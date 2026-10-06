@@ -13,9 +13,6 @@
 
 namespace
 {
-	/** Same parameter units use for team colour. */
-	const FName TeamColorParameter(TEXT("Color"));
-
 	/** A fresh construction site still shows a sliver of the building. */
 	constexpr float MinConstructionScale = 0.05f;
 
@@ -156,7 +153,7 @@ void ARTSBuilding::ApplyTeamColor()
 	{
 		if (UMaterialInstanceDynamic* Material = Mesh->CreateDynamicMaterialInstance(0))
 		{
-			Material->SetVectorParameterValue(TeamColorParameter, ARTSUnit::GetTeamColor(TeamId));
+			Material->SetVectorParameterValue(ARTSUnit::TeamColorParameter,ARTSUnit::GetTeamColor(TeamId));
 		}
 	}
 }

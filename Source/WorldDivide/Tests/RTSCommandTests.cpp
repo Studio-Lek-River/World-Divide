@@ -4,13 +4,14 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "Misc/AutomationTest.h"
+#include "Tests/RTSTestFlags.h"
 #include "Units/RTSUnit.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
 namespace
 {
-	constexpr EAutomationTestFlags TestFlags = EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter;
+	using RTSTests::TestFlags;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSFormationOffsetsTest, "WorldDivide.Commands.Formation.Offsets", TestFlags)

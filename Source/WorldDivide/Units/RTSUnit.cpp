@@ -15,14 +15,14 @@
 
 namespace
 {
-	/** Engine basic shapes expose this parameter; real unit materials should too. */
-	const FName TeamColorParameter(TEXT("Color"));
-
 	constexpr float MoveAcceptanceRadius = 25.f;
 
 	/** Attackers stop this far inside their range so a slowly retreating target does not slip straight out again. */
 	constexpr float AttackApproachFraction = 0.8f;
 }
+
+/** Engine basic shapes expose this parameter; real unit and building materials should too. */
+const FName ARTSUnit::TeamColorParameter(TEXT("Color"));
 
 ARTSUnit::ARTSUnit()
 {

@@ -3,6 +3,7 @@
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
 #include "Misc/AutomationTest.h"
+#include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
 #include "Units/RTSUnit.h"
 
@@ -10,8 +11,7 @@
 
 namespace
 {
-	constexpr EAutomationTestFlags TestFlags = EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter;
-
+	using RTSTests::TestFlags;
 	using RTSTests::FRTSTestWorld;
 
 	URTSUnitData* MakeUnitData(float MaxHealth, URTSWeaponData* Weapon)

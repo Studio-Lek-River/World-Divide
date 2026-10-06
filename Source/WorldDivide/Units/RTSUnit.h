@@ -47,6 +47,9 @@ public:
 
 	static FLinearColor GetTeamColor(int32 InTeamId);
 
+	/** Material vector parameter that receives the team colour, on units and buildings alike. */
+	static const FName TeamColorParameter;
+
 	/** Feet, not eye height: navmesh queries start from the ground. */
 	virtual FVector GetNavAgentLocation() const override;
 
