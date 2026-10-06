@@ -6,6 +6,7 @@
 #include "RTSEntityData.generated.h"
 
 class UStaticMesh;
+class URTSWeaponData;
 
 /**
  * Everything a player can build or train shares this schema: how it looks, what it costs and what it needs first.
@@ -33,6 +34,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats", meta = (ClampMin = "1"))
 	float MaxHealth = 100.f;
+
+	/** No weapon means unarmed. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	TObjectPtr<URTSWeaponData> Weapon;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production", meta = (ClampMin = "0"))
 	int32 Cost = 100;

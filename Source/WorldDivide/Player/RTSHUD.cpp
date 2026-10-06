@@ -1,6 +1,7 @@
 #include "Player/RTSHUD.h"
 
 #include "Camera/PlayerCameraManager.h"
+#include "Combat/RTSHealthComponent.h"
 #include "Player/RTSPlayerController.h"
 #include "Units/RTSUnit.h"
 
@@ -82,7 +83,7 @@ void ARTSHUD::DrawUnitMarker(const ARTSPlayerController& Controller, const ARTSU
 	DrawLine(Right, Bottom, Right, Bottom - Corner, SelectionColor, 2.f);
 
 	// Health bar above the brackets, green to red.
-	const float HealthFraction = FMath::Clamp(Unit.GetHealth() / Unit.GetMaxHealth(), 0.f, 1.f);
+	const float HealthFraction = Unit.GetHealthComponent()->GetHealthFraction();
 	const float BarWidth = Radius * 2.f;
 	const float BarY = Top - 8.f;
 	DrawRect(HealthBackground, Left - 1.f, BarY - 1.f, BarWidth + 2.f, 6.f);

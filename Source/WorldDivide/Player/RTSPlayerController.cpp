@@ -322,9 +322,19 @@ void ARTSPlayerController::OnMoveOrder()
 		return;
 	}
 
+	// Right-clicking an enemy attacks it; anywhere else is a move.
 	FRTSCommand Command;
-	Command.Type = ERTSCommandType::Move;
-	Command.TargetLocation = Hit.Location;
+	ARTSUnit* ClickedUnit = Cast<ARTSUnit>(Hit.GetActor());
+	if (ClickedUnit && !IsOwnUnit(ClickedUnit))
+	{
+		Command.Type = ERTSCommandType::Attack;
+		Command.TargetActor = ClickedUnit;
+	}
+	else
+	{
+		Command.Type = ERTSCommandType::Move;
+		Command.TargetLocation = Hit.Location;
+	}
 	Command.bQueue = IsShiftDown();
 	IssueToSelection(Command);
 }

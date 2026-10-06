@@ -9,6 +9,8 @@ enum class ERTSCommandType : uint8
 	None,
 	Move,
 	Stop,
+	/** Close in on TargetActor and fire until it dies. */
+	Attack,
 };
 
 /**

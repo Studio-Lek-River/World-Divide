@@ -5,9 +5,12 @@
 #include "Commands/RTSCommand.h"
 #include "RTSUnit.generated.h"
 
+class AAIController;
 class UCapsuleComponent;
 class UStaticMeshComponent;
 class UFloatingPawnMovement;
+class URTSHealthComponent;
+class URTSWeaponComponent;
 class URTSUnitData;
 struct FPathFollowingResult;
 
@@ -34,8 +37,8 @@ public:
 
 	URTSUnitData* GetUnitData() const { return UnitData; }
 	int32 GetTeamId() const { return TeamId; }
-	float GetHealth() const { return Health; }
-	float GetMaxHealth() const;
+	URTSHealthComponent* GetHealthComponent() const { return HealthComponent; }
+	URTSWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
 	float GetSelectionRadius() const;
 	int32 GetQueuedCommandCount() const { return CommandQueue.Num(); }
 
@@ -47,6 +50,7 @@ public:
 	/** Feet, not eye height: navmesh queries start from the ground. */
 	virtual FVector GetNavAgentLocation() const override;
 
+	virtual void PostInitializeComponents() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -57,10 +61,25 @@ protected:
 	UFUNCTION()
 	void OnRep_TeamId();
 
+	/** Server only. */
+	UFUNCTION()
+	void HandleDeath(AActor* Killer);
+
 private:
 	void ApplyUnitData();
 	void ApplyTeamColor();
 	void StartNextCommand();
+
+	/** Returns false when the command is already done or invalid and should be dropped. */
+	bool StartCommand(AAIController& AI, const FRTSCommand& Command);
+
+	/** Each tick while an Attack is the current order: drop it once the target is gone, otherwise close in or hold. */
+	void UpdateAttackOrder();
+
+	/** Points the weapon at what the current order allows: the attack target, anything in range when idle, nothing while moving. */
+	void ApplyWeaponMode();
+
+	void FaceTowardYaw(float Yaw, float DeltaSeconds);
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UCapsuleComponent> Collision;
@@ -71,16 +90,20 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UFloatingPawnMovement> Movement;
 
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<URTSHealthComponent> HealthComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<URTSWeaponComponent> WeaponComponent;
+
 	UPROPERTY(ReplicatedUsing = OnRep_UnitData)
 	TObjectPtr<URTSUnitData> UnitData;
 
 	UPROPERTY(ReplicatedUsing = OnRep_TeamId)
 	int32 TeamId = 0;
 
-	UPROPERTY(Replicated)
-	float Health = 0.f;
-
-	/** Server only. Front entry is the order being executed. */
+	/** Server only. Front entry is the order being executed. A UPROPERTY so GC sees and clears attack targets. */
+	UPROPERTY(Transient)
 	TArray<FRTSCommand> CommandQueue;
 
 	bool bRequestingMove = false;

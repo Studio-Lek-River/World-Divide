@@ -27,19 +27,20 @@ Command-line build:
 | Mouse wheel | Zoom |
 | Q / E, or drag with middle mouse | Rotate camera |
 | Left click / left drag | Select own units (Shift adds or toggles) |
-| Right click | Move (Shift queues waypoints) |
+| Right click | Move, or attack when on an enemy unit (Shift queues) |
 | X | Stop |
 
 ## Layout
 
 | Path | Contents |
 |---|---|
-| `Source/WorldDivide/Data` | `URTSEntityData` / `URTSUnitData`: every unit is a data asset (mesh, health, speed, cost, build time, prerequisites, faction) |
+| `Source/WorldDivide/Data` | `URTSEntityData` / `URTSUnitData`: every unit is a data asset (mesh, health, weapon, speed, cost, build time, prerequisites, faction); `URTSWeaponData` holds range, damage and reload |
+| `Source/WorldDivide/Combat` | `URTSHealthComponent` (replicated health, death) and the server-side `URTSWeaponComponent` (targeting, instant-hit fire) |
 | `Source/WorldDivide/Commands` | `FRTSCommand`, formation layout and server-side dispatch |
 | `Source/WorldDivide/Units` | `ARTSUnit` (light pawn, no Character), its AI controller, and the map-placed `ARTSUnitSpawner` |
 | `Source/WorldDivide/Player` | Camera pawn, player controller (input, selection, orders) and HUD |
 | `Source/WorldDivide/Core` | Game mode (team assignment, team start spots) and player state |
-| `Tools/Editor/setup_testmap.py` | Rebuilds the placeholder data assets and `L_TestMap` |
+| `Tools/Editor/setup_testmap.py` | Rebuilds the placeholder unit and weapon data assets and `L_TestMap` |
 
 Every player order is an `FRTSCommand` sent through `ARTSPlayerController::Server_IssueCommand` and executed only on the server, so singleplayer already runs the multiplayer code path. Units are always relevant for now; fog of war will decide relevancy later.
 
@@ -51,7 +52,9 @@ Every player order is an `FRTSCommand` sent through `ARTSPlayerController::Serve
 "<UE_5.6>\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -ExecCmds="Automation RunTests WorldDivide;Quit" -unattended -nullrhi
 ```
 
-`WorldDivide.Smoke.TestMap` plays `L_TestMap` in PIE and checks that a move order brings all 16 own units around the wall to the target while enemy units ignore it.
+`WorldDivide.Smoke.TestMap` plays `L_TestMap` in PIE and checks that a move order brings all 16 own units around the wall to the target while enemy units ignore it. `WorldDivide.Smoke.AttackOrder` orders a tank to attack an enemy out of range and checks it closes in and destroys it. `WorldDivide.Combat.*` cover health and an unordered duel between two idle units.
+
+Idle units fire at the nearest enemy in range on their own; units on a move order hold fire.
 
 To rebuild the test content:
 

@@ -15,7 +15,7 @@ struct FInputActionValue;
  * Turns mouse and keyboard into camera movement, a local selection and FRTSCommands for the server.
  *
  * Controls: WASD/arrows or screen edge pan, mouse wheel zoom, Q/E or middle-mouse drag rotate,
- * left click/drag select (Shift adds), right click move (Shift queues), X stop.
+ * left click/drag select (Shift adds), right click move or attack an enemy (Shift queues), X stop.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSPlayerController : public APlayerController

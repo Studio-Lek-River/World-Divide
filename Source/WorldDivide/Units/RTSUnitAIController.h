@@ -4,7 +4,7 @@
 #include "AIController.h"
 #include "RTSUnitAIController.generated.h"
 
-/** Server-side brain of an ARTSUnit. For now it only walks; targeting and combat come later. */
+/** Server-side pathing for an ARTSUnit. Orders and targeting live on the unit and its weapon component. */
 UCLASS()
 class WORLDDIVIDE_API ARTSUnitAIController : public AAIController
 {

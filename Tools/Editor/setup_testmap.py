@@ -1,4 +1,4 @@
-"""Builds the placeholder unit data assets and the L_TestMap level. Safe to re-run: both are rebuilt.
+"""Builds the placeholder weapon and unit data assets and the L_TestMap level. Safe to re-run: both are rebuilt.
 
 Run from the repo root (adjust the engine path):
   "G:/Program Files/Epic Games/UE_5.6/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "%CD%/WorldDivide.uproject"
@@ -8,6 +8,7 @@ Run from the repo root (adjust the engine path):
 import unreal
 
 UNIT_DIR = "/Game/Data/Units"
+WEAPON_DIR = "/Game/Data/Weapons"
 MAP_PATH = "/Game/Maps/L_TestMap"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
 CYLINDER = "/Engine/BasicShapes/Cylinder.Cylinder"
@@ -18,20 +19,33 @@ actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 levels = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 
 
-def make_unit(name, display_name, mesh, scale, radius, health, speed, turn_rate, cost, build_time):
-    path = f"{UNIT_DIR}/{name}"
+def load_or_create(name, directory, data_class):
+    path = f"{directory}/{name}"
     if assets.does_asset_exist(path):
-        unit = assets.load_asset(path)
-    else:
-        factory = unreal.DataAssetFactory()
-        factory.set_editor_property("data_asset_class", unreal.RTSUnitData)
-        unit = asset_tools.create_asset(name, UNIT_DIR, unreal.RTSUnitData, factory)
+        return assets.load_asset(path)
+    factory = unreal.DataAssetFactory()
+    factory.set_editor_property("data_asset_class", data_class)
+    return asset_tools.create_asset(name, directory, data_class, factory)
+
+
+def make_weapon(name, weapon_range, damage, reload_seconds):
+    weapon = load_or_create(name, WEAPON_DIR, unreal.RTSWeaponData)
+    weapon.set_editor_property("range", weapon_range)
+    weapon.set_editor_property("damage", damage)
+    weapon.set_editor_property("reload_seconds", reload_seconds)
+    assets.save_loaded_asset(weapon, only_if_is_dirty=False)
+    return weapon
+
+
+def make_unit(name, display_name, mesh, scale, radius, health, weapon, speed, turn_rate, cost, build_time):
+    unit = load_or_create(name, UNIT_DIR, unreal.RTSUnitData)
 
     unit.set_editor_property("display_name", unreal.Text(display_name))
     unit.set_editor_property("mesh", unreal.load_asset(mesh))
     unit.set_editor_property("mesh_scale", unreal.Vector(*scale))
     unit.set_editor_property("selection_radius", radius)
     unit.set_editor_property("max_health", health)
+    unit.set_editor_property("weapon", weapon)
     unit.set_editor_property("move_speed", speed)
     unit.set_editor_property("turn_rate", turn_rate)
     unit.set_editor_property("cost", cost)
@@ -104,7 +118,9 @@ def build_map(tank, infantry):
         raise RuntimeError(f"Could not save {MAP_PATH}")
 
 
-tank = make_unit("DA_TestTank", "Test Tank", CUBE, (2.4, 1.4, 0.9), 90.0, 200.0, 600.0, 180.0, 700, 10.0)
-infantry = make_unit("DA_TestInfantry", "Test Infantry", CYLINDER, (0.5, 0.5, 1.0), 30.0, 100.0, 350.0, 540.0, 150, 4.0)
+cannon = make_weapon("DA_TestCannon", 1200.0, 40.0, 2.0)
+rifle = make_weapon("DA_TestRifle", 700.0, 8.0, 0.5)
+tank = make_unit("DA_TestTank", "Test Tank", CUBE, (2.4, 1.4, 0.9), 90.0, 200.0, cannon, 600.0, 180.0, 700, 10.0)
+infantry = make_unit("DA_TestInfantry", "Test Infantry", CYLINDER, (0.5, 0.5, 1.0), 30.0, 100.0, rifle, 350.0, 540.0, 150, 4.0)
 build_map(tank, infantry)
 unreal.log("setup_testmap: done")

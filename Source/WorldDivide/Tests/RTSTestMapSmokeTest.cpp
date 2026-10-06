@@ -2,7 +2,9 @@
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
+#include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
+#include "Data/RTSUnitData.h"
 #include "EngineUtils.h"
 #include "NavigationSystem.h"
 #include "NavMesh/RecastNavMesh.h"
@@ -14,6 +16,7 @@
 /**
  * End to end: open L_TestMap in PIE, wait for the navmesh, order every unit (own and enemy) through the
  * player controller's server RPC, and check that only the player's units walk around the wall to the target.
+ * A second test orders a lone tank to attack an enemy out of range and checks it closes in and destroys it.
  */
 namespace
 {
@@ -24,13 +27,38 @@ namespace
 	constexpr double NavTimeout = 30.0;
 	constexpr double MoveTimeout = 60.0;
 
+	/** The empty strip north of both bases, far out of range of the map's own units. */
+	const FVector AttackerStart(-1500.f, 7000.f, 0.f);
+	const FVector VictimStart(1500.f, 7000.f, 0.f);
+	constexpr double AttackTimeout = 30.0;
+
 	struct FSmokeState
 	{
 		TArray<TWeakObjectPtr<ARTSUnit>> OwnUnits;
 		TArray<TWeakObjectPtr<ARTSUnit>> EnemyUnits;
 		TArray<FVector> EnemyStartLocations;
 		double PhaseStart = 0.0;
+
+		// Attack order test only.
+		TWeakObjectPtr<ARTSUnit> Attacker;
+		TWeakObjectPtr<ARTSUnit> Victim;
 	};
+
+	ARTSUnit* SpawnTestUnit(UWorld* World, const TCHAR* DataPath, int32 TeamId, const FVector& Location)
+	{
+		URTSUnitData* Data = LoadObject<URTSUnitData>(nullptr, DataPath);
+		if (!Data)
+		{
+			return nullptr;
+		}
+		FTransform Transform(Location);
+		ARTSUnit* Unit = World->SpawnActorDeferred<ARTSUnit>(
+			ARTSUnit::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		Unit->InitFromData(Data, TeamId);
+		Transform.AddToTranslation(FVector(0.f, 0.f, Unit->GetGroundOffset()));
+		Unit->FinishSpawning(Transform);
+		return Unit;
+	}
 }
 
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSWaitForNavigation, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
@@ -134,6 +162,64 @@ bool FRTSVerifyArrival::Update()
 	return true;
 }
 
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueAttack, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueAttack::Update()
+{
+	UWorld* World = AutomationCommon::GetAnyGameWorld();
+	ARTSPlayerController* Controller = World ? Cast<ARTSPlayerController>(World->GetFirstPlayerController()) : nullptr;
+	if (!Controller)
+	{
+		Test->AddError(TEXT("No ARTSPlayerController in the PIE world"));
+		return true;
+	}
+
+	ARTSUnit* Attacker = SpawnTestUnit(World, TEXT("/Game/Data/Units/DA_TestTank.DA_TestTank"), Controller->GetTeamId(), AttackerStart);
+	ARTSUnit* Victim = SpawnTestUnit(World, TEXT("/Game/Data/Units/DA_TestInfantry.DA_TestInfantry"), Controller->GetTeamId() + 1, VictimStart);
+	if (!Attacker || !Victim)
+	{
+		Test->AddError(TEXT("Could not spawn the test units"));
+		return true;
+	}
+	Test->TestTrue(TEXT("Attacker is armed"), Attacker->GetWeaponComponent()->IsArmed());
+	Test->TestFalse(TEXT("Target starts out of range"), Attacker->GetWeaponComponent()->IsInRange(Victim));
+	State->Attacker = Attacker;
+	State->Victim = Victim;
+
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::Attack;
+	Command.TargetActor = Victim;
+	Controller->Server_IssueCommand({ Attacker }, Command);
+
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyAttack, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyAttack::Update()
+{
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	// The attacker notices the kill on its own next tick, so also wait for its order to clear.
+	const bool bOrderPending = State->Attacker.IsValid() && State->Attacker->GetQueuedCommandCount() > 0;
+	if ((State->Victim.IsValid() || bOrderPending) && Elapsed < AttackTimeout)
+	{
+		return false;
+	}
+
+	Test->TestFalse(TEXT("Target destroyed"), State->Victim.IsValid());
+	Test->AddInfo(FString::Printf(TEXT("Attack finished after %.1f s"), Elapsed));
+	if (ARTSUnit* Attacker = State->Attacker.Get())
+	{
+		Test->TestTrue(TEXT("Attacker closed in on the target"),
+			FVector::Dist2D(Attacker->GetActorLocation(), AttackerStart) > 500.f);
+		Test->TestEqual(TEXT("Attack order completed"), Attacker->GetQueuedCommandCount(), 0);
+	}
+	else
+	{
+		Test->AddError(TEXT("Attacker died"));
+	}
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTestMapSmokeTest, "WorldDivide.Smoke.TestMap",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -151,6 +237,27 @@ bool FRTSTestMapSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueMoveToAll(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyArrival(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAttackOrderSmokeTest, "WorldDivide.Smoke.AttackOrder",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSAttackOrderSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueAttack(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAttack(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }
