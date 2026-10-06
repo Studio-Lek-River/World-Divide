@@ -4,11 +4,11 @@
 #include "Components/ActorComponent.h"
 #include "RTSWeaponComponent.generated.h"
 
-class ARTSUnit;
 class URTSWeaponData;
 
 /**
- * Server-side gunner of a unit or building: picks an enemy unit, waits out the reload and deals instant-hit damage.
+ * Server-side gunner of a unit or building: picks an enemy target, waits out the reload and deals instant-hit damage.
+ * Enemy units come before enemy buildings when it picks a target on its own.
  * The owner decides what it may shoot (an ordered target, anything in range, or nothing while moving);
  * turning and closing in are the unit's job. Clients never run it; they see the damage through health replication.
  */
@@ -27,22 +27,22 @@ public:
 	bool IsArmed() const { return WeaponData != nullptr; }
 	float GetRange() const;
 
-	/** Server only. The owner's team; units of any other team are enemies. */
+	/** Server only. The owner's team; targets of any other team are enemies. */
 	void SetTeamId(int32 InTeamId) { TeamId = InTeamId; }
 
-	/** Server only. Shoot only this unit, once it is in range; null clears the order. */
-	void SetOrderedTarget(ARTSUnit* InTarget);
+	/** Server only. Shoot only this target, once it is in range; null clears the order. */
+	void SetOrderedTarget(AActor* InTarget);
 
 	/** Server only. Without an ordered target, engage the nearest enemy in range while this is set. */
 	void SetAutoAcquire(bool bEnable);
 
-	/** A living unit of another team than the owner's. */
-	bool CanTarget(const ARTSUnit* Candidate) const;
+	/** A living IRTSTargetable of another team than the owner's. Buildings under construction count. */
+	bool CanTarget(const AActor* Candidate) const;
 
 	/** Distance to the edge of the target's footprint is within range. */
-	bool IsInRange(const ARTSUnit* Candidate) const;
+	bool IsInRange(const AActor* Candidate) const;
 
-	ARTSUnit* GetTarget() const { return Target.Get(); }
+	AActor* GetTarget() const { return Target.Get(); }
 
 	/** Server only. Advances the reload and fires when possible. Public so tests can step it deterministically. */
 	void UpdateWeapon(float DeltaSeconds);
@@ -50,12 +50,17 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
-	ARTSUnit* FindNearestEnemyInRange() const;
+	/** The nearest enemy unit in range, or failing that the nearest enemy building in range. */
+	AActor* FindNearestEnemyInRange() const;
+
+	/** The nearest T the weapon may shoot right now, measured centre to centre. */
+	template <typename T>
+	T* FindNearestInRange() const;
 
 	UPROPERTY(Transient)
 	TObjectPtr<URTSWeaponData> WeaponData;
 
-	TWeakObjectPtr<ARTSUnit> Target;
+	TWeakObjectPtr<AActor> Target;
 	int32 TeamId = 0;
 	bool bTargetOrdered = false;
 	bool bAutoAcquire = true;

@@ -19,6 +19,9 @@ namespace
 
 	/** Attackers stop this far inside their range so a slowly retreating target does not slip straight out again. */
 	constexpr float AttackApproachFraction = 0.8f;
+
+	/** Attackers head for a spot this fraction of their range outside a building's edge, well clear of its navmesh hole. */
+	constexpr float BuildingApproachFraction = 0.5f;
 }
 
 /** Engine basic shapes expose this parameter; real unit and building materials should too. */
@@ -159,6 +162,12 @@ float ARTSUnit::GetSelectionRadius() const
 	return UnitData ? UnitData->SelectionRadius : Collision->GetUnscaledCapsuleRadius();
 }
 
+FVector ARTSUnit::GetClosestFootprintPoint(const FVector& From) const
+{
+	const FVector Center = GetActorLocation();
+	return Center + (From - Center).GetSafeNormal2D() * GetSelectionRadius();
+}
+
 float ARTSUnit::GetGroundOffset() const
 {
 	return Collision->GetScaledCapsuleHalfHeight();
@@ -185,7 +194,7 @@ void ARTSUnit::Tick(float DeltaSeconds)
 	{
 		FaceTowardYaw(Movement->Velocity.Rotation().Yaw, DeltaSeconds);
 	}
-	else if (const ARTSUnit* Target = WeaponComponent->GetTarget())
+	else if (const AActor* Target = WeaponComponent->GetTarget())
 	{
 		const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
 		if (!ToTarget.IsNearlyZero())
@@ -268,8 +277,7 @@ bool ARTSUnit::StartCommand(AAIController& AI, const FRTSCommand& Command)
 	if (Command.Type == ERTSCommandType::Attack)
 	{
 		// Clients pick the target, so the server checks it: armed, alive, and not on our side.
-		const ARTSUnit* Target = Cast<ARTSUnit>(Command.TargetActor);
-		if (!WeaponComponent->IsArmed() || !WeaponComponent->CanTarget(Target))
+		if (!WeaponComponent->IsArmed() || !WeaponComponent->CanTarget(Command.TargetActor))
 		{
 			return false;
 		}
@@ -293,7 +301,7 @@ void ARTSUnit::UpdateAttackOrder()
 		return;
 	}
 
-	ARTSUnit* Target = Cast<ARTSUnit>(CommandQueue[0].TargetActor);
+	AActor* Target = CommandQueue[0].TargetActor;
 	if (!WeaponComponent->CanTarget(Target))
 	{
 		AI->StopMovement();
@@ -312,10 +320,23 @@ void ARTSUnit::UpdateAttackOrder()
 	}
 	else if (!bMoving)
 	{
-		// Following the actor keeps the path updated while the target moves.
-		AI->MoveToActor(Target, WeaponComponent->GetRange() * AttackApproachFraction,
-			/*bStopOnOverlap*/ true, /*bUsePathfinding*/ true, /*bCanStrafe*/ true, /*FilterClass*/ nullptr,
-			/*bAllowPartialPath*/ true);
+		const float Range = WeaponComponent->GetRange();
+		if (Target->IsA<ARTSUnit>())
+		{
+			// Following the actor keeps the path updated while the target moves.
+			AI->MoveToActor(Target, Range * AttackApproachFraction,
+				/*bStopOnOverlap*/ true, /*bUsePathfinding*/ true, /*bCanStrafe*/ true, /*FilterClass*/ nullptr,
+				/*bAllowPartialPath*/ true);
+		}
+		else
+		{
+			// A building's centre lies in its own navmesh hole, out of reach of a path; aim outside its nearest edge.
+			const FVector Edge = Cast<IRTSTargetable>(Target)->GetClosestFootprintPoint(GetActorLocation());
+			const FVector Outward = (GetActorLocation() - Edge).GetSafeNormal2D();
+			AI->MoveToLocation(Edge + Outward * Range * BuildingApproachFraction, MoveAcceptanceRadius,
+				/*bStopOnOverlap*/ false, /*bUsePathfinding*/ true, /*bProjectDestinationToNavigation*/ true,
+				/*bCanStrafe*/ true, /*FilterClass*/ nullptr, /*bAllowPartialPath*/ true);
+		}
 	}
 }
 
@@ -323,7 +344,7 @@ void ARTSUnit::ApplyWeaponMode()
 {
 	const FRTSCommand* Current = CommandQueue.IsEmpty() ? nullptr : &CommandQueue[0];
 	const bool bAttacking = Current && Current->Type == ERTSCommandType::Attack;
-	WeaponComponent->SetOrderedTarget(bAttacking ? Cast<ARTSUnit>(Current->TargetActor) : nullptr);
+	WeaponComponent->SetOrderedTarget(bAttacking ? Current->TargetActor.Get() : nullptr);
 	// Units on the move ignore enemies; attack-move will change that.
 	WeaponComponent->SetAutoAcquire(Current == nullptr);
 }

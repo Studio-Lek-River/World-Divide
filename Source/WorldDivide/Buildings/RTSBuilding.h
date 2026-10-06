@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Combat/RTSTargetable.h"
 #include "GameFramework/Actor.h"
 #include "RTSBuilding.generated.h"
 
@@ -16,7 +17,7 @@ class URTSWeaponComponent;
  * Construction runs on the server; clients see the progress through replication.
  */
 UCLASS()
-class WORLDDIVIDE_API ARTSBuilding : public AActor
+class WORLDDIVIDE_API ARTSBuilding : public AActor, public IRTSTargetable
 {
 	GENERATED_BODY()
 
@@ -30,9 +31,12 @@ public:
 	void UpdateConstruction(float DeltaSeconds);
 
 	URTSBuildingData* GetBuildingData() const { return BuildingData; }
-	int32 GetTeamId() const { return TeamId; }
-	URTSHealthComponent* GetHealthComponent() const { return HealthComponent; }
+	virtual int32 GetTeamId() const override { return TeamId; }
+	virtual URTSHealthComponent* GetHealthComponent() const override { return HealthComponent; }
 	URTSWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
+
+	/** From clamped to the footprint rectangle. Under construction or not, the building can be shot. */
+	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
 
 	/** 0 when placed, 1 when complete. */
 	float GetConstructionProgress() const { return ConstructionProgress; }

@@ -6,6 +6,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
+#include "Commands/RTSCommandDispatch.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Data/RTSUnitData.h"
@@ -22,7 +23,8 @@
  * player controller's server RPC, and check that only the player's units walk around the wall to the target.
  * A second test orders a lone tank to attack an enemy out of range and checks it closes in and destroys it.
  * The building tests place buildings through the same RPC: valid and invalid spots, construction over BuildTime,
- * and a unit routing around a freshly placed building.
+ * and a unit routing around a freshly placed building. The last test has three tanks destroy an enemy building and
+ * checks that its hole in the navmesh closes again.
  */
 namespace
 {
@@ -57,6 +59,14 @@ namespace
 	constexpr float RouteArrivalRadius = 150.f;
 	constexpr double RouteTimeout = 30.0;
 
+	/** The building attack puts an enemy power plant on BuildSpot and sends tanks at it from well out of range. */
+	const FVector BuildingAttackerStarts[] = {
+		FVector(-3500.f, 6700.f, 0.f),
+		FVector(-3500.f, 7000.f, 0.f),
+		FVector(-3500.f, 7300.f, 0.f),
+	};
+	constexpr double BuildingAttackTimeout = 45.0;
+
 	struct FSmokeState
 	{
 		TArray<TWeakObjectPtr<ARTSUnit>> OwnUnits;
@@ -74,7 +84,20 @@ namespace
 		TWeakObjectPtr<ARTSUnit> Walker;
 		bool bEnteredFootprint = false;
 		float MaxDetour = 0.f;
+
+		// Building attack test only.
+		TArray<TWeakObjectPtr<ARTSUnit>> Attackers;
+		FVector BuildingCenter = FVector::ZeroVector;
 	};
+
+	/** True once the navmesh covers Location and is not rebuilding. */
+	bool IsOnNavMesh(UWorld& World, const FVector& Location)
+	{
+		UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
+		FNavLocation Projected;
+		return NavSystem && !NavSystem->IsNavigationBuildInProgress()
+			&& NavSystem->ProjectPointToNavigation(Location, Projected, FVector(10.f, 10.f, 250.f));
+	}
 
 	int32 CountBuildings(UWorld* World)
 	{
@@ -498,6 +521,125 @@ bool FRTSVerifyRoute::Update()
 	return true;
 }
 
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceEnemyBuilding, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSPlaceEnemyBuilding::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+
+	// The enemy has no controller in PIE, so the server places its building directly.
+	FRTSCommand Build;
+	Build.Type = ERTSCommandType::Build;
+	Build.EntityData = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+	Build.TargetLocation = BuildSpot;
+	ARTSBuilding* Building = RTSCommands::PlaceBuilding(*World, Controller->GetFaction(), Controller->GetTeamId() + 1, Build);
+	if (!Building)
+	{
+		Test->AddError(TEXT("Could not place the enemy power plant"));
+		return true;
+	}
+	State->Building = Building;
+	State->BuildingCenter = Building->GetActorLocation();
+
+	for (const FVector& Start : BuildingAttackerStarts)
+	{
+		ARTSUnit* Attacker = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), Start);
+		if (!Attacker)
+		{
+			Test->AddError(TEXT("Could not spawn an attacking tank"));
+			return true;
+		}
+		Test->TestFalse(TEXT("The building starts out of the tank's range"), Attacker->GetWeaponComponent()->IsInRange(Building));
+		State->Attackers.Add(Attacker);
+	}
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueBuildingAttack, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueBuildingAttack::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller || !State->Building.IsValid())
+	{
+		Test->AddError(TEXT("No controller or enemy building"));
+		return true;
+	}
+
+	TArray<ARTSUnit*> Attackers;
+	for (const TWeakObjectPtr<ARTSUnit>& Attacker : State->Attackers)
+	{
+		if (Attacker.IsValid())
+		{
+			Attackers.Add(Attacker.Get());
+		}
+	}
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::Attack;
+	Command.TargetActor = State->Building.Get();
+	Controller->Server_IssueCommand(Attackers, Command);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyBuildingAttack, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyBuildingAttack::Update()
+{
+	bool bOrderPending = false;
+	for (const TWeakObjectPtr<ARTSUnit>& Attacker : State->Attackers)
+	{
+		bOrderPending |= Attacker.IsValid() && Attacker->GetQueuedCommandCount() > 0;
+	}
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if ((State->Building.IsValid() || bOrderPending) && Elapsed < BuildingAttackTimeout)
+	{
+		return false;
+	}
+
+	Test->TestFalse(TEXT("Enemy building destroyed"), State->Building.IsValid());
+	Test->AddInfo(FString::Printf(TEXT("Building attack finished after %.1f s"), Elapsed));
+	for (int32 Index = 0; Index < State->Attackers.Num(); ++Index)
+	{
+		const ARTSUnit* Attacker = State->Attackers[Index].Get();
+		if (!Attacker)
+		{
+			Test->AddError(TEXT("An attacker died"));
+			continue;
+		}
+		Test->TestTrue(TEXT("Attacker closed in on the building"),
+			FVector::Dist2D(Attacker->GetActorLocation(), BuildingAttackerStarts[Index]) > 500.f);
+		Test->TestEqual(TEXT("Attack order completed"), Attacker->GetQueuedCommandCount(), 0);
+	}
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSWaitForNavRestored, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSWaitForNavRestored::Update()
+{
+	UWorld* World = AutomationCommon::GetAnyGameWorld();
+	if (!World)
+	{
+		Test->AddError(TEXT("No PIE world"));
+		return true;
+	}
+	if (IsOnNavMesh(*World, State->BuildingCenter))
+	{
+		Test->AddInfo(FString::Printf(TEXT("Navmesh hole closed after %.1f s"), FPlatformTime::Seconds() - State->PhaseStart));
+		return true;
+	}
+	if (FPlatformTime::Seconds() - State->PhaseStart > NavTimeout)
+	{
+		Test->AddError(TEXT("The destroyed building's navmesh hole never closed"));
+		return true;
+	}
+	return false;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTestMapSmokeTest, "WorldDivide.Smoke.TestMap",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -581,6 +723,30 @@ bool FRTSRouteAroundBuildingSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueRouteMove(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyRoute(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAttackBuildingSmokeTest, "WorldDivide.Smoke.AttackBuilding",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSAttackBuildingSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceEnemyBuilding(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueBuildingAttack(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyBuildingAttack(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavRestored(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

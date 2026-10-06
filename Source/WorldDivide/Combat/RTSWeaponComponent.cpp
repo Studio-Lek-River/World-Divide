@@ -1,6 +1,8 @@
 #include "Combat/RTSWeaponComponent.h"
 
+#include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
+#include "Combat/RTSTargetable.h"
 #include "Data/RTSWeaponData.h"
 #include "EngineUtils.h"
 #include "Units/RTSUnit.h"
@@ -20,7 +22,7 @@ float URTSWeaponComponent::GetRange() const
 	return WeaponData ? WeaponData->Range : 0.f;
 }
 
-void URTSWeaponComponent::SetOrderedTarget(ARTSUnit* InTarget)
+void URTSWeaponComponent::SetOrderedTarget(AActor* InTarget)
 {
 	if (InTarget)
 	{
@@ -43,32 +45,35 @@ void URTSWeaponComponent::SetAutoAcquire(bool bEnable)
 	}
 }
 
-bool URTSWeaponComponent::CanTarget(const ARTSUnit* Candidate) const
+bool URTSWeaponComponent::CanTarget(const AActor* Candidate) const
 {
-	return IsValid(Candidate) && Candidate != GetOwner()
-		&& Candidate->GetTeamId() != TeamId
-		&& !Candidate->GetHealthComponent()->IsDead();
+	const IRTSTargetable* Targetable = Cast<IRTSTargetable>(Candidate);
+	return Targetable && IsValid(Candidate) && Candidate != GetOwner()
+		&& Targetable->GetTeamId() != TeamId
+		&& !Targetable->GetHealthComponent()->IsDead();
 }
 
-bool URTSWeaponComponent::IsInRange(const ARTSUnit* Candidate) const
+bool URTSWeaponComponent::IsInRange(const AActor* Candidate) const
 {
-	if (!WeaponData || !Candidate)
+	const IRTSTargetable* Targetable = Cast<IRTSTargetable>(Candidate);
+	if (!WeaponData || !Targetable)
 	{
 		return false;
 	}
-	const float Distance = FVector::Dist2D(GetOwner()->GetActorLocation(), Candidate->GetActorLocation());
-	return Distance - Candidate->GetSelectionRadius() <= WeaponData->Range;
+	const FVector Origin = GetOwner()->GetActorLocation();
+	return FVector::Dist2D(Origin, Targetable->GetClosestFootprintPoint(Origin)) <= WeaponData->Range;
 }
 
-ARTSUnit* URTSWeaponComponent::FindNearestEnemyInRange() const
+template <typename T>
+T* URTSWeaponComponent::FindNearestInRange() const
 {
 	// A full scan is fine at prototype unit counts; a spatial query replaces it once armies grow.
-	ARTSUnit* Nearest = nullptr;
+	T* Nearest = nullptr;
 	float NearestDistSq = TNumericLimits<float>::Max();
 	const FVector Origin = GetOwner()->GetActorLocation();
-	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
+	for (TActorIterator<T> It(GetWorld()); It; ++It)
 	{
-		ARTSUnit* Candidate = *It;
+		T* Candidate = *It;
 		if (!CanTarget(Candidate) || !IsInRange(Candidate))
 		{
 			continue;
@@ -83,6 +88,16 @@ ARTSUnit* URTSWeaponComponent::FindNearestEnemyInRange() const
 	return Nearest;
 }
 
+AActor* URTSWeaponComponent::FindNearestEnemyInRange() const
+{
+	// Units shoot back and buildings don't run away, so units come first.
+	if (ARTSUnit* Unit = FindNearestInRange<ARTSUnit>())
+	{
+		return Unit;
+	}
+	return FindNearestInRange<ARTSBuilding>();
+}
+
 void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 {
 	Cooldown = FMath::Max(Cooldown - DeltaSeconds, 0.f);
@@ -91,7 +106,7 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 		return;
 	}
 
-	ARTSUnit* Current = Target.Get();
+	AActor* Current = Target.Get();
 	if (bTargetOrdered)
 	{
 		// The unit drops the order once the target is gone and closes in while it is out of range.
@@ -109,8 +124,16 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 		if (!CanTarget(Current) || !IsInRange(Current))
 		{
 			Current = FindNearestEnemyInRange();
-			Target = Current;
 		}
+		else if (!Current->IsA<ARTSUnit>())
+		{
+			// A building is only a fallback: switch as soon as an enemy unit comes into range.
+			if (ARTSUnit* Unit = FindNearestInRange<ARTSUnit>())
+			{
+				Current = Unit;
+			}
+		}
+		Target = Current;
 		if (!Current)
 		{
 			return;
@@ -123,7 +146,7 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 		return;
 	}
 	Cooldown = WeaponData->ReloadSeconds;
-	Current->GetHealthComponent()->ApplyDamage(WeaponData->Damage, GetOwner());
+	Cast<IRTSTargetable>(Current)->GetHealthComponent()->ApplyDamage(WeaponData->Damage, GetOwner());
 }
 
 void URTSWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)

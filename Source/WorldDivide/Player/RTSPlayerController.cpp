@@ -1,6 +1,7 @@
 #include "Player/RTSPlayerController.h"
 
 #include "Buildings/RTSBuildPlacement.h"
+#include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSPlacementGhost.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSPlayerState.h"
@@ -168,6 +169,12 @@ URTSFactionData* ARTSPlayerController::GetFaction() const
 {
 	const ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
 	return State ? State->GetFaction() : nullptr;
+}
+
+ARTSBuilding* ARTSPlayerController::GetBuildingUnderCursor() const
+{
+	FHitResult Hit;
+	return GetHitResultUnderCursor(ECC_Visibility, false, Hit) ? Cast<ARTSBuilding>(Hit.GetActor()) : nullptr;
 }
 
 bool ARTSPlayerController::IsOwnUnit(const ARTSUnit* Unit) const
@@ -372,13 +379,13 @@ void ARTSPlayerController::OnMoveOrder()
 		return;
 	}
 
-	// Right-clicking an enemy attacks it; anywhere else is a move.
+	// Right-clicking an enemy unit or building attacks it; anywhere else is a move.
 	FRTSCommand Command;
-	ARTSUnit* ClickedUnit = Cast<ARTSUnit>(Hit.GetActor());
-	if (ClickedUnit && !IsOwnUnit(ClickedUnit))
+	const IRTSTargetable* Clicked = Cast<IRTSTargetable>(Hit.GetActor());
+	if (Clicked && Clicked->GetTeamId() != GetTeamId())
 	{
 		Command.Type = ERTSCommandType::Attack;
-		Command.TargetActor = ClickedUnit;
+		Command.TargetActor = Hit.GetActor();
 	}
 	else
 	{

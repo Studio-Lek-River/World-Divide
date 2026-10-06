@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "Combat/RTSTargetable.h"
 #include "Commands/RTSCommand.h"
 #include "RTSUnit.generated.h"
 
@@ -19,7 +20,7 @@ struct FPathFollowingResult;
  * Orders are executed on the server only; clients see the result through replication.
  */
 UCLASS()
-class WORLDDIVIDE_API ARTSUnit : public APawn
+class WORLDDIVIDE_API ARTSUnit : public APawn, public IRTSTargetable
 {
 	GENERATED_BODY()
 
@@ -36,11 +37,14 @@ public:
 	void NotifyMoveFinished(const FPathFollowingResult& Result);
 
 	URTSUnitData* GetUnitData() const { return UnitData; }
-	int32 GetTeamId() const { return TeamId; }
-	URTSHealthComponent* GetHealthComponent() const { return HealthComponent; }
+	virtual int32 GetTeamId() const override { return TeamId; }
+	virtual URTSHealthComponent* GetHealthComponent() const override { return HealthComponent; }
 	URTSWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
 	float GetSelectionRadius() const;
 	int32 GetQueuedCommandCount() const { return CommandQueue.Num(); }
+
+	/** The edge of the selection circle facing From. */
+	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
 
 	/** Distance from the actor origin down to the ground contact point. */
 	float GetGroundOffset() const;
@@ -76,7 +80,10 @@ private:
 	/** Returns false when the command is already done or invalid and should be dropped. */
 	bool StartCommand(AAIController& AI, const FRTSCommand& Command);
 
-	/** Each tick while an Attack is the current order: drop it once the target is gone, otherwise close in or hold. */
+	/**
+	 * Each tick while an Attack is the current order: drop it once the target is gone, otherwise close in or hold.
+	 * Units are followed; buildings stand in their own navmesh hole, so the unit walks to a spot outside the nearest edge.
+	 */
 	void UpdateAttackOrder();
 
 	/** Points the weapon at what the current order allows: the attack target, anything in range when idle, nothing while moving. */

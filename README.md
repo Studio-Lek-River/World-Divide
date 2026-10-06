@@ -27,7 +27,7 @@ Command-line build:
 | Mouse wheel | Zoom |
 | Q / E, or drag with middle mouse | Rotate camera |
 | Left click / left drag | Select own units (Shift adds or toggles) |
-| Right click | Move, or attack when on an enemy unit (Shift queues) |
+| Right click | Move, or attack when on an enemy unit or building (Shift queues) |
 | X | Stop |
 | 1–9 | Debug build menu: place the n-th building of your faction |
 | Left click / right click or Esc | While placing: build / cancel (Esc also stops PIE in the editor) |
@@ -37,11 +37,11 @@ Command-line build:
 | Path | Contents |
 |---|---|
 | `Source/WorldDivide/Data` | `URTSEntityData` / `URTSUnitData` / `URTSBuildingData`: every unit and building is a data asset (mesh, health, weapon, speed or footprint and power, cost, build time, prerequisites, faction); `URTSWeaponData` holds range, damage and reload; `URTSFactionData` lists what a faction can build |
-| `Source/WorldDivide/Combat` | `URTSHealthComponent` (replicated health, death) and the server-side `URTSWeaponComponent` (targeting, instant-hit fire) |
+| `Source/WorldDivide/Combat` | `URTSHealthComponent` (replicated health, death), `IRTSTargetable` (team, health and footprint shared by units and buildings) and the server-side `URTSWeaponComponent` (targeting, instant-hit fire) |
 | `Source/WorldDivide/Commands` | `FRTSCommand`, formation layout and server-side dispatch |
 | `Source/WorldDivide/Buildings` | `ARTSBuilding` (constructs over its build time, cuts the navmesh, inert until complete), the shared grid and placement rules, and the local placement ghost |
 | `Source/WorldDivide/Units` | `ARTSUnit` (light pawn, no Character), its AI controller, and the map-placed `ARTSUnitSpawner` |
-| `Source/WorldDivide/Player` | Camera pawn, player controller (input, selection, orders, building placement) and HUD (including the debug build menu) |
+| `Source/WorldDivide/Player` | Camera pawn, player controller (input, selection, orders, building placement) and HUD (health of selected units and the hovered building, the debug build menu) |
 | `Source/WorldDivide/Core` | Game mode (team and faction assignment, team start spots), player state, and `URTSSettings` (default faction and ghost material, set in `Config/DefaultGame.ini`) |
 | `Tools/Editor/setup_testmap.py` | Builds the placeholder unit, weapon, building and faction data assets, the placement ghost material and `L_TestMap`, saving only what differs from the script |
 
@@ -57,9 +57,9 @@ Buildings snap to a 100 cm grid. The client's ghost and the server run the same 
 "<UE_5.6>\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -ExecCmds="Automation RunTests WorldDivide;Quit" -unattended -nullrhi
 ```
 
-`WorldDivide.Smoke.TestMap` plays `L_TestMap` in PIE and checks that a move order brings all 16 own units around the wall to the target while enemy units ignore it. `WorldDivide.Smoke.AttackOrder` orders a tank to attack an enemy out of range and checks it closes in and destroys it. `WorldDivide.Combat.*` cover health and an unordered duel between two idle units. `WorldDivide.Buildings.*` cover grid snapping, construction over the build time and a finished tower killing enemies in range. `WorldDivide.Smoke.BuildingPlacement` checks that client and server accept an open spot and reject spots on buildings, units, walls and off the navmesh, plus buildings outside the faction, and that the building completes after its build time. `WorldDivide.Smoke.RouteAroundBuilding` places a building across a tank's path and checks the tank walks around it. `WorldDivide.Smoke.ListenServer` plays `L_TestMap` as a listen server with one client, checks both players' teams and start spots, and sends a move for every unit from the client's controller: the server moves only the client's units and the client sees them arrive.
+`WorldDivide.Smoke.TestMap` plays `L_TestMap` in PIE and checks that a move order brings all 16 own units around the wall to the target while enemy units ignore it. `WorldDivide.Smoke.AttackOrder` orders a tank to attack an enemy out of range and checks it closes in and destroys it. `WorldDivide.Combat.*` cover health and an unordered duel between two idle units. `WorldDivide.Buildings.*` cover grid snapping, construction over the build time, a finished tower killing enemies in range, an idle unit destroying an enemy construction site whose edge is in range, and weapons preferring enemy units over buildings. `WorldDivide.Smoke.BuildingPlacement` checks that client and server accept an open spot and reject spots on buildings, units, walls and off the navmesh, plus buildings outside the faction, and that the building completes after its build time. `WorldDivide.Smoke.RouteAroundBuilding` places a building across a tank's path and checks the tank walks around it. `WorldDivide.Smoke.AttackBuilding` orders three tanks to attack an enemy power plant and checks they destroy it and its hole in the navmesh closes. `WorldDivide.Smoke.ListenServer` plays `L_TestMap` as a listen server with one client, checks both players' teams and start spots, and sends a move for every unit from the client's controller: the server moves only the client's units and the client sees them arrive. The client then orders its units to attack a host building and must see its health drop before it disappears.
 
-Idle units fire at the nearest enemy in range on their own; units on a move order hold fire.
+Idle units fire at the nearest enemy in range on their own, enemy units before enemy buildings; units on a move order hold fire. Weapon range is measured to the edge of a target's footprint.
 
 To rebuild the test content after changing `setup_testmap.py` or a data asset class, run `ue.ps1 -Task setup` (after `-Task build`), or directly:
 

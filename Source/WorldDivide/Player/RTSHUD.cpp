@@ -18,6 +18,7 @@ namespace
 	const FLinearColor MenuColor(0.9f, 0.9f, 0.9f, 1.f);
 
 	constexpr float ConstructionBarWidth = 60.f;
+	constexpr float BarSpacing = 8.f;
 	constexpr float MenuMargin = 16.f;
 	constexpr float MenuLineHeight = 18.f;
 }
@@ -46,6 +47,11 @@ void ARTSHUD::DrawHUD()
 		{
 			DrawConstructionBar(*Controller, **It);
 		}
+	}
+
+	if (const ARTSBuilding* Hovered = Controller->GetBuildingUnderCursor())
+	{
+		DrawBuildingHealth(*Controller, *Hovered);
 	}
 
 	DrawBuildMenu(*Controller);
@@ -102,12 +108,13 @@ void ARTSHUD::DrawUnitMarker(const ARTSPlayerController& Controller, const ARTSU
 	DrawLine(Right, Bottom, Right - Corner, Bottom, SelectionColor, 2.f);
 	DrawLine(Right, Bottom, Right, Bottom - Corner, SelectionColor, 2.f);
 
-	// Health bar above the brackets, green to red.
-	const float HealthFraction = Unit.GetHealthComponent()->GetHealthFraction();
-	const float BarWidth = Radius * 2.f;
-	const float BarY = Top - 8.f;
-	DrawRect(HealthBackground, Left - 1.f, BarY - 1.f, BarWidth + 2.f, 6.f);
-	DrawRect(FLinearColor::LerpUsingHSV(FLinearColor::Red, FLinearColor::Green, HealthFraction), Left, BarY, BarWidth * HealthFraction, 4.f);
+	DrawHealthBar(Left, Top - BarSpacing, Radius * 2.f, Unit.GetHealthComponent()->GetHealthFraction());
+}
+
+void ARTSHUD::DrawHealthBar(float Left, float Top, float Width, float HealthFraction)
+{
+	DrawRect(HealthBackground, Left - 1.f, Top - 1.f, Width + 2.f, 6.f);
+	DrawRect(FLinearColor::LerpUsingHSV(FLinearColor::Red, FLinearColor::Green, HealthFraction), Left, Top, Width * HealthFraction, 4.f);
 }
 
 void ARTSHUD::DrawConstructionBar(const ARTSPlayerController& Controller, const ARTSBuilding& Building)
@@ -120,6 +127,18 @@ void ARTSHUD::DrawConstructionBar(const ARTSPlayerController& Controller, const 
 	const float Left = ScreenCenter.X - ConstructionBarWidth * 0.5f;
 	DrawRect(HealthBackground, Left - 1.f, ScreenCenter.Y - 1.f, ConstructionBarWidth + 2.f, 6.f);
 	DrawRect(ConstructionColor, Left, ScreenCenter.Y, ConstructionBarWidth * Building.GetConstructionProgress(), 4.f);
+}
+
+void ARTSHUD::DrawBuildingHealth(const ARTSPlayerController& Controller, const ARTSBuilding& Building)
+{
+	FVector2D ScreenCenter;
+	if (!Controller.ProjectWorldLocationToScreen(Building.GetActorLocation(), ScreenCenter))
+	{
+		return;
+	}
+	// Above the construction bar, which own construction sites show at the same spot.
+	DrawHealthBar(ScreenCenter.X - ConstructionBarWidth * 0.5f, ScreenCenter.Y - BarSpacing, ConstructionBarWidth,
+		Building.GetHealthComponent()->GetHealthFraction());
 }
 
 void ARTSHUD::DrawBuildMenu(const ARTSPlayerController& Controller)

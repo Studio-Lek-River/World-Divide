@@ -5,6 +5,7 @@
 #include "Commands/RTSCommand.h"
 #include "RTSPlayerController.generated.h"
 
+class ARTSBuilding;
 class ARTSCameraPawn;
 class ARTSPlacementGhost;
 class ARTSUnit;
@@ -18,7 +19,7 @@ struct FInputActionValue;
  * Turns mouse and keyboard into camera movement, a local selection and FRTSCommands for the server.
  *
  * Controls: WASD/arrows or screen edge pan, mouse wheel zoom, Q/E or middle-mouse drag rotate,
- * left click/drag select (Shift adds), right click move or attack an enemy (Shift queues), X stop.
+ * left click/drag select (Shift adds), right click move or attack an enemy unit or building (Shift queues), X stop.
  * Debug build menu: 1-9 pick a faction building to place, left click builds, right click or Esc cancels.
  * Placement mode stays once builder units exist; only the hotkey menu that starts it is a stand-in.
  */
@@ -36,6 +37,9 @@ public:
 	bool GetSelectionBox(FVector2D& OutStart, FVector2D& OutEnd) const;
 
 	int32 GetTeamId() const;
+
+	/** The building of any team under the mouse cursor, or null. */
+	ARTSBuilding* GetBuildingUnderCursor() const;
 
 	/** The local player's faction, or null before the player state has replicated. */
 	URTSFactionData* GetFaction() const;

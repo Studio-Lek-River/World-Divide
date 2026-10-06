@@ -145,4 +145,97 @@ bool FRTSTowerTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBuildingUnderFireTest, "WorldDivide.Buildings.UnderFire", TestFlags)
+
+bool FRTSBuildingUnderFireTest::RunTest(const FString& Parameters)
+{
+	constexpr float Step = 0.05f;
+	constexpr float Range = 300.f;
+
+	URTSUnitData* Gunner = NewObject<URTSUnitData>();
+	Gunner->MaxHealth = 100.f;
+	Gunner->Weapon = MakeWeapon(Range, 25.f, 1.f);
+
+	// A 4x4 site that never finishes: its edges lie 200 cm from its centre.
+	URTSBuildingData* Site = MakeBuildingData(10.f, nullptr);
+	Site->Footprint = FIntPoint(4, 4);
+	Site->MaxHealth = 100.f;
+
+	const FRTSTestWorld TestWorld;
+	ARTSBuilding* Enemy = TestWorld.SpawnBuilding(Site, 1, FVector::ZeroVector);
+	ARTSBuilding* Friendly = TestWorld.SpawnBuilding(Site, 0, FVector(900.f, 0.f, 0.f));
+	ARTSUnit* Unit = TestWorld.SpawnUnit(Gunner, 0, FVector(450.f, 0.f, 0.f));
+	URTSWeaponComponent* Weapon = Unit->GetWeaponComponent();
+
+	TestFalse(TEXT("The enemy building is still under construction"), Enemy->IsConstructed());
+	TestTrue(TEXT("Range reaches the footprint edge although the centre is out of range"),
+		Weapon->IsInRange(Enemy) && FVector::Dist2D(Unit->GetActorLocation(), Enemy->GetActorLocation()) > Range);
+	TestTrue(TEXT("The friendly building is just as close"), Weapon->IsInRange(Friendly));
+	TestFalse(TEXT("Friendly buildings are not targets"), Weapon->CanTarget(Friendly));
+
+	// Four shots, the first immediate.
+	float Elapsed = 0.f;
+	for (int32 Frame = 0; IsValid(Enemy) && Elapsed < 5.f; ++Frame, Elapsed += Step)
+	{
+		Weapon->UpdateWeapon(Step);
+		if (Frame == 0)
+		{
+			TestTrue(TEXT("Idle unit acquired the enemy building on its own"), Weapon->GetTarget() == Enemy);
+		}
+	}
+
+	TestFalse(FString::Printf(TEXT("Enemy construction site destroyed (after %.2f s)"), Elapsed), IsValid(Enemy));
+	TestTrue(TEXT("Friendly building untouched"), IsValid(Friendly) && Friendly->GetHealthComponent()->GetHealth() == 100.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSPreferUnitsTest, "WorldDivide.Buildings.PreferUnits", TestFlags)
+
+bool FRTSPreferUnitsTest::RunTest(const FString& Parameters)
+{
+	constexpr float Step = 0.05f;
+
+	URTSWeaponData* Gun = MakeWeapon(1000.f, 50.f, 1.f);
+	URTSUnitData* Gunner = NewObject<URTSUnitData>();
+	Gunner->MaxHealth = 100.f;
+	Gunner->Weapon = Gun;
+	URTSUnitData* Infantry = NewObject<URTSUnitData>();
+	Infantry->MaxHealth = 100.f;
+	URTSBuildingData* Depot = MakeBuildingData(0.f, nullptr);
+
+	// The enemy building is nearer than the enemy unit, both well in range.
+	const FRTSTestWorld TestWorld;
+	ARTSUnit* Unit = TestWorld.SpawnUnit(Gunner, 0, FVector::ZeroVector);
+	ARTSBuilding* Building = TestWorld.SpawnBuilding(Depot, 1, FVector(400.f, 0.f, 0.f));
+	ARTSUnit* Enemy = TestWorld.SpawnUnit(Infantry, 1, FVector(800.f, 0.f, 0.f));
+	URTSWeaponComponent* Weapon = Unit->GetWeaponComponent();
+
+	Weapon->UpdateWeapon(Step);
+	TestTrue(TEXT("The enemy unit is preferred over a nearer building"), Weapon->GetTarget() == Enemy);
+
+	for (float Time = Step; IsValid(Enemy) && Time < 3.f; Time += Step)
+	{
+		Weapon->UpdateWeapon(Step);
+	}
+	TestFalse(TEXT("Enemy unit killed"), IsValid(Enemy));
+	TestEqual(TEXT("The building took no fire while the unit lived"), Building->GetHealthComponent()->GetHealth(), 500.f);
+
+	Weapon->UpdateWeapon(Step);
+	TestTrue(TEXT("Fire moves to the building once no unit is in range"), Weapon->GetTarget() == Building);
+
+	ARTSUnit* Newcomer = TestWorld.SpawnUnit(Infantry, 1, FVector(700.f, 0.f, 0.f));
+	Weapon->UpdateWeapon(Step);
+	TestTrue(TEXT("An enemy unit coming into range pulls fire off the building"), Weapon->GetTarget() == Newcomer);
+
+	// Towers pick the same way.
+	ARTSBuilding* Tower = TestWorld.SpawnBuilding(MakeBuildingData(0.f, Gun), 0, FVector(0.f, 5000.f, 0.f));
+	Tower->UpdateConstruction(Step);
+	TestTrue(TEXT("Tower is armed"), Tower->GetWeaponComponent()->IsArmed());
+	TestWorld.SpawnBuilding(Depot, 1, FVector(0.f, 5400.f, 0.f));
+	ARTSUnit* TowerEnemy = TestWorld.SpawnUnit(Infantry, 1, FVector(0.f, 5800.f, 0.f));
+	Tower->GetWeaponComponent()->UpdateWeapon(Step);
+	TestTrue(TEXT("Tower prefers the enemy unit too"), Tower->GetWeaponComponent()->GetTarget() == TowerEnemy);
+	return true;
+}
+
 #endif

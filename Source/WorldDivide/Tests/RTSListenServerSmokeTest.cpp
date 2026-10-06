@@ -2,7 +2,11 @@
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
+#include "Buildings/RTSBuilding.h"
+#include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommand.h"
+#include "Commands/RTSCommandDispatch.h"
+#include "Data/RTSBuildingData.h"
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
@@ -19,7 +23,9 @@
 /**
  * Plays L_TestMap as a listen server with one client in the same process. Checks that the host gets team 0 and the
  * client team 1 at their tagged player starts, then sends a move for every unit the client sees through the client's
- * own controller: the server must move only the client's units, and the client must see them arrive.
+ * own controller: the server must move only the client's units, and the client must see them arrive. Then the server
+ * places a host building and the client orders its units to attack it: the client's copy must show the building's
+ * health dropping before it disappears.
  */
 namespace RTSListenServerTest
 {
@@ -30,6 +36,12 @@ namespace RTSListenServerTest
 	constexpr float UnmovedTolerance = 50.f;
 	constexpr double SessionTimeout = 60.0;
 	constexpr double MoveTimeout = 60.0;
+
+	/** The empty strip north of both bases, far out of range of every unit. */
+	const FVector HostBuildingSpot(0.f, 7000.f, 0.f);
+	const TCHAR* PowerPlantPath = TEXT("/Game/Data/Buildings/DA_TestPowerPlant.DA_TestPowerPlant");
+	constexpr double ReplicationTimeout = 15.0;
+	constexpr double BuildingAttackTimeout = 60.0;
 
 	constexpr int32 HostTeam = 0;
 	constexpr int32 ClientTeam = 1;
@@ -45,6 +57,12 @@ namespace RTSListenServerTest
 		TArray<TWeakObjectPtr<ARTSUnit>> ClientUnits[2];
 		TArray<FVector> ServerHostStarts;
 		TArray<FVector> ClientHostStarts;
+
+		/** The host building the client attacks, as each world sees it. */
+		TWeakObjectPtr<ARTSBuilding> ServerBuilding;
+		TWeakObjectPtr<ARTSBuilding> ClientBuilding;
+		float ClientMaxHealth = 0.f;
+		float ClientLowestHealth = 0.f;
 	};
 
 	UWorld* FindPIEWorld(ENetMode NetMode)
@@ -274,6 +292,112 @@ namespace RTSListenServerTest
 		return true;
 	}
 
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceHostBuilding, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSPlaceHostBuilding::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		const ARTSPlayerController* HostController = ServerWorld ? GetLocalController(*ServerWorld) : nullptr;
+		if (!HostController)
+		{
+			Test->AddError(TEXT("Lost the server world or the host's controller"));
+			return true;
+		}
+
+		FRTSCommand Build;
+		Build.Type = ERTSCommandType::Build;
+		Build.EntityData = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+		Build.TargetLocation = HostBuildingSpot;
+		State->ServerBuilding = RTSCommands::PlaceBuilding(*ServerWorld, HostController->GetFaction(), HostTeam, Build);
+		if (!State->ServerBuilding.IsValid())
+		{
+			Test->AddError(TEXT("The server could not place the host building"));
+		}
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSWaitForClientBuilding, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSWaitForClientBuilding::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		if (!ClientWorld || !State->ServerBuilding.IsValid())
+		{
+			return true;
+		}
+
+		for (TActorIterator<ARTSBuilding> It(ClientWorld); It; ++It)
+		{
+			// Wait for the health component's first update too, not just the actor.
+			const URTSHealthComponent* Health = It->GetHealthComponent();
+			if (It->GetTeamId() == HostTeam && Health->GetMaxHealth() > 1.f)
+			{
+				State->ClientBuilding = *It;
+				State->ClientMaxHealth = Health->GetMaxHealth();
+				State->ClientLowestHealth = Health->GetHealth();
+				Test->TestEqual(TEXT("The client sees the building at full health"), Health->GetHealth(), Health->GetMaxHealth());
+				Test->TestEqual(TEXT("The client sees the server's maximum health"),
+					Health->GetMaxHealth(), State->ServerBuilding->GetHealthComponent()->GetMaxHealth());
+				return true;
+			}
+		}
+		if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+		{
+			Test->AddError(TEXT("The host building never replicated to the client"));
+			return true;
+		}
+		return false;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueClientBuildingAttack, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSIssueClientBuildingAttack::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		if (!ClientController || !State->ClientBuilding.IsValid())
+		{
+			Test->AddError(TEXT("Lost the client's controller or its copy of the building"));
+			return true;
+		}
+
+		TArray<ARTSUnit*> OwnUnits;
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : State->ClientUnits[ClientTeam])
+		{
+			if (Unit.IsValid())
+			{
+				OwnUnits.Add(Unit.Get());
+			}
+		}
+		// What a right-click on the building sends: the client names its own copy, the server resolves it to the real one.
+		FRTSCommand Command;
+		Command.Type = ERTSCommandType::Attack;
+		Command.TargetActor = State->ClientBuilding.Get();
+		ClientController->Server_IssueCommand(OwnUnits, Command);
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientBuildingHealth, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientBuildingHealth::Update()
+	{
+		if (const ARTSBuilding* Building = State->ClientBuilding.Get())
+		{
+			State->ClientLowestHealth = FMath::Min(State->ClientLowestHealth, Building->GetHealthComponent()->GetHealth());
+		}
+		const bool bGone = !State->ServerBuilding.IsValid() && !State->ClientBuilding.IsValid();
+		const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+		if (!bGone && Elapsed < BuildingAttackTimeout)
+		{
+			return false;
+		}
+
+		Test->AddInfo(FString::Printf(TEXT("Host building destroyed after %.1f s; lowest health the client saw: %.0f of %.0f"),
+			Elapsed, State->ClientLowestHealth, State->ClientMaxHealth));
+		Test->TestFalse(TEXT("The client's units destroyed the host building on the server"), State->ServerBuilding.IsValid());
+		Test->TestFalse(TEXT("The building disappeared on the client"), State->ClientBuilding.IsValid());
+		Test->TestTrue(TEXT("The client saw the building's health drop"), State->ClientLowestHealth < State->ClientMaxHealth);
+		return true;
+	}
+
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSListenServerSmokeTest, "WorldDivide.Smoke.ListenServer", RTSTests::TestFlags)
 
 	bool FRTSListenServerSmokeTest::RunTest(const FString& Parameters)
@@ -290,6 +414,10 @@ namespace RTSListenServerTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckTeamsAndStarts(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientMove(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientMove(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceHostBuilding(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientBuilding(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientBuildingAttack(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientBuildingHealth(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		return true;
 	}

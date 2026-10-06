@@ -101,6 +101,21 @@ void ARTSBuilding::UpdateConstruction(float DeltaSeconds)
 	ApplyConstructionVisual();
 }
 
+FVector ARTSBuilding::GetClosestFootprintPoint(const FVector& From) const
+{
+	const FVector Center = GetActorLocation();
+	if (!BuildingData)
+	{
+		return Center;
+	}
+	// Buildings are never rotated, so the footprint is axis aligned.
+	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint);
+	return FVector(
+		FMath::Clamp(From.X, Center.X - Extent.X, Center.X + Extent.X),
+		FMath::Clamp(From.Y, Center.Y - Extent.Y, Center.Y + Extent.Y),
+		Center.Z);
+}
+
 void ARTSBuilding::OnRep_BuildingData()
 {
 	ApplyBuildingData();
