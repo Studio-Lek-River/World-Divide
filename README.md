@@ -45,6 +45,8 @@ Every player order is an `FRTSCommand` sent through `ARTSPlayerController::Serve
 
 ## Tests
 
+`Tools/Scripts/ue.ps1 -Task build|test|setup` wraps the commands below and exits nonzero on failure. It uses `UE_ROOT` as the engine folder, falling back to `G:\Program Files\Epic Games\UE_5.6`.
+
 ```
 "<UE_5.6>\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -ExecCmds="Automation RunTests WorldDivide;Quit" -unattended -nullrhi
 ```
