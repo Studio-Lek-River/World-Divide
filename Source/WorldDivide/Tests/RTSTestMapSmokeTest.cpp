@@ -32,7 +32,7 @@
  * The building tests place buildings through the same RPC: valid and invalid spots, cost and credits, construction
  * over BuildTime, selecting and cancelling a construction site for a refund, and a unit routing around a freshly
  * placed building. Another has three tanks destroy an enemy building
- * and checks that its hole in the navmesh closes again; a variant hides the building behind a wall of the player's own buildings, so the tanks must
+ * and checks that its hole in the navmesh closes again; a variant hides the building behind the map's west wall, so the tanks must
  * approach it from another side. The harvest test buys a supply depot next to a small supply source and follows its
  * harvester through every load until the source is empty. The unreachable-docks test walls the nearest source and depot in
  * with buildings and checks that the harvester uses the open ones instead, then ends its run, loaded, once only the walled
@@ -85,18 +85,15 @@ namespace
 	constexpr double BuildingAttackTimeout = 45.0;
 
 	/**
-	 * The wall test puts an enemy power plant on BuildSpot behind a wall of three of the player's own power plants, 400 cm
-	 * thick and 1200 cm long, exactly where the spot facing the tanks to the west lies.
+	 * The wall test puts an enemy power plant just east of Wall_West, 200 cm thick at WallSpot. Its west edge lies half a
+	 * tank's range east of the wall's centre, so the spot facing the tanks to the west lies inside the wall.
 	 */
-	const FVector WallSpots[] = {
-		FVector(-800.f, 6600.f, 0.f),
-		FVector(-800.f, 7000.f, 0.f),
-		FVector(-800.f, 7400.f, 0.f),
-	};
+	const TCHAR* WallLabel = TEXT("Wall_West");
+	const FVector BehindWallSpot(-1700.f, 0.f, 0.f);
 	const FVector WallAttackerStarts[] = {
-		FVector(-2500.f, 6700.f, 0.f),
-		FVector(-2500.f, 7000.f, 0.f),
-		FVector(-2500.f, 7300.f, 0.f),
+		FVector(-3500.f, -300.f, 0.f),
+		FVector(-3500.f, 0.f, 0.f),
+		FVector(-3500.f, 300.f, 0.f),
 	};
 
 	/** The unreachable test puts targets beyond the ground's east edge at x = 10000, out of range of any navmesh. */
@@ -809,22 +806,19 @@ bool FRTSPlaceBuildingBehindWall::Update()
 		return true;
 	}
 	UWorld* World = Controller->GetWorld();
-	URTSBuildingData* PlantData = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
 
-	// The player's own plants form the wall; nobody attacks them.
-	for (const FVector& Spot : WallSpots)
+	const AStaticMeshActor* Wall = FindObstacle(World, WallLabel);
+	if (!Wall)
 	{
-		const FTransform Transform(Spot);
-		ARTSBuilding* Segment = World->SpawnActorDeferred<ARTSBuilding>(
-			ARTSBuilding::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-		Segment->InitFromData(PlantData, Controller->GetTeamId());
-		Segment->FinishSpawning(Transform);
+		Test->AddError(FString::Printf(TEXT("No %s in the map"), WallLabel));
+		return true;
 	}
+	State->ObstacleBox = Wall->GetComponentsBoundingBox();
 
 	FRTSCommand Build;
 	Build.Type = ERTSCommandType::Build;
-	Build.EntityData = PlantData;
-	Build.TargetLocation = BuildSpot;
+	Build.EntityData = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+	Build.TargetLocation = BehindWallSpot;
 	ARTSBuilding* Building = RTSCommands::PlaceBuilding(*World, Controller->GetFaction(), Controller->GetTeamId() + 1, Build);
 	if (!Building)
 	{
@@ -878,6 +872,9 @@ bool FRTSCheckWallApproach::Update()
 		const bool bFound = RTSApproach::FindReachableSpot(*Attacker, Building->GetActorLocation(), Footprint, Range * 0.5f, Range, Spot);
 		Test->TestTrue(FString::Printf(TEXT("A reachable spot on another side (%s)"), *Spot.ToCompactString()),
 			bFound && FVector::Dist2D(Spot, Facing) > 200.f);
+		// Only around the wall's end, on the building's side of it.
+		Test->TestTrue(FString::Printf(TEXT("The spot (%s) lies past the wall"), *Spot.ToCompactString()),
+			bFound && Spot.X > State->ObstacleBox.Max.X);
 	}
 	return true;
 }
