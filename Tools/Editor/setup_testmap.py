@@ -1,7 +1,8 @@
-"""Builds the placeholder weapon, unit, harvester, building and faction data assets, the placement ghost material and the
-L_TestMap level with a supply source by each base. Safe to re-run: only assets that differ from this script are saved, so
-a run without script changes writes nothing. Data assets are compared property by property; the material and the map carry
-a hash of the code that builds them and are rebuilt only when that code changes.
+"""Builds the placeholder weapon, unit, harvester, building and faction data assets, the placement ghost material, the
+placeholder models (imported from Art/Source/Placeholder by placeholder_art.py) and the L_TestMap level with a supply
+source by each base. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
+writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
+source files that build them and are rebuilt only when those change.
 
 The assets are LFS lockable and therefore read-only unless locked. If an asset that must change is read-only, nothing
 is written: the files are listed in Saved/Setup/ReadOnlyAssets.txt and the run stops. Lock them (git lfs lock) and rerun.
@@ -15,8 +16,12 @@ import hashlib
 import inspect
 import math
 import os
+import sys
 
 import unreal
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import placeholder_art as art  # noqa: E402
 
 UNIT_DIR = "/Game/Data/Units"
 WEAPON_DIR = "/Game/Data/Weapons"
@@ -25,7 +30,9 @@ FACTION_DIR = "/Game/Data/Factions"
 MATERIAL_DIR = "/Game/Materials"
 MAP_PATH = "/Game/Maps/L_TestMap"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
-CYLINDER = "/Engine/BasicShapes/Cylinder.Cylinder"
+TEAM_MATERIAL = "M_PlaceholderTeam"
+# How strongly units and buildings take on their team colour; scenery keeps its own colours.
+TEAM_TINT = 0.7
 
 # Package metadata key holding the hash of the code that built the asset.
 HASH_TAG = "SetupHash"
@@ -33,6 +40,7 @@ HASH_TAG = "SetupHash"
 PROJECT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 CONTENT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir())
 READ_ONLY_REPORT = os.path.join(PROJECT_DIR, "Saved", "Setup", "ReadOnlyAssets.txt")
+ART_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Source", "Placeholder")
 
 assets = unreal.EditorAssetLibrary
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
@@ -105,6 +113,73 @@ def plan_rebuild(path, extension, build, digest):
     pending.append((path, extension, exists, lambda: build(digest)))
 
 
+def plan_now(path, build, digest):
+    """Builds an asset in memory right away, so assets planned after it can use it, and queues its save. Returns the
+    asset on disk instead when it was built from the same hash."""
+    exists = assets.does_asset_exist(path)
+    if exists:
+        asset = assets.load_asset(path)
+        if assets.get_metadata_tag(asset, HASH_TAG) == digest:
+            return asset
+    asset = build()
+    assets.set_metadata_tag(asset, HASH_TAG, digest)
+
+    def write():
+        if not assets.save_loaded_asset(asset, only_if_is_dirty=False):
+            raise RuntimeError(f"Could not save {path}")
+    pending.append((path, ".uasset", exists, write))
+    return asset
+
+
+def file_hash(path):
+    with open(path, "rb") as file:
+        return hashlib.sha1(file.read()).hexdigest()
+
+
+def make_team_material():
+    path = f"{MATERIAL_DIR}/{TEAM_MATERIAL}"
+
+    def build():
+        material = assets.load_asset(path) if assets.does_asset_exist(path) else asset_tools.create_asset(
+            TEAM_MATERIAL, MATERIAL_DIR, unreal.Material, unreal.MaterialFactoryNew())
+        return art.build_team_material(material)
+    return plan_now(path, build, spec_hash([art.build_team_material], path))
+
+
+def make_texture(source):
+    """A pack's texture, named after the pack folder: Kenney/CarKit/Textures/colormap.png becomes T_CarKit_colormap."""
+    name = f"T_{os.path.basename(os.path.dirname(os.path.dirname(source)))}_{os.path.splitext(os.path.basename(source))[0]}"
+    return plan_now(f"{art.TEXTURE_DIR}/{name}", lambda: art.import_texture(source, name),
+                    spec_hash([art.import_texture], name, file_hash(source)))
+
+
+def make_art(name, source, yaw=0.0, tint=TEAM_TINT):
+    """Imports Art/Source/Placeholder/<source> as SM_<name>, turned by yaw so it faces +X, with a material instance
+    MI_<name>_<slot> per glTF material."""
+    source = os.path.join(ART_SOURCE_DIR, source)
+    parent = make_team_material()
+    slot_materials = {}
+    for slot, (color, texture_file) in art.read_gltf_materials(source).items():
+        texture = make_texture(texture_file) if texture_file else None
+        instance_name = f"MI_{name}_{slot}".replace("-", "_").replace(".", "_")
+        slot_materials[slot] = plan_now(
+            f"{art.MATERIAL_DIR}/{instance_name}",
+            lambda n=instance_name, t=texture, c=color: art.build_material_instance(n, parent, t, c, tint),
+            spec_hash([art.build_material_instance], instance_name, parent, texture, color, tint))
+    mesh_name = f"SM_{name}"
+    return plan_now(f"{art.MESH_DIR}/{mesh_name}", lambda: art.import_mesh(source, mesh_name, yaw, slot_materials),
+                    spec_hash([art.import_mesh, art.import_static_mesh], mesh_name, file_hash(source), yaw,
+                              sorted((slot, object_path(instance)) for slot, instance in slot_materials.items())))
+
+
+def fit_scale(mesh, length, width, height=None):
+    """MeshScale fitting the mesh inside length x width (along x and y) with its proportions kept, or stretched to height
+    when one is given."""
+    box = mesh.get_bounding_box()
+    scale = min(length / (box.max.x - box.min.x), width / (box.max.y - box.min.y))
+    return (scale, scale, height / (box.max.z - box.min.z) if height else scale)
+
+
 def make_weapon(name, weapon_range, damage, reload_seconds):
     return plan_data_asset(name, WEAPON_DIR, unreal.RTSWeaponData, {
         "range": weapon_range,
@@ -116,7 +191,7 @@ def make_weapon(name, weapon_range, damage, reload_seconds):
 def make_unit(name, display_name, mesh, scale, radius, health, weapon, speed, turn_rate, cost, build_time):
     return plan_data_asset(name, UNIT_DIR, unreal.RTSUnitData, {
         "display_name": unreal.Text(display_name),
-        "mesh": unreal.load_asset(mesh),
+        "mesh": mesh,
         "mesh_scale": unreal.Vector(*scale),
         "selection_radius": radius,
         "max_health": health,
@@ -132,7 +207,7 @@ def make_harvester(name, display_name, mesh, scale, radius, health, speed, turn_
                    carry_amount, gather_seconds, search_radius):
     return plan_data_asset(name, UNIT_DIR, unreal.RTSHarvesterData, {
         "display_name": unreal.Text(display_name),
-        "mesh": unreal.load_asset(mesh),
+        "mesh": mesh,
         "mesh_scale": unreal.Vector(*scale),
         "selection_radius": radius,
         "max_health": health,
@@ -151,7 +226,7 @@ def make_building(name, display_name, mesh, scale, footprint, health, weapon, co
                   spawn_on_complete=None, accepts_supply=False, requires_power=False):
     return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
         "display_name": unreal.Text(display_name),
-        "mesh": unreal.load_asset(mesh),
+        "mesh": mesh,
         "mesh_scale": unreal.Vector(*scale),
         "footprint": unreal.IntPoint(*footprint),
         "selection_radius": max(footprint) * 50.0,
@@ -240,15 +315,35 @@ def spawn_units(unit, count, team_id, location, yaw):
     return spawner
 
 
-def spawn_supply_source(location, amount, footprint):
+def spawn_wall(label, location, scale, piece):
+    """An obstacle running along y whose block is hidden behind a row of wall pieces; the block alone collides."""
+    block = spawn_obstacle(label, location, scale)
+    block.static_mesh_component.set_visibility(False)
+    box = piece.get_bounding_box()
+    width, length, height = scale[0] * 100.0, scale[1] * 100.0, scale[2] * 100.0
+    count = max(1, round(length / width))
+    piece_scale = (width / (box.max.x - box.min.x), length / count / (box.max.y - box.min.y), height / (box.max.z - box.min.z))
+    for index in range(count):
+        y = location[1] - length / 2.0 + length / count * (index + 0.5)
+        z = location[2] - height / 2.0 - box.min.z * piece_scale[2]
+        # Not labelled Wall_ or Block_: the tests take those to be the obstacles themselves.
+        visual = spawn(unreal.StaticMeshActor, (location[0], y, z), label=f"Visual_{label}_{index}")
+        visual.static_mesh_component.set_static_mesh(piece)
+        visual.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+        visual.static_mesh_component.set_editor_property("can_ever_affect_navigation", False)
+        visual.set_actor_scale3d(unreal.Vector(*piece_scale))
+    return block
+
+
+def spawn_supply_source(location, amount, footprint, mesh):
     source = spawn(unreal.RTSSupplySource, location, label=f"SupplySource_{int(location[0])}_{int(location[1])}")
     source.set_editor_property("amount", amount)
     source.set_editor_property("footprint", unreal.IntPoint(*footprint))
-    source.set_editor_property("mesh", unreal.load_asset(CUBE))
+    source.set_editor_property("mesh", mesh)
     return source
 
 
-def build_map(tank, infantry, digest):
+def build_map(tank, infantry, wall, crate, digest):
     if assets.does_asset_exist(MAP_PATH):
         assets.delete_asset(MAP_PATH)
     if not levels.new_level(MAP_PATH):
@@ -258,10 +353,10 @@ def build_map(tank, infantry, digest):
     spawn_block("Ground", (0.0, 0.0, -50.0), (200.0, 200.0, 1.0))
 
     # Obstacles between the two bases so pathfinding has something to do.
-    spawn_obstacle("Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0))
+    spawn_wall("Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0), wall)
     spawn_obstacle("Block_North", (1000.0, 2500.0, 200.0), (8.0, 8.0, 4.0))
     spawn_obstacle("Block_South", (1000.0, -2500.0, 200.0), (8.0, 8.0, 4.0))
-    spawn_obstacle("Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0))
+    spawn_wall("Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0), wall)
 
     sun = spawn(unreal.DirectionalLight, (0.0, 0.0, 2000.0), label="Sun")
     sun.set_actor_rotation(unreal.Rotator(roll=0.0, pitch=-50.0, yaw=35.0), False)
@@ -286,7 +381,7 @@ def build_map(tank, infantry, digest):
         spawn_units(tank, 6, team_id, (x + 600.0 * forward, -900.0, 0.0), yaw)
         spawn_units(infantry, 10, team_id, (x + 600.0 * forward, 900.0, 0.0), yaw)
         # Beside each base, clear of the units' paths and of the empty strip at y = 7000 the tests build in.
-        spawn_supply_source((x - 50.0 * forward, 2550.0 * forward, 0.0), 5000, (3, 3))
+        spawn_supply_source((x - 50.0 * forward, 2550.0 * forward, 0.0), 5000, (3, 3), crate)
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     assets.set_metadata_tag(world, HASH_TAG, digest)
@@ -294,9 +389,10 @@ def build_map(tank, infantry, digest):
         raise RuntimeError(f"Could not save {MAP_PATH}")
 
 
-def make_map(tank, infantry):
-    plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, digest),
-                 spec_hash([build_map, spawn, spawn_block, spawn_obstacle, spawn_units, spawn_supply_source], MAP_PATH, CUBE, tank, infantry))
+def make_map(tank, infantry, wall, crate):
+    plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, wall, crate, digest),
+                 spec_hash([build_map, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source],
+                           MAP_PATH, CUBE, tank, infantry, wall, crate))
 
 
 def asset_file(path, extension):
@@ -325,19 +421,34 @@ def write_pending():
 if os.path.exists(READ_ONLY_REPORT):
     os.remove(READ_ONLY_REPORT)
 
+# Placeholder models (CC0, see Art/Source/Placeholder/CREDITS.md). The Kenney vehicles and characters face +Y and the
+# Quaternius tank -X once imported; yaw turns them all to face +X.
+tank_mesh = make_art("Tank", "Quaternius/tank.glb", yaw=180.0)
+infantry_mesh = make_art("Infantry", "Kenney/MiniCharacters/character-male-a.glb", yaw=-90.0)
+truck_mesh = make_art("Truck", "Kenney/CarKit/delivery.glb", yaw=-90.0)
+power_plant_mesh = make_art("PowerPlant", "Kenney/CityKitIndustrial/building-m.glb")
+supply_depot_mesh = make_art("SupplyDepot", "Kenney/CityKitIndustrial/building-j.glb")
+tower_mesh = make_art("Tower", "Kenney/TowerDefenseKit/tower-round-build-c.glb")
+wall_mesh = make_art("Wall", "Kenney/CastleKit/wall.glb", tint=0.0)
+crate_mesh = make_art("SupplyCrate", "Kenney/FactoryKit/box-wide.glb", tint=0.0)
+
 cannon = make_weapon("DA_TestCannon", 1200.0, 40.0, 2.0)
 rifle = make_weapon("DA_TestRifle", 700.0, 8.0, 0.5)
-tank = make_unit("DA_TestTank", "Test Tank", CUBE, (2.4, 1.4, 0.9), 90.0, 200.0, cannon, 600.0, 180.0, 700, 10.0)
-infantry = make_unit("DA_TestInfantry", "Test Infantry", CYLINDER, (0.5, 0.5, 1.0), 30.0, 100.0, rifle, 350.0, 540.0, 150, 4.0)
+tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 260.0, 150.0), 90.0, 200.0, cannon, 600.0,
+                 180.0, 700, 10.0)
+infantry = make_unit("DA_TestInfantry", "Test Infantry", infantry_mesh, fit_scale(infantry_mesh, 100.0, 100.0), 30.0, 100.0,
+                     rifle, 350.0, 540.0, 150, 4.0)
 tower_gun = make_weapon("DA_TestTowerGun", 1400.0, 30.0, 1.0)
-power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", CUBE, (3.8, 3.8, 2.0), (4, 4), 800.0, None, 800, 6.0, 5, 0)
-tower = make_building("DA_TestTower", "Test Tower", CYLINDER, (1.6, 1.6, 3.0), (2, 2), 500.0, tower_gun, 600, 3.0, 0, 2,
-                      requires_power=True)
-harvester = make_harvester("DA_TestHarvester", "Test Harvester", CUBE, (1.6, 1.1, 0.8), 70.0, 300.0, 450.0, 360.0, 600, 8.0,
-                           100, 3.0, 6000.0)
-supply_depot = make_building("DA_TestSupplyDepot", "Test Supply Depot", CUBE, (2.8, 2.8, 1.4), (3, 3), 1000.0, None, 1500,
-                             5.0, 0, 1, spawn_on_complete=harvester, accepts_supply=True)
+power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", power_plant_mesh, fit_scale(power_plant_mesh, 380.0, 380.0),
+                            (4, 4), 800.0, None, 800, 6.0, 5, 0)
+tower = make_building("DA_TestTower", "Test Tower", tower_mesh, fit_scale(tower_mesh, 160.0, 160.0, 260.0), (2, 2), 500.0,
+                      tower_gun, 600, 3.0, 0, 2, requires_power=True)
+harvester = make_harvester("DA_TestHarvester", "Test Harvester", truck_mesh, fit_scale(truck_mesh, 180.0, 110.0), 70.0,
+                           300.0, 450.0, 360.0, 600, 8.0, 100, 3.0, 6000.0)
+supply_depot = make_building("DA_TestSupplyDepot", "Test Supply Depot", supply_depot_mesh,
+                             fit_scale(supply_depot_mesh, 280.0, 280.0), (3, 3), 1000.0, None, 1500, 5.0, 0, 1,
+                             spawn_on_complete=harvester, accepts_supply=True)
 make_faction("DA_TestFaction", "Test Faction", [power_plant, tower, supply_depot])
 make_ghost_material("M_PlacementGhost")
-make_map(tank, infantry)
+make_map(tank, infantry, wall_mesh, crate_mesh)
 write_pending()

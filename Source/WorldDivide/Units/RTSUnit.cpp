@@ -155,9 +155,14 @@ void ARTSUnit::ApplyUnitData()
 
 void ARTSUnit::ApplyTeamColor()
 {
-	if (Mesh->GetStaticMesh())
+	if (!Mesh->GetStaticMesh())
 	{
-		if (UMaterialInstanceDynamic* Material = Mesh->CreateDynamicMaterialInstance(0))
+		return;
+	}
+	// Every slot, since a model can carry several materials.
+	for (int32 Slot = 0; Slot < Mesh->GetNumMaterials(); ++Slot)
+	{
+		if (UMaterialInstanceDynamic* Material = Mesh->CreateDynamicMaterialInstance(Slot))
 		{
 			Material->SetVectorParameterValue(TeamColorParameter, GetTeamColor(TeamId));
 		}

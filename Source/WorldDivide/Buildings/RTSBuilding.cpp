@@ -254,11 +254,16 @@ void ARTSBuilding::ApplyConstructionVisual()
 
 void ARTSBuilding::ApplyTeamColor()
 {
-	if (Mesh->GetStaticMesh())
+	if (!Mesh->GetStaticMesh())
 	{
-		if (UMaterialInstanceDynamic* Material = Mesh->CreateDynamicMaterialInstance(0))
+		return;
+	}
+	// Every slot, since a model can carry several materials.
+	for (int32 Slot = 0; Slot < Mesh->GetNumMaterials(); ++Slot)
+	{
+		if (UMaterialInstanceDynamic* Material = Mesh->CreateDynamicMaterialInstance(Slot))
 		{
-			Material->SetVectorParameterValue(ARTSUnit::TeamColorParameter,ARTSUnit::GetTeamColor(TeamId));
+			Material->SetVectorParameterValue(ARTSUnit::TeamColorParameter, ARTSUnit::GetTeamColor(TeamId));
 		}
 	}
 }

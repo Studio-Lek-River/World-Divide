@@ -46,6 +46,7 @@ Command-line build:
 | `Source/WorldDivide/Player` | Camera pawn, player controller (input, selection, orders, building placement) and HUD (health of selected units and of the hovered or selected building, a cancel button for a selected construction site, credits and power, the debug build menu with costs) |
 | `Source/WorldDivide/Core` | Game mode (team and faction assignment, starting credits, team start spots), player state (team, faction, credits, the power of its completed buildings), and `URTSSettings` (default faction and ghost material, set in `Config/DefaultGame.ini`) |
 | `Tools/Editor/setup_testmap.py` | Builds the placeholder unit, harvester, weapon, building and faction data assets, the placement ghost material and `L_TestMap` with a supply source by each base, saving only what differs from the script |
+| `Tools/Editor/placeholder_art.py`, `Art/Source/Placeholder` | Free CC0 stand-in models (Kenney, Quaternius; see `CREDITS.md` there) that setup imports for every unit, building, wall and supply source, each tinted towards its team colour |
 
 Every player order is an `FRTSCommand` sent through `ARTSPlayerController::Server_IssueCommand` and executed only on the server, so singleplayer already runs the multiplayer code path. Units and buildings are always relevant for now; fog of war will decide relevancy later.
 
@@ -73,7 +74,7 @@ To rebuild the test content after changing `setup_testmap.py` or a data asset cl
 "<UE_5.6>\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -run=pythonscript -script="<repo>\Tools\Editor\setup_testmap.py" -unattended -nullrhi
 ```
 
-Setup only saves assets that differ from the script: data assets are compared property by property, and the ghost material and `L_TestMap` store a hash of the code that builds them and are rebuilt only when that code changes. A run without script changes writes nothing and leaves `git status` clean.
+Setup only saves assets that differ from the script: data assets are compared property by property, and the materials, the imported models and `L_TestMap` store a hash of the code and source files that build them and are rebuilt only when those change. A run without script changes writes nothing and leaves `git status` clean.
 
 Because the assets are LFS lockable, Git LFS checks them out read-only. If setup has to rewrite one, it writes nothing and `ue.ps1` exits 3 listing the files. Then:
 
