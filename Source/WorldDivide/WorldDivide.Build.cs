@@ -21,10 +21,10 @@ public class WorldDivide : ModuleRules
 			"DeveloperSettings",
 		});
 
-		// PIE-driven smoke tests only.
+		// PIE-driven smoke tests and the placeholder art test only.
 		if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.Add("UnrealEd");
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "AssetRegistry" });
 		}
 	}
 }
