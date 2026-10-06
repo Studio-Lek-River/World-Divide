@@ -70,7 +70,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task t
 
 ## 6. Commit
 
-Imperative subject in the repo's style (e.g. `Add health and weapon components with auto-targeting`), a short body if the why is not obvious, and `Closes #<n>` on its own line as the last line. Multi-line messages via a quoted heredoc. Do not push.
+Imperative subject in the repo's style (e.g. `Add health and weapon components with auto-targeting`), without the `[NN]` roadmap-order prefix from the issue title, a short body if the why is not obvious, and `Closes #<n>` on its own line as the last line. Multi-line messages via a quoted heredoc. Do not push.
 
 ## 7. Gate 2 — report and wait
 
