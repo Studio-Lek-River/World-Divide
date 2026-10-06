@@ -6,8 +6,12 @@
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Data/RTSBuildingData.h"
+#include "Data/RTSUnitData.h"
+#include "Economy/RTSHarvesterComponent.h"
+#include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "NavAreas/NavArea_Null.h"
+#include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Units/RTSUnit.h"
 
@@ -18,6 +22,9 @@ namespace
 
 	/** Collision height when the data has no mesh. */
 	constexpr float DefaultHeight = 200.f;
+
+	/** Gap between the footprint edge and a unit spawned on completion, beyond the unit's radius. */
+	constexpr float SpawnClearance = 80.f;
 }
 
 ARTSBuilding::ARTSBuilding()
@@ -97,8 +104,49 @@ void ARTSBuilding::UpdateConstruction(float DeltaSeconds)
 	if (IsConstructed())
 	{
 		WeaponComponent->SetWeaponData(BuildingData->Weapon);
+		SpawnCompletionUnit();
 	}
 	ApplyConstructionVisual();
+}
+
+void ARTSBuilding::SpawnCompletionUnit()
+{
+	URTSUnitData* UnitData = BuildingData->SpawnOnComplete;
+	if (!UnitData)
+	{
+		return;
+	}
+
+	// Outside the +X edge, the front until buildings can rotate; nudged onto the navmesh when one exists.
+	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint);
+	FVector Location = GetActorLocation() + FVector(Extent.X + UnitData->SelectionRadius + SpawnClearance, 0.f, 0.f);
+	if (const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
+	{
+		FNavLocation NavPoint;
+		if (NavSystem->ProjectPointToNavigation(Location, NavPoint, FVector(200.f, 200.f, 250.f)))
+		{
+			Location.X = NavPoint.Location.X;
+			Location.Y = NavPoint.Location.Y;
+		}
+	}
+
+	FTransform Transform(Location);
+	ARTSUnit* Unit = GetWorld()->SpawnActorDeferred<ARTSUnit>(
+		ARTSUnit::StaticClass(), Transform, this, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (!Unit)
+	{
+		return;
+	}
+	Unit->InitFromData(UnitData, TeamId);
+	Transform.AddToTranslation(FVector(0.f, 0.f, Unit->GetGroundOffset()));
+	Unit->FinishSpawning(Transform);
+
+	if (Unit->GetHarvesterComponent()->CanHarvest())
+	{
+		FRTSCommand Harvest;
+		Harvest.Type = ERTSCommandType::Harvest;
+		Unit->ExecuteCommand(Harvest);
+	}
 }
 
 FVector ARTSBuilding::GetClosestFootprintPoint(const FVector& From) const

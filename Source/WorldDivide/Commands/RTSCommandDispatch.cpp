@@ -3,6 +3,7 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Commands/RTSFormation.h"
+#include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Engine/World.h"
@@ -91,6 +92,24 @@ namespace RTSCommands
 		{
 			Building->InitFromData(Data, TeamId);
 			Building->FinishSpawning(Transform);
+		}
+		return Building;
+	}
+
+	ARTSBuilding* PurchaseBuilding(UWorld& World, ARTSPlayerState& Player, const FRTSCommand& Command)
+	{
+		const int32 Cost = Command.EntityData ? Command.EntityData->Cost : 0;
+		if (Player.GetCredits() < Cost)
+		{
+			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot afford %s (%d of %d credits)"),
+				Player.GetTeamId(), *GetNameSafe(Command.EntityData), Player.GetCredits(), Cost);
+			return nullptr;
+		}
+
+		ARTSBuilding* Building = PlaceBuilding(World, Player.GetFaction(), Player.GetTeamId(), Command);
+		if (Building)
+		{
+			Player.TrySpendCredits(Cost);
 		}
 		return Building;
 	}

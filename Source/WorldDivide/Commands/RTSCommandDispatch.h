@@ -4,6 +4,7 @@
 #include "Commands/RTSCommand.h"
 
 class ARTSBuilding;
+class ARTSPlayerState;
 class ARTSUnit;
 class URTSFactionData;
 
@@ -20,4 +21,7 @@ namespace RTSCommands
 	 * passes placement. Returns the new building, or null when the command is rejected.
 	 */
 	WORLDDIVIDE_API ARTSBuilding* PlaceBuilding(UWorld& World, const URTSFactionData* Faction, int32 TeamId, const FRTSCommand& Command);
+
+	/** Server only. PlaceBuilding for Player's faction and team, charged to Player: refused when they cannot afford it. */
+	WORLDDIVIDE_API ARTSBuilding* PurchaseBuilding(UWorld& World, ARTSPlayerState& Player, const FRTSCommand& Command);
 }

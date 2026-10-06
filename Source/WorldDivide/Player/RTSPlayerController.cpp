@@ -8,6 +8,7 @@
 #include "Core/RTSSettings.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
+#include "Economy/RTSSupplySource.h"
 #include "EngineUtils.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -169,6 +170,17 @@ URTSFactionData* ARTSPlayerController::GetFaction() const
 {
 	const ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
 	return State ? State->GetFaction() : nullptr;
+}
+
+int32 ARTSPlayerController::GetCredits() const
+{
+	const ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
+	return State ? State->GetCredits() : 0;
+}
+
+bool ARTSPlayerController::CanAfford(const URTSEntityData& Data) const
+{
+	return GetCredits() >= Data.Cost;
 }
 
 ARTSBuilding* ARTSPlayerController::GetBuildingUnderCursor() const
@@ -379,12 +391,17 @@ void ARTSPlayerController::OnMoveOrder()
 		return;
 	}
 
-	// Right-clicking an enemy unit or building attacks it; anywhere else is a move.
+	// Right-clicking an enemy unit or building attacks it, a supply source harvests it; anywhere else is a move.
 	FRTSCommand Command;
 	const IRTSTargetable* Clicked = Cast<IRTSTargetable>(Hit.GetActor());
 	if (Clicked && Clicked->GetTeamId() != GetTeamId())
 	{
 		Command.Type = ERTSCommandType::Attack;
+		Command.TargetActor = Hit.GetActor();
+	}
+	else if (Hit.GetActor() && Hit.GetActor()->IsA<ARTSSupplySource>())
+	{
+		Command.Type = ERTSCommandType::Harvest;
 		Command.TargetActor = Hit.GetActor();
 	}
 	else
@@ -467,8 +484,9 @@ void ARTSPlayerController::UpdatePlacement()
 		return;
 	}
 
-	// The same check the server repeats, so a green ghost is a spot the server accepts.
-	bPlacementValid = RTSBuildPlacement::CanPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation);
+	// The same checks the server repeats, so a green ghost is a spot the server accepts.
+	bPlacementValid = RTSBuildPlacement::CanPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation)
+		&& CanAfford(*PlacementData);
 	PlacementGhost->SetActorLocation(PlacementLocation);
 	PlacementGhost->SetValid(bPlacementValid);
 	PlacementGhost->SetActorHiddenInGame(false);
@@ -509,7 +527,7 @@ void ARTSPlayerController::IssueToSelection(const FRTSCommand& Command)
 
 void ARTSPlayerController::Server_IssueCommand_Implementation(const TArray<ARTSUnit*>& Units, const FRTSCommand& Command)
 {
-	const ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
+	ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
 	if (!State)
 	{
 		return;
@@ -517,7 +535,7 @@ void ARTSPlayerController::Server_IssueCommand_Implementation(const TArray<ARTSU
 	if (Command.Type == ERTSCommandType::Build)
 	{
 		// Debug build menu path. Once builder units exist, a Build order goes to them through Dispatch instead.
-		RTSCommands::PlaceBuilding(*GetWorld(), State->GetFaction(), State->GetTeamId(), Command);
+		RTSCommands::PurchaseBuilding(*GetWorld(), *State, Command);
 		return;
 	}
 	RTSCommands::Dispatch(RTSCommands::FilterOwnedUnits(Units, State->GetTeamId()), Command);

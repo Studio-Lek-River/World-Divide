@@ -4,7 +4,10 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Data/RTSHarvesterData.h"
 #include "Data/RTSUnitData.h"
+#include "Economy/RTSHarvesterComponent.h"
+#include "Economy/RTSSupplySource.h"
 #include "Engine/StaticMesh.h"
 #include "GameFramework/FloatingPawnMovement.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -22,6 +25,9 @@ namespace
 
 	/** Attackers head for a spot this fraction of their range outside a building's edge, well clear of its navmesh hole. */
 	constexpr float BuildingApproachFraction = 0.5f;
+
+	/** Units that cannot harvest stop this far outside the edge of a supply source they were sent to. */
+	constexpr float SupplySourceStandOff = 100.f;
 }
 
 /** Engine basic shapes expose this parameter; real unit and building materials should too. */
@@ -59,6 +65,7 @@ ARTSUnit::ARTSUnit()
 
 	HealthComponent = CreateDefaultSubobject<URTSHealthComponent>(TEXT("Health"));
 	WeaponComponent = CreateDefaultSubobject<URTSWeaponComponent>(TEXT("Weapon"));
+	HarvesterComponent = CreateDefaultSubobject<URTSHarvesterComponent>(TEXT("Harvester"));
 
 	AIControllerClass = ARTSUnitAIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -79,6 +86,7 @@ void ARTSUnit::InitFromData(URTSUnitData* InUnitData, int32 InTeamId)
 	HealthComponent->InitHealth(UnitData ? UnitData->MaxHealth : 1.f);
 	WeaponComponent->SetTeamId(TeamId);
 	WeaponComponent->SetWeaponData(UnitData ? UnitData->Weapon : nullptr);
+	HarvesterComponent->SetHarvesterData(Cast<URTSHarvesterData>(UnitData));
 	ApplyUnitData();
 }
 
@@ -188,6 +196,7 @@ void ARTSUnit::Tick(float DeltaSeconds)
 	}
 
 	UpdateAttackOrder();
+	UpdateHarvestOrder(DeltaSeconds);
 
 	// Turn toward the direction of travel, or toward the target while standing. Rotation replicates with movement.
 	if (Movement->Velocity.SizeSquared2D() > FMath::Square(10.f))
@@ -210,9 +219,29 @@ void ARTSUnit::FaceTowardYaw(float Yaw, float DeltaSeconds)
 	SetActorRotation(FMath::RInterpConstantTo(Current, FRotator(0.f, Yaw, 0.f), DeltaSeconds, UnitData->TurnRate));
 }
 
-void ARTSUnit::ExecuteCommand(const FRTSCommand& Command)
+void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 {
 	check(HasAuthority());
+
+	FRTSCommand Command = InCommand;
+	if (Command.Type == ERTSCommandType::Harvest && !HarvesterComponent->CanHarvest())
+	{
+		const ARTSSupplySource* Source = Cast<ARTSSupplySource>(Command.TargetActor);
+		if (!Source)
+		{
+			return;
+		}
+		// Only harvesters load; anyone else sent to a source just walks up to it.
+		const FVector Edge = Source->GetClosestFootprintPoint(GetActorLocation());
+		Command.Type = ERTSCommandType::Move;
+		Command.TargetActor = nullptr;
+		Command.TargetLocation = Edge + (GetActorLocation() - Edge).GetSafeNormal2D() * (GetSelectionRadius() + SupplySourceStandOff);
+	}
+
+	if (Command.Type == ERTSCommandType::Stop || !Command.bQueue)
+	{
+		HarvesterComponent->StopHarvest();
+	}
 
 	if (Command.Type == ERTSCommandType::Stop)
 	{
@@ -286,7 +315,26 @@ bool ARTSUnit::StartCommand(AAIController& AI, const FRTSCommand& Command)
 		return true;
 	}
 
+	if (Command.Type == ERTSCommandType::Harvest)
+	{
+		// Clients name the source, so anything else in TargetActor counts as none: the nearest source then.
+		return HarvesterComponent->StartHarvest(Cast<ARTSSupplySource>(Command.TargetActor));
+	}
+
 	return false;
+}
+
+void ARTSUnit::UpdateHarvestOrder(float DeltaSeconds)
+{
+	if (CommandQueue.IsEmpty() || CommandQueue[0].Type != ERTSCommandType::Harvest)
+	{
+		return;
+	}
+	if (!HarvesterComponent->UpdateHarvest(DeltaSeconds))
+	{
+		CommandQueue.RemoveAt(0);
+		StartNextCommand();
+	}
 }
 
 void ARTSUnit::UpdateAttackOrder()
@@ -361,8 +409,9 @@ void ARTSUnit::NotifyMoveFinished(const FPathFollowingResult& Result)
 		bMoveFinishedDuringRequest = true;
 		return;
 	}
-	// UpdateAttackOrder starts and stops the approach itself and ends the order when the target dies.
-	if (!CommandQueue.IsEmpty() && CommandQueue[0].Type == ERTSCommandType::Attack)
+	// UpdateAttackOrder and the harvester start and stop their own moves and end their orders themselves.
+	if (!CommandQueue.IsEmpty()
+		&& (CommandQueue[0].Type == ERTSCommandType::Attack || CommandQueue[0].Type == ERTSCommandType::Harvest))
 	{
 		return;
 	}

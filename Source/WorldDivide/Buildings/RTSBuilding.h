@@ -13,7 +13,8 @@ class URTSWeaponComponent;
 
 /**
  * A structure on the build grid. Stats come from URTSBuildingData. It blocks the navmesh from the moment it is placed,
- * constructs over BuildTime and stays inert, weapon included, until construction completes.
+ * constructs over BuildTime and stays inert, weapon included, until construction completes. Completion also spawns the
+ * data's SpawnOnComplete unit, such as a depot's harvester, which sets off on a Harvest order.
  * Construction runs on the server; clients see the progress through replication.
  */
 UCLASS()
@@ -27,7 +28,10 @@ public:
 	/** Server only, between SpawnActorDeferred and FinishSpawning. The actor origin is the footprint centre on the ground. */
 	void InitFromData(URTSBuildingData* InBuildingData, int32 InTeamId);
 
-	/** Server only. Advances construction; completing it arms the weapon. Public so tests and builders can drive it. */
+	/**
+	 * Server only. Advances construction; completing it arms the weapon and spawns the SpawnOnComplete unit.
+	 * Public so tests and builders can drive it.
+	 */
 	void UpdateConstruction(float DeltaSeconds);
 
 	URTSBuildingData* GetBuildingData() const { return BuildingData; }
@@ -70,6 +74,9 @@ private:
 
 	/** The mesh rises out of the ground as construction progresses. */
 	void ApplyConstructionVisual();
+
+	/** Server only. Spawns SpawnOnComplete just outside the footprint and sends a harvester off to work. */
+	void SpawnCompletionUnit();
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<USceneComponent> Root;

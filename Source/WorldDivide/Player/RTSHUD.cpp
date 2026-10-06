@@ -5,6 +5,7 @@
 #include "Combat/RTSHealthComponent.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
+#include "Engine/Canvas.h"
 #include "EngineUtils.h"
 #include "Player/RTSPlayerController.h"
 #include "Units/RTSUnit.h"
@@ -16,6 +17,8 @@ namespace
 	const FLinearColor HealthBackground(0.f, 0.f, 0.f, 0.6f);
 	const FLinearColor ConstructionColor(1.f, 0.8f, 0.1f, 1.f);
 	const FLinearColor MenuColor(0.9f, 0.9f, 0.9f, 1.f);
+	const FLinearColor UnaffordableColor(0.45f, 0.45f, 0.45f, 1.f);
+	const FLinearColor CreditsColor(1.f, 0.85f, 0.3f, 1.f);
 
 	constexpr float ConstructionBarWidth = 60.f;
 	constexpr float BarSpacing = 8.f;
@@ -55,6 +58,7 @@ void ARTSHUD::DrawHUD()
 	}
 
 	DrawBuildMenu(*Controller);
+	DrawCredits(*Controller);
 
 	FVector2D Start;
 	FVector2D End;
@@ -161,12 +165,21 @@ void ARTSHUD::DrawBuildMenu(const ARTSPlayerController& Controller)
 		}
 		Y += MenuLineHeight;
 		const bool bPlacing = Controller.GetPlacementData() == Data;
-		DrawText(FString::Printf(TEXT("%d  %s"), Index + 1, *Data->DisplayName.ToString()),
-			bPlacing ? SelectionColor : MenuColor, MenuMargin, Y);
+		const FLinearColor Color = bPlacing ? SelectionColor : Controller.CanAfford(*Data) ? MenuColor : UnaffordableColor;
+		DrawText(FString::Printf(TEXT("%d  %s  (%d)"), Index + 1, *Data->DisplayName.ToString(), Data->Cost), Color, MenuMargin, Y);
 	}
 	if (Controller.GetPlacementData())
 	{
 		Y += MenuLineHeight;
 		DrawText(TEXT("Left click: build    Right click / Esc: cancel"), MenuColor, MenuMargin, Y);
 	}
+}
+
+void ARTSHUD::DrawCredits(const ARTSPlayerController& Controller)
+{
+	const FString Text = FString::Printf(TEXT("Credits: %d"), Controller.GetCredits());
+	float Width = 0.f;
+	float Height = 0.f;
+	GetTextSize(Text, Width, Height);
+	DrawText(Text, CreditsColor, Canvas->ClipX - MenuMargin - Width, MenuMargin);
 }

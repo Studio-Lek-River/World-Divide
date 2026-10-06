@@ -4,6 +4,8 @@
 #include "Data/RTSEntityData.h"
 #include "RTSBuildingData.generated.h"
 
+class URTSUnitData;
+
 /** A structure placed on the 100 cm build grid. An armed building (a tower) fires once construction completes. */
 UCLASS(BlueprintType)
 class WORLDDIVIDE_API URTSBuildingData : public URTSEntityData
@@ -20,4 +22,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power", meta = (ClampMin = "0"))
 	int32 PowerDraw = 0;
+
+	/** Spawned once for the owner when construction completes, such as the harvester that comes with a supply depot. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production")
+	TObjectPtr<URTSUnitData> SpawnOnComplete;
+
+	/** Harvesters deliver supplies here once it is constructed. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Economy")
+	bool bAcceptsSupply = false;
 };

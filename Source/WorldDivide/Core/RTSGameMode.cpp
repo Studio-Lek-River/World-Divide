@@ -25,6 +25,7 @@ FString ARTSGameMode::InitNewPlayer(APlayerController* NewPlayerController, cons
 	{
 		PlayerState->SetTeamId(NextTeamId++);
 		PlayerState->SetFaction(GetDefault<URTSSettings>()->DefaultFaction.LoadSynchronous());
+		PlayerState->AddCredits(StartingCredits - PlayerState->GetCredits());
 	}
 	return Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
 }

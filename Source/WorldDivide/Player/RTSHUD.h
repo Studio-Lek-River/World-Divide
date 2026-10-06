@@ -10,7 +10,7 @@ class ARTSUnit;
 
 /**
  * Draws the drag box, the brackets plus health bar of selected units, construction progress of own buildings,
- * the health of the building under the cursor and the debug build menu, without any UI assets.
+ * the health of the building under the cursor, the player's credits and the debug build menu, without any UI assets.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSHUD : public AHUD
@@ -26,6 +26,7 @@ private:
 	void DrawConstructionBar(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawBuildingHealth(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawBuildMenu(const ARTSPlayerController& Controller);
+	void DrawCredits(const ARTSPlayerController& Controller);
 
 	/** Green to red over a dark backdrop; Top is the bar's upper edge. */
 	void DrawHealthBar(float Left, float Top, float Width, float HealthFraction);

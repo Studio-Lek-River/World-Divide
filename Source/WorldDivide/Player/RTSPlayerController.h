@@ -10,6 +10,7 @@ class ARTSCameraPawn;
 class ARTSPlacementGhost;
 class ARTSUnit;
 class URTSBuildingData;
+class URTSEntityData;
 class URTSFactionData;
 class UInputAction;
 class UInputMappingContext;
@@ -19,7 +20,8 @@ struct FInputActionValue;
  * Turns mouse and keyboard into camera movement, a local selection and FRTSCommands for the server.
  *
  * Controls: WASD/arrows or screen edge pan, mouse wheel zoom, Q/E or middle-mouse drag rotate,
- * left click/drag select (Shift adds), right click move or attack an enemy unit or building (Shift queues), X stop.
+ * left click/drag select (Shift adds), right click move, attack an enemy unit or building, or harvest a supply source
+ * (Shift queues), X stop.
  * Debug build menu: 1-9 pick a faction building to place, left click builds, right click or Esc cancels.
  * Placement mode stays once builder units exist; only the hotkey menu that starts it is a stand-in.
  */
@@ -44,6 +46,12 @@ public:
 	/** The local player's faction, or null before the player state has replicated. */
 	URTSFactionData* GetFaction() const;
 
+	/** The local player's credits, 0 before the player state has replicated. */
+	int32 GetCredits() const;
+
+	/** The local player has the credits for Data's cost. The server checks again before it charges. */
+	bool CanAfford(const URTSEntityData& Data) const;
+
 	/** Number of faction buildings the debug build menu reaches through the 1-9 keys. */
 	static constexpr int32 MaxBuildHotkeys = 9;
 
@@ -54,7 +62,7 @@ public:
 
 	/**
 	 * The only way orders reach the server. Units not owned by this player's team are ignored.
-	 * A Build order is placed directly for now, without units, after the server re-checks faction and spot.
+	 * A Build order is placed directly for now, without units, after the server re-checks faction, spot and credits.
 	 */
 	UFUNCTION(Server, Reliable)
 	void Server_IssueCommand(const TArray<ARTSUnit*>& Units, const FRTSCommand& Command);

@@ -15,6 +15,11 @@ enum class ERTSCommandType : uint8
 	Attack,
 	/** Place EntityData (a building) at TargetLocation. */
 	Build,
+	/**
+	 * Haul supplies from TargetActor (a supply source), or from the nearest one when it is null, to the nearest own depot
+	 * until ordered otherwise or no source is left in reach. Units that cannot harvest move to the source instead.
+	 */
+	Harvest,
 };
 
 /**

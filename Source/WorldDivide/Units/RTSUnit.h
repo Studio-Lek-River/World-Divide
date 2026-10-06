@@ -10,6 +10,7 @@ class AAIController;
 class UCapsuleComponent;
 class UStaticMeshComponent;
 class UFloatingPawnMovement;
+class URTSHarvesterComponent;
 class URTSHealthComponent;
 class URTSWeaponComponent;
 class URTSUnitData;
@@ -30,8 +31,11 @@ public:
 	/** Server only, between SpawnActorDeferred and FinishSpawning. */
 	void InitFromData(URTSUnitData* InUnitData, int32 InTeamId);
 
-	/** Server only. Replaces the order queue, or appends to it when Command.bQueue is set. */
-	void ExecuteCommand(const FRTSCommand& Command);
+	/**
+	 * Server only. Replaces the order queue, or appends to it when Command.bQueue is set.
+	 * A Harvest for a unit that cannot harvest becomes a move up to the source.
+	 */
+	void ExecuteCommand(const FRTSCommand& InCommand);
 
 	/** Server only. Called by the AI controller whenever a path-following request ends. */
 	void NotifyMoveFinished(const FPathFollowingResult& Result);
@@ -40,6 +44,7 @@ public:
 	virtual int32 GetTeamId() const override { return TeamId; }
 	virtual URTSHealthComponent* GetHealthComponent() const override { return HealthComponent; }
 	URTSWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
+	URTSHarvesterComponent* GetHarvesterComponent() const { return HarvesterComponent; }
 	float GetSelectionRadius() const;
 	int32 GetQueuedCommandCount() const { return CommandQueue.Num(); }
 
@@ -86,6 +91,9 @@ private:
 	 */
 	void UpdateAttackOrder();
 
+	/** Each tick while a Harvest is the current order: the harvester component runs it and says when it is over. */
+	void UpdateHarvestOrder(float DeltaSeconds);
+
 	/** Points the weapon at what the current order allows: the attack target, anything in range when idle, nothing while moving. */
 	void ApplyWeaponMode();
 
@@ -105,6 +113,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<URTSWeaponComponent> WeaponComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<URTSHarvesterComponent> HarvesterComponent;
 
 	UPROPERTY(ReplicatedUsing = OnRep_UnitData)
 	TObjectPtr<URTSUnitData> UnitData;

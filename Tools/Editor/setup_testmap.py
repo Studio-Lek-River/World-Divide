@@ -1,7 +1,7 @@
-"""Builds the placeholder weapon, unit, building and faction data assets, the placement ghost material and the L_TestMap
-level. Safe to re-run: only assets that differ from this script are saved, so a run without script changes writes
-nothing. Data assets are compared property by property; the material and the map carry a hash of the code that builds
-them and are rebuilt only when that code changes.
+"""Builds the placeholder weapon, unit, harvester, building and faction data assets, the placement ghost material and the
+L_TestMap level with a supply source by each base. Safe to re-run: only assets that differ from this script are saved, so
+a run without script changes writes nothing. Data assets are compared property by property; the material and the map carry
+a hash of the code that builds them and are rebuilt only when that code changes.
 
 The assets are LFS lockable and therefore read-only unless locked. If an asset that must change is read-only, nothing
 is written: the files are listed in Saved/Setup/ReadOnlyAssets.txt and the run stops. Lock them (git lfs lock) and rerun.
@@ -128,7 +128,27 @@ def make_unit(name, display_name, mesh, scale, radius, health, weapon, speed, tu
     })
 
 
-def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw):
+def make_harvester(name, display_name, mesh, scale, radius, health, speed, turn_rate, cost, build_time,
+                   carry_amount, gather_seconds, search_radius):
+    return plan_data_asset(name, UNIT_DIR, unreal.RTSHarvesterData, {
+        "display_name": unreal.Text(display_name),
+        "mesh": unreal.load_asset(mesh),
+        "mesh_scale": unreal.Vector(*scale),
+        "selection_radius": radius,
+        "max_health": health,
+        "weapon": None,
+        "move_speed": speed,
+        "turn_rate": turn_rate,
+        "cost": cost,
+        "build_time": build_time,
+        "carry_amount": carry_amount,
+        "gather_seconds": gather_seconds,
+        "search_radius": search_radius,
+    })
+
+
+def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw,
+                  spawn_on_complete=None, accepts_supply=False):
     return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
         "display_name": unreal.Text(display_name),
         "mesh": unreal.load_asset(mesh),
@@ -141,6 +161,8 @@ def make_building(name, display_name, mesh, scale, footprint, health, weapon, co
         "build_time": build_time,
         "power_output": power_output,
         "power_draw": power_draw,
+        "spawn_on_complete": spawn_on_complete,
+        "accepts_supply": accepts_supply,
     })
 
 
@@ -206,6 +228,14 @@ def spawn_units(unit, count, team_id, location, yaw):
     return spawner
 
 
+def spawn_supply_source(location, amount, footprint):
+    source = spawn(unreal.RTSSupplySource, location, label=f"SupplySource_{int(location[0])}_{int(location[1])}")
+    source.set_editor_property("amount", amount)
+    source.set_editor_property("footprint", unreal.IntPoint(*footprint))
+    source.set_editor_property("mesh", unreal.load_asset(CUBE))
+    return source
+
+
 def build_map(tank, infantry, digest):
     if assets.does_asset_exist(MAP_PATH):
         assets.delete_asset(MAP_PATH)
@@ -243,6 +273,8 @@ def build_map(tank, infantry, digest):
         forward = 1.0 if yaw == 0.0 else -1.0
         spawn_units(tank, 6, team_id, (x + 600.0 * forward, -900.0, 0.0), yaw)
         spawn_units(infantry, 10, team_id, (x + 600.0 * forward, 900.0, 0.0), yaw)
+        # Beside each base, clear of the units' paths and of the empty strip at y = 7000 the tests build in.
+        spawn_supply_source((x - 50.0 * forward, 2550.0 * forward, 0.0), 5000, (3, 3))
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     assets.set_metadata_tag(world, HASH_TAG, digest)
@@ -252,7 +284,7 @@ def build_map(tank, infantry, digest):
 
 def make_map(tank, infantry):
     plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, digest),
-                 spec_hash([build_map, spawn, spawn_block, spawn_units], MAP_PATH, CUBE, tank, infantry))
+                 spec_hash([build_map, spawn, spawn_block, spawn_units, spawn_supply_source], MAP_PATH, CUBE, tank, infantry))
 
 
 def asset_file(path, extension):
@@ -288,7 +320,11 @@ infantry = make_unit("DA_TestInfantry", "Test Infantry", CYLINDER, (0.5, 0.5, 1.
 tower_gun = make_weapon("DA_TestTowerGun", 1400.0, 30.0, 1.0)
 power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", CUBE, (3.8, 3.8, 2.0), (4, 4), 800.0, None, 800, 6.0, 5, 0)
 tower = make_building("DA_TestTower", "Test Tower", CYLINDER, (1.6, 1.6, 3.0), (2, 2), 500.0, tower_gun, 600, 3.0, 0, 2)
-make_faction("DA_TestFaction", "Test Faction", [power_plant, tower])
+harvester = make_harvester("DA_TestHarvester", "Test Harvester", CUBE, (1.6, 1.1, 0.8), 70.0, 300.0, 450.0, 360.0, 600, 8.0,
+                           100, 3.0, 6000.0)
+supply_depot = make_building("DA_TestSupplyDepot", "Test Supply Depot", CUBE, (2.8, 2.8, 1.4), (3, 3), 1000.0, None, 1500,
+                             5.0, 0, 1, spawn_on_complete=harvester, accepts_supply=True)
+make_faction("DA_TestFaction", "Test Faction", [power_plant, tower, supply_depot])
 make_ghost_material("M_PlacementGhost")
 make_map(tank, infantry)
 write_pending()

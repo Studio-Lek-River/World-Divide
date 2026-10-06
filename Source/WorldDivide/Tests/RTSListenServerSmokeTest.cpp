@@ -6,6 +6,7 @@
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
+#include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Editor.h"
 #include "EngineUtils.h"
@@ -22,7 +23,7 @@
 
 /**
  * Plays L_TestMap as a listen server with one client in the same process. Checks that the host gets team 0 and the
- * client team 1 at their tagged player starts, then sends a move for every unit the client sees through the client's
+ * client team 1 at their tagged player starts, and that the client sees its own credits but not the host's, then sends a move for every unit the client sees through the client's
  * own controller: the server must move only the client's units, and the client must see them arrive. Then the server
  * places a host building and the client orders its units to attack it: the client's copy must show the building's
  * health dropping before it disappears.
@@ -232,6 +233,14 @@ namespace RTSListenServerTest
 
 		const ARTSPlayerController* ClientController = GetLocalController(*ClientWorld);
 		Test->TestEqual(TEXT("The client sees itself on team 1"), ClientController ? ClientController->GetTeamId() : INDEX_NONE, ClientTeam);
+
+		// Credits replicate to their owner only.
+		const ARTSPlayerState* ServerClientState = ARTSPlayerState::FindForTeam(*ServerWorld, ClientTeam);
+		const ARTSPlayerState* ClientHostState = ARTSPlayerState::FindForTeam(*ClientWorld, HostTeam);
+		Test->TestTrue(TEXT("The client starts with credits"), ServerClientState && ServerClientState->GetCredits() > 0);
+		Test->TestEqual(TEXT("The client sees its own credits"),
+			ClientController ? ClientController->GetCredits() : INDEX_NONE, ServerClientState ? ServerClientState->GetCredits() : 0);
+		Test->TestTrue(TEXT("The client does not see the host's credits"), ClientHostState && ClientHostState->GetCredits() == 0);
 		return true;
 	}
 
