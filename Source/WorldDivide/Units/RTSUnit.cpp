@@ -14,6 +14,7 @@
 #include "GameFramework/FloatingPawnMovement.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSUnitAIController.h"
@@ -31,6 +32,12 @@ namespace
 
 	/** Units that cannot harvest stop this far outside the edge of a supply source they were sent to. */
 	constexpr float SupplySourceStandOff = 100.f;
+
+	/** A move into a wall or a building steps back toward the unit by this much until it finds navmesh, up to the distance. */
+	constexpr float MoveSnapStep = 50.f;
+	constexpr float MoveSnapDistance = 1000.f;
+	/** Tall enough to reach the ground from the roof of a block, where a click on it lands. */
+	const FVector MoveSnapExtent(MoveSnapStep, MoveSnapStep, 1000.f);
 }
 
 /** Engine basic shapes expose this parameter; real unit and building materials should too. */
@@ -289,12 +296,31 @@ bool ARTSUnit::StartCommand(AAIController& AI, const FRTSCommand& Command)
 {
 	if (Command.Type == ERTSCommandType::Move)
 	{
+		// Inside a wall or a building there is no navmesh to stand on, so the unit stops at the edge on its own side
+		// instead of dropping the order or walking around to the far one.
+		FVector Destination = Command.TargetLocation;
+		UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+		const ANavigationData* NavData = NavSystem ? NavSystem->GetNavDataForProps(GetNavAgentPropertiesRef(), GetNavAgentLocation()) : nullptr;
+		FNavLocation NavPoint;
+		if (NavData && !NavSystem->ProjectPointToNavigation(Destination, NavPoint, INVALID_NAVEXTENT, NavData))
+		{
+			const FVector Back = (GetNavAgentLocation() - Destination).GetSafeNormal2D();
+			for (float Distance = 0.f; Distance <= MoveSnapDistance; Distance += MoveSnapStep)
+			{
+				if (NavSystem->ProjectPointToNavigation(Destination + Back * Distance, NavPoint, MoveSnapExtent, NavData))
+				{
+					Destination = NavPoint.Location;
+					break;
+				}
+			}
+		}
+
 		// The AI controller may report AlreadyAtGoal or a failure back through NotifyMoveFinished
 		// before MoveToLocation returns; that is handled here instead of re-entering the queue.
 		bRequestingMove = true;
 		bMoveFinishedDuringRequest = false;
 		const EPathFollowingRequestResult::Type Result = AI.MoveToLocation(
-			Command.TargetLocation, MoveAcceptanceRadius,
+			Destination, MoveAcceptanceRadius,
 			/*bStopOnOverlap*/ false, /*bUsePathfinding*/ true, /*bProjectDestinationToNavigation*/ true,
 			/*bCanStrafe*/ true, /*FilterClass*/ nullptr, /*bAllowPartialPath*/ true);
 		bRequestingMove = false;

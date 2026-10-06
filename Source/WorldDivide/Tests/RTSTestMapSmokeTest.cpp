@@ -35,8 +35,8 @@
  * and checks that its hole in the navmesh closes again; a variant hides the building behind a wall of the player's own buildings, so the tanks must
  * approach it from another side. The harvest test buys a supply depot next to a small supply source and follows its
  * harvester through every load until the source is empty. The unreachable test sends a tank and a harvester at targets beyond
- * the edge of the map and checks that both orders end instead of looping. The last test checks that no navmesh lies inside
- * or on top of the map's walls and blocks.
+ * the edge of the map and checks that both orders end instead of looping. The obstacle tests check that no navmesh lies inside
+ * or on top of the map's walls and blocks, and that tanks sent onto a block stop at its edge on their own side.
  */
 namespace
 {
@@ -113,6 +113,17 @@ namespace
 	/** Allowed difference in seconds between two cycles on the same route. */
 	constexpr double CycleTolerance = 1.5;
 
+	/** The obstacle move test sends three tanks from north of Block_North onto its roof, where a click on it lands. */
+	const TCHAR* ObstacleLabel = TEXT("Block_North");
+	const FVector ObstacleMoverStarts[] = {
+		FVector(800.f, 4500.f, 0.f),
+		FVector(1000.f, 4500.f, 0.f),
+		FVector(1200.f, 4500.f, 0.f),
+	};
+	/** How far from the block's face a tank may stop: the navmesh ends an agent radius out, plus some slack. */
+	constexpr float ObstacleEdgeTolerance = 200.f;
+	constexpr double ObstacleMoveTimeout = 30.0;
+
 	struct FSmokeState
 	{
 		TArray<TWeakObjectPtr<ARTSUnit>> OwnUnits;
@@ -145,7 +156,24 @@ namespace
 		int32 LastCredits = 0;
 		TArray<int32> Deposits;
 		TArray<double> DepositTimes;
+
+		// Obstacle move test only.
+		TArray<TWeakObjectPtr<ARTSUnit>> Movers;
+		FBox ObstacleBox = FBox(ForceInit);
 	};
+
+	/** One of the map's walls or blocks, found by its label. */
+	AStaticMeshActor* FindObstacle(UWorld* World, const TCHAR* Label)
+	{
+		for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
+		{
+			if (It->GetActorLabel() == Label)
+			{
+				return *It;
+			}
+		}
+		return nullptr;
+	}
 
 	/** True once the navmesh covers Location and is not rebuilding. */
 	bool IsOnNavMesh(UWorld& World, const FVector& Location)
@@ -1134,6 +1162,85 @@ bool FRTSCheckSolidObstacles::Update()
 	return true;
 }
 
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueObstacleMove, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueObstacleMove::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+
+	const AStaticMeshActor* Obstacle = FindObstacle(World, ObstacleLabel);
+	if (!Obstacle)
+	{
+		Test->AddError(FString::Printf(TEXT("No %s in the map"), ObstacleLabel));
+		return true;
+	}
+	State->ObstacleBox = Obstacle->GetComponentsBoundingBox();
+
+	TArray<ARTSUnit*> Movers;
+	for (const FVector& Start : ObstacleMoverStarts)
+	{
+		ARTSUnit* Mover = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), Start);
+		if (!Mover)
+		{
+			Test->AddError(TEXT("Could not spawn a tank"));
+			return true;
+		}
+		Movers.Add(Mover);
+		State->Movers.Add(Mover);
+	}
+
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::Move;
+	Command.TargetLocation = FVector(State->ObstacleBox.GetCenter().X, State->ObstacleBox.GetCenter().Y, State->ObstacleBox.Max.Z);
+	Controller->Server_IssueCommand(Movers, Command);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyObstacleMove, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyObstacleMove::Update()
+{
+	const FBox& Box = State->ObstacleBox;
+	const auto DistanceToFace = [&Box](const FVector& Location)
+	{
+		return FVector::Dist2D(Location, FVector(
+			FMath::Clamp(Location.X, Box.Min.X, Box.Max.X), FMath::Clamp(Location.Y, Box.Min.Y, Box.Max.Y), Location.Z));
+	};
+
+	bool bAllAtEdge = true;
+	for (const TWeakObjectPtr<ARTSUnit>& Mover : State->Movers)
+	{
+		bAllAtEdge &= Mover.IsValid() && Mover->GetQueuedCommandCount() == 0
+			&& DistanceToFace(Mover->GetActorLocation()) <= ObstacleEdgeTolerance;
+	}
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (!bAllAtEdge && Elapsed < ObstacleMoveTimeout)
+	{
+		return false;
+	}
+
+	for (const TWeakObjectPtr<ARTSUnit>& Mover : State->Movers)
+	{
+		if (!Mover.IsValid())
+		{
+			Test->AddError(TEXT("A tank disappeared"));
+			continue;
+		}
+		const FVector Location = Mover->GetActorLocation();
+		const float Distance = DistanceToFace(Location);
+		Test->AddInfo(FString::Printf(TEXT("%s stopped at %s, %.0f cm from the block"), *Mover->GetName(), *Location.ToCompactString(), Distance));
+		Test->TestTrue(FString::Printf(TEXT("%s stopped at the block's edge (%.0f cm out, at %s after %.1f s)"),
+			*Mover->GetName(), Distance, *Location.ToCompactString(), Elapsed), Distance > 0.f && Distance <= ObstacleEdgeTolerance);
+		Test->TestTrue(FString::Printf(TEXT("%s stayed on its own side of the block"), *Mover->GetName()), Location.Y > Box.Max.Y);
+		Test->TestEqual(FString::Printf(TEXT("%s finished its order"), *Mover->GetName()), Mover->GetQueuedCommandCount(), 0);
+	}
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTestMapSmokeTest, "WorldDivide.Smoke.TestMap",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -1329,6 +1436,27 @@ bool FRTSSolidObstaclesSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckSolidObstacles(this));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMoveIntoObstacleSmokeTest, "WorldDivide.Smoke.MoveIntoObstacle",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSMoveIntoObstacleSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueObstacleMove(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyObstacleMove(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }
