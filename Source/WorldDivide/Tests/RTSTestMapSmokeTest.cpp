@@ -59,6 +59,9 @@ namespace
 	const FVector OffMapSpot(11000.f, 0.f, 0.f);
 	constexpr double ConstructionTimeout = 15.0;
 
+	/** Where the building tests give the player a power plant, in the empty strip south of the bases. */
+	const FVector PowerPlantSpot(-3000.f, -7000.f, 0.f);
+
 	/** The route test drives a tank straight through BuildSpot after a power plant goes down there. */
 	const FVector RouteStart(-1500.f, 7000.f, 0.f);
 	const FVector RouteTarget(1500.f, 7000.f, 0.f);
@@ -175,6 +178,23 @@ namespace
 			Test.AddError(TEXT("No ARTSPlayerController in the PIE world"));
 		}
 		return Controller;
+	}
+
+	/** A completed test power plant for TeamId, so its buildings construct at full speed and its towers fire. */
+	ARTSBuilding* SpawnPowerPlant(UWorld* World, int32 TeamId)
+	{
+		URTSBuildingData* Data = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+		if (!Data)
+		{
+			return nullptr;
+		}
+		const FTransform Transform(PowerPlantSpot);
+		ARTSBuilding* Plant = World->SpawnActorDeferred<ARTSBuilding>(
+			ARTSBuilding::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		Plant->InitFromData(Data, TeamId);
+		Plant->FinishSpawning(Transform);
+		Plant->UpdateConstruction(Data->BuildTime);
+		return Plant;
 	}
 
 	ARTSUnit* SpawnTestUnit(UWorld* World, const TCHAR* DataPath, int32 TeamId, const FVector& Location)
@@ -374,6 +394,15 @@ bool FRTSCheckPlacement::Update()
 	const int32 StartCredits = Player->GetCredits();
 	Test->TestTrue(FString::Printf(TEXT("The player starts with credits (%d)"), StartCredits), StartCredits >= Tower->Cost);
 
+	// Towers need power: without a plant the tower would build slower and never arm.
+	const ARTSBuilding* Plant = SpawnPowerPlant(World, Controller->GetTeamId());
+	if (!Plant || !Plant->IsConstructed())
+	{
+		Test->AddError(TEXT("Could not give the player a power plant"));
+		return true;
+	}
+	Test->TestEqual(TEXT("The plant feeds the player's grid"), Player->GetPowerProduced(), Plant->GetBuildingData()->PowerOutput);
+
 	// A valid spot: the client shows green and the server builds.
 	Test->TestTrue(TEXT("Client accepts an open spot"), ClientAccepts(*World, *Tower, BuildSpot));
 	ARTSBuilding* Building = RequestBuild(*Controller, Tower, BuildSpot + FVector(37.f, -12.f, 150.f));
@@ -427,7 +456,7 @@ bool FRTSCheckPlacement::Update()
 	Player->AddCredits(1);
 	Test->TestTrue(TEXT("Client can afford the tower with exactly its cost"), Controller->CanAfford(*Tower));
 
-	Test->TestEqual(TEXT("Only the valid request built anything"), CountBuildings(World), 1);
+	Test->TestEqual(TEXT("Only the valid request built anything besides the plant"), CountBuildings(World), 2);
 	State->PhaseStart = FPlatformTime::Seconds();
 	return true;
 }
@@ -452,6 +481,9 @@ bool FRTSVerifyConstruction::Update()
 	Test->TestTrue(FString::Printf(TEXT("Took %.2f s of game time, BuildTime is %.2f s"), Elapsed, BuildTime),
 		FMath::Abs(Elapsed - BuildTime) <= 0.5);
 	Test->TestTrue(TEXT("Armed once complete"), Building->GetWeaponComponent()->IsArmed());
+	const ARTSPlayerState* Player = Building->GetWorld()->GetFirstPlayerController()->GetPlayerState<ARTSPlayerState>();
+	Test->TestEqual(TEXT("The completed tower draws from the grid"), Player->GetPowerConsumed(), Building->GetBuildingData()->PowerDraw);
+	Test->TestFalse(TEXT("The plant covers the tower"), Player->IsLowPower());
 	return true;
 }
 
@@ -756,6 +788,11 @@ bool FRTSBuySupplyDepot::Update()
 	}
 	State->Player = Player;
 	State->CarryAmount = HarvesterData->CarryAmount;
+	if (!SpawnPowerPlant(World, Controller->GetTeamId()))
+	{
+		Test->AddError(TEXT("Could not give the player a power plant"));
+		return true;
+	}
 
 	const FTransform SourceTransform(HarvestSourceSpot);
 	ARTSSupplySource* Source = World->SpawnActorDeferred<ARTSSupplySource>(

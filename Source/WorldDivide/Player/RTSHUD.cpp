@@ -4,6 +4,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Combat/RTSHealthComponent.h"
+#include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Engine/Canvas.h"
@@ -20,6 +21,8 @@ namespace
 	const FLinearColor MenuColor(0.9f, 0.9f, 0.9f, 1.f);
 	const FLinearColor UnaffordableColor(0.45f, 0.45f, 0.45f, 1.f);
 	const FLinearColor CreditsColor(1.f, 0.85f, 0.3f, 1.f);
+	const FLinearColor PowerColor(0.4f, 0.9f, 1.f, 1.f);
+	const FLinearColor LowPowerColor(1.f, 0.25f, 0.2f, 1.f);
 	const FLinearColor ButtonFill(0.35f, 0.08f, 0.05f, 0.85f);
 	const FLinearColor ButtonHoverFill(0.6f, 0.12f, 0.08f, 0.9f);
 
@@ -75,6 +78,7 @@ void ARTSHUD::DrawHUD()
 
 	DrawBuildMenu(*Controller);
 	DrawCredits(*Controller);
+	DrawPower(*Controller);
 
 	FVector2D Start;
 	FVector2D End;
@@ -245,4 +249,19 @@ void ARTSHUD::DrawCredits(const ARTSPlayerController& Controller)
 	float Height = 0.f;
 	GetTextSize(Text, Width, Height);
 	DrawText(Text, CreditsColor, Canvas->ClipX - MenuMargin - Width, MenuMargin);
+}
+
+void ARTSHUD::DrawPower(const ARTSPlayerController& Controller)
+{
+	const ARTSPlayerState* State = Controller.GetPlayerState<ARTSPlayerState>();
+	const URTSFactionData* Faction = State ? State->GetFaction() : nullptr;
+	if (!State || (Faction && !Faction->bUsesPower))
+	{
+		return;
+	}
+	const FString Text = FString::Printf(TEXT("Power: %d / %d"), State->GetPowerProduced(), State->GetPowerConsumed());
+	float Width = 0.f;
+	float Height = 0.f;
+	GetTextSize(Text, Width, Height);
+	DrawText(Text, State->IsLowPower() ? LowPowerColor : PowerColor, Canvas->ClipX - MenuMargin - Width, MenuMargin + MenuLineHeight);
 }

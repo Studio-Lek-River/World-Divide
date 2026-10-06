@@ -5,6 +5,7 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Economy/RTSHarvesterComponent.h"
@@ -110,15 +111,44 @@ void ARTSBuilding::UpdateConstruction(float DeltaSeconds)
 		return;
 	}
 
+	const float Rate = ARTSPlayerState::GetProductionRateForTeam(*GetWorld(), TeamId);
 	ConstructionProgress = BuildingData->BuildTime > 0.f
-		? FMath::Min(ConstructionProgress + DeltaSeconds / BuildingData->BuildTime, 1.f)
+		? FMath::Min(ConstructionProgress + DeltaSeconds * Rate / BuildingData->BuildTime, 1.f)
 		: 1.f;
 	if (IsConstructed())
 	{
-		WeaponComponent->SetWeaponData(BuildingData->Weapon);
+		// The owner's new totals decide whether this building's own weapon is powered; recalculating refreshes it.
+		if (ARTSPlayerState* Player = ARTSPlayerState::FindForTeam(*GetWorld(), TeamId))
+		{
+			Player->RecalculatePower();
+		}
+		else
+		{
+			RefreshWeapon();
+		}
 		SpawnCompletionUnit();
 	}
 	ApplyConstructionVisual();
+}
+
+void ARTSBuilding::RefreshWeapon()
+{
+	check(HasAuthority());
+	const bool bPowered = BuildingData && (!BuildingData->bRequiresPower || !ARTSPlayerState::IsLowPowerForTeam(*GetWorld(), TeamId));
+	WeaponComponent->SetWeaponData(IsConstructed() && bPowered ? BuildingData->Weapon.Get() : nullptr);
+}
+
+void ARTSBuilding::Destroyed()
+{
+	// Only completed buildings count towards the grid; cancelled or destroyed sites never did.
+	if (HasAuthority() && IsConstructed() && GetWorld())
+	{
+		if (ARTSPlayerState* Player = ARTSPlayerState::FindForTeam(*GetWorld(), TeamId))
+		{
+			Player->RecalculatePower(this);
+		}
+	}
+	Super::Destroyed();
 }
 
 void ARTSBuilding::SpawnCompletionUnit()

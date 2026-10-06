@@ -19,4 +19,8 @@ public:
 	/** In build menu order. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production")
 	TArray<TObjectPtr<URTSBuildingData>> Buildings;
+
+	/** A faction without a power grid always runs at full efficiency, whatever its buildings produce or draw. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power")
+	bool bUsesPower = true;
 };

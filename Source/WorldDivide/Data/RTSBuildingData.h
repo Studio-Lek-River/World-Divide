@@ -23,6 +23,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power", meta = (ClampMin = "0"))
 	int32 PowerDraw = 0;
 
+	/** The weapon holds fire while the owner is low on power, as base defences do. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power")
+	bool bRequiresPower = false;
+
 	/** Spawned once for the owner when construction completes, such as the harvester that comes with a supply depot. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production")
 	TObjectPtr<URTSUnitData> SpawnOnComplete;

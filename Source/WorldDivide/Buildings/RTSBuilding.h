@@ -29,10 +29,13 @@ public:
 	void InitFromData(URTSBuildingData* InBuildingData, int32 InTeamId);
 
 	/**
-	 * Server only. Advances construction; completing it arms the weapon and spawns the SpawnOnComplete unit.
-	 * Public so tests and builders can drive it.
+	 * Server only. Advances construction, slower while the owner is low on power; completing it arms the weapon, adds the
+	 * building to the owner's power grid and spawns the SpawnOnComplete unit. Public so tests and builders can drive it.
 	 */
 	void UpdateConstruction(float DeltaSeconds);
+
+	/** Server only. Arms the weapon once constructed, unless the data requires power and the owner is low on power. */
+	void RefreshWeapon();
 
 	URTSBuildingData* GetBuildingData() const { return BuildingData; }
 	virtual int32 GetTeamId() const override { return TeamId; }
@@ -64,6 +67,7 @@ public:
 
 	virtual void PostInitializeComponents() override;
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void Destroyed() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:

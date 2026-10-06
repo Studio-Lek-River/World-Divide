@@ -148,7 +148,7 @@ def make_harvester(name, display_name, mesh, scale, radius, health, speed, turn_
 
 
 def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw,
-                  spawn_on_complete=None, accepts_supply=False):
+                  spawn_on_complete=None, accepts_supply=False, requires_power=False):
     return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
         "display_name": unreal.Text(display_name),
         "mesh": unreal.load_asset(mesh),
@@ -161,15 +161,17 @@ def make_building(name, display_name, mesh, scale, footprint, health, weapon, co
         "build_time": build_time,
         "power_output": power_output,
         "power_draw": power_draw,
+        "requires_power": requires_power,
         "spawn_on_complete": spawn_on_complete,
         "accepts_supply": accepts_supply,
     })
 
 
-def make_faction(name, display_name, buildings):
+def make_faction(name, display_name, buildings, uses_power=True):
     return plan_data_asset(name, FACTION_DIR, unreal.RTSFactionData, {
         "display_name": unreal.Text(display_name),
         "buildings": buildings,
+        "uses_power": uses_power,
     })
 
 
@@ -319,7 +321,8 @@ tank = make_unit("DA_TestTank", "Test Tank", CUBE, (2.4, 1.4, 0.9), 90.0, 200.0,
 infantry = make_unit("DA_TestInfantry", "Test Infantry", CYLINDER, (0.5, 0.5, 1.0), 30.0, 100.0, rifle, 350.0, 540.0, 150, 4.0)
 tower_gun = make_weapon("DA_TestTowerGun", 1400.0, 30.0, 1.0)
 power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", CUBE, (3.8, 3.8, 2.0), (4, 4), 800.0, None, 800, 6.0, 5, 0)
-tower = make_building("DA_TestTower", "Test Tower", CYLINDER, (1.6, 1.6, 3.0), (2, 2), 500.0, tower_gun, 600, 3.0, 0, 2)
+tower = make_building("DA_TestTower", "Test Tower", CYLINDER, (1.6, 1.6, 3.0), (2, 2), 500.0, tower_gun, 600, 3.0, 0, 2,
+                      requires_power=True)
 harvester = make_harvester("DA_TestHarvester", "Test Harvester", CUBE, (1.6, 1.1, 0.8), 70.0, 300.0, 450.0, 360.0, 600, 8.0,
                            100, 3.0, 6000.0)
 supply_depot = make_building("DA_TestSupplyDepot", "Test Supply Depot", CUBE, (2.8, 2.8, 1.4), (3, 3), 1000.0, None, 1500,
