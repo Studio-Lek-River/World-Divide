@@ -1,4 +1,5 @@
-"""Builds the placeholder weapon and unit data assets and the L_TestMap level. Safe to re-run: both are rebuilt.
+"""Builds the placeholder weapon, unit, building and faction data assets, the placement ghost material and the L_TestMap
+level. Safe to re-run: everything is rebuilt.
 
 Run from the repo root (adjust the engine path):
   "G:/Program Files/Epic Games/UE_5.6/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "%CD%/WorldDivide.uproject"
@@ -9,6 +10,9 @@ import unreal
 
 UNIT_DIR = "/Game/Data/Units"
 WEAPON_DIR = "/Game/Data/Weapons"
+BUILDING_DIR = "/Game/Data/Buildings"
+FACTION_DIR = "/Game/Data/Factions"
+MATERIAL_DIR = "/Game/Materials"
 MAP_PATH = "/Game/Maps/L_TestMap"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
 CYLINDER = "/Engine/BasicShapes/Cylinder.Cylinder"
@@ -52,6 +56,59 @@ def make_unit(name, display_name, mesh, scale, radius, health, weapon, speed, tu
     unit.set_editor_property("build_time", build_time)
     assets.save_loaded_asset(unit, only_if_is_dirty=False)
     return unit
+
+
+def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw):
+    building = load_or_create(name, BUILDING_DIR, unreal.RTSBuildingData)
+
+    building.set_editor_property("display_name", unreal.Text(display_name))
+    building.set_editor_property("mesh", unreal.load_asset(mesh))
+    building.set_editor_property("mesh_scale", unreal.Vector(*scale))
+    building.set_editor_property("footprint", unreal.IntPoint(*footprint))
+    building.set_editor_property("selection_radius", max(footprint) * 50.0)
+    building.set_editor_property("max_health", health)
+    building.set_editor_property("weapon", weapon)
+    building.set_editor_property("cost", cost)
+    building.set_editor_property("build_time", build_time)
+    building.set_editor_property("power_output", power_output)
+    building.set_editor_property("power_draw", power_draw)
+    assets.save_loaded_asset(building, only_if_is_dirty=False)
+    return building
+
+
+def make_faction(name, display_name, buildings):
+    faction = load_or_create(name, FACTION_DIR, unreal.RTSFactionData)
+    faction.set_editor_property("display_name", unreal.Text(display_name))
+    faction.set_editor_property("buildings", buildings)
+    assets.save_loaded_asset(faction, only_if_is_dirty=False)
+    return faction
+
+
+def make_ghost_material(name):
+    """Unlit translucent material tinted through a "Color" parameter, for the building placement ghost."""
+    path = f"{MATERIAL_DIR}/{name}"
+    if assets.does_asset_exist(path):
+        material = assets.load_asset(path)
+    else:
+        material = asset_tools.create_asset(name, MATERIAL_DIR, unreal.Material, unreal.MaterialFactoryNew())
+
+    editing = unreal.MaterialEditingLibrary
+    editing.delete_all_material_expressions(material)
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+
+    color = editing.create_material_expression(material, unreal.MaterialExpressionVectorParameter, -400, 0)
+    color.set_editor_property("parameter_name", "Color")
+    color.set_editor_property("default_value", unreal.LinearColor(0.1, 1.0, 0.2, 1.0))
+    editing.connect_material_property(color, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+
+    opacity = editing.create_material_expression(material, unreal.MaterialExpressionConstant, -400, 200)
+    opacity.set_editor_property("r", 0.4)
+    editing.connect_material_property(opacity, "", unreal.MaterialProperty.MP_OPACITY)
+
+    editing.recompile_material(material)
+    assets.save_loaded_asset(material, only_if_is_dirty=False)
+    return material
 
 
 def spawn(actor_class, location, yaw=0.0, label=None):
@@ -122,5 +179,10 @@ cannon = make_weapon("DA_TestCannon", 1200.0, 40.0, 2.0)
 rifle = make_weapon("DA_TestRifle", 700.0, 8.0, 0.5)
 tank = make_unit("DA_TestTank", "Test Tank", CUBE, (2.4, 1.4, 0.9), 90.0, 200.0, cannon, 600.0, 180.0, 700, 10.0)
 infantry = make_unit("DA_TestInfantry", "Test Infantry", CYLINDER, (0.5, 0.5, 1.0), 30.0, 100.0, rifle, 350.0, 540.0, 150, 4.0)
+tower_gun = make_weapon("DA_TestTowerGun", 1400.0, 30.0, 1.0)
+power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", CUBE, (3.8, 3.8, 2.0), (4, 4), 800.0, None, 800, 6.0, 5, 0)
+tower = make_building("DA_TestTower", "Test Tower", CYLINDER, (1.6, 1.6, 3.0), (2, 2), 500.0, tower_gun, 600, 3.0, 0, 2)
+make_faction("DA_TestFaction", "Test Faction", [power_plant, tower])
+make_ghost_material("M_PlacementGhost")
 build_map(tank, infantry)
 unreal.log("setup_testmap: done")

@@ -1,7 +1,11 @@
 #include "Player/RTSHUD.h"
 
+#include "Buildings/RTSBuilding.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Combat/RTSHealthComponent.h"
+#include "Data/RTSBuildingData.h"
+#include "Data/RTSFactionData.h"
+#include "EngineUtils.h"
 #include "Player/RTSPlayerController.h"
 #include "Units/RTSUnit.h"
 
@@ -10,6 +14,12 @@ namespace
 	const FLinearColor SelectionColor(0.2f, 1.f, 0.3f, 1.f);
 	const FLinearColor SelectionFill(0.2f, 1.f, 0.3f, 0.12f);
 	const FLinearColor HealthBackground(0.f, 0.f, 0.f, 0.6f);
+	const FLinearColor ConstructionColor(1.f, 0.8f, 0.1f, 1.f);
+	const FLinearColor MenuColor(0.9f, 0.9f, 0.9f, 1.f);
+
+	constexpr float ConstructionBarWidth = 60.f;
+	constexpr float MenuMargin = 16.f;
+	constexpr float MenuLineHeight = 18.f;
 }
 
 void ARTSHUD::DrawHUD()
@@ -29,6 +39,16 @@ void ARTSHUD::DrawHUD()
 			DrawUnitMarker(*Controller, *Unit);
 		}
 	}
+
+	for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
+	{
+		if (It->GetTeamId() == Controller->GetTeamId() && !It->IsConstructed())
+		{
+			DrawConstructionBar(*Controller, **It);
+		}
+	}
+
+	DrawBuildMenu(*Controller);
 
 	FVector2D Start;
 	FVector2D End;
@@ -88,4 +108,46 @@ void ARTSHUD::DrawUnitMarker(const ARTSPlayerController& Controller, const ARTSU
 	const float BarY = Top - 8.f;
 	DrawRect(HealthBackground, Left - 1.f, BarY - 1.f, BarWidth + 2.f, 6.f);
 	DrawRect(FLinearColor::LerpUsingHSV(FLinearColor::Red, FLinearColor::Green, HealthFraction), Left, BarY, BarWidth * HealthFraction, 4.f);
+}
+
+void ARTSHUD::DrawConstructionBar(const ARTSPlayerController& Controller, const ARTSBuilding& Building)
+{
+	FVector2D ScreenCenter;
+	if (!Controller.ProjectWorldLocationToScreen(Building.GetActorLocation(), ScreenCenter))
+	{
+		return;
+	}
+	const float Left = ScreenCenter.X - ConstructionBarWidth * 0.5f;
+	DrawRect(HealthBackground, Left - 1.f, ScreenCenter.Y - 1.f, ConstructionBarWidth + 2.f, 6.f);
+	DrawRect(ConstructionColor, Left, ScreenCenter.Y, ConstructionBarWidth * Building.GetConstructionProgress(), 4.f);
+}
+
+void ARTSHUD::DrawBuildMenu(const ARTSPlayerController& Controller)
+{
+	const URTSFactionData* Faction = Controller.GetFaction();
+	if (!Faction)
+	{
+		return;
+	}
+
+	float Y = MenuMargin;
+	DrawText(TEXT("Build (debug)"), MenuColor, MenuMargin, Y);
+	const int32 Count = FMath::Min(Faction->Buildings.Num(), ARTSPlayerController::MaxBuildHotkeys);
+	for (int32 Index = 0; Index < Count; ++Index)
+	{
+		const URTSBuildingData* Data = Faction->Buildings[Index];
+		if (!Data)
+		{
+			continue;
+		}
+		Y += MenuLineHeight;
+		const bool bPlacing = Controller.GetPlacementData() == Data;
+		DrawText(FString::Printf(TEXT("%d  %s"), Index + 1, *Data->DisplayName.ToString()),
+			bPlacing ? SelectionColor : MenuColor, MenuMargin, Y);
+	}
+	if (Controller.GetPlacementData())
+	{
+		Y += MenuLineHeight;
+		DrawText(TEXT("Left click: build    Right click / Esc: cancel"), MenuColor, MenuMargin, Y);
+	}
 }

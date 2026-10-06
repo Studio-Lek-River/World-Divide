@@ -74,6 +74,7 @@ void ARTSUnit::InitFromData(URTSUnitData* InUnitData, int32 InTeamId)
 	UnitData = InUnitData;
 	TeamId = InTeamId;
 	HealthComponent->InitHealth(UnitData ? UnitData->MaxHealth : 1.f);
+	WeaponComponent->SetTeamId(TeamId);
 	WeaponComponent->SetWeaponData(UnitData ? UnitData->Weapon : nullptr);
 	ApplyUnitData();
 }

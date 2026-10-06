@@ -1,7 +1,12 @@
 #include "Player/RTSPlayerController.h"
 
+#include "Buildings/RTSBuildPlacement.h"
+#include "Buildings/RTSPlacementGhost.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSPlayerState.h"
+#include "Core/RTSSettings.h"
+#include "Data/RTSBuildingData.h"
+#include "Data/RTSFactionData.h"
 #include "EngineUtils.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -19,6 +24,10 @@ namespace
 		Action->ValueType = ValueType;
 		return Action;
 	}
+
+	const FKey BuildHotkeys[ARTSPlayerController::MaxBuildHotkeys] = {
+		EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::Nine,
+	};
 
 	void MapKey(UInputMappingContext* Context, UInputAction* Action, const FKey& Key, bool bNegate = false, bool bSwizzle = false)
 	{
@@ -74,6 +83,17 @@ void ARTSPlayerController::CreateInputActions()
 
 	StopOrderAction = MakeAction(this, TEXT("IA_StopOrder"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, StopOrderAction, EKeys::X);
+
+	CancelAction = MakeAction(this, TEXT("IA_Cancel"), EInputActionValueType::Boolean);
+	MapKey(MappingContext, CancelAction, EKeys::Escape);
+
+	BuildActions.Reset();
+	for (int32 Index = 0; Index < MaxBuildHotkeys; ++Index)
+	{
+		UInputAction* Action = MakeAction(this, *FString::Printf(TEXT("IA_Build%d"), Index + 1), EInputActionValueType::Boolean);
+		MapKey(MappingContext, Action, BuildHotkeys[Index]);
+		BuildActions.Add(Action);
+	}
 }
 
 void ARTSPlayerController::SetupInputComponent()
@@ -103,6 +123,11 @@ void ARTSPlayerController::SetupInputComponent()
 	Input->BindAction(SelectAction, ETriggerEvent::Completed, this, &ThisClass::OnSelectCompleted);
 	Input->BindAction(MoveOrderAction, ETriggerEvent::Started, this, &ThisClass::OnMoveOrder);
 	Input->BindAction(StopOrderAction, ETriggerEvent::Started, this, &ThisClass::OnStopOrder);
+	Input->BindAction(CancelAction, ETriggerEvent::Started, this, &ThisClass::OnCancel);
+	for (int32 Index = 0; Index < BuildActions.Num(); ++Index)
+	{
+		Input->BindAction(BuildActions[Index], ETriggerEvent::Started, this, &ThisClass::OnBuildHotkey, Index);
+	}
 }
 
 void ARTSPlayerController::PlayerTick(float DeltaTime)
@@ -118,6 +143,14 @@ void ARTSPlayerController::PlayerTick(float DeltaTime)
 
 	ApplyDragRotate();
 	ApplyEdgeScroll();
+	UpdatePlacement();
+}
+
+void ARTSPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	CancelPlacement();
+
+	Super::EndPlay(EndPlayReason);
 }
 
 ARTSCameraPawn* ARTSPlayerController::GetCameraPawn() const
@@ -129,6 +162,12 @@ int32 ARTSPlayerController::GetTeamId() const
 {
 	const ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
 	return State ? State->GetTeamId() : INDEX_NONE;
+}
+
+URTSFactionData* ARTSPlayerController::GetFaction() const
+{
+	const ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
+	return State ? State->GetFaction() : nullptr;
 }
 
 bool ARTSPlayerController::IsOwnUnit(const ARTSUnit* Unit) const
@@ -232,6 +271,11 @@ void ARTSPlayerController::ApplyEdgeScroll() const
 
 void ARTSPlayerController::OnSelectStarted()
 {
+	if (PlacementData)
+	{
+		ConfirmPlacement();
+		return;
+	}
 	bSelecting = GetMousePosition(SelectStart.X, SelectStart.Y);
 	SelectCurrent = SelectStart;
 }
@@ -316,6 +360,12 @@ void ARTSPlayerController::SelectInBox(const FVector2D& Start, const FVector2D& 
 
 void ARTSPlayerController::OnMoveOrder()
 {
+	if (PlacementData)
+	{
+		CancelPlacement();
+		return;
+	}
+
 	FHitResult Hit;
 	if (SelectedUnits.IsEmpty() || !GetHitResultUnderCursor(ECC_Visibility, false, Hit))
 	{
@@ -346,6 +396,93 @@ void ARTSPlayerController::OnStopOrder()
 	IssueToSelection(Command);
 }
 
+void ARTSPlayerController::OnBuildHotkey(int32 Index)
+{
+	const URTSFactionData* Faction = GetFaction();
+	if (Faction && Faction->Buildings.IsValidIndex(Index))
+	{
+		BeginPlacement(Faction->Buildings[Index]);
+	}
+}
+
+void ARTSPlayerController::OnCancel()
+{
+	CancelPlacement();
+}
+
+void ARTSPlayerController::BeginPlacement(URTSBuildingData* Data)
+{
+	CancelPlacement();
+	if (!Data)
+	{
+		return;
+	}
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Params.ObjectFlags |= RF_Transient;
+	PlacementGhost = GetWorld()->SpawnActor<ARTSPlacementGhost>(Params);
+	if (!PlacementGhost)
+	{
+		return;
+	}
+	PlacementGhost->SetBuildingData(*Data, GetDefault<URTSSettings>()->PlacementGhostMaterial.LoadSynchronous());
+	PlacementGhost->SetActorHiddenInGame(true);
+	PlacementData = Data;
+	// A half-dragged selection box would otherwise finish on the confirming click.
+	bSelecting = false;
+}
+
+void ARTSPlayerController::CancelPlacement()
+{
+	if (PlacementGhost)
+	{
+		PlacementGhost->Destroy();
+	}
+	PlacementGhost = nullptr;
+	PlacementData = nullptr;
+	bPlacementValid = false;
+}
+
+void ARTSPlayerController::UpdatePlacement()
+{
+	if (!PlacementData || !PlacementGhost)
+	{
+		return;
+	}
+
+	// Only the ground and obstacles position the ghost; units and buildings under the cursor make it invalid instead.
+	FHitResult Hit;
+	if (!GetHitResultUnderCursorForObjects({ UEngineTypes::ConvertToObjectType(ECC_WorldStatic) }, false, Hit))
+	{
+		bPlacementValid = false;
+		PlacementGhost->SetActorHiddenInGame(true);
+		return;
+	}
+
+	// The same check the server repeats, so a green ghost is a spot the server accepts.
+	bPlacementValid = RTSBuildPlacement::CanPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation);
+	PlacementGhost->SetActorLocation(PlacementLocation);
+	PlacementGhost->SetValid(bPlacementValid);
+	PlacementGhost->SetActorHiddenInGame(false);
+}
+
+void ARTSPlayerController::ConfirmPlacement()
+{
+	if (!bPlacementValid)
+	{
+		return;
+	}
+
+	// No builder units yet: the debug menu sends the order without units and the server places the building directly.
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::Build;
+	Command.EntityData = PlacementData;
+	Command.TargetLocation = PlacementLocation;
+	Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+	CancelPlacement();
+}
+
 void ARTSPlayerController::IssueToSelection(const FRTSCommand& Command)
 {
 	TArray<ARTSUnit*> Units;
@@ -368,6 +505,12 @@ void ARTSPlayerController::Server_IssueCommand_Implementation(const TArray<ARTSU
 	const ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
 	if (!State)
 	{
+		return;
+	}
+	if (Command.Type == ERTSCommandType::Build)
+	{
+		// Debug build menu path. Once builder units exist, a Build order goes to them through Dispatch instead.
+		RTSCommands::PlaceBuilding(*GetWorld(), State->GetFaction(), State->GetTeamId(), Command);
 		return;
 	}
 	RTSCommands::Dispatch(RTSCommands::FilterOwnedUnits(Units, State->GetTeamId()), Command);

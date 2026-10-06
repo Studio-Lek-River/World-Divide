@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "RTSCommand.generated.h"
 
+class URTSEntityData;
+
 UENUM(BlueprintType)
 enum class ERTSCommandType : uint8
 {
@@ -11,6 +13,8 @@ enum class ERTSCommandType : uint8
 	Stop,
 	/** Close in on TargetActor and fire until it dies. */
 	Attack,
+	/** Place EntityData (a building) at TargetLocation. */
+	Build,
 };
 
 /**
@@ -30,6 +34,10 @@ struct WORLDDIVIDE_API FRTSCommand
 
 	UPROPERTY(BlueprintReadWrite, Category = "Command")
 	TObjectPtr<AActor> TargetActor = nullptr;
+
+	/** What to build. */
+	UPROPERTY(BlueprintReadWrite, Category = "Command")
+	TObjectPtr<URTSEntityData> EntityData = nullptr;
 
 	/** Append to the unit's order queue instead of replacing it (Shift). */
 	UPROPERTY(BlueprintReadWrite, Category = "Command")

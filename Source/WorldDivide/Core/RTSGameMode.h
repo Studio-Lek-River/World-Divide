@@ -5,7 +5,8 @@
 #include "RTSGameMode.generated.h"
 
 /**
- * Gives each joining player the next team id and starts their camera at the PlayerStart tagged "Team<id>".
+ * Gives each joining player the next team id and the default faction from URTSSettings,
+ * and starts their camera at the PlayerStart tagged "Team<id>".
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSGameMode : public AGameModeBase

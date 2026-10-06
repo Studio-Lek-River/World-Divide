@@ -45,9 +45,8 @@ void URTSWeaponComponent::SetAutoAcquire(bool bEnable)
 
 bool URTSWeaponComponent::CanTarget(const ARTSUnit* Candidate) const
 {
-	const ARTSUnit* Owner = GetOwner<ARTSUnit>();
-	return IsValid(Candidate) && Owner && Candidate != Owner
-		&& Candidate->GetTeamId() != Owner->GetTeamId()
+	return IsValid(Candidate) && Candidate != GetOwner()
+		&& Candidate->GetTeamId() != TeamId
 		&& !Candidate->GetHealthComponent()->IsDead();
 }
 

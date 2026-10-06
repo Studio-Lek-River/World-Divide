@@ -2,10 +2,8 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
-#include "Engine/Engine.h"
-#include "Engine/EngineBaseTypes.h"
-#include "Engine/World.h"
 #include "Misc/AutomationTest.h"
+#include "Tests/RTSTestWorld.h"
 #include "Units/RTSUnit.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -14,36 +12,7 @@ namespace
 {
 	constexpr EAutomationTestFlags TestFlags = EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter;
 
-	/**
-	 * A game world with initialized actors, so units bind their death handling, but no BeginPlay:
-	 * nothing ticks and tests step the weapons themselves.
-	 */
-	struct FRTSTestWorld
-	{
-		FRTSTestWorld()
-		{
-			World = UWorld::CreateWorld(EWorldType::Game, false);
-			GEngine->CreateNewWorldContext(EWorldType::Game).SetCurrentWorld(World);
-			World->InitializeActorsForPlay(FURL());
-		}
-
-		~FRTSTestWorld()
-		{
-			GEngine->DestroyWorldContext(World);
-			World->DestroyWorld(false);
-		}
-
-		ARTSUnit* SpawnUnit(URTSUnitData* Data, int32 TeamId, const FVector& Location) const
-		{
-			const FTransform Transform(Location);
-			ARTSUnit* Unit = World->SpawnActorDeferred<ARTSUnit>(ARTSUnit::StaticClass(), Transform);
-			Unit->InitFromData(Data, TeamId);
-			Unit->FinishSpawning(Transform);
-			return Unit;
-		}
-
-		UWorld* World = nullptr;
-	};
+	using RTSTests::FRTSTestWorld;
 
 	URTSUnitData* MakeUnitData(float MaxHealth, URTSWeaponData* Weapon)
 	{

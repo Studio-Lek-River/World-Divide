@@ -2,8 +2,12 @@
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
+#include "Buildings/RTSBuildPlacement.h"
+#include "Buildings/RTSBuilding.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
+#include "Data/RTSBuildingData.h"
+#include "Data/RTSFactionData.h"
 #include "Data/RTSUnitData.h"
 #include "EngineUtils.h"
 #include "NavigationSystem.h"
@@ -17,6 +21,8 @@
  * End to end: open L_TestMap in PIE, wait for the navmesh, order every unit (own and enemy) through the
  * player controller's server RPC, and check that only the player's units walk around the wall to the target.
  * A second test orders a lone tank to attack an enemy out of range and checks it closes in and destroys it.
+ * The building tests place buildings through the same RPC: valid and invalid spots, construction over BuildTime,
+ * and a unit routing around a freshly placed building.
  */
 namespace
 {
@@ -32,6 +38,25 @@ namespace
 	const FVector VictimStart(1500.f, 7000.f, 0.f);
 	constexpr double AttackTimeout = 30.0;
 
+	const TCHAR* TowerPath = TEXT("/Game/Data/Buildings/DA_TestTower.DA_TestTower");
+	const TCHAR* PowerPlantPath = TEXT("/Game/Data/Buildings/DA_TestPowerPlant.DA_TestPowerPlant");
+	const TCHAR* TankPath = TEXT("/Game/Data/Units/DA_TestTank.DA_TestTank");
+	const TCHAR* InfantryPath = TEXT("/Game/Data/Units/DA_TestInfantry.DA_TestInfantry");
+
+	/** Spots in the empty north strip, plus a wall and a spot beyond the edge of the ground. */
+	const FVector BuildSpot(0.f, 7000.f, 0.f);
+	const FVector UnitSpot(3000.f, 7000.f, 0.f);
+	const FVector OtherBuildSpot(-3000.f, 7000.f, 0.f);
+	const FVector WallSpot(-2500.f, 0.f, 0.f);
+	const FVector OffMapSpot(11000.f, 0.f, 0.f);
+	constexpr double ConstructionTimeout = 15.0;
+
+	/** The route test drives a tank straight through BuildSpot after a power plant goes down there. */
+	const FVector RouteStart(-1500.f, 7000.f, 0.f);
+	const FVector RouteTarget(1500.f, 7000.f, 0.f);
+	constexpr float RouteArrivalRadius = 150.f;
+	constexpr double RouteTimeout = 30.0;
+
 	struct FSmokeState
 	{
 		TArray<TWeakObjectPtr<ARTSUnit>> OwnUnits;
@@ -42,7 +67,68 @@ namespace
 		// Attack order test only.
 		TWeakObjectPtr<ARTSUnit> Attacker;
 		TWeakObjectPtr<ARTSUnit> Victim;
+
+		// Building tests only.
+		TWeakObjectPtr<ARTSBuilding> Building;
+		double PlacedAtWorldTime = 0.0;
+		TWeakObjectPtr<ARTSUnit> Walker;
+		bool bEnteredFootprint = false;
+		float MaxDetour = 0.f;
 	};
+
+	int32 CountBuildings(UWorld* World)
+	{
+		int32 Count = 0;
+		for (TActorIterator<ARTSBuilding> It(World); It; ++It)
+		{
+			++Count;
+		}
+		return Count;
+	}
+
+	/** Sends a Build order through the player controller's RPC; returns the new building, or null if the server refused. */
+	ARTSBuilding* RequestBuild(ARTSPlayerController& Controller, URTSBuildingData* Data, const FVector& Location)
+	{
+		UWorld* World = Controller.GetWorld();
+		TSet<ARTSBuilding*> Before;
+		for (TActorIterator<ARTSBuilding> It(World); It; ++It)
+		{
+			Before.Add(*It);
+		}
+
+		FRTSCommand Command;
+		Command.Type = ERTSCommandType::Build;
+		Command.EntityData = Data;
+		Command.TargetLocation = Location;
+		Controller.Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+
+		for (TActorIterator<ARTSBuilding> It(World); It; ++It)
+		{
+			if (!Before.Contains(*It))
+			{
+				return *It;
+			}
+		}
+		return nullptr;
+	}
+
+	/** What the client's ghost would show for this spot. */
+	bool ClientAccepts(UWorld& World, const URTSBuildingData& Data, const FVector& Location)
+	{
+		FVector Snapped;
+		return RTSBuildPlacement::CanPlace(World, Data, Location, Snapped);
+	}
+
+	ARTSPlayerController* GetTestController(FAutomationTestBase& Test)
+	{
+		UWorld* World = AutomationCommon::GetAnyGameWorld();
+		ARTSPlayerController* Controller = World ? Cast<ARTSPlayerController>(World->GetFirstPlayerController()) : nullptr;
+		if (!Controller)
+		{
+			Test.AddError(TEXT("No ARTSPlayerController in the PIE world"));
+		}
+		return Controller;
+	}
 
 	ARTSUnit* SpawnTestUnit(UWorld* World, const TCHAR* DataPath, int32 TeamId, const FVector& Location)
 	{
@@ -220,6 +306,198 @@ bool FRTSVerifyAttack::Update()
 	return true;
 }
 
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckPlacement, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSCheckPlacement::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	URTSBuildingData* Tower = LoadObject<URTSBuildingData>(nullptr, TowerPath);
+	const URTSFactionData* Faction = Controller->GetFaction();
+	if (!Tower || !Faction)
+	{
+		Test->AddError(TEXT("Missing the test tower or the player's faction"));
+		return true;
+	}
+	Test->TestTrue(TEXT("The player's faction can build the tower"), Faction->Buildings.Contains(Tower));
+
+	// A valid spot: the client shows green and the server builds.
+	Test->TestTrue(TEXT("Client accepts an open spot"), ClientAccepts(*World, *Tower, BuildSpot));
+	ARTSBuilding* Building = RequestBuild(*Controller, Tower, BuildSpot + FVector(37.f, -12.f, 150.f));
+	if (!Building)
+	{
+		Test->AddError(TEXT("Server refused an open spot"));
+		return true;
+	}
+	const FVector Expected = RTSBuildPlacement::SnapToGrid(BuildSpot + FVector(37.f, -12.f, 0.f), Tower->Footprint);
+	Test->TestTrue(FString::Printf(TEXT("Placed on the grid at %s"), *Building->GetActorLocation().ToCompactString()),
+		FVector::Dist2D(Building->GetActorLocation(), Expected) < 1.f);
+	Test->TestTrue(TEXT("Placed on the ground, not at the requested height"), FMath::Abs(Building->GetActorLocation().Z) < 50.f);
+	Test->TestEqual(TEXT("Placed for the player's team"), Building->GetTeamId(), Controller->GetTeamId());
+	Test->TestFalse(TEXT("Starts under construction"), Building->IsConstructed());
+	Test->TestFalse(TEXT("Inert while under construction"), Building->GetWeaponComponent()->IsArmed());
+	State->Building = Building;
+	State->PlacedAtWorldTime = World->GetTimeSeconds();
+
+	// Invalid spots: the client shows red and the server refuses even when asked directly.
+	ARTSUnit* Blocker = SpawnTestUnit(World, InfantryPath, Controller->GetTeamId(), UnitSpot);
+	if (!Blocker)
+	{
+		Test->AddError(TEXT("Could not spawn the blocking unit"));
+		return true;
+	}
+	const TPair<const TCHAR*, FVector> InvalidSpots[] = {
+		{ TEXT("on another building"), BuildSpot },
+		{ TEXT("on a unit"), UnitSpot },
+		{ TEXT("on a wall"), WallSpot },
+		{ TEXT("off the navmesh"), OffMapSpot },
+	};
+	for (const TPair<const TCHAR*, FVector>& Spot : InvalidSpots)
+	{
+		Test->TestFalse(FString::Printf(TEXT("Client rejects a spot %s"), Spot.Key), ClientAccepts(*World, *Tower, Spot.Value));
+		Test->TestNull(FString::Printf(TEXT("Server rejects a spot %s"), Spot.Key), RequestBuild(*Controller, Tower, Spot.Value));
+	}
+
+	// The server also refuses what the faction cannot build, even on a good spot.
+	URTSBuildingData* Foreign = DuplicateObject<URTSBuildingData>(Tower, GetTransientPackage());
+	Test->TestTrue(TEXT("The foreign building's spot is fine"), ClientAccepts(*World, *Foreign, OtherBuildSpot));
+	Test->TestNull(TEXT("Server rejects a building outside the faction"), RequestBuild(*Controller, Foreign, OtherBuildSpot));
+	Test->TestNull(TEXT("Server rejects a Build without data"), RequestBuild(*Controller, nullptr, OtherBuildSpot));
+
+	Test->TestEqual(TEXT("Only the valid request built anything"), CountBuildings(World), 1);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyConstruction, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyConstruction::Update()
+{
+	ARTSBuilding* Building = State->Building.Get();
+	if (!Building)
+	{
+		Test->AddError(TEXT("The placed building disappeared"));
+		return true;
+	}
+	if (!Building->IsConstructed() && FPlatformTime::Seconds() - State->PhaseStart < ConstructionTimeout)
+	{
+		return false;
+	}
+
+	const float BuildTime = Building->GetBuildingData()->BuildTime;
+	const double Elapsed = Building->GetWorld()->GetTimeSeconds() - State->PlacedAtWorldTime;
+	Test->TestTrue(TEXT("Construction completed"), Building->IsConstructed());
+	Test->TestTrue(FString::Printf(TEXT("Took %.2f s of game time, BuildTime is %.2f s"), Elapsed, BuildTime),
+		FMath::Abs(Elapsed - BuildTime) <= 0.5);
+	Test->TestTrue(TEXT("Armed once complete"), Building->GetWeaponComponent()->IsArmed());
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceObstacle, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSPlaceObstacle::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+
+	ARTSUnit* Walker = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), RouteStart);
+	ARTSBuilding* Building = RequestBuild(*Controller, LoadObject<URTSBuildingData>(nullptr, PowerPlantPath), BuildSpot);
+	if (!Walker || !Building)
+	{
+		Test->AddError(TEXT("Could not spawn the walker or place the power plant"));
+		return true;
+	}
+	State->Walker = Walker;
+	State->Building = Building;
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSWaitForNavCut, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSWaitForNavCut::Update()
+{
+	const ARTSBuilding* Building = State->Building.Get();
+	UWorld* World = Building ? Building->GetWorld() : nullptr;
+	UNavigationSystemV1* NavSystem = World ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World) : nullptr;
+	if (!NavSystem)
+	{
+		Test->AddError(TEXT("No building or navigation system"));
+		return true;
+	}
+
+	FNavLocation Projected;
+	const bool bCut = !NavSystem->ProjectPointToNavigation(Building->GetActorLocation(), Projected, FVector(10.f, 10.f, 250.f))
+		&& !NavSystem->IsNavigationBuildInProgress();
+	if (bCut)
+	{
+		Test->AddInfo(FString::Printf(TEXT("Navmesh cut after %.1f s"), FPlatformTime::Seconds() - State->PhaseStart));
+		return true;
+	}
+	if (FPlatformTime::Seconds() - State->PhaseStart > NavTimeout)
+	{
+		Test->AddError(TEXT("The building never cut the navmesh"));
+		return true;
+	}
+	return false;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueRouteMove, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueRouteMove::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller || !State->Walker.IsValid())
+	{
+		Test->AddError(TEXT("No controller or walker"));
+		return true;
+	}
+
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::Move;
+	Command.TargetLocation = RouteTarget;
+	Controller->Server_IssueCommand({ State->Walker.Get() }, Command);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyRoute, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyRoute::Update()
+{
+	const ARTSUnit* Walker = State->Walker.Get();
+	const ARTSBuilding* Building = State->Building.Get();
+	if (!Walker || !Building)
+	{
+		Test->AddError(TEXT("The walker or the building disappeared"));
+		return true;
+	}
+
+	const FVector Location = Walker->GetActorLocation();
+	const FVector Center = Building->GetActorLocation();
+	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Building->GetBuildingData()->Footprint);
+	if (FMath::Abs(Location.X - Center.X) < Extent.X && FMath::Abs(Location.Y - Center.Y) < Extent.Y)
+	{
+		State->bEnteredFootprint = true;
+	}
+	State->MaxDetour = FMath::Max(State->MaxDetour, FMath::Abs(Location.Y - RouteStart.Y));
+
+	const bool bArrived = FVector::Dist2D(Location, RouteTarget) <= RouteArrivalRadius;
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (!bArrived && Elapsed < RouteTimeout)
+	{
+		return false;
+	}
+
+	Test->TestTrue(FString::Printf(TEXT("Walker arrived (at %s after %.1f s)"), *Location.ToCompactString(), Elapsed), bArrived);
+	Test->TestFalse(TEXT("Walker never entered the building's footprint"), State->bEnteredFootprint);
+	Test->TestTrue(FString::Printf(TEXT("Walker went around the building (%.0f cm detour)"), State->MaxDetour),
+		State->MaxDetour >= Extent.Y);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTestMapSmokeTest, "WorldDivide.Smoke.TestMap",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -258,6 +536,51 @@ bool FRTSAttackOrderSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueAttack(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAttack(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBuildingPlacementSmokeTest, "WorldDivide.Smoke.BuildingPlacement",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSBuildingPlacementSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckPlacement(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyConstruction(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRouteAroundBuildingSmokeTest, "WorldDivide.Smoke.RouteAroundBuilding",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSRouteAroundBuildingSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceObstacle(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueRouteMove(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyRoute(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

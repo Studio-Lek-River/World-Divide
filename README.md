@@ -29,20 +29,25 @@ Command-line build:
 | Left click / left drag | Select own units (Shift adds or toggles) |
 | Right click | Move, or attack when on an enemy unit (Shift queues) |
 | X | Stop |
+| 1–9 | Debug build menu: place the n-th building of your faction |
+| Left click / right click or Esc | While placing: build / cancel (Esc also stops PIE in the editor) |
 
 ## Layout
 
 | Path | Contents |
 |---|---|
-| `Source/WorldDivide/Data` | `URTSEntityData` / `URTSUnitData`: every unit is a data asset (mesh, health, weapon, speed, cost, build time, prerequisites, faction); `URTSWeaponData` holds range, damage and reload |
+| `Source/WorldDivide/Data` | `URTSEntityData` / `URTSUnitData` / `URTSBuildingData`: every unit and building is a data asset (mesh, health, weapon, speed or footprint and power, cost, build time, prerequisites, faction); `URTSWeaponData` holds range, damage and reload; `URTSFactionData` lists what a faction can build |
 | `Source/WorldDivide/Combat` | `URTSHealthComponent` (replicated health, death) and the server-side `URTSWeaponComponent` (targeting, instant-hit fire) |
 | `Source/WorldDivide/Commands` | `FRTSCommand`, formation layout and server-side dispatch |
+| `Source/WorldDivide/Buildings` | `ARTSBuilding` (constructs over its build time, cuts the navmesh, inert until complete), the shared grid and placement rules, and the local placement ghost |
 | `Source/WorldDivide/Units` | `ARTSUnit` (light pawn, no Character), its AI controller, and the map-placed `ARTSUnitSpawner` |
-| `Source/WorldDivide/Player` | Camera pawn, player controller (input, selection, orders) and HUD |
-| `Source/WorldDivide/Core` | Game mode (team assignment, team start spots) and player state |
-| `Tools/Editor/setup_testmap.py` | Rebuilds the placeholder unit and weapon data assets and `L_TestMap` |
+| `Source/WorldDivide/Player` | Camera pawn, player controller (input, selection, orders, building placement) and HUD (including the debug build menu) |
+| `Source/WorldDivide/Core` | Game mode (team and faction assignment, team start spots), player state, and `URTSSettings` (default faction and ghost material, set in `Config/DefaultGame.ini`) |
+| `Tools/Editor/setup_testmap.py` | Rebuilds the placeholder unit, weapon, building and faction data assets, the placement ghost material and `L_TestMap` |
 
-Every player order is an `FRTSCommand` sent through `ARTSPlayerController::Server_IssueCommand` and executed only on the server, so singleplayer already runs the multiplayer code path. Units are always relevant for now; fog of war will decide relevancy later.
+Every player order is an `FRTSCommand` sent through `ARTSPlayerController::Server_IssueCommand` and executed only on the server, so singleplayer already runs the multiplayer code path. Units and buildings are always relevant for now; fog of war will decide relevancy later.
+
+Buildings snap to a 100 cm grid. The client's ghost and the server run the same placement check (no overlap with units, buildings or obstacles; footprint on the navmesh), which is why clients keep a navmesh too (`bAllowClientSideNavigation`). Until builder units exist, a `Build` order without units is placed directly by the server; the 1–9 menu is a debug stand-in for a builder's command card.
 
 ## Tests
 
@@ -52,7 +57,7 @@ Every player order is an `FRTSCommand` sent through `ARTSPlayerController::Serve
 "<UE_5.6>\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -ExecCmds="Automation RunTests WorldDivide;Quit" -unattended -nullrhi
 ```
 
-`WorldDivide.Smoke.TestMap` plays `L_TestMap` in PIE and checks that a move order brings all 16 own units around the wall to the target while enemy units ignore it. `WorldDivide.Smoke.AttackOrder` orders a tank to attack an enemy out of range and checks it closes in and destroys it. `WorldDivide.Combat.*` cover health and an unordered duel between two idle units.
+`WorldDivide.Smoke.TestMap` plays `L_TestMap` in PIE and checks that a move order brings all 16 own units around the wall to the target while enemy units ignore it. `WorldDivide.Smoke.AttackOrder` orders a tank to attack an enemy out of range and checks it closes in and destroys it. `WorldDivide.Combat.*` cover health and an unordered duel between two idle units. `WorldDivide.Buildings.*` cover grid snapping, construction over the build time and a finished tower killing enemies in range. `WorldDivide.Smoke.BuildingPlacement` checks that client and server accept an open spot and reject spots on buildings, units, walls and off the navmesh, plus buildings outside the faction, and that the building completes after its build time. `WorldDivide.Smoke.RouteAroundBuilding` places a building across a tank's path and checks the tank walks around it.
 
 Idle units fire at the nearest enemy in range on their own; units on a move order hold fire.
 

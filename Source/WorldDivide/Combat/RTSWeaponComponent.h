@@ -8,8 +8,8 @@ class ARTSUnit;
 class URTSWeaponData;
 
 /**
- * Server-side gunner of an ARTSUnit: picks a target, waits out the reload and deals instant-hit damage.
- * The unit decides what it may shoot (an ordered target, anything in range, or nothing while moving);
+ * Server-side gunner of a unit or building: picks an enemy unit, waits out the reload and deals instant-hit damage.
+ * The owner decides what it may shoot (an ordered target, anything in range, or nothing while moving);
  * turning and closing in are the unit's job. Clients never run it; they see the damage through health replication.
  */
 UCLASS(ClassGroup = (RTS))
@@ -27,13 +27,16 @@ public:
 	bool IsArmed() const { return WeaponData != nullptr; }
 	float GetRange() const;
 
+	/** Server only. The owner's team; units of any other team are enemies. */
+	void SetTeamId(int32 InTeamId) { TeamId = InTeamId; }
+
 	/** Server only. Shoot only this unit, once it is in range; null clears the order. */
 	void SetOrderedTarget(ARTSUnit* InTarget);
 
 	/** Server only. Without an ordered target, engage the nearest enemy in range while this is set. */
 	void SetAutoAcquire(bool bEnable);
 
-	/** A living unit of another team. */
+	/** A living unit of another team than the owner's. */
 	bool CanTarget(const ARTSUnit* Candidate) const;
 
 	/** Distance to the edge of the target's footprint is within range. */
@@ -53,6 +56,7 @@ private:
 	TObjectPtr<URTSWeaponData> WeaponData;
 
 	TWeakObjectPtr<ARTSUnit> Target;
+	int32 TeamId = 0;
 	bool bTargetOrdered = false;
 	bool bAutoAcquire = true;
 

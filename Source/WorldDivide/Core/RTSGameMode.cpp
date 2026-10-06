@@ -1,6 +1,8 @@
 #include "Core/RTSGameMode.h"
 
 #include "Core/RTSPlayerState.h"
+#include "Core/RTSSettings.h"
+#include "Data/RTSFactionData.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
 #include "Player/RTSCameraPawn.h"
@@ -22,6 +24,7 @@ FString ARTSGameMode::InitNewPlayer(APlayerController* NewPlayerController, cons
 	if (ARTSPlayerState* PlayerState = NewPlayerController->GetPlayerState<ARTSPlayerState>())
 	{
 		PlayerState->SetTeamId(NextTeamId++);
+		PlayerState->SetFaction(GetDefault<URTSSettings>()->DefaultFaction.LoadSynchronous());
 	}
 	return Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
 }

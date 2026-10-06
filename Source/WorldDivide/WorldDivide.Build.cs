@@ -18,6 +18,7 @@ public class WorldDivide : ModuleRules
 			"AIModule",
 			"NavigationSystem",
 			"GameplayTags",
+			"DeveloperSettings",
 		});
 
 		// PIE-driven smoke tests only.
