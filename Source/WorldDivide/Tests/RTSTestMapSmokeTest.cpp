@@ -34,7 +34,9 @@
  * placed building. Another has three tanks destroy an enemy building
  * and checks that its hole in the navmesh closes again; a variant hides the building behind a wall of the player's own buildings, so the tanks must
  * approach it from another side. The harvest test buys a supply depot next to a small supply source and follows its
- * harvester through every load until the source is empty. The unreachable test sends a tank and a harvester at targets beyond
+ * harvester through every load until the source is empty. The unreachable-docks test walls the nearest source and depot in
+ * with buildings and checks that the harvester uses the open ones instead, then ends its run, loaded, once only the walled
+ * depot is left. The unreachable test sends a tank and a harvester at targets beyond
  * the edge of the map and checks that both orders end instead of looping. The obstacle tests check that no navmesh lies inside
  * or on top of the map's walls and blocks, and that tanks sent onto a block stop at its edge on their own side.
  */
@@ -113,6 +115,25 @@ namespace
 	/** Allowed difference in seconds between two cycles on the same route. */
 	constexpr double CycleTolerance = 1.5;
 
+	/**
+	 * The unreachable-docks test walls a source and a depot in with a ring of ten of the player's power plants, two cells
+	 * wide. Seen from the harvester each lies nearer than its reachable counterpart: the open source south of it, the open
+	 * depot north of it.
+	 */
+	const FVector WalledSourceSpot(-400.f, 7000.f, 0.f);
+	const FVector WalledDepotSpot(0.f, 7000.f, 0.f);
+	const FVector RingSpots[] = {
+		FVector(-800.f, 6600.f, 0.f), FVector(-400.f, 6600.f, 0.f), FVector(0.f, 6600.f, 0.f), FVector(400.f, 6600.f, 0.f),
+		FVector(-800.f, 7000.f, 0.f), FVector(400.f, 7000.f, 0.f),
+		FVector(-800.f, 7400.f, 0.f), FVector(-400.f, 7400.f, 0.f), FVector(0.f, 7400.f, 0.f), FVector(400.f, 7400.f, 0.f),
+	};
+	const FVector OpenSourceSpot(1500.f, 5000.f, 0.f);
+	const FVector OpenDepotSpot(1500.f, 9000.f, 0.f);
+	const FVector DockHarvesterStart(1500.f, 7000.f, 0.f);
+	/** How far from a depot's footprint edge a harvester stands when it delivers there, with some slack. */
+	constexpr float DeliveryReach = 300.f;
+	constexpr double UnreachableDocksTimeout = 60.0;
+
 	/** The obstacle move test sends three tanks from north of Block_North onto its roof, where a click on it lands. */
 	const TCHAR* ObstacleLabel = TEXT("Block_North");
 	const FVector ObstacleMoverStarts[] = {
@@ -156,6 +177,12 @@ namespace
 		int32 LastCredits = 0;
 		TArray<int32> Deposits;
 		TArray<double> DepositTimes;
+
+		// Unreachable-docks test only.
+		TWeakObjectPtr<ARTSBuilding> OpenDepot;
+		TWeakObjectPtr<ARTSSupplySource> WalledSource;
+		int32 SourceAmount = 0;
+		float FirstDeliveryDistance = -1.f;
 
 		// Obstacle move test only.
 		TArray<TWeakObjectPtr<ARTSUnit>> Movers;
@@ -269,6 +296,31 @@ namespace
 		Transform.AddToTranslation(FVector(0.f, 0.f, Unit->GetGroundOffset()));
 		Unit->FinishSpawning(Transform);
 		return Unit;
+	}
+
+	ARTSSupplySource* SpawnSupplySource(UWorld* World, const FVector& Location, int32 Amount)
+	{
+		const FTransform Transform(Location);
+		ARTSSupplySource* Source = World->SpawnActorDeferred<ARTSSupplySource>(
+			ARTSSupplySource::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		Source->Amount = Amount;
+		Source->FinishSpawning(Transform);
+		return Source;
+	}
+
+	/** A building of TeamId spawned in place, completed when bConstructed. */
+	ARTSBuilding* SpawnBuilding(UWorld* World, URTSBuildingData* Data, int32 TeamId, const FVector& Location, bool bConstructed)
+	{
+		const FTransform Transform(Location);
+		ARTSBuilding* Building = World->SpawnActorDeferred<ARTSBuilding>(
+			ARTSBuilding::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		Building->InitFromData(Data, TeamId);
+		Building->FinishSpawning(Transform);
+		if (bConstructed)
+		{
+			Building->UpdateConstruction(Data->BuildTime);
+		}
+		return Building;
 	}
 }
 
@@ -1125,6 +1177,147 @@ bool FRTSVerifyHarvest::Update()
 	return true;
 }
 
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceUnreachableDocks, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSPlaceUnreachableDocks::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	const int32 TeamId = Controller->GetTeamId();
+	URTSBuildingData* PlantData = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+	URTSBuildingData* TestDepot = LoadObject<URTSBuildingData>(nullptr, SupplyDepotPath);
+	if (!PlantData || !TestDepot || !SpawnPowerPlant(World, TeamId))
+	{
+		Test->AddError(TEXT("Missing the test power plant or supply depot"));
+		return true;
+	}
+	// Depots without a harvester of their own, so only the test's harvester runs.
+	URTSBuildingData* DepotData = DuplicateObject<URTSBuildingData>(TestDepot, GetTransientPackage());
+	DepotData->SpawnOnComplete = nullptr;
+
+	for (const FVector& Spot : RingSpots)
+	{
+		SpawnBuilding(World, PlantData, TeamId, Spot, false);
+	}
+	ARTSBuilding* WalledDepot = SpawnBuilding(World, DepotData, TeamId, WalledDepotSpot, true);
+	ARTSBuilding* OpenDepot = SpawnBuilding(World, DepotData, TeamId, OpenDepotSpot, true);
+	ARTSUnit* Harvester = SpawnTestUnit(World, HarvesterPath, TeamId, DockHarvesterStart);
+	const URTSHarvesterData* HarvesterData = Harvester ? Cast<URTSHarvesterData>(Harvester->GetUnitData()) : nullptr;
+	if (!HarvesterData)
+	{
+		Test->AddError(TEXT("Could not spawn the harvester"));
+		return true;
+	}
+	State->CarryAmount = HarvesterData->CarryAmount;
+	State->SourceAmount = 3 * State->CarryAmount;
+	ARTSSupplySource* WalledSource = SpawnSupplySource(World, WalledSourceSpot, State->SourceAmount);
+	ARTSSupplySource* OpenSource = SpawnSupplySource(World, OpenSourceSpot, State->SourceAmount);
+
+	Test->TestTrue(TEXT("Both depots are complete"), WalledDepot->IsConstructed() && OpenDepot->IsConstructed());
+	Test->TestTrue(TEXT("The walled source is the nearest in reach"),
+		ARTSSupplySource::FindNearest(*World, DockHarvesterStart, HarvesterData->SearchRadius) == WalledSource);
+	Test->TestTrue(TEXT("The walled depot is the nearest"),
+		URTSHarvesterComponent::FindNearestDepot(*World, TeamId, DockHarvesterStart) == WalledDepot);
+
+	State->Player = Controller->GetPlayerState<ARTSPlayerState>();
+	State->Building = WalledDepot;
+	State->OpenDepot = OpenDepot;
+	State->Source = OpenSource;
+	State->WalledSource = WalledSource;
+	State->Harvester = Harvester;
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueUnreachableDocksHarvest, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueUnreachableDocksHarvest::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	ARTSUnit* Harvester = State->Harvester.Get();
+	if (!Controller || !Harvester || !State->Building.IsValid() || !State->OpenDepot.IsValid()
+		|| !State->Source.IsValid() || !State->WalledSource.IsValid() || !State->Player.IsValid())
+	{
+		Test->AddError(TEXT("Lost the controller, the harvester, a depot, a source or the player state"));
+		return true;
+	}
+
+	// The ring must really cut the walled ones off, with the stand-off and reach the harvester uses.
+	const float Radius = Harvester->GetSelectionRadius();
+	const auto IsReachable = [Harvester, Radius](const AActor& Dock, const FIntPoint& Footprint)
+	{
+		FVector Spot;
+		return RTSApproach::FindReachableSpot(*Harvester, Dock.GetActorLocation(), Footprint, Radius + 60.f, Radius + 125.f, Spot);
+	};
+	Test->TestFalse(TEXT("The walled source cannot be reached"), IsReachable(*State->WalledSource, State->WalledSource->Footprint));
+	Test->TestFalse(TEXT("The walled depot cannot be reached"), IsReachable(*State->Building, State->Building->GetBuildingData()->Footprint));
+	Test->TestTrue(TEXT("The open source can be reached"), IsReachable(*State->Source, State->Source->Footprint));
+	Test->TestTrue(TEXT("The open depot can be reached"), IsReachable(*State->OpenDepot, State->OpenDepot->GetBuildingData()->Footprint));
+
+	// No source named: the harvester picks its own.
+	FRTSCommand Harvest;
+	Harvest.Type = ERTSCommandType::Harvest;
+	Controller->Server_IssueCommand({ Harvester }, Harvest);
+	Test->TestEqual(TEXT("The harvester took the Harvest order"), Harvester->GetQueuedCommandCount(), 1);
+
+	State->CreditsAfterPurchase = State->Player->GetCredits();
+	State->LastCredits = State->CreditsAfterPurchase;
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyUnreachableDocks, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyUnreachableDocks::Update()
+{
+	const ARTSPlayerState* Player = State->Player.Get();
+	const ARTSUnit* Harvester = State->Harvester.Get();
+	if (!Player || !Harvester)
+	{
+		Test->AddError(TEXT("Lost the player state or the harvester"));
+		return true;
+	}
+
+	if (Player->GetCredits() != State->LastCredits)
+	{
+		State->Deposits.Add(Player->GetCredits() - State->LastCredits);
+		State->LastCredits = Player->GetCredits();
+		// The first load went to the open depot; take it away so the next load has only the walled one left.
+		if (ARTSBuilding* OpenDepot = State->OpenDepot.Get(); OpenDepot && State->Deposits.Num() == 1)
+		{
+			const FVector Location = Harvester->GetActorLocation();
+			State->FirstDeliveryDistance = FVector::Dist2D(Location, OpenDepot->GetClosestFootprintPoint(Location));
+			OpenDepot->Destroy();
+		}
+	}
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (Harvester->GetQueuedCommandCount() > 0 && Elapsed < UnreachableDocksTimeout)
+	{
+		return false;
+	}
+
+	Test->AddInfo(FString::Printf(TEXT("Harvest order ended after %.1f s"), Elapsed));
+	if (!Test->TestEqual(TEXT("One delivery, before the open depot went"), State->Deposits.Num(), 1))
+	{
+		return true;
+	}
+	Test->TestEqual(TEXT("The delivery is a full load"), State->Deposits[0], State->CarryAmount);
+	Test->TestTrue(FString::Printf(TEXT("Delivered at the open depot (%.0f cm from its edge)"), State->FirstDeliveryDistance),
+		State->FirstDeliveryDistance >= 0.f && State->FirstDeliveryDistance <= DeliveryReach);
+
+	const URTSHarvesterComponent* Component = Harvester->GetHarvesterComponent();
+	Test->TestEqual(TEXT("With only the walled depot left the Harvest order ended"), Harvester->GetQueuedCommandCount(), 0);
+	Test->TestEqual(TEXT("The harvester is idle"), Component->GetState(), ERTSHarvestState::Idle);
+	Test->TestEqual(TEXT("The second load stays on board"), Component->GetCarried(), State->CarryAmount);
+	Test->TestEqual(TEXT("Credits rose by the one delivery"), Player->GetCredits(), State->CreditsAfterPurchase + State->CarryAmount);
+	Test->TestTrue(TEXT("Both loads came from the open source"),
+		State->Source.IsValid() && State->Source->GetRemaining() == State->SourceAmount - 2 * State->CarryAmount);
+	Test->TestTrue(TEXT("The walled source is untouched"),
+		State->WalledSource.IsValid() && State->WalledSource->GetRemaining() == State->SourceAmount);
+	return true;
+}
+
 DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FRTSCheckSolidObstacles, FAutomationTestBase*, Test);
 bool FRTSCheckSolidObstacles::Update()
 {
@@ -1416,6 +1609,29 @@ bool FRTSHarvestSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSBuySupplyDepot(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForHarvester(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyHarvest(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSHarvestUnreachableDocksSmokeTest, "WorldDivide.Smoke.HarvestUnreachableDocks",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSHarvestUnreachableDocksSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceUnreachableDocks(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueUnreachableDocksHarvest(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyUnreachableDocks(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

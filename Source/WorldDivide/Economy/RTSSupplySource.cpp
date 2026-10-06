@@ -73,13 +73,14 @@ FVector ARTSSupplySource::GetClosestFootprintPoint(const FVector& From) const
 		Center.Z);
 }
 
-ARTSSupplySource* ARTSSupplySource::FindNearest(const UWorld& World, const FVector& From, float MaxDistance)
+ARTSSupplySource* ARTSSupplySource::FindNearest(const UWorld& World, const FVector& From, float MaxDistance,
+	TConstArrayView<TWeakObjectPtr<ARTSSupplySource>> Exclude)
 {
 	ARTSSupplySource* Nearest = nullptr;
 	float NearestDistance = MaxDistance;
 	for (TActorIterator<ARTSSupplySource> It(&World); It; ++It)
 	{
-		if (It->IsDepleted())
+		if (It->IsDepleted() || Exclude.Contains(*It))
 		{
 			continue;
 		}

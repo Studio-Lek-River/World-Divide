@@ -45,11 +45,14 @@ bool URTSHarvesterComponent::StartHarvest(ARTSSupplySource* InSource)
 		return false;
 	}
 	Depot.Reset();
+	SkippedSources.Reset();
+	SkippedDepots.Reset();
 	RetryCooldown = 0.f;
 
 	if (InSource && !InSource->IsDepleted())
 	{
 		Source = InSource;
+		bSourceOrdered = true;
 		State = ERTSHarvestState::ToSource;
 	}
 	else if (!PickNextSource())
@@ -67,15 +70,18 @@ void URTSHarvesterComponent::StopHarvest()
 	State = ERTSHarvestState::Idle;
 	Source.Reset();
 	Depot.Reset();
+	SkippedSources.Reset();
+	SkippedDepots.Reset();
 }
 
 bool URTSHarvesterComponent::PickNextSource()
 {
-	Source = ARTSSupplySource::FindNearest(*GetWorld(), GetOwner()->GetActorLocation(), HarvesterData->SearchRadius);
+	Source = ARTSSupplySource::FindNearest(*GetWorld(), GetOwner()->GetActorLocation(), HarvesterData->SearchRadius, SkippedSources);
 	if (!Source.IsValid())
 	{
 		return false;
 	}
+	bSourceOrdered = false;
 	State = ERTSHarvestState::ToSource;
 	return true;
 }
@@ -118,7 +124,8 @@ bool URTSHarvesterComponent::UpdateHarvest(float DeltaSeconds)
 		{
 			if (!IsDocked(Target->GetClosestFootprintPoint(Location)))
 			{
-				return ApproachDock(Target->GetActorLocation(), Target->Footprint) || EndUnreachable(*Target);
+				return ApproachDock(Target->GetActorLocation(), Target->Footprint)
+					|| (bSourceOrdered ? EndUnreachable(*Target) : SkipUnreachableSource());
 			}
 			StopOwnerMovement();
 			State = ERTSHarvestState::Gathering;
@@ -142,16 +149,24 @@ bool URTSHarvesterComponent::UpdateHarvest(float DeltaSeconds)
 		{
 			return true;
 		}
-		Depot = FindNearestDepot(*GetWorld(), GetTeamId(), Location);
+		Depot = FindNearestDepot(*GetWorld(), GetTeamId(), Location, SkippedDepots);
 		if (!Depot.IsValid())
 		{
+			// Depots stand, but none can be reached: waiting would not change that.
+			for (const TWeakObjectPtr<ARTSBuilding>& Skipped : SkippedDepots)
+			{
+				if (Skipped.IsValid())
+				{
+					return EndUnreachable(*Skipped);
+				}
+			}
 			RetryCooldown = RetrySeconds;
 			return true;
 		}
 	}
 	if (!IsDocked(Depot->GetClosestFootprintPoint(Location)))
 	{
-		return ApproachDock(Depot->GetActorLocation(), Depot->GetBuildingData()->Footprint) || EndUnreachable(*Depot);
+		return ApproachDock(Depot->GetActorLocation(), Depot->GetBuildingData()->Footprint) || SkipUnreachableDepot();
 	}
 
 	StopOwnerMovement();
@@ -171,6 +186,8 @@ void URTSHarvesterComponent::Deposit()
 		Player->AddCredits(Carried);
 	}
 	Carried = 0;
+	// Whatever blocked a depot on this delivery may be gone by the next one.
+	SkippedDepots.Reset();
 }
 
 void URTSHarvesterComponent::StopOwnerMovement() const
@@ -215,20 +232,37 @@ bool URTSHarvesterComponent::EndUnreachable(const AActor& Dock)
 	return false;
 }
 
+bool URTSHarvesterComponent::SkipUnreachableSource()
+{
+	UE_LOG(LogWorldDivide, Verbose, TEXT("%s cannot reach %s and looks for another source"), *GetOwner()->GetName(), *Source->GetName());
+	SkippedSources.Add(Source);
+	Source.Reset();
+	return ContinueAfterSourceEmpty();
+}
+
+bool URTSHarvesterComponent::SkipUnreachableDepot()
+{
+	UE_LOG(LogWorldDivide, Verbose, TEXT("%s cannot reach %s and looks for another depot"), *GetOwner()->GetName(), *Depot->GetName());
+	SkippedDepots.Add(Depot);
+	Depot.Reset();
+	return true;
+}
+
 bool URTSHarvesterComponent::IsDocked(const FVector& EdgePoint) const
 {
 	const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner());
 	return Unit && FVector::Dist2D(Unit->GetActorLocation(), EdgePoint) <= Unit->GetSelectionRadius() + DockReach;
 }
 
-ARTSBuilding* URTSHarvesterComponent::FindNearestDepot(const UWorld& World, int32 TeamId, const FVector& From)
+ARTSBuilding* URTSHarvesterComponent::FindNearestDepot(const UWorld& World, int32 TeamId, const FVector& From,
+	TConstArrayView<TWeakObjectPtr<ARTSBuilding>> Exclude)
 {
 	ARTSBuilding* Nearest = nullptr;
 	float NearestDistance = TNumericLimits<float>::Max();
 	for (TActorIterator<ARTSBuilding> It(&World); It; ++It)
 	{
 		const URTSBuildingData* Data = It->GetBuildingData();
-		if (It->GetTeamId() != TeamId || !Data || !Data->bAcceptsSupply || !It->IsConstructed())
+		if (It->GetTeamId() != TeamId || !Data || !Data->bAcceptsSupply || !It->IsConstructed() || Exclude.Contains(*It))
 		{
 			continue;
 		}

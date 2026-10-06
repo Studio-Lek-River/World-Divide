@@ -105,6 +105,9 @@ bool FRTSSupplySourceTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("The empty source is skipped for the nearest one with supplies"),
 		ARTSSupplySource::FindNearest(*TestWorld.World, From, 10000.f) == Near);
 	TestNull(TEXT("Nothing beyond the search distance"), ARTSSupplySource::FindNearest(*TestWorld.World, From, 1000.f));
+	const TWeakObjectPtr<ARTSSupplySource> Skipped[] = { Near };
+	TestTrue(TEXT("An excluded source is skipped for the next nearest"),
+		ARTSSupplySource::FindNearest(*TestWorld.World, From, 10000.f, Skipped) == Far);
 	Near->Take(500);
 	TestTrue(TEXT("Once the near one is empty the far one is next"),
 		ARTSSupplySource::FindNearest(*TestWorld.World, From, 10000.f) == Far);
@@ -144,6 +147,15 @@ bool FRTSDepotSpawnsHarvesterTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("A completed depot spawns nothing more"), GetUnits(TestWorld.World).Num(), 1);
 	TestTrue(TEXT("The completed depot takes its team's deliveries"),
 		URTSHarvesterComponent::FindNearestDepot(*TestWorld.World, 1, FVector(2500.f, 0.f, 0.f)) == Depot);
+
+	ARTSBuilding* FarDepot = TestWorld.SpawnBuilding(MakeDepotData(nullptr), 1, FVector(-3000.f, 0.f, 0.f));
+	FarDepot->UpdateConstruction(DepotData->BuildTime);
+	const TWeakObjectPtr<ARTSBuilding> Skipped[] = { Depot };
+	TestTrue(TEXT("An excluded depot is skipped for the next nearest of the team"),
+		URTSHarvesterComponent::FindNearestDepot(*TestWorld.World, 1, FVector(2500.f, 0.f, 0.f), Skipped) == FarDepot);
+	const TWeakObjectPtr<ARTSBuilding> SkippedBoth[] = { Depot, FarDepot };
+	TestNull(TEXT("With every own depot excluded there is none, even with an enemy depot nearby"),
+		URTSHarvesterComponent::FindNearestDepot(*TestWorld.World, 1, FVector(2500.f, 0.f, 0.f), SkippedBoth));
 	return true;
 }
 

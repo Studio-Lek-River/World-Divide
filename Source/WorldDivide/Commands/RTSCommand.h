@@ -16,8 +16,9 @@ enum class ERTSCommandType : uint8
 	/** Place EntityData (a building) at TargetLocation. */
 	Build,
 	/**
-	 * Haul supplies from TargetActor (a supply source), or from the nearest one when it is null, to the nearest own depot
-	 * until ordered otherwise or no source is left in reach. Units that cannot harvest move to the source instead.
+	 * Haul supplies from TargetActor (a supply source), or from the nearest reachable one when it is null, to the nearest
+	 * reachable own depot until ordered otherwise or no source is left in reach. Units that cannot harvest move to the source
+	 * instead.
 	 */
 	Harvest,
 	/** Cancel TargetActor, an own building under construction, refunding the unbuilt share of what was paid for it. */

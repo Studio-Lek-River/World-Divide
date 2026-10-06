@@ -29,8 +29,9 @@ public:
 	/** From clamped to the footprint rectangle. */
 	FVector GetClosestFootprintPoint(const FVector& From) const;
 
-	/** The source with supplies left whose footprint edge is nearest From and within MaxDistance, or null. */
-	static ARTSSupplySource* FindNearest(const UWorld& World, const FVector& From, float MaxDistance);
+	/** The source with supplies left, not in Exclude, whose footprint edge is nearest From and within MaxDistance, or null. */
+	static ARTSSupplySource* FindNearest(const UWorld& World, const FVector& From, float MaxDistance,
+		TConstArrayView<TWeakObjectPtr<ARTSSupplySource>> Exclude = {});
 
 	/** Supplies at the start of the match. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Supply", meta = (ClampMin = "0"))
