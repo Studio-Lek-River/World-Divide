@@ -83,3 +83,12 @@ Report:
 - Suggested follow-up issues, if any.
 
 Then `AskUserQuestion`: push to `origin/main` / adjust / leave unpushed. Push only on explicit approval; the push closes the issue through `Closes #<n>`. Never close the issue by hand.
+
+## 8. Follow-ups and roadmap order
+
+After the push, always, without asking again:
+
+- Create every follow-up from the report as an issue in the `Roadmap` milestone: body with **Context** (start with `Follow-up to #<n>.`, name the classes involved), **What** and **Acceptance**, no labels. If an open issue already covers it, add a bullet to that issue's **What** instead of creating a duplicate.
+- Title prefix: the roadmap slot it belongs in, `[NNb]` (`[NNc]`, ...) right after the issue it must precede or follow, e.g. `[06b]` for work that a later issue builds on. Never renumber existing issues.
+- Update the `Roadmap` milestone description (`gh api -X PATCH repos/Studio-Lek-River/World-Divide/milestones/<id> -f description=...`): drop the line of the issue just closed and insert the new ones in order, keeping the `NN. #<n>` format under `Work top to bottom:`.
+- Report the new issue URLs and the new order.
