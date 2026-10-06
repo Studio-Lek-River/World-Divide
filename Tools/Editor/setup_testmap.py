@@ -1,6 +1,6 @@
-"""Builds the placeholder weapon, unit, harvester, building and faction data assets, the placement ghost material, the
+"""Builds the placeholder weapon, unit, harvester, builder, building and faction data assets, the placement ghost material, the
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py) and the L_TestMap level with a supply
-source by each base. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
+source and two builders by each base. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
 source files that build them and are rebuilt only when those change.
 
@@ -222,6 +222,22 @@ def make_harvester(name, display_name, mesh, scale, radius, health, speed, turn_
     })
 
 
+def make_builder(name, display_name, mesh, scale, radius, health, speed, turn_rate, cost, build_time, buildings):
+    return plan_data_asset(name, UNIT_DIR, unreal.RTSBuilderData, {
+        "display_name": unreal.Text(display_name),
+        "mesh": mesh,
+        "mesh_scale": unreal.Vector(*scale),
+        "selection_radius": radius,
+        "max_health": health,
+        "weapon": None,
+        "move_speed": speed,
+        "turn_rate": turn_rate,
+        "cost": cost,
+        "build_time": build_time,
+        "buildings": buildings,
+    })
+
+
 def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw,
                   spawn_on_complete=None, accepts_supply=False, requires_power=False):
     return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
@@ -343,7 +359,7 @@ def spawn_supply_source(location, amount, footprint, mesh):
     return source
 
 
-def build_map(tank, infantry, wall, crate, digest):
+def build_map(tank, infantry, builder, wall, crate, digest):
     if assets.does_asset_exist(MAP_PATH):
         assets.delete_asset(MAP_PATH)
     if not levels.new_level(MAP_PATH):
@@ -380,6 +396,7 @@ def build_map(tank, infantry, wall, crate, digest):
         forward = 1.0 if yaw == 0.0 else -1.0
         spawn_units(tank, 6, team_id, (x + 600.0 * forward, -900.0, 0.0), yaw)
         spawn_units(infantry, 10, team_id, (x + 600.0 * forward, 900.0, 0.0), yaw)
+        spawn_units(builder, 2, team_id, (x - 400.0 * forward, 0.0, 0.0), yaw)
         # Beside each base, clear of the units' paths and of the empty strip at y = 7000 the tests build in.
         spawn_supply_source((x - 50.0 * forward, 2550.0 * forward, 0.0), 5000, (3, 3), crate)
 
@@ -389,10 +406,10 @@ def build_map(tank, infantry, wall, crate, digest):
         raise RuntimeError(f"Could not save {MAP_PATH}")
 
 
-def make_map(tank, infantry, wall, crate):
-    plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, wall, crate, digest),
+def make_map(tank, infantry, builder, wall, crate):
+    plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, builder, wall, crate, digest),
                  spec_hash([build_map, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source],
-                           MAP_PATH, CUBE, tank, infantry, wall, crate))
+                           MAP_PATH, CUBE, tank, infantry, builder, wall, crate))
 
 
 def asset_file(path, extension):
@@ -426,6 +443,7 @@ if os.path.exists(READ_ONLY_REPORT):
 tank_mesh = make_art("Tank", "Quaternius/tank.glb", yaw=180.0)
 infantry_mesh = make_art("Infantry", "Kenney/MiniCharacters/character-male-a.glb", yaw=-90.0)
 truck_mesh = make_art("Truck", "Kenney/CarKit/delivery.glb", yaw=-90.0)
+builder_mesh = make_art("Builder", "Kenney/CarKit/tractor-shovel.glb", yaw=-90.0)
 power_plant_mesh = make_art("PowerPlant", "Kenney/CityKitIndustrial/building-m.glb")
 supply_depot_mesh = make_art("SupplyDepot", "Kenney/CityKitIndustrial/building-j.glb")
 tower_mesh = make_art("Tower", "Kenney/TowerDefenseKit/tower-round-build-c.glb")
@@ -448,7 +466,9 @@ harvester = make_harvester("DA_TestHarvester", "Test Harvester", truck_mesh, fit
 supply_depot = make_building("DA_TestSupplyDepot", "Test Supply Depot", supply_depot_mesh,
                              fit_scale(supply_depot_mesh, 280.0, 280.0), (3, 3), 1000.0, None, 1500, 5.0, 0, 1,
                              spawn_on_complete=harvester, accepts_supply=True)
+builder = make_builder("DA_TestBuilder", "Test Builder", builder_mesh, fit_scale(builder_mesh, 150.0, 100.0), 60.0, 300.0,
+                       500.0, 360.0, 1000, 10.0, [power_plant, tower, supply_depot])
 make_faction("DA_TestFaction", "Test Faction", [power_plant, tower, supply_depot])
 make_ghost_material("M_PlacementGhost")
-make_map(tank, infantry, wall_mesh, crate_mesh)
+make_map(tank, infantry, builder, wall_mesh, crate_mesh)
 write_pending()

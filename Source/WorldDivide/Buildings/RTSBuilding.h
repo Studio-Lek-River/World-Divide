@@ -61,7 +61,10 @@ public:
 	 */
 	int32 GetCancelRefund() const;
 
-	/** Server only. While set the building constructs itself each tick; a builder unit will clear it and drive UpdateConstruction. */
+	/**
+	 * Server only. While set the building constructs itself each tick, as one from the debug build menu does; a builder unit
+	 * clears it on the site it places and drives UpdateConstruction while it stands there.
+	 */
 	UPROPERTY(EditAnywhere, Category = "Construction")
 	bool bAutoConstruct = true;
 

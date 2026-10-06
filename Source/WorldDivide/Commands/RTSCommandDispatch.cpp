@@ -8,11 +8,25 @@
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Engine/World.h"
+#include "HAL/IConsoleManager.h"
 #include "Units/RTSUnit.h"
 #include "WorldDivide.h"
 
+namespace
+{
+	TAutoConsoleVariable<bool> CVarDebugBuild(
+		TEXT("rts.DebugBuild"), false,
+		TEXT("Lets the 1-9 menu place the faction's buildings without a builder, and the server accept them."),
+		ECVF_Cheat);
+}
+
 namespace RTSCommands
 {
+	bool IsDebugBuildEnabled()
+	{
+		return CVarDebugBuild.GetValueOnAnyThread();
+	}
+
 	TArray<ARTSUnit*> FilterOwnedUnits(TConstArrayView<ARTSUnit*> Units, int32 TeamId)
 	{
 		TArray<ARTSUnit*> Owned;

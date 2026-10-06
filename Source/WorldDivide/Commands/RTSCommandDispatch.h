@@ -22,6 +22,12 @@ namespace RTSCommands
 	 */
 	WORLDDIVIDE_API ARTSBuilding* PlaceBuilding(UWorld& World, const URTSFactionData* Faction, int32 TeamId, const FRTSCommand& Command);
 
+	/**
+	 * A Build order without units is placed directly, as by the debug build menu. Off unless the cheat console variable
+	 * rts.DebugBuild is set; otherwise only builder units place buildings.
+	 */
+	WORLDDIVIDE_API bool IsDebugBuildEnabled();
+
 	/** Server only. PlaceBuilding for Player's faction and team, charged to Player: refused when they cannot afford it. */
 	WORLDDIVIDE_API ARTSBuilding* PurchaseBuilding(UWorld& World, ARTSPlayerState& Player, const FRTSCommand& Command);
 

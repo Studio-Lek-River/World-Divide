@@ -23,8 +23,9 @@ struct FInputActionValue;
  * left click/drag select (Shift adds; a click on an own building selects that building), right click move, attack an
  * enemy unit or building, or harvest a supply source (Shift queues), X stop. Delete cancels the own construction site
  * under the cursor, or else the selected one, as does the HUD's cancel button.
- * Debug build menu: 1-9 pick a faction building to place, left click builds, right click or Esc cancels.
- * Placement mode stays once builder units exist; only the hotkey menu that starts it is a stand-in.
+ * With a builder selected, 1-9 pick a building from its list to place: left click sends the builder (Shift queues it and
+ * keeps placing), right click or Esc cancels. A right click on an own construction site sends builders to resume it.
+ * With rts.DebugBuild on and no builder selected, 1-9 pick from the faction's buildings and place them without a builder.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSPlayerController : public APlayerController
@@ -65,17 +66,30 @@ public:
 	/** The local player has the credits for Data's cost. The server checks again before it charges. */
 	bool CanAfford(const URTSEntityData& Data) const;
 
-	/** Number of faction buildings the debug build menu reaches through the 1-9 keys. */
+	/** Number of build menu entries the 1-9 keys reach. */
 	static constexpr int32 MaxBuildHotkeys = 9;
 
-	/** Local. Shows a ghost of Data under the cursor until the player builds or cancels. */
+	/** The first selected unit that can build, or null. Its list is the build menu. */
+	ARTSUnit* GetSelectedBuilder() const;
+
+	/**
+	 * What 1-9 place: the selected builder's buildings, else the faction's buildings while debug build is on
+	 * (RTSCommands::IsDebugBuildEnabled), else nothing.
+	 */
+	TArray<URTSBuildingData*> GetBuildMenu() const;
+
+	/**
+	 * Local. Shows a ghost of Data under the cursor until the player builds or cancels. Confirming sends the selected
+	 * builder, or without one places the building directly in debug build.
+	 */
 	void BeginPlacement(URTSBuildingData* Data);
 	void CancelPlacement();
 	URTSBuildingData* GetPlacementData() const { return PlacementData; }
 
 	/**
 	 * The only way orders reach the server. Units not owned by this player's team are ignored.
-	 * A Build order is placed directly for now, without units, after the server re-checks faction, spot and credits.
+	 * A Build order without units is placed directly, after the server re-checks faction, spot and credits, but only in debug
+	 * build; otherwise it is refused.
 	 */
 	UFUNCTION(Server, Reliable)
 	void Server_IssueCommand(const TArray<ARTSUnit*>& Units, const FRTSCommand& Command);
@@ -176,6 +190,10 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<ARTSPlacementGhost> PlacementGhost;
+
+	/** The builder that gets the order; placement ends when it dies. Null while placing from the debug menu. */
+	TWeakObjectPtr<ARTSUnit> PlacementBuilder;
+	bool bPlacementDebug = false;
 
 	FVector PlacementLocation = FVector::ZeroVector;
 	bool bPlacementValid = false;

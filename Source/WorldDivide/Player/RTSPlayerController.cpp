@@ -6,6 +6,7 @@
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSPlayerState.h"
 #include "Core/RTSSettings.h"
+#include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Economy/RTSSupplySource.h"
@@ -18,6 +19,7 @@
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSHUD.h"
 #include "Units/RTSUnit.h"
+#include "WorldDivide.h"
 
 namespace
 {
@@ -442,12 +444,20 @@ void ARTSPlayerController::OnMoveOrder()
 		return;
 	}
 
-	// Right-clicking an enemy unit or building attacks it, a supply source harvests it; anywhere else is a move.
+	// Right-clicking an enemy unit or building attacks it, an own construction site resumes it, a supply source harvests it;
+	// anywhere else is a move.
 	FRTSCommand Command;
 	const IRTSTargetable* Clicked = Cast<IRTSTargetable>(Hit.GetActor());
+	const ARTSBuilding* ClickedBuilding = Cast<ARTSBuilding>(Hit.GetActor());
 	if (Clicked && Clicked->GetTeamId() != GetTeamId())
 	{
 		Command.Type = ERTSCommandType::Attack;
+		Command.TargetActor = Hit.GetActor();
+	}
+	else if (ClickedBuilding && !ClickedBuilding->IsConstructed())
+	{
+		// An own construction site: builders resume it, the others walk up to it.
+		Command.Type = ERTSCommandType::Build;
 		Command.TargetActor = Hit.GetActor();
 	}
 	else if (Hit.GetActor() && Hit.GetActor()->IsA<ARTSSupplySource>())
@@ -471,12 +481,46 @@ void ARTSPlayerController::OnStopOrder()
 	IssueToSelection(Command);
 }
 
+ARTSUnit* ARTSPlayerController::GetSelectedBuilder() const
+{
+	for (const TWeakObjectPtr<ARTSUnit>& Unit : SelectedUnits)
+	{
+		// Unit data replicates; the builder component only knows its data on the server.
+		if (Unit.IsValid() && Cast<URTSBuilderData>(Unit->GetUnitData()))
+		{
+			return Unit.Get();
+		}
+	}
+	return nullptr;
+}
+
+TArray<URTSBuildingData*> ARTSPlayerController::GetBuildMenu() const
+{
+	TArray<URTSBuildingData*> Menu;
+	const URTSFactionData* Faction = GetFaction();
+	if (const ARTSUnit* Builder = GetSelectedBuilder())
+	{
+		for (URTSBuildingData* Data : CastChecked<URTSBuilderData>(Builder->GetUnitData())->Buildings)
+		{
+			Menu.Add(Data);
+		}
+	}
+	else if (Faction && RTSCommands::IsDebugBuildEnabled())
+	{
+		for (URTSBuildingData* Data : Faction->Buildings)
+		{
+			Menu.Add(Data);
+		}
+	}
+	return Menu;
+}
+
 void ARTSPlayerController::OnBuildHotkey(int32 Index)
 {
-	const URTSFactionData* Faction = GetFaction();
-	if (Faction && Faction->Buildings.IsValidIndex(Index))
+	const TArray<URTSBuildingData*> Menu = GetBuildMenu();
+	if (Menu.IsValidIndex(Index))
 	{
-		BeginPlacement(Faction->Buildings[Index]);
+		BeginPlacement(Menu[Index]);
 	}
 }
 
@@ -510,6 +554,8 @@ void ARTSPlayerController::BeginPlacement(URTSBuildingData* Data)
 	PlacementGhost->SetBuildingData(*Data, GetDefault<URTSSettings>()->PlacementGhostMaterial.LoadSynchronous());
 	PlacementGhost->SetActorHiddenInGame(true);
 	PlacementData = Data;
+	PlacementBuilder = GetSelectedBuilder();
+	bPlacementDebug = !PlacementBuilder.IsValid();
 	// A half-dragged selection box would otherwise finish on the confirming click.
 	bSelecting = false;
 }
@@ -522,6 +568,8 @@ void ARTSPlayerController::CancelPlacement()
 	}
 	PlacementGhost = nullptr;
 	PlacementData = nullptr;
+	PlacementBuilder = nullptr;
+	bPlacementDebug = false;
 	bPlacementValid = false;
 }
 
@@ -529,6 +577,12 @@ void ARTSPlayerController::UpdatePlacement()
 {
 	if (!PlacementData || !PlacementGhost)
 	{
+		return;
+	}
+	if (!bPlacementDebug && !PlacementBuilder.IsValid())
+	{
+		// The builder died: nobody is left to send.
+		CancelPlacement();
 		return;
 	}
 
@@ -556,12 +610,25 @@ void ARTSPlayerController::ConfirmPlacement()
 		return;
 	}
 
-	// No builder units yet: the debug menu sends the order without units and the server places the building directly.
 	FRTSCommand Command;
 	Command.Type = ERTSCommandType::Build;
 	Command.EntityData = PlacementData;
 	Command.TargetLocation = PlacementLocation;
-	Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+	if (ARTSUnit* Builder = PlacementBuilder.Get())
+	{
+		// The builder walks there, places the building and constructs it. Shift queues it and keeps placing.
+		Command.bQueue = IsShiftDown();
+		Server_IssueCommand({ Builder }, Command);
+		if (Command.bQueue)
+		{
+			return;
+		}
+	}
+	else if (bPlacementDebug)
+	{
+		// The debug menu sends the order without units and the server places the building directly.
+		Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+	}
 	CancelPlacement();
 }
 
@@ -589,10 +656,17 @@ void ARTSPlayerController::Server_IssueCommand_Implementation(const TArray<ARTSU
 	{
 		return;
 	}
-	if (Command.Type == ERTSCommandType::Build)
+	if (Command.Type == ERTSCommandType::Build && Units.IsEmpty())
 	{
-		// Debug build menu path. Once builder units exist, a Build order goes to them through Dispatch instead.
-		RTSCommands::PurchaseBuilding(*GetWorld(), *State, Command);
+		// The debug build menu: no builder, so the server places the building directly, if debug build is on.
+		if (RTSCommands::IsDebugBuildEnabled())
+		{
+			RTSCommands::PurchaseBuilding(*GetWorld(), *State, Command);
+		}
+		else
+		{
+			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d may not build without a builder"), State->GetTeamId());
+		}
 		return;
 	}
 	if (Command.Type == ERTSCommandType::CancelConstruction)

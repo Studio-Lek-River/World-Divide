@@ -36,7 +36,11 @@ namespace RTSApproach
 		const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Footprint);
 		const FVector Facing = ClosestFootprintPoint(Center, Extent, From);
 		TArray<FVector, TInlineAllocator<32>> Candidates;
-		Candidates.Add(Facing + (From - Facing).GetSafeNormal2D() * StandOff);
+		// A builder may stand inside the footprint of a building it has yet to place; then no side faces it.
+		if (FVector::DistSquared2D(Facing, From) > KINDA_SMALL_NUMBER)
+		{
+			Candidates.Add(Facing + (From - Facing).GetSafeNormal2D() * StandOff);
+		}
 		for (const FVector Normal : { FVector(1.f, 0.f, 0.f), FVector(-1.f, 0.f, 0.f), FVector(0.f, 1.f, 0.f), FVector(0.f, -1.f, 0.f) })
 		{
 			const FVector Along(FMath::Abs(Normal.Y), FMath::Abs(Normal.X), 0.f);

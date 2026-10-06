@@ -1,10 +1,12 @@
 #include "Units/RTSUnit.h"
 
+#include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSHarvesterData.h"
 #include "Data/RTSUnitData.h"
@@ -30,8 +32,8 @@ namespace
 	/** Attackers head for a spot this fraction of their range outside a building's edge, well clear of its navmesh hole. */
 	constexpr float BuildingApproachFraction = 0.5f;
 
-	/** Units that cannot harvest stop this far outside the edge of a supply source they were sent to. */
-	constexpr float SupplySourceStandOff = 100.f;
+	/** Units that cannot harvest or build stop this far outside the edge of a supply source or construction site they were sent to. */
+	constexpr float DockStandOff = 100.f;
 
 	/** A move into a wall or a building steps back toward the unit by this much until it finds navmesh, up to the distance. */
 	constexpr float MoveSnapStep = 50.f;
@@ -76,6 +78,7 @@ ARTSUnit::ARTSUnit()
 	HealthComponent = CreateDefaultSubobject<URTSHealthComponent>(TEXT("Health"));
 	WeaponComponent = CreateDefaultSubobject<URTSWeaponComponent>(TEXT("Weapon"));
 	HarvesterComponent = CreateDefaultSubobject<URTSHarvesterComponent>(TEXT("Harvester"));
+	BuilderComponent = CreateDefaultSubobject<URTSBuilderComponent>(TEXT("Builder"));
 
 	AIControllerClass = ARTSUnitAIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -97,6 +100,7 @@ void ARTSUnit::InitFromData(URTSUnitData* InUnitData, int32 InTeamId)
 	WeaponComponent->SetTeamId(TeamId);
 	WeaponComponent->SetWeaponData(UnitData ? UnitData->Weapon : nullptr);
 	HarvesterComponent->SetHarvesterData(Cast<URTSHarvesterData>(UnitData));
+	BuilderComponent->SetBuilderData(Cast<URTSBuilderData>(UnitData));
 	ApplyUnitData();
 }
 
@@ -212,6 +216,7 @@ void ARTSUnit::Tick(float DeltaSeconds)
 
 	UpdateAttackOrder();
 	UpdateHarvestOrder(DeltaSeconds);
+	UpdateBuildOrder(DeltaSeconds);
 
 	// Turn toward the direction of travel, or toward the target while standing. Rotation replicates with movement.
 	if (Movement->Velocity.SizeSquared2D() > FMath::Square(10.f))
@@ -250,12 +255,26 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 		const FVector Edge = Source->GetClosestFootprintPoint(GetActorLocation());
 		Command.Type = ERTSCommandType::Move;
 		Command.TargetActor = nullptr;
-		Command.TargetLocation = Edge + (GetActorLocation() - Edge).GetSafeNormal2D() * (GetSelectionRadius() + SupplySourceStandOff);
+		Command.TargetLocation = Edge + (GetActorLocation() - Edge).GetSafeNormal2D() * (GetSelectionRadius() + DockStandOff);
+	}
+	else if (Command.Type == ERTSCommandType::Build && !BuilderComponent->CanBuild())
+	{
+		// Only builders construct; anyone else sent to a site just walks up to it. A new building for them is dropped.
+		const ARTSBuilding* Site = Cast<ARTSBuilding>(Command.TargetActor);
+		if (!Site)
+		{
+			return;
+		}
+		const FVector Edge = Site->GetClosestFootprintPoint(GetActorLocation());
+		Command.Type = ERTSCommandType::Move;
+		Command.TargetActor = nullptr;
+		Command.TargetLocation = Edge + (GetActorLocation() - Edge).GetSafeNormal2D() * (GetSelectionRadius() + DockStandOff);
 	}
 
 	if (Command.Type == ERTSCommandType::Stop || !Command.bQueue)
 	{
 		HarvesterComponent->StopHarvest();
+		BuilderComponent->StopBuild();
 	}
 
 	if (Command.Type == ERTSCommandType::Stop)
@@ -355,6 +374,11 @@ bool ARTSUnit::StartCommand(AAIController& AI, const FRTSCommand& Command)
 		return HarvesterComponent->StartHarvest(Cast<ARTSSupplySource>(Command.TargetActor));
 	}
 
+	if (Command.Type == ERTSCommandType::Build)
+	{
+		return BuilderComponent->StartBuild(Command);
+	}
+
 	return false;
 }
 
@@ -365,6 +389,19 @@ void ARTSUnit::UpdateHarvestOrder(float DeltaSeconds)
 		return;
 	}
 	if (!HarvesterComponent->UpdateHarvest(DeltaSeconds))
+	{
+		CommandQueue.RemoveAt(0);
+		StartNextCommand();
+	}
+}
+
+void ARTSUnit::UpdateBuildOrder(float DeltaSeconds)
+{
+	if (CommandQueue.IsEmpty() || CommandQueue[0].Type != ERTSCommandType::Build)
+	{
+		return;
+	}
+	if (!BuilderComponent->UpdateBuild(DeltaSeconds))
 	{
 		CommandQueue.RemoveAt(0);
 		StartNextCommand();
@@ -455,9 +492,10 @@ void ARTSUnit::NotifyMoveFinished(const FPathFollowingResult& Result)
 		bMoveFinishedDuringRequest = true;
 		return;
 	}
-	// UpdateAttackOrder and the harvester start and stop their own moves and end their orders themselves.
+	// UpdateAttackOrder, the harvester and the builder start and stop their own moves and end their orders themselves.
 	if (!CommandQueue.IsEmpty()
-		&& (CommandQueue[0].Type == ERTSCommandType::Attack || CommandQueue[0].Type == ERTSCommandType::Harvest))
+		&& (CommandQueue[0].Type == ERTSCommandType::Attack || CommandQueue[0].Type == ERTSCommandType::Harvest
+			|| CommandQueue[0].Type == ERTSCommandType::Build))
 	{
 		return;
 	}

@@ -8,6 +8,7 @@ required. They are credited here anyway. `Tools/Editor/setup_testmap.py` imports
 | `Quaternius/tank.glb` | Tank | [Tank](https://poly.pizza/m/jWS1CLA0RO) | Quaternius |
 | `Kenney/MiniCharacters/character-male-a.glb` | Infantry | [Mini Characters](https://kenney.nl/assets/mini-characters) | Kenney |
 | `Kenney/CarKit/delivery.glb` | Harvester | [Car Kit](https://kenney.nl/assets/car-kit) | Kenney |
+| `Kenney/CarKit/tractor-shovel.glb` | Builder | [Car Kit](https://kenney.nl/assets/car-kit) | Kenney |
 | `Kenney/CityKitIndustrial/building-m.glb` | Power Plant | [City Kit (Industrial)](https://kenney.nl/assets/city-kit-industrial) | Kenney |
 | `Kenney/CityKitIndustrial/building-j.glb` | Supply Depot | [City Kit (Industrial)](https://kenney.nl/assets/city-kit-industrial) | Kenney |
 | `Kenney/TowerDefenseKit/tower-round-build-c.glb` | Tower | [Tower Defense Kit](https://kenney.nl/assets/tower-defense-kit) | Kenney |

@@ -10,6 +10,7 @@ class AAIController;
 class UCapsuleComponent;
 class UStaticMeshComponent;
 class UFloatingPawnMovement;
+class URTSBuilderComponent;
 class URTSHarvesterComponent;
 class URTSHealthComponent;
 class URTSWeaponComponent;
@@ -33,7 +34,8 @@ public:
 
 	/**
 	 * Server only. Replaces the order queue, or appends to it when Command.bQueue is set.
-	 * A Harvest for a unit that cannot harvest becomes a move up to the source.
+	 * A Harvest for a unit that cannot harvest becomes a move up to the source, as a Build naming an own construction site
+	 * becomes a move up to the site for a unit that cannot build.
 	 */
 	void ExecuteCommand(const FRTSCommand& InCommand);
 
@@ -45,6 +47,7 @@ public:
 	virtual URTSHealthComponent* GetHealthComponent() const override { return HealthComponent; }
 	URTSWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
 	URTSHarvesterComponent* GetHarvesterComponent() const { return HarvesterComponent; }
+	URTSBuilderComponent* GetBuilderComponent() const { return BuilderComponent; }
 	float GetSelectionRadius() const;
 	int32 GetQueuedCommandCount() const { return CommandQueue.Num(); }
 
@@ -95,6 +98,9 @@ private:
 	/** Each tick while a Harvest is the current order: the harvester component runs it and says when it is over. */
 	void UpdateHarvestOrder(float DeltaSeconds);
 
+	/** Each tick while a Build is the current order: the builder component runs it and says when it is over. */
+	void UpdateBuildOrder(float DeltaSeconds);
+
 	/** Points the weapon at what the current order allows: the attack target, anything in range when idle, nothing while moving. */
 	void ApplyWeaponMode();
 
@@ -117,6 +123,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<URTSHarvesterComponent> HarvesterComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<URTSBuilderComponent> BuilderComponent;
 
 	UPROPERTY(ReplicatedUsing = OnRep_UnitData)
 	TObjectPtr<URTSUnitData> UnitData;

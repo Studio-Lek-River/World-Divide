@@ -13,7 +13,11 @@ enum class ERTSCommandType : uint8
 	Stop,
 	/** Close in on TargetActor and fire until it dies. */
 	Attack,
-	/** Place EntityData (a building) at TargetLocation. */
+	/**
+	 * Builders walk to TargetLocation, place EntityData (a building) there and construct it while they stay; when TargetActor
+	 * is an own construction site they resume that instead. Units that cannot build move up to a named site. Without units the
+	 * server places the building directly, but only in debug build (RTSCommands::IsDebugBuildEnabled).
+	 */
 	Build,
 	/**
 	 * Haul supplies from TargetActor (a supply source), or from the nearest reachable one when it is null, to the nearest

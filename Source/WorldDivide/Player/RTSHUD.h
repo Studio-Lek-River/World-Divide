@@ -11,7 +11,7 @@ class ARTSUnit;
 /**
  * Draws the drag box, the brackets plus health bar of selected units, construction progress of own buildings,
  * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
- * the player's credits and power, and the debug build menu, without any UI assets.
+ * the player's credits and power, and the build menu of the selected builder (or the debug build menu), without any UI assets.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSHUD : public AHUD

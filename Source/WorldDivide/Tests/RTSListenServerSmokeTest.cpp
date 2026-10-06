@@ -2,11 +2,13 @@
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
+#include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSPlayerState.h"
+#include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Editor.h"
 #include "EngineUtils.h"
@@ -25,8 +27,8 @@
  * Plays L_TestMap as a listen server with one client in the same process. Checks that the host gets team 0 and the
  * client team 1 at their tagged player starts, and that the client sees its own credits but not the host's, then sends a move for every unit the client sees through the client's
  * own controller: the server must move only the client's units, and the client must see them arrive. The client then
- * buys a construction site and cancels it: the site must disappear in both worlds and the client must see its refund
- * while the host's credits stay put. Then the server
+ * sends its builder to buy a construction site, stops the builder and cancels the site: the site must disappear in both
+ * worlds and the client must see its refund while the host's credits stay put. Then the server
  * places a host building and the client orders its units to attack it: the client's copy must show the building's
  * health dropping before it disappears.
  */
@@ -34,7 +36,7 @@ namespace RTSListenServerTest
 {
 	const TCHAR* TestMap = TEXT("/Game/Maps/L_TestMap");
 	const FVector MoveTarget(0.f, 0.f, 0.f);
-	constexpr int32 UnitsPerTeam = 16;
+	constexpr int32 UnitsPerTeam = 18;
 	constexpr float ArrivalRadius = 800.f;
 	constexpr float UnmovedTolerance = 50.f;
 	constexpr double SessionTimeout = 60.0;
@@ -45,6 +47,8 @@ namespace RTSListenServerTest
 	const FVector ClientSiteSpot(-3000.f, 7000.f, 0.f);
 	const TCHAR* PowerPlantPath = TEXT("/Game/Data/Buildings/DA_TestPowerPlant.DA_TestPowerPlant");
 	constexpr double ReplicationTimeout = 15.0;
+	/** The client's builder walks from the middle of the map to its site before placing it. */
+	constexpr double ClientSiteTimeout = 60.0;
 	constexpr double BuildingAttackTimeout = 60.0;
 
 	constexpr int32 HostTeam = 0;
@@ -68,7 +72,9 @@ namespace RTSListenServerTest
 		float ClientMaxHealth = 0.f;
 		float ClientLowestHealth = 0.f;
 
-		/** The construction site the client buys and cancels, as each world sees it, and the credits around it. */
+		/** The construction site the client's builder buys and the client cancels, as each world sees it, and the credits around it. */
+		TWeakObjectPtr<ARTSUnit> ClientBuilder;
+		bool bClientBuilderStopped = false;
 		TWeakObjectPtr<ARTSBuilding> ServerSite;
 		TWeakObjectPtr<ARTSBuilding> ClientSite;
 		int32 ClientCreditsBefore = 0;
@@ -327,11 +333,26 @@ namespace RTSListenServerTest
 		State->ClientCreditsBefore = ServerClientState->GetCredits();
 		State->HostCredits = HostState->GetCredits();
 
+		// The client's own copy of one of its builders, as a selection would hold it.
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : State->ClientUnits[ClientTeam])
+		{
+			if (Unit.IsValid() && Cast<URTSBuilderData>(Unit->GetUnitData()))
+			{
+				State->ClientBuilder = Unit;
+				break;
+			}
+		}
+		if (!State->ClientBuilder.IsValid())
+		{
+			Test->AddError(TEXT("The client has no builder"));
+			return true;
+		}
+
 		FRTSCommand Build;
 		Build.Type = ERTSCommandType::Build;
 		Build.EntityData = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
 		Build.TargetLocation = ClientSiteSpot;
-		ClientController->Server_IssueCommand(TArray<ARTSUnit*>(), Build);
+		ClientController->Server_IssueCommand({ State->ClientBuilder.Get() }, Build);
 		State->PhaseStart = FPlatformTime::Seconds();
 		return true;
 	}
@@ -352,9 +373,7 @@ namespace RTSListenServerTest
 			{
 				if (It->GetTeamId() == ClientTeam)
 				{
-					// Held where it is, so the refund cannot change before the cancel arrives.
 					State->ServerSite = *It;
-					It->bAutoConstruct = false;
 				}
 			}
 		}
@@ -371,17 +390,32 @@ namespace RTSListenServerTest
 
 		const ARTSBuilding* ServerSite = State->ServerSite.Get();
 		const ARTSBuilding* ClientSite = State->ClientSite.Get();
-		const ARTSPlayerController* ClientController = GetLocalController(*ClientWorld);
+		ARTSPlayerController* ClientController = GetLocalController(*ClientWorld);
 		const ARTSPlayerState* ServerClientState = ARTSPlayerState::FindForTeam(*ServerWorld, ClientTeam);
-		const bool bSynced = ServerSite && ClientSite && ClientController && ServerClientState
+
+		// Once the builder has placed the site, the client stops it so the refund holds until the cancel arrives.
+		if (ServerSite && ClientController && State->ClientBuilder.IsValid() && !State->bClientBuilderStopped)
+		{
+			FRTSCommand Stop;
+			Stop.Type = ERTSCommandType::Stop;
+			ClientController->Server_IssueCommand({ State->ClientBuilder.Get() }, Stop);
+			State->bClientBuilderStopped = true;
+		}
+		bool bBuildersIdle = true;
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : State->ServerUnits[ClientTeam])
+		{
+			bBuildersIdle &= !Unit.IsValid() || Unit->GetBuilderComponent()->GetState() == ERTSBuildState::Idle;
+		}
+
+		const bool bSynced = ServerSite && ClientSite && ClientController && ServerClientState && bBuildersIdle
 			&& ClientController->GetCredits() == ServerClientState->GetCredits()
 			&& ClientSite->GetCancelRefund() == ServerSite->GetCancelRefund();
 		if (!bSynced)
 		{
-			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+			if (FPlatformTime::Seconds() - State->PhaseStart > ClientSiteTimeout)
 			{
-				Test->AddError(FString::Printf(TEXT("The client's site never synced: server site %d, client site %d"),
-					ServerSite != nullptr, ClientSite != nullptr));
+				Test->AddError(FString::Printf(TEXT("The client's site never synced: server site %d, client site %d, builders idle %d"),
+					ServerSite != nullptr, ClientSite != nullptr, bBuildersIdle));
 				return true;
 			}
 			return false;
@@ -391,6 +425,7 @@ namespace RTSListenServerTest
 		Test->TestEqual(TEXT("The purchase charged the client"), ServerClientState->GetCredits(), State->ClientCreditsBefore - Cost);
 		Test->TestEqual(TEXT("The client's copy knows what it paid"), ClientSite->GetPaidCost(), Cost);
 		Test->TestFalse(TEXT("The site is still under construction"), ServerSite->IsConstructed());
+		Test->TestFalse(TEXT("The builder's site does not build itself"), ServerSite->bAutoConstruct);
 		Test->TestTrue(TEXT("Cancelling would refund something"), ServerSite->GetCancelRefund() > 0);
 		return true;
 	}

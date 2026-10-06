@@ -214,18 +214,18 @@ void ARTSHUD::DrawBuildingHealth(const ARTSPlayerController& Controller, const A
 
 void ARTSHUD::DrawBuildMenu(const ARTSPlayerController& Controller)
 {
-	const URTSFactionData* Faction = Controller.GetFaction();
-	if (!Faction)
+	const TArray<URTSBuildingData*> Menu = Controller.GetBuildMenu();
+	if (Menu.IsEmpty())
 	{
 		return;
 	}
 
 	float Y = MenuMargin;
-	DrawText(TEXT("Build (debug)"), MenuColor, MenuMargin, Y);
-	const int32 Count = FMath::Min(Faction->Buildings.Num(), ARTSPlayerController::MaxBuildHotkeys);
+	DrawText(Controller.GetSelectedBuilder() ? TEXT("Build") : TEXT("Build (debug)"), MenuColor, MenuMargin, Y);
+	const int32 Count = FMath::Min(Menu.Num(), ARTSPlayerController::MaxBuildHotkeys);
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
-		const URTSBuildingData* Data = Faction->Buildings[Index];
+		const URTSBuildingData* Data = Menu[Index];
 		if (!Data)
 		{
 			continue;
@@ -238,7 +238,7 @@ void ARTSHUD::DrawBuildMenu(const ARTSPlayerController& Controller)
 	if (Controller.GetPlacementData())
 	{
 		Y += MenuLineHeight;
-		DrawText(TEXT("Left click: build    Right click / Esc: cancel"), MenuColor, MenuMargin, Y);
+		DrawText(TEXT("Left click: build (Shift: queue)    Right click / Esc: cancel"), MenuColor, MenuMargin, Y);
 	}
 }
 
