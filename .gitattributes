@@ -1,0 +1,15 @@
+* text=auto
+
+# Unreal assets: binary, stored in LFS, lockable so two people never edit the same map
+*.uasset filter=lfs diff=lfs merge=lfs -text lockable
+*.umap   filter=lfs diff=lfs merge=lfs -text lockable
+
+# Source art and audio
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.obj filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.tga filter=lfs diff=lfs merge=lfs -text
+*.exr filter=lfs diff=lfs merge=lfs -text
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs -text

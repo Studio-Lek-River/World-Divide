@@ -1,0 +1,110 @@
+"""Builds the placeholder unit data assets and the L_TestMap level. Safe to re-run: both are rebuilt.
+
+Run from the repo root (adjust the engine path):
+  "G:/Program Files/Epic Games/UE_5.6/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "%CD%/WorldDivide.uproject"
+      -run=pythonscript -script="%CD%/Tools/Editor/setup_testmap.py" -unattended -nosplash -nullrhi
+"""
+
+import unreal
+
+UNIT_DIR = "/Game/Data/Units"
+MAP_PATH = "/Game/Maps/L_TestMap"
+CUBE = "/Engine/BasicShapes/Cube.Cube"
+CYLINDER = "/Engine/BasicShapes/Cylinder.Cylinder"
+
+assets = unreal.EditorAssetLibrary
+asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+levels = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+
+
+def make_unit(name, display_name, mesh, scale, radius, health, speed, turn_rate, cost, build_time):
+    path = f"{UNIT_DIR}/{name}"
+    if assets.does_asset_exist(path):
+        unit = assets.load_asset(path)
+    else:
+        factory = unreal.DataAssetFactory()
+        factory.set_editor_property("data_asset_class", unreal.RTSUnitData)
+        unit = asset_tools.create_asset(name, UNIT_DIR, unreal.RTSUnitData, factory)
+
+    unit.set_editor_property("display_name", unreal.Text(display_name))
+    unit.set_editor_property("mesh", unreal.load_asset(mesh))
+    unit.set_editor_property("mesh_scale", unreal.Vector(*scale))
+    unit.set_editor_property("selection_radius", radius)
+    unit.set_editor_property("max_health", health)
+    unit.set_editor_property("move_speed", speed)
+    unit.set_editor_property("turn_rate", turn_rate)
+    unit.set_editor_property("cost", cost)
+    unit.set_editor_property("build_time", build_time)
+    assets.save_loaded_asset(unit, only_if_is_dirty=False)
+    return unit
+
+
+def spawn(actor_class, location, yaw=0.0, label=None):
+    actor = actors.spawn_actor_from_class(actor_class, unreal.Vector(*location), unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw))
+    if label:
+        actor.set_actor_label(label)
+    return actor
+
+
+def spawn_block(label, location, scale):
+    block = spawn(unreal.StaticMeshActor, location, label=label)
+    block.static_mesh_component.set_static_mesh(unreal.load_asset(CUBE))
+    block.set_actor_scale3d(unreal.Vector(*scale))
+    return block
+
+
+def spawn_units(unit, count, team_id, location, yaw):
+    spawner = spawn(unreal.RTSUnitSpawner, location, yaw, label=f"Spawn_Team{team_id}_{unit.get_name()}")
+    spawner.set_editor_property("unit_data", unit)
+    spawner.set_editor_property("count", count)
+    spawner.set_editor_property("team_id", team_id)
+    return spawner
+
+
+def build_map(tank, infantry):
+    if assets.does_asset_exist(MAP_PATH):
+        assets.delete_asset(MAP_PATH)
+    if not levels.new_level(MAP_PATH):
+        raise RuntimeError(f"Could not create {MAP_PATH}")
+
+    # 200 x 200 m ground, top face at z = 0.
+    spawn_block("Ground", (0.0, 0.0, -50.0), (200.0, 200.0, 1.0))
+
+    # Obstacles between the two bases so pathfinding has something to do.
+    spawn_block("Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0))
+    spawn_block("Block_North", (1000.0, 2500.0, 200.0), (8.0, 8.0, 4.0))
+    spawn_block("Block_South", (1000.0, -2500.0, 200.0), (8.0, 8.0, 4.0))
+    spawn_block("Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0))
+
+    sun = spawn(unreal.DirectionalLight, (0.0, 0.0, 2000.0), label="Sun")
+    sun.set_actor_rotation(unreal.Rotator(roll=0.0, pitch=-50.0, yaw=35.0), False)
+    sun.get_component_by_class(unreal.DirectionalLightComponent).set_editor_property("atmosphere_sun_light", True)
+
+    sky = spawn(unreal.SkyLight, (0.0, 0.0, 1000.0), label="SkyLight")
+    sky.get_component_by_class(unreal.SkyLightComponent).set_editor_property("real_time_capture", True)
+    spawn(unreal.SkyAtmosphere, (0.0, 0.0, 0.0), label="SkyAtmosphere")
+
+    # The default volume brush is a 200 uu cube, so this covers the whole ground.
+    nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
+    nav.set_actor_scale3d(unreal.Vector(100.0, 100.0, 10.0))
+    _, nav_extent = nav.get_actor_bounds(False)
+    unreal.log(f"NavMeshBoundsVolume extent: {nav_extent}")
+    if nav_extent.x < 1000.0:
+        unreal.log_warning("NavMeshBoundsVolume has no usable brush: drag one into L_TestMap by hand and save.")
+
+    for team_id, x, yaw in ((0, -6000.0, 0.0), (1, 6000.0, 180.0)):
+        start = spawn(unreal.PlayerStart, (x, 0.0, 100.0), yaw, label=f"PlayerStart_Team{team_id}")
+        start.set_editor_property("player_start_tag", f"Team{team_id}")
+        forward = 1.0 if yaw == 0.0 else -1.0
+        spawn_units(tank, 6, team_id, (x + 600.0 * forward, -900.0, 0.0), yaw)
+        spawn_units(infantry, 10, team_id, (x + 600.0 * forward, 900.0, 0.0), yaw)
+
+    if not levels.save_current_level():
+        raise RuntimeError(f"Could not save {MAP_PATH}")
+
+
+tank = make_unit("DA_TestTank", "Test Tank", CUBE, (2.4, 1.4, 0.9), 90.0, 200.0, 600.0, 180.0, 700, 10.0)
+infantry = make_unit("DA_TestInfantry", "Test Infantry", CYLINDER, (0.5, 0.5, 1.0), 30.0, 100.0, 350.0, 540.0, 150, 4.0)
+build_map(tank, infantry)
+unreal.log("setup_testmap: done")
