@@ -1,10 +1,20 @@
 """Builds the placeholder weapon, unit, building and faction data assets, the placement ghost material and the L_TestMap
-level. Safe to re-run: everything is rebuilt.
+level. Safe to re-run: only assets that differ from this script are saved, so a run without script changes writes
+nothing. Data assets are compared property by property; the material and the map carry a hash of the code that builds
+them and are rebuilt only when that code changes.
 
-Run from the repo root (adjust the engine path):
+The assets are LFS lockable and therefore read-only unless locked. If an asset that must change is read-only, nothing
+is written: the files are listed in Saved/Setup/ReadOnlyAssets.txt and the run stops. Lock them (git lfs lock) and rerun.
+
+Run from the repo root (adjust the engine path), or use Tools/Scripts/ue.ps1 -Task setup:
   "G:/Program Files/Epic Games/UE_5.6/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "%CD%/WorldDivide.uproject"
       -run=pythonscript -script="%CD%/Tools/Editor/setup_testmap.py" -unattended -nosplash -nullrhi
 """
+
+import hashlib
+import inspect
+import math
+import os
 
 import unreal
 
@@ -17,74 +27,131 @@ MAP_PATH = "/Game/Maps/L_TestMap"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
 CYLINDER = "/Engine/BasicShapes/Cylinder.Cylinder"
 
+# Package metadata key holding the hash of the code that built the asset.
+HASH_TAG = "SetupHash"
+
+PROJECT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
+CONTENT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir())
+READ_ONLY_REPORT = os.path.join(PROJECT_DIR, "Saved", "Setup", "ReadOnlyAssets.txt")
+
 assets = unreal.EditorAssetLibrary
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
 actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 levels = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 
+# Assets that need saving: (package path, file extension, already on disk, function that writes it).
+pending = []
 
-def load_or_create(name, directory, data_class):
+
+def object_path(obj):
+    return obj.get_path_name() if obj else None
+
+
+def differs(current, desired):
+    """True when a property value read from an asset is not the desired value. Float properties are 32 bit, so floats
+    are compared with a tolerance."""
+    if isinstance(desired, float):
+        return not math.isclose(current, desired, rel_tol=1e-6, abs_tol=1e-6)
+    if isinstance(desired, unreal.Text):
+        return str(current) != str(desired)
+    if isinstance(desired, unreal.Vector):
+        return any(differs(getattr(current, axis), getattr(desired, axis)) for axis in "xyz")
+    if isinstance(desired, unreal.IntPoint):
+        return (current.x, current.y) != (desired.x, desired.y)
+    if isinstance(desired, list):
+        return len(current) != len(desired) or any(differs(c, d) for c, d in zip(current, desired))
+    if desired is None or isinstance(desired, unreal.Object):
+        return object_path(current) != object_path(desired)
+    return current != desired
+
+
+def spec_hash(functions, *values):
+    """Hash of the source of the functions that build an asset plus the values they use."""
+    digest = hashlib.sha1()
+    for function in functions:
+        digest.update(inspect.getsource(function).encode("utf-8"))
+    for value in values:
+        digest.update(repr(object_path(value) if isinstance(value, unreal.Object) else value).encode("utf-8"))
+    return digest.hexdigest()
+
+
+def plan_data_asset(name, directory, data_class, properties):
+    """Loads or creates a data asset and queues a save if it is new or any property differs."""
     path = f"{directory}/{name}"
-    if assets.does_asset_exist(path):
-        return assets.load_asset(path)
-    factory = unreal.DataAssetFactory()
-    factory.set_editor_property("data_asset_class", data_class)
-    return asset_tools.create_asset(name, directory, data_class, factory)
+    exists = assets.does_asset_exist(path)
+    if exists:
+        asset = assets.load_asset(path)
+    else:
+        factory = unreal.DataAssetFactory()
+        factory.set_editor_property("data_asset_class", data_class)
+        asset = asset_tools.create_asset(name, directory, data_class, factory)
+
+    changed = {key: value for key, value in properties.items() if differs(asset.get_editor_property(key), value)}
+    if changed or not exists:
+        def write():
+            for key, value in changed.items():
+                asset.set_editor_property(key, value)
+            if not assets.save_loaded_asset(asset, only_if_is_dirty=False):
+                raise RuntimeError(f"Could not save {path}")
+        pending.append((path, ".uasset", exists, write))
+    return asset
+
+
+def plan_rebuild(path, extension, build, digest):
+    """Queues build(digest) unless the asset exists and was built from code with the same hash."""
+    exists = assets.does_asset_exist(path)
+    if exists and assets.get_metadata_tag(assets.load_asset(path), HASH_TAG) == digest:
+        return
+    pending.append((path, extension, exists, lambda: build(digest)))
 
 
 def make_weapon(name, weapon_range, damage, reload_seconds):
-    weapon = load_or_create(name, WEAPON_DIR, unreal.RTSWeaponData)
-    weapon.set_editor_property("range", weapon_range)
-    weapon.set_editor_property("damage", damage)
-    weapon.set_editor_property("reload_seconds", reload_seconds)
-    assets.save_loaded_asset(weapon, only_if_is_dirty=False)
-    return weapon
+    return plan_data_asset(name, WEAPON_DIR, unreal.RTSWeaponData, {
+        "range": weapon_range,
+        "damage": damage,
+        "reload_seconds": reload_seconds,
+    })
 
 
 def make_unit(name, display_name, mesh, scale, radius, health, weapon, speed, turn_rate, cost, build_time):
-    unit = load_or_create(name, UNIT_DIR, unreal.RTSUnitData)
-
-    unit.set_editor_property("display_name", unreal.Text(display_name))
-    unit.set_editor_property("mesh", unreal.load_asset(mesh))
-    unit.set_editor_property("mesh_scale", unreal.Vector(*scale))
-    unit.set_editor_property("selection_radius", radius)
-    unit.set_editor_property("max_health", health)
-    unit.set_editor_property("weapon", weapon)
-    unit.set_editor_property("move_speed", speed)
-    unit.set_editor_property("turn_rate", turn_rate)
-    unit.set_editor_property("cost", cost)
-    unit.set_editor_property("build_time", build_time)
-    assets.save_loaded_asset(unit, only_if_is_dirty=False)
-    return unit
+    return plan_data_asset(name, UNIT_DIR, unreal.RTSUnitData, {
+        "display_name": unreal.Text(display_name),
+        "mesh": unreal.load_asset(mesh),
+        "mesh_scale": unreal.Vector(*scale),
+        "selection_radius": radius,
+        "max_health": health,
+        "weapon": weapon,
+        "move_speed": speed,
+        "turn_rate": turn_rate,
+        "cost": cost,
+        "build_time": build_time,
+    })
 
 
 def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw):
-    building = load_or_create(name, BUILDING_DIR, unreal.RTSBuildingData)
-
-    building.set_editor_property("display_name", unreal.Text(display_name))
-    building.set_editor_property("mesh", unreal.load_asset(mesh))
-    building.set_editor_property("mesh_scale", unreal.Vector(*scale))
-    building.set_editor_property("footprint", unreal.IntPoint(*footprint))
-    building.set_editor_property("selection_radius", max(footprint) * 50.0)
-    building.set_editor_property("max_health", health)
-    building.set_editor_property("weapon", weapon)
-    building.set_editor_property("cost", cost)
-    building.set_editor_property("build_time", build_time)
-    building.set_editor_property("power_output", power_output)
-    building.set_editor_property("power_draw", power_draw)
-    assets.save_loaded_asset(building, only_if_is_dirty=False)
-    return building
+    return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
+        "display_name": unreal.Text(display_name),
+        "mesh": unreal.load_asset(mesh),
+        "mesh_scale": unreal.Vector(*scale),
+        "footprint": unreal.IntPoint(*footprint),
+        "selection_radius": max(footprint) * 50.0,
+        "max_health": health,
+        "weapon": weapon,
+        "cost": cost,
+        "build_time": build_time,
+        "power_output": power_output,
+        "power_draw": power_draw,
+    })
 
 
 def make_faction(name, display_name, buildings):
-    faction = load_or_create(name, FACTION_DIR, unreal.RTSFactionData)
-    faction.set_editor_property("display_name", unreal.Text(display_name))
-    faction.set_editor_property("buildings", buildings)
-    assets.save_loaded_asset(faction, only_if_is_dirty=False)
-    return faction
+    return plan_data_asset(name, FACTION_DIR, unreal.RTSFactionData, {
+        "display_name": unreal.Text(display_name),
+        "buildings": buildings,
+    })
 
 
-def make_ghost_material(name):
+def build_ghost_material(name, digest):
     """Unlit translucent material tinted through a "Color" parameter, for the building placement ghost."""
     path = f"{MATERIAL_DIR}/{name}"
     if assets.does_asset_exist(path):
@@ -107,8 +174,14 @@ def make_ghost_material(name):
     editing.connect_material_property(opacity, "", unreal.MaterialProperty.MP_OPACITY)
 
     editing.recompile_material(material)
-    assets.save_loaded_asset(material, only_if_is_dirty=False)
-    return material
+    assets.set_metadata_tag(material, HASH_TAG, digest)
+    if not assets.save_loaded_asset(material, only_if_is_dirty=False):
+        raise RuntimeError(f"Could not save {path}")
+
+
+def make_ghost_material(name):
+    plan_rebuild(f"{MATERIAL_DIR}/{name}", ".uasset", lambda digest: build_ghost_material(name, digest),
+                 spec_hash([build_ghost_material], name))
 
 
 def spawn(actor_class, location, yaw=0.0, label=None):
@@ -133,7 +206,7 @@ def spawn_units(unit, count, team_id, location, yaw):
     return spawner
 
 
-def build_map(tank, infantry):
+def build_map(tank, infantry, digest):
     if assets.does_asset_exist(MAP_PATH):
         assets.delete_asset(MAP_PATH)
     if not levels.new_level(MAP_PATH):
@@ -171,9 +244,42 @@ def build_map(tank, infantry):
         spawn_units(tank, 6, team_id, (x + 600.0 * forward, -900.0, 0.0), yaw)
         spawn_units(infantry, 10, team_id, (x + 600.0 * forward, 900.0, 0.0), yaw)
 
+    world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    assets.set_metadata_tag(world, HASH_TAG, digest)
     if not levels.save_current_level():
         raise RuntimeError(f"Could not save {MAP_PATH}")
 
+
+def make_map(tank, infantry):
+    plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, digest),
+                 spec_hash([build_map, spawn, spawn_block, spawn_units], MAP_PATH, CUBE, tank, infantry))
+
+
+def asset_file(path, extension):
+    return os.path.join(CONTENT_DIR, path[len("/Game/"):] + extension)
+
+
+def write_pending():
+    """Writes every queued asset, or nothing at all when one of the existing files is read-only."""
+    read_only = [asset_file(path, extension) for path, extension, exists, _ in pending
+                 if exists and not os.access(asset_file(path, extension), os.W_OK)]
+    if read_only:
+        files = [os.path.relpath(file, PROJECT_DIR).replace("\\", "/") for file in read_only]
+        os.makedirs(os.path.dirname(READ_ONLY_REPORT), exist_ok=True)
+        with open(READ_ONLY_REPORT, "w", encoding="utf-8") as report:
+            report.write("\n".join(files) + "\n")
+        for file in files:
+            unreal.log_error(f"setup_testmap: {file} must be rewritten but is read-only (git lfs lock it)")
+        unreal.log_error("setup_testmap: nothing written")
+        return
+
+    for _, _, _, write in pending:
+        write()
+    unreal.log(f"setup_testmap: done ({len(pending)} assets written)")
+
+
+if os.path.exists(READ_ONLY_REPORT):
+    os.remove(READ_ONLY_REPORT)
 
 cannon = make_weapon("DA_TestCannon", 1200.0, 40.0, 2.0)
 rifle = make_weapon("DA_TestRifle", 700.0, 8.0, 0.5)
@@ -184,5 +290,5 @@ power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", CUBE, (3.8,
 tower = make_building("DA_TestTower", "Test Tower", CYLINDER, (1.6, 1.6, 3.0), (2, 2), 500.0, tower_gun, 600, 3.0, 0, 2)
 make_faction("DA_TestFaction", "Test Faction", [power_plant, tower])
 make_ghost_material("M_PlacementGhost")
-build_map(tank, infantry)
-unreal.log("setup_testmap: done")
+make_map(tank, infantry)
+write_pending()

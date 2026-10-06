@@ -43,7 +43,7 @@ Command-line build:
 | `Source/WorldDivide/Units` | `ARTSUnit` (light pawn, no Character), its AI controller, and the map-placed `ARTSUnitSpawner` |
 | `Source/WorldDivide/Player` | Camera pawn, player controller (input, selection, orders, building placement) and HUD (including the debug build menu) |
 | `Source/WorldDivide/Core` | Game mode (team and faction assignment, team start spots), player state, and `URTSSettings` (default faction and ghost material, set in `Config/DefaultGame.ini`) |
-| `Tools/Editor/setup_testmap.py` | Rebuilds the placeholder unit, weapon, building and faction data assets, the placement ghost material and `L_TestMap` |
+| `Tools/Editor/setup_testmap.py` | Builds the placeholder unit, weapon, building and faction data assets, the placement ghost material and `L_TestMap`, saving only what differs from the script |
 
 Every player order is an `FRTSCommand` sent through `ARTSPlayerController::Server_IssueCommand` and executed only on the server, so singleplayer already runs the multiplayer code path. Units and buildings are always relevant for now; fog of war will decide relevancy later.
 
@@ -61,8 +61,16 @@ Buildings snap to a 100 cm grid. The client's ghost and the server run the same 
 
 Idle units fire at the nearest enemy in range on their own; units on a move order hold fire.
 
-To rebuild the test content:
+To rebuild the test content after changing `setup_testmap.py` or a data asset class, run `ue.ps1 -Task setup` (after `-Task build`), or directly:
 
 ```
 "<UE_5.6>\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -run=pythonscript -script="<repo>\Tools\Editor\setup_testmap.py" -unattended -nullrhi
 ```
+
+Setup only saves assets that differ from the script: data assets are compared property by property, and the ghost material and `L_TestMap` store a hash of the code that builds them and are rebuilt only when that code changes. A run without script changes writes nothing and leaves `git status` clean.
+
+Because the assets are LFS lockable, Git LFS checks them out read-only. If setup has to rewrite one, it writes nothing and `ue.ps1` exits 3 listing the files. Then:
+
+1. `git lfs lock <file>` for each listed file
+2. rerun setup, commit and push
+3. `git lfs unlock <file>`

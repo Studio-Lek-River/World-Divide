@@ -8,7 +8,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task t
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup
 
 The engine is taken from $env:UE_ROOT, falling back to G:\Program Files\Epic Games\UE_5.6.
-Exits nonzero on any failure.
+Exits nonzero on any failure: 2 when the editor is running (build), 3 when setup must rewrite read-only LFS assets.
 #>
 param(
 	[Parameter(Mandatory = $true)]
@@ -52,7 +52,21 @@ function Invoke-Build {
 
 function Invoke-Setup {
 	$Script = Join-Path $RepoRoot 'Tools\Editor\setup_testmap.py'
+	# Written by the script when assets it must rewrite are read-only (LFS lockable, not locked).
+	$ReadOnlyReport = Join-Path $RepoRoot 'Saved\Setup\ReadOnlyAssets.txt'
+	if (Test-Path $ReadOnlyReport) { Remove-Item -Force $ReadOnlyReport }
+
 	& $EditorCmd $Project -run=pythonscript "-script=$Script" -unattended -nosplash -nullrhi -nosound -stdout -FullStdOutLogOutput
+	if (Test-Path $ReadOnlyReport) {
+		$Files = @(Get-Content $ReadOnlyReport | Where-Object { $_ })
+		Write-Host ''
+		Write-Host 'SETUP BLOCKED: these assets must be rewritten but are read-only (LFS lockable, not locked by you):'
+		$Files | ForEach-Object { Write-Host "  $_" }
+		Write-Host 'Nothing was written. Lock them, rerun setup, commit and push, then unlock:'
+		$Files | ForEach-Object { Write-Host "  git lfs lock $_" }
+		$Files | ForEach-Object { Write-Host "  git lfs unlock $_" }
+		exit 3
+	}
 	if ($LASTEXITCODE -ne 0) {
 		Write-Host "SETUP FAILED (exit $LASTEXITCODE)"
 		exit $LASTEXITCODE
