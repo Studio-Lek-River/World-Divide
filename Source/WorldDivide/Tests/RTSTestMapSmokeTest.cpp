@@ -15,6 +15,7 @@
 #include "Data/RTSUnitData.h"
 #include "Economy/RTSHarvesterComponent.h"
 #include "Economy/RTSSupplySource.h"
+#include "Engine/StaticMeshActor.h"
 #include "EngineUtils.h"
 #include "NavigationSystem.h"
 #include "NavMesh/RecastNavMesh.h"
@@ -33,8 +34,9 @@
  * placed building. Another has three tanks destroy an enemy building
  * and checks that its hole in the navmesh closes again; a variant hides the building behind a wall of the player's own buildings, so the tanks must
  * approach it from another side. The harvest test buys a supply depot next to a small supply source and follows its
- * harvester through every load until the source is empty. The last test sends a tank and a harvester at targets beyond
- * the edge of the map and checks that both orders end instead of looping.
+ * harvester through every load until the source is empty. The unreachable test sends a tank and a harvester at targets beyond
+ * the edge of the map and checks that both orders end instead of looping. The last test checks that no navmesh lies inside
+ * or on top of the map's walls and blocks.
  */
 namespace
 {
@@ -82,8 +84,7 @@ namespace
 
 	/**
 	 * The wall test puts an enemy power plant on BuildSpot behind a wall of three of the player's own power plants, 400 cm
-	 * thick and 1200 cm long, exactly where the spot facing the tanks to the west lies. Wall_West would not do: Recast leaves
-	 * an unreachable navmesh island inside the hollow block, and a partial path to it ends within the tanks' range anyway.
+	 * thick and 1200 cm long, exactly where the spot facing the tanks to the west lies.
 	 */
 	const FVector WallSpots[] = {
 		FVector(-800.f, 6600.f, 0.f),
@@ -1096,6 +1097,43 @@ bool FRTSVerifyHarvest::Update()
 	return true;
 }
 
+DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FRTSCheckSolidObstacles, FAutomationTestBase*, Test);
+bool FRTSCheckSolidObstacles::Update()
+{
+	UWorld* World = AutomationCommon::GetAnyGameWorld();
+	UNavigationSystemV1* NavSystem = World ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World) : nullptr;
+	if (!NavSystem)
+	{
+		Test->AddError(TEXT("No PIE world or navigation system"));
+		return true;
+	}
+
+	int32 Obstacles = 0;
+	for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
+	{
+		const FString Label = It->GetActorLabel();
+		if (!Label.StartsWith(TEXT("Wall_")) && !Label.StartsWith(TEXT("Block_")))
+		{
+			continue;
+		}
+		++Obstacles;
+
+		FVector Center;
+		FVector Extent;
+		It->GetActorBounds(false, Center, Extent);
+		FNavLocation Projected;
+		// Tall enough to reach the ground inside the block and its roof.
+		Test->TestFalse(FString::Printf(TEXT("No navmesh inside or on %s"), *Label),
+			NavSystem->ProjectPointToNavigation(Center, Projected, FVector(10.f, 10.f, Extent.Z + 100.f)));
+
+		const FVector Beside(Center.X - Extent.X - 300.f, Center.Y, 0.f);
+		Test->TestTrue(FString::Printf(TEXT("Navmesh on the ground beside %s"), *Label),
+			NavSystem->ProjectPointToNavigation(Beside, Projected, FVector(10.f, 10.f, 250.f)));
+	}
+	Test->TestEqual(TEXT("Walls and blocks found"), Obstacles, 4);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTestMapSmokeTest, "WorldDivide.Smoke.TestMap",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -1271,6 +1309,26 @@ bool FRTSHarvestSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSBuySupplyDepot(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForHarvester(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyHarvest(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSSolidObstaclesSmokeTest, "WorldDivide.Smoke.SolidObstacles",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSSolidObstaclesSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckSolidObstacles(this));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

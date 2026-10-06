@@ -222,6 +222,16 @@ def spawn_block(label, location, scale):
     return block
 
 
+def spawn_obstacle(label, location, scale):
+    """A block with a null nav area over it, so Recast leaves no island inside it or on its roof."""
+    block = spawn_block(label, location, scale)
+    # The default volume brush is a 200 uu cube, twice the size of the engine cube; 50 cm extra above and below.
+    nav_null = spawn(unreal.NavModifierVolume, location, label=f"{label}_NavNull")
+    nav_null.set_actor_scale3d(unreal.Vector(scale[0] / 2.0, scale[1] / 2.0, (scale[2] + 1.0) / 2.0))
+    nav_null.set_editor_property("area_class", unreal.NavArea_Null)
+    return block
+
+
 def spawn_units(unit, count, team_id, location, yaw):
     spawner = spawn(unreal.RTSUnitSpawner, location, yaw, label=f"Spawn_Team{team_id}_{unit.get_name()}")
     spawner.set_editor_property("unit_data", unit)
@@ -248,10 +258,10 @@ def build_map(tank, infantry, digest):
     spawn_block("Ground", (0.0, 0.0, -50.0), (200.0, 200.0, 1.0))
 
     # Obstacles between the two bases so pathfinding has something to do.
-    spawn_block("Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0))
-    spawn_block("Block_North", (1000.0, 2500.0, 200.0), (8.0, 8.0, 4.0))
-    spawn_block("Block_South", (1000.0, -2500.0, 200.0), (8.0, 8.0, 4.0))
-    spawn_block("Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0))
+    spawn_obstacle("Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0))
+    spawn_obstacle("Block_North", (1000.0, 2500.0, 200.0), (8.0, 8.0, 4.0))
+    spawn_obstacle("Block_South", (1000.0, -2500.0, 200.0), (8.0, 8.0, 4.0))
+    spawn_obstacle("Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0))
 
     sun = spawn(unreal.DirectionalLight, (0.0, 0.0, 2000.0), label="Sun")
     sun.set_actor_rotation(unreal.Rotator(roll=0.0, pitch=-50.0, yaw=35.0), False)
@@ -286,7 +296,7 @@ def build_map(tank, infantry, digest):
 
 def make_map(tank, infantry):
     plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, digest),
-                 spec_hash([build_map, spawn, spawn_block, spawn_units, spawn_supply_source], MAP_PATH, CUBE, tank, infantry))
+                 spec_hash([build_map, spawn, spawn_block, spawn_obstacle, spawn_units, spawn_supply_source], MAP_PATH, CUBE, tank, infantry))
 
 
 def asset_file(path, extension):
