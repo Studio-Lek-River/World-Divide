@@ -24,7 +24,9 @@
 /**
  * Plays L_TestMap as a listen server with one client in the same process. Checks that the host gets team 0 and the
  * client team 1 at their tagged player starts, and that the client sees its own credits but not the host's, then sends a move for every unit the client sees through the client's
- * own controller: the server must move only the client's units, and the client must see them arrive. Then the server
+ * own controller: the server must move only the client's units, and the client must see them arrive. The client then
+ * buys a construction site and cancels it: the site must disappear in both worlds and the client must see its refund
+ * while the host's credits stay put. Then the server
  * places a host building and the client orders its units to attack it: the client's copy must show the building's
  * health dropping before it disappears.
  */
@@ -40,6 +42,7 @@ namespace RTSListenServerTest
 
 	/** The empty strip north of both bases, far out of range of every unit. */
 	const FVector HostBuildingSpot(0.f, 7000.f, 0.f);
+	const FVector ClientSiteSpot(-3000.f, 7000.f, 0.f);
 	const TCHAR* PowerPlantPath = TEXT("/Game/Data/Buildings/DA_TestPowerPlant.DA_TestPowerPlant");
 	constexpr double ReplicationTimeout = 15.0;
 	constexpr double BuildingAttackTimeout = 60.0;
@@ -64,6 +67,13 @@ namespace RTSListenServerTest
 		TWeakObjectPtr<ARTSBuilding> ClientBuilding;
 		float ClientMaxHealth = 0.f;
 		float ClientLowestHealth = 0.f;
+
+		/** The construction site the client buys and cancels, as each world sees it, and the credits around it. */
+		TWeakObjectPtr<ARTSBuilding> ServerSite;
+		TWeakObjectPtr<ARTSBuilding> ClientSite;
+		int32 ClientCreditsBefore = 0;
+		int32 ExpectedClientCredits = 0;
+		int32 HostCredits = 0;
 	};
 
 	UWorld* FindPIEWorld(ENetMode NetMode)
@@ -301,6 +311,140 @@ namespace RTSListenServerTest
 		return true;
 	}
 
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSClientBuysSite, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSClientBuysSite::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		const ARTSPlayerState* ServerClientState = ServerWorld ? ARTSPlayerState::FindForTeam(*ServerWorld, ClientTeam) : nullptr;
+		const ARTSPlayerState* HostState = ServerWorld ? ARTSPlayerState::FindForTeam(*ServerWorld, HostTeam) : nullptr;
+		if (!ClientController || !ServerClientState || !HostState)
+		{
+			Test->AddError(TEXT("Lost the client's controller or a player state"));
+			return true;
+		}
+		State->ClientCreditsBefore = ServerClientState->GetCredits();
+		State->HostCredits = HostState->GetCredits();
+
+		FRTSCommand Build;
+		Build.Type = ERTSCommandType::Build;
+		Build.EntityData = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+		Build.TargetLocation = ClientSiteSpot;
+		ClientController->Server_IssueCommand(TArray<ARTSUnit*>(), Build);
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSWaitForClientSite, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSWaitForClientSite::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		if (!ServerWorld || !ClientWorld)
+		{
+			return true;
+		}
+
+		if (!State->ServerSite.IsValid())
+		{
+			for (TActorIterator<ARTSBuilding> It(ServerWorld); It; ++It)
+			{
+				if (It->GetTeamId() == ClientTeam)
+				{
+					// Held where it is, so the refund cannot change before the cancel arrives.
+					State->ServerSite = *It;
+					It->bAutoConstruct = false;
+				}
+			}
+		}
+		if (!State->ClientSite.IsValid())
+		{
+			for (TActorIterator<ARTSBuilding> It(ClientWorld); It; ++It)
+			{
+				if (It->GetTeamId() == ClientTeam && It->GetBuildingData())
+				{
+					State->ClientSite = *It;
+				}
+			}
+		}
+
+		const ARTSBuilding* ServerSite = State->ServerSite.Get();
+		const ARTSBuilding* ClientSite = State->ClientSite.Get();
+		const ARTSPlayerController* ClientController = GetLocalController(*ClientWorld);
+		const ARTSPlayerState* ServerClientState = ARTSPlayerState::FindForTeam(*ServerWorld, ClientTeam);
+		const bool bSynced = ServerSite && ClientSite && ClientController && ServerClientState
+			&& ClientController->GetCredits() == ServerClientState->GetCredits()
+			&& ClientSite->GetCancelRefund() == ServerSite->GetCancelRefund();
+		if (!bSynced)
+		{
+			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+			{
+				Test->AddError(FString::Printf(TEXT("The client's site never synced: server site %d, client site %d"),
+					ServerSite != nullptr, ClientSite != nullptr));
+				return true;
+			}
+			return false;
+		}
+
+		const int32 Cost = ServerSite->GetBuildingData()->Cost;
+		Test->TestEqual(TEXT("The purchase charged the client"), ServerClientState->GetCredits(), State->ClientCreditsBefore - Cost);
+		Test->TestEqual(TEXT("The client's copy knows what it paid"), ClientSite->GetPaidCost(), Cost);
+		Test->TestFalse(TEXT("The site is still under construction"), ServerSite->IsConstructed());
+		Test->TestTrue(TEXT("Cancelling would refund something"), ServerSite->GetCancelRefund() > 0);
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueClientCancel, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSIssueClientCancel::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		const ARTSBuilding* ServerSite = State->ServerSite.Get();
+		if (!ClientController || !ServerSite || !State->ClientSite.IsValid())
+		{
+			Test->AddError(TEXT("Lost the client's controller or the construction site"));
+			return true;
+		}
+
+		State->ExpectedClientCredits = ClientController->GetCredits() + ServerSite->GetCancelRefund();
+		// What Delete or the HUD button sends: the client names its own copy of the site.
+		Test->TestTrue(TEXT("The client may cancel its own site"), ClientController->SelectBuilding(State->ClientSite.Get())
+			&& ClientController->RequestCancelConstruction(ClientController->GetSelectedBuilding()));
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientRefund, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientRefund::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		const ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		if (!ServerWorld || !ClientController)
+		{
+			Test->AddError(TEXT("Lost the server world or the client's controller"));
+			return true;
+		}
+
+		const bool bDone = !State->ServerSite.IsValid() && !State->ClientSite.IsValid()
+			&& ClientController->GetCredits() == State->ExpectedClientCredits;
+		if (!bDone && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
+		{
+			return false;
+		}
+
+		const ARTSPlayerState* ServerClientState = ARTSPlayerState::FindForTeam(*ServerWorld, ClientTeam);
+		const ARTSPlayerState* HostState = ARTSPlayerState::FindForTeam(*ServerWorld, HostTeam);
+		Test->TestFalse(TEXT("The server removed the cancelled site"), State->ServerSite.IsValid());
+		Test->TestFalse(TEXT("The site disappeared on the client"), State->ClientSite.IsValid());
+		Test->TestEqual(TEXT("The server refunded the client"),
+			ServerClientState ? ServerClientState->GetCredits() : INDEX_NONE, State->ExpectedClientCredits);
+		Test->TestEqual(TEXT("The client sees its refund"), ClientController->GetCredits(), State->ExpectedClientCredits);
+		Test->TestEqual(TEXT("The host's credits are untouched"), HostState ? HostState->GetCredits() : INDEX_NONE, State->HostCredits);
+		return true;
+	}
+
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceHostBuilding, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
 	bool FRTSPlaceHostBuilding::Update()
 	{
@@ -423,6 +567,10 @@ namespace RTSListenServerTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckTeamsAndStarts(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientMove(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientMove(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientBuysSite(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientSite(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientCancel(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientRefund(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceHostBuilding(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientBuilding(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientBuildingAttack(this, State));

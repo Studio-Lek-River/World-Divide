@@ -2,6 +2,7 @@
 
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
+#include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSFormation.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
@@ -110,7 +111,23 @@ namespace RTSCommands
 		if (Building)
 		{
 			Player.TrySpendCredits(Cost);
+			Building->SetPaidCost(Cost);
 		}
 		return Building;
+	}
+
+	int32 CancelConstruction(ARTSPlayerState& Player, const FRTSCommand& Command)
+	{
+		ARTSBuilding* Building = Cast<ARTSBuilding>(Command.TargetActor);
+		if (!IsValid(Building) || Building->GetTeamId() != Player.GetTeamId() || Building->IsConstructed()
+			|| Building->GetHealthComponent()->IsDead())
+		{
+			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot cancel %s"), Player.GetTeamId(), *GetNameSafe(Command.TargetActor));
+			return INDEX_NONE;
+		}
+		const int32 Refund = Building->GetCancelRefund();
+		Player.AddCredits(Refund);
+		Building->Destroy();
+		return Refund;
 	}
 }

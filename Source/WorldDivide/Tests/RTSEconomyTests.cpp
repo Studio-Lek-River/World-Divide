@@ -1,4 +1,6 @@
 #include "Buildings/RTSBuilding.h"
+#include "Combat/RTSHealthComponent.h"
+#include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSHarvesterData.h"
@@ -213,6 +215,63 @@ bool FRTSHarvestCycleTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("The run ends with no source in reach"), Harvester->UpdateHarvest(Step));
 	TestEqual(TEXT("The harvester is idle"), Harvester->GetState(), ERTSHarvestState::Idle);
 	TestFalse(TEXT("The far source was never picked"), OutOfReach->IsDepleted() || Harvester->GetSource() == OutOfReach);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSConstructionRefundTest, "WorldDivide.Economy.ConstructionRefund", TestFlags)
+
+bool FRTSConstructionRefundTest::RunTest(const FString& Parameters)
+{
+	constexpr int32 Paid = 400;
+
+	const FRTSTestWorld TestWorld;
+	ARTSPlayerState* Player = TestWorld.SpawnPlayer(0, 0);
+	ARTSPlayerState* Enemy = TestWorld.SpawnPlayer(1, 0);
+	URTSBuildingData* Data = MakeDepotData(nullptr);
+
+	auto Cancel = [](ARTSPlayerState& By, ARTSBuilding* Building)
+	{
+		FRTSCommand Command;
+		Command.Type = ERTSCommandType::CancelConstruction;
+		Command.TargetActor = Building;
+		return RTSCommands::CancelConstruction(By, Command);
+	};
+	auto SpawnSite = [&](const FVector& Location, int32 PaidCost, float Progress)
+	{
+		ARTSBuilding* Building = TestWorld.SpawnBuilding(Data, 0, Location);
+		Building->SetPaidCost(PaidCost);
+		Building->UpdateConstruction(Data->BuildTime * Progress);
+		return Building;
+	};
+
+	// A quarter built: cancelling returns the three quarters still to build.
+	ARTSBuilding* Site = SpawnSite(FVector::ZeroVector, Paid, 0.25f);
+	TestEqual(TEXT("The refund is the unbuilt share"), Site->GetCancelRefund(), 300);
+	TestEqual(TEXT("Another team cannot cancel it"), Cancel(*Enemy, Site), INDEX_NONE);
+	TestTrue(TEXT("The refused cancel left the site standing"), IsValid(Site));
+	TestEqual(TEXT("Cancelling returns the unbuilt share"), Cancel(*Player, Site), 300);
+	TestEqual(TEXT("The owner got the refund"), Player->GetCredits(), 300);
+	TestEqual(TEXT("Nothing went to the other team"), Enemy->GetCredits(), 0);
+	TestFalse(TEXT("The cancelled site is gone"), IsValid(Site));
+	TestEqual(TEXT("A cancelled site cannot be cancelled again"), Cancel(*Player, Site), INDEX_NONE);
+
+	// A completed building is no construction site any more.
+	ARTSBuilding* Done = SpawnSite(FVector(1000.f, 0.f, 0.f), Paid, 1.f);
+	TestEqual(TEXT("A completed building has nothing to refund"), Done->GetCancelRefund(), 0);
+	TestEqual(TEXT("A completed building cannot be cancelled"), Cancel(*Player, Done), INDEX_NONE);
+	TestTrue(TEXT("The completed building stands"), IsValid(Done));
+
+	// A construction site the enemy destroys is lost with everything paid for it.
+	ARTSBuilding* Lost = SpawnSite(FVector(2000.f, 0.f, 0.f), Paid, 0.5f);
+	Lost->GetHealthComponent()->ApplyDamage(Data->MaxHealth, nullptr);
+	TestFalse(TEXT("The destroyed site is gone"), IsValid(Lost));
+	TestEqual(TEXT("A destroyed site refunds nothing"), Player->GetCredits(), 300);
+
+	// A site placed for free, such as by the map, returns nothing.
+	ARTSBuilding* Free = SpawnSite(FVector(3000.f, 0.f, 0.f), 0, 0.f);
+	TestEqual(TEXT("A free site cancels for nothing"), Cancel(*Player, Free), 0);
+	TestFalse(TEXT("The free site is gone"), IsValid(Free));
+	TestEqual(TEXT("Credits are unchanged"), Player->GetCredits(), 300);
 	return true;
 }
 

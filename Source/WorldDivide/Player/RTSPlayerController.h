@@ -20,8 +20,9 @@ struct FInputActionValue;
  * Turns mouse and keyboard into camera movement, a local selection and FRTSCommands for the server.
  *
  * Controls: WASD/arrows or screen edge pan, mouse wheel zoom, Q/E or middle-mouse drag rotate,
- * left click/drag select (Shift adds), right click move, attack an enemy unit or building, or harvest a supply source
- * (Shift queues), X stop.
+ * left click/drag select (Shift adds; a click on an own building selects that building), right click move, attack an
+ * enemy unit or building, or harvest a supply source (Shift queues), X stop. Delete cancels the own construction site
+ * under the cursor, or else the selected one, as does the HUD's cancel button.
  * Debug build menu: 1-9 pick a faction building to place, left click builds, right click or Esc cancels.
  * Placement mode stays once builder units exist; only the hotkey menu that starts it is a stand-in.
  */
@@ -34,6 +35,18 @@ public:
 	ARTSPlayerController();
 
 	const TArray<TWeakObjectPtr<ARTSUnit>>& GetSelectedUnits() const { return SelectedUnits; }
+
+	/** The own building selected by a click, or null. Units and a building are never selected together. */
+	ARTSBuilding* GetSelectedBuilding() const { return SelectedBuilding.Get(); }
+
+	/** Selects Building in place of the current selection; false, changing nothing, when it is not the player's own. */
+	bool SelectBuilding(ARTSBuilding* Building);
+
+	/** Building is one of the player's own construction sites. The server checks again before it cancels. */
+	bool CanCancelConstruction(const ARTSBuilding* Building) const;
+
+	/** Asks the server to cancel Building for a refund; false when CanCancelConstruction refuses it locally. */
+	bool RequestCancelConstruction(ARTSBuilding* Building);
 
 	/** True while the player drags a selection box; outputs its corners in viewport pixels. */
 	bool GetSelectionBox(FVector2D& OutStart, FVector2D& OutEnd) const;
@@ -101,6 +114,7 @@ private:
 	void OnStopOrder();
 	void OnBuildHotkey(int32 Index);
 	void OnCancel();
+	void OnCancelConstruction();
 
 	void ApplyEdgeScroll() const;
 	void ApplyDragRotate();
@@ -141,9 +155,13 @@ private:
 	TObjectPtr<UInputAction> CancelAction;
 
 	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> CancelConstructionAction;
+
+	UPROPERTY(Transient)
 	TArray<TObjectPtr<UInputAction>> BuildActions;
 
 	TArray<TWeakObjectPtr<ARTSUnit>> SelectedUnits;
+	TWeakObjectPtr<ARTSBuilding> SelectedBuilding;
 
 	bool bSelecting = false;
 	FVector2D SelectStart = FVector2D::ZeroVector;

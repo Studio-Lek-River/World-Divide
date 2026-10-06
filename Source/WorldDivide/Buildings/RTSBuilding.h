@@ -46,6 +46,18 @@ public:
 	float GetConstructionProgress() const { return ConstructionProgress; }
 	bool IsConstructed() const { return ConstructionProgress >= 1.f; }
 
+	/** Credits the owner paid for the building; 0 for one placed for free, such as by the map. */
+	int32 GetPaidCost() const { return PaidCost; }
+
+	/** Server only. Set right after a purchase, while the building is still in its initial replication. */
+	void SetPaidCost(int32 InPaidCost);
+
+	/**
+	 * What cancelling returns now: the unbuilt share of PaidCost, rounded down, so nothing once constructed.
+	 * A construction site that is destroyed refunds nothing.
+	 */
+	int32 GetCancelRefund() const;
+
 	/** Server only. While set the building constructs itself each tick; a builder unit will clear it and drive UpdateConstruction. */
 	UPROPERTY(EditAnywhere, Category = "Construction")
 	bool bAutoConstruct = true;
@@ -102,6 +114,9 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_ConstructionProgress)
 	float ConstructionProgress = 0.f;
+
+	UPROPERTY(Replicated)
+	int32 PaidCost = 0;
 
 	float MeshBaseOffset = 0.f;
 };

@@ -24,4 +24,10 @@ namespace RTSCommands
 
 	/** Server only. PlaceBuilding for Player's faction and team, charged to Player: refused when they cannot afford it. */
 	WORLDDIVIDE_API ARTSBuilding* PurchaseBuilding(UWorld& World, ARTSPlayerState& Player, const FRTSCommand& Command);
+
+	/**
+	 * Server only. Removes the command's TargetActor, one of Player's buildings still under construction, and refunds
+	 * its ARTSBuilding::GetCancelRefund to Player. Returns the refund, or INDEX_NONE when the command is rejected.
+	 */
+	WORLDDIVIDE_API int32 CancelConstruction(ARTSPlayerState& Player, const FRTSCommand& Command);
 }

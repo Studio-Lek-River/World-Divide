@@ -20,6 +20,8 @@ enum class ERTSCommandType : uint8
 	 * until ordered otherwise or no source is left in reach. Units that cannot harvest move to the source instead.
 	 */
 	Harvest,
+	/** Cancel TargetActor, an own building under construction, refunding the unbuilt share of what was paid for it. */
+	CancelConstruction,
 };
 
 /**

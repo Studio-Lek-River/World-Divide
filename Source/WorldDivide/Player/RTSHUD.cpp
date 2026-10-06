@@ -1,5 +1,6 @@
 #include "Player/RTSHUD.h"
 
+#include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Combat/RTSHealthComponent.h"
@@ -19,8 +20,11 @@ namespace
 	const FLinearColor MenuColor(0.9f, 0.9f, 0.9f, 1.f);
 	const FLinearColor UnaffordableColor(0.45f, 0.45f, 0.45f, 1.f);
 	const FLinearColor CreditsColor(1.f, 0.85f, 0.3f, 1.f);
+	const FLinearColor ButtonFill(0.35f, 0.08f, 0.05f, 0.85f);
+	const FLinearColor ButtonHoverFill(0.6f, 0.12f, 0.08f, 0.9f);
 
 	constexpr float ConstructionBarWidth = 60.f;
+	constexpr float ButtonPadding = 8.f;
 	constexpr float BarSpacing = 8.f;
 	constexpr float MenuMargin = 16.f;
 	constexpr float MenuLineHeight = 18.f;
@@ -52,7 +56,19 @@ void ARTSHUD::DrawHUD()
 		}
 	}
 
-	if (const ARTSBuilding* Hovered = Controller->GetBuildingUnderCursor())
+	CancelButton = FBox2D(ForceInit);
+	const ARTSBuilding* Selected = Controller->GetSelectedBuilding();
+	if (Selected)
+	{
+		DrawBuildingMarker(*Controller, *Selected);
+		if (Controller->CanCancelConstruction(Selected))
+		{
+			DrawCancelButton(*Selected);
+		}
+	}
+
+	const ARTSBuilding* Hovered = Controller->GetBuildingUnderCursor();
+	if (Hovered && Hovered != Selected)
 	{
 		DrawBuildingHealth(*Controller, *Hovered);
 	}
@@ -96,13 +112,15 @@ void ARTSHUD::DrawUnitMarker(const ARTSPlayerController& Controller, const ARTSU
 	}
 
 	const float Radius = FMath::Max(8.f, FVector2D::Distance(ScreenCenter, ScreenEdge));
-	const float Corner = Radius * 0.4f;
 	const float Left = ScreenCenter.X - Radius;
-	const float Right = ScreenCenter.X + Radius;
 	const float Top = ScreenCenter.Y - Radius;
-	const float Bottom = ScreenCenter.Y + Radius;
+	DrawBrackets(Left, Top, ScreenCenter.X + Radius, ScreenCenter.Y + Radius);
+	DrawHealthBar(Left, Top - BarSpacing, Radius * 2.f, Unit.GetHealthComponent()->GetHealthFraction());
+}
 
-	// Corner brackets.
+void ARTSHUD::DrawBrackets(float Left, float Top, float Right, float Bottom)
+{
+	const float Corner = FMath::Min(Right - Left, Bottom - Top) * 0.2f;
 	DrawLine(Left, Top, Left + Corner, Top, SelectionColor, 2.f);
 	DrawLine(Left, Top, Left, Top + Corner, SelectionColor, 2.f);
 	DrawLine(Right, Top, Right - Corner, Top, SelectionColor, 2.f);
@@ -111,8 +129,53 @@ void ARTSHUD::DrawUnitMarker(const ARTSPlayerController& Controller, const ARTSU
 	DrawLine(Left, Bottom, Left, Bottom - Corner, SelectionColor, 2.f);
 	DrawLine(Right, Bottom, Right - Corner, Bottom, SelectionColor, 2.f);
 	DrawLine(Right, Bottom, Right, Bottom - Corner, SelectionColor, 2.f);
+}
 
-	DrawHealthBar(Left, Top - BarSpacing, Radius * 2.f, Unit.GetHealthComponent()->GetHealthFraction());
+void ARTSHUD::DrawBuildingMarker(const ARTSPlayerController& Controller, const ARTSBuilding& Building)
+{
+	const URTSBuildingData* Data = Building.GetBuildingData();
+	if (!Data)
+	{
+		return;
+	}
+
+	// Brackets around the screen bounds of the footprint's ground corners.
+	const FVector Center = Building.GetActorLocation();
+	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Data->Footprint);
+	FBox2D Bounds(ForceInit);
+	for (const FVector2D Corner : { FVector2D(-1.f, -1.f), FVector2D(-1.f, 1.f), FVector2D(1.f, -1.f), FVector2D(1.f, 1.f) })
+	{
+		FVector2D Screen;
+		if (!Controller.ProjectWorldLocationToScreen(Center + FVector(Corner.X * Extent.X, Corner.Y * Extent.Y, 0.f), Screen))
+		{
+			return;
+		}
+		Bounds += Screen;
+	}
+	DrawBrackets(Bounds.Min.X, Bounds.Min.Y, Bounds.Max.X, Bounds.Max.Y);
+	DrawBuildingHealth(Controller, Building);
+}
+
+void ARTSHUD::DrawCancelButton(const ARTSBuilding& Building)
+{
+	const FString Text = FString::Printf(TEXT("Cancel construction (+%d)   [Del]"), Building.GetCancelRefund());
+	float Width = 0.f;
+	float Height = 0.f;
+	GetTextSize(Text, Width, Height);
+	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - MenuMargin - Size.Y);
+	CancelButton = FBox2D(Min, Min + Size);
+
+	FVector2D Mouse;
+	const APlayerController* Controller = GetOwningPlayerController();
+	const bool bHovered = Controller && Controller->GetMousePosition(Mouse.X, Mouse.Y) && IsOnCancelButton(Mouse);
+	DrawRect(bHovered ? ButtonHoverFill : ButtonFill, Min.X, Min.Y, Size.X, Size.Y);
+	DrawText(Text, MenuColor, Min.X + ButtonPadding, Min.Y + ButtonPadding);
+}
+
+bool ARTSHUD::IsOnCancelButton(const FVector2D& Point) const
+{
+	return CancelButton.bIsValid && CancelButton.IsInside(Point);
 }
 
 void ARTSHUD::DrawHealthBar(float Left, float Top, float Width, float HealthFraction)

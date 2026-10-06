@@ -16,6 +16,7 @@
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
 #include "Player/RTSCameraPawn.h"
+#include "Player/RTSHUD.h"
 #include "Units/RTSUnit.h"
 
 namespace
@@ -89,6 +90,9 @@ void ARTSPlayerController::CreateInputActions()
 	CancelAction = MakeAction(this, TEXT("IA_Cancel"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, CancelAction, EKeys::Escape);
 
+	CancelConstructionAction = MakeAction(this, TEXT("IA_CancelConstruction"), EInputActionValueType::Boolean);
+	MapKey(MappingContext, CancelConstructionAction, EKeys::Delete);
+
 	BuildActions.Reset();
 	for (int32 Index = 0; Index < MaxBuildHotkeys; ++Index)
 	{
@@ -126,6 +130,7 @@ void ARTSPlayerController::SetupInputComponent()
 	Input->BindAction(MoveOrderAction, ETriggerEvent::Started, this, &ThisClass::OnMoveOrder);
 	Input->BindAction(StopOrderAction, ETriggerEvent::Started, this, &ThisClass::OnStopOrder);
 	Input->BindAction(CancelAction, ETriggerEvent::Started, this, &ThisClass::OnCancel);
+	Input->BindAction(CancelConstructionAction, ETriggerEvent::Started, this, &ThisClass::OnCancelConstruction);
 	for (int32 Index = 0; Index < BuildActions.Num(); ++Index)
 	{
 		Input->BindAction(BuildActions[Index], ETriggerEvent::Started, this, &ThisClass::OnBuildHotkey, Index);
@@ -187,6 +192,35 @@ ARTSBuilding* ARTSPlayerController::GetBuildingUnderCursor() const
 {
 	FHitResult Hit;
 	return GetHitResultUnderCursor(ECC_Visibility, false, Hit) ? Cast<ARTSBuilding>(Hit.GetActor()) : nullptr;
+}
+
+bool ARTSPlayerController::SelectBuilding(ARTSBuilding* Building)
+{
+	if (!IsValid(Building) || Building->GetTeamId() != GetTeamId())
+	{
+		return false;
+	}
+	SelectedUnits.Reset();
+	SelectedBuilding = Building;
+	return true;
+}
+
+bool ARTSPlayerController::CanCancelConstruction(const ARTSBuilding* Building) const
+{
+	return IsValid(Building) && Building->GetTeamId() == GetTeamId() && !Building->IsConstructed();
+}
+
+bool ARTSPlayerController::RequestCancelConstruction(ARTSBuilding* Building)
+{
+	if (!CanCancelConstruction(Building))
+	{
+		return false;
+	}
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::CancelConstruction;
+	Command.TargetActor = Building;
+	Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+	return true;
 }
 
 bool ARTSPlayerController::IsOwnUnit(const ARTSUnit* Unit) const
@@ -295,6 +329,13 @@ void ARTSPlayerController::OnSelectStarted()
 		ConfirmPlacement();
 		return;
 	}
+	FVector2D Mouse;
+	const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
+	if (RTSHUD && GetMousePosition(Mouse.X, Mouse.Y) && RTSHUD->IsOnCancelButton(Mouse))
+	{
+		RequestCancelConstruction(GetSelectedBuilding());
+		return;
+	}
 	bSelecting = GetMousePosition(SelectStart.X, SelectStart.Y);
 	SelectCurrent = SelectStart;
 }
@@ -333,16 +374,22 @@ void ARTSPlayerController::SelectUnderCursor(bool bAdditive)
 {
 	FHitResult Hit;
 	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+	if (SelectBuilding(Cast<ARTSBuilding>(Hit.GetActor())))
+	{
+		return;
+	}
 	ARTSUnit* Unit = Cast<ARTSUnit>(Hit.GetActor());
 
 	if (!bAdditive)
 	{
 		SelectedUnits.Reset();
+		SelectedBuilding = nullptr;
 	}
 	if (!IsOwnUnit(Unit))
 	{
 		return;
 	}
+	SelectedBuilding = nullptr;
 
 	// Shift-click toggles a unit in or out of the selection.
 	if (bAdditive && SelectedUnits.Contains(Unit))
@@ -374,6 +421,10 @@ void ARTSPlayerController::SelectInBox(const FVector2D& Start, const FVector2D& 
 		{
 			SelectedUnits.AddUnique(Unit);
 		}
+	}
+	if (!bAdditive || !SelectedUnits.IsEmpty())
+	{
+		SelectedBuilding = nullptr;
 	}
 }
 
@@ -432,6 +483,12 @@ void ARTSPlayerController::OnBuildHotkey(int32 Index)
 void ARTSPlayerController::OnCancel()
 {
 	CancelPlacement();
+}
+
+void ARTSPlayerController::OnCancelConstruction()
+{
+	ARTSBuilding* Hovered = GetBuildingUnderCursor();
+	RequestCancelConstruction(CanCancelConstruction(Hovered) ? Hovered : GetSelectedBuilding());
 }
 
 void ARTSPlayerController::BeginPlacement(URTSBuildingData* Data)
@@ -536,6 +593,11 @@ void ARTSPlayerController::Server_IssueCommand_Implementation(const TArray<ARTSU
 	{
 		// Debug build menu path. Once builder units exist, a Build order goes to them through Dispatch instead.
 		RTSCommands::PurchaseBuilding(*GetWorld(), *State, Command);
+		return;
+	}
+	if (Command.Type == ERTSCommandType::CancelConstruction)
+	{
+		RTSCommands::CancelConstruction(*State, Command);
 		return;
 	}
 	RTSCommands::Dispatch(RTSCommands::FilterOwnedUnits(Units, State->GetTeamId()), Command);

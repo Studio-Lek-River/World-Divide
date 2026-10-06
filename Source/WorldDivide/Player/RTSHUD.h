@@ -10,7 +10,8 @@ class ARTSUnit;
 
 /**
  * Draws the drag box, the brackets plus health bar of selected units, construction progress of own buildings,
- * the health of the building under the cursor, the player's credits and the debug build menu, without any UI assets.
+ * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
+ * the player's credits and the debug build menu, without any UI assets.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSHUD : public AHUD
@@ -20,9 +21,15 @@ class WORLDDIVIDE_API ARTSHUD : public AHUD
 public:
 	virtual void DrawHUD() override;
 
+	/** Point, in viewport pixels, lies on the cancel button drawn last frame. */
+	bool IsOnCancelButton(const FVector2D& Point) const;
+
 private:
 	void DrawSelectionBox(const FVector2D& Start, const FVector2D& End);
+	void DrawBrackets(float Left, float Top, float Right, float Bottom);
 	void DrawUnitMarker(const ARTSPlayerController& Controller, const ARTSUnit& Unit);
+	void DrawBuildingMarker(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
+	void DrawCancelButton(const ARTSBuilding& Building);
 	void DrawConstructionBar(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawBuildingHealth(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawBuildMenu(const ARTSPlayerController& Controller);
@@ -30,4 +37,7 @@ private:
 
 	/** Green to red over a dark backdrop; Top is the bar's upper edge. */
 	void DrawHealthBar(float Left, float Top, float Width, float HealthFraction);
+
+	/** Invalid while no cancel button is shown. */
+	FBox2D CancelButton = FBox2D(ForceInit);
 };

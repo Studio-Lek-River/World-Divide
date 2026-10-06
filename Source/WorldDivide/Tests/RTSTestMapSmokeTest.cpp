@@ -27,7 +27,8 @@
  * player controller's server RPC, and check that only the player's units walk around the wall to the target.
  * A second test orders a lone tank to attack an enemy out of range and checks it closes in and destroys it.
  * The building tests place buildings through the same RPC: valid and invalid spots, cost and credits, construction
- * over BuildTime, and a unit routing around a freshly placed building. Another has three tanks destroy an enemy building
+ * over BuildTime, selecting and cancelling a construction site for a refund, and a unit routing around a freshly
+ * placed building. Another has three tanks destroy an enemy building
  * and checks that its hole in the navmesh closes again. The harvest test buys a supply depot next to a small supply
  * source and follows its harvester through every load until the source is empty.
  */
@@ -454,6 +455,66 @@ bool FRTSVerifyConstruction::Update()
 	return true;
 }
 
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckCancelConstruction, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSCheckCancelConstruction::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	ARTSBuilding* Tower = State->Building.Get();
+	if (!Controller || !Tower)
+	{
+		Test->AddError(TEXT("Missing the controller or the completed tower"));
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	URTSBuildingData* TowerData = Tower->GetBuildingData();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+
+	// A second tower, held at half way so the refund is known.
+	const int32 CreditsBefore = Player->GetCredits();
+	ARTSBuilding* Site = RequestBuild(*Controller, TowerData, OtherBuildSpot);
+	if (!Site)
+	{
+		Test->AddError(TEXT("Server refused the second tower"));
+		return true;
+	}
+	Site->bAutoConstruct = false;
+	Site->UpdateConstruction(TowerData->BuildTime * 0.5f);
+	Test->TestEqual(TEXT("The site remembers what it cost"), Site->GetPaidCost(), TowerData->Cost);
+	const int32 Refund = Site->GetCancelRefund();
+	Test->TestEqual(TEXT("Half built, half the cost comes back"), Refund, TowerData->Cost / 2);
+
+	// Only own buildings are selectable, and only own construction sites can be cancelled.
+	const FTransform EnemyTransform(FVector(-6000.f, 7000.f, 0.f));
+	ARTSBuilding* Enemy = World->SpawnActorDeferred<ARTSBuilding>(
+		ARTSBuilding::StaticClass(), EnemyTransform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	Enemy->InitFromData(TowerData, Controller->GetTeamId() + 1);
+	Enemy->FinishSpawning(EnemyTransform);
+	Test->TestTrue(TEXT("The own site is selectable"), Controller->SelectBuilding(Site) && Controller->GetSelectedBuilding() == Site);
+	Test->TestTrue(TEXT("Selecting a building clears the unit selection"), Controller->GetSelectedUnits().IsEmpty());
+	Test->TestFalse(TEXT("An enemy building is not selectable"), Controller->SelectBuilding(Enemy));
+	Test->TestTrue(TEXT("The selection is unchanged"), Controller->GetSelectedBuilding() == Site);
+	Test->TestFalse(TEXT("The client refuses to cancel an enemy site"), Controller->RequestCancelConstruction(Enemy));
+	Test->TestFalse(TEXT("The client refuses to cancel a completed building"), Controller->RequestCancelConstruction(Tower));
+
+	// The server refuses them too when asked directly.
+	for (ARTSBuilding* Target : { Enemy, Tower })
+	{
+		FRTSCommand Command;
+		Command.Type = ERTSCommandType::CancelConstruction;
+		Command.TargetActor = Target;
+		Controller->Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+	}
+	Test->TestTrue(TEXT("The server kept the enemy site and the completed tower"), IsValid(Enemy) && IsValid(Tower));
+	Test->TestEqual(TEXT("Refused cancels pay nothing"), Player->GetCredits(), CreditsBefore - TowerData->Cost);
+	Enemy->Destroy();
+
+	Test->TestTrue(TEXT("The selected site can be cancelled"), Controller->RequestCancelConstruction(Controller->GetSelectedBuilding()));
+	Test->TestFalse(TEXT("The cancelled site is gone"), IsValid(Site));
+	Test->TestNull(TEXT("Nothing stays selected"), Controller->GetSelectedBuilding());
+	Test->TestEqual(TEXT("The unbuilt share came back"), Player->GetCredits(), CreditsBefore - TowerData->Cost + Refund);
+	return true;
+}
+
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceObstacle, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
 bool FRTSPlaceObstacle::Update()
 {
@@ -864,6 +925,7 @@ bool FRTSBuildingPlacementSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckPlacement(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyConstruction(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckCancelConstruction(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

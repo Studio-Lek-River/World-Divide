@@ -77,7 +77,19 @@ void ARTSBuilding::PostInitializeComponents()
 
 void ARTSBuilding::HandleDeath(AActor* Killer)
 {
+	// Only cancelling refunds; a construction site the enemy destroys is lost with everything paid for it.
 	Destroy();
+}
+
+void ARTSBuilding::SetPaidCost(int32 InPaidCost)
+{
+	check(HasAuthority());
+	PaidCost = FMath::Max(InPaidCost, 0);
+}
+
+int32 ARTSBuilding::GetCancelRefund() const
+{
+	return IsConstructed() ? 0 : FMath::FloorToInt(PaidCost * (1.f - ConstructionProgress));
 }
 
 void ARTSBuilding::Tick(float DeltaSeconds)
@@ -228,4 +240,5 @@ void ARTSBuilding::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME_CONDITION(ARTSBuilding, BuildingData, COND_InitialOnly);
 	DOREPLIFETIME_CONDITION(ARTSBuilding, TeamId, COND_InitialOnly);
 	DOREPLIFETIME(ARTSBuilding, ConstructionProgress);
+	DOREPLIFETIME_CONDITION(ARTSBuilding, PaidCost, COND_InitialOnly);
 }
