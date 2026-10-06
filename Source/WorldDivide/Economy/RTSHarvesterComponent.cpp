@@ -8,6 +8,7 @@
 #include "Economy/RTSSupplySource.h"
 #include "EngineUtils.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "Units/RTSApproach.h"
 #include "Units/RTSUnit.h"
 #include "WorldDivide.h"
 
@@ -115,11 +116,9 @@ bool URTSHarvesterComponent::UpdateHarvest(float DeltaSeconds)
 
 		if (State == ERTSHarvestState::ToSource)
 		{
-			const FVector Edge = Target->GetClosestFootprintPoint(Location);
-			if (!IsDocked(Edge))
+			if (!IsDocked(Target->GetClosestFootprintPoint(Location)))
 			{
-				ApproachDock(Edge);
-				return true;
+				return ApproachDock(Target->GetActorLocation(), Target->Footprint) || EndUnreachable(*Target);
 			}
 			StopOwnerMovement();
 			State = ERTSHarvestState::Gathering;
@@ -150,11 +149,9 @@ bool URTSHarvesterComponent::UpdateHarvest(float DeltaSeconds)
 			return true;
 		}
 	}
-	const FVector Edge = Depot->GetClosestFootprintPoint(Location);
-	if (!IsDocked(Edge))
+	if (!IsDocked(Depot->GetClosestFootprintPoint(Location)))
 	{
-		ApproachDock(Edge);
-		return true;
+		return ApproachDock(Depot->GetActorLocation(), Depot->GetBuildingData()->Footprint) || EndUnreachable(*Depot);
 	}
 
 	StopOwnerMovement();
@@ -185,23 +182,37 @@ void URTSHarvesterComponent::StopOwnerMovement() const
 	}
 }
 
-void URTSHarvesterComponent::ApproachDock(const FVector& EdgePoint)
+bool URTSHarvesterComponent::ApproachDock(const FVector& Center, const FIntPoint& Footprint)
 {
 	const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner());
 	AAIController* AI = Unit ? Unit->GetController<AAIController>() : nullptr;
 	if (!AI || AI->GetMoveStatus() != EPathFollowingStatus::Idle || RetryCooldown > 0.f)
 	{
-		return;
+		return true;
 	}
 
-	// The dock's centre lies in its own navmesh hole; aim just outside the edge nearest the harvester.
-	const FVector Outward = (Unit->GetActorLocation() - EdgePoint).GetSafeNormal2D();
-	const FVector Goal = EdgePoint + Outward * (Unit->GetSelectionRadius() + DockOffset);
+	// The dock's centre lies in its own navmesh hole; stand just outside the footprint, facing side first.
+	const float Radius = Unit->GetSelectionRadius();
+	FVector Goal;
+	if (!RTSApproach::FindReachableSpot(*Unit, Center, Footprint, Radius + DockOffset,
+		Radius + DockReach - ApproachAcceptanceRadius, Goal))
+	{
+		return false;
+	}
 	AI->MoveToLocation(Goal, ApproachAcceptanceRadius,
 		/*bStopOnOverlap*/ false, /*bUsePathfinding*/ true, /*bProjectDestinationToNavigation*/ true,
 		/*bCanStrafe*/ true, /*FilterClass*/ nullptr, /*bAllowPartialPath*/ true);
-	// Whether the request failed or will end short of the dock, the next attempt waits instead of coming every tick.
+	// Should the move end short of the dock, the next attempt waits instead of coming every tick.
 	RetryCooldown = RetrySeconds;
+	return true;
+}
+
+bool URTSHarvesterComponent::EndUnreachable(const AActor& Dock)
+{
+	UE_LOG(LogWorldDivide, Verbose, TEXT("%s cannot reach %s and stops"), *GetOwner()->GetName(), *Dock.GetName());
+	StopOwnerMovement();
+	StopHarvest();
+	return false;
 }
 
 bool URTSHarvesterComponent::IsDocked(const FVector& EdgePoint) const

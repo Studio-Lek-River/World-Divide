@@ -20,7 +20,8 @@ enum class ERTSHarvestState : uint8
 /**
  * Server-side supply run of a harvester unit: drive to a source, load for GatherSeconds, drive to the nearest own depot
  * and pay the load to the team's player as credits, then go again. When the source runs dry the load is delivered first,
- * then the harvester moves on to the nearest other source within its search radius, or the run ends.
+ * then the harvester moves on to the nearest other source within its search radius, or the run ends. It also ends when the
+ * source or depot has no reachable spot around it.
  * Every unit has one; it stays inert unless the unit's data is URTSHarvesterData. The unit's Harvest order drives it.
  */
 UCLASS(ClassGroup = (RTS))
@@ -62,8 +63,14 @@ private:
 	void Deposit();
 	void StopOwnerMovement() const;
 
-	/** Pathfinds to just outside the footprint edge at EdgePoint, unless a move is running or a retry is on hold. */
-	void ApproachDock(const FVector& EdgePoint);
+	/**
+	 * Pathfinds to a reachable spot just outside the footprint at Center, unless a move is running or a retry is on hold.
+	 * False when no such spot exists.
+	 */
+	bool ApproachDock(const FVector& Center, const FIntPoint& Footprint);
+
+	/** Ends the run because Dock cannot be reached; any load stays on board. Always false. */
+	bool EndUnreachable(const AActor& Dock);
 
 	/** The owner stands within reach of EdgePoint. */
 	bool IsDocked(const FVector& EdgePoint) const;

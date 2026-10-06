@@ -4,6 +4,7 @@
 
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
+#include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
@@ -20,6 +21,7 @@
 #include "Player/RTSPlayerController.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
+#include "Units/RTSApproach.h"
 #include "Units/RTSUnit.h"
 
 /**
@@ -29,8 +31,10 @@
  * The building tests place buildings through the same RPC: valid and invalid spots, cost and credits, construction
  * over BuildTime, selecting and cancelling a construction site for a refund, and a unit routing around a freshly
  * placed building. Another has three tanks destroy an enemy building
- * and checks that its hole in the navmesh closes again. The harvest test buys a supply depot next to a small supply
- * source and follows its harvester through every load until the source is empty.
+ * and checks that its hole in the navmesh closes again; a variant hides the building behind a wall of the player's own buildings, so the tanks must
+ * approach it from another side. The harvest test buys a supply depot next to a small supply source and follows its
+ * harvester through every load until the source is empty. The last test sends a tank and a harvester at targets beyond
+ * the edge of the map and checks that both orders end instead of looping.
  */
 namespace
 {
@@ -76,6 +80,30 @@ namespace
 	};
 	constexpr double BuildingAttackTimeout = 45.0;
 
+	/**
+	 * The wall test puts an enemy power plant on BuildSpot behind a wall of three of the player's own power plants, 400 cm
+	 * thick and 1200 cm long, exactly where the spot facing the tanks to the west lies. Wall_West would not do: Recast leaves
+	 * an unreachable navmesh island inside the hollow block, and a partial path to it ends within the tanks' range anyway.
+	 */
+	const FVector WallSpots[] = {
+		FVector(-800.f, 6600.f, 0.f),
+		FVector(-800.f, 7000.f, 0.f),
+		FVector(-800.f, 7400.f, 0.f),
+	};
+	const FVector WallAttackerStarts[] = {
+		FVector(-2500.f, 6700.f, 0.f),
+		FVector(-2500.f, 7000.f, 0.f),
+		FVector(-2500.f, 7300.f, 0.f),
+	};
+
+	/** The unreachable test puts targets beyond the ground's east edge at x = 10000, out of range of any navmesh. */
+	const FVector UnreachableBuildingSpot(13000.f, 7000.f, 0.f);
+	const FVector UnreachableSourceSpot(13000.f, 5000.f, 0.f);
+	const FVector UnreachableAttackerStart(8000.f, 7000.f, 0.f);
+	const FVector UnreachableHarvesterStart(8000.f, 5000.f, 0.f);
+	constexpr double UnreachableTimeout = 5.0;
+	const TCHAR* HarvesterPath = TEXT("/Game/Data/Units/DA_TestHarvester.DA_TestHarvester");
+
 	/** The harvest test puts a supply depot on BuildSpot and a source holding three loads beside it. */
 	const TCHAR* SupplyDepotPath = TEXT("/Game/Data/Buildings/DA_TestSupplyDepot.DA_TestSupplyDepot");
 	const FVector HarvestSourceSpot(900.f, 7000.f, 0.f);
@@ -104,6 +132,7 @@ namespace
 
 		// Building attack test only.
 		TArray<TWeakObjectPtr<ARTSUnit>> Attackers;
+		TArray<FVector> AttackerStarts;
 		FVector BuildingCenter = FVector::ZeroVector;
 
 		// Harvest test only.
@@ -684,8 +713,173 @@ bool FRTSPlaceEnemyBuilding::Update()
 		}
 		Test->TestFalse(TEXT("The building starts out of the tank's range"), Attacker->GetWeaponComponent()->IsInRange(Building));
 		State->Attackers.Add(Attacker);
+		State->AttackerStarts.Add(Start);
 	}
 	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceBuildingBehindWall, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSPlaceBuildingBehindWall::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	URTSBuildingData* PlantData = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+
+	// The player's own plants form the wall; nobody attacks them.
+	for (const FVector& Spot : WallSpots)
+	{
+		const FTransform Transform(Spot);
+		ARTSBuilding* Segment = World->SpawnActorDeferred<ARTSBuilding>(
+			ARTSBuilding::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		Segment->InitFromData(PlantData, Controller->GetTeamId());
+		Segment->FinishSpawning(Transform);
+	}
+
+	FRTSCommand Build;
+	Build.Type = ERTSCommandType::Build;
+	Build.EntityData = PlantData;
+	Build.TargetLocation = BuildSpot;
+	ARTSBuilding* Building = RTSCommands::PlaceBuilding(*World, Controller->GetFaction(), Controller->GetTeamId() + 1, Build);
+	if (!Building)
+	{
+		Test->AddError(TEXT("Could not place the enemy power plant behind the wall"));
+		return true;
+	}
+	State->Building = Building;
+
+	for (const FVector& Start : WallAttackerStarts)
+	{
+		ARTSUnit* Attacker = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), Start);
+		if (!Attacker)
+		{
+			Test->AddError(TEXT("Could not spawn an attacking tank"));
+			return true;
+		}
+		Test->TestFalse(TEXT("The building starts out of the tank's range"), Attacker->GetWeaponComponent()->IsInRange(Building));
+		State->Attackers.Add(Attacker);
+		State->AttackerStarts.Add(Start);
+	}
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckWallApproach, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSCheckWallApproach::Update()
+{
+	const ARTSBuilding* Building = State->Building.Get();
+	if (!Building)
+	{
+		Test->AddError(TEXT("The building behind the wall disappeared"));
+		return true;
+	}
+	UWorld* World = Building->GetWorld();
+	const FIntPoint Footprint = Building->GetBuildingData()->Footprint;
+
+	for (const TWeakObjectPtr<ARTSUnit>& Attacker : State->Attackers)
+	{
+		if (!Attacker.IsValid())
+		{
+			continue;
+		}
+		// The same stand-off and reach the Attack order uses.
+		const float Range = Attacker->GetWeaponComponent()->GetRange();
+		const FVector Edge = Building->GetClosestFootprintPoint(Attacker->GetActorLocation());
+		const FVector Facing = Edge + (Attacker->GetActorLocation() - Edge).GetSafeNormal2D() * Range * 0.5f;
+		Test->TestFalse(FString::Printf(TEXT("The spot facing the tank (%s) lies in the wall"), *Facing.ToCompactString()),
+			IsOnNavMesh(*World, Facing));
+
+		FVector Spot;
+		const bool bFound = RTSApproach::FindReachableSpot(*Attacker, Building->GetActorLocation(), Footprint, Range * 0.5f, Range, Spot);
+		Test->TestTrue(FString::Printf(TEXT("A reachable spot on another side (%s)"), *Spot.ToCompactString()),
+			bFound && FVector::Dist2D(Spot, Facing) > 200.f);
+	}
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceUnreachableTargets, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSPlaceUnreachableTargets::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+
+	// Placement would refuse a spot off the navmesh, so the server spawns these directly.
+	URTSBuildingData* PlantData = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+	const FTransform BuildingTransform(UnreachableBuildingSpot);
+	ARTSBuilding* Building = World->SpawnActorDeferred<ARTSBuilding>(
+		ARTSBuilding::StaticClass(), BuildingTransform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	Building->InitFromData(PlantData, Controller->GetTeamId() + 1);
+	Building->FinishSpawning(BuildingTransform);
+
+	const FTransform SourceTransform(UnreachableSourceSpot);
+	ARTSSupplySource* Source = World->SpawnActorDeferred<ARTSSupplySource>(
+		ARTSSupplySource::StaticClass(), SourceTransform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	Source->Amount = 1000;
+	Source->FinishSpawning(SourceTransform);
+
+	ARTSUnit* Attacker = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), UnreachableAttackerStart);
+	ARTSUnit* Harvester = SpawnTestUnit(World, HarvesterPath, Controller->GetTeamId(), UnreachableHarvesterStart);
+	if (!Attacker || !Harvester || !Harvester->GetHarvesterComponent()->CanHarvest())
+	{
+		Test->AddError(TEXT("Could not spawn the tank and the harvester"));
+		return true;
+	}
+	State->Building = Building;
+	State->Source = Source;
+	State->Attacker = Attacker;
+	State->Harvester = Harvester;
+
+	FRTSCommand Attack;
+	Attack.Type = ERTSCommandType::Attack;
+	Attack.TargetActor = Building;
+	Controller->Server_IssueCommand({ Attacker }, Attack);
+	Test->TestEqual(TEXT("The tank took the Attack order"), Attacker->GetQueuedCommandCount(), 1);
+
+	FRTSCommand Harvest;
+	Harvest.Type = ERTSCommandType::Harvest;
+	Harvest.TargetActor = Source;
+	Controller->Server_IssueCommand({ Harvester }, Harvest);
+	Test->TestEqual(TEXT("The harvester took the Harvest order"), Harvester->GetQueuedCommandCount(), 1);
+
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyUnreachableTargets, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyUnreachableTargets::Update()
+{
+	const ARTSUnit* Attacker = State->Attacker.Get();
+	const ARTSUnit* Harvester = State->Harvester.Get();
+	if (!Attacker || !Harvester)
+	{
+		Test->AddError(TEXT("Lost the tank or the harvester"));
+		return true;
+	}
+	const bool bOrdersPending = Attacker->GetQueuedCommandCount() > 0 || Harvester->GetQueuedCommandCount() > 0;
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (bOrdersPending && Elapsed < UnreachableTimeout)
+	{
+		return false;
+	}
+
+	Test->AddInfo(FString::Printf(TEXT("Orders ended after %.1f s"), Elapsed));
+	Test->TestEqual(TEXT("The Attack order on an unreachable building ended"), Attacker->GetQueuedCommandCount(), 0);
+	Test->TestEqual(TEXT("The Harvest order on an unreachable source ended"), Harvester->GetQueuedCommandCount(), 0);
+	Test->TestEqual(TEXT("The harvester is idle"), Harvester->GetHarvesterComponent()->GetState(), ERTSHarvestState::Idle);
+	Test->TestTrue(TEXT("The building is untouched"), State->Building.IsValid()
+		&& State->Building->GetHealthComponent()->GetHealth() == State->Building->GetHealthComponent()->GetMaxHealth());
+	Test->TestTrue(FString::Printf(TEXT("The tank stayed put (%s)"), *Attacker->GetActorLocation().ToCompactString()),
+		FVector::Dist2D(Attacker->GetActorLocation(), UnreachableAttackerStart) < 100.f);
+	Test->TestTrue(FString::Printf(TEXT("The harvester stayed put (%s)"), *Harvester->GetActorLocation().ToCompactString()),
+		FVector::Dist2D(Harvester->GetActorLocation(), UnreachableHarvesterStart) < 100.f);
 	return true;
 }
 
@@ -740,7 +934,7 @@ bool FRTSVerifyBuildingAttack::Update()
 			continue;
 		}
 		Test->TestTrue(TEXT("Attacker closed in on the building"),
-			FVector::Dist2D(Attacker->GetActorLocation(), BuildingAttackerStarts[Index]) > 500.f);
+			FVector::Dist2D(Attacker->GetActorLocation(), State->AttackerStarts[Index]) > 500.f);
 		Test->TestEqual(TEXT("Attack order completed"), Attacker->GetQueuedCommandCount(), 0);
 	}
 	State->PhaseStart = FPlatformTime::Seconds();
@@ -1010,6 +1204,51 @@ bool FRTSAttackBuildingSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueBuildingAttack(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyBuildingAttack(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavRestored(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAttackBuildingBehindWallSmokeTest, "WorldDivide.Smoke.AttackBuildingBehindWall",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSAttackBuildingBehindWallSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceBuildingBehindWall(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckWallApproach(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueBuildingAttack(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyBuildingAttack(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSUnreachableTargetsSmokeTest, "WorldDivide.Smoke.UnreachableTargets",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSUnreachableTargetsSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceUnreachableTargets(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyUnreachableTargets(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

@@ -1,9 +1,11 @@
 #include "Units/RTSUnit.h"
 
+#include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Data/RTSBuildingData.h"
 #include "Data/RTSHarvesterData.h"
 #include "Data/RTSUnitData.h"
 #include "Economy/RTSHarvesterComponent.h"
@@ -13,6 +15,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Units/RTSApproach.h"
 #include "Units/RTSUnitAIController.h"
 #include "WorldDivide.h"
 
@@ -376,14 +379,26 @@ void ARTSUnit::UpdateAttackOrder()
 				/*bStopOnOverlap*/ true, /*bUsePathfinding*/ true, /*bCanStrafe*/ true, /*FilterClass*/ nullptr,
 				/*bAllowPartialPath*/ true);
 		}
-		else
+		else if (const ARTSBuilding* Building = Cast<ARTSBuilding>(Target))
 		{
-			// A building's centre lies in its own navmesh hole, out of reach of a path; aim outside its nearest edge.
-			const FVector Edge = Cast<IRTSTargetable>(Target)->GetClosestFootprintPoint(GetActorLocation());
-			const FVector Outward = (GetActorLocation() - Edge).GetSafeNormal2D();
-			AI->MoveToLocation(Edge + Outward * Range * BuildingApproachFraction, MoveAcceptanceRadius,
-				/*bStopOnOverlap*/ false, /*bUsePathfinding*/ true, /*bProjectDestinationToNavigation*/ true,
-				/*bCanStrafe*/ true, /*FilterClass*/ nullptr, /*bAllowPartialPath*/ true);
+			// A building's centre lies in its own navmesh hole, out of reach of a path; stand outside its footprint,
+			// facing side first. With no reachable spot in range, or a move that cannot start, the order is over.
+			FVector Spot;
+			const bool bFound = Building->GetBuildingData()
+				&& RTSApproach::FindReachableSpot(*this, Building->GetActorLocation(), Building->GetBuildingData()->Footprint,
+					Range * BuildingApproachFraction, Range - MoveAcceptanceRadius, Spot);
+			const EPathFollowingRequestResult::Type Result = bFound
+				? AI->MoveToLocation(Spot, MoveAcceptanceRadius,
+					/*bStopOnOverlap*/ false, /*bUsePathfinding*/ true, /*bProjectDestinationToNavigation*/ true,
+					/*bCanStrafe*/ true, /*FilterClass*/ nullptr, /*bAllowPartialPath*/ true)
+				: EPathFollowingRequestResult::Failed;
+			if (Result != EPathFollowingRequestResult::RequestSuccessful)
+			{
+				UE_LOG(LogWorldDivide, Verbose, TEXT("%s cannot reach %s and drops the attack"), *GetName(), *Target->GetName());
+				AI->StopMovement();
+				CommandQueue.RemoveAt(0);
+				StartNextCommand();
+			}
 		}
 	}
 }

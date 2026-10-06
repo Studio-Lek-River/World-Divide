@@ -87,7 +87,8 @@ private:
 
 	/**
 	 * Each tick while an Attack is the current order: drop it once the target is gone, otherwise close in or hold.
-	 * Units are followed; buildings stand in their own navmesh hole, so the unit walks to a spot outside the nearest edge.
+	 * Units are followed; buildings stand in their own navmesh hole, so the unit walks to a reachable spot outside the
+	 * footprint, facing side first, and drops the order when there is none in range.
 	 */
 	void UpdateAttackOrder();
 

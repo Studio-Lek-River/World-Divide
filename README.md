@@ -42,7 +42,7 @@ Command-line build:
 | `Source/WorldDivide/Commands` | `FRTSCommand`, formation layout and server-side dispatch |
 | `Source/WorldDivide/Buildings` | `ARTSBuilding` (constructs over its build time, cuts the navmesh, inert until complete), the shared grid and placement rules, and the local placement ghost |
 | `Source/WorldDivide/Economy` | The map-placed `ARTSSupplySource` (finite supplies, cuts the navmesh like a building) and the server-side `URTSHarvesterComponent` that runs a harvester's gather and delivery loop |
-| `Source/WorldDivide/Units` | `ARTSUnit` (light pawn, no Character), its AI controller, and the map-placed `ARTSUnitSpawner` |
+| `Source/WorldDivide/Units` | `ARTSUnit` (light pawn, no Character), its AI controller, the map-placed `ARTSUnitSpawner`, and `RTSApproach` (picks a reachable spot around a building or supply source footprint) |
 | `Source/WorldDivide/Player` | Camera pawn, player controller (input, selection, orders, building placement) and HUD (health of selected units and of the hovered or selected building, a cancel button for a selected construction site, credits and power, the debug build menu with costs) |
 | `Source/WorldDivide/Core` | Game mode (team and faction assignment, starting credits, team start spots), player state (team, faction, credits, the power of its completed buildings), and `URTSSettings` (default faction and ghost material, set in `Config/DefaultGame.ini`) |
 | `Tools/Editor/setup_testmap.py` | Builds the placeholder unit, harvester, weapon, building and faction data assets, the placement ghost material and `L_TestMap` with a supply source by each base, saving only what differs from the script |
