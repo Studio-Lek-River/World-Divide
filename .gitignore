@@ -21,3 +21,7 @@ Build/
 # Python
 __pycache__/
 *.pyc
+
+# Reference art pulled from locally installed games (Tools/Art/extract_big.py): not ours to commit or ship
+Art/Source/Local/
+Content/Art/Local/
