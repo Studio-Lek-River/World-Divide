@@ -11,9 +11,18 @@ class URTSUnitData;
 
 namespace RTSProduction
 {
+	/** The first of Data's prerequisites not in Owned, or null when Owned holds them all. */
+	WORLDDIVIDE_API const URTSEntityData* FindMissingPrerequisite(const TSet<const URTSEntityData*>& Owned, const URTSEntityData& Data);
+
+	/** Every one of Data's prerequisites is in Owned. */
+	WORLDDIVIDE_API bool IsAvailable(const TSet<const URTSEntityData*>& Owned, const URTSEntityData& Data);
+
+	/** What TeamId owns for prerequisites: its constructed, standing buildings and its living units. */
+	WORLDDIVIDE_API TSet<const URTSEntityData*> GatherOwned(const UWorld& World, int32 TeamId);
+
 	/**
-	 * The first of Data's prerequisites TeamId does not own, or null when it owns them all. A building counts once it is
-	 * constructed and standing, a unit while it lives. The client's menu and the server's check share it.
+	 * The first of Data's prerequisites TeamId does not own, or null when it owns them all. The client's menus and the
+	 * server's checks share it; it only gates new orders, so what is already queued or paid for carries on.
 	 */
 	WORLDDIVIDE_API const URTSEntityData* FindMissingPrerequisite(const UWorld& World, int32 TeamId, const URTSEntityData& Data);
 }

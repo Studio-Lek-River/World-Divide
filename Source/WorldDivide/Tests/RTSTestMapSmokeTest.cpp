@@ -431,13 +431,21 @@ namespace
 		return Controller;
 	}
 
-	/** A completed test power plant for TeamId, so its buildings construct at full speed and its towers fire. */
+	/**
+	 * A completed test power plant for TeamId, so its buildings construct at full speed, its towers fire and it may order
+	 * towers. Reuses the one an earlier step of the same test gave it.
+	 */
 	ARTSBuilding* SpawnPowerPlant(UWorld* World, int32 TeamId)
 	{
 		URTSBuildingData* Data = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
 		if (!Data)
 		{
 			return nullptr;
+		}
+		ARTSBuilding* Existing = FindBuildingAt(World, Data, PowerPlantSpot);
+		if (Existing && Existing->GetTeamId() == TeamId && Existing->IsConstructed() && !Existing->GetHealthComponent()->IsDead())
+		{
+			return Existing;
 		}
 		const FTransform Transform(PowerPlantSpot);
 		ARTSBuilding* Plant = World->SpawnActorDeferred<ARTSBuilding>(
@@ -2037,9 +2045,11 @@ bool FRTSIssueEnemyBlockedBuild::Update()
 	URTSBuildingData* Tower = LoadObject<URTSBuildingData>(nullptr, TowerPath);
 	ARTSUnit* Builder = SpawnTestUnit(World, BuilderPath, TeamId, BuilderStart);
 	ARTSUnit* Enemy = SpawnUnarmedEnemy(World, TeamId, OtherBuildSpot);
-	if (!Tower || !Builder || !Enemy)
+	// A tower needs a power plant first.
+	const ARTSBuilding* Plant = SpawnPowerPlant(World, TeamId);
+	if (!Tower || !Builder || !Enemy || !Plant)
 	{
-		Test->AddError(TEXT("Could not spawn the builder or the enemy, or load the tower"));
+		Test->AddError(TEXT("Could not spawn the builder, the enemy or the power plant, or load the tower"));
 		return true;
 	}
 	State->Builder = Builder;
@@ -2431,6 +2441,96 @@ bool FRTSVerifyProducedHarvester::Update()
 	return true;
 }
 
+/**
+ * Walks the test tech tree through the debug build menu: the tower waits for a power plant, the vehicle factory for a
+ * completed barracks, and losing the barracks blocks new factories while the one placed builds on.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckBuildPrerequisites, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSCheckBuildPrerequisites::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	const int32 TeamId = Controller->GetTeamId();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	URTSBuildingData* Tower = LoadObject<URTSBuildingData>(nullptr, TowerPath);
+	URTSBuildingData* Plant = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+	URTSBuildingData* Barracks = LoadObject<URTSBuildingData>(nullptr, BarracksPath);
+	URTSBuildingData* Factory = LoadObject<URTSBuildingData>(nullptr, VehicleFactoryPath);
+	if (!Player || !Tower || !Plant || !Barracks || !Factory)
+	{
+		Test->AddError(TEXT("Missing the player state or the test tower, power plant, barracks or vehicle factory"));
+		return true;
+	}
+	Player->AddCredits(Factory->Cost * 2);
+
+	// The tech tree comes from the data: setup_testmap.py lists these prerequisites.
+	Test->TestTrue(TEXT("The tower needs a power plant"), Controller->GetMissingPrerequisite(*Tower) == Plant);
+	Test->TestTrue(TEXT("The vehicle factory needs a barracks"), Controller->GetMissingPrerequisite(*Factory) == Barracks);
+	Test->TestNull(TEXT("The barracks needs nothing"), Controller->GetMissingPrerequisite(*Barracks));
+	if (!SpawnPowerPlant(World, TeamId))
+	{
+		Test->AddError(TEXT("Could not give the player a power plant"));
+		return true;
+	}
+	Test->TestNull(TEXT("With a power plant the tower is available"), Controller->GetMissingPrerequisite(*Tower));
+
+	// Without a barracks the menu offers the factory but neither the ghost nor the server takes it.
+	const bool bWasDebugBuild = SetDebugBuild(true);
+	Test->TestTrue(TEXT("The debug build menu lists the factory"), Controller->GetBuildMenu().Contains(Factory));
+	Controller->BeginPlacement(Factory);
+	Test->TestNull(TEXT("Without a barracks the factory cannot be placed"), Controller->GetPlacementData());
+	SetDebugBuild(bWasDebugBuild);
+	const int32 Credits = Player->GetCredits();
+	Test->TestNull(TEXT("Without a barracks the server refuses the factory"), RequestBuild(*Controller, Factory, BuildSpot));
+
+	ARTSBuilding* BarracksSite = SpawnBuilding(World, Barracks, TeamId, OtherBuildSpot, false);
+	Test->TestTrue(TEXT("A barracks under construction does not count"), Controller->GetMissingPrerequisite(*Factory) == Barracks);
+	Test->TestNull(TEXT("Nor does the server count it"), RequestBuild(*Controller, Factory, BuildSpot));
+	Test->TestEqual(TEXT("Refusals charge nothing"), Player->GetCredits(), Credits);
+
+	BarracksSite->UpdateConstruction(Barracks->BuildTime);
+	Test->TestNull(TEXT("Once the barracks completes the factory is available"), Controller->GetMissingPrerequisite(*Factory));
+	SetDebugBuild(true);
+	Controller->BeginPlacement(Factory);
+	Test->TestTrue(TEXT("The factory can be placed"), Controller->GetPlacementData() == Factory);
+	Controller->CancelPlacement();
+	SetDebugBuild(bWasDebugBuild);
+	ARTSBuilding* FactorySite = RequestBuild(*Controller, Factory, BuildSpot);
+	Test->TestNotNull(TEXT("The server places the factory"), FactorySite);
+	Test->TestEqual(TEXT("The factory is charged"), Player->GetCredits(), Credits - Factory->Cost);
+
+	BarracksSite->GetHealthComponent()->ApplyDamage(Barracks->MaxHealth * 2.f, nullptr);
+	Test->TestTrue(TEXT("Once the barracks is destroyed the factory needs it again"), Controller->GetMissingPrerequisite(*Factory) == Barracks);
+	Test->TestNull(TEXT("And the server refuses another factory"), RequestBuild(*Controller, Factory, UnitSpot));
+	Test->TestEqual(TEXT("The refusal charges nothing"), Player->GetCredits(), Credits - Factory->Cost);
+
+	State->Building = FactorySite;
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+/** The factory placed before the barracks fell completes all the same. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyPlacedFactoryCompletes, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyPlacedFactoryCompletes::Update()
+{
+	ARTSBuilding* Factory = State->Building.Get();
+	if (!Factory)
+	{
+		Test->AddError(TEXT("The placed factory disappeared"));
+		return true;
+	}
+	if (!Factory->IsConstructed() && FPlatformTime::Seconds() - State->PhaseStart < ConstructionTimeout)
+	{
+		return false;
+	}
+	Test->TestTrue(TEXT("The factory completed without the barracks"), Factory->IsConstructed());
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTestMapSmokeTest, "WorldDivide.Smoke.TestMap",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -2492,6 +2592,27 @@ bool FRTSBuildingPlacementSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckPlacement(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyConstruction(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckCancelConstruction(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBuildPrerequisitesSmokeTest, "WorldDivide.Smoke.BuildPrerequisites",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSBuildPrerequisitesSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckBuildPrerequisites(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyPlacedFactoryCompletes(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

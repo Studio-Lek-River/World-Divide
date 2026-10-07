@@ -518,6 +518,9 @@ buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory]
 add_properties(builder, {"buildings": buildings})
 # A harvester needs a depot to deliver to, so the factory only offers one once a depot stands.
 add_properties(harvester, {"prerequisites": [supply_depot]})
+# The tech tree: vehicles only after infantry, and a tower only once a plant can power it.
+add_properties(vehicle_factory, {"prerequisites": [barracks]})
+add_properties(tower, {"prerequisites": [power_plant]})
 make_faction("DA_TestFaction", "Test Faction", buildings)
 make_ghost_material("M_PlacementGhost")
 make_map(tank, infantry, builder, wall_mesh, crate_mesh)

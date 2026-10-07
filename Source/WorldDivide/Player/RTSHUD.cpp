@@ -240,8 +240,14 @@ void ARTSHUD::DrawBuildMenu(const ARTSPlayerController& Controller)
 		}
 		Y += MenuLineHeight;
 		const bool bPlacing = Controller.GetPlacementData() == Data;
-		const FLinearColor Color = bPlacing ? SelectionColor : Controller.CanAfford(*Data) ? MenuColor : UnaffordableColor;
-		DrawText(FString::Printf(TEXT("%d  %s  (%d)"), Index + 1, *Data->DisplayName.ToString(), Data->Cost), Color, MenuMargin, Y);
+		FString Text = FString::Printf(TEXT("%d  %s  (%d)"), Index + 1, *Data->DisplayName.ToString(), Data->Cost);
+		const URTSEntityData* Missing = Controller.GetMissingPrerequisite(*Data);
+		if (Missing)
+		{
+			Text += FString::Printf(TEXT("  needs %s"), *Missing->DisplayName.ToString());
+		}
+		const FLinearColor Color = bPlacing ? SelectionColor : Controller.CanAfford(*Data) && !Missing ? MenuColor : UnaffordableColor;
+		DrawText(Text, Color, MenuMargin, Y);
 	}
 	if (Controller.GetPlacementData())
 	{

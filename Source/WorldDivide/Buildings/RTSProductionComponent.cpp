@@ -15,37 +15,47 @@
 
 namespace RTSProduction
 {
-	const URTSEntityData* FindMissingPrerequisite(const UWorld& World, int32 TeamId, const URTSEntityData& Data)
+	const URTSEntityData* FindMissingPrerequisite(const TSet<const URTSEntityData*>& Owned, const URTSEntityData& Data)
 	{
 		for (const TObjectPtr<URTSEntityData>& Prerequisite : Data.Prerequisites)
 		{
-			if (!Prerequisite)
-			{
-				continue;
-			}
-			bool bOwned = false;
-			if (Prerequisite->IsA<URTSBuildingData>())
-			{
-				for (TActorIterator<ARTSBuilding> It(&World); It && !bOwned; ++It)
-				{
-					bOwned = It->GetTeamId() == TeamId && It->GetBuildingData() == Prerequisite && It->IsConstructed()
-						&& !It->IsActorBeingDestroyed() && !It->GetHealthComponent()->IsDead();
-				}
-			}
-			else
-			{
-				for (TActorIterator<ARTSUnit> It(&World); It && !bOwned; ++It)
-				{
-					bOwned = It->GetTeamId() == TeamId && It->GetUnitData() == Prerequisite && !It->IsActorBeingDestroyed()
-						&& !It->GetHealthComponent()->IsDead();
-				}
-			}
-			if (!bOwned)
+			if (Prerequisite && !Owned.Contains(Prerequisite.Get()))
 			{
 				return Prerequisite;
 			}
 		}
 		return nullptr;
+	}
+
+	bool IsAvailable(const TSet<const URTSEntityData*>& Owned, const URTSEntityData& Data)
+	{
+		return !FindMissingPrerequisite(Owned, Data);
+	}
+
+	TSet<const URTSEntityData*> GatherOwned(const UWorld& World, int32 TeamId)
+	{
+		TSet<const URTSEntityData*> Owned;
+		for (TActorIterator<ARTSBuilding> It(&World); It; ++It)
+		{
+			if (It->GetTeamId() == TeamId && It->IsConstructed() && !It->IsActorBeingDestroyed() && !It->GetHealthComponent()->IsDead())
+			{
+				Owned.Add(It->GetBuildingData());
+			}
+		}
+		for (TActorIterator<ARTSUnit> It(&World); It; ++It)
+		{
+			if (It->GetTeamId() == TeamId && !It->IsActorBeingDestroyed() && !It->GetHealthComponent()->IsDead())
+			{
+				Owned.Add(It->GetUnitData());
+			}
+		}
+		return Owned;
+	}
+
+	const URTSEntityData* FindMissingPrerequisite(const UWorld& World, int32 TeamId, const URTSEntityData& Data)
+	{
+		// Most entries need nothing; only gather the team's actors when there is something to look up.
+		return Data.Prerequisites.IsEmpty() ? nullptr : FindMissingPrerequisite(GatherOwned(World, TeamId), Data);
 	}
 }
 

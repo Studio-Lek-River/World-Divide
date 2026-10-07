@@ -744,7 +744,7 @@ void ARTSPlayerController::BeginPlacement(URTSBuildingData* Data)
 {
 	CancelPlacement();
 	CancelAttackMove();
-	if (!Data)
+	if (!Data || GetMissingPrerequisite(*Data))
 	{
 		return;
 	}
@@ -807,7 +807,8 @@ void ARTSPlayerController::UpdatePlacement()
 	const bool bSpotValid = Builder
 		? RTSBuildPlacement::CanBuilderPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation, Builder->GetTeamId())
 		: RTSBuildPlacement::CanPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation);
-	bPlacementValid = bSpotValid && CanAfford(*PlacementData);
+	// A prerequisite lost while placing turns the ghost red; the server would refuse the order.
+	bPlacementValid = bSpotValid && CanAfford(*PlacementData) && !GetMissingPrerequisite(*PlacementData);
 	PlacementGhost->SetActorLocation(PlacementLocation);
 	PlacementGhost->SetValid(bPlacementValid);
 	PlacementGhost->SetActorHiddenInGame(false);

@@ -209,6 +209,37 @@ namespace RTSProductionTests
 		return true;
 	}
 
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSProductionIsAvailableTest, "WorldDivide.Production.IsAvailable", TestFlags)
+
+	bool FRTSProductionIsAvailableTest::RunTest(const FString& Parameters)
+	{
+		URTSBuildingData* Barracks = MakeBuilding();
+		URTSBuildingData* Plant = MakeBuilding(5, 0);
+		URTSBuildingData* Factory = MakeBuilding();
+		Factory->Prerequisites.Add(Barracks);
+		Factory->Prerequisites.Add(Plant);
+		URTSBuildingData* Depot = MakeBuilding();
+		Depot->Prerequisites.Add(nullptr);
+
+		TSet<const URTSEntityData*> Owned;
+		TestTrue(TEXT("Nothing needed is available with nothing owned"), RTSProduction::IsAvailable(Owned, *Barracks));
+		TestTrue(TEXT("An empty prerequisite slot is ignored"), RTSProduction::IsAvailable(Owned, *Depot));
+		TestFalse(TEXT("With nothing owned the factory is unavailable"), RTSProduction::IsAvailable(Owned, *Factory));
+		TestTrue(TEXT("The first missing prerequisite is named"), RTSProduction::FindMissingPrerequisite(Owned, *Factory) == Barracks);
+
+		Owned.Add(Barracks);
+		TestFalse(TEXT("One of two prerequisites is not enough"), RTSProduction::IsAvailable(Owned, *Factory));
+		TestTrue(TEXT("The one still missing is named"), RTSProduction::FindMissingPrerequisite(Owned, *Factory) == Plant);
+
+		Owned.Add(Plant);
+		TestTrue(TEXT("With both owned the factory is available"), RTSProduction::IsAvailable(Owned, *Factory));
+		TestNull(TEXT("Nothing is missing"), RTSProduction::FindMissingPrerequisite(Owned, *Factory));
+
+		Owned.Remove(Barracks);
+		TestFalse(TEXT("Losing one makes it unavailable again"), RTSProduction::IsAvailable(Owned, *Factory));
+		return true;
+	}
+
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSProductionCancelTest, "WorldDivide.Production.Cancel", TestFlags)
 
 	bool FRTSProductionCancelTest::RunTest(const FString& Parameters)

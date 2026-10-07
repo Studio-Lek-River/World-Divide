@@ -92,7 +92,7 @@ public:
 	/** What 1-9 queue at the selected production building; empty without one. */
 	TArray<URTSUnitData*> GetProductionMenu() const;
 
-	/** The first of Data's prerequisites the local player does not own, or null. The server checks again before it queues. */
+	/** The first of Data's prerequisites the local player does not own, or null. The server checks again before it charges. */
 	const URTSEntityData* GetMissingPrerequisite(const URTSEntityData& Data) const;
 
 	/**
@@ -112,7 +112,7 @@ public:
 
 	/**
 	 * Local. Shows a ghost of Data under the cursor until the player builds or cancels. Confirming sends the selected
-	 * builder, or without one places the building directly in debug build.
+	 * builder, or without one places the building directly in debug build. Does nothing while a prerequisite is missing.
 	 */
 	void BeginPlacement(URTSBuildingData* Data);
 	void CancelPlacement();

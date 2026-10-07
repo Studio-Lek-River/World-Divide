@@ -3,6 +3,7 @@
 #include "AIController.h"
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
+#include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
@@ -59,6 +60,12 @@ bool URTSBuilderComponent::ChargeOrder(FRTSCommand& Command)
 	ARTSPlayerState* Player = FindPlayer();
 	if (!CanBuild(Data) || !Player)
 	{
+		return false;
+	}
+	// Only new orders need the prerequisites; one already paid for carries on when they are lost.
+	if (const URTSEntityData* Missing = RTSProduction::FindMissingPrerequisite(*GetWorld(), Player->GetTeamId(), *Data))
+	{
+		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d needs %s for %s"), Player->GetTeamId(), *Missing->GetName(), *Data->GetName());
 		return false;
 	}
 	if (!Player->TrySpendCredits(Data->Cost))

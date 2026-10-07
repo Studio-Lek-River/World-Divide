@@ -46,8 +46,8 @@ public:
 
 	/**
 	 * Server only. Pays for a Build order's new building: takes its cost from the owner's player and puts it on the command.
-	 * False when the builder cannot build it or the player cannot afford it; nothing is charged then. An order naming an own
-	 * construction site costs nothing.
+	 * False when the builder cannot build it, the player lacks one of its prerequisites or cannot afford it; nothing is charged
+	 * then. An order naming an own construction site costs nothing and needs no prerequisites.
 	 */
 	bool ChargeOrder(FRTSCommand& Command);
 

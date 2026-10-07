@@ -28,7 +28,10 @@ namespace RTSCommands
 	 */
 	WORLDDIVIDE_API bool IsDebugBuildEnabled();
 
-	/** Server only. PlaceBuilding for Player's faction and team, charged to Player: refused when they cannot afford it. */
+	/**
+	 * Server only. PlaceBuilding for Player's faction and team, charged to Player: refused when they lack one of its
+	 * prerequisites or cannot afford it.
+	 */
 	WORLDDIVIDE_API ARTSBuilding* PurchaseBuilding(UWorld& World, ARTSPlayerState& Player, const FRTSCommand& Command);
 
 	/**

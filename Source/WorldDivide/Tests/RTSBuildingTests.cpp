@@ -331,4 +331,60 @@ bool FRTSBuilderChargeTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBuilderPrerequisitesTest, "WorldDivide.Buildings.Prerequisites", TestFlags)
+
+bool FRTSBuilderPrerequisitesTest::RunTest(const FString& Parameters)
+{
+	URTSBuildingData* Barracks = MakeBuildingData(2.f, nullptr);
+	URTSBuildingData* Factory = MakeBuildingData(2.f, nullptr);
+	Factory->Cost = 500;
+	Factory->Prerequisites.Add(Barracks);
+	URTSBuilderData* BuilderData = NewObject<URTSBuilderData>();
+	BuilderData->MaxHealth = 100.f;
+	BuilderData->SelectionRadius = 60.f;
+	BuilderData->Buildings.Add(Barracks);
+	BuilderData->Buildings.Add(Factory);
+
+	const FRTSTestWorld TestWorld;
+	ARTSPlayerState* Player = TestWorld.SpawnPlayer(0, 5000);
+	TestWorld.SpawnPlayer(1, 0);
+	URTSBuilderComponent* Builder = TestWorld.SpawnUnit(BuilderData, 0, FVector(220.f, 0.f, 0.f))->GetBuilderComponent();
+	auto MakeOrder = [Factory]()
+	{
+		FRTSCommand Order;
+		Order.Type = ERTSCommandType::Build;
+		Order.EntityData = Factory;
+		Order.TargetLocation = FVector::ZeroVector;
+		return Order;
+	};
+
+	FRTSCommand Order = MakeOrder();
+	TestFalse(TEXT("Without a barracks the factory is refused"), Builder->ChargeOrder(Order));
+	ARTSBuilding* Site = TestWorld.SpawnBuilding(Barracks, 0, FVector(3000.f, 0.f, 0.f));
+	TestFalse(TEXT("A barracks under construction does not count"), Builder->ChargeOrder(Order));
+	TestWorld.SpawnBuilding(Barracks, 1, FVector(6000.f, 0.f, 0.f))->UpdateConstruction(Barracks->BuildTime);
+	TestFalse(TEXT("The enemy's barracks does not count"), Builder->ChargeOrder(Order));
+	TestEqual(TEXT("Refusals charge nothing"), Player->GetCredits(), 5000);
+
+	Site->UpdateConstruction(Barracks->BuildTime);
+	TestTrue(TEXT("Once the barracks completes the factory is accepted"), Builder->ChargeOrder(Order));
+	TestEqual(TEXT("The accepted order is charged"), Player->GetCredits(), 5000 - Factory->Cost);
+
+	// What is already paid for carries on: losing the barracks only blocks new orders.
+	Site->GetHealthComponent()->ApplyDamage(Barracks->MaxHealth * 2.f, nullptr);
+	TestFalse(TEXT("The barracks was destroyed"), IsValid(Site));
+	FRTSCommand NewOrder = MakeOrder();
+	TestFalse(TEXT("Once the barracks is destroyed a new factory is refused"), Builder->ChargeOrder(NewOrder));
+	TestTrue(TEXT("The factory already paid for still starts"), Builder->StartBuild(Order));
+	TestEqual(TEXT("Nothing more was charged"), Player->GetCredits(), 5000 - Factory->Cost);
+
+	// Resuming an own site needs no prerequisites: it was checked when it was ordered.
+	FRTSCommand Resume;
+	Resume.Type = ERTSCommandType::Build;
+	Resume.TargetActor = TestWorld.SpawnBuilding(Factory, 0, FVector(-3000.f, 0.f, 0.f));
+	TestTrue(TEXT("Resuming a factory site is accepted without a barracks"), Builder->ChargeOrder(Resume));
+	TestTrue(TEXT("And starts"), Builder->StartBuild(Resume));
+	return true;
+}
+
 #endif

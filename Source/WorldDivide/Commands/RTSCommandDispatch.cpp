@@ -117,6 +117,13 @@ namespace RTSCommands
 	ARTSBuilding* PurchaseBuilding(UWorld& World, ARTSPlayerState& Player, const FRTSCommand& Command)
 	{
 		const int32 Cost = Command.EntityData ? Command.EntityData->Cost : 0;
+		const URTSEntityData* Missing = Command.EntityData
+			? RTSProduction::FindMissingPrerequisite(World, Player.GetTeamId(), *Command.EntityData) : nullptr;
+		if (Missing)
+		{
+			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d needs %s for %s"), Player.GetTeamId(), *Missing->GetName(), *Command.EntityData->GetName());
+			return nullptr;
+		}
 		if (Player.GetCredits() < Cost)
 		{
 			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot afford %s (%d of %d credits)"),
