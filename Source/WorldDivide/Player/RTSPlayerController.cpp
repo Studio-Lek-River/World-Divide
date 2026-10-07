@@ -595,9 +595,13 @@ void ARTSPlayerController::UpdatePlacement()
 		return;
 	}
 
-	// The same checks the server repeats, so a green ghost is a spot the server accepts.
-	bPlacementValid = RTSBuildPlacement::CanPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation)
-		&& CanAfford(*PlacementData);
+	// The same checks the server repeats, so a green ghost is a spot the server accepts. Own units may stand on a builder's
+	// spot: it sends them off when it arrives.
+	const ARTSUnit* Builder = PlacementBuilder.Get();
+	const bool bSpotValid = Builder
+		? RTSBuildPlacement::CanBuilderPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation, Builder->GetTeamId())
+		: RTSBuildPlacement::CanPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation);
+	bPlacementValid = bSpotValid && CanAfford(*PlacementData);
 	PlacementGhost->SetActorLocation(PlacementLocation);
 	PlacementGhost->SetValid(bPlacementValid);
 	PlacementGhost->SetActorHiddenInGame(false);

@@ -30,6 +30,13 @@ namespace RTSBuildPlacement
 	WORLDDIVIDE_API bool CanPlace(const UWorld& World, const URTSBuildingData& Data, const FVector& RequestedLocation, FVector& OutLocation,
 		TArray<AActor*>* OutBlockers = nullptr);
 
+	/**
+	 * CanPlace for a builder of TeamId: units of that team on the footprint do not count, since the builder sends them off
+	 * when it arrives. Enemy units, buildings and obstacles still rule the spot out.
+	 */
+	WORLDDIVIDE_API bool CanBuilderPlace(const UWorld& World, const URTSBuildingData& Data, const FVector& RequestedLocation,
+		FVector& OutLocation, int32 TeamId);
+
 	/** Relative Z that stands the data's mesh on the actor origin, and the mesh's scaled height. */
 	WORLDDIVIDE_API void GetMeshPlacement(const URTSEntityData& Data, float& OutBaseOffset, float& OutHeight);
 }

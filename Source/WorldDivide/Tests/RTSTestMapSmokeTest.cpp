@@ -44,7 +44,8 @@
  * The building tests place buildings without units, as the debug build menu does, so they turn rts.DebugBuild on for each
  * request. The builder test sends builders instead: one walks to the site and places it, construction holds while it is
  * away and once a second builder dies there, the first finishes it, then builds two buildings queued with Shift. The site
- * clearing test checks that an enemy on the spot refuses a builder, while own units on it step aside, keeping their orders.
+ * clearing test checks that an enemy on the spot refuses a builder, while own units on it step aside, keeping their orders;
+ * the builder's ghost turns red over the enemy but stays green over own units, which the debug ghost does not.
  */
 namespace
 {
@@ -342,11 +343,13 @@ namespace
 		return FVector::Dist2D(Location, Site.GetClosestFootprintPoint(Location)) >= Unit.GetSelectionRadius();
 	}
 
-	/** What the client's ghost would show for this spot. */
-	bool ClientAccepts(UWorld& World, const URTSBuildingData& Data, const FVector& Location)
+	/** What the client's ghost would show for this spot: placed directly, or by a builder of BuilderTeam when given. */
+	bool ClientAccepts(UWorld& World, const URTSBuildingData& Data, const FVector& Location, int32 BuilderTeam = INDEX_NONE)
 	{
 		FVector Snapped;
-		return RTSBuildPlacement::CanPlace(World, Data, Location, Snapped);
+		return BuilderTeam == INDEX_NONE
+			? RTSBuildPlacement::CanPlace(World, Data, Location, Snapped)
+			: RTSBuildPlacement::CanBuilderPlace(World, Data, Location, Snapped, BuilderTeam);
 	}
 
 	ARTSPlayerController* GetTestController(FAutomationTestBase& Test)
@@ -1853,6 +1856,7 @@ bool FRTSIssueEnemyBlockedBuild::Update()
 	State->Player = Player;
 	State->BuilderCredits = Player->GetCredits();
 
+	Test->TestFalse(TEXT("A builder's ghost rejects a spot covered by an enemy"), ClientAccepts(*World, *Tower, OtherBuildSpot, TeamId));
 	Controller->Server_IssueCommand({ Builder }, MakeBuild(Tower, OtherBuildSpot));
 	Test->TestEqual(TEXT("The builder took the order"), Builder->GetQueuedCommandCount(), 1);
 	State->PhaseStart = FPlatformTime::Seconds();
@@ -1920,6 +1924,9 @@ bool FRTSIssueOwnBlockedBuild::Update()
 	State->SiteTank = Tank;
 	State->SiteInfantry = Infantry;
 	State->SiteDummy = Dummy;
+
+	Test->TestFalse(TEXT("The debug ghost rejects a spot covered by an own tank"), ClientAccepts(*World, *Tower, BuildSpot));
+	Test->TestTrue(TEXT("A builder's ghost accepts a spot covered by an own tank"), ClientAccepts(*World, *Tower, BuildSpot, TeamId));
 
 	FRTSCommand Attack;
 	Attack.Type = ERTSCommandType::Attack;

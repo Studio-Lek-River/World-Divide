@@ -5,6 +5,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "NavigationSystem.h"
+#include "Units/RTSUnit.h"
 
 namespace
 {
@@ -99,6 +100,30 @@ namespace RTSBuildPlacement
 			}
 		}
 		return Overlaps.IsEmpty();
+	}
+
+	bool CanBuilderPlace(const UWorld& World, const URTSBuildingData& Data, const FVector& RequestedLocation, FVector& OutLocation,
+		int32 TeamId)
+	{
+		TArray<AActor*> Blockers;
+		if (CanPlace(World, Data, RequestedLocation, OutLocation, &Blockers))
+		{
+			return true;
+		}
+		// No blockers means the navmesh ruled the spot out.
+		if (Blockers.IsEmpty())
+		{
+			return false;
+		}
+		for (const AActor* Blocker : Blockers)
+		{
+			const ARTSUnit* Unit = Cast<ARTSUnit>(Blocker);
+			if (!Unit || Unit->GetTeamId() != TeamId)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	void GetMeshPlacement(const URTSEntityData& Data, float& OutBaseOffset, float& OutHeight)
