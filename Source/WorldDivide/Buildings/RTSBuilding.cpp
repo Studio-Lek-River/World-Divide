@@ -10,11 +10,13 @@
 #include "Data/RTSUnitData.h"
 #include "Economy/RTSHarvesterComponent.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "NavAreas/NavArea_Null.h"
 #include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Units/RTSUnit.h"
+#include "WorldDivide.h"
 
 namespace
 {
@@ -26,6 +28,12 @@ namespace
 
 	/** Gap between the footprint edge and a unit spawned on completion, beyond the unit's radius. */
 	constexpr float SpawnClearance = 80.f;
+
+	/** Units held short of a new building go on regardless once its navmesh hole takes this long. */
+	constexpr float NavCutTimeout = 10.f;
+
+	/** How close to the footprint centre a navmesh point still counts as the hole not being there yet. */
+	const FVector NavCutQueryExtent(10.f, 10.f, 250.f);
 }
 
 ARTSBuilding::ARTSBuilding()
@@ -76,6 +84,18 @@ void ARTSBuilding::PostInitializeComponents()
 	HealthComponent->OnDeath.AddDynamic(this, &ThisClass::HandleDeath);
 }
 
+void ARTSBuilding::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (HasAuthority())
+	{
+		// Before any unit moves another frame towards the footprint.
+		bNavCutPending = true;
+		UpdateNavCut(0.f);
+	}
+}
+
 void ARTSBuilding::HandleDeath(AActor* Killer)
 {
 	// Only cancelling refunds; a construction site the enemy destroys is lost with everything paid for it.
@@ -97,6 +117,10 @@ void ARTSBuilding::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	if (bNavCutPending)
+	{
+		UpdateNavCut(DeltaSeconds);
+	}
 	if (HasAuthority() && bAutoConstruct && !IsConstructed())
 	{
 		UpdateConstruction(DeltaSeconds);
@@ -138,8 +162,62 @@ void ARTSBuilding::RefreshWeapon()
 	WeaponComponent->SetWeaponData(IsConstructed() && bPowered ? BuildingData->Weapon.Get() : nullptr);
 }
 
+void ARTSBuilding::UpdateNavCut(float DeltaSeconds)
+{
+	check(HasAuthority());
+	NavCutWaited += DeltaSeconds;
+
+	// The rebuild runs asynchronously; the hole is there once the centre is off the navmesh and no build is left.
+	UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+	FNavLocation NavPoint;
+	const bool bCut = !NavSystem
+		|| (!NavSystem->IsNavigationBuildInProgress()
+			&& !NavSystem->ProjectPointToNavigation(GetActorLocation(), NavPoint, NavCutQueryExtent));
+	if (bCut || NavCutWaited >= NavCutTimeout || !BuildingData)
+	{
+		if (!bCut)
+		{
+			UE_LOG(LogWorldDivide, Warning, TEXT("%s: navmesh hole not built after %.0f s, releasing held units"), *GetName(), NavCutWaited);
+		}
+		bNavCutPending = false;
+		ReleaseHeldUnits();
+		return;
+	}
+
+	const FVector Center = GetActorLocation();
+	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint);
+	const FBox Footprint(Center - FVector(Extent.X, Extent.Y, 0.f), Center + FVector(Extent.X, Extent.Y, 0.f));
+	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
+	{
+		if (!It->IsMoveHeld() && It->HoldShortOf(Footprint))
+		{
+			HeldUnits.AddUnique(*It);
+		}
+	}
+}
+
+void ARTSBuilding::ReleaseHeldUnits()
+{
+	// Held by this building or not, a unit only goes on while it still waits.
+	for (const TWeakObjectPtr<ARTSUnit>& Unit : HeldUnits)
+	{
+		if (Unit.IsValid())
+		{
+			Unit->ReleaseHold();
+		}
+	}
+	HeldUnits.Reset();
+}
+
 void ARTSBuilding::Destroyed()
 {
+	// A site cancelled or destroyed before its hole was built lets its waiting units go.
+	if (HasAuthority() && bNavCutPending)
+	{
+		bNavCutPending = false;
+		ReleaseHeldUnits();
+	}
+
 	// Only completed buildings count towards the grid; cancelled or destroyed sites never did.
 	if (HasAuthority() && IsConstructed() && GetWorld())
 	{

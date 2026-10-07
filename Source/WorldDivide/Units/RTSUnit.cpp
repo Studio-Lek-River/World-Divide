@@ -40,6 +40,9 @@ namespace
 	constexpr float MoveSnapDistance = 1000.f;
 	/** Tall enough to reach the ground from the roof of a block, where a click on it lands. */
 	const FVector MoveSnapExtent(MoveSnapStep, MoveSnapStep, 1000.f);
+
+	/** A unit holds short of a new building once this much of its travel time lies between it and the footprint. */
+	constexpr float HoldLookaheadSeconds = 0.2f;
 }
 
 /** Engine basic shapes expose this parameter; real unit and building materials should too. */
@@ -321,6 +324,73 @@ void ARTSUnit::StepAside(const FVector& Location)
 	Move.TargetLocation = Location;
 	CommandQueue.Insert(Move, 0);
 	StartNextCommand();
+}
+
+bool ARTSUnit::HoldShortOf(const FBox& Footprint)
+{
+	check(HasAuthority());
+
+	AAIController* AI = GetController<AAIController>();
+	const UPathFollowingComponent* PathFollowing = AI ? AI->GetPathFollowingComponent() : nullptr;
+	const FNavPathSharedPtr Path = PathFollowing ? PathFollowing->GetPath() : nullptr;
+	if (!Path.IsValid() || PathFollowing->GetStatus() != EPathFollowingStatus::Moving)
+	{
+		return false;
+	}
+
+	// Footprint and path compared flat: the unit's whole circle has to stay out.
+	const FBox Flat(FVector(Footprint.Min.X, Footprint.Min.Y, -WORLD_MAX), FVector(Footprint.Max.X, Footprint.Max.Y, WORLD_MAX));
+	const FBox Area = Flat.ExpandBy(FVector(GetSelectionRadius(), GetSelectionRadius(), 0.f));
+
+	const TArray<FNavPathPoint>& Points = Path->GetPathPoints();
+	float Remaining = Movement->GetMaxSpeed() * HoldLookaheadSeconds;
+	FVector Start = GetActorLocation();
+	bool bEnters = false;
+	for (int32 Index = PathFollowing->GetNextPathIndex(); !bEnters && Remaining > 0.f && Points.IsValidIndex(Index); ++Index)
+	{
+		FVector End = Points[Index].Location;
+		End.Z = Start.Z;
+		const float Length = FVector::Dist2D(Start, End);
+		if (Length > Remaining)
+		{
+			End = Start + (End - Start) * (Remaining / Length);
+		}
+		// A unit brushing the footprint, such as one still stepping off the site, may leave it.
+		const bool bLeaving = Area.IsInsideXY(Start)
+			&& Flat.ComputeSquaredDistanceToPoint(End) >= Flat.ComputeSquaredDistanceToPoint(Start);
+		bEnters = Length > UE_KINDA_SMALL_NUMBER && !bLeaving && FMath::LineBoxIntersection(Area, Start, End, End - Start);
+		Remaining -= Length;
+		Start = End;
+	}
+
+	return bEnters && AI->PauseMove(AI->GetCurrentMoveRequestID());
+}
+
+bool ARTSUnit::IsMoveHeld() const
+{
+	// Nothing else pauses a move.
+	const AAIController* AI = GetController<AAIController>();
+	return AI && AI->GetMoveStatus() == EPathFollowingStatus::Paused;
+}
+
+void ARTSUnit::ReleaseHold()
+{
+	check(HasAuthority());
+
+	if (!IsMoveHeld())
+	{
+		return;
+	}
+	if (!CommandQueue.IsEmpty() && CommandQueue[0].Type == ERTSCommandType::Move)
+	{
+		// A fresh request replaces the paused one, so its path takes the new hole into account.
+		StartNextCommand();
+	}
+	else if (AAIController* AI = GetController<AAIController>())
+	{
+		// Attacks, harvests and builds start a new move of their own once the unit stands idle.
+		AI->StopMovement();
+	}
 }
 
 void ARTSUnit::StartNextCommand()

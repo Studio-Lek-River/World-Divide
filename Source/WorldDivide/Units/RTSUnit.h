@@ -45,6 +45,18 @@ public:
 	 */
 	void StepAside(const FVector& Location);
 
+	/**
+	 * Server only. Pauses the current move when the next stretch of its path leads into Footprint, a new building whose
+	 * navmesh hole is not built yet, so the unit waits at its edge. Returns true when it paused.
+	 */
+	bool HoldShortOf(const FBox& Footprint);
+
+	/** Server only. True while HoldShortOf keeps the move paused; any new move ends the hold. */
+	bool IsMoveHeld() const;
+
+	/** Server only. Ends a hold: the current order paths again, now around the building. */
+	void ReleaseHold();
+
 	/** Server only. Called by the AI controller whenever a path-following request ends. */
 	void NotifyMoveFinished(const FPathFollowingResult& Result);
 

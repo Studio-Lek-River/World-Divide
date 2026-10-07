@@ -33,7 +33,8 @@
  * A second test orders a lone tank to attack an enemy out of range and checks it closes in and destroys it.
  * The building tests place buildings through the same RPC: valid and invalid spots, cost and credits, construction
  * over BuildTime, selecting and cancelling a construction site for a refund, and a unit routing around a freshly
- * placed building. Another has three tanks destroy an enemy building
+ * placed building, and a tank waiting at the edge of a building placed in its path until the navmesh routes it around.
+ * Another has three tanks destroy an enemy building
  * and checks that its hole in the navmesh closes again; a variant hides the building behind the map's west wall, so the tanks must
  * approach it from another side. The harvest test buys a supply depot next to a small supply source and follows its
  * harvester through every load until the source is empty. The unreachable-docks test walls the nearest source and depot in
@@ -82,6 +83,14 @@ namespace
 	const FVector RouteTarget(1500.f, 7000.f, 0.f);
 	constexpr float RouteArrivalRadius = 150.f;
 	constexpr double RouteTimeout = 30.0;
+
+	/**
+	 * The path test places the power plant on BuildSpot once the moving tank's circle is this close to its footprint, well
+	 * before the navmesh can cut the hole. A second tank drives a parallel lane south of it, far from the building.
+	 */
+	constexpr float PathPlacementLead = 40.f;
+	const FVector BystanderStart(-1500.f, 6200.f, 0.f);
+	const FVector BystanderTarget(1500.f, 6200.f, 0.f);
 
 	/** The building attack puts an enemy power plant on BuildSpot and sends tanks at it from well out of range. */
 	const FVector BuildingAttackerStarts[] = {
@@ -190,6 +199,7 @@ namespace
 		TWeakObjectPtr<ARTSUnit> Walker;
 		bool bEnteredFootprint = false;
 		float MaxDetour = 0.f;
+		TWeakObjectPtr<ARTSUnit> Bystander;
 
 		// Building attack test only.
 		TArray<TWeakObjectPtr<ARTSUnit>> Attackers;
@@ -842,6 +852,105 @@ bool FRTSIssueRouteMove::Update()
 	Command.Type = ERTSCommandType::Move;
 	Command.TargetLocation = RouteTarget;
 	Controller->Server_IssueCommand({ State->Walker.Get() }, Command);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueCrossingMoves, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueCrossingMoves::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+
+	ARTSUnit* Walker = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), RouteStart);
+	ARTSUnit* Bystander = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), BystanderStart);
+	if (!Walker || !Bystander)
+	{
+		Test->AddError(TEXT("Could not spawn the tanks"));
+		return true;
+	}
+	State->Walker = Walker;
+	State->Bystander = Bystander;
+
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::Move;
+	Command.TargetLocation = RouteTarget;
+	Controller->Server_IssueCommand({ Walker }, Command);
+	Command.TargetLocation = BystanderTarget;
+	Controller->Server_IssueCommand({ Bystander }, Command);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceOnPath, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSPlaceOnPath::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	ARTSUnit* Walker = State->Walker.Get();
+	ARTSUnit* Bystander = State->Bystander.Get();
+	if (!Controller || !Walker || !Bystander)
+	{
+		Test->AddError(TEXT("No controller or tanks"));
+		return true;
+	}
+
+	URTSBuildingData* Data = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Data->Footprint);
+	const float Gap = BuildSpot.X - Extent.X - Walker->GetSelectionRadius() - Walker->GetActorLocation().X;
+	if (Gap > PathPlacementLead)
+	{
+		if (FPlatformTime::Seconds() - State->PhaseStart > RouteTimeout)
+		{
+			Test->AddError(FString::Printf(TEXT("The tank never neared the building spot (at %s)"), *Walker->GetActorLocation().ToCompactString()));
+			return true;
+		}
+		return false;
+	}
+
+	ARTSBuilding* Building = RequestBuild(*Controller, Data, BuildSpot);
+	if (!Building)
+	{
+		Test->AddError(FString::Printf(TEXT("Could not place the power plant in front of the tank (%.0f cm away)"), Gap));
+		return true;
+	}
+	State->Building = Building;
+	Test->TestTrue(TEXT("The navmesh hole is still pending"), Building->IsNavCutPending());
+	Test->TestTrue(TEXT("The tank waits at the edge of the new building"), Walker->IsMoveHeld());
+	Test->TestFalse(TEXT("The tank on the other lane keeps going"), Bystander->IsMoveHeld());
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSHoldUntilNavCut, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSHoldUntilNavCut::Update()
+{
+	const ARTSUnit* Walker = State->Walker.Get();
+	const ARTSBuilding* Building = State->Building.Get();
+	if (!Walker || !Building)
+	{
+		Test->AddError(TEXT("The tank or the building disappeared"));
+		return true;
+	}
+
+	// Not even the tank's edge may cross into the footprint before the hole is there.
+	if (!IsOffFootprint(*Walker, *Building))
+	{
+		State->bEnteredFootprint = true;
+	}
+	if (Building->IsNavCutPending() && FPlatformTime::Seconds() - State->PhaseStart <= NavTimeout)
+	{
+		return false;
+	}
+
+	Test->TestFalse(TEXT("The navmesh hole was built"), Building->IsNavCutPending());
+	Test->TestFalse(FString::Printf(TEXT("The tank stayed off the footprint while it waited (at %s)"),
+		*Walker->GetActorLocation().ToCompactString()), State->bEnteredFootprint);
+	Test->AddInfo(FString::Printf(TEXT("Navmesh cut after %.2f s"), FPlatformTime::Seconds() - State->PhaseStart));
+	State->bEnteredFootprint = false;
 	State->PhaseStart = FPlatformTime::Seconds();
 	return true;
 }
@@ -2069,6 +2178,29 @@ bool FRTSRouteAroundBuildingSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceObstacle(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueRouteMove(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyRoute(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBuildingOnPathSmokeTest, "WorldDivide.Smoke.BuildingOnPath",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSBuildingOnPathSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueCrossingMoves(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceOnPath(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSHoldUntilNavCut(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyRoute(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;

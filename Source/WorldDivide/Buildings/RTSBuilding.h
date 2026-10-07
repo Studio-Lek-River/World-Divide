@@ -5,6 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "RTSBuilding.generated.h"
 
+class ARTSUnit;
 class UBoxComponent;
 class UStaticMeshComponent;
 class URTSBuildingData;
@@ -62,6 +63,12 @@ public:
 	int32 GetCancelRefund() const;
 
 	/**
+	 * Server only. True from placement until the navmesh hole under the footprint is built. Meanwhile units whose path leads
+	 * into the footprint wait at its edge, and route around it once the hole is there.
+	 */
+	bool IsNavCutPending() const { return bNavCutPending; }
+
+	/**
 	 * Server only. While set the building constructs itself each tick, as one from the debug build menu does; a builder unit
 	 * clears it on the site it places and drives UpdateConstruction while it stands there.
 	 */
@@ -69,6 +76,7 @@ public:
 	bool bAutoConstruct = true;
 
 	virtual void PostInitializeComponents() override;
+	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void Destroyed() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -96,6 +104,11 @@ private:
 
 	/** Server only. Spawns SpawnOnComplete just outside the footprint and sends a harvester off to work. */
 	void SpawnCompletionUnit();
+
+	/** Server only, while the navmesh hole is pending: holds units headed into the footprint, releases them once it is built. */
+	void UpdateNavCut(float DeltaSeconds);
+
+	void ReleaseHeldUnits();
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<USceneComponent> Root;
@@ -126,4 +139,9 @@ private:
 	int32 PaidCost = 0;
 
 	float MeshBaseOffset = 0.f;
+
+	/** Server only. */
+	bool bNavCutPending = false;
+	float NavCutWaited = 0.f;
+	TArray<TWeakObjectPtr<ARTSUnit>> HeldUnits;
 };
