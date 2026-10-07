@@ -35,7 +35,8 @@ public:
 	/**
 	 * Server only. Replaces the order queue, or appends to it when Command.bQueue is set.
 	 * A Harvest for a unit that cannot harvest becomes a move up to the source, as a Build naming an own construction site
-	 * becomes a move up to the site for a unit that cannot build.
+	 * becomes a move up to the site for a unit that cannot build. A builder's new building is paid here, queued or not, and
+	 * refused when the player cannot afford it; it is refunded if the order ends before the building is placed.
 	 */
 	void ExecuteCommand(const FRTSCommand& InCommand);
 
@@ -84,6 +85,7 @@ public:
 	virtual FVector GetNavAgentLocation() const override;
 
 	virtual void PostInitializeComponents() override;
+	virtual void Destroyed() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -103,8 +105,17 @@ private:
 	void ApplyTeamColor();
 	void StartNextCommand();
 
-	/** Returns false when the command is already done or invalid and should be dropped. */
-	bool StartCommand(AAIController& AI, const FRTSCommand& Command);
+	/** Empties the order queue, refunding what its orders still hold. */
+	void ClearCommands();
+
+	/** Drops the front order, refunding what it still holds. */
+	void PopCommand();
+
+	/**
+	 * Returns false when the command is already done or invalid and should be dropped. A Build hands its payment to the builder
+	 * component.
+	 */
+	bool StartCommand(AAIController& AI, FRTSCommand& Command);
 
 	/**
 	 * Paths to Location, stopping at the edge on the unit's side when it lies inside a wall or a building. Returns true while

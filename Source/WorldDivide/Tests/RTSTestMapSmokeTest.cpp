@@ -1753,10 +1753,32 @@ bool FRTSIssueBuilderBuild::Update()
 	Test->TestTrue(TEXT("The builder can build the tower"), Builder->GetBuilderComponent()->CanBuild(Tower));
 	Test->TestFalse(TEXT("A tank cannot build"), NonBuilder->GetBuilderComponent()->CanBuild());
 
+	// The second builder's orders are paid as soon as they are given and refunded when dropped before placing anything.
+	const int32 Credits = Player->GetCredits();
+	Player->AddCredits(Tower->Cost - 1 - Credits);
+	Controller->Server_IssueCommand({ SecondBuilder }, MakeBuild(Tower, OtherBuildSpot));
+	Test->TestEqual(TEXT("An order the player cannot afford is refused"), SecondBuilder->GetQueuedCommandCount(), 0);
+	Test->TestEqual(TEXT("The refused order charged nothing"), Player->GetCredits(), Tower->Cost - 1);
+	Player->AddCredits(Credits - Player->GetCredits());
+	Controller->Server_IssueCommand({ SecondBuilder }, MakeBuild(Tower, OtherBuildSpot));
+	Controller->Server_IssueCommand({ SecondBuilder }, MakeBuild(Tower, QueuedTowerSpot, /*bQueue*/ true));
+	Test->TestEqual(TEXT("The second builder queued both towers"), SecondBuilder->GetQueuedCommandCount(), 2);
+	Test->TestEqual(TEXT("Both towers are charged at once, the queued one too"), Player->GetCredits(), Credits - 2 * Tower->Cost);
+	FRTSCommand Stop;
+	Stop.Type = ERTSCommandType::Stop;
+	Controller->Server_IssueCommand({ SecondBuilder }, Stop);
+	Test->TestEqual(TEXT("Stopping refunds both towers"), Player->GetCredits(), Credits);
+	Controller->Server_IssueCommand({ SecondBuilder }, MakeBuild(Tower, OtherBuildSpot));
+	FRTSCommand StayPut;
+	StayPut.Type = ERTSCommandType::Move;
+	StayPut.TargetLocation = SecondBuilderStart;
+	Controller->Server_IssueCommand({ SecondBuilder }, StayPut);
+	Test->TestEqual(TEXT("Another order refunds the tower"), Player->GetCredits(), Credits);
+
 	Controller->Server_IssueCommand({ Builder }, MakeBuild(Tower, BuildSpot));
 	Test->TestEqual(TEXT("The builder took the order"), Builder->GetQueuedCommandCount(), 1);
 	Test->TestEqual(TEXT("Nothing is placed before the builder arrives"), CountBuildings(World), 1);
-	Test->TestEqual(TEXT("Nothing is charged before the builder arrives"), Player->GetCredits(), State->BuilderCredits);
+	Test->TestEqual(TEXT("The order charged the tower at once"), Player->GetCredits(), State->BuilderCredits - Tower->Cost);
 
 	// A tank drops a new building; a builder sent off the map or into a wall places nothing.
 	Controller->Server_IssueCommand({ NonBuilder }, MakeBuild(Tower, OtherBuildSpot));
@@ -1796,7 +1818,8 @@ bool FRTSWaitForBuilderSite::Update()
 		FVector::Dist2D(Builder->GetActorLocation(), BuilderStart) > 1500.f);
 	Test->TestTrue(TEXT("The builder stands at the site when it places it"), IsAtSite(*Builder, *Site));
 	Test->TestEqual(TEXT("Placed for the builder's team"), Site->GetTeamId(), Builder->GetTeamId());
-	Test->TestEqual(TEXT("Placing charged the tower's cost"), State->Player->GetCredits(), State->BuilderCredits - Tower->Cost);
+	Test->TestEqual(TEXT("Placing charged nothing more"), State->Player->GetCredits(), State->BuilderCredits - Tower->Cost);
+	Test->TestEqual(TEXT("The site remembers what its order paid"), Site->GetPaidCost(), Tower->Cost);
 	Test->TestFalse(TEXT("The site does not build itself"), Site->bAutoConstruct);
 	Test->TestFalse(TEXT("The site starts under construction"), Site->IsConstructed());
 	Test->TestTrue(TEXT("The builder is constructing"), Builder->GetBuilderComponent()->GetState() == ERTSBuildState::Constructing);
@@ -1954,6 +1977,8 @@ bool FRTSIssueQueuedBuilds::Update()
 	Controller->Server_IssueCommand({ Builder }, MakeBuild(Plant, OtherBuildSpot));
 	Controller->Server_IssueCommand({ Builder }, MakeBuild(Tower, QueuedTowerSpot, /*bQueue*/ true));
 	Test->TestEqual(TEXT("The builder queued both buildings"), Builder->GetQueuedCommandCount(), 2);
+	Test->TestEqual(TEXT("Both are charged before either is placed"), State->Player->GetCredits(),
+		State->BuilderCredits - Plant->Cost - Tower->Cost);
 	State->PhaseStart = FPlatformTime::Seconds();
 	return true;
 }
@@ -2026,11 +2051,12 @@ bool FRTSIssueEnemyBlockedBuild::Update()
 	Test->TestFalse(TEXT("A builder's ghost rejects a spot covered by an enemy"), ClientAccepts(*World, *Tower, OtherBuildSpot, TeamId));
 	Controller->Server_IssueCommand({ Builder }, MakeBuild(Tower, OtherBuildSpot));
 	Test->TestEqual(TEXT("The builder took the order"), Builder->GetQueuedCommandCount(), 1);
+	Test->TestEqual(TEXT("The order charged the tower"), Player->GetCredits(), State->BuilderCredits - Tower->Cost);
 	State->PhaseStart = FPlatformTime::Seconds();
 	return true;
 }
 
-/** Waits for the builder to give up on the enemy's spot, then checks nothing was placed, charged or moved. */
+/** Waits for the builder to give up on the enemy's spot, then checks nothing was placed or moved and the tower was refunded. */
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyEnemyBlocksSite, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
 bool FRTSVerifyEnemyBlocksSite::Update()
 {
@@ -2052,7 +2078,7 @@ bool FRTSVerifyEnemyBlocksSite::Update()
 	Test->TestTrue(FString::Printf(TEXT("The builder walked up to the site first (stands at %s)"), *Builder->GetActorLocation().ToCompactString()),
 		FVector::Dist2D(Builder->GetActorLocation(), BuilderStart) > 100.f);
 	Test->TestNull(TEXT("Nothing was placed on the enemy"), FindBuildingAt(Builder->GetWorld(), Tower, OtherBuildSpot));
-	Test->TestEqual(TEXT("Nothing was charged"), State->Player->GetCredits(), State->BuilderCredits);
+	Test->TestEqual(TEXT("The blocked tower was refunded"), State->Player->GetCredits(), State->BuilderCredits);
 	Test->TestTrue(FString::Printf(TEXT("The enemy was not moved (stands at %s)"), *Enemy->GetActorLocation().ToCompactString()),
 		FVector::Dist2D(Enemy->GetActorLocation(), OtherBuildSpot) < 10.f);
 	Enemy->Destroy();

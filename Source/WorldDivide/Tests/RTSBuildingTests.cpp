@@ -1,7 +1,9 @@
 #include "Buildings/RTSBuildPlacement.h"
+#include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
+#include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
@@ -235,6 +237,97 @@ bool FRTSPreferUnitsTest::RunTest(const FString& Parameters)
 	ARTSUnit* TowerEnemy = TestWorld.SpawnUnit(Infantry, 1, FVector(0.f, 5800.f, 0.f));
 	Tower->GetWeaponComponent()->UpdateWeapon(Step);
 	TestTrue(TEXT("Tower prefers the enemy unit too"), Tower->GetWeaponComponent()->GetTarget() == TowerEnemy);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBuilderChargeTest, "WorldDivide.Buildings.BuilderCharge", TestFlags)
+
+bool FRTSBuilderChargeTest::RunTest(const FString& Parameters)
+{
+	constexpr int32 Cost = 400;
+
+	URTSBuildingData* Depot = MakeBuildingData(2.f, nullptr);
+	Depot->Cost = Cost;
+	URTSBuilderData* BuilderData = NewObject<URTSBuilderData>();
+	BuilderData->MaxHealth = 100.f;
+	BuilderData->SelectionRadius = 60.f;
+	BuilderData->Buildings.Add(Depot);
+
+	const FRTSTestWorld TestWorld;
+	ARTSPlayerState* Player = TestWorld.SpawnPlayer(0, Cost * 2);
+	// Docked at the east edge of a depot at the origin, whose 2x2 footprint reaches 100 cm out.
+	ARTSUnit* Unit = TestWorld.SpawnUnit(BuilderData, 0, FVector(220.f, 0.f, 0.f));
+	URTSBuilderComponent* Builder = Unit->GetBuilderComponent();
+	auto MakeOrder = [Depot]()
+	{
+		FRTSCommand Order;
+		Order.Type = ERTSCommandType::Build;
+		Order.EntityData = Depot;
+		Order.TargetLocation = FVector::ZeroVector;
+		return Order;
+	};
+
+	// Ordering pays at once, before the builder has done anything.
+	FRTSCommand Order = MakeOrder();
+	TestTrue(TEXT("The builder accepts a building the player can afford"), Builder->ChargeOrder(Order));
+	TestEqual(TEXT("The order is charged at once"), Player->GetCredits(), Cost);
+	TestEqual(TEXT("The order holds the payment"), Order.PaidCost, Cost);
+
+	// An order dropped before it starts, such as a queued one, gives the money back once.
+	Builder->RefundOrder(Order);
+	TestEqual(TEXT("Dropping the order refunds it"), Player->GetCredits(), Cost * 2);
+	TestEqual(TEXT("The dropped order holds nothing"), Order.PaidCost, 0);
+	Builder->RefundOrder(Order);
+	TestEqual(TEXT("A refund is paid once"), Player->GetCredits(), Cost * 2);
+
+	// Started, the payment moves to the builder; stopping before the site is placed refunds it.
+	FRTSCommand Unpaid = MakeOrder();
+	TestFalse(TEXT("An unpaid order does not start"), Builder->StartBuild(Unpaid));
+	Order = MakeOrder();
+	Builder->ChargeOrder(Order);
+	TestTrue(TEXT("A paid order starts"), Builder->StartBuild(Order));
+	TestEqual(TEXT("The builder took over the payment"), Order.PaidCost, 0);
+	Builder->StopBuild();
+	TestEqual(TEXT("Stopping before the site is placed refunds it"), Player->GetCredits(), Cost * 2);
+
+	// Sent aside, the builder hands the payment back to the order instead of refunding it.
+	Order = MakeOrder();
+	Builder->ChargeOrder(Order);
+	Builder->StartBuild(Order);
+	Builder->SuspendBuild(Order);
+	TestEqual(TEXT("Suspending refunds nothing"), Player->GetCredits(), Cost);
+	TestEqual(TEXT("The suspended order holds the payment again"), Order.PaidCost, Cost);
+	TestTrue(TEXT("The suspended order starts again"), Builder->StartBuild(Order));
+	TestEqual(TEXT("Restarting charges nothing more"), Player->GetCredits(), Cost);
+
+	// The test world has no navmesh, so the spot is refused once the builder stands next to it.
+	TestFalse(TEXT("A spot refused on arrival ends the order"), Builder->UpdateBuild(0.1f));
+	TestNull(TEXT("Nothing was placed"), Builder->GetSite());
+	TestEqual(TEXT("The refused spot was refunded"), Player->GetCredits(), Cost * 2);
+
+	// More than the player has is refused and charges nothing.
+	Player->AddCredits(Cost - 1 - Player->GetCredits());
+	Order = MakeOrder();
+	TestFalse(TEXT("An order the player cannot afford is refused"), Builder->ChargeOrder(Order));
+	TestEqual(TEXT("The refused order charged nothing"), Player->GetCredits(), Cost - 1);
+	TestEqual(TEXT("The refused order holds nothing"), Order.PaidCost, 0);
+
+	// Resuming an own site was paid when the site was placed.
+	FRTSCommand Resume;
+	Resume.Type = ERTSCommandType::Build;
+	Resume.TargetActor = TestWorld.SpawnBuilding(Depot, 0, FVector(2000.f, 0.f, 0.f));
+	TestTrue(TEXT("A resume order is accepted"), Builder->ChargeOrder(Resume));
+	TestEqual(TEXT("Resuming a site costs nothing"), Player->GetCredits(), Cost - 1);
+
+	// A builder that dies on its way gives back what it was carrying.
+	Player->AddCredits(1);
+	Order = MakeOrder();
+	Builder->ChargeOrder(Order);
+	Builder->StartBuild(Order);
+	TestEqual(TEXT("The last order spent everything"), Player->GetCredits(), 0);
+	Unit->GetHealthComponent()->ApplyDamage(BuilderData->MaxHealth * 2.f, nullptr);
+	TestFalse(TEXT("The builder died"), IsValid(Unit));
+	TestEqual(TEXT("Its unplaced building was refunded"), Player->GetCredits(), Cost);
 	return true;
 }
 

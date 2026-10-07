@@ -46,7 +46,44 @@ bool URTSBuilderComponent::CanBuild(const URTSBuildingData* Data) const
 		&& BuilderData->Buildings.ContainsByPredicate([Data](const TObjectPtr<URTSBuildingData>& Entry) { return Entry.Get() == Data; });
 }
 
-bool URTSBuilderComponent::StartBuild(const FRTSCommand& Command)
+bool URTSBuilderComponent::ChargeOrder(FRTSCommand& Command)
+{
+	Command.PaidCost = 0;
+	if (Cast<ARTSBuilding>(Command.TargetActor))
+	{
+		// A site was paid for when it was placed; StartBuild checks the site itself.
+		return true;
+	}
+
+	const URTSBuildingData* Data = Cast<URTSBuildingData>(Command.EntityData);
+	ARTSPlayerState* Player = FindPlayer();
+	if (!CanBuild(Data) || !Player)
+	{
+		return false;
+	}
+	if (!Player->TrySpendCredits(Data->Cost))
+	{
+		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot afford %s (%d of %d credits)"),
+			Player->GetTeamId(), *Data->GetName(), Player->GetCredits(), Data->Cost);
+		return false;
+	}
+	Command.PaidCost = Data->Cost;
+	return true;
+}
+
+void URTSBuilderComponent::RefundOrder(FRTSCommand& Command)
+{
+	if (Command.PaidCost > 0)
+	{
+		if (ARTSPlayerState* Player = FindPlayer())
+		{
+			Player->AddCredits(Command.PaidCost);
+		}
+	}
+	Command.PaidCost = 0;
+}
+
+bool URTSBuilderComponent::StartBuild(FRTSCommand& Command)
 {
 	const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner());
 	if (!BuilderData || !Unit)
@@ -69,13 +106,15 @@ bool URTSBuilderComponent::StartBuild(const FRTSCommand& Command)
 	else
 	{
 		URTSBuildingData* Data = Cast<URTSBuildingData>(Command.EntityData);
-		if (!CanBuild(Data))
+		if (!CanBuild(Data) || Command.PaidCost < Data->Cost)
 		{
 			return false;
 		}
 		// The spot itself is checked on arrival, when whatever stands there now may have moved on.
 		PlannedData = Data;
 		PlannedLocation = RTSBuildPlacement::SnapToGrid(Command.TargetLocation, Data->Footprint);
+		PlannedCost = Command.PaidCost;
+		Command.PaidCost = 0;
 	}
 
 	State = ERTSBuildState::ToSite;
@@ -86,6 +125,14 @@ bool URTSBuilderComponent::StartBuild(const FRTSCommand& Command)
 
 void URTSBuilderComponent::StopBuild()
 {
+	if (PlannedCost > 0)
+	{
+		if (ARTSPlayerState* Player = FindPlayer())
+		{
+			Player->AddCredits(PlannedCost);
+		}
+	}
+	PlannedCost = 0;
 	State = ERTSBuildState::Idle;
 	PlannedData = nullptr;
 	Site.Reset();
@@ -93,6 +140,20 @@ void URTSBuilderComponent::StopBuild()
 	RetryCooldown = 0.f;
 	ClearingSeconds = 0.f;
 	ClearedUnits.Reset();
+}
+
+void URTSBuilderComponent::SuspendBuild(FRTSCommand& Command)
+{
+	if (ARTSBuilding* Building = Site.Get())
+	{
+		Command.TargetActor = Building;
+	}
+	else
+	{
+		Command.PaidCost = PlannedCost;
+		PlannedCost = 0;
+	}
+	StopBuild();
 }
 
 bool URTSBuilderComponent::UpdateBuild(float DeltaSeconds)
@@ -159,8 +220,7 @@ bool URTSBuilderComponent::UpdateBuild(float DeltaSeconds)
 
 bool URTSBuilderComponent::PlaceSite()
 {
-	const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner());
-	ARTSPlayerState* Player = Unit ? ARTSPlayerState::FindForTeam(*GetWorld(), Unit->GetTeamId()) : nullptr;
+	const ARTSPlayerState* Player = FindPlayer();
 	if (!Player)
 	{
 		return false;
@@ -170,11 +230,14 @@ bool URTSBuilderComponent::PlaceSite()
 	Command.Type = ERTSCommandType::Build;
 	Command.EntityData = PlannedData;
 	Command.TargetLocation = PlannedLocation;
-	ARTSBuilding* Building = RTSCommands::PurchaseBuilding(*GetWorld(), *Player, Command);
+	ARTSBuilding* Building = RTSCommands::PlaceBuilding(*GetWorld(), Player->GetFaction(), Player->GetTeamId(), Command);
 	if (!Building)
 	{
 		return false;
 	}
+	// Paid with the order; cancelling the site refunds from this.
+	Building->SetPaidCost(PlannedCost);
+	PlannedCost = 0;
 	// From here on only builders advance it.
 	Building->bAutoConstruct = false;
 	Site = Building;
@@ -183,6 +246,13 @@ bool URTSBuilderComponent::PlaceSite()
 	ClearingSeconds = 0.f;
 	ClearedUnits.Reset();
 	return true;
+}
+
+ARTSPlayerState* URTSBuilderComponent::FindPlayer() const
+{
+	const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner());
+	const UWorld* World = GetWorld();
+	return Unit && World ? ARTSPlayerState::FindForTeam(*World, Unit->GetTeamId()) : nullptr;
 }
 
 bool URTSBuilderComponent::ClearSite(float DeltaSeconds)

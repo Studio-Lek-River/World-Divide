@@ -5,6 +5,7 @@
 #include "RTSBuilderComponent.generated.h"
 
 class ARTSBuilding;
+class ARTSPlayerState;
 class ARTSUnit;
 class URTSBuilderData;
 class URTSBuildingData;
@@ -20,10 +21,12 @@ enum class ERTSBuildState : uint8
 
 /**
  * Server-side Build order of a builder unit: walk to a spot just outside the site's footprint, place the building there
- * once standing next to it (charged then, with the same faction, spot and credit checks as any purchase) and drive its
- * construction for as long as the builder stays. Own units standing on the spot are first sent aside; anything else there
- * makes the purchase fail. A site whose builder leaves or dies stays where it is, paused, until a
- * builder is sent to it again. Every unit has one; it stays inert unless the unit's data is URTSBuilderData.
+ * once standing next to it (with the same faction and spot checks as any placement) and drive its construction for as long
+ * as the builder stays. A new building is paid when it is ordered (ChargeOrder), also when queued; the order carries the
+ * payment until StartBuild takes it over, and the placed site keeps it as its paid cost. An order that ends before its
+ * building is placed is refunded in full. Own units standing on the spot are first sent aside; anything else there makes
+ * the placement fail. A site whose builder leaves or dies stays where it is, paused, until a builder is sent to it again.
+ * Every unit has one; it stays inert unless the unit's data is URTSBuilderData.
  */
 UCLASS(ClassGroup = (RTS))
 class WORLDDIVIDE_API URTSBuilderComponent : public UActorComponent
@@ -42,13 +45,33 @@ public:
 	bool CanBuild(const URTSBuildingData* Data) const;
 
 	/**
-	 * Server only. Starts a Build order: a new site of the command's EntityData at its TargetLocation, or, when TargetActor
-	 * is set, the own construction site it names. False when the builder cannot take the order.
+	 * Server only. Pays for a Build order's new building: takes its cost from the owner's player and puts it on the command.
+	 * False when the builder cannot build it or the player cannot afford it; nothing is charged then. An order naming an own
+	 * construction site costs nothing.
 	 */
-	bool StartBuild(const FRTSCommand& Command);
+	bool ChargeOrder(FRTSCommand& Command);
 
-	/** Server only. Leaves the site as it is; nothing more gets built until a builder returns. */
+	/** Server only. Gives back what the command still holds for a building it never placed. */
+	void RefundOrder(FRTSCommand& Command);
+
+	/**
+	 * Server only. Starts a Build order: a new site of the command's EntityData at its TargetLocation, paid through
+	 * ChargeOrder, or, when TargetActor is set, the own construction site it names. The payment moves from the command to
+	 * the builder. False when the builder cannot take the order.
+	 */
+	bool StartBuild(FRTSCommand& Command);
+
+	/**
+	 * Server only. Leaves the site as it is; nothing more gets built until a builder returns. A building paid for but not
+	 * placed yet is refunded.
+	 */
 	void StopBuild();
+
+	/**
+	 * Server only. Stops the order so it can start again from Command later: a placed site is named in it to be resumed, a
+	 * building not placed yet keeps its payment there instead of being refunded.
+	 */
+	void SuspendBuild(FRTSCommand& Command);
 
 	/** Server only. Advances the order; returns false once it has ended. */
 	bool UpdateBuild(float DeltaSeconds);
@@ -59,8 +82,11 @@ public:
 	ARTSBuilding* GetSite() const { return Site.Get(); }
 
 private:
-	/** Places the planned building next to the builder. False when the purchase is refused. */
+	/** Places the planned building next to the builder, already paid. False when the placement is refused. */
 	bool PlaceSite();
+
+	/** The player of the owner's team, who pays for its buildings. */
+	ARTSPlayerState* FindPlayer() const;
 
 	/**
 	 * Sends own units standing on the planned footprint to the nearest reachable spot outside it. True while waiting for them
@@ -90,6 +116,9 @@ private:
 	TObjectPtr<URTSBuildingData> PlannedData;
 
 	FVector PlannedLocation = FVector::ZeroVector;
+
+	/** What was paid for the planned building: the site's paid cost once placed, refunded if it never is. */
+	int32 PlannedCost = 0;
 
 	TWeakObjectPtr<ARTSBuilding> Site;
 

@@ -62,4 +62,8 @@ struct WORLDDIVIDE_API FRTSCommand
 	/** Append to the unit's order queue instead of replacing it (Shift). */
 	UPROPERTY(BlueprintReadWrite, Category = "Command")
 	bool bQueue = false;
+
+	/** Server only, never sent by clients: credits already taken for this order, refunded if it ends before its building is placed. */
+	UPROPERTY(NotReplicated)
+	int32 PaidCost = 0;
 };

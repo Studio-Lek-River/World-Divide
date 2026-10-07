@@ -29,7 +29,8 @@
  * Plays L_TestMap as a listen server with one client in the same process. Checks that the host gets team 0 and the
  * client team 1 at their tagged player starts, and that the client sees its own credits but not the host's, then sends a move for every unit the client sees through the client's
  * own controller: the server must move only the client's units, and the client must see them arrive. The client then
- * sends its builder to buy a construction site, stops the builder and cancels the site: the site must disappear in both
+ * sends its builder to buy a construction site and must see its credits drop before the site is placed, then stops the
+ * builder and cancels the site: the site must disappear in both
  * worlds and the client must see its refund while the host's credits stay put. The server then gives the client a
  * barracks: the client sets its rally point, queues two infantry, sees them charged and cancels one for a refund, and
  * must see the other come out and walk to the rally point. Then the server places a host building and the client orders its units to attack it: the client's copy must show the building's
@@ -430,6 +431,48 @@ namespace RTSListenServerTest
 		Build.TargetLocation = ClientSiteSpot;
 		ClientController->Server_IssueCommand({ State->ClientBuilder.Get() }, Build);
 		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	/** The Build order is paid when the server takes it: the client sees its credits drop while the builder still walks. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientCharged, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientCharged::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		const ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		const URTSBuildingData* PowerPlant = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+		if (!ServerWorld || !ClientController || !PowerPlant)
+		{
+			Test->AddError(TEXT("Lost a world, the client's controller or the power plant data"));
+			return true;
+		}
+
+		const int32 Expected = State->ClientCreditsBefore - PowerPlant->Cost;
+		if (ClientController->GetCredits() != Expected)
+		{
+			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+			{
+				Test->AddError(FString::Printf(TEXT("The client never saw the order charged: %d credits, expected %d"),
+					ClientController->GetCredits(), Expected));
+				return true;
+			}
+			return false;
+		}
+
+		auto HasClientSite = [](UWorld& World)
+		{
+			for (TActorIterator<ARTSBuilding> It(&World); It; ++It)
+			{
+				if (It->GetTeamId() == ClientTeam)
+				{
+					return true;
+				}
+			}
+			return false;
+		};
+		Test->TestFalse(TEXT("The order was charged before the server placed the site"), HasClientSite(*ServerWorld));
+		Test->TestFalse(TEXT("The client saw the charge before the site"), HasClientSite(*ClientWorld));
 		return true;
 	}
 
@@ -910,6 +953,7 @@ namespace RTSListenServerTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientMove(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientMove(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientBuysSite(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientCharged(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientSite(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientCancel(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientRefund(this, State));

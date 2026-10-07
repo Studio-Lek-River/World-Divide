@@ -120,6 +120,17 @@ void ARTSUnit::HandleDeath(AActor* Killer)
 	Destroy();
 }
 
+void ARTSUnit::Destroyed()
+{
+	// Buildings this unit was ordered to build but never placed go back to the player.
+	if (HasAuthority())
+	{
+		ClearCommands();
+		BuilderComponent->StopBuild();
+	}
+	Super::Destroyed();
+}
+
 void ARTSUnit::OnRep_UnitData()
 {
 	ApplyUnitData();
@@ -248,6 +259,8 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 	check(HasAuthority());
 
 	FRTSCommand Command = InCommand;
+	// Only ChargeOrder puts credits on an order.
+	Command.PaidCost = 0;
 	if (Command.Type == ERTSCommandType::Harvest && !HarvesterComponent->CanHarvest())
 	{
 		const ARTSSupplySource* Source = Cast<ARTSSupplySource>(Command.TargetActor);
@@ -283,7 +296,7 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 
 	if (Command.Type == ERTSCommandType::Stop)
 	{
-		CommandQueue.Reset();
+		ClearCommands();
 		if (AAIController* AI = GetController<AAIController>())
 		{
 			AI->StopMovement();
@@ -295,9 +308,14 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 	const bool bWasIdle = CommandQueue.IsEmpty();
 	if (!Command.bQueue)
 	{
-		CommandQueue.Reset();
+		ClearCommands();
 	}
-	CommandQueue.Add(Command);
+	// A new building is paid as soon as it is ordered, after the replaced orders gave their payments back; one the player
+	// cannot afford is dropped.
+	if (Command.Type != ERTSCommandType::Build || BuilderComponent->ChargeOrder(Command))
+	{
+		CommandQueue.Add(Command);
+	}
 
 	if (!Command.bQueue || bWasIdle)
 	{
@@ -309,13 +327,10 @@ void ARTSUnit::StepAside(const FVector& Location)
 {
 	check(HasAuthority());
 
-	// A Build for a new building restarts from its command afterwards; once placed it must resume that site instead.
+	// A Build restarts from its command afterwards, which the builder updates: a placed site to resume, or its payment.
 	if (!CommandQueue.IsEmpty() && CommandQueue[0].Type == ERTSCommandType::Build)
 	{
-		if (ARTSBuilding* Site = BuilderComponent->GetSite())
-		{
-			CommandQueue[0].TargetActor = Site;
-		}
+		BuilderComponent->SuspendBuild(CommandQueue[0]);
 	}
 	HarvesterComponent->StopHarvest();
 	BuilderComponent->StopBuild();
@@ -400,14 +415,29 @@ void ARTSUnit::StartNextCommand()
 	AAIController* AI = GetController<AAIController>();
 	if (!AI)
 	{
-		CommandQueue.Reset();
+		ClearCommands();
 	}
 
 	while (!CommandQueue.IsEmpty() && !StartCommand(*AI, CommandQueue[0]))
 	{
-		CommandQueue.RemoveAt(0);
+		PopCommand();
 	}
 	ApplyWeaponMode();
+}
+
+void ARTSUnit::ClearCommands()
+{
+	for (FRTSCommand& Command : CommandQueue)
+	{
+		BuilderComponent->RefundOrder(Command);
+	}
+	CommandQueue.Reset();
+}
+
+void ARTSUnit::PopCommand()
+{
+	BuilderComponent->RefundOrder(CommandQueue[0]);
+	CommandQueue.RemoveAt(0);
 }
 
 bool ARTSUnit::RequestMove(AAIController& AI, const FVector& Location)
@@ -448,7 +478,7 @@ bool ARTSUnit::RequestMove(AAIController& AI, const FVector& Location)
 	return Result == EPathFollowingRequestResult::RequestSuccessful && !bMoveFinishedDuringRequest;
 }
 
-bool ARTSUnit::StartCommand(AAIController& AI, const FRTSCommand& Command)
+bool ARTSUnit::StartCommand(AAIController& AI, FRTSCommand& Command)
 {
 	if (Command.Type == ERTSCommandType::Move || Command.Type == ERTSCommandType::AttackMove)
 	{
@@ -489,7 +519,7 @@ void ARTSUnit::UpdateHarvestOrder(float DeltaSeconds)
 	}
 	if (!HarvesterComponent->UpdateHarvest(DeltaSeconds))
 	{
-		CommandQueue.RemoveAt(0);
+		PopCommand();
 		StartNextCommand();
 	}
 }
@@ -502,7 +532,7 @@ void ARTSUnit::UpdateBuildOrder(float DeltaSeconds)
 	}
 	if (!BuilderComponent->UpdateBuild(DeltaSeconds))
 	{
-		CommandQueue.RemoveAt(0);
+		PopCommand();
 		StartNextCommand();
 	}
 }
@@ -523,7 +553,7 @@ void ARTSUnit::UpdateAttackOrder()
 	if (!WeaponComponent->CanTarget(Target))
 	{
 		AI->StopMovement();
-		CommandQueue.RemoveAt(0);
+		PopCommand();
 		StartNextCommand();
 		return;
 	}
@@ -563,7 +593,7 @@ void ARTSUnit::UpdateAttackOrder()
 			{
 				UE_LOG(LogWorldDivide, Verbose, TEXT("%s cannot reach %s and drops the attack"), *GetName(), *Target->GetName());
 				AI->StopMovement();
-				CommandQueue.RemoveAt(0);
+				PopCommand();
 				StartNextCommand();
 			}
 		}
@@ -600,7 +630,7 @@ void ARTSUnit::UpdateAttackMoveOrder()
 	else if (!bMoving && !RequestMove(*AI, CommandQueue[0].TargetLocation))
 	{
 		// Already at the target, or no way left there.
-		CommandQueue.RemoveAt(0);
+		PopCommand();
 		StartNextCommand();
 	}
 }
@@ -641,7 +671,7 @@ void ARTSUnit::NotifyMoveFinished(const FPathFollowingResult& Result)
 
 	if (!CommandQueue.IsEmpty())
 	{
-		CommandQueue.RemoveAt(0);
+		PopCommand();
 	}
 	StartNextCommand();
 }
