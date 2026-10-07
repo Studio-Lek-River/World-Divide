@@ -6,6 +6,7 @@ source files that build them and are rebuilt only when those change.
 
 The assets are LFS lockable and therefore read-only unless locked. If an asset that must change is read-only, nothing
 is written: the files are listed in Saved/Setup/ReadOnlyAssets.txt and the run stops. Lock them (git lfs lock) and rerun.
+Assets marked skip-worktree, such as DA_TestTank swapped for local art by import_local_art.py, are left as they are.
 
 Run from the repo root (adjust the engine path), or use Tools/Scripts/ue.ps1 -Task setup:
   "G:/Program Files/Epic Games/UE_5.6/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "%CD%/WorldDivide.uproject"
@@ -16,6 +17,7 @@ import hashlib
 import inspect
 import math
 import os
+import subprocess
 import sys
 
 import unreal
@@ -431,8 +433,29 @@ def asset_file(path, extension):
     return os.path.join(CONTENT_DIR, path[len("/Game/"):] + extension)
 
 
+def repo_file(path, extension):
+    return os.path.relpath(asset_file(path, extension), PROJECT_DIR).replace("\\", "/")
+
+
+def skip_worktree_files():
+    """Repo files git ignores local changes to (git update-index --skip-worktree), such as a test asset swapped for
+    local-only art by import_local_art.py. Empty when git is not available."""
+    try:
+        listing = subprocess.run(["git", "ls-files", "-v"], cwd=PROJECT_DIR, capture_output=True, text=True, check=True)
+    except (OSError, subprocess.CalledProcessError):
+        return set()
+    return {line[2:] for line in listing.stdout.splitlines() if line.startswith("S ")}
+
+
 def write_pending():
-    """Writes every queued asset, or nothing at all when one of the existing files is read-only."""
+    """Writes every queued asset, or nothing at all when one of the existing files is read-only. Assets marked
+    skip-worktree keep their local version."""
+    local = skip_worktree_files()
+    for path, extension, _, _ in pending:
+        if repo_file(path, extension) in local:
+            unreal.log_warning(f"setup_testmap: {repo_file(path, extension)} is marked skip-worktree, keeping the local version")
+    pending[:] = [entry for entry in pending if repo_file(entry[0], entry[1]) not in local]
+
     read_only = [asset_file(path, extension) for path, extension, exists, _ in pending
                  if exists and not os.access(asset_file(path, extension), os.W_OK)]
     if read_only:

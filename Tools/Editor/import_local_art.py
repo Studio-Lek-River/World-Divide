@@ -6,8 +6,8 @@ For each model it builds SM_<name> with a team-tint material instance per glTF m
 at the local folders). Models whose source is missing are skipped.
 
 The model marked as the test tank replaces the mesh of DA_TestTank on this machine only. That asset is committed, so it
-is also marked skip-worktree: git then ignores the local change and it cannot be committed by accident. setup_testmap.py
-puts the committed tank back when it runs; rerun this script afterwards. To undo the swap for good:
+is also marked skip-worktree: git then ignores the local change and it cannot be committed by accident, and
+setup_testmap.py leaves it alone. To undo the swap for good:
   git update-index --no-skip-worktree Content/Data/Units/DA_TestTank.uasset
   git checkout -- Content/Data/Units/DA_TestTank.uasset
 
