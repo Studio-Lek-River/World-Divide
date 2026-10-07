@@ -86,6 +86,7 @@ void ARTSHUD::DrawHUD()
 	DrawProduction(*Controller);
 	DrawCredits(*Controller);
 	DrawPower(*Controller);
+	DrawAttackMoveHint(*Controller);
 
 	FVector2D Start;
 	FVector2D End;
@@ -352,4 +353,20 @@ void ARTSHUD::DrawPower(const ARTSPlayerController& Controller)
 	float Height = 0.f;
 	GetTextSize(Text, Width, Height);
 	DrawText(Text, State->IsLowPower() ? LowPowerColor : PowerColor, Canvas->ClipX - MenuMargin - Width, MenuMargin + MenuLineHeight);
+}
+
+void ARTSHUD::DrawAttackMoveHint(const ARTSPlayerController& Controller)
+{
+	if (!Controller.IsAttackMoveArmed())
+	{
+		return;
+	}
+	const FString Text = TEXT("Attack-move: left click a target (Shift: queue)    Right click / Esc: cancel");
+	float Width = 0.f;
+	float Height = 0.f;
+	GetTextSize(Text, Width, Height);
+	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - MenuMargin - Size.Y);
+	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
+	DrawText(Text, SelectionColor, Min.X + ButtonPadding, Min.Y + ButtonPadding);
 }

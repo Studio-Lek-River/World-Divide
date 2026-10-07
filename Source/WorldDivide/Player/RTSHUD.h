@@ -12,7 +12,7 @@ class ARTSUnit;
  * Draws the drag box, the brackets plus health bar of selected units, construction progress of own buildings,
  * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
  * the player's credits and power, the build menu of the selected builder (or the debug build menu), and the production menu,
- * queue and rally point of a selected production building, without any UI assets.
+ * queue and rally point of a selected production building, and a hint while attack-move is armed, without any UI assets.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSHUD : public AHUD
@@ -50,6 +50,9 @@ private:
 
 	/** Produced and consumed power under the credits, red while low; nothing for a faction without power. */
 	void DrawPower(const ARTSPlayerController& Controller);
+
+	/** Bottom center, where the cancel button would be: that needs a selected building, attack-move selected units. */
+	void DrawAttackMoveHint(const ARTSPlayerController& Controller);
 
 	/** Green to red over a dark backdrop; Top is the bar's upper edge. */
 	void DrawHealthBar(float Left, float Top, float Width, float HealthFraction);

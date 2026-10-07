@@ -218,6 +218,19 @@ bool ARTSPlayerController::SelectBuilding(ARTSBuilding* Building)
 	return true;
 }
 
+void ARTSPlayerController::SelectUnits(const TArray<ARTSUnit*>& Units)
+{
+	SelectedUnits.Reset();
+	SelectedBuilding = nullptr;
+	for (ARTSUnit* Unit : Units)
+	{
+		if (IsValid(Unit) && IsOwnUnit(Unit))
+		{
+			SelectedUnits.AddUnique(Unit);
+		}
+	}
+}
+
 bool ARTSPlayerController::CanCancelConstruction(const ARTSBuilding* Building) const
 {
 	return IsValid(Building) && Building->GetTeamId() == GetTeamId() && !Building->IsConstructed();
@@ -344,7 +357,11 @@ void ARTSPlayerController::OnSelectStarted()
 	}
 	if (bAttackMoveArmed)
 	{
-		ConfirmAttackMove();
+		FHitResult Hit;
+		if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+		{
+			ConfirmAttackMove(Hit.Location, IsShiftDown());
+		}
 		return;
 	}
 	FVector2D Mouse;
@@ -473,7 +490,7 @@ void ARTSPlayerController::OnMoveOrder()
 	}
 	if (bAttackMoveArmed)
 	{
-		SetAttackMoveArmed(false);
+		CancelAttackMove();
 		return;
 	}
 
@@ -528,12 +545,23 @@ void ARTSPlayerController::OnStopOrder()
 
 void ARTSPlayerController::OnAttackMoveKey()
 {
+	BeginAttackMove();
+}
+
+bool ARTSPlayerController::BeginAttackMove()
+{
 	if (SelectedUnits.IsEmpty())
 	{
-		return;
+		return false;
 	}
 	CancelPlacement();
 	SetAttackMoveArmed(true);
+	return true;
+}
+
+void ARTSPlayerController::CancelAttackMove()
+{
+	SetAttackMoveArmed(false);
 }
 
 void ARTSPlayerController::SetAttackMoveArmed(bool bArmed)
@@ -542,23 +570,18 @@ void ARTSPlayerController::SetAttackMoveArmed(bool bArmed)
 	CurrentMouseCursor = bArmed ? EMouseCursor::Crosshairs : EMouseCursor::Default;
 }
 
-void ARTSPlayerController::ConfirmAttackMove()
+void ARTSPlayerController::ConfirmAttackMove(const FVector& Location, bool bQueue)
 {
-	FHitResult Hit;
-	if (!GetHitResultUnderCursor(ECC_Visibility, false, Hit))
-	{
-		return;
-	}
 	// Units fight whatever comes into range on the way, the clicked enemy included.
 	FRTSCommand Command;
 	Command.Type = ERTSCommandType::AttackMove;
-	Command.TargetLocation = Hit.Location;
-	Command.bQueue = IsShiftDown();
+	Command.TargetLocation = Location;
+	Command.bQueue = bQueue;
 	IssueToSelection(Command);
 	// Shift keeps attack-move armed for the next waypoint, as it keeps placing buildings.
-	if (!Command.bQueue)
+	if (!bQueue)
 	{
-		SetAttackMoveArmed(false);
+		CancelAttackMove();
 	}
 }
 
@@ -696,7 +719,7 @@ void ARTSPlayerController::OnBuildHotkey(int32 Index)
 void ARTSPlayerController::OnCancel()
 {
 	CancelPlacement();
-	SetAttackMoveArmed(false);
+	CancelAttackMove();
 }
 
 void ARTSPlayerController::OnCancelConstruction()
@@ -720,7 +743,7 @@ void ARTSPlayerController::OnCancelConstruction()
 void ARTSPlayerController::BeginPlacement(URTSBuildingData* Data)
 {
 	CancelPlacement();
-	SetAttackMoveArmed(false);
+	CancelAttackMove();
 	if (!Data)
 	{
 		return;

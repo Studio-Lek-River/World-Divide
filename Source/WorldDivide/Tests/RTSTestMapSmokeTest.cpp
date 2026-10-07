@@ -220,6 +220,8 @@ namespace
 	constexpr double AttackMoveTimeout = 45.0;
 	/** Tanks that fought on the way were at least this far short of their target when the enemy fell. */
 	constexpr float AttackMoveShortfall = 1000.f;
+	// A few frames are enough for PlayerTick to notice the emptied selection.
+	constexpr double AttackMoveDisarmTimeout = 5.0;
 
 	struct FSmokeState
 	{
@@ -2943,6 +2945,66 @@ bool FRTSVerifyAttackMovePastBuilding::Update()
 	return true;
 }
 
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckAttackMoveArming, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSCheckAttackMoveArming::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	ARTSUnit* Tank = SpawnTestUnit(Controller->GetWorld(), TankPath, Controller->GetTeamId(), AttackMoveWest);
+	if (!Tank)
+	{
+		Test->AddError(TEXT("Could not spawn the test tank"));
+		return true;
+	}
+
+	Controller->SelectUnits({});
+	Test->TestFalse(TEXT("Attack-move does not arm with nothing selected"), Controller->BeginAttackMove());
+	Test->TestFalse(TEXT("Not armed with nothing selected"), Controller->IsAttackMoveArmed());
+
+	Controller->SelectUnits({ Tank });
+	Test->TestEqual(TEXT("The own tank is selected"), Controller->GetSelectedUnits().Num(), 1);
+	Test->TestTrue(TEXT("Attack-move arms with own units selected"), Controller->BeginAttackMove());
+	Test->TestTrue(TEXT("Armed"), Controller->IsAttackMoveArmed());
+	Test->TestTrue(TEXT("Armed shows the crosshair"), Controller->CurrentMouseCursor == EMouseCursor::Crosshairs);
+
+	Controller->ConfirmAttackMove(AttackMoveEast, /*bQueue*/ true);
+	Test->TestTrue(TEXT("A queued attack-move stays armed"), Controller->IsAttackMoveArmed());
+	Controller->ConfirmAttackMove(AttackMoveEast, false);
+	Test->TestFalse(TEXT("An attack-move sent without Shift disarms"), Controller->IsAttackMoveArmed());
+	Test->TestTrue(TEXT("Disarmed restores the cursor"), Controller->CurrentMouseCursor == EMouseCursor::Default);
+
+	Controller->BeginAttackMove();
+	Controller->CancelAttackMove();
+	Test->TestFalse(TEXT("Right click or Esc disarms"), Controller->IsAttackMoveArmed());
+
+	Test->TestTrue(TEXT("Armed again"), Controller->BeginAttackMove());
+	Tank->Destroy();
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyAttackMoveDisarmed, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyAttackMoveDisarmed::Update()
+{
+	const ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (Controller->IsAttackMoveArmed() && Elapsed < AttackMoveDisarmTimeout)
+	{
+		return false;
+	}
+	Test->TestTrue(TEXT("The selection emptied"), Controller->GetSelectedUnits().IsEmpty());
+	Test->TestFalse(TEXT("An emptied selection disarms"), Controller->IsAttackMoveArmed());
+	Test->TestTrue(TEXT("The cursor is back to default"), Controller->CurrentMouseCursor == EMouseCursor::Default);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSProductionSmokeTest, "WorldDivide.Smoke.Production",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -3027,6 +3089,27 @@ bool FRTSAttackMoveBuildingSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueAttackMovePastBuilding(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAttackMovePastBuilding(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAttackMoveArmedSmokeTest, "WorldDivide.Smoke.AttackMoveArmed",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSAttackMoveArmedSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckAttackMoveArming(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAttackMoveDisarmed(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

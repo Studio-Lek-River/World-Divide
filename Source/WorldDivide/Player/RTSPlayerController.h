@@ -23,7 +23,8 @@ struct FInputActionValue;
  * Controls: WASD/arrows or screen edge pan, mouse wheel zoom, Q/E or middle-mouse drag rotate,
  * left click/drag select (Shift adds; a click on an own building selects that building), right click move, attack an
  * enemy unit or building, or harvest a supply source (Shift queues), X stop. J then left click attack-moves the selection to
- * the clicked spot (Shift queues and keeps attack-move armed); right click or Esc cancels it. Delete cancels the own
+ * the clicked spot (Shift queues and keeps attack-move armed); right click, Esc or an emptied selection cancels it, and the
+ * HUD shows a hint while it is armed. Delete cancels the own
  * construction site under the cursor, or else the selected one, as does the HUD's cancel button.
  * With a builder selected, 1-9 pick a building from its list to place: left click sends the builder (Shift queues it and
  * keeps placing), right click or Esc cancels. A right click on an own construction site sends builders to resume it.
@@ -46,6 +47,9 @@ public:
 
 	/** Selects Building in place of the current selection; false, changing nothing, when it is not the player's own. */
 	bool SelectBuilding(ARTSBuilding* Building);
+
+	/** Selects the player's own units among Units in place of the current selection, the selected building included. */
+	void SelectUnits(const TArray<ARTSUnit*>& Units);
 
 	/** Building is one of the player's own construction sites. The server checks again before it cancels. */
 	bool CanCancelConstruction(const ARTSBuilding* Building) const;
@@ -114,6 +118,14 @@ public:
 	void CancelPlacement();
 	URTSBuildingData* GetPlacementData() const { return PlacementData; }
 
+	/** Local. Arms attack-move for the selected units until it is sent or cancelled; false, changing nothing, without units. */
+	bool BeginAttackMove();
+	void CancelAttackMove();
+	bool IsAttackMoveArmed() const { return bAttackMoveArmed; }
+
+	/** Sends the selected units an attack-move to Location. bQueue queues it and keeps attack-move armed for the next waypoint. */
+	void ConfirmAttackMove(const FVector& Location, bool bQueue);
+
 	/**
 	 * The only way orders reach the server. Units not owned by this player's team are ignored.
 	 * A Build order without units is placed directly, after the server re-checks faction, spot and credits, but only in debug
@@ -166,7 +178,6 @@ private:
 	void IssueToSelection(const FRTSCommand& Command);
 	void UpdatePlacement();
 	void ConfirmPlacement();
-	void ConfirmAttackMove();
 	void SetAttackMoveArmed(bool bArmed);
 	bool IsOwnUnit(const ARTSUnit* Unit) const;
 	bool IsShiftDown() const;
