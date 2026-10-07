@@ -10,6 +10,8 @@
 #include "Data/RTSFactionData.h"
 #include "Data/RTSUpgradeData.h"
 #include "Engine/Canvas.h"
+#include "Engine/Engine.h"
+#include "Engine/Font.h"
 #include "EngineUtils.h"
 #include "Player/RTSPlayerController.h"
 #include "Units/RTSUnit.h"
@@ -28,6 +30,9 @@ namespace
 	const FLinearColor ButtonFill(0.35f, 0.08f, 0.05f, 0.85f);
 	const FLinearColor ButtonHoverFill(0.6f, 0.12f, 0.08f, 0.9f);
 	const FLinearColor ProgressFill(1.f, 0.8f, 0.1f, 0.45f);
+	const FLinearColor VictoryColor(0.3f, 1.f, 0.4f, 1.f);
+	const FLinearColor DefeatColor(1.f, 0.3f, 0.25f, 1.f);
+	const FLinearColor ResultBackdrop(0.f, 0.f, 0.f, 0.55f);
 
 	constexpr float ConstructionBarWidth = 60.f;
 	constexpr float QueueEntryWidth = 180.f;
@@ -35,6 +40,7 @@ namespace
 	constexpr float BarSpacing = 8.f;
 	constexpr float MenuMargin = 16.f;
 	constexpr float MenuLineHeight = 18.f;
+	constexpr float ResultTextScale = 3.f;
 }
 
 void ARTSHUD::DrawHUD()
@@ -94,6 +100,9 @@ void ARTSHUD::DrawHUD()
 	{
 		DrawSelectionBox(Start, End);
 	}
+
+	RestartButton = FBox2D(ForceInit);
+	DrawMatchResult(*Controller);
 }
 
 void ARTSHUD::DrawSelectionBox(const FVector2D& Start, const FVector2D& End)
@@ -384,4 +393,53 @@ void ARTSHUD::DrawAttackMoveHint(const ARTSPlayerController& Controller)
 	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - MenuMargin - Size.Y);
 	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
 	DrawText(Text, SelectionColor, Min.X + ButtonPadding, Min.Y + ButtonPadding);
+}
+
+void ARTSHUD::DrawMatchResult(const ARTSPlayerController& Controller)
+{
+	const ERTSMatchResult Result = Controller.GetMatchResult();
+	if (Result == ERTSMatchResult::InProgress)
+	{
+		return;
+	}
+
+	const bool bVictory = Result == ERTSMatchResult::Victory;
+	const FString Title = bVictory ? TEXT("Victory") : TEXT("Defeat");
+	UFont* Font = GEngine->GetLargeFont();
+	float TitleWidth = 0.f;
+	float TitleHeight = 0.f;
+	GetTextSize(Title, TitleWidth, TitleHeight, Font, ResultTextScale);
+
+	const float Top = Canvas->ClipY * 0.35f;
+	DrawRect(ResultBackdrop, 0.f, Top - ButtonPadding * 2.f, Canvas->ClipX, TitleHeight + MenuLineHeight * 4.f);
+	DrawText(Title, bVictory ? VictoryColor : DefeatColor, (Canvas->ClipX - TitleWidth) * 0.5f, Top, Font, ResultTextScale);
+
+	const float Y = Top + TitleHeight + MenuLineHeight;
+	if (!Controller.CanRestart())
+	{
+		const FString Text = TEXT("Waiting for the host to restart");
+		float Width = 0.f;
+		float Height = 0.f;
+		GetTextSize(Text, Width, Height);
+		DrawText(Text, MenuColor, (Canvas->ClipX - Width) * 0.5f, Y);
+		return;
+	}
+
+	const FString Text = TEXT("Restart");
+	float Width = 0.f;
+	float Height = 0.f;
+	GetTextSize(Text, Width, Height);
+	const FVector2D Size(Width + ButtonPadding * 4.f, Height + ButtonPadding * 2.f);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Y);
+	RestartButton = FBox2D(Min, Min + Size);
+
+	FVector2D Mouse;
+	const bool bHovered = Controller.GetMousePosition(Mouse.X, Mouse.Y) && IsOnRestartButton(Mouse);
+	DrawRect(bHovered ? ButtonHoverFill : ButtonFill, Min.X, Min.Y, Size.X, Size.Y);
+	DrawText(Text, MenuColor, Min.X + ButtonPadding * 2.f, Min.Y + ButtonPadding);
+}
+
+bool ARTSHUD::IsOnRestartButton(const FVector2D& Point) const
+{
+	return RestartButton.bIsValid && RestartButton.IsInside(Point);
 }

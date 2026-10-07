@@ -12,7 +12,8 @@ class ARTSUnit;
  * Draws the drag box, the brackets plus health bar of selected units, construction progress of own buildings,
  * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
  * the player's credits and power, the build menu of the selected builder (or the debug build menu), and the production menu,
- * queue and rally point of a selected production building, and a hint while attack-move is armed, without any UI assets.
+ * queue and rally point of a selected production building, a hint while attack-move is armed, and once the match is over
+ * Victory or Defeat with, on the host, a restart button, without any UI assets.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSHUD : public AHUD
@@ -24,6 +25,9 @@ public:
 
 	/** Point, in viewport pixels, lies on the cancel button drawn last frame. */
 	bool IsOnCancelButton(const FVector2D& Point) const;
+
+	/** Point, in viewport pixels, lies on the restart button drawn last frame. */
+	bool IsOnRestartButton(const FVector2D& Point) const;
 
 	/** Index into the production menu of the entry drawn at Point last frame, or INDEX_NONE. */
 	int32 GetProduceButtonAt(const FVector2D& Point) const;
@@ -54,11 +58,17 @@ private:
 	/** Bottom center, where the cancel button would be: that needs a selected building, attack-move selected units. */
 	void DrawAttackMoveHint(const ARTSPlayerController& Controller);
 
+	/** Once the match is over: Victory or Defeat across the middle, then the restart button on the host or a wait note on a client. */
+	void DrawMatchResult(const ARTSPlayerController& Controller);
+
 	/** Green to red over a dark backdrop; Top is the bar's upper edge. */
 	void DrawHealthBar(float Left, float Top, float Width, float HealthFraction);
 
 	/** Invalid while no cancel button is shown. */
 	FBox2D CancelButton = FBox2D(ForceInit);
+
+	/** Invalid while no restart button is shown. */
+	FBox2D RestartButton = FBox2D(ForceInit);
 
 	/** Drawn last frame, by index into the production menu and queue; invalid boxes for entries not drawn. */
 	TArray<FBox2D> ProduceButtons;

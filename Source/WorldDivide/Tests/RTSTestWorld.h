@@ -5,6 +5,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Buildings/RTSBuilding.h"
+#include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Economy/RTSSupplySource.h"
 #include "Engine/Engine.h"
@@ -60,6 +61,14 @@ namespace RTSTests
 			Source->Footprint = Footprint;
 			Source->FinishSpawning(Transform);
 			return Source;
+		}
+
+		/** Gives the world an ARTSGameState, which tracks the teams in the match. Call before SpawnPlayer and before any building. */
+		ARTSGameState* SpawnGameState() const
+		{
+			ARTSGameState* GameState = World->SpawnActor<ARTSGameState>();
+			World->SetGameState(GameState);
+			return GameState;
 		}
 
 		/** A player on TeamId, registered with a game state so ARTSPlayerState::FindForTeam finds it. */

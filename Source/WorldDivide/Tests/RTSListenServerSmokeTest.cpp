@@ -8,6 +8,7 @@
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
+#include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
@@ -39,6 +40,8 @@
  * grenadier it gates accepted. Then the server places a host building and the client orders its units to attack it: the client's copy must show the building's
  * health dropping before it disappears. Last, the server gives the client a tank in the empty south strip and puts a host
  * infantry beside its lane; the client attack-moves the tank past it and must see the infantry disappear and the tank arrive.
+ * Finally the server destroys the host's headquarters, its last building: the client must see Victory for itself and the
+ * host Defeat, only the host may restart, and a move the client sends afterwards is refused.
  */
 namespace RTSListenServerTest
 {
@@ -84,6 +87,11 @@ namespace RTSListenServerTest
 	constexpr float AttackMoveArrivalRadius = 150.f;
 	constexpr double AttackMoveTimeout = 60.0;
 
+	/** Each team starts with one; the checks on buildings the test places leave them out. */
+	const TCHAR* HeadquartersPath = TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters");
+	/** Game seconds the client's refused order is watched for any movement. */
+	constexpr double RefusedOrderSeconds = 2.0;
+
 	constexpr int32 HostTeam = 0;
 	constexpr int32 ClientTeam = 1;
 
@@ -125,6 +133,10 @@ namespace RTSListenServerTest
 		TWeakObjectPtr<ARTSUnit> ClientTank;
 		TWeakObjectPtr<ARTSUnit> ServerInfantry;
 		TWeakObjectPtr<ARTSUnit> ClientInfantry;
+
+		/** Where the client's tank stood when the server got its order after the match. */
+		FVector RefusedStart = FVector::ZeroVector;
+		double RefusedAtWorldTime = 0.0;
 	};
 
 	UWorld* FindPIEWorld(ENetMode NetMode)
@@ -155,6 +167,13 @@ namespace RTSListenServerTest
 			++Count;
 		}
 		return Count;
+	}
+
+	/** A building the test placed, not the headquarters the team started with; false while its data has not replicated. */
+	bool IsPlacedBuilding(const ARTSBuilding& Building)
+	{
+		const URTSBuildingData* Headquarters = LoadObject<URTSBuildingData>(nullptr, HeadquartersPath);
+		return Building.GetBuildingData() && Building.GetBuildingData() != Headquarters;
 	}
 
 	ARTSPlayerController* GetLocalController(UWorld& World)
@@ -473,7 +492,7 @@ namespace RTSListenServerTest
 		{
 			for (TActorIterator<ARTSBuilding> It(&World); It; ++It)
 			{
-				if (It->GetTeamId() == ClientTeam)
+				if (It->GetTeamId() == ClientTeam && IsPlacedBuilding(**It))
 				{
 					return true;
 				}
@@ -499,7 +518,7 @@ namespace RTSListenServerTest
 		{
 			for (TActorIterator<ARTSBuilding> It(ServerWorld); It; ++It)
 			{
-				if (It->GetTeamId() == ClientTeam)
+				if (It->GetTeamId() == ClientTeam && IsPlacedBuilding(**It))
 				{
 					State->ServerSite = *It;
 				}
@@ -509,7 +528,7 @@ namespace RTSListenServerTest
 		{
 			for (TActorIterator<ARTSBuilding> It(ClientWorld); It; ++It)
 			{
-				if (It->GetTeamId() == ClientTeam && It->GetBuildingData())
+				if (It->GetTeamId() == ClientTeam && IsPlacedBuilding(**It))
 				{
 					State->ClientSite = *It;
 				}
@@ -650,7 +669,7 @@ namespace RTSListenServerTest
 		// Wait until the client's copy of the barracks is complete, as the production menu needs.
 		for (TActorIterator<ARTSBuilding> It(ClientWorld); It; ++It)
 		{
-			if (It->GetTeamId() == ClientTeam && It->GetProductionComponent()->CanProduce())
+			if (It->GetTeamId() == ClientTeam && IsPlacedBuilding(**It) && It->GetProductionComponent()->CanProduce())
 			{
 				State->ClientBarracks = *It;
 			}
@@ -907,7 +926,7 @@ namespace RTSListenServerTest
 		{
 			// Wait for the health component's first update too, not just the actor.
 			const URTSHealthComponent* Health = It->GetHealthComponent();
-			if (It->GetTeamId() == HostTeam && Health->GetMaxHealth() > 1.f)
+			if (It->GetTeamId() == HostTeam && IsPlacedBuilding(**It) && Health->GetMaxHealth() > 1.f)
 			{
 				State->ClientBuilding = *It;
 				State->ClientMaxHealth = Health->GetMaxHealth();
@@ -1060,6 +1079,100 @@ namespace RTSListenServerTest
 		return true;
 	}
 
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSDestroyHostBase, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSDestroyHostBase::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		const ARTSGameState* GameState = ServerWorld ? ServerWorld->GetGameState<ARTSGameState>() : nullptr;
+		if (!GameState)
+		{
+			Test->AddError(TEXT("Lost the server world or its match game state"));
+			return true;
+		}
+		Test->TestFalse(TEXT("The match runs while the host has its headquarters"), GameState->IsMatchOver());
+
+		// The client's tank takes the credit, as if it had shot them down.
+		TArray<ARTSBuilding*> HostBuildings;
+		for (TActorIterator<ARTSBuilding> It(ServerWorld); It; ++It)
+		{
+			if (It->GetTeamId() == HostTeam)
+			{
+				HostBuildings.Add(*It);
+			}
+		}
+		Test->TestEqual(TEXT("The host has only its headquarters left"), HostBuildings.Num(), 1);
+		for (ARTSBuilding* Building : HostBuildings)
+		{
+			Building->GetHealthComponent()->ApplyDamage(Building->GetHealthComponent()->GetMaxHealth(), State->ServerTank.Get());
+		}
+		Test->TestTrue(TEXT("The match is over on the server"), GameState->IsMatchOver());
+		Test->TestEqual(TEXT("The client's team wins"), GameState->GetWinningTeam(), ClientTeam);
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientVictory, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientVictory::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* HostController = ServerWorld ? GetLocalController(*ServerWorld) : nullptr;
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		if (!HostController || !ClientController || !State->ClientTank.IsValid() || !State->ServerTank.IsValid())
+		{
+			Test->AddError(TEXT("Lost a controller or the client's tank"));
+			return true;
+		}
+
+		// The tank may still be finishing its attack-move; the refused order is judged from where it comes to rest.
+		const bool bTankAtRest = State->ServerTank->GetQueuedCommandCount() == 0 && State->ServerTank->GetVelocity().Size2D() < 1.f;
+		if (ClientController->GetMatchResult() == ERTSMatchResult::InProgress || !bTankAtRest)
+		{
+			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+			{
+				Test->AddError(FString::Printf(TEXT("The client never saw the match end (%d) or the tank never came to rest (%d)"),
+					ClientController->GetMatchResult() != ERTSMatchResult::InProgress, bTankAtRest));
+				return true;
+			}
+			return false;
+		}
+		Test->TestTrue(TEXT("The client sees Victory"), ClientController->GetMatchResult() == ERTSMatchResult::Victory);
+		Test->TestTrue(TEXT("The host sees Defeat"), HostController->GetMatchResult() == ERTSMatchResult::Defeat);
+		const ARTSGameState* ClientGameState = ClientWorld->GetGameState<ARTSGameState>();
+		Test->TestTrue(TEXT("The client's game state has only its team left"),
+			ClientGameState && ClientGameState->GetAliveTeams() == TArray<int32>({ ClientTeam }));
+		Test->TestFalse(TEXT("The client cannot restart"), ClientController->CanRestart());
+		Test->TestTrue(TEXT("The host can restart"), HostController->CanRestart());
+
+		// What a right click with the tank selected sends after the match.
+		FRTSCommand Move;
+		Move.Type = ERTSCommandType::Move;
+		Move.TargetLocation = ClientTankStart;
+		ClientController->Server_IssueCommand({ State->ClientTank.Get() }, Move);
+		State->RefusedStart = State->ServerTank->GetActorLocation();
+		State->RefusedAtWorldTime = ServerWorld->GetTimeSeconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientOrderRefused, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientOrderRefused::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		const ARTSUnit* ServerTank = State->ServerTank.Get();
+		if (!ServerWorld || !ServerTank)
+		{
+			Test->AddError(TEXT("Lost the server world or the client's tank"));
+			return true;
+		}
+		if (ServerWorld->GetTimeSeconds() - State->RefusedAtWorldTime < RefusedOrderSeconds)
+		{
+			return false;
+		}
+		Test->TestEqual(TEXT("The server refused the client's move"), ServerTank->GetQueuedCommandCount(), 0);
+		const float Moved = FVector::Dist2D(ServerTank->GetActorLocation(), State->RefusedStart);
+		Test->TestTrue(FString::Printf(TEXT("The client's tank stayed put (moved %.0f cm)"), Moved), Moved < UnmovedTolerance);
+		return true;
+	}
 
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSListenServerSmokeTest, "WorldDivide.Smoke.ListenServer", RTSTests::TestFlags)
 
@@ -1098,6 +1211,9 @@ namespace RTSListenServerTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientTank(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientAttackMove(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientAttackMove(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSDestroyHostBase(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientVictory(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientOrderRefused(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		return true;
 	}

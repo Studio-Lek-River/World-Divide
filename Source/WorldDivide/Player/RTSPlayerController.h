@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "Commands/RTSCommand.h"
+#include "Core/RTSGameState.h"
 #include "RTSPlayerController.generated.h"
 
 class ARTSBuilding;
@@ -31,6 +32,7 @@ struct FInputActionValue;
  * With rts.DebugBuild on and no builder selected, 1-9 pick from the faction's buildings and place them without a builder.
  * With an own production building selected, 1-9 or a click on the HUD's menu queue a unit, right click sets the rally point,
  * and a click on a queued unit, or Delete for the last one, cancels it for a refund.
+ * Once the match is over the HUD shows Victory or Defeat, and on the host a restart button.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSPlayerController : public APlayerController
@@ -129,8 +131,17 @@ public:
 	/** Sends the selected units an attack-move to Location. bQueue queues it and keeps attack-move armed for the next waypoint. */
 	void ConfirmAttackMove(const FVector& Location, bool bQueue);
 
+	/** The local player's team's result, InProgress before the game state has replicated. */
+	ERTSMatchResult GetMatchResult() const;
+
+	/** The match is over and this is the host's local controller, which restarts for every player. */
+	bool CanRestart() const;
+
+	/** Restarts the match on the same map, taking any clients along; false, changing nothing, when CanRestart refuses. */
+	bool RequestRestart();
+
 	/**
-	 * The only way orders reach the server. Units not owned by this player's team are ignored.
+	 * The only way orders reach the server. Every order is refused once the match is over. Units not owned by this player's team are ignored.
 	 * A Build order without units is placed directly, after the server re-checks faction, spot and credits, but only in debug
 	 * build; otherwise it is refused.
 	 */

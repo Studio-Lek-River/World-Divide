@@ -46,4 +46,11 @@ public:
 	/** Harvesters deliver supplies here once it is constructed. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Economy")
 	bool bAcceptsSupply = false;
+
+	/**
+	 * A defensive structure, such as a tower. Defences do not keep a team in the match: a team is eliminated once every
+	 * other building it has, construction sites included, is gone.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Match")
+	bool bIsDefense = false;
 };

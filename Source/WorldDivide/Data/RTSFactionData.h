@@ -20,6 +20,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production")
 	TArray<TObjectPtr<URTSBuildingData>> Buildings;
 
+	/**
+	 * The completed building each team of this faction starts with at its PlayerStart, such as the headquarters that
+	 * produces builders. Not in Buildings, so it cannot be built.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production")
+	TObjectPtr<URTSBuildingData> Headquarters;
+
 	/** A faction without a power grid always runs at full efficiency, whatever its buildings produce or draw. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power")
 	bool bUsesPower = true;

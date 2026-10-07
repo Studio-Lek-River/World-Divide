@@ -250,6 +250,27 @@ bool ARTSPlayerController::RequestCancelConstruction(ARTSBuilding* Building)
 	return true;
 }
 
+ERTSMatchResult ARTSPlayerController::GetMatchResult() const
+{
+	const ARTSGameState* GameState = GetWorld()->GetGameState<ARTSGameState>();
+	return GameState ? GameState->GetMatchResult(GetTeamId()) : ERTSMatchResult::InProgress;
+}
+
+bool ARTSPlayerController::CanRestart() const
+{
+	return IsLocalController() && HasAuthority() && ARTSGameState::IsMatchOver(*GetWorld());
+}
+
+bool ARTSPlayerController::RequestRestart()
+{
+	if (!CanRestart())
+	{
+		return false;
+	}
+	// Reloads the current map; clients travel along.
+	return GetWorld()->ServerTravel(TEXT("?Restart"));
+}
+
 bool ARTSPlayerController::IsOwnUnit(const ARTSUnit* Unit) const
 {
 	return Unit && Unit->GetTeamId() == GetTeamId();
@@ -369,6 +390,11 @@ void ARTSPlayerController::OnSelectStarted()
 	const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
 	if (RTSHUD && GetMousePosition(Mouse.X, Mouse.Y))
 	{
+		if (RTSHUD->IsOnRestartButton(Mouse))
+		{
+			RequestRestart();
+			return;
+		}
 		if (RTSHUD->IsOnCancelButton(Mouse))
 		{
 			RequestCancelConstruction(GetSelectedBuilding());
@@ -881,6 +907,11 @@ void ARTSPlayerController::Server_IssueCommand_Implementation(const TArray<ARTSU
 	ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
 	if (!State)
 	{
+		return;
+	}
+	if (ARTSGameState::IsMatchOver(*GetWorld()))
+	{
+		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d's order comes after the match is over"), State->GetTeamId());
 		return;
 	}
 	if (Command.Type == ERTSCommandType::Build && Units.IsEmpty())

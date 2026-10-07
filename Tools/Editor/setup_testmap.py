@@ -1,4 +1,4 @@
-"""Builds the placeholder weapon, unit, harvester, builder, upgrade, building and faction data assets, the placement ghost material, the
+"""Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters included) and faction data assets, the placement ghost material, the
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py) and the L_TestMap level with a supply
 source and two builders by each base. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
@@ -256,7 +256,7 @@ def make_builder(name, display_name, mesh, scale, radius, health, speed, turn_ra
 
 
 def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw,
-                  spawn_on_complete=None, accepts_supply=False, requires_power=False, units=(), upgrades=()):
+                  spawn_on_complete=None, accepts_supply=False, requires_power=False, units=(), upgrades=(), defense=False):
     return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
         "display_name": unreal.Text(display_name),
         "mesh": mesh,
@@ -274,6 +274,7 @@ def make_building(name, display_name, mesh, scale, footprint, health, weapon, co
         "accepts_supply": accepts_supply,
         "units": list(units),
         "upgrades": list(upgrades),
+        "is_defense": defense,
     })
 
 
@@ -289,10 +290,11 @@ def make_upgrade(name, display_name, cost, build_time, stat, multiplier, targets
     })
 
 
-def make_faction(name, display_name, buildings, uses_power=True):
+def make_faction(name, display_name, buildings, headquarters=None, uses_power=True):
     return plan_data_asset(name, FACTION_DIR, unreal.RTSFactionData, {
         "display_name": unreal.Text(display_name),
         "buildings": buildings,
+        "headquarters": headquarters,
         "uses_power": uses_power,
     })
 
@@ -501,6 +503,7 @@ supply_depot_mesh = make_art("SupplyDepot", "Kenney/CityKitIndustrial/building-j
 tower_mesh = make_art("Tower", "Kenney/TowerDefenseKit/tower-round-build-c.glb")
 barracks_mesh = make_art("Barracks", "Kenney/SurvivalKit/tent-canvas.glb")
 vehicle_factory_mesh = make_art("VehicleFactory", "Kenney/CityKitIndustrial/building-l.glb")
+headquarters_mesh = make_art("Headquarters", "Kenney/CityKitCommercial/building-skyscraper-a.glb")
 wall_mesh = make_art("Wall", "Kenney/CastleKit/wall.glb", tint=0.0)
 crate_mesh = make_art("SupplyCrate", "Kenney/FactoryKit/box-wide.glb", tint=0.0)
 
@@ -521,7 +524,7 @@ tower_gun = make_weapon("DA_TestTowerGun", 1400.0, 30.0, 1.0)
 power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", power_plant_mesh, fit_scale(power_plant_mesh, 380.0, 380.0),
                             (4, 4), 800.0, None, 800, 6.0, 5, 0)
 tower = make_building("DA_TestTower", "Test Tower", tower_mesh, fit_scale(tower_mesh, 160.0, 160.0, 260.0), (2, 2), 500.0,
-                      tower_gun, 600, 3.0, 0, 2, requires_power=True)
+                      tower_gun, 600, 3.0, 0, 2, requires_power=True, defense=True)
 harvester = make_harvester("DA_TestHarvester", "Test Harvester", truck_mesh, fit_scale(truck_mesh, 180.0, 110.0), 70.0,
                            300.0, 450.0, 360.0, 600, 8.0, 100, 3.0, 6000.0)
 supply_depot = make_building("DA_TestSupplyDepot", "Test Supply Depot", supply_depot_mesh,
@@ -533,16 +536,20 @@ barracks = make_building("DA_TestBarracks", "Test Barracks", barracks_mesh, fit_
                          800.0, None, 500, 5.0, 0, 1, units=[infantry, grenadier], upgrades=[rifle_training])
 vehicle_factory = make_building("DA_TestVehicleFactory", "Test Vehicle Factory", vehicle_factory_mesh,
                                 fit_scale(vehicle_factory_mesh, 380.0, 380.0), (4, 4), 1200.0, None, 1200, 8.0, 0, 2,
-                                units=[tank, harvester, builder])
+                                units=[tank, harvester])
+# Every team starts with one at its PlayerStart; it is not in the faction's buildings, so it cannot be built.
+headquarters = make_building("DA_TestHeadquarters", "Test Headquarters", headquarters_mesh,
+                             fit_scale(headquarters_mesh, 380.0, 380.0), (4, 4), 3000.0, None, 0, 0.0, 0, 0,
+                             units=[builder])
 buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory]
-# The vehicle factory produces the builder, which builds the factory in turn.
+# The headquarters produces the builder, which builds the rest.
 add_properties(builder, {"buildings": buildings})
 # A harvester needs a depot to deliver to, so the factory only offers one once a depot stands.
 add_properties(harvester, {"prerequisites": [supply_depot]})
 # The tech tree: vehicles only after infantry, and a tower only once a plant can power it.
 add_properties(vehicle_factory, {"prerequisites": [barracks]})
 add_properties(tower, {"prerequisites": [power_plant]})
-make_faction("DA_TestFaction", "Test Faction", buildings)
+make_faction("DA_TestFaction", "Test Faction", buildings, headquarters)
 make_ghost_material("M_PlacementGhost")
 make_map(tank, infantry, builder, wall_mesh, crate_mesh)
 plan_data_assets()

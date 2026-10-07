@@ -10,7 +10,9 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
+#include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
+#include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Data/RTSHarvesterData.h"
@@ -21,6 +23,7 @@
 #include "Economy/RTSSupplySource.h"
 #include "Engine/StaticMeshActor.h"
 #include "EngineUtils.h"
+#include "GameFramework/PlayerStart.h"
 #include "HAL/IConsoleManager.h"
 #include "NavigationSystem.h"
 #include "NavMesh/RecastNavMesh.h"
@@ -60,6 +63,8 @@
  * The attack-move tests drive tanks past an enemy beside their lane: a plain move passes an enemy infantry without firing,
  * an attack-move back stops to kill it and then walks on, and three tanks attack-moving past an enemy power plant destroy
  * it before they carry on to the target.
+ * The headquarters test checks that each team starts with its headquarters on its PlayerStart and that the player's
+ * produces a builder, then destroys the enemy's last building but a tower: the player has won and orders are refused.
  */
 namespace
 {
@@ -76,6 +81,7 @@ namespace
 	constexpr double AttackTimeout = 30.0;
 
 	const TCHAR* TowerPath = TEXT("/Game/Data/Buildings/DA_TestTower.DA_TestTower");
+	const TCHAR* HeadquartersPath = TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters");
 	const TCHAR* PowerPlantPath = TEXT("/Game/Data/Buildings/DA_TestPowerPlant.DA_TestPowerPlant");
 	const TCHAR* TankPath = TEXT("/Game/Data/Units/DA_TestTank.DA_TestTank");
 	const TCHAR* InfantryPath = TEXT("/Game/Data/Units/DA_TestInfantry.DA_TestInfantry");
@@ -228,6 +234,14 @@ namespace
 	const FVector AttackMoveEnemySpot(0.f, 7900.f, 0.f);
 	const FVector AttackMoveBuildingTarget(3500.f, 7000.f, 0.f);
 	constexpr double AttackMoveTimeout = 45.0;
+
+	/**
+	 * The headquarters test: each team's headquarters stands on its PlayerStart, the player's produces a builder, and once
+	 * the enemy has lost every building the player has won and orders are refused.
+	 */
+	constexpr double HeadquartersTimeout = 30.0;
+	/** Game seconds a refused order is watched for any movement. */
+	constexpr double RefusedOrderSeconds = 2.0;
 	/** Tanks that fought on the way were at least this far short of their target when the enemy fell. */
 	constexpr float AttackMoveShortfall = 1000.f;
 	// A few frames are enough for PlayerTick to notice the emptied selection.
@@ -310,6 +324,10 @@ namespace
 		// Upgrade test only.
 		TWeakObjectPtr<ARTSUnit> Veteran;
 
+		// Headquarters test only.
+		FVector RefusedStart = FVector::ZeroVector;
+		double RefusedAtWorldTime = 0.0;
+
 		// Attack-move tests only.
 		bool bHadTarget = false;
 		bool bStoodToFight = false;
@@ -339,12 +357,14 @@ namespace
 			&& NavSystem->ProjectPointToNavigation(Location, Projected, FVector(10.f, 10.f, 250.f));
 	}
 
+	/** Buildings besides the headquarters each team starts with. */
 	int32 CountBuildings(UWorld* World)
 	{
+		const URTSBuildingData* Headquarters = LoadObject<URTSBuildingData>(nullptr, HeadquartersPath);
 		int32 Count = 0;
 		for (TActorIterator<ARTSBuilding> It(World); It; ++It)
 		{
-			++Count;
+			Count += It->GetBuildingData() != Headquarters ? 1 : 0;
 		}
 		return Count;
 	}
@@ -3421,6 +3441,217 @@ bool FRTSAttackMoveArmedSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckAttackMoveArming(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAttackMoveDisarmed(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckHeadquarters, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSCheckHeadquarters::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	URTSBuildingData* HeadquartersData = LoadObject<URTSBuildingData>(nullptr, HeadquartersPath);
+	URTSUnitData* BuilderData = LoadObject<URTSUnitData>(nullptr, BuilderPath);
+	if (!Player || !HeadquartersData || !BuilderData)
+	{
+		Test->AddError(TEXT("Missing the player state, the test headquarters or the test builder"));
+		return true;
+	}
+	const URTSFactionData* Faction = Player->GetFaction();
+	Test->TestTrue(TEXT("The faction starts with the test headquarters"), Faction && Faction->Headquarters == HeadquartersData);
+	Test->TestFalse(TEXT("The headquarters cannot be built"), Faction && Faction->Buildings.Contains(HeadquartersData));
+
+	ARTSBuilding* Own = nullptr;
+	for (int32 Team = 0; Team < 2; ++Team)
+	{
+		const FName Tag(*FString::Printf(TEXT("Team%d"), Team));
+		const APlayerStart* Start = nullptr;
+		for (TActorIterator<APlayerStart> It(World); It; ++It)
+		{
+			Start = It->PlayerStartTag == Tag ? *It : Start;
+		}
+		TArray<ARTSBuilding*> Found;
+		for (TActorIterator<ARTSBuilding> It(World); It; ++It)
+		{
+			if (It->GetBuildingData() == HeadquartersData && It->GetTeamId() == Team)
+			{
+				Found.Add(*It);
+			}
+		}
+		if (!Test->TestNotNull(FString::Printf(TEXT("Team %d has a PlayerStart"), Team), Start)
+			|| !Test->TestEqual(FString::Printf(TEXT("Team %d starts with one headquarters"), Team), Found.Num(), 1))
+		{
+			return true;
+		}
+		const FVector Expected = RTSBuildPlacement::SnapToGrid(Start->GetActorLocation(), HeadquartersData->Footprint);
+		Test->TestTrue(FString::Printf(TEXT("Team %d's headquarters stands on its PlayerStart"), Team),
+			FVector::Dist2D(Found[0]->GetActorLocation(), Expected) < 1.f);
+		Test->TestTrue(FString::Printf(TEXT("Team %d's headquarters stands on the ground"), Team),
+			FMath::Abs(Found[0]->GetActorLocation().Z) < 1.f);
+		Test->TestTrue(FString::Printf(TEXT("Team %d's headquarters is complete"), Team), Found[0]->IsConstructed());
+		Own = Team == Controller->GetTeamId() ? Found[0] : Own;
+	}
+	ARTSGameState* GameState = World->GetGameState<ARTSGameState>();
+	if (!Test->TestNotNull(TEXT("The match game state runs"), GameState) || !Test->TestNotNull(TEXT("The player has a headquarters"), Own))
+	{
+		return true;
+	}
+	Test->TestTrue(TEXT("Both teams are in the match"), GameState->GetAliveTeams() == TArray<int32>({ 0, 1 }));
+	Test->TestTrue(TEXT("The match runs"), Controller->GetMatchResult() == ERTSMatchResult::InProgress);
+	Test->TestFalse(TEXT("Nothing to restart yet"), Controller->CanRestart());
+
+	// What a click on the headquarters and 1 send.
+	Test->TestTrue(TEXT("The headquarters can be selected"), Controller->SelectBuilding(Own));
+	Test->TestTrue(TEXT("It is a production building"), Controller->GetProductionBuilding() == Own);
+	Test->TestTrue(TEXT("It produces the builder"), Controller->GetProductionMenu().Contains(BuilderData));
+	const int32 CreditsBefore = Player->GetCredits();
+	Test->TestTrue(TEXT("A builder is queued"), Controller->RequestProduce(Own, BuilderData));
+	Test->TestEqual(TEXT("The builder is charged"), Player->GetCredits(), CreditsBefore - BuilderData->Cost);
+
+	for (TActorIterator<ARTSUnit> It(World); It; ++It)
+	{
+		State->UnitsBefore.Add(*It);
+	}
+	State->Building = Own;
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSWaitForHeadquartersBuilder, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSWaitForHeadquartersBuilder::Update()
+{
+	const ARTSBuilding* Headquarters = State->Building.Get();
+	if (!Headquarters)
+	{
+		Test->AddError(TEXT("The headquarters disappeared"));
+		return true;
+	}
+	for (TActorIterator<ARTSUnit> It(Headquarters->GetWorld()); It; ++It)
+	{
+		if (!State->UnitsBefore.Contains(*It) && Cast<URTSBuilderData>(It->GetUnitData()))
+		{
+			Test->TestEqual(TEXT("The builder is the player's"), It->GetTeamId(), Headquarters->GetTeamId());
+			State->Builder = *It;
+			return true;
+		}
+	}
+	if (FPlatformTime::Seconds() - State->PhaseStart > HeadquartersTimeout)
+	{
+		Test->AddError(TEXT("The headquarters never produced its builder"));
+		return true;
+	}
+	return false;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSDestroyEnemyBase, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSDestroyEnemyBase::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	const ARTSGameState* GameState = World->GetGameState<ARTSGameState>();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	URTSBuildingData* TowerData = LoadObject<URTSBuildingData>(nullptr, TowerPath);
+	URTSUnitData* BuilderData = LoadObject<URTSUnitData>(nullptr, BuilderPath);
+	ARTSBuilding* Headquarters = State->Building.Get();
+	if (!GameState || !Player || !TowerData || !BuilderData || !Headquarters)
+	{
+		Test->AddError(TEXT("Missing the game state, the player state, the test tower or builder, or the headquarters"));
+		return true;
+	}
+
+	// A defence keeps no team in the match, so the enemy's tower may stand.
+	const int32 EnemyTeam = Controller->GetTeamId() + 1;
+	ARTSBuilding* EnemyTower = SpawnBuilding(World, TowerData, EnemyTeam, OtherBuildSpot, true);
+	TArray<ARTSBuilding*> EnemyBuildings;
+	for (TActorIterator<ARTSBuilding> It(World); It; ++It)
+	{
+		if (It->GetTeamId() == EnemyTeam && *It != EnemyTower)
+		{
+			EnemyBuildings.Add(*It);
+		}
+	}
+	Test->TestEqual(TEXT("The enemy has only its headquarters besides the tower"), EnemyBuildings.Num(), 1);
+	Test->TestFalse(TEXT("The match runs while the enemy has a headquarters"), GameState->IsMatchOver());
+	for (ARTSBuilding* Building : EnemyBuildings)
+	{
+		Building->GetHealthComponent()->ApplyDamage(Building->GetHealthComponent()->GetMaxHealth(), nullptr);
+	}
+	Test->TestTrue(TEXT("The enemy tower still stands"), IsValid(EnemyTower) && !EnemyTower->IsActorBeingDestroyed());
+	Test->TestTrue(TEXT("The match is over"), GameState->IsMatchOver());
+	Test->TestTrue(TEXT("The player has won"), Controller->GetMatchResult() == ERTSMatchResult::Victory);
+	Test->TestTrue(TEXT("The host may restart"), Controller->CanRestart());
+
+	// Orders after the end are refused: a builder at the headquarters and a move for an idle unit.
+	const int32 CreditsBefore = Player->GetCredits();
+	Controller->RequestProduce(Headquarters, BuilderData);
+	Test->TestEqual(TEXT("Production is refused uncharged"), Player->GetCredits(), CreditsBefore);
+	Test->TestEqual(TEXT("Nothing is queued"), Headquarters->GetProductionComponent()->GetQueue().Num(), 0);
+
+	ARTSUnit* Idle = nullptr;
+	for (TActorIterator<ARTSUnit> It(World); It && !Idle; ++It)
+	{
+		Idle = It->GetTeamId() == Controller->GetTeamId() && It->GetQueuedCommandCount() == 0 && *It != State->Builder.Get() ? *It : nullptr;
+	}
+	if (!Test->TestNotNull(TEXT("The player has an idle unit"), Idle))
+	{
+		return true;
+	}
+	FRTSCommand Move;
+	Move.Type = ERTSCommandType::Move;
+	Move.TargetLocation = MoveTarget;
+	Controller->Server_IssueCommand({ Idle }, Move);
+	Test->TestEqual(TEXT("The move is refused"), Idle->GetQueuedCommandCount(), 0);
+	State->Walker = Idle;
+	State->RefusedStart = Idle->GetActorLocation();
+	State->RefusedAtWorldTime = World->GetTimeSeconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyOrdersRefused, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyOrdersRefused::Update()
+{
+	const ARTSUnit* Idle = State->Walker.Get();
+	if (!Idle)
+	{
+		Test->AddError(TEXT("The idle unit disappeared"));
+		return true;
+	}
+	if (Idle->GetWorld()->GetTimeSeconds() - State->RefusedAtWorldTime < RefusedOrderSeconds)
+	{
+		return false;
+	}
+	Test->TestTrue(TEXT("The unit stayed put"), FVector::Dist2D(Idle->GetActorLocation(), State->RefusedStart) < 50.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSHeadquartersSmokeTest, "WorldDivide.Smoke.Headquarters",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSHeadquartersSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckHeadquarters(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForHeadquartersBuilder(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSDestroyEnemyBase(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyOrdersRefused(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

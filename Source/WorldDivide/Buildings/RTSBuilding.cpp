@@ -6,6 +6,7 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
@@ -81,6 +82,13 @@ void ARTSBuilding::InitFromData(URTSBuildingData* InBuildingData, int32 InTeamId
 	WeaponComponent->SetWeaponData(nullptr);
 	ApplyUpgrades();
 	ApplyBuildingData();
+
+	// From now on the building keeps its team in the match.
+	ARTSGameState* GameState = GetWorld()->GetGameState<ARTSGameState>();
+	if (GameState && ARTSGameState::CountsForSurvival(*this))
+	{
+		GameState->RefreshTeams();
+	}
 }
 
 void ARTSBuilding::ApplyUpgrades()
@@ -247,6 +255,16 @@ void ARTSBuilding::Destroyed()
 		if (ARTSPlayerState* Player = ARTSPlayerState::FindForTeam(*GetWorld(), TeamId))
 		{
 			Player->RecalculatePower(this);
+		}
+	}
+
+	// Destroyed or cancelled, the team's last building that is not a defence takes the team out of the match.
+	UWorld* World = GetWorld();
+	if (HasAuthority() && World && !World->bIsTearingDown && ARTSGameState::CountsForSurvival(*this))
+	{
+		if (ARTSGameState* GameState = World->GetGameState<ARTSGameState>())
+		{
+			GameState->RefreshTeams(this);
 		}
 	}
 	Super::Destroyed();
