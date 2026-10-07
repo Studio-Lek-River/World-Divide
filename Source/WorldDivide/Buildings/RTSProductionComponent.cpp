@@ -6,6 +6,7 @@
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
+#include "Economy/RTSHarvesterComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
@@ -147,6 +148,14 @@ void URTSProductionComponent::UpdateProduction(float DeltaSeconds)
 		Move.Type = ERTSCommandType::Move;
 		Move.TargetLocation = RallyPoint;
 		Unit->ExecuteCommand(Move);
+		// Harvesters go on to the nearest source from the rally point.
+		if (Unit->GetHarvesterComponent()->CanHarvest())
+		{
+			FRTSCommand Harvest;
+			Harvest.Type = ERTSCommandType::Harvest;
+			Harvest.bQueue = true;
+			Unit->ExecuteCommand(Harvest);
+		}
 	}
 }
 

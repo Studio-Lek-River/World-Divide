@@ -31,7 +31,7 @@ enum class ERTSCommandType : uint8
 	Produce,
 	/** Take the last queued EntityData off TargetActor's production queue, refunding its cost. */
 	CancelProduction,
-	/** Send units TargetActor produces to TargetLocation. */
+	/** Send units TargetActor produces to TargetLocation; harvesters then start harvesting from there. */
 	SetRallyPoint,
 	/** Move to TargetLocation, stopping to fight enemies that come into range and moving on once none is left. */
 	AttackMove,
