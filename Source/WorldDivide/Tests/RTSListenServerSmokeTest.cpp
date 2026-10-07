@@ -273,11 +273,18 @@ namespace RTSListenServerTest
 			}
 		}
 		const ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		// The controller holds its own player state before the client's GameState lists every player, the host's included.
+		const ARTSPlayerState* ClientOwnState = ClientWorld ? ARTSPlayerState::FindForTeam(*ClientWorld, ClientTeam) : nullptr;
+		const ARTSPlayerState* ClientHostState = ClientWorld ? ARTSPlayerState::FindForTeam(*ClientWorld, HostTeam) : nullptr;
+		const bool bClientPlayersReady = ClientController && ClientHostState
+			&& ClientOwnState && ClientOwnState == ClientController->GetPlayerState<ARTSPlayerState>()
+			&& ClientController->GetFaction() && ClientController->GetCredits() > 0;
 
 		const bool bReady = ServerWorld && ClientWorld
 			&& ServerControllers == 2
 			&& IsNavMeshReady(*ServerWorld)
 			&& ClientController && ClientController->GetTeamId() != INDEX_NONE
+			&& bClientPlayersReady
 			&& CountUnits(*ClientWorld) == 2 * UnitsPerTeam;
 		if (bReady)
 		{
@@ -288,9 +295,12 @@ namespace RTSListenServerTest
 		}
 		if (FPlatformTime::Seconds() - State->PhaseStart > SessionTimeout)
 		{
-			Test->AddError(FString::Printf(TEXT("Listen session not ready: server world %d, client world %d, server players %d, client team %d, client units %d"),
+			Test->AddError(FString::Printf(TEXT("Listen session not ready: server world %d, client world %d, server players %d, client team %d, client units %d, ")
+				TEXT("client sees host state %d, own state %d, faction %d, credits %d"),
 				ServerWorld != nullptr, ClientWorld != nullptr, ServerControllers,
-				ClientController ? ClientController->GetTeamId() : INDEX_NONE, ClientWorld ? CountUnits(*ClientWorld) : 0));
+				ClientController ? ClientController->GetTeamId() : INDEX_NONE, ClientWorld ? CountUnits(*ClientWorld) : 0,
+				ClientHostState != nullptr, ClientOwnState != nullptr, ClientController && ClientController->GetFaction(),
+				ClientController ? ClientController->GetCredits() : 0));
 			return true;
 		}
 		return false;
@@ -321,6 +331,7 @@ namespace RTSListenServerTest
 		Test->TestTrue(TEXT("The client starts with credits"), ServerClientState && ServerClientState->GetCredits() > 0);
 		Test->TestEqual(TEXT("The client sees its own credits"),
 			ClientController ? ClientController->GetCredits() : INDEX_NONE, ServerClientState ? ServerClientState->GetCredits() : 0);
+		Test->TestNotNull(TEXT("The client sees the host's player state"), ClientHostState);
 		Test->TestTrue(TEXT("The client does not see the host's credits"), ClientHostState && ClientHostState->GetCredits() == 0);
 		return true;
 	}
