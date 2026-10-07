@@ -12,6 +12,7 @@
 #include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
+#include "Data/RTSUpgradeData.h"
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
@@ -33,7 +34,9 @@
  * builder and cancels the site: the site must disappear in both
  * worlds and the client must see its refund while the host's credits stay put. The server then gives the client a
  * barracks: the client sets its rally point, queues two infantry, sees them charged and cancels one for a refund, and
- * must see the other come out and walk to the rally point. Then the server places a host building and the client orders its units to attack it: the client's copy must show the building's
+ * must see the other come out and walk to the rally point. At the same barracks the client researches rifle training: it sees
+ * the charge and the upgrade queued, then researched, while the host's player state stays without it; only then is the
+ * grenadier it gates accepted. Then the server places a host building and the client orders its units to attack it: the client's copy must show the building's
  * health dropping before it disappears. Last, the server gives the client a tank in the empty south strip and puts a host
  * infantry beside its lane; the client attack-moves the tank past it and must see the infantry disappear and the tank arrive.
  */
@@ -64,6 +67,11 @@ namespace RTSListenServerTest
 	constexpr float RallyArrivalRadius = 250.f;
 	/** Without a power plant the client produces at the low-power rate. */
 	constexpr double ProductionTimeout = 60.0;
+
+	/** The client researches rifle training at its barracks, which the grenadier needs. Without power it takes a third longer. */
+	const TCHAR* RifleTrainingPath = TEXT("/Game/Data/Upgrades/DA_TestRifleTraining.DA_TestRifleTraining");
+	const TCHAR* GrenadierPath = TEXT("/Game/Data/Units/DA_TestGrenadier.DA_TestGrenadier");
+	constexpr double ResearchTimeout = 60.0;
 
 	/**
 	 * The client's tank attack-moves along the empty strip south of the bases, away from the units gathered at the host
@@ -110,6 +118,7 @@ namespace RTSListenServerTest
 		TWeakObjectPtr<ARTSBuilding> ServerBarracks;
 		TWeakObjectPtr<ARTSBuilding> ClientBarracks;
 		int32 ClientProductionCredits = 0;
+		int32 ClientResearchCredits = 0;
 
 		/** The client's attack-moving tank and the host infantry beside its lane, as each world sees them. */
 		TWeakObjectPtr<ARTSUnit> ServerTank;
@@ -745,6 +754,122 @@ namespace RTSListenServerTest
 		return true;
 	}
 
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSClientResearches, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSClientResearches::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		ARTSBuilding* Barracks = State->ClientBarracks.Get();
+		URTSUnitData* Grenadier = LoadObject<URTSUnitData>(nullptr, GrenadierPath);
+		URTSUpgradeData* RifleTraining = LoadObject<URTSUpgradeData>(nullptr, RifleTrainingPath);
+		if (!ClientController || !Barracks || !Grenadier || !RifleTraining)
+		{
+			Test->AddError(TEXT("Lost the client's controller or its copy of the barracks, or the test data is missing"));
+			return true;
+		}
+
+		// What pressing the grenadier's and then the upgrade's number with the barracks selected sends.
+		Test->TestTrue(TEXT("The client's grenadier needs rifle training"), ClientController->GetMissingPrerequisite(*Grenadier) == RifleTraining);
+		Test->TestFalse(TEXT("So the client's menu refuses the grenadier"), ClientController->RequestProduce(Barracks, Grenadier));
+		State->ClientResearchCredits = ClientController->GetCredits();
+		Test->TestTrue(TEXT("The client researches rifle training"), ClientController->RequestProduce(Barracks, RifleTraining));
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientResearchQueued, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientResearchQueued::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		ARTSBuilding* Barracks = State->ClientBarracks.Get();
+		URTSUpgradeData* RifleTraining = LoadObject<URTSUpgradeData>(nullptr, RifleTrainingPath);
+		if (!ClientController || !Barracks || !RifleTraining)
+		{
+			Test->AddError(TEXT("Lost the client's controller or its copy of the barracks"));
+			return true;
+		}
+
+		const int32 Charged = State->ClientResearchCredits - RifleTraining->Cost;
+		const bool bQueued = Barracks->GetProductionComponent()->GetQueue().Contains(RifleTraining);
+		if ((!bQueued || ClientController->GetCredits() != Charged) && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
+		{
+			return false;
+		}
+		Test->TestTrue(TEXT("The client sees the upgrade queued"), bQueued);
+		Test->TestEqual(TEXT("The client sees the research charged"), ClientController->GetCredits(), Charged);
+		Test->TestFalse(TEXT("The client's menu refuses it a second time while queued"), ClientController->RequestProduce(Barracks, RifleTraining));
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientResearched, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientResearched::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		const ARTSPlayerController* HostController = ServerWorld ? GetLocalController(*ServerWorld) : nullptr;
+		ARTSBuilding* Barracks = State->ClientBarracks.Get();
+		URTSUnitData* Grenadier = LoadObject<URTSUnitData>(nullptr, GrenadierPath);
+		URTSUpgradeData* RifleTraining = LoadObject<URTSUpgradeData>(nullptr, RifleTrainingPath);
+		if (!ClientController || !HostController || !Barracks || !Grenadier || !RifleTraining)
+		{
+			Test->AddError(TEXT("Lost a controller or the client's copy of the barracks"));
+			return true;
+		}
+
+		const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+		if (!ClientController->HasUpgrade(*RifleTraining) && Elapsed < ResearchTimeout)
+		{
+			return false;
+		}
+		Test->AddInfo(FString::Printf(TEXT("The client saw rifle training researched after %.1f s"), Elapsed));
+		const ARTSPlayerState* ServerClientState = ARTSPlayerState::FindForTeam(*ServerWorld, ClientTeam);
+		const ARTSPlayerState* ServerHostState = ARTSPlayerState::FindForTeam(*ServerWorld, HostTeam);
+		const ARTSPlayerState* ClientHostState = ARTSPlayerState::FindForTeam(*ClientWorld, HostTeam);
+		Test->TestTrue(TEXT("The server records the client's upgrade"), ServerClientState && ServerClientState->HasUpgrade(RifleTraining));
+		if (!Test->TestTrue(TEXT("The client sees its upgrade"), ClientController->HasUpgrade(*RifleTraining)))
+		{
+			return true;
+		}
+		// Each player researches for itself: the host's own controller and player state know nothing of it.
+		Test->TestFalse(TEXT("The host's controller does not have the client's upgrade"), HostController->HasUpgrade(*RifleTraining));
+		Test->TestTrue(TEXT("The host's player state lists no upgrades"), ServerHostState && ServerHostState->GetCompletedUpgrades().IsEmpty());
+		Test->TestTrue(TEXT("The client's copy of the host's state lists none"), ClientHostState && ClientHostState->GetCompletedUpgrades().IsEmpty());
+
+		Test->TestFalse(TEXT("The client's menu refuses it once researched"), ClientController->RequestProduce(Barracks, RifleTraining));
+		Test->TestNull(TEXT("The client's grenadier has its prerequisite"), ClientController->GetMissingPrerequisite(*Grenadier));
+		State->ClientResearchCredits = ClientController->GetCredits();
+		Test->TestTrue(TEXT("The client queues the grenadier"), ClientController->RequestProduce(Barracks, Grenadier));
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientGrenadierQueued, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientGrenadierQueued::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		const ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		const ARTSBuilding* ServerBarracks = State->ServerBarracks.Get();
+		const URTSUnitData* Grenadier = LoadObject<URTSUnitData>(nullptr, GrenadierPath);
+		if (!ClientController || !ServerBarracks || !Grenadier)
+		{
+			Test->AddError(TEXT("Lost the client's controller or the barracks"));
+			return true;
+		}
+
+		const int32 Charged = State->ClientResearchCredits - Grenadier->Cost;
+		const bool bQueued = ServerBarracks->GetProductionComponent()->GetQueue().Contains(Grenadier);
+		if ((!bQueued || ClientController->GetCredits() != Charged) && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
+		{
+			return false;
+		}
+		Test->TestTrue(TEXT("The server accepted the client's grenadier"), bQueued);
+		Test->TestEqual(TEXT("The client sees the grenadier charged"), ClientController->GetCredits(), Charged);
+		return true;
+	}
+
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceHostBuilding, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
 	bool FRTSPlaceHostBuilding::Update()
 	{
@@ -961,6 +1086,10 @@ namespace RTSListenServerTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientQueuesInfantry(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientCancelsInfantry(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientProduction(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientResearches(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientResearchQueued(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientResearched(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientGrenadierQueued(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceHostBuilding(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientBuilding(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientBuildingAttack(this, State));

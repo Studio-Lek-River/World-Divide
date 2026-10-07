@@ -15,6 +15,8 @@
 #include "Data/RTSFactionData.h"
 #include "Data/RTSHarvesterData.h"
 #include "Data/RTSUnitData.h"
+#include "Data/RTSUpgradeData.h"
+#include "Data/RTSWeaponData.h"
 #include "Economy/RTSHarvesterComponent.h"
 #include "Economy/RTSSupplySource.h"
 #include "Engine/StaticMeshActor.h"
@@ -52,6 +54,9 @@
  * HUD does: they must come out one build time apart and each walk to the rally point. The produced-harvester test has a
  * vehicle factory send a harvester and a tank to a rally point beside a source: the harvester walks there, then delivers a
  * load to the depot, while the tank stays at the rally point.
+ * The upgrade test selects a barracks and researches rifle training through the controller: the menu refuses it while
+ * queued and once researched, infantry already standing and infantry produced afterwards deal the upgraded damage, and the
+ * grenadier is refused before the research and accepted after it.
  * The attack-move tests drive tanks past an enemy beside their lane: a plain move passes an enemy infantry without firing,
  * an attack-move back stops to kill it and then walks on, and three tanks attack-moving past an enemy power plant destroy
  * it before they carry on to the target.
@@ -209,6 +214,11 @@ namespace
 	const FVector ProducedDepotSpot(2400.f, 8800.f, 0.f);
 	constexpr double ProducedHarvesterTimeout = 60.0;
 
+	/** The upgrade test: a barracks at BuildSpot researches rifle training, with an infantry already standing at UnitSpot. */
+	const TCHAR* RifleTrainingPath = TEXT("/Game/Data/Upgrades/DA_TestRifleTraining.DA_TestRifleTraining");
+	const TCHAR* GrenadierPath = TEXT("/Game/Data/Units/DA_TestGrenadier.DA_TestGrenadier");
+	constexpr double UpgradeTimeout = 30.0;
+
 	/**
 	 * The attack-move tests run along the north strip. The enemy stands beside the lane: inside a tank's range (1200 cm) as it
 	 * passes, but outside the infantry rifle's (700 cm), so the infantry never hits back.
@@ -296,6 +306,9 @@ namespace
 		TWeakObjectPtr<ARTSUnit> ProducedTank;
 		bool bHarvesterReachedRally = false;
 		bool bRallyBeforeDelivery = false;
+
+		// Upgrade test only.
+		TWeakObjectPtr<ARTSUnit> Veteran;
 
 		// Attack-move tests only.
 		bool bHadTarget = false;
@@ -2441,6 +2454,135 @@ bool FRTSVerifyProducedHarvester::Update()
 	return true;
 }
 
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSQueueResearch, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSQueueResearch::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	const int32 TeamId = Controller->GetTeamId();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	URTSBuildingData* BarracksData = LoadObject<URTSBuildingData>(nullptr, BarracksPath);
+	URTSUnitData* Grenadier = LoadObject<URTSUnitData>(nullptr, GrenadierPath);
+	URTSUpgradeData* RifleTraining = LoadObject<URTSUpgradeData>(nullptr, RifleTrainingPath);
+	if (!Player || !BarracksData || !Grenadier || !RifleTraining || !SpawnPowerPlant(World, TeamId))
+	{
+		Test->AddError(TEXT("Missing the player state, the test barracks, grenadier or rifle training, or the power plant"));
+		return true;
+	}
+
+	ARTSUnit* Veteran = SpawnTestUnit(World, InfantryPath, TeamId, UnitSpot);
+	ARTSBuilding* Barracks = SpawnBuilding(World, BarracksData, TeamId, BuildSpot, true);
+	if (!Veteran || !Test->TestTrue(TEXT("The barracks is selected"), Controller->SelectBuilding(Barracks)))
+	{
+		return true;
+	}
+	const URTSWeaponData* Rifle = Veteran->GetUnitData()->Weapon;
+	Test->TestEqual(TEXT("A standing infantry deals its base damage"), Veteran->GetWeaponComponent()->GetDamage(), Rifle->Damage);
+	Test->TestTrue(TEXT("The menu offers rifle training"), Controller->GetProductionMenu().Contains(RifleTraining));
+	Test->TestTrue(TEXT("And the grenadier"), Controller->GetProductionMenu().Contains(Grenadier));
+
+	// What pressing the grenadier's and then the upgrade's number twice sends. The host's RPCs run right away.
+	const int32 Credits = Player->GetCredits();
+	Test->TestTrue(TEXT("The grenadier needs rifle training"), Controller->GetMissingPrerequisite(*Grenadier) == RifleTraining);
+	Test->TestFalse(TEXT("So the grenadier is refused"), Controller->RequestProduce(Barracks, Grenadier));
+	Test->TestEqual(TEXT("The refusal charges nothing"), Player->GetCredits(), Credits);
+	Test->TestTrue(TEXT("Rifle training is queued"), Controller->RequestProduce(Barracks, RifleTraining));
+	Test->TestEqual(TEXT("It is charged"), Player->GetCredits(), Credits - RifleTraining->Cost);
+	Test->TestFalse(TEXT("The menu refuses it a second time while queued"), Controller->RequestProduce(Barracks, RifleTraining));
+	Test->TestEqual(TEXT("It is charged once"), Player->GetCredits(), Credits - RifleTraining->Cost);
+	Test->TestEqual(TEXT("It is the only entry in the queue"), Barracks->GetProductionComponent()->GetQueue().Num(), 1);
+
+	State->Player = Player;
+	State->Building = Barracks;
+	State->Veteran = Veteran;
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyResearch, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyResearch::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	ARTSBuilding* Barracks = State->Building.Get();
+	const ARTSUnit* Veteran = State->Veteran.Get();
+	URTSUnitData* Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
+	URTSUnitData* Grenadier = LoadObject<URTSUnitData>(nullptr, GrenadierPath);
+	URTSUpgradeData* RifleTraining = LoadObject<URTSUpgradeData>(nullptr, RifleTrainingPath);
+	if (!Controller || !Barracks || !Veteran || !Infantry || !Grenadier || !RifleTraining)
+	{
+		Test->AddError(TEXT("Lost the controller, the barracks or the standing infantry, or the test data"));
+		return true;
+	}
+
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (!Controller->HasUpgrade(*RifleTraining) && Elapsed < UpgradeTimeout)
+	{
+		return false;
+	}
+	Test->AddInfo(FString::Printf(TEXT("Rifle training researched after %.1f s"), Elapsed));
+	if (!Test->TestTrue(TEXT("The player has researched rifle training"), Controller->HasUpgrade(*RifleTraining)))
+	{
+		return true;
+	}
+	Test->TestTrue(TEXT("The queue is empty"), Barracks->GetProductionComponent()->GetQueue().IsEmpty());
+	Test->TestFalse(TEXT("The menu refuses it once researched"), Controller->RequestProduce(Barracks, RifleTraining));
+
+	const float Upgraded = Infantry->Weapon->Damage * RifleTraining->Multiplier;
+	Test->TestEqual(TEXT("The standing infantry deals the upgraded damage"), Veteran->GetWeaponComponent()->GetDamage(), Upgraded);
+
+	Test->TestNull(TEXT("The grenadier's prerequisite is met"), Controller->GetMissingPrerequisite(*Grenadier));
+	for (TActorIterator<ARTSUnit> It(Barracks->GetWorld()); It; ++It)
+	{
+		State->UnitsBefore.Add(*It);
+	}
+	Test->TestTrue(TEXT("An infantry is queued"), Controller->RequestProduce(Barracks, Infantry));
+	Test->TestTrue(TEXT("The grenadier is accepted after the research"), Controller->RequestProduce(Barracks, Grenadier));
+	Test->TestEqual(TEXT("Both are in the queue"), Barracks->GetProductionComponent()->GetQueue().Num(), 2);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyUpgradedProduction, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyUpgradedProduction::Update()
+{
+	const ARTSBuilding* Barracks = State->Building.Get();
+	const URTSUnitData* Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
+	const URTSUnitData* Grenadier = LoadObject<URTSUnitData>(nullptr, GrenadierPath);
+	const URTSUpgradeData* RifleTraining = LoadObject<URTSUpgradeData>(nullptr, RifleTrainingPath);
+	if (!Barracks || !Infantry || !Grenadier || !RifleTraining)
+	{
+		Test->AddError(TEXT("Lost the barracks or the test data"));
+		return true;
+	}
+
+	// Only the barracks adds units during this test, and the infantry comes out first.
+	const ARTSUnit* Fresh = nullptr;
+	for (TActorIterator<ARTSUnit> It(Barracks->GetWorld()); It; ++It)
+	{
+		if (!State->UnitsBefore.Contains(*It) && It->GetUnitData() == Infantry)
+		{
+			Fresh = *It;
+		}
+	}
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (!Fresh && Elapsed < UpgradeTimeout)
+	{
+		return false;
+	}
+	if (!Test->TestNotNull(TEXT("The barracks produced the infantry"), Fresh))
+	{
+		return true;
+	}
+	Test->TestEqual(TEXT("The infantry produced after the research deals the upgraded damage"),
+		Fresh->GetWeaponComponent()->GetDamage(), Infantry->Weapon->Damage * RifleTraining->Multiplier);
+	Test->TestTrue(TEXT("The grenadier is next in the queue"), Barracks->GetProductionComponent()->GetQueue().Contains(Grenadier));
+	return true;
+}
+
 /**
  * Walks the test tech tree through the debug build menu: the tower waits for a power plant, the vehicle factory for a
  * completed barracks, and losing the barracks blocks new factories while the one placed builds on.
@@ -3190,6 +3332,28 @@ bool FRTSProducedHarvesterSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSQueueProducedHarvester(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyProducedHarvester(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSUpgradeResearchSmokeTest, "WorldDivide.Smoke.UpgradeResearch",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSUpgradeResearchSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSQueueResearch(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyResearch(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyUpgradedProduction(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }
