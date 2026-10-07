@@ -5,6 +5,7 @@
 #include "RTSBuilderComponent.generated.h"
 
 class ARTSBuilding;
+class ARTSUnit;
 class URTSBuilderData;
 class URTSBuildingData;
 struct FRTSCommand;
@@ -20,7 +21,8 @@ enum class ERTSBuildState : uint8
 /**
  * Server-side Build order of a builder unit: walk to a spot just outside the site's footprint, place the building there
  * once standing next to it (charged then, with the same faction, spot and credit checks as any purchase) and drive its
- * construction for as long as the builder stays. A site whose builder leaves or dies stays where it is, paused, until a
+ * construction for as long as the builder stays. Own units standing on the spot are first sent aside; anything else there
+ * makes the purchase fail. A site whose builder leaves or dies stays where it is, paused, until a
  * builder is sent to it again. Every unit has one; it stays inert unless the unit's data is URTSBuilderData.
  */
 UCLASS(ClassGroup = (RTS))
@@ -61,6 +63,12 @@ private:
 	bool PlaceSite();
 
 	/**
+	 * Sends own units standing on the planned footprint to the nearest reachable spot outside it. True while waiting for them
+	 * to leave; false when the spot is free, blocked by anything else, or the wait has timed out.
+	 */
+	bool ClearSite(float DeltaSeconds);
+
+	/**
 	 * Pathfinds to a reachable spot just outside the footprint at Center, unless a move is running or a retry is on hold.
 	 * False when no such spot exists.
 	 */
@@ -92,4 +100,10 @@ private:
 
 	/** Seconds before a failed approach is tried again. */
 	float RetryCooldown = 0.f;
+
+	/** Seconds spent waiting for own units to leave the planned footprint. */
+	float ClearingSeconds = 0.f;
+
+	/** Own units already sent off the planned footprint. */
+	TArray<TWeakObjectPtr<ARTSUnit>> ClearedUnits;
 };

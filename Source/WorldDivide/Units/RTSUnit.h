@@ -39,6 +39,12 @@ public:
 	 */
 	void ExecuteCommand(const FRTSCommand& InCommand);
 
+	/**
+	 * Server only. Moves to Location ahead of the current order, then picks the queue up again where it was: a builder resumes
+	 * the site it already placed. Used to clear a building site, not a player order.
+	 */
+	void StepAside(const FVector& Location);
+
 	/** Server only. Called by the AI controller whenever a path-following request ends. */
 	void NotifyMoveFinished(const FPathFollowingResult& Result);
 

@@ -301,6 +301,28 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 	}
 }
 
+void ARTSUnit::StepAside(const FVector& Location)
+{
+	check(HasAuthority());
+
+	// A Build for a new building restarts from its command afterwards; once placed it must resume that site instead.
+	if (!CommandQueue.IsEmpty() && CommandQueue[0].Type == ERTSCommandType::Build)
+	{
+		if (ARTSBuilding* Site = BuilderComponent->GetSite())
+		{
+			CommandQueue[0].TargetActor = Site;
+		}
+	}
+	HarvesterComponent->StopHarvest();
+	BuilderComponent->StopBuild();
+
+	FRTSCommand Move;
+	Move.Type = ERTSCommandType::Move;
+	Move.TargetLocation = Location;
+	CommandQueue.Insert(Move, 0);
+	StartNextCommand();
+}
+
 void ARTSUnit::StartNextCommand()
 {
 	AAIController* AI = GetController<AAIController>();

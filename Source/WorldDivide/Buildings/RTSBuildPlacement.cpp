@@ -1,6 +1,7 @@
 #include "Buildings/RTSBuildPlacement.h"
 
 #include "Data/RTSBuildingData.h"
+#include "Engine/OverlapResult.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "NavigationSystem.h"
@@ -34,8 +35,13 @@ namespace RTSBuildPlacement
 		return FVector(Footprint.X * GridSize * 0.5f, Footprint.Y * GridSize * 0.5f, 0.f);
 	}
 
-	bool CanPlace(const UWorld& World, const URTSBuildingData& Data, const FVector& RequestedLocation, FVector& OutLocation)
+	bool CanPlace(const UWorld& World, const URTSBuildingData& Data, const FVector& RequestedLocation, FVector& OutLocation,
+		TArray<AActor*>* OutBlockers)
 	{
+		if (OutBlockers)
+		{
+			OutBlockers->Reset();
+		}
 		OutLocation = SnapToGrid(RequestedLocation, Data.Footprint);
 
 		const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
@@ -77,8 +83,22 @@ namespace RTSBuildPlacement
 		// Shrunk by a centimetre so buildings may stand flush against each other.
 		const FVector BoxExtent(Extent.X - 1.f, Extent.Y - 1.f, OverlapHeight * 0.5f);
 		const FVector BoxCenter = OutLocation + FVector(0.f, 0.f, GroundClearance + BoxExtent.Z);
-		return !World.OverlapAnyTestByObjectType(BoxCenter, FQuat::Identity, Objects, FCollisionShape::MakeBox(BoxExtent),
-			FCollisionQueryParams(SCENE_QUERY_STAT(RTSBuildPlacement)));
+		const FCollisionQueryParams Params(SCENE_QUERY_STAT(RTSBuildPlacement));
+		if (!OutBlockers)
+		{
+			return !World.OverlapAnyTestByObjectType(BoxCenter, FQuat::Identity, Objects, FCollisionShape::MakeBox(BoxExtent), Params);
+		}
+
+		TArray<FOverlapResult> Overlaps;
+		World.OverlapMultiByObjectType(Overlaps, BoxCenter, FQuat::Identity, Objects, FCollisionShape::MakeBox(BoxExtent), Params);
+		for (const FOverlapResult& Overlap : Overlaps)
+		{
+			if (AActor* Actor = Overlap.GetActor())
+			{
+				OutBlockers->AddUnique(Actor);
+			}
+		}
+		return Overlaps.IsEmpty();
 	}
 
 	void GetMeshPlacement(const URTSEntityData& Data, float& OutBaseOffset, float& OutHeight)

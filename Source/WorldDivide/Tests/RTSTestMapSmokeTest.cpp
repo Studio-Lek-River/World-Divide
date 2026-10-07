@@ -43,7 +43,8 @@
  * or on top of the map's walls and blocks, and that tanks sent onto a block stop at its edge on their own side.
  * The building tests place buildings without units, as the debug build menu does, so they turn rts.DebugBuild on for each
  * request. The builder test sends builders instead: one walks to the site and places it, construction holds while it is
- * away and once a second builder dies there, the first finishes it, then builds two buildings queued with Shift.
+ * away and once a second builder dies there, the first finishes it, then builds two buildings queued with Shift. The site
+ * clearing test checks that an enemy on the spot refuses a builder, while own units on it step aside, keeping their orders.
  */
 namespace
 {
@@ -164,6 +165,13 @@ namespace
 	/** Game seconds a site is watched for progress while no builder stands at it. */
 	constexpr double HoldSeconds = 1.5;
 
+	/**
+	 * The site clearing test: an enemy parked on OtherBuildSpot refuses the builder, then an idle own tank and an own infantry
+	 * attacking a sturdy enemy dummy north of BuildSpot stand on the site of a tower there.
+	 */
+	const FVector SiteInfantryStart(60.f, 6960.f, 0.f);
+	const FVector SiteDummySpot(0.f, 7500.f, 0.f);
+
 	struct FSmokeState
 	{
 		TArray<TWeakObjectPtr<ARTSUnit>> OwnUnits;
@@ -219,6 +227,12 @@ namespace
 		TWeakObjectPtr<ARTSBuilding> QueuedPlant;
 		TWeakObjectPtr<ARTSBuilding> QueuedTower;
 		bool bTowerBeforePlant = false;
+
+		// Site clearing test only.
+		TWeakObjectPtr<ARTSUnit> SiteEnemy;
+		TWeakObjectPtr<ARTSUnit> SiteTank;
+		TWeakObjectPtr<ARTSUnit> SiteInfantry;
+		TWeakObjectPtr<ARTSUnit> SiteDummy;
 	};
 
 	/** One of the map's walls or blocks, found by its label. */
@@ -321,6 +335,13 @@ namespace
 		return FVector::Dist2D(Location, Site.GetClosestFootprintPoint(Location)) <= Unit.GetSelectionRadius() + BuilderReach;
 	}
 
+	/** Unit's selection circle stays clear of Site's footprint. */
+	bool IsOffFootprint(const ARTSUnit& Unit, const ARTSBuilding& Site)
+	{
+		const FVector Location = Unit.GetActorLocation();
+		return FVector::Dist2D(Location, Site.GetClosestFootprintPoint(Location)) >= Unit.GetSelectionRadius();
+	}
+
 	/** What the client's ghost would show for this spot. */
 	bool ClientAccepts(UWorld& World, const URTSBuildingData& Data, const FVector& Location)
 	{
@@ -395,6 +416,17 @@ namespace
 			Building->UpdateConstruction(Data->BuildTime);
 		}
 		return Building;
+	}
+
+	/** An infantry of the team after TeamId that cannot fire, so it only stands in the way. */
+	ARTSUnit* SpawnUnarmedEnemy(UWorld* World, int32 TeamId, const FVector& Location)
+	{
+		ARTSUnit* Enemy = SpawnTestUnit(World, InfantryPath, TeamId + 1, Location);
+		if (Enemy)
+		{
+			Enemy->GetWeaponComponent()->SetWeaponData(nullptr);
+		}
+		return Enemy;
 	}
 }
 
@@ -1796,6 +1828,157 @@ bool FRTSVerifyQueuedBuilds::Update()
 	return true;
 }
 
+/** Parks an unarmed enemy on OtherBuildSpot and orders a builder to put a tower there. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueEnemyBlockedBuild, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueEnemyBlockedBuild::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	const int32 TeamId = Controller->GetTeamId();
+	URTSBuildingData* Tower = LoadObject<URTSBuildingData>(nullptr, TowerPath);
+	ARTSUnit* Builder = SpawnTestUnit(World, BuilderPath, TeamId, BuilderStart);
+	ARTSUnit* Enemy = SpawnUnarmedEnemy(World, TeamId, OtherBuildSpot);
+	if (!Tower || !Builder || !Enemy)
+	{
+		Test->AddError(TEXT("Could not spawn the builder or the enemy, or load the tower"));
+		return true;
+	}
+	State->Builder = Builder;
+	State->SiteEnemy = Enemy;
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	State->Player = Player;
+	State->BuilderCredits = Player->GetCredits();
+
+	Controller->Server_IssueCommand({ Builder }, MakeBuild(Tower, OtherBuildSpot));
+	Test->TestEqual(TEXT("The builder took the order"), Builder->GetQueuedCommandCount(), 1);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+/** Waits for the builder to give up on the enemy's spot, then checks nothing was placed, charged or moved. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyEnemyBlocksSite, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyEnemyBlocksSite::Update()
+{
+	ARTSUnit* Builder = State->Builder.Get();
+	ARTSUnit* Enemy = State->SiteEnemy.Get();
+	const URTSBuildingData* Tower = LoadObject<URTSBuildingData>(nullptr, TowerPath);
+	if (!Builder || !Enemy || !Tower)
+	{
+		Test->AddError(TEXT("Lost the builder or the enemy"));
+		return true;
+	}
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (Builder->GetQueuedCommandCount() > 0 && Elapsed < BuilderTimeout)
+	{
+		return false;
+	}
+
+	Test->TestEqual(TEXT("The builder dropped the order"), Builder->GetQueuedCommandCount(), 0);
+	Test->TestTrue(FString::Printf(TEXT("The builder walked up to the site first (stands at %s)"), *Builder->GetActorLocation().ToCompactString()),
+		FVector::Dist2D(Builder->GetActorLocation(), BuilderStart) > 100.f);
+	Test->TestNull(TEXT("Nothing was placed on the enemy"), FindBuildingAt(Builder->GetWorld(), Tower, OtherBuildSpot));
+	Test->TestEqual(TEXT("Nothing was charged"), State->Player->GetCredits(), State->BuilderCredits);
+	Test->TestTrue(FString::Printf(TEXT("The enemy was not moved (stands at %s)"), *Enemy->GetActorLocation().ToCompactString()),
+		FVector::Dist2D(Enemy->GetActorLocation(), OtherBuildSpot) < 10.f);
+	Enemy->Destroy();
+	return true;
+}
+
+/**
+ * Parks an idle own tank and an own infantry attacking a sturdy enemy dummy on BuildSpot, then sends the builder to put a
+ * tower there.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueOwnBlockedBuild, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueOwnBlockedBuild::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	ARTSUnit* Builder = State->Builder.Get();
+	if (!Controller || !Builder)
+	{
+		Test->AddError(TEXT("Lost the builder"));
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	const int32 TeamId = Controller->GetTeamId();
+	URTSBuildingData* Tower = LoadObject<URTSBuildingData>(nullptr, TowerPath);
+	ARTSUnit* Tank = SpawnTestUnit(World, TankPath, TeamId, BuildSpot);
+	ARTSUnit* Infantry = SpawnTestUnit(World, InfantryPath, TeamId, SiteInfantryStart);
+	ARTSUnit* Dummy = SpawnUnarmedEnemy(World, TeamId, SiteDummySpot);
+	// Towers need power to build at full speed.
+	const ARTSBuilding* Plant = SpawnPowerPlant(World, TeamId);
+	if (!Tower || !Tank || !Infantry || !Dummy || !Plant)
+	{
+		Test->AddError(TEXT("Could not spawn the tank, the infantry, the dummy or the power plant"));
+		return true;
+	}
+	// Outlives every shot of the tank, the infantry and the finished tower.
+	Dummy->GetHealthComponent()->InitHealth(1.e6f);
+	State->SiteTank = Tank;
+	State->SiteInfantry = Infantry;
+	State->SiteDummy = Dummy;
+
+	FRTSCommand Attack;
+	Attack.Type = ERTSCommandType::Attack;
+	Attack.TargetActor = Dummy;
+	Controller->Server_IssueCommand({ Infantry }, Attack);
+	Test->TestEqual(TEXT("The infantry took the attack"), Infantry->GetQueuedCommandCount(), 1);
+
+	State->BuilderCredits = State->Player->GetCredits();
+	Controller->Server_IssueCommand({ Builder }, MakeBuild(Tower, BuildSpot));
+	Test->TestEqual(TEXT("The builder took the order"), Builder->GetQueuedCommandCount(), 1);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+/** Waits for the builder to finish the tower and checks the own units stepped off its site and kept their orders. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifySiteCleared, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifySiteCleared::Update()
+{
+	ARTSUnit* Builder = State->Builder.Get();
+	ARTSUnit* Tank = State->SiteTank.Get();
+	ARTSUnit* Infantry = State->SiteInfantry.Get();
+	ARTSUnit* Dummy = State->SiteDummy.Get();
+	const URTSBuildingData* Tower = LoadObject<URTSBuildingData>(nullptr, TowerPath);
+	if (!Builder || !Tank || !Infantry || !Dummy || !Tower)
+	{
+		Test->AddError(TEXT("Lost the builder, the tank, the infantry or the dummy"));
+		return true;
+	}
+	UWorld* World = Builder->GetWorld();
+	const ARTSBuilding* Site = FindBuildingAt(World, Tower, BuildSpot);
+	const bool bDone = Site && Site->IsConstructed() && Builder->GetQueuedCommandCount() == 0
+		&& Infantry->GetWeaponComponent()->GetTarget() == Dummy;
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (!bDone && Elapsed < BuilderTimeout)
+	{
+		return false;
+	}
+
+	Test->AddInfo(FString::Printf(TEXT("The site was cleared and built after %.1f s"), Elapsed));
+	if (!Site)
+	{
+		Test->AddError(FString::Printf(TEXT("The builder never placed the tower; tank at %s, infantry at %s"),
+			*Tank->GetActorLocation().ToCompactString(), *Infantry->GetActorLocation().ToCompactString()));
+		return true;
+	}
+	Test->TestFalse(TEXT("The builder placed the tower"), Site->bAutoConstruct);
+	Test->TestTrue(TEXT("The builder finished the tower"), Site->IsConstructed());
+	Test->TestEqual(TEXT("Its Build order ended with the construction"), Builder->GetQueuedCommandCount(), 0);
+	Test->TestEqual(TEXT("The tower was charged once"), State->Player->GetCredits(), State->BuilderCredits - Tower->Cost);
+	Test->TestTrue(FString::Printf(TEXT("The tank stepped off the site (stands at %s)"), *Tank->GetActorLocation().ToCompactString()),
+		IsOffFootprint(*Tank, *Site));
+	Test->TestEqual(TEXT("The tank is idle again"), Tank->GetQueuedCommandCount(), 0);
+	Test->TestTrue(FString::Printf(TEXT("The infantry stepped off the site (stands at %s)"), *Infantry->GetActorLocation().ToCompactString()),
+		IsOffFootprint(*Infantry, *Site));
+	Test->TestEqual(TEXT("The infantry kept its attack and nothing else"), Infantry->GetQueuedCommandCount(), 1);
+	Test->TestTrue(TEXT("The infantry fires at the dummy again"), Infantry->GetWeaponComponent()->GetTarget() == Dummy);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTestMapSmokeTest, "WorldDivide.Smoke.TestMap",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -2063,6 +2246,29 @@ bool FRTSBuilderConstructsSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSFirstBuilderFinishes(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueQueuedBuilds(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyQueuedBuilds(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBuilderClearsSiteSmokeTest, "WorldDivide.Smoke.BuilderClearsSite",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSBuilderClearsSiteSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueEnemyBlockedBuild(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyEnemyBlocksSite(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueOwnBlockedBuild(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifySiteCleared(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

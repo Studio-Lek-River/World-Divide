@@ -26,6 +26,12 @@ namespace
 
 	/** Seconds between attempts when an approach ended short of the site. */
 	constexpr float SiteRetrySeconds = 1.f;
+
+	/** Own units stepping off a site aim this far, beyond their own radius, outside the edge. */
+	constexpr float ClearOffset = 60.f;
+
+	/** How long a builder waits for own units to clear its site before it gives up. */
+	constexpr float ClearSiteTimeout = 5.f;
 }
 
 URTSBuilderComponent::URTSBuilderComponent()
@@ -85,6 +91,8 @@ void URTSBuilderComponent::StopBuild()
 	Site.Reset();
 	bHasSite = false;
 	RetryCooldown = 0.f;
+	ClearingSeconds = 0.f;
+	ClearedUnits.Reset();
 }
 
 bool URTSBuilderComponent::UpdateBuild(float DeltaSeconds)
@@ -129,6 +137,10 @@ bool URTSBuilderComponent::UpdateBuild(float DeltaSeconds)
 	}
 	if (!Building)
 	{
+		if (ClearSite(DeltaSeconds))
+		{
+			return true;
+		}
 		if (!PlaceSite())
 		{
 			return EndBuild(TEXT("could not place its building"));
@@ -168,6 +180,57 @@ bool URTSBuilderComponent::PlaceSite()
 	Site = Building;
 	bHasSite = true;
 	PlannedData = nullptr;
+	ClearingSeconds = 0.f;
+	ClearedUnits.Reset();
+	return true;
+}
+
+bool URTSBuilderComponent::ClearSite(float DeltaSeconds)
+{
+	const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner());
+	if (!Unit || !PlannedData)
+	{
+		return false;
+	}
+	FVector Center;
+	TArray<AActor*> Blockers;
+	if (RTSBuildPlacement::CanPlace(*GetWorld(), *PlannedData, PlannedLocation, Center, &Blockers) || Blockers.IsEmpty())
+	{
+		return false;
+	}
+
+	// Only own units step aside; enemy units, buildings and obstacles leave the spot to be refused.
+	TArray<ARTSUnit*, TInlineAllocator<8>> OwnUnits;
+	for (AActor* Blocker : Blockers)
+	{
+		ARTSUnit* Other = Cast<ARTSUnit>(Blocker);
+		if (!Other || Other == Unit || Other->GetTeamId() != Unit->GetTeamId())
+		{
+			return false;
+		}
+		OwnUnits.Add(Other);
+	}
+	ClearingSeconds += DeltaSeconds;
+	if (ClearingSeconds > ClearSiteTimeout)
+	{
+		return false;
+	}
+
+	// Each unit is sent once; one that finds no spot or wanders back runs out the timeout.
+	for (ARTSUnit* Other : OwnUnits)
+	{
+		if (ClearedUnits.Contains(Other))
+		{
+			continue;
+		}
+		ClearedUnits.Add(Other);
+		const float Radius = Other->GetSelectionRadius();
+		FVector Spot;
+		if (RTSApproach::FindReachableSpot(*Other, Center, PlannedData->Footprint, Radius + ClearOffset, Radius + SiteReach, Spot))
+		{
+			Other->StepAside(Spot);
+		}
+	}
 	return true;
 }
 
