@@ -50,6 +50,9 @@
  * the builder's ghost turns red over the enemy but stays green over own units, which the debug ghost does not.
  * The production test selects a barracks, sets its rally point and queues three infantry through the controller, as the
  * HUD does: they must come out one build time apart and each walk to the rally point.
+ * The attack-move tests drive tanks past an enemy beside their lane: a plain move passes an enemy infantry without firing,
+ * an attack-move back stops to kill it and then walks on, and three tanks attack-moving past an enemy power plant destroy
+ * it before they carry on to the target.
  */
 namespace
 {
@@ -195,6 +198,18 @@ namespace
 	constexpr double ProductionTolerance = 0.5;
 	constexpr double ProductionTimeout = 60.0;
 
+	/**
+	 * The attack-move tests run along the north strip. The enemy stands beside the lane: inside a tank's range (1200 cm) as it
+	 * passes, but outside the infantry rifle's (700 cm), so the infantry never hits back.
+	 */
+	const FVector AttackMoveWest(-3000.f, 7000.f, 0.f);
+	const FVector AttackMoveEast(3000.f, 7000.f, 0.f);
+	const FVector AttackMoveEnemySpot(0.f, 7900.f, 0.f);
+	const FVector AttackMoveBuildingTarget(3500.f, 7000.f, 0.f);
+	constexpr double AttackMoveTimeout = 45.0;
+	/** Tanks that fought on the way were at least this far short of their target when the enemy fell. */
+	constexpr float AttackMoveShortfall = 1000.f;
+
 	struct FSmokeState
 	{
 		TArray<TWeakObjectPtr<ARTSUnit>> OwnUnits;
@@ -262,6 +277,12 @@ namespace
 		TArray<TWeakObjectPtr<ARTSUnit>> UnitsBefore;
 		TArray<TWeakObjectPtr<ARTSUnit>> Produced;
 		TArray<double> ProducedTimes;
+
+		// Attack-move tests only.
+		bool bHadTarget = false;
+		bool bStoodToFight = false;
+		bool bEnemyFell = false;
+		float ShortfallAtKill = 0.f;
 	};
 
 	/** One of the map's walls or blocks, found by its label. */
@@ -2549,6 +2570,229 @@ bool FRTSBuilderClearsSiteSmokeTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueMovePastEnemy, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueMovePastEnemy::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+
+	ARTSUnit* Tank = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), AttackMoveWest);
+	ARTSUnit* Enemy = SpawnTestUnit(World, InfantryPath, Controller->GetTeamId() + 1, AttackMoveEnemySpot);
+	if (!Tank || !Enemy)
+	{
+		Test->AddError(TEXT("Could not spawn the test units"));
+		return true;
+	}
+	Test->TestFalse(TEXT("The enemy starts out of the tank's range"), Tank->GetWeaponComponent()->IsInRange(Enemy));
+	State->Attacker = Tank;
+	State->Victim = Enemy;
+
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::Move;
+	Command.TargetLocation = AttackMoveEast;
+	Controller->Server_IssueCommand({ Tank }, Command);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyMovePastEnemy, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyMovePastEnemy::Update()
+{
+	const ARTSUnit* Tank = State->Attacker.Get();
+	if (!Tank)
+	{
+		Test->AddError(TEXT("The tank died"));
+		return true;
+	}
+	State->bHadTarget |= Tank->GetWeaponComponent()->GetTarget() != nullptr;
+
+	const float Distance = FVector::Dist2D(Tank->GetActorLocation(), AttackMoveEast);
+	const bool bArrived = Distance <= RouteArrivalRadius && Tank->GetQueuedCommandCount() == 0;
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (!bArrived && Elapsed < AttackMoveTimeout)
+	{
+		return false;
+	}
+
+	Test->TestTrue(FString::Printf(TEXT("The tank arrived on a plain move (%.0f cm away after %.1f s)"), Distance, Elapsed), bArrived);
+	Test->TestFalse(TEXT("The tank held fire on a plain move"), State->bHadTarget);
+	const ARTSUnit* Enemy = State->Victim.Get();
+	Test->TestTrue(TEXT("The enemy it passed is untouched"),
+		Enemy && Enemy->GetHealthComponent()->GetHealth() == Enemy->GetHealthComponent()->GetMaxHealth());
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueAttackMovePastEnemy, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueAttackMovePastEnemy::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	ARTSUnit* Tank = State->Attacker.Get();
+	if (!Controller || !Tank || !State->Victim.IsValid())
+	{
+		Test->AddError(TEXT("No controller, tank or enemy"));
+		return true;
+	}
+	Test->TestFalse(TEXT("The enemy is out of range of the tank's new start"), Tank->GetWeaponComponent()->IsInRange(State->Victim.Get()));
+
+	// Back along the same lane, past the same enemy.
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::AttackMove;
+	Command.TargetLocation = AttackMoveWest;
+	Controller->Server_IssueCommand({ Tank }, Command);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyAttackMovePastEnemy, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyAttackMovePastEnemy::Update()
+{
+	const ARTSUnit* Tank = State->Attacker.Get();
+	if (!Tank)
+	{
+		Test->AddError(TEXT("The tank died"));
+		return true;
+	}
+
+	const ARTSUnit* Enemy = State->Victim.Get();
+	if (Enemy)
+	{
+		State->bStoodToFight |= Tank->GetWeaponComponent()->GetTarget() == Enemy && Tank->GetVelocity().Size2D() < 10.f;
+	}
+	else if (!State->bEnemyFell)
+	{
+		State->bEnemyFell = true;
+		State->ShortfallAtKill = FVector::Dist2D(Tank->GetActorLocation(), AttackMoveWest);
+	}
+
+	const float Distance = FVector::Dist2D(Tank->GetActorLocation(), AttackMoveWest);
+	const bool bDone = !Enemy && Distance <= RouteArrivalRadius && Tank->GetQueuedCommandCount() == 0;
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (!bDone && Elapsed < AttackMoveTimeout)
+	{
+		return false;
+	}
+
+	Test->TestFalse(TEXT("The attack-moving tank destroyed the enemy it passed"), State->Victim.IsValid());
+	Test->TestTrue(TEXT("The tank stood still to fight"), State->bStoodToFight);
+	Test->TestTrue(FString::Printf(TEXT("The enemy fell before the tank arrived (%.0f cm short)"), State->ShortfallAtKill),
+		State->ShortfallAtKill >= AttackMoveShortfall);
+	Test->TestTrue(FString::Printf(TEXT("The tank then reached its target (%.0f cm away after %.1f s)"), Distance, Elapsed),
+		Distance <= RouteArrivalRadius);
+	Test->TestEqual(TEXT("The attack-move completed"), Tank->GetQueuedCommandCount(), 0);
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceAttackMoveBuilding, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSPlaceAttackMoveBuilding::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+
+	// The enemy has no controller in PIE, so the server places its building directly.
+	FRTSCommand Build;
+	Build.Type = ERTSCommandType::Build;
+	Build.EntityData = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+	Build.TargetLocation = AttackMoveEnemySpot;
+	ARTSBuilding* Building = RTSCommands::PlaceBuilding(*World, Controller->GetFaction(), Controller->GetTeamId() + 1, Build);
+	if (!Building)
+	{
+		Test->AddError(TEXT("Could not place the enemy power plant"));
+		return true;
+	}
+	State->Building = Building;
+
+	for (const FVector& Start : BuildingAttackerStarts)
+	{
+		ARTSUnit* Tank = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), Start);
+		if (!Tank)
+		{
+			Test->AddError(TEXT("Could not spawn an attack-moving tank"));
+			return true;
+		}
+		Test->TestFalse(TEXT("The building starts out of the tank's range"), Tank->GetWeaponComponent()->IsInRange(Building));
+		State->Attackers.Add(Tank);
+	}
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueAttackMovePastBuilding, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueAttackMovePastBuilding::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller || !State->Building.IsValid())
+	{
+		Test->AddError(TEXT("No controller or enemy building"));
+		return true;
+	}
+
+	TArray<ARTSUnit*> Tanks;
+	for (const TWeakObjectPtr<ARTSUnit>& Tank : State->Attackers)
+	{
+		if (Tank.IsValid())
+		{
+			Tanks.Add(Tank.Get());
+		}
+	}
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::AttackMove;
+	Command.TargetLocation = AttackMoveBuildingTarget;
+	Controller->Server_IssueCommand(Tanks, Command);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyAttackMovePastBuilding, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyAttackMovePastBuilding::Update()
+{
+	bool bOrderPending = false;
+	float Shortfall = TNumericLimits<float>::Max();
+	for (const TWeakObjectPtr<ARTSUnit>& Tank : State->Attackers)
+	{
+		if (Tank.IsValid())
+		{
+			bOrderPending |= Tank->GetQueuedCommandCount() > 0;
+			Shortfall = FMath::Min(Shortfall, FVector::Dist2D(Tank->GetActorLocation(), AttackMoveBuildingTarget));
+		}
+	}
+	if (!State->Building.IsValid() && !State->bEnemyFell)
+	{
+		State->bEnemyFell = true;
+		State->ShortfallAtKill = Shortfall;
+	}
+
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if ((State->Building.IsValid() || bOrderPending) && Elapsed < AttackMoveTimeout)
+	{
+		return false;
+	}
+
+	Test->TestFalse(TEXT("The attack-moving tanks destroyed the building they passed"), State->Building.IsValid());
+	Test->TestTrue(FString::Printf(TEXT("The building fell before any tank arrived (the nearest %.0f cm short)"), State->ShortfallAtKill),
+		State->ShortfallAtKill >= AttackMoveShortfall);
+	Test->AddInfo(FString::Printf(TEXT("Attack-move past the building finished after %.1f s"), Elapsed));
+	for (const TWeakObjectPtr<ARTSUnit>& Tank : State->Attackers)
+	{
+		if (!Tank.IsValid())
+		{
+			Test->AddError(TEXT("A tank died"));
+			continue;
+		}
+		const float Distance = FVector::Dist2D(Tank->GetActorLocation(), AttackMoveBuildingTarget);
+		Test->TestTrue(FString::Printf(TEXT("A tank then reached the target (%.0f cm away)"), Distance), Distance <= ArrivalRadius);
+		Test->TestEqual(TEXT("Its attack-move completed"), Tank->GetQueuedCommandCount(), 0);
+	}
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSProductionSmokeTest, "WorldDivide.Smoke.Production",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -2566,6 +2810,52 @@ bool FRTSProductionSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSQueueProduction(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyProduction(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAttackMoveSmokeTest, "WorldDivide.Smoke.AttackMove",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSAttackMoveSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueMovePastEnemy(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyMovePastEnemy(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueAttackMovePastEnemy(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAttackMovePastEnemy(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAttackMoveBuildingSmokeTest, "WorldDivide.Smoke.AttackMoveBuilding",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSAttackMoveBuildingSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceAttackMoveBuilding(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueAttackMovePastBuilding(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAttackMovePastBuilding(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

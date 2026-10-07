@@ -50,7 +50,8 @@ namespace RTSCommands
 			return;
 		}
 
-		if (Command.Type != ERTSCommandType::Move || Units.Num() == 1)
+		const bool bFormation = Command.Type == ERTSCommandType::Move || Command.Type == ERTSCommandType::AttackMove;
+		if (!bFormation || Units.Num() == 1)
 		{
 			for (ARTSUnit* Unit : Units)
 			{

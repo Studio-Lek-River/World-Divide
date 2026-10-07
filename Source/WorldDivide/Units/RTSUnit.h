@@ -107,11 +107,23 @@ private:
 	bool StartCommand(AAIController& AI, const FRTSCommand& Command);
 
 	/**
+	 * Paths to Location, stopping at the edge on the unit's side when it lies inside a wall or a building. Returns true while
+	 * the unit moves; false when it cannot path there or already stands at the goal.
+	 */
+	bool RequestMove(AAIController& AI, const FVector& Location);
+
+	/**
 	 * Each tick while an Attack is the current order: drop it once the target is gone, otherwise close in or hold.
 	 * Units are followed; buildings stand in their own navmesh hole, so the unit walks to a reachable spot outside the
 	 * footprint, facing side first, and drops the order when there is none in range.
 	 */
 	void UpdateAttackOrder();
+
+	/**
+	 * Each tick while an AttackMove is the current order: stand and fight while the weapon has an enemy in range, otherwise
+	 * walk on to the target, and end the order once the unit stands there.
+	 */
+	void UpdateAttackMoveOrder();
 
 	/** Each tick while a Harvest is the current order: the harvester component runs it and says when it is over. */
 	void UpdateHarvestOrder(float DeltaSeconds);
@@ -119,7 +131,10 @@ private:
 	/** Each tick while a Build is the current order: the builder component runs it and says when it is over. */
 	void UpdateBuildOrder(float DeltaSeconds);
 
-	/** Points the weapon at what the current order allows: the attack target, anything in range when idle, nothing while moving. */
+	/**
+	 * Points the weapon at what the current order allows: the attack target, anything in range when idle or attack-moving,
+	 * nothing while moving otherwise.
+	 */
 	void ApplyWeaponMode();
 
 	void FaceTowardYaw(float Yaw, float DeltaSeconds);
@@ -157,4 +172,7 @@ private:
 
 	bool bRequestingMove = false;
 	bool bMoveFinishedDuringRequest = false;
+
+	/** Set while an attack-move stops to fight, so the aborted move does not end the order. */
+	bool bStoppingToFight = false;
 };

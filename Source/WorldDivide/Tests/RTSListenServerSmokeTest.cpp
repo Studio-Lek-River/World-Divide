@@ -33,7 +33,8 @@
  * worlds and the client must see its refund while the host's credits stay put. The server then gives the client a
  * barracks: the client sets its rally point, queues two infantry, sees them charged and cancels one for a refund, and
  * must see the other come out and walk to the rally point. Then the server places a host building and the client orders its units to attack it: the client's copy must show the building's
- * health dropping before it disappears.
+ * health dropping before it disappears. Last, the server gives the client a tank in the empty south strip and puts a host
+ * infantry beside its lane; the client attack-moves the tank past it and must see the infantry disappear and the tank arrive.
  */
 namespace RTSListenServerTest
 {
@@ -62,6 +63,17 @@ namespace RTSListenServerTest
 	constexpr float RallyArrivalRadius = 250.f;
 	/** Without a power plant the client produces at the low-power rate. */
 	constexpr double ProductionTimeout = 60.0;
+
+	/**
+	 * The client's tank attack-moves along the empty strip south of the bases, away from the units gathered at the host
+	 * building. The host infantry stands beside the lane, inside the tank's range as it passes but outside its own.
+	 */
+	const TCHAR* TankPath = TEXT("/Game/Data/Units/DA_TestTank.DA_TestTank");
+	const FVector ClientTankStart(-3000.f, -7000.f, 0.f);
+	const FVector ClientTankTarget(3000.f, -7000.f, 0.f);
+	const FVector HostInfantrySpot(0.f, -7900.f, 0.f);
+	constexpr float AttackMoveArrivalRadius = 150.f;
+	constexpr double AttackMoveTimeout = 60.0;
 
 	constexpr int32 HostTeam = 0;
 	constexpr int32 ClientTeam = 1;
@@ -97,6 +109,12 @@ namespace RTSListenServerTest
 		TWeakObjectPtr<ARTSBuilding> ServerBarracks;
 		TWeakObjectPtr<ARTSBuilding> ClientBarracks;
 		int32 ClientProductionCredits = 0;
+
+		/** The client's attack-moving tank and the host infantry beside its lane, as each world sees them. */
+		TWeakObjectPtr<ARTSUnit> ServerTank;
+		TWeakObjectPtr<ARTSUnit> ClientTank;
+		TWeakObjectPtr<ARTSUnit> ServerInfantry;
+		TWeakObjectPtr<ARTSUnit> ClientInfantry;
 	};
 
 	UWorld* FindPIEWorld(ENetMode NetMode)
@@ -132,6 +150,36 @@ namespace RTSListenServerTest
 	ARTSPlayerController* GetLocalController(UWorld& World)
 	{
 		return Cast<ARTSPlayerController>(World.GetFirstPlayerController());
+	}
+
+	/** Server only. A unit of TeamId standing on the ground at Location. */
+	ARTSUnit* SpawnUnit(UWorld& World, const TCHAR* DataPath, int32 TeamId, const FVector& Location)
+	{
+		URTSUnitData* Data = LoadObject<URTSUnitData>(nullptr, DataPath);
+		if (!Data)
+		{
+			return nullptr;
+		}
+		FTransform Transform(Location);
+		ARTSUnit* Unit = World.SpawnActorDeferred<ARTSUnit>(
+			ARTSUnit::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		Unit->InitFromData(Data, TeamId);
+		Transform.AddToTranslation(FVector(0.f, 0.f, Unit->GetGroundOffset()));
+		Unit->FinishSpawning(Transform);
+		return Unit;
+	}
+
+	/** The world's copy of a unit of TeamId within a few metres of Location, or null. */
+	ARTSUnit* FindUnitNear(UWorld& World, int32 TeamId, const FVector& Location)
+	{
+		for (TActorIterator<ARTSUnit> It(&World); It; ++It)
+		{
+			if (It->GetTeamId() == TeamId && FVector::Dist2D(It->GetActorLocation(), Location) < 200.f)
+			{
+				return *It;
+			}
+		}
+		return nullptr;
 	}
 
 	void CollectUnits(UWorld& World, TArray<TWeakObjectPtr<ARTSUnit>> (&OutUnits)[2], TArray<FVector>& OutHostStarts)
@@ -749,6 +797,91 @@ namespace RTSListenServerTest
 		return true;
 	}
 
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSSpawnClientTank, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSSpawnClientTank::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		if (!ServerWorld)
+		{
+			Test->AddError(TEXT("Lost the server world"));
+			return true;
+		}
+
+		State->ServerTank = SpawnUnit(*ServerWorld, TankPath, ClientTeam, ClientTankStart);
+		State->ServerInfantry = SpawnUnit(*ServerWorld, InfantryPath, HostTeam, HostInfantrySpot);
+		if (!State->ServerTank.IsValid() || !State->ServerInfantry.IsValid())
+		{
+			Test->AddError(TEXT("The server could not spawn the client's tank or the host infantry"));
+		}
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSWaitForClientTank, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSWaitForClientTank::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		if (!ClientWorld || !State->ServerTank.IsValid() || !State->ServerInfantry.IsValid())
+		{
+			return true;
+		}
+
+		State->ClientTank = FindUnitNear(*ClientWorld, ClientTeam, ClientTankStart);
+		State->ClientInfantry = FindUnitNear(*ClientWorld, HostTeam, HostInfantrySpot);
+		if (State->ClientTank.IsValid() && State->ClientInfantry.IsValid())
+		{
+			return true;
+		}
+		if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+		{
+			Test->AddError(TEXT("The client's tank or the host infantry never replicated to the client"));
+			return true;
+		}
+		return false;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueClientAttackMove, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSIssueClientAttackMove::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		if (!ClientController || !State->ClientTank.IsValid())
+		{
+			Test->AddError(TEXT("Lost the client's controller or its copy of the tank"));
+			return true;
+		}
+
+		// What J and a left click send: the client names its own copy, the server resolves it to the real one.
+		FRTSCommand Command;
+		Command.Type = ERTSCommandType::AttackMove;
+		Command.TargetLocation = ClientTankTarget;
+		ClientController->Server_IssueCommand({ State->ClientTank.Get() }, Command);
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientAttackMove, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientAttackMove::Update()
+	{
+		const ARTSUnit* ClientTank = State->ClientTank.Get();
+		const float Distance = ClientTank ? FVector::Dist2D(ClientTank->GetActorLocation(), ClientTankTarget) : -1.f;
+		const bool bDone = !State->ServerInfantry.IsValid() && !State->ClientInfantry.IsValid()
+			&& ClientTank && Distance <= AttackMoveArrivalRadius;
+		const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+		if (!bDone && Elapsed < AttackMoveTimeout)
+		{
+			return false;
+		}
+
+		Test->AddInfo(FString::Printf(TEXT("The client's attack-move finished after %.1f s"), Elapsed));
+		Test->TestFalse(TEXT("The client's tank destroyed the host infantry on the server"), State->ServerInfantry.IsValid());
+		Test->TestFalse(TEXT("The infantry disappeared on the client"), State->ClientInfantry.IsValid());
+		Test->TestTrue(FString::Printf(TEXT("The client sees its tank arrive (%.0f cm away)"), Distance),
+			ClientTank && Distance <= AttackMoveArrivalRadius);
+		return true;
+	}
+
+
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSListenServerSmokeTest, "WorldDivide.Smoke.ListenServer", RTSTests::TestFlags)
 
 	bool FRTSListenServerSmokeTest::RunTest(const FString& Parameters)
@@ -777,6 +910,10 @@ namespace RTSListenServerTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientBuilding(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientBuildingAttack(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientBuildingHealth(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSSpawnClientTank(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientTank(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientAttackMove(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientAttackMove(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		return true;
 	}

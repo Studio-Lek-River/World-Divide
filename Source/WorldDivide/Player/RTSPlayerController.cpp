@@ -91,6 +91,10 @@ void ARTSPlayerController::CreateInputActions()
 	StopOrderAction = MakeAction(this, TEXT("IA_StopOrder"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, StopOrderAction, EKeys::X);
 
+	// Not A: that pans the camera.
+	AttackMoveAction = MakeAction(this, TEXT("IA_AttackMove"), EInputActionValueType::Boolean);
+	MapKey(MappingContext, AttackMoveAction, EKeys::J);
+
 	CancelAction = MakeAction(this, TEXT("IA_Cancel"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, CancelAction, EKeys::Escape);
 
@@ -133,6 +137,7 @@ void ARTSPlayerController::SetupInputComponent()
 	Input->BindAction(SelectAction, ETriggerEvent::Completed, this, &ThisClass::OnSelectCompleted);
 	Input->BindAction(MoveOrderAction, ETriggerEvent::Started, this, &ThisClass::OnMoveOrder);
 	Input->BindAction(StopOrderAction, ETriggerEvent::Started, this, &ThisClass::OnStopOrder);
+	Input->BindAction(AttackMoveAction, ETriggerEvent::Started, this, &ThisClass::OnAttackMoveKey);
 	Input->BindAction(CancelAction, ETriggerEvent::Started, this, &ThisClass::OnCancel);
 	Input->BindAction(CancelConstructionAction, ETriggerEvent::Started, this, &ThisClass::OnCancelConstruction);
 	for (int32 Index = 0; Index < BuildActions.Num(); ++Index)
@@ -146,6 +151,10 @@ void ARTSPlayerController::PlayerTick(float DeltaTime)
 	Super::PlayerTick(DeltaTime);
 
 	SelectedUnits.RemoveAll([](const TWeakObjectPtr<ARTSUnit>& Unit) { return !Unit.IsValid(); });
+	if (bAttackMoveArmed && SelectedUnits.IsEmpty())
+	{
+		SetAttackMoveArmed(false);
+	}
 
 	if (bSelecting)
 	{
@@ -333,6 +342,11 @@ void ARTSPlayerController::OnSelectStarted()
 		ConfirmPlacement();
 		return;
 	}
+	if (bAttackMoveArmed)
+	{
+		ConfirmAttackMove();
+		return;
+	}
 	FVector2D Mouse;
 	const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
 	if (RTSHUD && GetMousePosition(Mouse.X, Mouse.Y))
@@ -457,6 +471,11 @@ void ARTSPlayerController::OnMoveOrder()
 		CancelPlacement();
 		return;
 	}
+	if (bAttackMoveArmed)
+	{
+		SetAttackMoveArmed(false);
+		return;
+	}
 
 	FHitResult Hit;
 	if (!GetHitResultUnderCursor(ECC_Visibility, false, Hit))
@@ -505,6 +524,42 @@ void ARTSPlayerController::OnStopOrder()
 	FRTSCommand Command;
 	Command.Type = ERTSCommandType::Stop;
 	IssueToSelection(Command);
+}
+
+void ARTSPlayerController::OnAttackMoveKey()
+{
+	if (SelectedUnits.IsEmpty())
+	{
+		return;
+	}
+	CancelPlacement();
+	SetAttackMoveArmed(true);
+}
+
+void ARTSPlayerController::SetAttackMoveArmed(bool bArmed)
+{
+	bAttackMoveArmed = bArmed;
+	CurrentMouseCursor = bArmed ? EMouseCursor::Crosshairs : EMouseCursor::Default;
+}
+
+void ARTSPlayerController::ConfirmAttackMove()
+{
+	FHitResult Hit;
+	if (!GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+	{
+		return;
+	}
+	// Units fight whatever comes into range on the way, the clicked enemy included.
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::AttackMove;
+	Command.TargetLocation = Hit.Location;
+	Command.bQueue = IsShiftDown();
+	IssueToSelection(Command);
+	// Shift keeps attack-move armed for the next waypoint, as it keeps placing buildings.
+	if (!Command.bQueue)
+	{
+		SetAttackMoveArmed(false);
+	}
 }
 
 ARTSUnit* ARTSPlayerController::GetSelectedBuilder() const
@@ -641,6 +696,7 @@ void ARTSPlayerController::OnBuildHotkey(int32 Index)
 void ARTSPlayerController::OnCancel()
 {
 	CancelPlacement();
+	SetAttackMoveArmed(false);
 }
 
 void ARTSPlayerController::OnCancelConstruction()
@@ -664,6 +720,7 @@ void ARTSPlayerController::OnCancelConstruction()
 void ARTSPlayerController::BeginPlacement(URTSBuildingData* Data)
 {
 	CancelPlacement();
+	SetAttackMoveArmed(false);
 	if (!Data)
 	{
 		return;

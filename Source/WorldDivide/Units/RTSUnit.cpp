@@ -218,6 +218,7 @@ void ARTSUnit::Tick(float DeltaSeconds)
 	}
 
 	UpdateAttackOrder();
+	UpdateAttackMoveOrder();
 	UpdateHarvestOrder(DeltaSeconds);
 	UpdateBuildOrder(DeltaSeconds);
 
@@ -381,7 +382,8 @@ void ARTSUnit::ReleaseHold()
 	{
 		return;
 	}
-	if (!CommandQueue.IsEmpty() && CommandQueue[0].Type == ERTSCommandType::Move)
+	if (!CommandQueue.IsEmpty()
+		&& (CommandQueue[0].Type == ERTSCommandType::Move || CommandQueue[0].Type == ERTSCommandType::AttackMove))
 	{
 		// A fresh request replaces the paused one, so its path takes the new hole into account.
 		StartNextCommand();
@@ -408,44 +410,49 @@ void ARTSUnit::StartNextCommand()
 	ApplyWeaponMode();
 }
 
-bool ARTSUnit::StartCommand(AAIController& AI, const FRTSCommand& Command)
+bool ARTSUnit::RequestMove(AAIController& AI, const FVector& Location)
 {
-	if (Command.Type == ERTSCommandType::Move)
+	// Inside a wall or a building there is no navmesh to stand on, so the unit stops at the edge on its own side
+	// instead of dropping the order or walking around to the far one.
+	FVector Destination = Location;
+	UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+	const ANavigationData* NavData = NavSystem ? NavSystem->GetNavDataForProps(GetNavAgentPropertiesRef(), GetNavAgentLocation()) : nullptr;
+	FNavLocation NavPoint;
+	if (NavData && !NavSystem->ProjectPointToNavigation(Destination, NavPoint, INVALID_NAVEXTENT, NavData))
 	{
-		// Inside a wall or a building there is no navmesh to stand on, so the unit stops at the edge on its own side
-		// instead of dropping the order or walking around to the far one.
-		FVector Destination = Command.TargetLocation;
-		UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
-		const ANavigationData* NavData = NavSystem ? NavSystem->GetNavDataForProps(GetNavAgentPropertiesRef(), GetNavAgentLocation()) : nullptr;
-		FNavLocation NavPoint;
-		if (NavData && !NavSystem->ProjectPointToNavigation(Destination, NavPoint, INVALID_NAVEXTENT, NavData))
+		const FVector Back = (GetNavAgentLocation() - Destination).GetSafeNormal2D();
+		for (float Distance = 0.f; Distance <= MoveSnapDistance; Distance += MoveSnapStep)
 		{
-			const FVector Back = (GetNavAgentLocation() - Destination).GetSafeNormal2D();
-			for (float Distance = 0.f; Distance <= MoveSnapDistance; Distance += MoveSnapStep)
+			if (NavSystem->ProjectPointToNavigation(Destination + Back * Distance, NavPoint, MoveSnapExtent, NavData))
 			{
-				if (NavSystem->ProjectPointToNavigation(Destination + Back * Distance, NavPoint, MoveSnapExtent, NavData))
-				{
-					Destination = NavPoint.Location;
-					break;
-				}
+				Destination = NavPoint.Location;
+				break;
 			}
 		}
+	}
 
-		// The AI controller may report AlreadyAtGoal or a failure back through NotifyMoveFinished
-		// before MoveToLocation returns; that is handled here instead of re-entering the queue.
-		bRequestingMove = true;
-		bMoveFinishedDuringRequest = false;
-		const EPathFollowingRequestResult::Type Result = AI.MoveToLocation(
-			Destination, MoveAcceptanceRadius,
-			/*bStopOnOverlap*/ false, /*bUsePathfinding*/ true, /*bProjectDestinationToNavigation*/ true,
-			/*bCanStrafe*/ true, /*FilterClass*/ nullptr, /*bAllowPartialPath*/ true);
-		bRequestingMove = false;
+	// The AI controller may report AlreadyAtGoal or a failure back through NotifyMoveFinished
+	// before MoveToLocation returns; that is handled here instead of re-entering the queue.
+	bRequestingMove = true;
+	bMoveFinishedDuringRequest = false;
+	const EPathFollowingRequestResult::Type Result = AI.MoveToLocation(
+		Destination, MoveAcceptanceRadius,
+		/*bStopOnOverlap*/ false, /*bUsePathfinding*/ true, /*bProjectDestinationToNavigation*/ true,
+		/*bCanStrafe*/ true, /*FilterClass*/ nullptr, /*bAllowPartialPath*/ true);
+	bRequestingMove = false;
 
-		if (Result == EPathFollowingRequestResult::Failed)
-		{
-			UE_LOG(LogWorldDivide, Verbose, TEXT("%s could not path to %s"), *GetName(), *Command.TargetLocation.ToString());
-		}
-		return Result == EPathFollowingRequestResult::RequestSuccessful && !bMoveFinishedDuringRequest;
+	if (Result == EPathFollowingRequestResult::Failed)
+	{
+		UE_LOG(LogWorldDivide, Verbose, TEXT("%s could not path to %s"), *GetName(), *Location.ToString());
+	}
+	return Result == EPathFollowingRequestResult::RequestSuccessful && !bMoveFinishedDuringRequest;
+}
+
+bool ARTSUnit::StartCommand(AAIController& AI, const FRTSCommand& Command)
+{
+	if (Command.Type == ERTSCommandType::Move || Command.Type == ERTSCommandType::AttackMove)
+	{
+		return RequestMove(AI, Command.TargetLocation);
 	}
 
 	if (Command.Type == ERTSCommandType::Attack)
@@ -563,13 +570,48 @@ void ARTSUnit::UpdateAttackOrder()
 	}
 }
 
+void ARTSUnit::UpdateAttackMoveOrder()
+{
+	if (CommandQueue.IsEmpty() || CommandQueue[0].Type != ERTSCommandType::AttackMove)
+	{
+		return;
+	}
+	AAIController* AI = GetController<AAIController>();
+	// A move held short of a new building waits for ReleaseHold, which paths it again.
+	if (!AI || IsMoveHeld())
+	{
+		return;
+	}
+
+	// The weapon picks its own target, units before buildings; the order only decides whether to stand or walk.
+	const AActor* Target = WeaponComponent->GetTarget();
+	const bool bEngaged = WeaponComponent->CanTarget(Target) && WeaponComponent->IsInRange(Target);
+	const bool bMoving = AI->GetMoveStatus() != EPathFollowingStatus::Idle;
+	if (bEngaged)
+	{
+		if (bMoving)
+		{
+			// NotifyMoveFinished keeps the order through this stop.
+			bStoppingToFight = true;
+			AI->StopMovement();
+			bStoppingToFight = false;
+		}
+	}
+	else if (!bMoving && !RequestMove(*AI, CommandQueue[0].TargetLocation))
+	{
+		// Already at the target, or no way left there.
+		CommandQueue.RemoveAt(0);
+		StartNextCommand();
+	}
+}
+
 void ARTSUnit::ApplyWeaponMode()
 {
 	const FRTSCommand* Current = CommandQueue.IsEmpty() ? nullptr : &CommandQueue[0];
 	const bool bAttacking = Current && Current->Type == ERTSCommandType::Attack;
 	WeaponComponent->SetOrderedTarget(bAttacking ? Current->TargetActor.Get() : nullptr);
-	// Units on the move ignore enemies; attack-move will change that.
-	WeaponComponent->SetAutoAcquire(Current == nullptr);
+	// Units on a plain move ignore enemies; idle and attack-moving units engage whatever comes into range.
+	WeaponComponent->SetAutoAcquire(Current == nullptr || Current->Type == ERTSCommandType::AttackMove);
 }
 
 void ARTSUnit::NotifyMoveFinished(const FPathFollowingResult& Result)
@@ -588,6 +630,11 @@ void ARTSUnit::NotifyMoveFinished(const FPathFollowingResult& Result)
 	if (!CommandQueue.IsEmpty()
 		&& (CommandQueue[0].Type == ERTSCommandType::Attack || CommandQueue[0].Type == ERTSCommandType::Harvest
 			|| CommandQueue[0].Type == ERTSCommandType::Build))
+	{
+		return;
+	}
+	// An attack-move stopped to fight; UpdateAttackMoveOrder walks on once no enemy is left in range.
+	if (bStoppingToFight)
 	{
 		return;
 	}

@@ -22,8 +22,9 @@ struct FInputActionValue;
  *
  * Controls: WASD/arrows or screen edge pan, mouse wheel zoom, Q/E or middle-mouse drag rotate,
  * left click/drag select (Shift adds; a click on an own building selects that building), right click move, attack an
- * enemy unit or building, or harvest a supply source (Shift queues), X stop. Delete cancels the own construction site
- * under the cursor, or else the selected one, as does the HUD's cancel button.
+ * enemy unit or building, or harvest a supply source (Shift queues), X stop. J then left click attack-moves the selection to
+ * the clicked spot (Shift queues and keeps attack-move armed); right click or Esc cancels it. Delete cancels the own
+ * construction site under the cursor, or else the selected one, as does the HUD's cancel button.
  * With a builder selected, 1-9 pick a building from its list to place: left click sends the builder (Shift queues it and
  * keeps placing), right click or Esc cancels. A right click on an own construction site sends builders to resume it.
  * With rts.DebugBuild on and no builder selected, 1-9 pick from the faction's buildings and place them without a builder.
@@ -153,6 +154,7 @@ private:
 	void OnSelectCompleted();
 	void OnMoveOrder();
 	void OnStopOrder();
+	void OnAttackMoveKey();
 	void OnBuildHotkey(int32 Index);
 	void OnCancel();
 	void OnCancelConstruction();
@@ -164,6 +166,8 @@ private:
 	void IssueToSelection(const FRTSCommand& Command);
 	void UpdatePlacement();
 	void ConfirmPlacement();
+	void ConfirmAttackMove();
+	void SetAttackMoveArmed(bool bArmed);
 	bool IsOwnUnit(const ARTSUnit* Unit) const;
 	bool IsShiftDown() const;
 	ARTSCameraPawn* GetCameraPawn() const;
@@ -191,6 +195,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> StopOrderAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> AttackMoveAction;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> CancelAction;
@@ -224,4 +231,7 @@ private:
 
 	FVector PlacementLocation = FVector::ZeroVector;
 	bool bPlacementValid = false;
+
+	/** Set by J until the next left click sends the attack-move, or right click or Esc cancels it. */
+	bool bAttackMoveArmed = false;
 };

@@ -33,6 +33,8 @@ enum class ERTSCommandType : uint8
 	CancelProduction,
 	/** Send units TargetActor produces to TargetLocation. */
 	SetRallyPoint,
+	/** Move to TargetLocation, stopping to fight enemies that come into range and moving on once none is left. */
+	AttackMove,
 };
 
 /**
