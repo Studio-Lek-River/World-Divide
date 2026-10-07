@@ -27,6 +27,12 @@ enum class ERTSCommandType : uint8
 	Harvest,
 	/** Cancel TargetActor, an own building under construction, refunding the unbuilt share of what was paid for it. */
 	CancelConstruction,
+	/** Queue EntityData, a unit, at TargetActor, an own production building, paying its cost. */
+	Produce,
+	/** Take the last queued EntityData off TargetActor's production queue, refunding its cost. */
+	CancelProduction,
+	/** Send units TargetActor produces to TargetLocation. */
+	SetRallyPoint,
 };
 
 /**
@@ -47,7 +53,7 @@ struct WORLDDIVIDE_API FRTSCommand
 	UPROPERTY(BlueprintReadWrite, Category = "Command")
 	TObjectPtr<AActor> TargetActor = nullptr;
 
-	/** What to build. */
+	/** What to build or produce. */
 	UPROPERTY(BlueprintReadWrite, Category = "Command")
 	TObjectPtr<URTSEntityData> EntityData = nullptr;
 

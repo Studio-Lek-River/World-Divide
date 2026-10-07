@@ -36,4 +36,13 @@ namespace RTSCommands
 	 * its ARTSBuilding::GetCancelRefund to Player. Returns the refund, or INDEX_NONE when the command is rejected.
 	 */
 	WORLDDIVIDE_API int32 CancelConstruction(ARTSPlayerState& Player, const FRTSCommand& Command);
+
+	/**
+	 * Server only. Production orders for the command's TargetActor, one of Player's buildings: Produce queues EntityData,
+	 * CancelProduction takes its last entry off the queue, SetRallyPoint moves the rally point to TargetLocation. Returns
+	 * false when the command is rejected.
+	 */
+	WORLDDIVIDE_API bool Produce(ARTSPlayerState& Player, const FRTSCommand& Command);
+	WORLDDIVIDE_API bool CancelProduction(ARTSPlayerState& Player, const FRTSCommand& Command);
+	WORLDDIVIDE_API bool SetRallyPoint(ARTSPlayerState& Player, const FRTSCommand& Command);
 }

@@ -1,6 +1,7 @@
 #include "Buildings/RTSBuilding.h"
 
 #include "Buildings/RTSBuildPlacement.h"
+#include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/BoxComponent.h"
@@ -26,8 +27,11 @@ namespace
 	/** Collision height when the data has no mesh. */
 	constexpr float DefaultHeight = 200.f;
 
-	/** Gap between the footprint edge and a unit spawned on completion, beyond the unit's radius. */
+	/** Gap between the footprint edge and a unit spawned at the exit, beyond the unit's radius. */
 	constexpr float SpawnClearance = 80.f;
+
+	/** A producer's rally point starts this far outside the exit edge, so finished units clear the spawn spot. */
+	constexpr float DefaultRallyDistance = 400.f;
 
 	/** Units held short of a new building go on regardless once its navmesh hole takes this long. */
 	constexpr float NavCutTimeout = 10.f;
@@ -58,6 +62,7 @@ ARTSBuilding::ARTSBuilding()
 
 	HealthComponent = CreateDefaultSubobject<URTSHealthComponent>(TEXT("Health"));
 	WeaponComponent = CreateDefaultSubobject<URTSWeaponComponent>(TEXT("Weapon"));
+	ProductionComponent = CreateDefaultSubobject<URTSProductionComponent>(TEXT("Production"));
 
 	bReplicates = true;
 	SetNetUpdateFrequency(10.f);
@@ -125,6 +130,10 @@ void ARTSBuilding::Tick(float DeltaSeconds)
 	{
 		UpdateConstruction(DeltaSeconds);
 	}
+	if (HasAuthority() && IsConstructed())
+	{
+		ProductionComponent->UpdateProduction(DeltaSeconds);
+	}
 }
 
 void ARTSBuilding::UpdateConstruction(float DeltaSeconds)
@@ -151,6 +160,7 @@ void ARTSBuilding::UpdateConstruction(float DeltaSeconds)
 			RefreshWeapon();
 		}
 		SpawnCompletionUnit();
+		ProductionComponent->SetRallyPoint(GetExitLocation(DefaultRallyDistance));
 	}
 	ApplyConstructionVisual();
 }
@@ -231,15 +241,19 @@ void ARTSBuilding::Destroyed()
 
 void ARTSBuilding::SpawnCompletionUnit()
 {
-	URTSUnitData* UnitData = BuildingData->SpawnOnComplete;
-	if (!UnitData)
+	ARTSUnit* Unit = SpawnUnitAtExit(BuildingData->SpawnOnComplete);
+	if (Unit && Unit->GetHarvesterComponent()->CanHarvest())
 	{
-		return;
+		FRTSCommand Harvest;
+		Harvest.Type = ERTSCommandType::Harvest;
+		Unit->ExecuteCommand(Harvest);
 	}
+}
 
-	// Outside the +X edge, the front until buildings can rotate; nudged onto the navmesh when one exists.
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint);
-	FVector Location = GetActorLocation() + FVector(Extent.X + UnitData->SelectionRadius + SpawnClearance, 0.f, 0.f);
+FVector ARTSBuilding::GetExitLocation(float Clearance) const
+{
+	const FVector Extent = BuildingData ? RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint) : FVector::ZeroVector;
+	FVector Location = GetActorLocation() + FVector(Extent.X + Clearance, 0.f, 0.f);
 	if (const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
 	{
 		FNavLocation NavPoint;
@@ -249,24 +263,28 @@ void ARTSBuilding::SpawnCompletionUnit()
 			Location.Y = NavPoint.Location.Y;
 		}
 	}
+	return Location;
+}
 
-	FTransform Transform(Location);
+ARTSUnit* ARTSBuilding::SpawnUnitAtExit(URTSUnitData* Data)
+{
+	check(HasAuthority());
+	if (!Data)
+	{
+		return nullptr;
+	}
+
+	FTransform Transform(GetExitLocation(Data->SelectionRadius + SpawnClearance));
 	ARTSUnit* Unit = GetWorld()->SpawnActorDeferred<ARTSUnit>(
 		ARTSUnit::StaticClass(), Transform, this, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (!Unit)
 	{
-		return;
+		return nullptr;
 	}
-	Unit->InitFromData(UnitData, TeamId);
+	Unit->InitFromData(Data, TeamId);
 	Transform.AddToTranslation(FVector(0.f, 0.f, Unit->GetGroundOffset()));
 	Unit->FinishSpawning(Transform);
-
-	if (Unit->GetHarvesterComponent()->CanHarvest())
-	{
-		FRTSCommand Harvest;
-		Harvest.Type = ERTSCommandType::Harvest;
-		Unit->ExecuteCommand(Harvest);
-	}
+	return Unit;
 }
 
 FVector ARTSBuilding::GetClosestFootprintPoint(const FVector& From) const

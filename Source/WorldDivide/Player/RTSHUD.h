@@ -11,7 +11,8 @@ class ARTSUnit;
 /**
  * Draws the drag box, the brackets plus health bar of selected units, construction progress of own buildings,
  * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
- * the player's credits and power, and the build menu of the selected builder (or the debug build menu), without any UI assets.
+ * the player's credits and power, the build menu of the selected builder (or the debug build menu), and the production menu,
+ * queue and rally point of a selected production building, without any UI assets.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSHUD : public AHUD
@@ -24,6 +25,12 @@ public:
 	/** Point, in viewport pixels, lies on the cancel button drawn last frame. */
 	bool IsOnCancelButton(const FVector2D& Point) const;
 
+	/** Index into the production menu of the entry drawn at Point last frame, or INDEX_NONE. */
+	int32 GetProduceButtonAt(const FVector2D& Point) const;
+
+	/** Index into the production queue of the entry drawn at Point last frame, or INDEX_NONE. */
+	int32 GetQueueButtonAt(const FVector2D& Point) const;
+
 private:
 	void DrawSelectionBox(const FVector2D& Start, const FVector2D& End);
 	void DrawBrackets(float Left, float Top, float Right, float Bottom);
@@ -33,6 +40,12 @@ private:
 	void DrawConstructionBar(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawBuildingHealth(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawBuildMenu(const ARTSPlayerController& Controller);
+
+	/** The selected production building's menu (greyed while not available) and its queue, the front entry's progress filled in. */
+	void DrawProduction(const ARTSPlayerController& Controller);
+
+	/** A line from the building to its rally point, and a marker there. */
+	void DrawRallyPoint(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawCredits(const ARTSPlayerController& Controller);
 
 	/** Produced and consumed power under the credits, red while low; nothing for a faction without power. */
@@ -43,4 +56,8 @@ private:
 
 	/** Invalid while no cancel button is shown. */
 	FBox2D CancelButton = FBox2D(ForceInit);
+
+	/** Drawn last frame, by index into the production menu and queue; invalid boxes for entries not drawn. */
+	TArray<FBox2D> ProduceButtons;
+	TArray<FBox2D> QueueButtons;
 };

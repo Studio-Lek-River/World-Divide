@@ -4,12 +4,14 @@
 
 #include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
+#include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
+#include "Data/RTSUnitData.h"
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
@@ -28,8 +30,9 @@
  * client team 1 at their tagged player starts, and that the client sees its own credits but not the host's, then sends a move for every unit the client sees through the client's
  * own controller: the server must move only the client's units, and the client must see them arrive. The client then
  * sends its builder to buy a construction site, stops the builder and cancels the site: the site must disappear in both
- * worlds and the client must see its refund while the host's credits stay put. Then the server
- * places a host building and the client orders its units to attack it: the client's copy must show the building's
+ * worlds and the client must see its refund while the host's credits stay put. The server then gives the client a
+ * barracks: the client sets its rally point, queues two infantry, sees them charged and cancels one for a refund, and
+ * must see the other come out and walk to the rally point. Then the server places a host building and the client orders its units to attack it: the client's copy must show the building's
  * health dropping before it disappears.
  */
 namespace RTSListenServerTest
@@ -50,6 +53,15 @@ namespace RTSListenServerTest
 	/** The client's builder walks from the middle of the map to its site before placing it. */
 	constexpr double ClientSiteTimeout = 60.0;
 	constexpr double BuildingAttackTimeout = 60.0;
+
+	/** The client's barracks stands north of its cancelled site, clear of the hole that site left; its infantry gather east of it. */
+	const TCHAR* BarracksPath = TEXT("/Game/Data/Buildings/DA_TestBarracks.DA_TestBarracks");
+	const TCHAR* InfantryPath = TEXT("/Game/Data/Units/DA_TestInfantry.DA_TestInfantry");
+	const FVector ClientBarracksSpot(-3000.f, 8500.f, 0.f);
+	const FVector ClientRallySpot(-1800.f, 8900.f, 0.f);
+	constexpr float RallyArrivalRadius = 250.f;
+	/** Without a power plant the client produces at the low-power rate. */
+	constexpr double ProductionTimeout = 60.0;
 
 	constexpr int32 HostTeam = 0;
 	constexpr int32 ClientTeam = 1;
@@ -80,6 +92,11 @@ namespace RTSListenServerTest
 		int32 ClientCreditsBefore = 0;
 		int32 ExpectedClientCredits = 0;
 		int32 HostCredits = 0;
+
+		/** The barracks the server gives the client, as each world sees it. */
+		TWeakObjectPtr<ARTSBuilding> ServerBarracks;
+		TWeakObjectPtr<ARTSBuilding> ClientBarracks;
+		int32 ClientProductionCredits = 0;
 	};
 
 	UWorld* FindPIEWorld(ENetMode NetMode)
@@ -480,6 +497,152 @@ namespace RTSListenServerTest
 		return true;
 	}
 
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSGiveClientBarracks, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSGiveClientBarracks::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		const ARTSPlayerState* ServerClientState = ServerWorld ? ARTSPlayerState::FindForTeam(*ServerWorld, ClientTeam) : nullptr;
+		if (!ServerClientState)
+		{
+			Test->AddError(TEXT("Lost the server world or the client's player state"));
+			return true;
+		}
+
+		FRTSCommand Build;
+		Build.Type = ERTSCommandType::Build;
+		Build.EntityData = LoadObject<URTSBuildingData>(nullptr, BarracksPath);
+		Build.TargetLocation = ClientBarracksSpot;
+		ARTSBuilding* Barracks = RTSCommands::PlaceBuilding(*ServerWorld, ServerClientState->GetFaction(), ClientTeam, Build);
+		if (!Barracks)
+		{
+			Test->AddError(TEXT("The server could not place the client's barracks"));
+			return true;
+		}
+		Barracks->UpdateConstruction(Barracks->GetBuildingData()->BuildTime);
+		State->ServerBarracks = Barracks;
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSClientQueuesInfantry, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSClientQueuesInfantry::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		URTSUnitData* Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
+		if (!ClientController || !Infantry || !State->ServerBarracks.IsValid())
+		{
+			Test->AddError(TEXT("Lost the client's controller or the barracks, or the test infantry is missing"));
+			return true;
+		}
+
+		// Wait until the client's copy of the barracks is complete, as the production menu needs.
+		for (TActorIterator<ARTSBuilding> It(ClientWorld); It; ++It)
+		{
+			if (It->GetTeamId() == ClientTeam && It->GetProductionComponent()->CanProduce())
+			{
+				State->ClientBarracks = *It;
+			}
+		}
+		ARTSBuilding* Barracks = State->ClientBarracks.Get();
+		if (!Barracks)
+		{
+			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+			{
+				Test->AddError(TEXT("The client never saw its completed barracks"));
+				return true;
+			}
+			return false;
+		}
+
+		// What selecting the barracks, a right click and pressing 1 twice send.
+		Test->TestTrue(TEXT("The client selects its barracks"), ClientController->SelectBuilding(Barracks));
+		Test->TestTrue(TEXT("It is the client's production building"), ClientController->GetProductionBuilding() == Barracks);
+		Test->TestTrue(TEXT("The client sets the rally point"), ClientController->RequestRallyPoint(Barracks, ClientRallySpot));
+		State->ClientProductionCredits = ClientController->GetCredits();
+		Test->TestTrue(TEXT("The client queues infantry"), ClientController->RequestProduce(Barracks, Infantry));
+		Test->TestTrue(TEXT("And a second"), ClientController->RequestProduce(Barracks, Infantry));
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSClientCancelsInfantry, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSClientCancelsInfantry::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		ARTSBuilding* Barracks = State->ClientBarracks.Get();
+		URTSUnitData* Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
+		if (!ClientController || !Barracks || !Infantry)
+		{
+			Test->AddError(TEXT("Lost the client's controller or its copy of the barracks"));
+			return true;
+		}
+
+		const URTSProductionComponent* Production = Barracks->GetProductionComponent();
+		const int32 Charged = State->ClientProductionCredits - 2 * Infantry->Cost;
+		const bool bSynced = Production->GetQueue().Num() == 2 && ClientController->GetCredits() == Charged
+			&& Production->GetRallyPoint().Equals(ClientRallySpot);
+		if (!bSynced && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
+		{
+			return false;
+		}
+		Test->TestEqual(TEXT("The client sees both infantry queued"), Production->GetQueue().Num(), 2);
+		Test->TestEqual(TEXT("The client sees both charged"), ClientController->GetCredits(), Charged);
+		Test->TestTrue(TEXT("The client sees its rally point"), Production->GetRallyPoint().Equals(ClientRallySpot));
+
+		// What clicking the second queue entry sends.
+		Test->TestTrue(TEXT("The client cancels one"), ClientController->RequestCancelProduction(Barracks, Infantry));
+		State->ExpectedClientCredits = Charged + Infantry->Cost;
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientProduction, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientProduction::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		const ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		const ARTSBuilding* ServerBarracks = State->ServerBarracks.Get();
+		if (!ServerWorld || !ClientController || !ServerBarracks)
+		{
+			Test->AddError(TEXT("Lost a world, the client's controller or the barracks"));
+			return true;
+		}
+
+		// New units of the client, in each world: only the barracks adds any.
+		int32 ServerProduced = 0;
+		for (TActorIterator<ARTSUnit> It(ServerWorld); It; ++It)
+		{
+			ServerProduced += It->GetTeamId() == ClientTeam && !State->ServerUnits[ClientTeam].Contains(*It) ? 1 : 0;
+		}
+		const ARTSUnit* ClientInfantry = nullptr;
+		for (TActorIterator<ARTSUnit> It(ClientWorld); It; ++It)
+		{
+			if (It->GetTeamId() == ClientTeam && !State->ClientUnits[ClientTeam].Contains(*It))
+			{
+				ClientInfantry = *It;
+			}
+		}
+		const float Distance = ClientInfantry ? FVector::Dist2D(ClientInfantry->GetActorLocation(), ClientRallySpot) : -1.f;
+		const bool bDone = ClientInfantry && Distance <= RallyArrivalRadius && ServerBarracks->GetProductionComponent()->GetQueue().IsEmpty();
+		const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+		if (!bDone && Elapsed < ProductionTimeout)
+		{
+			return false;
+		}
+
+		Test->AddInfo(FString::Printf(TEXT("The client's infantry reached its rally point after %.1f s"), Elapsed));
+		Test->TestEqual(TEXT("The client sees the cancelled infantry refunded"), ClientController->GetCredits(), State->ExpectedClientCredits);
+		Test->TestEqual(TEXT("The server produced one infantry for the client"), ServerProduced, 1);
+		Test->TestTrue(TEXT("The server's queue is empty"), ServerBarracks->GetProductionComponent()->GetQueue().IsEmpty());
+		Test->TestNotNull(TEXT("The client sees its new infantry"), ClientInfantry);
+		Test->TestTrue(FString::Printf(TEXT("The client sees it at the rally point (%.0f cm away)"), Distance),
+			ClientInfantry && Distance <= RallyArrivalRadius);
+		return true;
+	}
+
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceHostBuilding, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
 	bool FRTSPlaceHostBuilding::Update()
 	{
@@ -606,6 +769,10 @@ namespace RTSListenServerTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientSite(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientCancel(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientRefund(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSGiveClientBarracks(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientQueuesInfantry(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientCancelsInfantry(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientProduction(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceHostBuilding(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientBuilding(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientBuildingAttack(this, State));

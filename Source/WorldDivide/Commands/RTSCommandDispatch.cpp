@@ -2,11 +2,13 @@
 
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
+#include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSFormation.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
+#include "Data/RTSUnitData.h"
 #include "Engine/World.h"
 #include "HAL/IConsoleManager.h"
 #include "Units/RTSUnit.h"
@@ -143,5 +145,29 @@ namespace RTSCommands
 		Player.AddCredits(Refund);
 		Building->Destroy();
 		return Refund;
+	}
+
+	bool Produce(ARTSPlayerState& Player, const FRTSCommand& Command)
+	{
+		const ARTSBuilding* Building = Cast<ARTSBuilding>(Command.TargetActor);
+		return IsValid(Building) && Building->GetProductionComponent()->Enqueue(Player, Cast<URTSUnitData>(Command.EntityData));
+	}
+
+	bool CancelProduction(ARTSPlayerState& Player, const FRTSCommand& Command)
+	{
+		const ARTSBuilding* Building = Cast<ARTSBuilding>(Command.TargetActor);
+		return IsValid(Building) && Building->GetProductionComponent()->CancelLast(Player, Cast<URTSUnitData>(Command.EntityData));
+	}
+
+	bool SetRallyPoint(ARTSPlayerState& Player, const FRTSCommand& Command)
+	{
+		const ARTSBuilding* Building = Cast<ARTSBuilding>(Command.TargetActor);
+		if (!IsValid(Building) || Building->GetTeamId() != Player.GetTeamId() || !Building->GetProductionComponent()->CanProduce())
+		{
+			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot set a rally point for %s"), Player.GetTeamId(), *GetNameSafe(Command.TargetActor));
+			return false;
+		}
+		Building->GetProductionComponent()->SetRallyPoint(Command.TargetLocation);
+		return true;
 	}
 }

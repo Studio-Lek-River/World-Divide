@@ -11,6 +11,8 @@ required. They are credited here anyway. `Tools/Editor/setup_testmap.py` imports
 | `Kenney/CarKit/tractor-shovel.glb` | Builder | [Car Kit](https://kenney.nl/assets/car-kit) | Kenney |
 | `Kenney/CityKitIndustrial/building-m.glb` | Power Plant | [City Kit (Industrial)](https://kenney.nl/assets/city-kit-industrial) | Kenney |
 | `Kenney/CityKitIndustrial/building-j.glb` | Supply Depot | [City Kit (Industrial)](https://kenney.nl/assets/city-kit-industrial) | Kenney |
+| `Kenney/CityKitIndustrial/building-l.glb` | Vehicle Factory | [City Kit (Industrial)](https://kenney.nl/assets/city-kit-industrial) | Kenney |
+| `Kenney/SurvivalKit/tent-canvas.glb` | Barracks | [Survival Kit](https://kenney.nl/assets/survival-kit) | Kenney |
 | `Kenney/TowerDefenseKit/tower-round-build-c.glb` | Tower | [Tower Defense Kit](https://kenney.nl/assets/tower-defense-kit) | Kenney |
 | `Kenney/CastleKit/wall.glb` | Test map walls | [Castle Kit](https://kenney.nl/assets/castle-kit) | Kenney |
 | `Kenney/FactoryKit/box-wide.glb` | Supply source | [Factory Kit](https://kenney.nl/assets/factory-kit) | Kenney |

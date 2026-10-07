@@ -10,12 +10,14 @@ class UBoxComponent;
 class UStaticMeshComponent;
 class URTSBuildingData;
 class URTSHealthComponent;
+class URTSProductionComponent;
+class URTSUnitData;
 class URTSWeaponComponent;
 
 /**
  * A structure on the build grid. Stats come from URTSBuildingData. It blocks the navmesh from the moment it is placed,
- * constructs over BuildTime and stays inert, weapon included, until construction completes. Completion also spawns the
- * data's SpawnOnComplete unit, such as a depot's harvester, which sets off on a Harvest order.
+ * constructs over BuildTime and stays inert, weapon and production included, until construction completes. Completion also
+ * spawns the data's SpawnOnComplete unit, such as a depot's harvester, which sets off on a Harvest order.
  * Construction runs on the server; clients see the progress through replication.
  */
 UCLASS()
@@ -31,7 +33,8 @@ public:
 
 	/**
 	 * Server only. Advances construction, slower while the owner is low on power; completing it arms the weapon, adds the
-	 * building to the owner's power grid and spawns the SpawnOnComplete unit. Public so tests and builders can drive it.
+	 * building to the owner's power grid, spawns the SpawnOnComplete unit and puts the rally point in front of the exit.
+	 * Public so tests and builders can drive it.
 	 */
 	void UpdateConstruction(float DeltaSeconds);
 
@@ -42,6 +45,16 @@ public:
 	virtual int32 GetTeamId() const override { return TeamId; }
 	virtual URTSHealthComponent* GetHealthComponent() const override { return HealthComponent; }
 	URTSWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
+	URTSProductionComponent* GetProductionComponent() const { return ProductionComponent; }
+
+	/**
+	 * Where units leave the building: outside the +X edge, the front until buildings can rotate, Clearance beyond it, nudged
+	 * onto the navmesh when one exists.
+	 */
+	FVector GetExitLocation(float Clearance) const;
+
+	/** Server only. Spawns a unit of Data for the building's team at the exit. */
+	ARTSUnit* SpawnUnitAtExit(URTSUnitData* Data);
 
 	/** From clamped to the footprint rectangle. Under construction or not, the building can be shot. */
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
@@ -102,7 +115,7 @@ private:
 	/** The mesh rises out of the ground as construction progresses. */
 	void ApplyConstructionVisual();
 
-	/** Server only. Spawns SpawnOnComplete just outside the footprint and sends a harvester off to work. */
+	/** Server only. Spawns SpawnOnComplete at the exit and sends a harvester off to work. */
 	void SpawnCompletionUnit();
 
 	/** Server only, while the navmesh hole is pending: holds units headed into the footprint, releases them once it is built. */
@@ -125,6 +138,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<URTSWeaponComponent> WeaponComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<URTSProductionComponent> ProductionComponent;
 
 	UPROPERTY(ReplicatedUsing = OnRep_BuildingData)
 	TObjectPtr<URTSBuildingData> BuildingData;

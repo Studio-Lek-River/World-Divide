@@ -3,12 +3,14 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSPlacementGhost.h"
+#include "Buildings/RTSProductionComponent.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSPlayerState.h"
 #include "Core/RTSSettings.h"
 #include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
+#include "Data/RTSUnitData.h"
 #include "Economy/RTSSupplySource.h"
 #include "EngineUtils.h"
 #include "EnhancedInputComponent.h"
@@ -333,10 +335,28 @@ void ARTSPlayerController::OnSelectStarted()
 	}
 	FVector2D Mouse;
 	const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
-	if (RTSHUD && GetMousePosition(Mouse.X, Mouse.Y) && RTSHUD->IsOnCancelButton(Mouse))
+	if (RTSHUD && GetMousePosition(Mouse.X, Mouse.Y))
 	{
-		RequestCancelConstruction(GetSelectedBuilding());
-		return;
+		if (RTSHUD->IsOnCancelButton(Mouse))
+		{
+			RequestCancelConstruction(GetSelectedBuilding());
+			return;
+		}
+		// The production menu and queue of the selected building; the HUD only draws them while there is one.
+		ARTSBuilding* Producer = GetProductionBuilding();
+		const TArray<URTSUnitData*> Menu = GetProductionMenu();
+		const int32 MenuIndex = RTSHUD->GetProduceButtonAt(Mouse);
+		if (Producer && Menu.IsValidIndex(MenuIndex))
+		{
+			RequestProduce(Producer, Menu[MenuIndex]);
+			return;
+		}
+		const int32 QueueIndex = RTSHUD->GetQueueButtonAt(Mouse);
+		if (Producer && Producer->GetProductionComponent()->GetQueue().IsValidIndex(QueueIndex))
+		{
+			RequestCancelProduction(Producer, Producer->GetProductionComponent()->GetQueue()[QueueIndex]);
+			return;
+		}
 	}
 	bSelecting = GetMousePosition(SelectStart.X, SelectStart.Y);
 	SelectCurrent = SelectStart;
@@ -439,8 +459,14 @@ void ARTSPlayerController::OnMoveOrder()
 	}
 
 	FHitResult Hit;
-	if (SelectedUnits.IsEmpty() || !GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+	if (!GetHitResultUnderCursor(ECC_Visibility, false, Hit))
 	{
+		return;
+	}
+	if (SelectedUnits.IsEmpty())
+	{
+		// A production building is selected on its own: the click moves its rally point.
+		RequestRallyPoint(GetProductionBuilding(), Hit.Location);
 		return;
 	}
 
@@ -505,7 +531,7 @@ TArray<URTSBuildingData*> ARTSPlayerController::GetBuildMenu() const
 			Menu.Add(Data);
 		}
 	}
-	else if (Faction && RTSCommands::IsDebugBuildEnabled())
+	else if (Faction && RTSCommands::IsDebugBuildEnabled() && !GetProductionBuilding())
 	{
 		for (URTSBuildingData* Data : Faction->Buildings)
 		{
@@ -515,8 +541,96 @@ TArray<URTSBuildingData*> ARTSPlayerController::GetBuildMenu() const
 	return Menu;
 }
 
+ARTSBuilding* ARTSPlayerController::GetProductionBuilding() const
+{
+	ARTSBuilding* Building = GetSelectedBuilding();
+	return Building && Building->GetTeamId() == GetTeamId() && Building->GetProductionComponent()->CanProduce() ? Building : nullptr;
+}
+
+TArray<URTSUnitData*> ARTSPlayerController::GetProductionMenu() const
+{
+	TArray<URTSUnitData*> Menu;
+	if (const ARTSBuilding* Building = GetProductionBuilding())
+	{
+		for (URTSUnitData* Data : Building->GetBuildingData()->Units)
+		{
+			Menu.Add(Data);
+		}
+	}
+	return Menu;
+}
+
+const URTSEntityData* ARTSPlayerController::GetMissingPrerequisite(const URTSEntityData& Data) const
+{
+	return RTSProduction::FindMissingPrerequisite(*GetWorld(), GetTeamId(), Data);
+}
+
+bool ARTSPlayerController::CanRequestProduce(const ARTSBuilding* Building, const URTSUnitData* Data) const
+{
+	if (!IsValid(Building) || Building->GetTeamId() != GetTeamId() || !Data)
+	{
+		return false;
+	}
+	const URTSProductionComponent* Production = Building->GetProductionComponent();
+	return Production->CanProduce(Data) && Production->GetQueue().Num() < URTSProductionComponent::MaxQueue
+		&& CanAfford(*Data) && !GetMissingPrerequisite(*Data);
+}
+
+bool ARTSPlayerController::RequestProduce(ARTSBuilding* Building, URTSUnitData* Data)
+{
+	if (!CanRequestProduce(Building, Data))
+	{
+		return false;
+	}
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::Produce;
+	Command.TargetActor = Building;
+	Command.EntityData = Data;
+	Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+	return true;
+}
+
+bool ARTSPlayerController::RequestCancelProduction(ARTSBuilding* Building, URTSUnitData* Data)
+{
+	if (!IsValid(Building) || Building->GetTeamId() != GetTeamId() || !Data
+		|| !Building->GetProductionComponent()->GetQueue().Contains(Data))
+	{
+		return false;
+	}
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::CancelProduction;
+	Command.TargetActor = Building;
+	Command.EntityData = Data;
+	Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+	return true;
+}
+
+bool ARTSPlayerController::RequestRallyPoint(ARTSBuilding* Building, const FVector& Location)
+{
+	if (!IsValid(Building) || Building->GetTeamId() != GetTeamId() || !Building->GetProductionComponent()->CanProduce())
+	{
+		return false;
+	}
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::SetRallyPoint;
+	Command.TargetActor = Building;
+	Command.TargetLocation = Location;
+	Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+	return true;
+}
+
 void ARTSPlayerController::OnBuildHotkey(int32 Index)
 {
+	if (ARTSBuilding* Producer = GetProductionBuilding())
+	{
+		const TArray<URTSUnitData*> Units = GetProductionMenu();
+		if (Units.IsValidIndex(Index))
+		{
+			RequestProduce(Producer, Units[Index]);
+		}
+		return;
+	}
+
 	const TArray<URTSBuildingData*> Menu = GetBuildMenu();
 	if (Menu.IsValidIndex(Index))
 	{
@@ -532,7 +646,19 @@ void ARTSPlayerController::OnCancel()
 void ARTSPlayerController::OnCancelConstruction()
 {
 	ARTSBuilding* Hovered = GetBuildingUnderCursor();
-	RequestCancelConstruction(CanCancelConstruction(Hovered) ? Hovered : GetSelectedBuilding());
+	if (RequestCancelConstruction(CanCancelConstruction(Hovered) ? Hovered : GetSelectedBuilding()))
+	{
+		return;
+	}
+	// No construction site to cancel: Delete takes the last unit off the selected production building's queue.
+	if (ARTSBuilding* Producer = GetProductionBuilding())
+	{
+		const TArray<TObjectPtr<URTSUnitData>>& Queue = Producer->GetProductionComponent()->GetQueue();
+		if (!Queue.IsEmpty())
+		{
+			RequestCancelProduction(Producer, Queue.Last());
+		}
+	}
 }
 
 void ARTSPlayerController::BeginPlacement(URTSBuildingData* Data)
@@ -673,10 +799,22 @@ void ARTSPlayerController::Server_IssueCommand_Implementation(const TArray<ARTSU
 		}
 		return;
 	}
-	if (Command.Type == ERTSCommandType::CancelConstruction)
+	switch (Command.Type)
 	{
+	case ERTSCommandType::CancelConstruction:
 		RTSCommands::CancelConstruction(*State, Command);
 		return;
+	case ERTSCommandType::Produce:
+		RTSCommands::Produce(*State, Command);
+		return;
+	case ERTSCommandType::CancelProduction:
+		RTSCommands::CancelProduction(*State, Command);
+		return;
+	case ERTSCommandType::SetRallyPoint:
+		RTSCommands::SetRallyPoint(*State, Command);
+		return;
+	default:
+		break;
 	}
 	RTSCommands::Dispatch(RTSCommands::FilterOwnedUnits(Units, State->GetTeamId()), Command);
 }

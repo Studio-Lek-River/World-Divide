@@ -5,6 +5,7 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
+#include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
@@ -47,6 +48,8 @@
  * away and once a second builder dies there, the first finishes it, then builds two buildings queued with Shift. The site
  * clearing test checks that an enemy on the spot refuses a builder, while own units on it step aside, keeping their orders;
  * the builder's ghost turns red over the enemy but stays green over own units, which the debug ghost does not.
+ * The production test selects a barracks, sets its rally point and queues three infantry through the controller, as the
+ * HUD does: they must come out one build time apart and each walk to the rally point.
  */
 namespace
 {
@@ -182,6 +185,16 @@ namespace
 	const FVector SiteInfantryStart(60.f, 6960.f, 0.f);
 	const FVector SiteDummySpot(0.f, 7500.f, 0.f);
 
+	/** The production test: a barracks at BuildSpot sends three infantry to a rally point north-east of it. */
+	const TCHAR* BarracksPath = TEXT("/Game/Data/Buildings/DA_TestBarracks.DA_TestBarracks");
+	const FVector RallySpot(1200.f, 7600.f, 0.f);
+	constexpr int32 ProductionCount = 3;
+	/** Units sent to the same rally point crowd around it. */
+	constexpr float RallyArrivalRadius = 250.f;
+	/** Game seconds a unit may come out later or sooner than one build time after the one before it. */
+	constexpr double ProductionTolerance = 0.5;
+	constexpr double ProductionTimeout = 60.0;
+
 	struct FSmokeState
 	{
 		TArray<TWeakObjectPtr<ARTSUnit>> OwnUnits;
@@ -244,6 +257,11 @@ namespace
 		TWeakObjectPtr<ARTSUnit> SiteTank;
 		TWeakObjectPtr<ARTSUnit> SiteInfantry;
 		TWeakObjectPtr<ARTSUnit> SiteDummy;
+
+		// Production test only.
+		TArray<TWeakObjectPtr<ARTSUnit>> UnitsBefore;
+		TArray<TWeakObjectPtr<ARTSUnit>> Produced;
+		TArray<double> ProducedTimes;
 	};
 
 	/** One of the map's walls or blocks, found by its label. */
@@ -2095,6 +2113,125 @@ bool FRTSVerifySiteCleared::Update()
 	return true;
 }
 
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSQueueProduction, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSQueueProduction::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	URTSBuildingData* BarracksData = LoadObject<URTSBuildingData>(nullptr, BarracksPath);
+	URTSUnitData* Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
+	if (!Player || !BarracksData || !Infantry || !SpawnPowerPlant(World, Controller->GetTeamId()))
+	{
+		Test->AddError(TEXT("Missing the player state, the test barracks or infantry, or the power plant"));
+		return true;
+	}
+
+	ARTSBuilding* Site = SpawnBuilding(World, BarracksData, Controller->GetTeamId(), BuildSpot, false);
+	Test->TestTrue(TEXT("A barracks under construction can be selected"), Controller->SelectBuilding(Site));
+	Test->TestNull(TEXT("It offers no production yet"), Controller->GetProductionBuilding());
+	Test->TestFalse(TEXT("Nor can units be queued there"), Controller->RequestProduce(Site, Infantry));
+	Site->UpdateConstruction(BarracksData->BuildTime);
+
+	ARTSBuilding* Barracks = Controller->GetProductionBuilding();
+	if (!Test->TestTrue(TEXT("The completed barracks is the production building"), Barracks == Site))
+	{
+		return true;
+	}
+	Test->TestTrue(TEXT("Its menu offers infantry"), Controller->GetProductionMenu().Contains(Infantry));
+	Test->TestTrue(TEXT("The build menu stays empty"), Controller->GetBuildMenu().IsEmpty());
+	Test->TestTrue(TEXT("The rally point starts outside the barracks"),
+		Barracks->GetProductionComponent()->GetRallyPoint().X > Barracks->GetClosestFootprintPoint(RallySpot).X);
+
+	// What a right click with the barracks selected and 1 pressed three times send. The host's RPCs run right away.
+	Test->TestTrue(TEXT("The rally point request goes out"), Controller->RequestRallyPoint(Barracks, RallySpot));
+	Test->TestTrue(TEXT("The rally point moved"), Barracks->GetProductionComponent()->GetRallyPoint().Equals(RallySpot));
+	const int32 CreditsBefore = Player->GetCredits();
+	for (int32 Index = 0; Index < ProductionCount; ++Index)
+	{
+		Test->TestTrue(FString::Printf(TEXT("Infantry %d is queued"), Index), Controller->RequestProduce(Barracks, Infantry));
+	}
+	Test->TestEqual(TEXT("Each is charged"), Player->GetCredits(), CreditsBefore - ProductionCount * Infantry->Cost);
+
+	// A fourth, cancelled again as Delete does, is refunded and leaves the three.
+	Test->TestTrue(TEXT("A fourth is queued"), Controller->RequestProduce(Barracks, Infantry));
+	Test->TestTrue(TEXT("And cancelled"), Controller->RequestCancelProduction(Barracks, Infantry));
+	Test->TestEqual(TEXT("The cancelled one is refunded"), Player->GetCredits(), CreditsBefore - ProductionCount * Infantry->Cost);
+	Test->TestEqual(TEXT("Three are left in the queue"), Barracks->GetProductionComponent()->GetQueue().Num(), ProductionCount);
+
+	for (TActorIterator<ARTSUnit> It(World); It; ++It)
+	{
+		State->UnitsBefore.Add(*It);
+	}
+	State->Building = Barracks;
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyProduction, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyProduction::Update()
+{
+	const ARTSBuilding* Barracks = State->Building.Get();
+	if (!Barracks)
+	{
+		Test->AddError(TEXT("The barracks disappeared"));
+		return true;
+	}
+
+	// Only the barracks adds units during this test.
+	UWorld* World = Barracks->GetWorld();
+	for (TActorIterator<ARTSUnit> It(World); It; ++It)
+	{
+		if (!State->UnitsBefore.Contains(*It) && !State->Produced.Contains(*It))
+		{
+			State->Produced.Add(*It);
+			State->ProducedTimes.Add(World->GetTimeSeconds());
+		}
+	}
+	bool bArrived = State->Produced.Num() == ProductionCount;
+	for (const TWeakObjectPtr<ARTSUnit>& Unit : State->Produced)
+	{
+		bArrived &= Unit.IsValid() && Unit->GetQueuedCommandCount() == 0
+			&& FVector::Dist2D(Unit->GetActorLocation(), RallySpot) <= RallyArrivalRadius;
+	}
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (!bArrived && Elapsed < ProductionTimeout)
+	{
+		return false;
+	}
+
+	Test->AddInfo(FString::Printf(TEXT("Production finished after %.1f s"), Elapsed));
+	if (!Test->TestEqual(TEXT("The barracks produced the three infantry"), State->Produced.Num(), ProductionCount))
+	{
+		return true;
+	}
+	const float BuildTime = Barracks->GetBuildingData()->Units[0]->BuildTime;
+	for (int32 Index = 0; Index < ProductionCount; ++Index)
+	{
+		const ARTSUnit* Unit = State->Produced[Index].Get();
+		if (!Test->TestNotNull(FString::Printf(TEXT("Infantry %d is alive"), Index), Unit))
+		{
+			continue;
+		}
+		const float Distance = FVector::Dist2D(Unit->GetActorLocation(), RallySpot);
+		Test->TestEqual(FString::Printf(TEXT("Infantry %d is the player's"), Index), Unit->GetTeamId(), Barracks->GetTeamId());
+		Test->TestTrue(FString::Printf(TEXT("Infantry %d reached the rally point (%.0f cm away)"), Index, Distance),
+			Distance <= RallyArrivalRadius);
+		if (Index > 0)
+		{
+			const double Gap = State->ProducedTimes[Index] - State->ProducedTimes[Index - 1];
+			Test->TestTrue(FString::Printf(TEXT("Infantry %d came out one build time after the one before (%.2f s)"), Index, Gap),
+				FMath::Abs(Gap - BuildTime) <= ProductionTolerance);
+		}
+	}
+	Test->TestEqual(TEXT("The queue is empty"), Barracks->GetProductionComponent()->GetQueue().Num(), 0);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTestMapSmokeTest, "WorldDivide.Smoke.TestMap",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
@@ -2408,6 +2545,27 @@ bool FRTSBuilderClearsSiteSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyEnemyBlocksSite(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueOwnBlockedBuild(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifySiteCleared(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSProductionSmokeTest, "WorldDivide.Smoke.Production",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSProductionSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSQueueProduction(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyProduction(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

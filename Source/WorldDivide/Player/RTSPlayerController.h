@@ -12,6 +12,7 @@ class ARTSUnit;
 class URTSBuildingData;
 class URTSEntityData;
 class URTSFactionData;
+class URTSUnitData;
 class UInputAction;
 class UInputMappingContext;
 struct FInputActionValue;
@@ -26,6 +27,8 @@ struct FInputActionValue;
  * With a builder selected, 1-9 pick a building from its list to place: left click sends the builder (Shift queues it and
  * keeps placing), right click or Esc cancels. A right click on an own construction site sends builders to resume it.
  * With rts.DebugBuild on and no builder selected, 1-9 pick from the faction's buildings and place them without a builder.
+ * With an own production building selected, 1-9 or a click on the HUD's menu queue a unit, right click sets the rally point,
+ * and a click on a queued unit, or Delete for the last one, cancels it for a refund.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSPlayerController : public APlayerController
@@ -74,9 +77,33 @@ public:
 
 	/**
 	 * What 1-9 place: the selected builder's buildings, else the faction's buildings while debug build is on
-	 * (RTSCommands::IsDebugBuildEnabled), else nothing.
+	 * (RTSCommands::IsDebugBuildEnabled) and no production building is selected, else nothing.
 	 */
 	TArray<URTSBuildingData*> GetBuildMenu() const;
+
+	/** The selected building while it is the player's own and can produce, or null. Its units are the production menu. */
+	ARTSBuilding* GetProductionBuilding() const;
+
+	/** What 1-9 queue at the selected production building; empty without one. */
+	TArray<URTSUnitData*> GetProductionMenu() const;
+
+	/** The first of Data's prerequisites the local player does not own, or null. The server checks again before it queues. */
+	const URTSEntityData* GetMissingPrerequisite(const URTSEntityData& Data) const;
+
+	/**
+	 * Building would take Data as far as the client knows: the player's own, Data on its list, prerequisites owned,
+	 * affordable and the queue not full. The server checks again before it charges.
+	 */
+	bool CanRequestProduce(const ARTSBuilding* Building, const URTSUnitData* Data) const;
+
+	/** Asks the server to queue Data at Building; false when CanRequestProduce refuses it locally. */
+	bool RequestProduce(ARTSBuilding* Building, URTSUnitData* Data);
+
+	/** Asks the server to take the last queued Data off Building's queue for a refund; false when none is queued there. */
+	bool RequestCancelProduction(ARTSBuilding* Building, URTSUnitData* Data);
+
+	/** Asks the server to move Building's rally point to Location; false when it is not an own production building. */
+	bool RequestRallyPoint(ARTSBuilding* Building, const FVector& Location);
 
 	/**
 	 * Local. Shows a ghost of Data under the cursor until the player builds or cancels. Confirming sends the selected

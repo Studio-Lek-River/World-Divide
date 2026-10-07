@@ -50,6 +50,10 @@ levels = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 # Assets that need saving: (package path, file extension, already on disk, function that writes it).
 pending = []
 
+# Data assets by package path: (asset, already on disk, desired properties). Compared and queued by plan_data_assets once
+# all are planned, so two of them can reference each other.
+data_assets = {}
+
 
 def object_path(obj):
     return obj.get_path_name() if obj else None
@@ -84,7 +88,7 @@ def spec_hash(functions, *values):
 
 
 def plan_data_asset(name, directory, data_class, properties):
-    """Loads or creates a data asset and queues a save if it is new or any property differs."""
+    """Loads or creates a data asset and records the properties it should have; plan_data_assets queues the save."""
     path = f"{directory}/{name}"
     exists = assets.does_asset_exist(path)
     if exists:
@@ -93,16 +97,21 @@ def plan_data_asset(name, directory, data_class, properties):
         factory = unreal.DataAssetFactory()
         factory.set_editor_property("data_asset_class", data_class)
         asset = asset_tools.create_asset(name, directory, data_class, factory)
-
-    changed = {key: value for key, value in properties.items() if differs(asset.get_editor_property(key), value)}
-    if changed or not exists:
-        def write():
-            for key, value in changed.items():
-                asset.set_editor_property(key, value)
-            if not assets.save_loaded_asset(asset, only_if_is_dirty=False):
-                raise RuntimeError(f"Could not save {path}")
-        pending.append((path, ".uasset", exists, write))
+    data_assets[path] = (asset, exists, dict(properties))
     return asset
+
+
+def plan_data_assets():
+    """Queues a save for every planned data asset that is new or has a property that differs."""
+    for path, (asset, exists, desired) in data_assets.items():
+        changed = {key: value for key, value in desired.items() if differs(asset.get_editor_property(key), value)}
+        if changed or not exists:
+            def write(asset=asset, path=path, changed=changed):
+                for key, value in changed.items():
+                    asset.set_editor_property(key, value)
+                if not assets.save_loaded_asset(asset, only_if_is_dirty=False):
+                    raise RuntimeError(f"Could not save {path}")
+            pending.append((path, ".uasset", exists, write))
 
 
 def plan_rebuild(path, extension, build, digest):
@@ -203,6 +212,11 @@ def make_unit(name, display_name, mesh, scale, radius, health, weapon, speed, tu
     })
 
 
+def add_properties(asset, properties):
+    """Plans more properties for a data asset planned earlier, for one that references something planned after it."""
+    data_assets[asset.get_path_name().split(".")[0]][2].update(properties)
+
+
 def make_harvester(name, display_name, mesh, scale, radius, health, speed, turn_rate, cost, build_time,
                    carry_amount, gather_seconds, search_radius):
     return plan_data_asset(name, UNIT_DIR, unreal.RTSHarvesterData, {
@@ -239,7 +253,7 @@ def make_builder(name, display_name, mesh, scale, radius, health, speed, turn_ra
 
 
 def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw,
-                  spawn_on_complete=None, accepts_supply=False, requires_power=False):
+                  spawn_on_complete=None, accepts_supply=False, requires_power=False, units=()):
     return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
         "display_name": unreal.Text(display_name),
         "mesh": mesh,
@@ -255,6 +269,7 @@ def make_building(name, display_name, mesh, scale, footprint, health, weapon, co
         "requires_power": requires_power,
         "spawn_on_complete": spawn_on_complete,
         "accepts_supply": accepts_supply,
+        "units": list(units),
     })
 
 
@@ -447,6 +462,8 @@ builder_mesh = make_art("Builder", "Kenney/CarKit/tractor-shovel.glb", yaw=-90.0
 power_plant_mesh = make_art("PowerPlant", "Kenney/CityKitIndustrial/building-m.glb")
 supply_depot_mesh = make_art("SupplyDepot", "Kenney/CityKitIndustrial/building-j.glb")
 tower_mesh = make_art("Tower", "Kenney/TowerDefenseKit/tower-round-build-c.glb")
+barracks_mesh = make_art("Barracks", "Kenney/SurvivalKit/tent-canvas.glb")
+vehicle_factory_mesh = make_art("VehicleFactory", "Kenney/CityKitIndustrial/building-l.glb")
 wall_mesh = make_art("Wall", "Kenney/CastleKit/wall.glb", tint=0.0)
 crate_mesh = make_art("SupplyCrate", "Kenney/FactoryKit/box-wide.glb", tint=0.0)
 
@@ -467,8 +484,19 @@ supply_depot = make_building("DA_TestSupplyDepot", "Test Supply Depot", supply_d
                              fit_scale(supply_depot_mesh, 280.0, 280.0), (3, 3), 1000.0, None, 1500, 5.0, 0, 1,
                              spawn_on_complete=harvester, accepts_supply=True)
 builder = make_builder("DA_TestBuilder", "Test Builder", builder_mesh, fit_scale(builder_mesh, 150.0, 100.0), 60.0, 300.0,
-                       500.0, 360.0, 1000, 10.0, [power_plant, tower, supply_depot])
-make_faction("DA_TestFaction", "Test Faction", [power_plant, tower, supply_depot])
+                       500.0, 360.0, 1000, 10.0, [])
+barracks = make_building("DA_TestBarracks", "Test Barracks", barracks_mesh, fit_scale(barracks_mesh, 280.0, 280.0), (3, 3),
+                         800.0, None, 500, 5.0, 0, 1, units=[infantry])
+vehicle_factory = make_building("DA_TestVehicleFactory", "Test Vehicle Factory", vehicle_factory_mesh,
+                                fit_scale(vehicle_factory_mesh, 380.0, 380.0), (4, 4), 1200.0, None, 1200, 8.0, 0, 2,
+                                units=[tank, harvester, builder])
+buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory]
+# The vehicle factory produces the builder, which builds the factory in turn.
+add_properties(builder, {"buildings": buildings})
+# A harvester needs a depot to deliver to, so the factory only offers one once a depot stands.
+add_properties(harvester, {"prerequisites": [supply_depot]})
+make_faction("DA_TestFaction", "Test Faction", buildings)
 make_ghost_material("M_PlacementGhost")
 make_map(tank, infantry, builder, wall_mesh, crate_mesh)
+plan_data_assets()
 write_pending()
