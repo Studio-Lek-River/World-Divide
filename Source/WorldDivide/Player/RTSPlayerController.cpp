@@ -11,6 +11,7 @@
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Data/RTSUnitData.h"
+#include "Data/RTSUpgradeData.h"
 #include "Economy/RTSSupplySource.h"
 #include "EngineUtils.h"
 #include "EnhancedInputComponent.h"
@@ -375,7 +376,7 @@ void ARTSPlayerController::OnSelectStarted()
 		}
 		// The production menu and queue of the selected building; the HUD only draws them while there is one.
 		ARTSBuilding* Producer = GetProductionBuilding();
-		const TArray<URTSUnitData*> Menu = GetProductionMenu();
+		const TArray<URTSEntityData*> Menu = GetProductionMenu();
 		const int32 MenuIndex = RTSHUD->GetProduceButtonAt(Mouse);
 		if (Producer && Menu.IsValidIndex(MenuIndex))
 		{
@@ -625,12 +626,16 @@ ARTSBuilding* ARTSPlayerController::GetProductionBuilding() const
 	return Building && Building->GetTeamId() == GetTeamId() && Building->GetProductionComponent()->CanProduce() ? Building : nullptr;
 }
 
-TArray<URTSUnitData*> ARTSPlayerController::GetProductionMenu() const
+TArray<URTSEntityData*> ARTSPlayerController::GetProductionMenu() const
 {
-	TArray<URTSUnitData*> Menu;
+	TArray<URTSEntityData*> Menu;
 	if (const ARTSBuilding* Building = GetProductionBuilding())
 	{
 		for (URTSUnitData* Data : Building->GetBuildingData()->Units)
+		{
+			Menu.Add(Data);
+		}
+		for (URTSUpgradeData* Data : Building->GetBuildingData()->Upgrades)
 		{
 			Menu.Add(Data);
 		}
@@ -638,14 +643,25 @@ TArray<URTSUnitData*> ARTSPlayerController::GetProductionMenu() const
 	return Menu;
 }
 
+bool ARTSPlayerController::HasUpgrade(const URTSUpgradeData& Upgrade) const
+{
+	const ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
+	return State && State->HasUpgrade(&Upgrade);
+}
+
 const URTSEntityData* ARTSPlayerController::GetMissingPrerequisite(const URTSEntityData& Data) const
 {
 	return RTSProduction::FindMissingPrerequisite(*GetWorld(), GetTeamId(), Data);
 }
 
-bool ARTSPlayerController::CanRequestProduce(const ARTSBuilding* Building, const URTSUnitData* Data) const
+bool ARTSPlayerController::CanRequestProduce(const ARTSBuilding* Building, const URTSEntityData* Data) const
 {
 	if (!IsValid(Building) || Building->GetTeamId() != GetTeamId() || !Data)
+	{
+		return false;
+	}
+	const URTSUpgradeData* Upgrade = Cast<URTSUpgradeData>(Data);
+	if (Upgrade && (HasUpgrade(*Upgrade) || RTSProduction::IsUpgradeQueued(*GetWorld(), GetTeamId(), *Upgrade)))
 	{
 		return false;
 	}
@@ -654,7 +670,7 @@ bool ARTSPlayerController::CanRequestProduce(const ARTSBuilding* Building, const
 		&& CanAfford(*Data) && !GetMissingPrerequisite(*Data);
 }
 
-bool ARTSPlayerController::RequestProduce(ARTSBuilding* Building, URTSUnitData* Data)
+bool ARTSPlayerController::RequestProduce(ARTSBuilding* Building, URTSEntityData* Data)
 {
 	if (!CanRequestProduce(Building, Data))
 	{
@@ -668,7 +684,7 @@ bool ARTSPlayerController::RequestProduce(ARTSBuilding* Building, URTSUnitData* 
 	return true;
 }
 
-bool ARTSPlayerController::RequestCancelProduction(ARTSBuilding* Building, URTSUnitData* Data)
+bool ARTSPlayerController::RequestCancelProduction(ARTSBuilding* Building, URTSEntityData* Data)
 {
 	if (!IsValid(Building) || Building->GetTeamId() != GetTeamId() || !Data
 		|| !Building->GetProductionComponent()->GetQueue().Contains(Data))
@@ -701,10 +717,10 @@ void ARTSPlayerController::OnBuildHotkey(int32 Index)
 {
 	if (ARTSBuilding* Producer = GetProductionBuilding())
 	{
-		const TArray<URTSUnitData*> Units = GetProductionMenu();
-		if (Units.IsValidIndex(Index))
+		const TArray<URTSEntityData*> Menu = GetProductionMenu();
+		if (Menu.IsValidIndex(Index))
 		{
-			RequestProduce(Producer, Units[Index]);
+			RequestProduce(Producer, Menu[Index]);
 		}
 		return;
 	}
@@ -729,10 +745,10 @@ void ARTSPlayerController::OnCancelConstruction()
 	{
 		return;
 	}
-	// No construction site to cancel: Delete takes the last unit off the selected production building's queue.
+	// No construction site to cancel: Delete takes the last entry off the selected production building's queue.
 	if (ARTSBuilding* Producer = GetProductionBuilding())
 	{
-		const TArray<TObjectPtr<URTSUnitData>>& Queue = Producer->GetProductionComponent()->GetQueue();
+		const TArray<TObjectPtr<URTSEntityData>>& Queue = Producer->GetProductionComponent()->GetQueue();
 		if (!Queue.IsEmpty())
 		{
 			RequestCancelProduction(Producer, Queue.Last());

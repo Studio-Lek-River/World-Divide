@@ -79,7 +79,20 @@ void ARTSBuilding::InitFromData(URTSBuildingData* InBuildingData, int32 InTeamId
 	// The weapon stays empty until construction completes.
 	WeaponComponent->SetTeamId(TeamId);
 	WeaponComponent->SetWeaponData(nullptr);
+	ApplyUpgrades();
 	ApplyBuildingData();
+}
+
+void ARTSBuilding::ApplyUpgrades()
+{
+	check(HasAuthority());
+	if (!BuildingData)
+	{
+		return;
+	}
+	const UWorld& World = *GetWorld();
+	HealthComponent->SetMaxHealth(BuildingData->MaxHealth * ARTSPlayerState::GetStatMultiplierForTeam(World, TeamId, *BuildingData, ERTSUpgradeStat::MaxHealth));
+	WeaponComponent->SetDamageMultiplier(ARTSPlayerState::GetStatMultiplierForTeam(World, TeamId, *BuildingData, ERTSUpgradeStat::WeaponDamage));
 }
 
 void ARTSBuilding::PostInitializeComponents()

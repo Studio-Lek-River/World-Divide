@@ -32,6 +32,9 @@ public:
 	/** Server only, between SpawnActorDeferred and FinishSpawning. */
 	void InitFromData(URTSUnitData* InUnitData, int32 InTeamId);
 
+	/** Server only. Sets weapon damage and maximum health from the data and the upgrades the owner has researched. */
+	void ApplyUpgrades();
+
 	/**
 	 * Server only. Replaces the order queue, or appends to it when Command.bQueue is set.
 	 * A Harvest for a unit that cannot harvest becomes a move up to the source, as a Build naming an own construction site

@@ -8,6 +8,7 @@ class ARTSBuilding;
 class ARTSPlayerState;
 class URTSEntityData;
 class URTSUnitData;
+class URTSUpgradeData;
 
 namespace RTSProduction
 {
@@ -17,7 +18,7 @@ namespace RTSProduction
 	/** Every one of Data's prerequisites is in Owned. */
 	WORLDDIVIDE_API bool IsAvailable(const TSet<const URTSEntityData*>& Owned, const URTSEntityData& Data);
 
-	/** What TeamId owns for prerequisites: its constructed, standing buildings and its living units. */
+	/** What TeamId owns for prerequisites: its constructed, standing buildings, its living units and its researched upgrades. */
 	WORLDDIVIDE_API TSet<const URTSEntityData*> GatherOwned(const UWorld& World, int32 TeamId);
 
 	/**
@@ -25,13 +26,17 @@ namespace RTSProduction
 	 * server's checks share it; it only gates new orders, so what is already queued or paid for carries on.
 	 */
 	WORLDDIVIDE_API const URTSEntityData* FindMissingPrerequisite(const UWorld& World, int32 TeamId, const URTSEntityData& Data);
+
+	/** Upgrade waits in the queue of one of TeamId's buildings, so it cannot be queued again anywhere. */
+	WORLDDIVIDE_API bool IsUpgradeQueued(const UWorld& World, int32 TeamId, const URTSUpgradeData& Upgrade);
 }
 
 /**
- * The build queue of a production building, such as a barracks. Queueing charges the unit's cost, cancelling refunds it.
- * The front entry builds over its BuildTime, slower while the owner is low on power; the finished unit comes out just
- * outside the footprint and walks to the rally point. Every building has one; it stays inert unless the building is
- * constructed and its data lists units. The server runs it; the queue, progress and rally point replicate for the HUD.
+ * The build queue of a production building, such as a barracks: units and upgrades in one queue. Queueing charges the entry's
+ * cost, cancelling refunds it. The front entry builds over its BuildTime, slower while the owner is low on power; a finished
+ * unit comes out just outside the footprint and walks to the rally point, a finished upgrade goes to the owner's player.
+ * Every building has one; it stays inert unless the building is constructed and its data lists units or upgrades. The server
+ * runs it; the queue, progress and rally point replicate for the HUD.
  */
 UCLASS(ClassGroup = (RTS))
 class WORLDDIVIDE_API URTSProductionComponent : public UActorComponent
@@ -43,31 +48,35 @@ public:
 
 	static constexpr int32 MaxQueue = 5;
 
-	/** The owner is a constructed, standing building whose data lists units. */
+	/** The owner is a constructed, standing building whose data lists units or upgrades. */
 	bool CanProduce() const;
 
-	/** CanProduce, and Data is on the building's list. */
-	bool CanProduce(const URTSUnitData* Data) const;
+	/** CanProduce, and Data is on the building's list of units or of upgrades. */
+	bool CanProduce(const URTSEntityData* Data) const;
 
 	/**
-	 * Server only. Appends Data and charges its cost to Player. Refused, changing nothing, unless the building is Player's and
-	 * can produce Data, Player owns its prerequisites and can afford it, and the queue is not full.
+	 * Server only. Appends Data, a unit or an upgrade, and charges its cost to Player. Refused, changing nothing, unless the
+	 * building is Player's and can produce Data, Player owns its prerequisites and can afford it, and the queue is not full;
+	 * an upgrade also when Player has researched it or it is queued at any of Player's buildings.
 	 */
-	bool Enqueue(ARTSPlayerState& Player, URTSUnitData* Data);
+	bool Enqueue(ARTSPlayerState& Player, URTSEntityData* Data);
 
 	/**
 	 * Server only. Removes the last queued entry of Data and refunds its cost to Player, so progress on the front entry is
 	 * kept while a later one of the same kind is left to cancel. False when Player does not own the building or Data is not queued.
 	 */
-	bool CancelLast(ARTSPlayerState& Player, const URTSUnitData* Data);
+	bool CancelLast(ARTSPlayerState& Player, const URTSEntityData* Data);
 
 	/** Server only. Where finished units walk to. */
 	void SetRallyPoint(const FVector& Location);
 
-	/** Server only. Advances the front entry; once complete, spawns it and sends it to the rally point. */
+	/**
+	 * Server only. Advances the front entry; once complete, spawns a unit and sends it to the rally point, or completes an
+	 * upgrade for the owner's player.
+	 */
 	void UpdateProduction(float DeltaSeconds);
 
-	const TArray<TObjectPtr<URTSUnitData>>& GetQueue() const { return Queue; }
+	const TArray<TObjectPtr<URTSEntityData>>& GetQueue() const { return Queue; }
 
 	/** 0 to 1, of the front entry. */
 	float GetProgress() const { return Progress; }
@@ -80,7 +89,7 @@ private:
 	ARTSBuilding* GetBuilding() const;
 
 	UPROPERTY(Replicated)
-	TArray<TObjectPtr<URTSUnitData>> Queue;
+	TArray<TObjectPtr<URTSEntityData>> Queue;
 
 	UPROPERTY(Replicated)
 	float Progress = 0.f;

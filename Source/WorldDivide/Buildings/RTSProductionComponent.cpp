@@ -6,6 +6,7 @@
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
+#include "Data/RTSUpgradeData.h"
 #include "Economy/RTSHarvesterComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -49,6 +50,13 @@ namespace RTSProduction
 				Owned.Add(It->GetUnitData());
 			}
 		}
+		if (const ARTSPlayerState* Player = ARTSPlayerState::FindForTeam(World, TeamId))
+		{
+			for (const TObjectPtr<URTSUpgradeData>& Upgrade : Player->GetCompletedUpgrades())
+			{
+				Owned.Add(Upgrade);
+			}
+		}
 		return Owned;
 	}
 
@@ -56,6 +64,20 @@ namespace RTSProduction
 	{
 		// Most entries need nothing; only gather the team's actors when there is something to look up.
 		return Data.Prerequisites.IsEmpty() ? nullptr : FindMissingPrerequisite(GatherOwned(World, TeamId), Data);
+	}
+
+	bool IsUpgradeQueued(const UWorld& World, int32 TeamId, const URTSUpgradeData& Upgrade)
+	{
+		// A destroyed building takes its queue with it, so only standing ones count.
+		for (TActorIterator<ARTSBuilding> It(&World); It; ++It)
+		{
+			if (It->GetTeamId() == TeamId && !It->IsActorBeingDestroyed() && !It->GetHealthComponent()->IsDead()
+				&& It->GetProductionComponent()->GetQueue().Contains(&Upgrade))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }
 
@@ -75,16 +97,23 @@ bool URTSProductionComponent::CanProduce() const
 {
 	const ARTSBuilding* Building = GetBuilding();
 	const URTSBuildingData* Data = Building ? Building->GetBuildingData() : nullptr;
-	return Data && !Data->Units.IsEmpty() && Building->IsConstructed() && !Building->IsActorBeingDestroyed()
+	return Data && (!Data->Units.IsEmpty() || !Data->Upgrades.IsEmpty()) && Building->IsConstructed() && !Building->IsActorBeingDestroyed()
 		&& !Building->GetHealthComponent()->IsDead();
 }
 
-bool URTSProductionComponent::CanProduce(const URTSUnitData* Data) const
+bool URTSProductionComponent::CanProduce(const URTSEntityData* Data) const
 {
-	return Data && CanProduce() && GetBuilding()->GetBuildingData()->Units.Contains(Data);
+	if (!Data || !CanProduce())
+	{
+		return false;
+	}
+	const URTSBuildingData* BuildingData = GetBuilding()->GetBuildingData();
+	const URTSUnitData* Unit = Cast<URTSUnitData>(Data);
+	const URTSUpgradeData* Upgrade = Cast<URTSUpgradeData>(Data);
+	return (Unit && BuildingData->Units.Contains(Unit)) || (Upgrade && BuildingData->Upgrades.Contains(Upgrade));
 }
 
-bool URTSProductionComponent::Enqueue(ARTSPlayerState& Player, URTSUnitData* Data)
+bool URTSProductionComponent::Enqueue(ARTSPlayerState& Player, URTSEntityData* Data)
 {
 	check(GetOwner()->HasAuthority());
 	const ARTSBuilding* Building = GetBuilding();
@@ -98,6 +127,12 @@ bool URTSProductionComponent::Enqueue(ARTSPlayerState& Player, URTSUnitData* Dat
 		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d needs %s for %s"), Player.GetTeamId(), *Missing->GetName(), *Data->GetName());
 		return false;
 	}
+	const URTSUpgradeData* Upgrade = Cast<URTSUpgradeData>(Data);
+	if (Upgrade && (Player.HasUpgrade(Upgrade) || RTSProduction::IsUpgradeQueued(*GetWorld(), Player.GetTeamId(), *Upgrade)))
+	{
+		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d already researched or queued %s"), Player.GetTeamId(), *Data->GetName());
+		return false;
+	}
 	if (Queue.Num() >= MaxQueue || !Player.TrySpendCredits(Data->Cost))
 	{
 		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot queue %s: %d queued, %d of %d credits"),
@@ -108,11 +143,11 @@ bool URTSProductionComponent::Enqueue(ARTSPlayerState& Player, URTSUnitData* Dat
 	return true;
 }
 
-bool URTSProductionComponent::CancelLast(ARTSPlayerState& Player, const URTSUnitData* Data)
+bool URTSProductionComponent::CancelLast(ARTSPlayerState& Player, const URTSEntityData* Data)
 {
 	check(GetOwner()->HasAuthority());
 	const ARTSBuilding* Building = GetBuilding();
-	const int32 Index = Queue.FindLastByPredicate([Data](const TObjectPtr<URTSUnitData>& Entry) { return Entry.Get() == Data; });
+	const int32 Index = Queue.FindLastByPredicate([Data](const TObjectPtr<URTSEntityData>& Entry) { return Entry.Get() == Data; });
 	if (!Building || Building->GetTeamId() != Player.GetTeamId() || !Data || Index == INDEX_NONE)
 	{
 		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot cancel %s at %s"), Player.GetTeamId(), *GetNameSafe(Data), *GetNameSafe(Building));
@@ -142,7 +177,7 @@ void URTSProductionComponent::UpdateProduction(float DeltaSeconds)
 		return;
 	}
 
-	URTSUnitData* Data = Queue[0];
+	URTSEntityData* Data = Queue[0];
 	const float Rate = ARTSPlayerState::GetProductionRateForTeam(*GetWorld(), Building->GetTeamId());
 	Progress = Data && Data->BuildTime > 0.f ? FMath::Min(Progress + DeltaSeconds * Rate / Data->BuildTime, 1.f) : 1.f;
 	if (Progress < 1.f)
@@ -152,7 +187,16 @@ void URTSProductionComponent::UpdateProduction(float DeltaSeconds)
 
 	Queue.RemoveAt(0);
 	Progress = 0.f;
-	if (ARTSUnit* Unit = Data ? Building->SpawnUnitAtExit(Data) : nullptr)
+	if (URTSUpgradeData* Upgrade = Cast<URTSUpgradeData>(Data))
+	{
+		if (ARTSPlayerState* Player = ARTSPlayerState::FindForTeam(*GetWorld(), Building->GetTeamId()))
+		{
+			Player->CompleteUpgrade(*Upgrade);
+		}
+		return;
+	}
+	URTSUnitData* UnitData = Cast<URTSUnitData>(Data);
+	if (ARTSUnit* Unit = UnitData ? Building->SpawnUnitAtExit(UnitData) : nullptr)
 	{
 		FRTSCommand Move;
 		Move.Type = ERTSCommandType::Move;

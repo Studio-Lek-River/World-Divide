@@ -1,4 +1,4 @@
-"""Builds the placeholder weapon, unit, harvester, builder, building and faction data assets, the placement ghost material, the
+"""Builds the placeholder weapon, unit, harvester, builder, upgrade, building and faction data assets, the placement ghost material, the
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py) and the L_TestMap level with a supply
 source and two builders by each base. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
@@ -28,6 +28,7 @@ import placeholder_art as art  # noqa: E402
 UNIT_DIR = "/Game/Data/Units"
 WEAPON_DIR = "/Game/Data/Weapons"
 BUILDING_DIR = "/Game/Data/Buildings"
+UPGRADE_DIR = "/Game/Data/Upgrades"
 FACTION_DIR = "/Game/Data/Factions"
 MATERIAL_DIR = "/Game/Materials"
 MAP_PATH = "/Game/Maps/L_TestMap"
@@ -255,7 +256,7 @@ def make_builder(name, display_name, mesh, scale, radius, health, speed, turn_ra
 
 
 def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw,
-                  spawn_on_complete=None, accepts_supply=False, requires_power=False, units=()):
+                  spawn_on_complete=None, accepts_supply=False, requires_power=False, units=(), upgrades=()):
     return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
         "display_name": unreal.Text(display_name),
         "mesh": mesh,
@@ -272,6 +273,19 @@ def make_building(name, display_name, mesh, scale, footprint, health, weapon, co
         "spawn_on_complete": spawn_on_complete,
         "accepts_supply": accepts_supply,
         "units": list(units),
+        "upgrades": list(upgrades),
+    })
+
+
+def make_upgrade(name, display_name, cost, build_time, stat, multiplier, targets, prerequisites=()):
+    return plan_data_asset(name, UPGRADE_DIR, unreal.RTSUpgradeData, {
+        "display_name": unreal.Text(display_name),
+        "cost": cost,
+        "build_time": build_time,
+        "prerequisites": list(prerequisites),
+        "stat": stat,
+        "multiplier": multiplier,
+        "targets": list(targets),
     })
 
 
@@ -496,6 +510,13 @@ tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 260
                  180.0, 700, 10.0)
 infantry = make_unit("DA_TestInfantry", "Test Infantry", infantry_mesh, fit_scale(infantry_mesh, 100.0, 100.0), 30.0, 100.0,
                      rifle, 350.0, 540.0, 150, 4.0)
+grenade = make_weapon("DA_TestGrenade", 600.0, 25.0, 1.5)
+grenadier = make_unit("DA_TestGrenadier", "Test Grenadier", infantry_mesh, fit_scale(infantry_mesh, 130.0, 130.0), 35.0, 120.0,
+                      grenade, 320.0, 540.0, 300, 6.0)
+rifle_training = make_upgrade("DA_TestRifleTraining", "Test Rifle Training", 400, 8.0, unreal.RTSUpgradeStat.WEAPON_DAMAGE, 1.5,
+                              [infantry])
+# The grenadier comes only once the barracks has researched rifle training.
+add_properties(grenadier, {"prerequisites": [rifle_training]})
 tower_gun = make_weapon("DA_TestTowerGun", 1400.0, 30.0, 1.0)
 power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", power_plant_mesh, fit_scale(power_plant_mesh, 380.0, 380.0),
                             (4, 4), 800.0, None, 800, 6.0, 5, 0)
@@ -509,7 +530,7 @@ supply_depot = make_building("DA_TestSupplyDepot", "Test Supply Depot", supply_d
 builder = make_builder("DA_TestBuilder", "Test Builder", builder_mesh, fit_scale(builder_mesh, 150.0, 100.0), 60.0, 300.0,
                        500.0, 360.0, 1000, 10.0, [])
 barracks = make_building("DA_TestBarracks", "Test Barracks", barracks_mesh, fit_scale(barracks_mesh, 280.0, 280.0), (3, 3),
-                         800.0, None, 500, 5.0, 0, 1, units=[infantry])
+                         800.0, None, 500, 5.0, 0, 1, units=[infantry, grenadier], upgrades=[rifle_training])
 vehicle_factory = make_building("DA_TestVehicleFactory", "Test Vehicle Factory", vehicle_factory_mesh,
                                 fit_scale(vehicle_factory_mesh, 380.0, 380.0), (4, 4), 1200.0, None, 1200, 8.0, 0, 2,
                                 units=[tank, harvester, builder])

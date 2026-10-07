@@ -4,10 +4,12 @@
 #include "Combat/RTSHealthComponent.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
+#include "Data/RTSUnitData.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/GameStateBase.h"
 #include "Net/UnrealNetwork.h"
+#include "Units/RTSUnit.h"
 
 void ARTSPlayerState::SetTeamId(int32 InTeamId)
 {
@@ -83,6 +85,48 @@ bool ARTSPlayerState::IsLowPowerForTeam(const UWorld& World, int32 InTeamId)
 	return Player && Player->IsLowPower();
 }
 
+bool ARTSPlayerState::CompleteUpgrade(URTSUpgradeData& Upgrade)
+{
+	check(HasAuthority());
+	if (HasUpgrade(&Upgrade))
+	{
+		return false;
+	}
+	CompletedUpgrades.Add(&Upgrade);
+
+	UWorld* World = GetWorld();
+	if (!World || Upgrade.Targets.IsEmpty())
+	{
+		return true;
+	}
+	for (TActorIterator<ARTSUnit> It(World); It; ++It)
+	{
+		if (It->GetTeamId() == TeamId && !It->IsActorBeingDestroyed() && Upgrade.Targets.Contains(It->GetUnitData()))
+		{
+			It->ApplyUpgrades();
+		}
+	}
+	for (TActorIterator<ARTSBuilding> It(World); It; ++It)
+	{
+		if (It->GetTeamId() == TeamId && !It->IsActorBeingDestroyed() && Upgrade.Targets.Contains(It->GetBuildingData()))
+		{
+			It->ApplyUpgrades();
+		}
+	}
+	return true;
+}
+
+float ARTSPlayerState::GetStatMultiplier(const URTSEntityData& Data, ERTSUpgradeStat Stat) const
+{
+	return URTSUpgradeData::GetMultiplier(CompletedUpgrades, Data, Stat);
+}
+
+float ARTSPlayerState::GetStatMultiplierForTeam(const UWorld& World, int32 InTeamId, const URTSEntityData& Data, ERTSUpgradeStat Stat)
+{
+	const ARTSPlayerState* Player = FindForTeam(World, InTeamId);
+	return Player ? Player->GetStatMultiplier(Data, Stat) : 1.f;
+}
+
 void ARTSPlayerState::RecalculatePower(const ARTSBuilding* Removed)
 {
 	check(HasAuthority());
@@ -127,4 +171,5 @@ void ARTSPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME_CONDITION(ARTSPlayerState, Credits, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ARTSPlayerState, PowerProduced, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ARTSPlayerState, PowerConsumed, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(ARTSPlayerState, CompletedUpgrades, COND_OwnerOnly);
 }

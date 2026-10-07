@@ -31,6 +31,9 @@ public:
 	/** Server only, between SpawnActorDeferred and FinishSpawning. The actor origin is the footprint centre on the ground. */
 	void InitFromData(URTSBuildingData* InBuildingData, int32 InTeamId);
 
+	/** Server only. Sets weapon damage and maximum health from the data and the upgrades the owner has researched. */
+	void ApplyUpgrades();
+
 	/**
 	 * Server only. Advances construction, slower while the owner is low on power; completing it arms the weapon, adds the
 	 * building to the owner's power grid, spawns the SpawnOnComplete unit and puts the rally point in front of the exit.

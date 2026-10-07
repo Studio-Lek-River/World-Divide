@@ -16,6 +16,14 @@ void URTSHealthComponent::InitHealth(float InMaxHealth)
 	Health = MaxHealth;
 }
 
+void URTSHealthComponent::SetMaxHealth(float InMaxHealth)
+{
+	check(GetOwner()->HasAuthority());
+	const float NewMaxHealth = FMath::Max(InMaxHealth, 1.f);
+	Health = MaxHealth > 0.f ? Health * NewMaxHealth / MaxHealth : NewMaxHealth;
+	MaxHealth = NewMaxHealth;
+}
+
 void URTSHealthComponent::ApplyDamage(float Amount, AActor* DamageInstigator)
 {
 	check(GetOwner()->HasAuthority());

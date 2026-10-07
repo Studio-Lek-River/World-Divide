@@ -8,7 +8,7 @@
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
-#include "Data/RTSUnitData.h"
+#include "Data/RTSUpgradeData.h"
 #include "Engine/Canvas.h"
 #include "EngineUtils.h"
 #include "Player/RTSPlayerController.h"
@@ -267,19 +267,28 @@ void ARTSHUD::DrawProduction(const ARTSPlayerController& Controller)
 
 	float Y = MenuMargin;
 	DrawText(TEXT("Produce"), MenuColor, MenuMargin, Y);
-	const TArray<URTSUnitData*> Menu = Controller.GetProductionMenu();
+	const TArray<URTSEntityData*> Menu = Controller.GetProductionMenu();
 	const int32 Count = FMath::Min(Menu.Num(), ARTSPlayerController::MaxBuildHotkeys);
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
 		Y += MenuLineHeight;
-		const URTSUnitData* Data = Menu[Index];
+		const URTSEntityData* Data = Menu[Index];
 		if (!Data)
 		{
 			ProduceButtons.Add(FBox2D(ForceInit));
 			continue;
 		}
 		FString Text = FString::Printf(TEXT("%d  %s  (%d)"), Index + 1, *Data->DisplayName.ToString(), Data->Cost);
-		if (const URTSEntityData* Missing = Controller.GetMissingPrerequisite(*Data))
+		const URTSUpgradeData* Upgrade = Cast<URTSUpgradeData>(Data);
+		if (Upgrade && Controller.HasUpgrade(*Upgrade))
+		{
+			Text = FString::Printf(TEXT("%d  %s  done"), Index + 1, *Data->DisplayName.ToString());
+		}
+		else if (Upgrade && RTSProduction::IsUpgradeQueued(*GetWorld(), Controller.GetTeamId(), *Upgrade))
+		{
+			Text += TEXT("  researching");
+		}
+		else if (const URTSEntityData* Missing = Controller.GetMissingPrerequisite(*Data))
 		{
 			Text += FString::Printf(TEXT("  needs %s"), *Missing->DisplayName.ToString());
 		}
@@ -291,7 +300,7 @@ void ARTSHUD::DrawProduction(const ARTSPlayerController& Controller)
 	}
 
 	const URTSProductionComponent* Production = Building->GetProductionComponent();
-	const TArray<TObjectPtr<URTSUnitData>>& Queue = Production->GetQueue();
+	const TArray<TObjectPtr<URTSEntityData>>& Queue = Production->GetQueue();
 	Y += MenuLineHeight * 1.5f;
 	DrawText(FString::Printf(TEXT("Queue  %d / %d"), Queue.Num(), URTSProductionComponent::MaxQueue), MenuColor, MenuMargin, Y);
 
@@ -311,7 +320,7 @@ void ARTSHUD::DrawProduction(const ARTSPlayerController& Controller)
 	}
 
 	Y += MenuLineHeight * 1.5f;
-	DrawText(TEXT("1-9 / click: produce    Right click: rally point    Click a queued unit / Del: cancel"), MenuColor, MenuMargin, Y);
+	DrawText(TEXT("1-9 / click: produce    Right click: rally point    Click a queued entry / Del: cancel"), MenuColor, MenuMargin, Y);
 }
 
 void ARTSHUD::DrawRallyPoint(const ARTSPlayerController& Controller, const ARTSBuilding& Building)

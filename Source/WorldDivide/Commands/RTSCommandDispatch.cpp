@@ -8,7 +8,6 @@
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
-#include "Data/RTSUnitData.h"
 #include "Engine/World.h"
 #include "HAL/IConsoleManager.h"
 #include "Units/RTSUnit.h"
@@ -158,13 +157,13 @@ namespace RTSCommands
 	bool Produce(ARTSPlayerState& Player, const FRTSCommand& Command)
 	{
 		const ARTSBuilding* Building = Cast<ARTSBuilding>(Command.TargetActor);
-		return IsValid(Building) && Building->GetProductionComponent()->Enqueue(Player, Cast<URTSUnitData>(Command.EntityData));
+		return IsValid(Building) && Building->GetProductionComponent()->Enqueue(Player, Command.EntityData);
 	}
 
 	bool CancelProduction(ARTSPlayerState& Player, const FRTSCommand& Command)
 	{
 		const ARTSBuilding* Building = Cast<ARTSBuilding>(Command.TargetActor);
-		return IsValid(Building) && Building->GetProductionComponent()->CancelLast(Player, Cast<URTSUnitData>(Command.EntityData));
+		return IsValid(Building) && Building->GetProductionComponent()->CancelLast(Player, Command.EntityData);
 	}
 
 	bool SetRallyPoint(ARTSPlayerState& Player, const FRTSCommand& Command)

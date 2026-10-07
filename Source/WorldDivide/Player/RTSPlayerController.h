@@ -12,7 +12,7 @@ class ARTSUnit;
 class URTSBuildingData;
 class URTSEntityData;
 class URTSFactionData;
-class URTSUnitData;
+class URTSUpgradeData;
 class UInputAction;
 class UInputMappingContext;
 struct FInputActionValue;
@@ -86,26 +86,29 @@ public:
 	 */
 	TArray<URTSBuildingData*> GetBuildMenu() const;
 
-	/** The selected building while it is the player's own and can produce, or null. Its units are the production menu. */
+	/** The selected building while it is the player's own and can produce, or null. Its units and upgrades are the production menu. */
 	ARTSBuilding* GetProductionBuilding() const;
 
-	/** What 1-9 queue at the selected production building; empty without one. */
-	TArray<URTSUnitData*> GetProductionMenu() const;
+	/** What 1-9 queue at the selected production building: its units, then its upgrades; empty without one. */
+	TArray<URTSEntityData*> GetProductionMenu() const;
+
+	/** The local player has researched Upgrade. */
+	bool HasUpgrade(const URTSUpgradeData& Upgrade) const;
 
 	/** The first of Data's prerequisites the local player does not own, or null. The server checks again before it charges. */
 	const URTSEntityData* GetMissingPrerequisite(const URTSEntityData& Data) const;
 
 	/**
 	 * Building would take Data as far as the client knows: the player's own, Data on its list, prerequisites owned,
-	 * affordable and the queue not full. The server checks again before it charges.
+	 * affordable and the queue not full, and an upgrade neither researched nor queued. The server checks again before it charges.
 	 */
-	bool CanRequestProduce(const ARTSBuilding* Building, const URTSUnitData* Data) const;
+	bool CanRequestProduce(const ARTSBuilding* Building, const URTSEntityData* Data) const;
 
-	/** Asks the server to queue Data at Building; false when CanRequestProduce refuses it locally. */
-	bool RequestProduce(ARTSBuilding* Building, URTSUnitData* Data);
+	/** Asks the server to queue Data, a unit or an upgrade, at Building; false when CanRequestProduce refuses it locally. */
+	bool RequestProduce(ARTSBuilding* Building, URTSEntityData* Data);
 
 	/** Asks the server to take the last queued Data off Building's queue for a refund; false when none is queued there. */
-	bool RequestCancelProduction(ARTSBuilding* Building, URTSUnitData* Data);
+	bool RequestCancelProduction(ARTSBuilding* Building, URTSEntityData* Data);
 
 	/** Asks the server to move Building's rally point to Location; false when it is not an own production building. */
 	bool RequestRallyPoint(ARTSBuilding* Building, const FVector& Location);

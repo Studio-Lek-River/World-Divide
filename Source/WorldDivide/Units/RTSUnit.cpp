@@ -6,6 +6,7 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Core/RTSPlayerState.h"
 #include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSHarvesterData.h"
@@ -102,9 +103,22 @@ void ARTSUnit::InitFromData(URTSUnitData* InUnitData, int32 InTeamId)
 	HealthComponent->InitHealth(UnitData ? UnitData->MaxHealth : 1.f);
 	WeaponComponent->SetTeamId(TeamId);
 	WeaponComponent->SetWeaponData(UnitData ? UnitData->Weapon : nullptr);
+	ApplyUpgrades();
 	HarvesterComponent->SetHarvesterData(Cast<URTSHarvesterData>(UnitData));
 	BuilderComponent->SetBuilderData(Cast<URTSBuilderData>(UnitData));
 	ApplyUnitData();
+}
+
+void ARTSUnit::ApplyUpgrades()
+{
+	check(HasAuthority());
+	if (!UnitData)
+	{
+		return;
+	}
+	const UWorld& World = *GetWorld();
+	HealthComponent->SetMaxHealth(UnitData->MaxHealth * ARTSPlayerState::GetStatMultiplierForTeam(World, TeamId, *UnitData, ERTSUpgradeStat::MaxHealth));
+	WeaponComponent->SetDamageMultiplier(ARTSPlayerState::GetStatMultiplierForTeam(World, TeamId, *UnitData, ERTSUpgradeStat::WeaponDamage));
 }
 
 void ARTSUnit::PostInitializeComponents()

@@ -18,6 +18,9 @@ public:
 	/** Server only. Fills health up to the new maximum. */
 	void InitHealth(float InMaxHealth);
 
+	/** Server only. Changes the maximum and scales health along, so the health fraction stays; for upgrades. */
+	void SetMaxHealth(float InMaxHealth);
+
 	/** Server only. Clamps at zero and broadcasts OnDeath once; damage to the dead is ignored. */
 	void ApplyDamage(float Amount, AActor* DamageInstigator);
 

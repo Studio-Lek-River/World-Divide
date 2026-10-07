@@ -1,10 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/RTSUpgradeData.h"
 #include "GameFramework/PlayerState.h"
 #include "RTSPlayerState.generated.h"
 
 class ARTSBuilding;
+class URTSEntityData;
 class URTSFactionData;
 
 UCLASS()
@@ -52,7 +54,7 @@ public:
 
 	bool IsLowPower() const { return GetPowerEfficiency() < 1.f; }
 
-	/** Multiplier on construction, and on unit production once it exists: 1, or LowPowerProductionRate when low on power. */
+	/** Multiplier on construction, unit production and research: 1, or LowPowerProductionRate when low on power. */
 	float GetProductionRate() const { return IsLowPower() ? LowPowerProductionRate : 1.f; }
 
 	/** The production rate of TeamId's player; 1 for a team without a player, which has no power grid. */
@@ -60,6 +62,23 @@ public:
 
 	/** Whether TeamId's player is low on power; false for a team without a player. */
 	static bool IsLowPowerForTeam(const UWorld& World, int32 InTeamId);
+
+	/** Upgrades the player has researched, in the order they completed. Only the owning player sees them replicate. */
+	const TArray<TObjectPtr<URTSUpgradeData>>& GetCompletedUpgrades() const { return CompletedUpgrades; }
+
+	bool HasUpgrade(const URTSUpgradeData* Upgrade) const { return Upgrade && CompletedUpgrades.Contains(Upgrade); }
+
+	/**
+	 * Server only. Records Upgrade and applies it to the player's units and buildings it targets; later ones get it as they
+	 * spawn. False, changing nothing, when the player already has it.
+	 */
+	bool CompleteUpgrade(URTSUpgradeData& Upgrade);
+
+	/** What the player's completed upgrades multiply Data's Stat by. */
+	float GetStatMultiplier(const URTSEntityData& Data, ERTSUpgradeStat Stat) const;
+
+	/** GetStatMultiplier of TeamId's player; 1 for a team without a player, which researches nothing. */
+	static float GetStatMultiplierForTeam(const UWorld& World, int32 InTeamId, const URTSEntityData& Data, ERTSUpgradeStat Stat);
 
 	/**
 	 * Server only. Sums the power of the team's completed buildings, leaving out Removed (a building being destroyed),
@@ -84,4 +103,7 @@ private:
 
 	UPROPERTY(Replicated)
 	int32 PowerConsumed = 0;
+
+	UPROPERTY(Replicated)
+	TArray<TObjectPtr<URTSUpgradeData>> CompletedUpgrades;
 };

@@ -5,10 +5,11 @@
 #include "RTSBuildingData.generated.h"
 
 class URTSUnitData;
+class URTSUpgradeData;
 
 /**
  * A structure placed on the 100 cm build grid. An armed building (a tower) fires once construction completes; a building
- * listing Units (a barracks) produces them.
+ * listing Units or Upgrades (a barracks) produces or researches them.
  */
 UCLASS(BlueprintType)
 class WORLDDIVIDE_API URTSBuildingData : public URTSEntityData
@@ -37,6 +38,10 @@ public:
 	/** What the building produces once constructed, in command card order. Empty for a building without production. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production")
 	TArray<TObjectPtr<URTSUnitData>> Units;
+
+	/** What the building researches once constructed, in command card order after Units. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production")
+	TArray<TObjectPtr<URTSUpgradeData>> Upgrades;
 
 	/** Harvesters deliver supplies here once it is constructed. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Economy")

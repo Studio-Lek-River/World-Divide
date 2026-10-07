@@ -27,6 +27,12 @@ public:
 	bool IsArmed() const { return WeaponData != nullptr; }
 	float GetRange() const;
 
+	/** Server only. Scales the weapon's damage, for upgrades; it stays when the weapon data changes. */
+	void SetDamageMultiplier(float InDamageMultiplier) { DamageMultiplier = InDamageMultiplier; }
+
+	/** Damage per shot after upgrades; 0 while unarmed. */
+	float GetDamage() const;
+
 	/** Server only. The owner's team; targets of any other team are enemies. */
 	void SetTeamId(int32 InTeamId) { TeamId = InTeamId; }
 
@@ -62,6 +68,7 @@ private:
 
 	TWeakObjectPtr<AActor> Target;
 	int32 TeamId = 0;
+	float DamageMultiplier = 1.f;
 	bool bTargetOrdered = false;
 	bool bAutoAcquire = true;
 

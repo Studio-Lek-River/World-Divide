@@ -22,6 +22,11 @@ float URTSWeaponComponent::GetRange() const
 	return WeaponData ? WeaponData->Range : 0.f;
 }
 
+float URTSWeaponComponent::GetDamage() const
+{
+	return WeaponData ? WeaponData->Damage * DamageMultiplier : 0.f;
+}
+
 void URTSWeaponComponent::SetOrderedTarget(AActor* InTarget)
 {
 	if (InTarget)
@@ -146,7 +151,7 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 		return;
 	}
 	Cooldown = WeaponData->ReloadSeconds;
-	Cast<IRTSTargetable>(Current)->GetHealthComponent()->ApplyDamage(WeaponData->Damage, GetOwner());
+	Cast<IRTSTargetable>(Current)->GetHealthComponent()->ApplyDamage(GetDamage(), GetOwner());
 }
 
 void URTSWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
