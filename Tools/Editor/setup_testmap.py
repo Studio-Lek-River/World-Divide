@@ -652,8 +652,12 @@ headquarters_mesh = make_art("Headquarters", "Kenney/CityKitCommercial/building-
 wall_mesh = make_art("Wall", "Kenney/CastleKit/wall.glb", tint=0.0)
 crate_mesh = make_art("SupplyCrate", "Kenney/FactoryKit/box-wide.glb", tint=0.0)
 
+# A defence outranges a standard tank by a quarter, so tanks take fire while they close in.
+TANK_RANGE = 1200.0
+TOWER_RANGE_OVER_TANK = 1.25
+
 # Shell speed in cm/s, effect scale, shell colour; the grenade lobs.
-cannon = make_weapon("DA_TestCannon", 1200.0, 40.0, 2.0, 6000.0, 1.6, (1.0, 0.45, 0.1))
+cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 6000.0, 1.6, (1.0, 0.45, 0.1))
 rifle = make_weapon("DA_TestRifle", 700.0, 8.0, 0.5, 9000.0, 0.4, (1.0, 0.85, 0.3))
 tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 260.0, 150.0), 90.0, 200.0, cannon, 600.0,
                  180.0, 700, 10.0)
@@ -666,7 +670,7 @@ rifle_training = make_upgrade("DA_TestRifleTraining", "Test Rifle Training", 400
                               [infantry])
 # The grenadier comes only once the barracks has researched rifle training.
 add_properties(grenadier, {"prerequisites": [rifle_training]})
-tower_gun = make_weapon("DA_TestTowerGun", 1400.0, 30.0, 1.0, 7000.0, 1.2, (0.4, 0.8, 1.0))
+tower_gun = make_weapon("DA_TestTowerGun", TANK_RANGE * TOWER_RANGE_OVER_TANK, 30.0, 1.0, 7000.0, 1.2, (0.4, 0.8, 1.0))
 power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", power_plant_mesh, fit_scale(power_plant_mesh, 380.0, 380.0),
                             (4, 4), 800.0, None, 800, 6.0, 5, 0)
 tower = make_building("DA_TestTower", "Test Tower", tower_mesh, fit_scale(tower_mesh, 160.0, 160.0, 260.0), (2, 2), 500.0,

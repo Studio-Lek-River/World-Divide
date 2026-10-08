@@ -148,6 +148,22 @@ bool FRTSTowerTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+/** A defence outranges a standard tank by a quarter, so tanks take fire while they close in (setup_testmap.py). */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTowerOutrangesTankTest, "WorldDivide.Buildings.TowerOutrangesTank", TestFlags)
+
+bool FRTSTowerOutrangesTankTest::RunTest(const FString& Parameters)
+{
+	const URTSBuildingData* Tower = LoadObject<URTSBuildingData>(nullptr, TEXT("/Game/Data/Buildings/DA_TestTower.DA_TestTower"));
+	const URTSUnitData* Tank = LoadObject<URTSUnitData>(nullptr, TEXT("/Game/Data/Units/DA_TestTank.DA_TestTank"));
+	if (!TestNotNull(TEXT("The test tower loads"), Tower) || !TestNotNull(TEXT("The test tank loads"), Tank)
+		|| !TestNotNull(TEXT("The tower is armed"), Tower->Weapon.Get()) || !TestNotNull(TEXT("The tank is armed"), Tank->Weapon.Get()))
+	{
+		return false;
+	}
+	TestEqual(TEXT("The tower's range is 1.25 times the tank's"), Tower->Weapon->Range, Tank->Weapon->Range * 1.25f);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBuildingUnderFireTest, "WorldDivide.Buildings.UnderFire", TestFlags)
 
 bool FRTSBuildingUnderFireTest::RunTest(const FString& Parameters)
