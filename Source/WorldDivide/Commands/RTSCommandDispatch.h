@@ -17,6 +17,13 @@ namespace RTSCommands
 	WORLDDIVIDE_API void Dispatch(TConstArrayView<ARTSUnit*> Units, const FRTSCommand& Command);
 
 	/**
+	 * Server only. Executes Player's order for Units, the one path every order takes, from a player's controller or an AI
+	 * opponent: refused once the match is over; a Build without units only in debug build; building orders checked against
+	 * Player; unit orders dispatched to those of Units that are Player's.
+	 */
+	WORLDDIVIDE_API void Issue(ARTSPlayerState& Player, TConstArrayView<ARTSUnit*> Units, const FRTSCommand& Command);
+
+	/**
 	 * Server only. Spawns the building of a Build command for TeamId once the faction may build it, the team is below its
 	 * MaxCount and the snapped spot passes placement. Returns the new building, or null when the command is rejected.
 	 */

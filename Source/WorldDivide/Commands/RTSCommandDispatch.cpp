@@ -5,6 +5,7 @@
 #include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSFormation.h"
+#include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
@@ -83,6 +84,51 @@ namespace RTSCommands
 			UnitCommand.TargetLocation = Slots[Assignment[Index]];
 			Units[Index]->ExecuteCommand(UnitCommand);
 		}
+	}
+
+	void Issue(ARTSPlayerState& Player, TConstArrayView<ARTSUnit*> Units, const FRTSCommand& Command)
+	{
+		UWorld* World = Player.GetWorld();
+		if (!World)
+		{
+			return;
+		}
+		if (ARTSGameState::IsMatchOver(*World))
+		{
+			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d's order comes after the match is over"), Player.GetTeamId());
+			return;
+		}
+		if (Command.Type == ERTSCommandType::Build && Units.IsEmpty())
+		{
+			// The debug build menu: no builder, so the server places the building directly, if debug build is on.
+			if (IsDebugBuildEnabled())
+			{
+				PurchaseBuilding(*World, Player, Command);
+			}
+			else
+			{
+				UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d may not build without a builder"), Player.GetTeamId());
+			}
+			return;
+		}
+		switch (Command.Type)
+		{
+		case ERTSCommandType::CancelConstruction:
+			CancelConstruction(Player, Command);
+			return;
+		case ERTSCommandType::Produce:
+			Produce(Player, Command);
+			return;
+		case ERTSCommandType::CancelProduction:
+			CancelProduction(Player, Command);
+			return;
+		case ERTSCommandType::SetRallyPoint:
+			SetRallyPoint(Player, Command);
+			return;
+		default:
+			break;
+		}
+		Dispatch(FilterOwnedUnits(Units, Player.GetTeamId()), Command);
 	}
 
 	ARTSBuilding* PlaceBuilding(UWorld& World, const URTSFactionData* Faction, int32 TeamId, const FRTSCommand& Command)

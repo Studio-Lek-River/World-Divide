@@ -1,6 +1,7 @@
-"""Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters included) and faction data assets, the placement ghost material, the
-placeholder models (imported from Art/Source/Placeholder by placeholder_art.py) and the L_TestMap level with a supply
-source and two builders by each base. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
+"""Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters included), AI build order and faction data assets, the placement ghost material, the
+placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the L_TestMap level with a supply
+source and two builders by each base, and the L_Skirmish level, the same ground without the armies, where an AI opponent
+plays team 1. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
 source files that build them and are rebuilt only when those change.
 
@@ -30,8 +31,10 @@ WEAPON_DIR = "/Game/Data/Weapons"
 BUILDING_DIR = "/Game/Data/Buildings"
 UPGRADE_DIR = "/Game/Data/Upgrades"
 FACTION_DIR = "/Game/Data/Factions"
+AI_DIR = "/Game/Data/AI"
 MATERIAL_DIR = "/Game/Materials"
 MAP_PATH = "/Game/Maps/L_TestMap"
+SKIRMISH_MAP_PATH = "/Game/Maps/L_Skirmish"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
 TEAM_MATERIAL = "M_PlaceholderTeam"
 # How strongly units and buildings take on their team colour; scenery keeps its own colours.
@@ -75,6 +78,11 @@ def differs(current, desired):
         return (current.x, current.y) != (desired.x, desired.y)
     if isinstance(desired, list):
         return len(current) != len(desired) or any(differs(c, d) for c, d in zip(current, desired))
+    if isinstance(desired, dict):
+        return len(current) != len(desired) or any(key not in current or differs(current[key], value)
+                                                   for key, value in desired.items())
+    if isinstance(desired, unreal.StructBase):
+        return current.export_text() != desired.export_text()
     if desired is None or isinstance(desired, unreal.Object):
         return object_path(current) != object_path(desired)
     return current != desired
@@ -292,12 +300,32 @@ def make_upgrade(name, display_name, cost, build_time, stat, multiplier, targets
     })
 
 
-def make_faction(name, display_name, buildings, headquarters=None, uses_power=True):
+def make_faction(name, display_name, buildings, headquarters=None, uses_power=True, ai_build_order=None):
     return plan_data_asset(name, FACTION_DIR, unreal.RTSFactionData, {
         "display_name": unreal.Text(display_name),
         "buildings": buildings,
         "headquarters": headquarters,
         "uses_power": uses_power,
+        "ai_build_order": ai_build_order,
+    })
+
+
+def make_struct(struct_class, properties):
+    struct = struct_class()
+    for key, value in properties.items():
+        struct.set_editor_property(key, value)
+    return struct
+
+
+def make_build_order(name, steps, army_units, interval, size, min_size, difficulty_scales):
+    """steps: (entry, count) pairs in order; difficulty_scales: {RTSAIDifficulty: (interval scale, size scale)}."""
+    return plan_data_asset(name, AI_DIR, unreal.RTSAIBuildOrderData, {
+        "steps": [make_struct(unreal.RTSBuildOrderStep, {"entry": entry, "count": count}) for entry, count in steps],
+        "army_units": army_units,
+        "waves": make_struct(unreal.RTSAIWaveSettings, {"interval": interval, "size": size, "min_size": min_size}),
+        "difficulty_scales": {difficulty: make_struct(unreal.RTSAIWaveScale, {"interval_scale": interval_scale,
+                                                                              "size_scale": size_scale})
+                              for difficulty, (interval_scale, size_scale) in difficulty_scales.items()},
     })
 
 
@@ -447,6 +475,50 @@ def make_map(tank, infantry, builder, wall, crate):
                            MAP_PATH, CUBE, tank, infantry, builder, wall, crate))
 
 
+def build_skirmish_map(builder, wall, crate, digest):
+    """L_TestMap's ground, obstacles and bases with only the builders and supply sources, and the skirmish game mode, so
+    an AI opponent takes team 1 and both sides build their armies themselves."""
+    if assets.does_asset_exist(SKIRMISH_MAP_PATH):
+        assets.delete_asset(SKIRMISH_MAP_PATH)
+    if not levels.new_level(SKIRMISH_MAP_PATH):
+        raise RuntimeError(f"Could not create {SKIRMISH_MAP_PATH}")
+
+    spawn_block("Ground", (0.0, 0.0, -50.0), (200.0, 200.0, 1.0))
+    spawn_wall("Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0), wall)
+    spawn_obstacle("Block_North", (1000.0, 2500.0, 200.0), (8.0, 8.0, 4.0))
+    spawn_obstacle("Block_South", (1000.0, -2500.0, 200.0), (8.0, 8.0, 4.0))
+    spawn_wall("Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0), wall)
+
+    sun = spawn(unreal.DirectionalLight, (0.0, 0.0, 2000.0), label="Sun")
+    sun.set_actor_rotation(unreal.Rotator(roll=0.0, pitch=-50.0, yaw=35.0), False)
+    sun.get_component_by_class(unreal.DirectionalLightComponent).set_editor_property("atmosphere_sun_light", True)
+    sky = spawn(unreal.SkyLight, (0.0, 0.0, 1000.0), label="SkyLight")
+    sky.get_component_by_class(unreal.SkyLightComponent).set_editor_property("real_time_capture", True)
+    spawn(unreal.SkyAtmosphere, (0.0, 0.0, 0.0), label="SkyAtmosphere")
+
+    nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
+    nav.set_actor_scale3d(unreal.Vector(100.0, 100.0, 10.0))
+
+    for team_id, x, yaw in ((0, -6000.0, 0.0), (1, 6000.0, 180.0)):
+        start = spawn(unreal.PlayerStart, (x, 0.0, 100.0), yaw, label=f"PlayerStart_Team{team_id}")
+        start.set_editor_property("player_start_tag", f"Team{team_id}")
+        forward = 1.0 if yaw == 0.0 else -1.0
+        spawn_units(builder, 2, team_id, (x - 400.0 * forward, 0.0, 0.0), yaw)
+        spawn_supply_source((x - 50.0 * forward, 2550.0 * forward, 0.0), 5000, (3, 3), crate)
+
+    world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    world.get_world_settings().set_editor_property("default_game_mode", unreal.RTSSkirmishGameMode.static_class())
+    assets.set_metadata_tag(world, HASH_TAG, digest)
+    if not levels.save_current_level():
+        raise RuntimeError(f"Could not save {SKIRMISH_MAP_PATH}")
+
+
+def make_skirmish_map(builder, wall, crate):
+    plan_rebuild(SKIRMISH_MAP_PATH, ".umap", lambda digest: build_skirmish_map(builder, wall, crate, digest),
+                 spec_hash([build_skirmish_map, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units,
+                            spawn_supply_source], SKIRMISH_MAP_PATH, CUBE, builder, wall, crate))
+
+
 def asset_file(path, extension):
     return os.path.join(CONTENT_DIR, path[len("/Game/"):] + extension)
 
@@ -551,8 +623,17 @@ add_properties(harvester, {"prerequisites": [supply_depot]})
 # The tech tree: vehicles only after infantry, and a tower only once a plant can power it.
 add_properties(vehicle_factory, {"prerequisites": [barracks]})
 add_properties(tower, {"prerequisites": [power_plant]})
-make_faction("DA_TestFaction", "Test Faction", buildings, headquarters)
+# The AI's base: a second plant before the tower, so the tower's draw never puts it on low power.
+build_order = make_build_order("DA_TestBuildOrder", [
+    (builder, 2), (power_plant, 1), (supply_depot, 1), (barracks, 1), (infantry, 3), (vehicle_factory, 1), (tank, 2),
+    (power_plant, 2), (tower, 1),
+], [infantry, tank], 90.0, 8, 4, {
+    unreal.RTSAIDifficulty.EASY: (1.5, 0.5),
+    unreal.RTSAIDifficulty.HARD: (0.67, 1.5),
+})
+make_faction("DA_TestFaction", "Test Faction", buildings, headquarters, ai_build_order=build_order)
 make_ghost_material("M_PlacementGhost")
 make_map(tank, infantry, builder, wall_mesh, crate_mesh)
+make_skirmish_map(builder, wall_mesh, crate_mesh)
 plan_data_assets()
 write_pending()

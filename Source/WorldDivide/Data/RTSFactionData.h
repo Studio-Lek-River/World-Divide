@@ -4,6 +4,7 @@
 #include "Engine/DataAsset.h"
 #include "RTSFactionData.generated.h"
 
+class URTSAIBuildOrderData;
 class URTSBuildingData;
 
 /** What one faction can build. The player state references the faction the player plays. */
@@ -30,4 +31,8 @@ public:
 	/** A faction without a power grid always runs at full efficiency, whatever its buildings produce or draw. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power")
 	bool bUsesPower = true;
+
+	/** What an AI opponent playing this faction builds and when it attacks. Without one the AI only harvests. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+	TObjectPtr<URTSAIBuildOrderData> AIBuildOrder;
 };

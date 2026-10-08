@@ -910,45 +910,8 @@ void ARTSPlayerController::IssueToSelection(const FRTSCommand& Command)
 
 void ARTSPlayerController::Server_IssueCommand_Implementation(const TArray<ARTSUnit*>& Units, const FRTSCommand& Command)
 {
-	ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
-	if (!State)
+	if (ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>())
 	{
-		return;
+		RTSCommands::Issue(*State, Units, Command);
 	}
-	if (ARTSGameState::IsMatchOver(*GetWorld()))
-	{
-		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d's order comes after the match is over"), State->GetTeamId());
-		return;
-	}
-	if (Command.Type == ERTSCommandType::Build && Units.IsEmpty())
-	{
-		// The debug build menu: no builder, so the server places the building directly, if debug build is on.
-		if (RTSCommands::IsDebugBuildEnabled())
-		{
-			RTSCommands::PurchaseBuilding(*GetWorld(), *State, Command);
-		}
-		else
-		{
-			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d may not build without a builder"), State->GetTeamId());
-		}
-		return;
-	}
-	switch (Command.Type)
-	{
-	case ERTSCommandType::CancelConstruction:
-		RTSCommands::CancelConstruction(*State, Command);
-		return;
-	case ERTSCommandType::Produce:
-		RTSCommands::Produce(*State, Command);
-		return;
-	case ERTSCommandType::CancelProduction:
-		RTSCommands::CancelProduction(*State, Command);
-		return;
-	case ERTSCommandType::SetRallyPoint:
-		RTSCommands::SetRallyPoint(*State, Command);
-		return;
-	default:
-		break;
-	}
-	RTSCommands::Dispatch(RTSCommands::FilterOwnedUnits(Units, State->GetTeamId()), Command);
 }

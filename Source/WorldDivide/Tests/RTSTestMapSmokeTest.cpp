@@ -606,7 +606,7 @@ bool FRTSWaitForNavigation::Update()
 		&& Controller->GetFaction() && Controller->GetCredits() > 0;
 	UNavigationSystemV1* NavSystem = bPlaying ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World) : nullptr;
 	const ARecastNavMesh* NavMesh = NavSystem ? Cast<ARecastNavMesh>(NavSystem->GetDefaultNavDataInstance()) : nullptr;
-	const bool bReady = NavMesh && NavMesh->GetNavMeshTilesCount() > 0 && !NavSystem->IsNavigationBuildInProgress();
+	const bool bReady = NavMesh && NavMesh->GetNavMeshTilesCount() > 0 && RTSTests::EnsureNavigation(*World);
 	if (bReady)
 	{
 		Test->AddInfo(FString::Printf(TEXT("Navmesh ready with %d tiles"), NavMesh->GetNavMeshTilesCount()));

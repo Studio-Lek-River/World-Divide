@@ -5,7 +5,10 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Engine/World.h"
+#include "EngineUtils.h"
+#include "GameFramework/PlayerStart.h"
 #include "GameFramework/WorldSettings.h"
+#include "NavigationSystem.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -25,6 +28,48 @@ namespace RTSTests
 		float Dilation = 1.f;
 		FParse::Value(FCommandLine::Get(), TEXT("RTSTestTimeDilation="), Dilation);
 		return FMath::Max(Dilation, 1.f);
+	}
+
+	/** Every PlayerStart of World has navmesh 10 m beside it, clear of the headquarters standing on it. */
+	inline bool HasNavigationAtStarts(UWorld& World)
+	{
+		const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
+		bool bAny = false;
+		for (TActorIterator<APlayerStart> It(&World); It && NavSystem; ++It)
+		{
+			FNavLocation NavPoint;
+			const FVector Beside = It->GetActorLocation() + FVector(0.f, 1000.f, 0.f);
+			if (!NavSystem->ProjectPointToNavigation(Beside, NavPoint, FVector(100.f, 100.f, 300.f)))
+			{
+				return false;
+			}
+			bAny = true;
+		}
+		return bAny;
+	}
+
+	/**
+	 * PIE copies the editor world's navmesh, and the editor builds it only for the map it started with: a map a test opened
+	 * with AutomationOpenMap, such as L_Skirmish, or L_TestMap again after it, comes into play with a navmesh missing or half
+	 * built. So the first call for a play world rebuilds its navmesh from scratch; true once that build is done and covers
+	 * the world's PlayerStarts.
+	 */
+	inline bool EnsureNavigation(UWorld& World)
+	{
+		UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
+		if (!NavSystem || !NavSystem->GetDefaultNavDataInstance() || NavSystem->IsNavigationBuildInProgress())
+		{
+			return false;
+		}
+		static TArray<TWeakObjectPtr<UWorld>> RebuiltWorlds;
+		RebuiltWorlds.RemoveAll([](const TWeakObjectPtr<UWorld>& Rebuilt) { return !Rebuilt.IsValid(); });
+		if (!RebuiltWorlds.Contains(&World))
+		{
+			RebuiltWorlds.Add(&World);
+			NavSystem->Build();
+			return false;
+		}
+		return HasNavigationAtStarts(World);
 	}
 
 	/** Runs World at the test time dilation. A listen server replicates it to its clients. */
