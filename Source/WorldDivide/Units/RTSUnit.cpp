@@ -6,6 +6,7 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
@@ -241,6 +242,16 @@ void ARTSUnit::Tick(float DeltaSeconds)
 	{
 		return;
 	}
+	// Once the match is over the unit stands where it is; its orders stay queued but never run again.
+	if (ARTSGameState::IsMatchOver(*GetWorld()))
+	{
+		AAIController* AI = GetController<AAIController>();
+		if (AI && AI->GetMoveStatus() != EPathFollowingStatus::Idle)
+		{
+			AI->StopMovement();
+		}
+		return;
+	}
 
 	UpdateAttackOrder();
 	UpdateAttackMoveOrder();
@@ -426,6 +437,11 @@ void ARTSUnit::ReleaseHold()
 
 void ARTSUnit::StartNextCommand()
 {
+	// Nothing starts after the match, such as a move released by a building's finished navmesh hole.
+	if (ARTSGameState::IsMatchOver(*GetWorld()))
+	{
+		return;
+	}
 	AAIController* AI = GetController<AAIController>();
 	if (!AI)
 	{
@@ -668,6 +684,11 @@ void ARTSUnit::NotifyMoveFinished(const FPathFollowingResult& Result)
 	if (bRequestingMove)
 	{
 		bMoveFinishedDuringRequest = true;
+		return;
+	}
+	// Stopped by the end of the match: the order is neither finished nor dropped, so nothing is popped or refunded.
+	if (ARTSGameState::IsMatchOver(*GetWorld()))
+	{
 		return;
 	}
 	// UpdateAttackOrder, the harvester and the builder start and stop their own moves and end their orders themselves.

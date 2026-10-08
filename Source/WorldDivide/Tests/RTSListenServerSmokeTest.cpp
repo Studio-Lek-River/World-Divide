@@ -138,6 +138,7 @@ namespace RTSListenServerTest
 
 		/** Where the client's tank stood when the server got its order after the match. */
 		FVector RefusedStart = FVector::ZeroVector;
+		int32 RefusedQueue = 0;
 		double RefusedAtWorldTime = 0.0;
 
 		/** The client's credits on the server when it ordered a second headquarters, and when the server took the order. */
@@ -1203,8 +1204,8 @@ namespace RTSListenServerTest
 			return true;
 		}
 
-		// The tank may still be finishing its attack-move; the refused order is judged from where it comes to rest.
-		const bool bTankAtRest = State->ServerTank->GetQueuedCommandCount() == 0 && State->ServerTank->GetVelocity().Size2D() < 1.f;
+		// The match end stops the tank where it is, an unfinished attack-move kept; the refused order is judged from there.
+		const bool bTankAtRest = State->ServerTank->GetVelocity().Size2D() < 1.f;
 		if (ClientController->GetMatchResult() == ERTSMatchResult::InProgress || !bTankAtRest)
 		{
 			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
@@ -1229,6 +1230,7 @@ namespace RTSListenServerTest
 		Move.TargetLocation = ClientTankStart;
 		ClientController->Server_IssueCommand({ State->ClientTank.Get() }, Move);
 		State->RefusedStart = State->ServerTank->GetActorLocation();
+		State->RefusedQueue = State->ServerTank->GetQueuedCommandCount();
 		State->RefusedAtWorldTime = ServerWorld->GetTimeSeconds();
 		return true;
 	}
@@ -1247,7 +1249,7 @@ namespace RTSListenServerTest
 		{
 			return false;
 		}
-		Test->TestEqual(TEXT("The server refused the client's move"), ServerTank->GetQueuedCommandCount(), 0);
+		Test->TestEqual(TEXT("The server refused the client's move"), ServerTank->GetQueuedCommandCount(), State->RefusedQueue);
 		const float Moved = FVector::Dist2D(ServerTank->GetActorLocation(), State->RefusedStart);
 		Test->TestTrue(FString::Printf(TEXT("The client's tank stayed put (moved %.0f cm)"), Moved), Moved < UnmovedTolerance);
 		return true;

@@ -3,6 +3,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSTargetable.h"
+#include "Core/RTSGameState.h"
 #include "Data/RTSWeaponData.h"
 #include "EngineUtils.h"
 #include "Units/RTSUnit.h"
@@ -158,7 +159,8 @@ void URTSWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (GetOwner()->HasAuthority())
+	// Units and buildings hold fire once the match is over.
+	if (GetOwner()->HasAuthority() && !ARTSGameState::IsMatchOver(*GetWorld()))
 	{
 		UpdateWeapon(DeltaTime);
 	}

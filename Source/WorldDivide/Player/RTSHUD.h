@@ -7,13 +7,14 @@
 class ARTSBuilding;
 class ARTSPlayerController;
 class ARTSUnit;
+enum class ERTSMatchResult : uint8;
 
 /**
  * Draws the drag box, the brackets plus health bar of selected units, construction progress of own buildings,
  * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
  * the player's credits and power, the build menu of the selected builder (or the debug build menu), and the production menu,
  * queue and rally point of a selected production building, a hint while attack-move is armed, and once the match is over
- * Victory or Defeat with, on the host, a restart button, without any UI assets.
+ * a pop-up with Victory or Defeat and, on the host, a restart button in place of the menus, without any UI assets.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSHUD : public AHUD
@@ -34,6 +35,12 @@ public:
 
 	/** Index into the production queue of the entry drawn at Point last frame, or INDEX_NONE. */
 	int32 GetQueueButtonAt(const FVector2D& Point) const;
+
+	/** The pop-up's title for a finished match, "Victory!" or "Defeated!"; empty while it runs. */
+	static FString GetMatchResultTitle(ERTSMatchResult Result);
+
+	/** The line under the title: whose forces were eliminated; empty while the match runs. */
+	static FString GetMatchResultMessage(ERTSMatchResult Result);
 
 private:
 	void DrawSelectionBox(const FVector2D& Start, const FVector2D& End);
@@ -58,7 +65,10 @@ private:
 	/** Bottom center, where the cancel button would be: that needs a selected building, attack-move selected units. */
 	void DrawAttackMoveHint(const ARTSPlayerController& Controller);
 
-	/** Once the match is over: Victory or Defeat across the middle, then the restart button on the host or a wait note on a client. */
+	/**
+	 * Once the match is over: the screen dimmed and a pop-up in the middle with the result, then the restart button on the
+	 * host or a wait note on a client.
+	 */
 	void DrawMatchResult(const ARTSPlayerController& Controller);
 
 	/** Green to red over a dark backdrop; Top is the bar's upper edge. */

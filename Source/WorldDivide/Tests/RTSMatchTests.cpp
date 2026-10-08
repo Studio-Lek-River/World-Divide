@@ -6,6 +6,7 @@
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Misc/AutomationTest.h"
+#include "Player/RTSHUD.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
 
@@ -153,6 +154,19 @@ namespace RTSMatchTests
 
 		Kill(*EnemyHeadquarters);
 		TestFalse(TEXT("A world without the match game state never ends a match"), ARTSGameState::IsMatchOver(*TestWorld.World));
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMatchResultTitleTest, "WorldDivide.Match.ResultTitle", TestFlags)
+
+	bool FRTSMatchResultTitleTest::RunTest(const FString& Parameters)
+	{
+		TestEqual(TEXT("The winner's pop-up"), ARTSHUD::GetMatchResultTitle(ERTSMatchResult::Victory), FString(TEXT("Victory!")));
+		TestEqual(TEXT("The loser's pop-up"), ARTSHUD::GetMatchResultTitle(ERTSMatchResult::Defeat), FString(TEXT("Defeated!")));
+		TestTrue(TEXT("No pop-up while the match runs"), ARTSHUD::GetMatchResultTitle(ERTSMatchResult::InProgress).IsEmpty());
+		TestFalse(TEXT("The winner reads why"), ARTSHUD::GetMatchResultMessage(ERTSMatchResult::Victory).IsEmpty());
+		TestFalse(TEXT("The loser reads why"), ARTSHUD::GetMatchResultMessage(ERTSMatchResult::Defeat).IsEmpty());
+		TestTrue(TEXT("No message while the match runs"), ARTSHUD::GetMatchResultMessage(ERTSMatchResult::InProgress).IsEmpty());
 		return true;
 	}
 }

@@ -5,6 +5,7 @@
 #include "Buildings/RTSProductionComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Combat/RTSHealthComponent.h"
+#include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
@@ -32,7 +33,8 @@ namespace
 	const FLinearColor ProgressFill(1.f, 0.8f, 0.1f, 0.45f);
 	const FLinearColor VictoryColor(0.3f, 1.f, 0.4f, 1.f);
 	const FLinearColor DefeatColor(1.f, 0.3f, 0.25f, 1.f);
-	const FLinearColor ResultBackdrop(0.f, 0.f, 0.f, 0.55f);
+	const FLinearColor ResultDim(0.f, 0.f, 0.f, 0.45f);
+	const FLinearColor ResultBackdrop(0.05f, 0.05f, 0.05f, 0.9f);
 
 	constexpr float ConstructionBarWidth = 60.f;
 	constexpr float QueueEntryWidth = 180.f;
@@ -41,6 +43,9 @@ namespace
 	constexpr float MenuMargin = 16.f;
 	constexpr float MenuLineHeight = 18.f;
 	constexpr float ResultTextScale = 3.f;
+	constexpr float ResultPanelMinWidth = 360.f;
+	constexpr float ResultPanelPadding = 24.f;
+	constexpr float ResultBorder = 2.f;
 }
 
 void ARTSHUD::DrawHUD()
@@ -69,12 +74,14 @@ void ARTSHUD::DrawHUD()
 		}
 	}
 
+	// Once the match is over every order is refused, so the pop-up replaces the menus.
+	const bool bMatchOver = Controller->GetMatchResult() != ERTSMatchResult::InProgress;
 	CancelButton = FBox2D(ForceInit);
 	const ARTSBuilding* Selected = Controller->GetSelectedBuilding();
 	if (Selected)
 	{
 		DrawBuildingMarker(*Controller, *Selected);
-		if (Controller->CanCancelConstruction(Selected))
+		if (!bMatchOver && Controller->CanCancelConstruction(Selected))
 		{
 			DrawCancelButton(*Selected);
 		}
@@ -86,13 +93,16 @@ void ARTSHUD::DrawHUD()
 		DrawBuildingHealth(*Controller, *Hovered);
 	}
 
-	DrawBuildMenu(*Controller);
 	ProduceButtons.Reset();
 	QueueButtons.Reset();
-	DrawProduction(*Controller);
+	if (!bMatchOver)
+	{
+		DrawBuildMenu(*Controller);
+		DrawProduction(*Controller);
+		DrawAttackMoveHint(*Controller);
+	}
 	DrawCredits(*Controller);
 	DrawPower(*Controller);
-	DrawAttackMoveHint(*Controller);
 
 	FVector2D Start;
 	FVector2D End;
@@ -401,6 +411,32 @@ void ARTSHUD::DrawAttackMoveHint(const ARTSPlayerController& Controller)
 	DrawText(Text, SelectionColor, Min.X + ButtonPadding, Min.Y + ButtonPadding);
 }
 
+FString ARTSHUD::GetMatchResultTitle(ERTSMatchResult Result)
+{
+	switch (Result)
+	{
+	case ERTSMatchResult::Victory:
+		return TEXT("Victory!");
+	case ERTSMatchResult::Defeat:
+		return TEXT("Defeated!");
+	default:
+		return FString();
+	}
+}
+
+FString ARTSHUD::GetMatchResultMessage(ERTSMatchResult Result)
+{
+	switch (Result)
+	{
+	case ERTSMatchResult::Victory:
+		return TEXT("The enemy has been eliminated.");
+	case ERTSMatchResult::Defeat:
+		return TEXT("Your forces have been eliminated.");
+	default:
+		return FString();
+	}
+}
+
 void ARTSHUD::DrawMatchResult(const ARTSPlayerController& Controller)
 {
 	const ERTSMatchResult Result = Controller.GetMatchResult();
@@ -409,40 +445,50 @@ void ARTSHUD::DrawMatchResult(const ARTSPlayerController& Controller)
 		return;
 	}
 
-	const bool bVictory = Result == ERTSMatchResult::Victory;
-	const FString Title = bVictory ? TEXT("Victory") : TEXT("Defeat");
+	const FLinearColor ResultColor = Result == ERTSMatchResult::Victory ? VictoryColor : DefeatColor;
+	const FString Title = GetMatchResultTitle(Result);
+	const FString Message = GetMatchResultMessage(Result);
+	const bool bCanRestart = Controller.CanRestart();
+	const FString Footer = bCanRestart ? TEXT("Restart") : TEXT("Waiting for the host to restart");
 	UFont* Font = GEngine->GetLargeFont();
-	float TitleWidth = 0.f;
-	float TitleHeight = 0.f;
-	GetTextSize(Title, TitleWidth, TitleHeight, Font, ResultTextScale);
+	FVector2f TitleSize;
+	FVector2f MessageSize;
+	FVector2f FooterSize;
+	GetTextSize(Title, TitleSize.X, TitleSize.Y, Font, ResultTextScale);
+	GetTextSize(Message, MessageSize.X, MessageSize.Y);
+	GetTextSize(Footer, FooterSize.X, FooterSize.Y);
+	const FVector2f ButtonSize(FooterSize.X + ButtonPadding * 4.f, FooterSize.Y + ButtonPadding * 2.f);
 
-	const float Top = Canvas->ClipY * 0.35f;
-	DrawRect(ResultBackdrop, 0.f, Top - ButtonPadding * 2.f, Canvas->ClipX, TitleHeight + MenuLineHeight * 4.f);
-	DrawText(Title, bVictory ? VictoryColor : DefeatColor, (Canvas->ClipX - TitleWidth) * 0.5f, Top, Font, ResultTextScale);
+	// The whole screen dimmed, then a bordered panel in the middle: title, message, and the restart button or wait note.
+	DrawRect(ResultDim, 0.f, 0.f, Canvas->ClipX, Canvas->ClipY);
+	const float ContentWidth = FMath::Max3(TitleSize.X, MessageSize.X, ButtonSize.X);
+	const FVector2D PanelSize(
+		FMath::Max(ContentWidth + ResultPanelPadding * 2.f, ResultPanelMinWidth),
+		ResultPanelPadding * 2.f + TitleSize.Y + MenuLineHeight + MessageSize.Y + MenuLineHeight * 1.5f + ButtonSize.Y);
+	const FVector2D Panel((Canvas->ClipX - PanelSize.X) * 0.5f, (Canvas->ClipY - PanelSize.Y) * 0.5f);
+	DrawRect(ResultColor, Panel.X - ResultBorder, Panel.Y - ResultBorder, PanelSize.X + ResultBorder * 2.f, PanelSize.Y + ResultBorder * 2.f);
+	DrawRect(ResultBackdrop, Panel.X, Panel.Y, PanelSize.X, PanelSize.Y);
 
-	const float Y = Top + TitleHeight + MenuLineHeight;
-	if (!Controller.CanRestart())
+	const float CenterX = Panel.X + PanelSize.X * 0.5f;
+	float Y = Panel.Y + ResultPanelPadding;
+	DrawText(Title, ResultColor, CenterX - TitleSize.X * 0.5f, Y, Font, ResultTextScale);
+	Y += TitleSize.Y + MenuLineHeight;
+	DrawText(Message, MenuColor, CenterX - MessageSize.X * 0.5f, Y);
+	Y += MessageSize.Y + MenuLineHeight * 1.5f;
+
+	if (!bCanRestart)
 	{
-		const FString Text = TEXT("Waiting for the host to restart");
-		float Width = 0.f;
-		float Height = 0.f;
-		GetTextSize(Text, Width, Height);
-		DrawText(Text, MenuColor, (Canvas->ClipX - Width) * 0.5f, Y);
+		DrawText(Footer, MenuColor, CenterX - FooterSize.X * 0.5f, Y + ButtonPadding);
 		return;
 	}
 
-	const FString Text = TEXT("Restart");
-	float Width = 0.f;
-	float Height = 0.f;
-	GetTextSize(Text, Width, Height);
-	const FVector2D Size(Width + ButtonPadding * 4.f, Height + ButtonPadding * 2.f);
-	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Y);
-	RestartButton = FBox2D(Min, Min + Size);
+	const FVector2D Min(CenterX - ButtonSize.X * 0.5f, Y);
+	RestartButton = FBox2D(Min, Min + FVector2D(ButtonSize));
 
 	FVector2D Mouse;
 	const bool bHovered = Controller.GetMousePosition(Mouse.X, Mouse.Y) && IsOnRestartButton(Mouse);
-	DrawRect(bHovered ? ButtonHoverFill : ButtonFill, Min.X, Min.Y, Size.X, Size.Y);
-	DrawText(Text, MenuColor, Min.X + ButtonPadding * 2.f, Min.Y + ButtonPadding);
+	DrawRect(bHovered ? ButtonHoverFill : ButtonFill, Min.X, Min.Y, ButtonSize.X, ButtonSize.Y);
+	DrawText(Footer, MenuColor, Min.X + ButtonPadding * 2.f, Min.Y + ButtonPadding);
 }
 
 bool ARTSHUD::IsOnRestartButton(const FVector2D& Point) const

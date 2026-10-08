@@ -147,11 +147,16 @@ void ARTSBuilding::Tick(float DeltaSeconds)
 	{
 		UpdateNavCut(DeltaSeconds);
 	}
-	if (HasAuthority() && bAutoConstruct && !IsConstructed())
+	// Construction and production hold once the match is over.
+	if (!HasAuthority() || ARTSGameState::IsMatchOver(*GetWorld()))
+	{
+		return;
+	}
+	if (bAutoConstruct && !IsConstructed())
 	{
 		UpdateConstruction(DeltaSeconds);
 	}
-	if (HasAuthority() && IsConstructed())
+	if (IsConstructed())
 	{
 		ProductionComponent->UpdateProduction(DeltaSeconds);
 	}

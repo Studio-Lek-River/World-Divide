@@ -7,6 +7,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
+#include "Combat/RTSTargetable.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
@@ -67,6 +68,8 @@
  * produces a builder, then destroys the enemy's last building but a tower: the player has won and orders are refused.
  * The rebuild test refuses a second headquarters while the first stands, then destroys it while a power plant keeps the
  * team in the match: a builder rebuilds it, a second one is refused beside the site, and the new one produces a builder.
+ * The match-end test sets a tank walking, a tank and an enemy tower firing at each other, a harvester, a builder and the
+ * headquarters' queue at work, then destroys the enemy headquarters: from then on nothing moves, fires or advances.
  */
 namespace
 {
@@ -249,6 +252,25 @@ namespace
 	// A few frames are enough for PlayerTick to notice the emptied selection.
 	constexpr double AttackMoveDisarmTimeout = 5.0;
 
+	/**
+	 * The match-end test: a harvester between a depot and a source on the empty strip, as in the harvest test, a tank walking
+	 * past them to the north and a builder at a vehicle factory site beyond, and a tank in range of an enemy tower south of
+	 * the bases. The walk takes over 13 s, the site 8 s and each queued builder 10 s, so all are under way when the match ends.
+	 */
+	const FVector MatchEndWalkerStart(-4000.f, 8200.f, 0.f);
+	const FVector MatchEndWalkerTarget(4000.f, 8200.f, 0.f);
+	const FVector MatchEndTowerSpot(3000.f, -7000.f, 0.f);
+	const FVector MatchEndFighterStart(2000.f, -7000.f, 0.f);
+	const FVector MatchEndSiteSpot(0.f, 9300.f, 0.f);
+	const FVector MatchEndBuilderStart(0.f, 9600.f, 0.f);
+	constexpr int32 MatchEndQueuedBuilders = 3;
+	constexpr int32 MatchEndSourceLoads = 10;
+	/** Game seconds everything runs before the enemy falls, and then is watched for any change. */
+	constexpr double MatchEndRunSeconds = 2.0;
+	constexpr double MatchEndFrozenSeconds = 3.0;
+	/** A unit may still move in the frame the match ends, before its own tick stops it. */
+	constexpr float MatchEndStopTolerance = 50.f;
+
 	struct FSmokeState
 	{
 		TArray<TWeakObjectPtr<ARTSUnit>> OwnUnits;
@@ -330,6 +352,25 @@ namespace
 		FVector RefusedStart = FVector::ZeroVector;
 		double RefusedAtWorldTime = 0.0;
 		bool bSecondHeadquartersChecked = false;
+
+		// Match-end test only.
+		struct FFrozenActor
+		{
+			TWeakObjectPtr<AActor> Actor;
+			FVector Location = FVector::ZeroVector;
+			float Health = 0.f;
+		};
+		TWeakObjectPtr<ARTSUnit> Fighter;
+		TWeakObjectPtr<ARTSBuilding> EnemyTower;
+		TWeakObjectPtr<ARTSBuilding> Site;
+		TArray<FFrozenActor> Frozen;
+		int32 FrozenUnits = 0;
+		int32 FrozenQueue = 0;
+		float FrozenQueueProgress = 0.f;
+		float FrozenSiteProgress = 0.f;
+		int32 FrozenSourceAmount = 0;
+		double ActivityStartWorldTime = 0.0;
+		double EndedAtWorldTime = 0.0;
 
 		// Attack-move tests only.
 		bool bHadTarget = false;
@@ -3794,6 +3835,290 @@ bool FRTSRebuildHeadquartersSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSLoseHeadquarters(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSRebuildHeadquarters(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForHeadquartersBuilder(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+/**
+ * Starts the harvest: a power plant, a supply source and a supply depot under construction beside it, which brings its
+ * harvester once complete and its hole in the navmesh is cut, as in play.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSStartMatchEndHarvest, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSStartMatchEndHarvest::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	const int32 TeamId = Controller->GetTeamId();
+	URTSBuildingData* DepotData = LoadObject<URTSBuildingData>(nullptr, SupplyDepotPath);
+	const URTSHarvesterData* HarvesterData = DepotData ? Cast<URTSHarvesterData>(DepotData->SpawnOnComplete) : nullptr;
+	if (!HarvesterData || !SpawnPowerPlant(World, TeamId))
+	{
+		Test->AddError(TEXT("Missing the test supply depot or harvester, or the power plant"));
+		return true;
+	}
+	ARTSSupplySource* Source = SpawnSupplySource(World, HarvestSourceSpot, MatchEndSourceLoads * HarvesterData->CarryAmount);
+	State->Building = RequestBuild(*Controller, DepotData, BuildSpot);
+	State->Source = Source;
+	State->SourceAmount = Source->GetRemaining();
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+/** Waits for the depot's harvester and its first load, so it is on its way to the depot when the match ends. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSWaitForMatchEndLoad, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSWaitForMatchEndLoad::Update()
+{
+	const ARTSBuilding* Depot = State->Building.Get();
+	const ARTSSupplySource* Source = State->Source.Get();
+	if (!Depot || !Source)
+	{
+		Test->AddError(TEXT("Lost the supply depot or the supply source"));
+		return true;
+	}
+	const URTSUnitData* HarvesterData = Depot->GetBuildingData()->SpawnOnComplete;
+	for (TActorIterator<ARTSUnit> It(Depot->GetWorld()); It && !State->Harvester.IsValid(); ++It)
+	{
+		State->Harvester = It->GetUnitData() == HarvesterData && It->GetTeamId() == Depot->GetTeamId() ? *It : nullptr;
+	}
+	if (State->Harvester.IsValid() && Source->GetRemaining() < State->SourceAmount)
+	{
+		return true;
+	}
+	if (FPlatformTime::Seconds() - State->PhaseStart > HarvestTimeout)
+	{
+		Test->AddError(TEXT("The depot's harvester never loaded"));
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Starts the rest: a tank on a long walk, a tank and an enemy tower firing at each other, a builder at a site, and three
+ * builders queued at the headquarters.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSStartMatchEndFight, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSStartMatchEndFight::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	const int32 TeamId = Controller->GetTeamId();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	URTSBuildingData* HeadquartersData = LoadObject<URTSBuildingData>(nullptr, HeadquartersPath);
+	URTSBuildingData* TowerData = LoadObject<URTSBuildingData>(nullptr, TowerPath);
+	URTSBuildingData* FactoryData = LoadObject<URTSBuildingData>(nullptr, VehicleFactoryPath);
+	URTSUnitData* BuilderData = LoadObject<URTSUnitData>(nullptr, BuilderPath);
+	ARTSUnit* Walker = SpawnTestUnit(World, TankPath, TeamId, MatchEndWalkerStart);
+	ARTSUnit* Fighter = SpawnTestUnit(World, TankPath, TeamId, MatchEndFighterStart);
+	ARTSUnit* Builder = SpawnTestUnit(World, BuilderPath, TeamId, MatchEndBuilderStart);
+	if (!Player || !HeadquartersData || !TowerData || !FactoryData || !BuilderData || !Walker || !Fighter || !Builder)
+	{
+		Test->AddError(TEXT("Missing the player state, the test headquarters, tower, vehicle factory or builder, or a test unit"));
+		return true;
+	}
+
+	FRTSCommand Move;
+	Move.Type = ERTSCommandType::Move;
+	Move.TargetLocation = MatchEndWalkerTarget;
+	Controller->Server_IssueCommand({ Walker }, Move);
+	Test->TestEqual(TEXT("The walker took the move"), Walker->GetQueuedCommandCount(), 1);
+
+	// A defence keeps no team in the match, so the tower outlasts the enemy headquarters.
+	ARTSBuilding* Tower = SpawnBuilding(World, TowerData, TeamId + 1, MatchEndTowerSpot, true);
+	FRTSCommand Attack;
+	Attack.Type = ERTSCommandType::Attack;
+	Attack.TargetActor = Tower;
+	Controller->Server_IssueCommand({ Fighter }, Attack);
+	Test->TestEqual(TEXT("The fighter took the attack order"), Fighter->GetQueuedCommandCount(), 1);
+
+	ARTSBuilding* Site = SpawnBuilding(World, FactoryData, TeamId, MatchEndSiteSpot, false);
+	Site->bAutoConstruct = false;
+	FRTSCommand Resume;
+	Resume.Type = ERTSCommandType::Build;
+	Resume.TargetActor = Site;
+	Controller->Server_IssueCommand({ Builder }, Resume);
+	Test->TestEqual(TEXT("The builder took the site"), Builder->GetQueuedCommandCount(), 1);
+
+	ARTSBuilding* Headquarters = nullptr;
+	for (TActorIterator<ARTSBuilding> It(World); It; ++It)
+	{
+		Headquarters = It->GetBuildingData() == HeadquartersData && It->GetTeamId() == TeamId ? *It : Headquarters;
+	}
+	if (!Test->TestNotNull(TEXT("The player has a headquarters"), Headquarters))
+	{
+		return true;
+	}
+	Player->AddCredits(MatchEndQueuedBuilders * BuilderData->Cost);
+	for (int32 Index = 0; Index < MatchEndQueuedBuilders; ++Index)
+	{
+		Controller->RequestProduce(Headquarters, BuilderData);
+	}
+	Test->TestEqual(TEXT("Every builder is queued"), Headquarters->GetProductionComponent()->GetQueue().Num(), MatchEndQueuedBuilders);
+
+	State->Walker = Walker;
+	State->Fighter = Fighter;
+	State->EnemyTower = Tower;
+	State->Builder = Builder;
+	State->Site = Site;
+	State->Building = Headquarters;
+	State->Player = Player;
+	State->ActivityStartWorldTime = World->GetTimeSeconds();
+	return true;
+}
+
+/** Once everything has run for a moment, destroys the enemy headquarters and records the state of the world. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSEndMatchWhileBusy, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSEndMatchWhileBusy::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	if (World->GetTimeSeconds() - State->ActivityStartWorldTime < MatchEndRunSeconds)
+	{
+		return false;
+	}
+	const ARTSUnit* Walker = State->Walker.Get();
+	const ARTSUnit* Fighter = State->Fighter.Get();
+	const ARTSBuilding* Tower = State->EnemyTower.Get();
+	const ARTSBuilding* Site = State->Site.Get();
+	const ARTSBuilding* Headquarters = State->Building.Get();
+	const ARTSPlayerState* Player = State->Player.Get();
+	const ARTSSupplySource* Source = State->Source.Get();
+	const ARTSGameState* GameState = World->GetGameState<ARTSGameState>();
+	const URTSBuildingData* HeadquartersData = LoadObject<URTSBuildingData>(nullptr, HeadquartersPath);
+	if (!Walker || !Fighter || !Tower || !Site || !Headquarters || !Player || !Source || !State->Harvester.IsValid() || !GameState
+		|| !HeadquartersData)
+	{
+		Test->AddError(TEXT("Lost a unit, a building, the player, the source or the game state before the match ended"));
+		return true;
+	}
+
+	// Everything must be under way, or the check after the end proves nothing.
+	Test->TestTrue(TEXT("The walker is on its way"), FVector::Dist2D(Walker->GetActorLocation(), MatchEndWalkerStart) > 500.f);
+	Test->TestTrue(TEXT("The walker has not arrived"), FVector::Dist2D(Walker->GetActorLocation(), MatchEndWalkerTarget) > ArrivalRadius);
+	Test->TestTrue(TEXT("The tower fires at the fighter"),
+		Fighter->GetHealthComponent()->GetHealth() < Fighter->GetHealthComponent()->GetMaxHealth());
+	Test->TestTrue(TEXT("The fighter fires at the tower"),
+		Tower->GetHealthComponent()->GetHealth() < Tower->GetHealthComponent()->GetMaxHealth());
+	Test->TestTrue(TEXT("The builder is constructing"), Site->GetConstructionProgress() > 0.f && !Site->IsConstructed());
+	const URTSProductionComponent* Production = Headquarters->GetProductionComponent();
+	Test->TestTrue(TEXT("The headquarters is producing"), Production->GetProgress() > 0.f && Production->GetQueue().Num() > 0);
+
+	const int32 EnemyTeam = Controller->GetTeamId() + 1;
+	TArray<ARTSBuilding*> EnemyHeadquarters;
+	for (TActorIterator<ARTSBuilding> It(World); It; ++It)
+	{
+		if (It->GetTeamId() == EnemyTeam && It->GetBuildingData() == HeadquartersData)
+		{
+			EnemyHeadquarters.Add(*It);
+		}
+	}
+	Test->TestFalse(TEXT("The match runs while the enemy has a headquarters"), GameState->IsMatchOver());
+	for (ARTSBuilding* Building : EnemyHeadquarters)
+	{
+		Building->GetHealthComponent()->ApplyDamage(Building->GetHealthComponent()->GetMaxHealth(), nullptr);
+	}
+	if (!Test->TestTrue(TEXT("The match is over"), GameState->IsMatchOver()))
+	{
+		return true;
+	}
+
+	State->Frozen.Reset();
+	State->FrozenUnits = 0;
+	for (TActorIterator<AActor> It(World); It; ++It)
+	{
+		const IRTSTargetable* Targetable = Cast<IRTSTargetable>(*It);
+		if (Targetable && !It->IsActorBeingDestroyed())
+		{
+			State->Frozen.Add({ *It, It->GetActorLocation(), Targetable->GetHealthComponent()->GetHealth() });
+			State->FrozenUnits += It->IsA<ARTSUnit>() ? 1 : 0;
+		}
+	}
+	State->FrozenQueue = Production->GetQueue().Num();
+	State->FrozenQueueProgress = Production->GetProgress();
+	State->FrozenSiteProgress = Site->GetConstructionProgress();
+	State->FrozenSourceAmount = Source->GetRemaining();
+	State->LastCredits = Player->GetCredits();
+	State->EndedAtWorldTime = World->GetTimeSeconds();
+	return true;
+}
+
+/** After the end nothing moves, takes damage, is produced, built or harvested, and no credits come or go. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifySimulationStopped, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifySimulationStopped::Update()
+{
+	UWorld* World = AutomationCommon::GetAnyGameWorld();
+	const ARTSBuilding* Site = State->Site.Get();
+	const ARTSBuilding* Headquarters = State->Building.Get();
+	const ARTSPlayerState* Player = State->Player.Get();
+	const ARTSSupplySource* Source = State->Source.Get();
+	if (!World || !Site || !Headquarters || !Player || !Source)
+	{
+		Test->AddError(TEXT("Lost the world, the site, the headquarters, the player or the source after the match ended"));
+		return true;
+	}
+	if (World->GetTimeSeconds() - State->EndedAtWorldTime < MatchEndFrozenSeconds)
+	{
+		return false;
+	}
+
+	for (const FSmokeState::FFrozenActor& Frozen : State->Frozen)
+	{
+		const AActor* Actor = Frozen.Actor.Get();
+		if (!Test->TestTrue(TEXT("Nothing is destroyed after the end"), IsValid(Actor) && !Actor->IsActorBeingDestroyed()))
+		{
+			continue;
+		}
+		const float Moved = FVector::Dist2D(Actor->GetActorLocation(), Frozen.Location);
+		Test->TestTrue(FString::Printf(TEXT("%s stays put (moved %.0f)"), *Actor->GetName(), Moved), Moved <= MatchEndStopTolerance);
+		Test->TestEqual(FString::Printf(TEXT("%s takes no damage"), *Actor->GetName()),
+			Cast<IRTSTargetable>(Actor)->GetHealthComponent()->GetHealth(), Frozen.Health);
+	}
+	int32 Units = 0;
+	for (TActorIterator<ARTSUnit> It(World); It; ++It)
+	{
+		++Units;
+	}
+	Test->TestEqual(TEXT("No unit is produced"), Units, State->FrozenUnits);
+	const URTSProductionComponent* Production = Headquarters->GetProductionComponent();
+	Test->TestEqual(TEXT("The queue holds"), Production->GetQueue().Num(), State->FrozenQueue);
+	Test->TestEqual(TEXT("Its progress holds"), Production->GetProgress(), State->FrozenQueueProgress);
+	Test->TestEqual(TEXT("The site's construction holds"), Site->GetConstructionProgress(), State->FrozenSiteProgress);
+	Test->TestEqual(TEXT("Nothing is harvested"), Source->GetRemaining(), State->FrozenSourceAmount);
+	Test->TestEqual(TEXT("No credits are earned or refunded"), Player->GetCredits(), State->LastCredits);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMatchEndSmokeTest, "WorldDivide.Smoke.MatchEnd",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSMatchEndSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSStartMatchEndHarvest(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForMatchEndLoad(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSStartMatchEndFight(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSEndMatchWhileBusy(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifySimulationStopped(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }
