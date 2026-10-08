@@ -5,6 +5,7 @@
 #include "Buildings/RTSPlacementGhost.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Commands/RTSCommandDispatch.h"
+#include "Core/RTSGameMode.h"
 #include "Core/RTSPlayerState.h"
 #include "Core/RTSSettings.h"
 #include "Data/RTSBuilderData.h"
@@ -267,8 +268,9 @@ bool ARTSPlayerController::RequestRestart()
 	{
 		return false;
 	}
-	// Reloads the current map; clients travel along.
-	return GetWorld()->ServerTravel(TEXT("?Restart"));
+	// Reloads the current map with the same seats; clients travel along.
+	const ARTSGameMode* GameMode = GetWorld()->GetAuthGameMode<ARTSGameMode>();
+	return GetWorld()->ServerTravel(GameMode ? GameMode->GetRestartURL() : TEXT("?Restart"));
 }
 
 bool ARTSPlayerController::IsOwnUnit(const ARTSUnit* Unit) const

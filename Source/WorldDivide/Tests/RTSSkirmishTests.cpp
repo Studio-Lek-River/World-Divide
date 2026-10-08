@@ -1,0 +1,172 @@
+#include "Core/RTSSkirmishSeats.h"
+#include "Misc/AutomationTest.h"
+#include "Tests/RTSTestFlags.h"
+
+#if WITH_DEV_AUTOMATION_TESTS
+
+// Named rather than anonymous: unity builds merge anonymous namespaces, and other test files have helpers of the same names.
+namespace RTSSkirmishTests
+{
+	using RTSTests::TestFlags;
+
+	FRTSSeat MakeSeat(ERTSSeatType Type, int32 StartSpot = INDEX_NONE, ERTSAIDifficulty Difficulty = ERTSAIDifficulty::Normal)
+	{
+		FRTSSeat Seat;
+		Seat.Type = Type;
+		Seat.StartSpot = StartSpot;
+		Seat.Difficulty = Difficulty;
+		return Seat;
+	}
+
+	FRTSSeat MakeHuman(int32 PlayerId, const FString& Token, int32 StartSpot = INDEX_NONE)
+	{
+		FRTSSeat Seat = MakeSeat(ERTSSeatType::Human, StartSpot);
+		Seat.PlayerId = PlayerId;
+		Seat.PlayerName = FString::Printf(TEXT("Player %d"), PlayerId);
+		Seat.PlayerToken = Token;
+		return Seat;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSSkirmishParseSeatsTest, "WorldDivide.Skirmish.ParseSeats", TestFlags)
+
+	bool FRTSSkirmishParseSeatsTest::RunTest(const FString& Parameters)
+	{
+		TArray<FRTSSeat> Seats;
+		TestTrue(TEXT("A full list parses"), RTSSkirmish::ParseSeats(TEXT("Human@3~abc,ai-hard@1,Open,Closed,AI"), Seats));
+		if (!TestEqual(TEXT("Five seats"), Seats.Num(), 5))
+		{
+			return false;
+		}
+		TestEqual(TEXT("A human"), Seats[0].Type, ERTSSeatType::Human);
+		TestEqual(TEXT("Its spot"), Seats[0].StartSpot, 3);
+		TestEqual(TEXT("Its token"), Seats[0].PlayerToken, FString(TEXT("abc")));
+		TestEqual(TEXT("An AI, ignoring case"), Seats[1].Type, ERTSSeatType::AI);
+		TestEqual(TEXT("Its difficulty"), Seats[1].Difficulty, ERTSAIDifficulty::Hard);
+		TestEqual(TEXT("Its spot"), Seats[1].StartSpot, 1);
+		TestEqual(TEXT("An open seat"), Seats[2].Type, ERTSSeatType::Open);
+		TestEqual(TEXT("Without a spot it is random"), Seats[2].StartSpot, int32(INDEX_NONE));
+		TestEqual(TEXT("A closed seat"), Seats[3].Type, ERTSSeatType::Closed);
+		TestEqual(TEXT("An AI without a difficulty is Normal"), Seats[4].Difficulty, ERTSAIDifficulty::Normal);
+
+		TArray<FRTSSeat> Again;
+		TestTrue(TEXT("The formatted list parses again"), RTSSkirmish::ParseSeats(RTSSkirmish::FormatSeats(Seats), Again));
+		TestTrue(TEXT("Into the same seats"), Again == Seats);
+		TestEqual(TEXT("Formatted"), RTSSkirmish::FormatSeats(Seats), FString(TEXT("Human@3~abc,AI-Hard@1,Open,Closed,AI-Normal")));
+
+		for (const TCHAR* Bad : { TEXT(""), TEXT("Human,Robot"), TEXT("AI-Insane"), TEXT("Open-Hard"), TEXT("AI~abc"),
+			TEXT("Human@x"), TEXT("Human@-1"), TEXT("Human@"), TEXT("Human~") })
+		{
+			TestFalse(FString::Printf(TEXT("\"%s\" is refused"), Bad), RTSSkirmish::ParseSeats(Bad, Seats));
+			TestTrue(FString::Printf(TEXT("\"%s\" leaves no seats"), Bad), Seats.IsEmpty());
+		}
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSSkirmishStartSpotsTest, "WorldDivide.Skirmish.StartSpots", TestFlags)
+
+	bool FRTSSkirmishStartSpotsTest::RunTest(const FString& Parameters)
+	{
+		FRandomStream Random(7);
+		for (int32 Round = 0; Round < 20; ++Round)
+		{
+			TArray<FRTSSeat> Seats = { MakeSeat(ERTSSeatType::Open), MakeSeat(ERTSSeatType::AI, 2), MakeSeat(ERTSSeatType::Closed, 0),
+				MakeSeat(ERTSSeatType::Human) };
+			if (!TestTrue(TEXT("Random spots are assigned"), RTSSkirmish::AssignStartSpots(Seats, 4, Random)))
+			{
+				return false;
+			}
+			TestEqual(TEXT("A chosen spot stays"), Seats[1].StartSpot, 2);
+			TestEqual(TEXT("A closed seat has no spot"), Seats[2].StartSpot, int32(INDEX_NONE));
+			TestTrue(TEXT("Random spots are free ones"), Seats[0].StartSpot != Seats[3].StartSpot
+				&& Seats[0].StartSpot != 2 && Seats[3].StartSpot != 2
+				&& Seats[0].StartSpot >= 0 && Seats[0].StartSpot < 4 && Seats[3].StartSpot >= 0 && Seats[3].StartSpot < 4);
+		}
+
+		TArray<FRTSSeat> Shared = { MakeSeat(ERTSSeatType::Open, 1), MakeSeat(ERTSSeatType::AI, 1) };
+		const TArray<FRTSSeat> Before = Shared;
+		TestFalse(TEXT("Two seats on one spot are refused"), RTSSkirmish::AssignStartSpots(Shared, 4, Random));
+		TestTrue(TEXT("Nothing changes"), Shared == Before);
+		TArray<FRTSSeat> OutOfRange = { MakeSeat(ERTSSeatType::Open, 4) };
+		TestFalse(TEXT("A spot the map does not have is refused"), RTSSkirmish::AssignStartSpots(OutOfRange, 4, Random));
+		TArray<FRTSSeat> TooMany = { MakeSeat(ERTSSeatType::Open), MakeSeat(ERTSSeatType::AI), MakeSeat(ERTSSeatType::AI) };
+		TestFalse(TEXT("More seats than spots are refused"), RTSSkirmish::AssignStartSpots(TooMany, 2, Random));
+		TArray<FRTSSeat> ClosedExtra = { MakeSeat(ERTSSeatType::Open), MakeSeat(ERTSSeatType::AI), MakeSeat(ERTSSeatType::Closed, 9) };
+		TestTrue(TEXT("Closed seats need no spot"), RTSSkirmish::AssignStartSpots(ClosedExtra, 2, Random));
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSSkirmishFindSeatTest, "WorldDivide.Skirmish.FindSeatForPlayer", TestFlags)
+
+	bool FRTSSkirmishFindSeatTest::RunTest(const FString& Parameters)
+	{
+		const TArray<FRTSSeat> Lobby = { MakeSeat(ERTSSeatType::AI), MakeHuman(1, TEXT("host")), MakeSeat(ERTSSeatType::Closed),
+			MakeHuman(2, TEXT("guest")) };
+		TestEqual(TEXT("A token finds its seat"), RTSSkirmish::FindSeatForPlayer(Lobby, TEXT("guest"), {}), 3);
+		TestEqual(TEXT("Whatever the order players join in"), RTSSkirmish::FindSeatForPlayer(Lobby, TEXT("host"), { 3 }), 1);
+		TestEqual(TEXT("An unknown token takes the first free human seat"), RTSSkirmish::FindSeatForPlayer(Lobby, TEXT("other"), { 1 }), 3);
+		TestEqual(TEXT("No seat once the human seats are taken"), RTSSkirmish::FindSeatForPlayer(Lobby, TEXT("other"), { 1, 3 }),
+			int32(INDEX_NONE));
+		TestEqual(TEXT("A token whose seat is taken finds none"), RTSSkirmish::FindSeatForPlayer(Lobby, TEXT("host"), { 1, 3 }),
+			int32(INDEX_NONE));
+
+		TArray<FRTSSeat> Direct = { MakeSeat(ERTSSeatType::AI), MakeSeat(ERTSSeatType::Human), MakeSeat(ERTSSeatType::Open),
+			MakeHuman(INDEX_NONE, TEXT("held")) };
+		TestEqual(TEXT("Without a token: an open seat first"), RTSSkirmish::FindSeatForPlayer(Direct, FString(), {}), 2);
+		TestEqual(TEXT("Then a human seat no token holds"), RTSSkirmish::FindSeatForPlayer(Direct, FString(), { 2 }), 1);
+		TestEqual(TEXT("Then one a token holds"), RTSSkirmish::FindSeatForPlayer(Direct, FString(), { 1, 2 }), 3);
+		TestEqual(TEXT("Never an AI or closed seat"), RTSSkirmish::FindSeatForPlayer(Direct, FString(), { 1, 2, 3 }), int32(INDEX_NONE));
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLobbySeatsTest, "WorldDivide.Lobby.Seats", TestFlags)
+
+	bool FRTSLobbySeatsTest::RunTest(const FString& Parameters)
+	{
+		TArray<FRTSSeat> Seats = { MakeSeat(ERTSSeatType::Open, 0), MakeSeat(ERTSSeatType::AI, 1), MakeSeat(ERTSSeatType::Open),
+			MakeSeat(ERTSSeatType::Closed) };
+		TestFalse(TEXT("No match without a human"), RTSSkirmish::CanStart(Seats));
+		TestEqual(TEXT("The host takes the first open seat"), RTSSkirmish::TakeOpenSeat(Seats, 10, TEXT("Host"), TEXT("t10")), 0);
+		TestEqual(TEXT("Its name"), Seats[0].PlayerName, FString(TEXT("Host")));
+		TestTrue(TEXT("A human and an AI can start"), RTSSkirmish::CanStart(Seats));
+		TestEqual(TEXT("A guest takes the next open seat"), RTSSkirmish::TakeOpenSeat(Seats, 11, TEXT("Guest"), TEXT("t11")), 2);
+		TestEqual(TEXT("No seat is left"), RTSSkirmish::TakeOpenSeat(Seats, 12, TEXT("Late"), TEXT("t12")), int32(INDEX_NONE));
+
+		// Seat types: the host's call, never for a seat a human holds.
+		TestTrue(TEXT("The host may make an AI harder"), RTSSkirmish::CanChangeType(Seats, 1, true, ERTSSeatType::AI));
+		TestTrue(TEXT("The host may close a seat"), RTSSkirmish::CanChangeType(Seats, 1, true, ERTSSeatType::Closed));
+		TestFalse(TEXT("A guest may not"), RTSSkirmish::CanChangeType(Seats, 1, false, ERTSSeatType::Closed));
+		TestFalse(TEXT("Not even the host changes a seat a human holds"), RTSSkirmish::CanChangeType(Seats, 2, true, ERTSSeatType::Closed));
+		TestFalse(TEXT("A seat is never made human by hand"), RTSSkirmish::CanChangeType(Seats, 3, true, ERTSSeatType::Human));
+		TestFalse(TEXT("A seat that does not exist"), RTSSkirmish::CanChangeType(Seats, 4, true, ERTSSeatType::Open));
+
+		// Start spots: the host sets any played seat's, a guest only its own, and two seats never share one.
+		TestTrue(TEXT("The guest moves itself"), RTSSkirmish::CanChangeStartSpot(Seats, 2, false, 11, 3, 4));
+		TestTrue(TEXT("Back to random"), RTSSkirmish::CanChangeStartSpot(Seats, 2, false, 11, INDEX_NONE, 4));
+		TestFalse(TEXT("The guest may not move the AI"), RTSSkirmish::CanChangeStartSpot(Seats, 1, false, 11, 3, 4));
+		TestFalse(TEXT("Nor the host"), RTSSkirmish::CanChangeStartSpot(Seats, 0, false, 11, 3, 4));
+		TestTrue(TEXT("The host moves the AI"), RTSSkirmish::CanChangeStartSpot(Seats, 1, true, 10, 3, 4));
+		TestFalse(TEXT("Onto a spot another seat has"), RTSSkirmish::CanChangeStartSpot(Seats, 1, true, 10, 0, 4));
+		TestTrue(TEXT("Its own spot again"), RTSSkirmish::CanChangeStartSpot(Seats, 1, true, 10, 1, 4));
+		TestFalse(TEXT("A spot the map does not have"), RTSSkirmish::CanChangeStartSpot(Seats, 1, true, 10, 4, 4));
+		TestFalse(TEXT("A closed seat has no spot"), RTSSkirmish::CanChangeStartSpot(Seats, 3, true, 10, 3, 4));
+
+		TestTrue(TEXT("The guest leaves"), RTSSkirmish::ReleaseSeat(Seats, 11));
+		TestEqual(TEXT("Its seat is open again"), Seats[2].Type, ERTSSeatType::Open);
+		TestTrue(TEXT("Without its token"), Seats[2].PlayerToken.IsEmpty());
+		TestFalse(TEXT("A player without a seat leaves nothing"), RTSSkirmish::ReleaseSeat(Seats, 11));
+
+		// The match: an open seat nobody took is closed; the token goes along, the lobby's names and ids do not.
+		const TArray<FRTSSeat> Match = RTSSkirmish::ToMatchSeats(Seats);
+		TestEqual(TEXT("The host plays"), Match[0].Type, ERTSSeatType::Human);
+		TestEqual(TEXT("By its token"), Match[0].PlayerToken, FString(TEXT("t10")));
+		TestEqual(TEXT("Without its lobby id"), Match[0].PlayerId, int32(INDEX_NONE));
+		TestEqual(TEXT("The open seat is closed"), Match[2].Type, ERTSSeatType::Closed);
+		TestEqual(TEXT("Formatted for the match"), RTSSkirmish::FormatSeats(Match), FString(TEXT("Human@0~t10,AI-Normal@1,Closed,Closed")));
+
+		TArray<FRTSSeat> Alone = { MakeHuman(1, TEXT("t1")), MakeSeat(ERTSSeatType::Open), MakeSeat(ERTSSeatType::Closed) };
+		TestFalse(TEXT("A human alone cannot start"), RTSSkirmish::CanStart(Alone));
+		return true;
+	}
+}
+
+#endif

@@ -5,6 +5,7 @@
 #include "RTSSettings.generated.h"
 
 class UMaterialInterface;
+class UWorld;
 class URTSFactionData;
 
 /** Project-wide asset references, kept in DefaultGame.ini so they stay reviewable text. */
@@ -21,4 +22,16 @@ public:
 	/** Translucent material with a "Color" vector parameter, tinted green or red by placement validity. */
 	UPROPERTY(Config, EditAnywhere, Category = "Placement")
 	TSoftObjectPtr<UMaterialInterface> PlacementGhostMaterial;
+
+	/** Where the game starts, and where leaving the lobby returns to. */
+	UPROPERTY(Config, EditAnywhere, Category = "Maps")
+	TSoftObjectPtr<UWorld> MainMenuMap;
+
+	/** Where the players pick the seats of a skirmish. */
+	UPROPERTY(Config, EditAnywhere, Category = "Maps")
+	TSoftObjectPtr<UWorld> LobbyMap;
+
+	/** The map the lobby starts the match on. */
+	UPROPERTY(Config, EditAnywhere, Category = "Maps")
+	TSoftObjectPtr<UWorld> SkirmishMap;
 };

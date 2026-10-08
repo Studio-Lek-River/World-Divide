@@ -14,6 +14,7 @@
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSHUD.h"
 #include "Player/RTSPlayerController.h"
+#include "Units/RTSUnitSpawner.h"
 #include "WorldDivide.h"
 
 namespace
@@ -29,7 +30,7 @@ namespace
 	}
 
 	/** The first PlayerStart tagged "Team<id>" of each team, by team id. */
-	TMap<int32, APlayerStart*> FindTeamStarts(UWorld& World)
+	TMap<int32, APlayerStart*> FindTaggedStarts(UWorld& World)
 	{
 		TMap<int32, APlayerStart*> Starts;
 		for (TActorIterator<APlayerStart> It(&World); It; ++It)
@@ -45,6 +46,8 @@ namespace
 	}
 }
 
+const TCHAR* ARTSGameMode::SeatTokenOption = TEXT("SeatToken");
+
 ARTSGameMode::ARTSGameMode()
 {
 	DefaultPawnClass = ARTSCameraPawn::StaticClass();
@@ -58,21 +61,95 @@ void ARTSGameMode::InitGame(const FString& MapName, const FString& Options, FStr
 {
 	Super::InitGame(MapName, Options, ErrorMessage);
 
-	const FString Difficulty = UGameplayStatics::ParseOption(Options, TEXT("AIDifficulty"));
-	if (Difficulty.IsEmpty())
+	if (UGameplayStatics::HasOption(Options, TEXT("Seats")))
 	{
-		return;
-	}
-	const UEnum* Enum = StaticEnum<ERTSAIDifficulty>();
-	for (int32 Index = 0; Index < Enum->NumEnums() - 1; ++Index)
-	{
-		if (Enum->GetNameStringByIndex(Index).Equals(Difficulty, ESearchCase::IgnoreCase))
+		const FString SeatsOption = UGameplayStatics::ParseOption(Options, TEXT("Seats"));
+		TArray<FRTSSeat> Parsed;
+		if (RTSSkirmish::ParseSeats(SeatsOption, Parsed))
 		{
-			AIDifficulty = static_cast<ERTSAIDifficulty>(Enum->GetValueByIndex(Index));
-			return;
+			Seats = MoveTemp(Parsed);
+		}
+		else
+		{
+			UE_LOG(LogWorldDivide, Warning, TEXT("Unknown Seats %s, keeping the default seats"), *SeatsOption);
 		}
 	}
-	UE_LOG(LogWorldDivide, Warning, TEXT("Unknown AIDifficulty %s, keeping %s"), *Difficulty, *Enum->GetNameStringByValue(static_cast<int64>(AIDifficulty)));
+	FindTeamStarts();
+}
+
+void ARTSGameMode::FindTeamStarts()
+{
+	const TMap<int32, APlayerStart*> Tagged = FindTaggedStarts(*GetWorld());
+	TeamStarts.Reset();
+	if (Seats.IsEmpty())
+	{
+		for (const TPair<int32, APlayerStart*>& Start : Tagged)
+		{
+			TeamStarts.Add(Start.Key, Start.Value);
+		}
+		return;
+	}
+
+	int32 SpotCount = 0;
+	for (const TPair<int32, APlayerStart*>& Start : Tagged)
+	{
+		SpotCount = FMath::Max(SpotCount, Start.Key + 1);
+	}
+	FRandomStream Random(FMath::Rand());
+	if (!RTSSkirmish::AssignStartSpots(Seats, SpotCount, Random))
+	{
+		UE_LOG(LogWorldDivide, Warning, TEXT("Seats %s do not fit the %d start spots of this map"),
+			*RTSSkirmish::FormatSeats(Seats), SpotCount);
+		return;
+	}
+	for (int32 TeamId = 0; TeamId < Seats.Num(); ++TeamId)
+	{
+		if (APlayerStart* const* Start = Tagged.Find(Seats[TeamId].StartSpot))
+		{
+			TeamStarts.Add(TeamId, *Start);
+		}
+	}
+	UE_LOG(LogWorldDivide, Log, TEXT("Playing with seats %s"), *RTSSkirmish::FormatSeats(Seats));
+}
+
+APlayerStart* ARTSGameMode::FindTeamStart(int32 TeamId) const
+{
+	const TObjectPtr<APlayerStart>* Start = TeamStarts.Find(TeamId);
+	return Start ? Start->Get() : nullptr;
+}
+
+int32 ARTSGameMode::ChooseTeam(const FString& Options, const APlayerState* Joining) const
+{
+	TSet<int32> Taken;
+	if (const AGameStateBase* State = GameState.Get())
+	{
+		for (const APlayerState* Player : State->PlayerArray)
+		{
+			const ARTSPlayerState* RTSPlayer = Cast<ARTSPlayerState>(Player);
+			if (RTSPlayer && RTSPlayer != Joining)
+			{
+				Taken.Add(RTSPlayer->GetTeamId());
+			}
+		}
+	}
+	// AI opponents take their seats once play starts.
+	for (int32 TeamId = 0; TeamId < Seats.Num(); ++TeamId)
+	{
+		if (Seats[TeamId].Type == ERTSSeatType::AI)
+		{
+			Taken.Add(TeamId);
+		}
+	}
+	return RTSSkirmish::FindSeatForPlayer(Seats, UGameplayStatics::ParseOption(Options, SeatTokenOption), Taken);
+}
+
+void ARTSGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
+{
+	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
+	if (ErrorMessage.IsEmpty() && !Seats.IsEmpty() && ChooseTeam(Options, nullptr) == INDEX_NONE)
+	{
+		ErrorMessage = TEXT("No free seat");
+	}
 }
 
 FString ARTSGameMode::InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
@@ -81,7 +158,12 @@ FString ARTSGameMode::InitNewPlayer(APlayerController* NewPlayerController, cons
 	// The team must be known before Super picks the start spot.
 	if (ARTSPlayerState* PlayerState = NewPlayerController->GetPlayerState<ARTSPlayerState>())
 	{
-		PlayerState->SetTeamId(NextTeamId++);
+		const int32 TeamId = Seats.IsEmpty() ? NextTeamId++ : ChooseTeam(Options, PlayerState);
+		if (TeamId == INDEX_NONE)
+		{
+			UE_LOG(LogWorldDivide, Warning, TEXT("No free seat for %s"), *PlayerState->GetPlayerName());
+		}
+		PlayerState->SetTeamId(TeamId);
 		PlayerState->SetFaction(GetDefault<URTSSettings>()->DefaultFaction.LoadSynchronous());
 		PlayerState->AddCredits(StartingCredits - PlayerState->GetCredits());
 	}
@@ -92,44 +174,77 @@ AActor* ARTSGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
 	if (const ARTSPlayerState* PlayerState = Player ? Player->GetPlayerState<ARTSPlayerState>() : nullptr)
 	{
-		const FName TeamTag(*FString::Printf(TEXT("Team%d"), PlayerState->GetTeamId()));
-		for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+		if (APlayerStart* Start = FindTeamStart(PlayerState->GetTeamId()))
 		{
-			if (It->PlayerStartTag == TeamTag)
-			{
-				return *It;
-			}
+			return Start;
 		}
 	}
 	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
+FString ARTSGameMode::GetRestartURL() const
+{
+	if (Seats.IsEmpty())
+	{
+		return TEXT("?Restart");
+	}
+	// The start spots stay where they fell; the humans find their seats again by their tokens.
+	FString URL = UWorld::RemovePIEPrefix(GetWorld()->GetOutermost()->GetName());
+	if (GetNetMode() == NM_ListenServer)
+	{
+		URL += TEXT("?listen");
+	}
+	return URL + TEXT("?Seats=") + RTSSkirmish::FormatSeats(Seats);
+}
+
 void ARTSGameMode::StartPlay()
 {
-	// Before BeginPlay goes out, so the headquarters starts play along with the map. The AI comes first, so its
-	// headquarters is of its faction.
-	if (bSpawnAIOpponents)
+	// Before BeginPlay goes out, so the starting units and the headquarters start play along with the map. The AI comes
+	// first, so its headquarters is of its faction.
+	if (!Seats.IsEmpty())
 	{
+		AssignUnitSpawners();
 		SpawnAIOpponents();
 	}
 	SpawnHeadquarters();
 	Super::StartPlay();
 }
 
+void ARTSGameMode::AssignUnitSpawners()
+{
+	// The map places each spot's starting units with the team id of the spot.
+	TMap<int32, int32> TeamBySpot;
+	for (const TPair<int32, TObjectPtr<APlayerStart>>& Start : TeamStarts)
+	{
+		TeamBySpot.Add(ParseTeamTag(Start.Value->PlayerStartTag), Start.Key);
+	}
+	for (TActorIterator<ARTSUnitSpawner> It(GetWorld()); It; ++It)
+	{
+		if (const int32* TeamId = TeamBySpot.Find(It->TeamId))
+		{
+			It->TeamId = *TeamId;
+		}
+		else
+		{
+			It->Destroy();
+		}
+	}
+}
+
 void ARTSGameMode::SpawnAIOpponents()
 {
 	UWorld* World = GetWorld();
-	for (const TPair<int32, APlayerStart*>& Start : FindTeamStarts(*World))
+	for (int32 TeamId = 0; TeamId < Seats.Num(); ++TeamId)
 	{
-		const int32 TeamId = Start.Key;
-		if (ARTSPlayerState::FindForTeam(*World, TeamId))
+		const APlayerStart* Start = FindTeamStart(TeamId);
+		if (Seats[TeamId].Type != ERTSSeatType::AI || !Start)
 		{
 			continue;
 		}
 
 		FActorSpawnParameters Params;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		ARTSAIPlayer* AI = World->SpawnActor<ARTSAIPlayer>(Start.Value->GetActorLocation(), FRotator::ZeroRotator, Params);
+		ARTSAIPlayer* AI = World->SpawnActor<ARTSAIPlayer>(Start->GetActorLocation(), FRotator::ZeroRotator, Params);
 		// The AI controller creates its player state as it spawns, from PlayerStateClass.
 		ARTSPlayerState* PlayerState = AI ? AI->GetPlayerState<ARTSPlayerState>() : nullptr;
 		if (!PlayerState)
@@ -144,17 +259,16 @@ void ARTSGameMode::SpawnAIOpponents()
 		PlayerState->SetTeamId(TeamId);
 		PlayerState->SetFaction(GetDefault<URTSSettings>()->DefaultFaction.LoadSynchronous());
 		PlayerState->AddCredits(StartingCredits - PlayerState->GetCredits());
-		AI->SetDifficulty(AIDifficulty);
-		AI->SetStartLocation(Start.Value->GetActorLocation());
-		NextTeamId = FMath::Max(NextTeamId, TeamId + 1);
-		UE_LOG(LogWorldDivide, Log, TEXT("AI opponent plays team %d"), TeamId);
+		AI->SetDifficulty(Seats[TeamId].Difficulty);
+		AI->SetStartLocation(Start->GetActorLocation());
+		UE_LOG(LogWorldDivide, Log, TEXT("AI opponent plays team %d from %s"), TeamId, *Start->PlayerStartTag.ToString());
 	}
 }
 
 void ARTSGameMode::SpawnHeadquarters()
 {
 	UWorld* World = GetWorld();
-	for (const TPair<int32, APlayerStart*>& Start : FindTeamStarts(*World))
+	for (const TPair<int32, TObjectPtr<APlayerStart>>& Start : TeamStarts)
 	{
 		const int32 TeamId = Start.Key;
 		APlayerStart* PlayerStart = Start.Value;

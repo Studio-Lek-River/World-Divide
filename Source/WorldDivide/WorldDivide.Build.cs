@@ -19,6 +19,8 @@ public class WorldDivide : ModuleRules
 			"NavigationSystem",
 			"GameplayTags",
 			"DeveloperSettings",
+			"Slate",
+			"SlateCore",
 		});
 
 		// PIE-driven smoke tests and the placeholder art test only.

@@ -1,7 +1,8 @@
 """Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters included), AI build order and faction data assets, the placement ghost material, the
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the L_TestMap level with a supply
-source and two builders by each base, and the L_Skirmish level, the same ground without the armies, where an AI opponent
-plays team 1. Both levels are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
+source and two builders by each base, the L_Skirmish level, the same ground without the armies and with four start spots,
+where the lobby's seats play, and the empty L_MainMenu and L_Lobby levels for the menu screens. L_TestMap and L_Skirmish
+are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
 source files that build them and are rebuilt only when those change.
 
@@ -35,6 +36,8 @@ AI_DIR = "/Game/Data/AI"
 MATERIAL_DIR = "/Game/Materials"
 MAP_PATH = "/Game/Maps/L_TestMap"
 SKIRMISH_MAP_PATH = "/Game/Maps/L_Skirmish"
+MAIN_MENU_MAP_PATH = "/Game/Maps/L_MainMenu"
+LOBBY_MAP_PATH = "/Game/Maps/L_Lobby"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
 TEAM_MATERIAL = "M_PlaceholderTeam"
 # How strongly units and buildings take on their team colour; scenery keeps its own colours.
@@ -486,8 +489,9 @@ def make_map(tank, infantry, builder, wall, crate):
 
 
 def build_skirmish_map(builder, wall, crate, digest):
-    """L_TestMap's ground, obstacles and bases with only the builders and supply sources, and the skirmish game mode, so
-    an AI opponent takes team 1 and both sides build their armies themselves."""
+    """L_TestMap's ground and obstacles with four start spots, each with only its builders and a supply source, and the
+    skirmish game mode, which plays the seats the lobby chose (by default a player against an AI opponent from spots 0
+    and 1) and lets every side build its army itself."""
     if assets.does_asset_exist(SKIRMISH_MAP_PATH):
         assets.delete_asset(SKIRMISH_MAP_PATH)
     if not levels.new_level(SKIRMISH_MAP_PATH):
@@ -509,12 +513,16 @@ def build_skirmish_map(builder, wall, crate, digest):
     nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
     nav.set_actor_scale3d(unreal.Vector(100.0, 100.0, 10.0))
 
-    for team_id, x, yaw in ((0, -6000.0, 0.0), (1, 6000.0, 180.0)):
-        start = spawn(unreal.PlayerStart, (x, 0.0, 100.0), yaw, label=f"PlayerStart_Team{team_id}")
-        start.set_editor_property("player_start_tag", f"Team{team_id}")
-        forward = 1.0 if yaw == 0.0 else -1.0
-        spawn_units(builder, 2, team_id, (x - 400.0 * forward, 0.0, 0.0), yaw)
-        spawn_supply_source((x - 50.0 * forward, 2550.0 * forward, 0.0), 5000, (3, 3), crate)
+    # Four start spots facing the middle: west and east as in L_TestMap, south and north on the empty strips.
+    for spot, x, y, yaw in ((0, -6000.0, 0.0, 0.0), (1, 6000.0, 0.0, 180.0), (2, 0.0, -7000.0, 90.0), (3, 0.0, 7000.0, -90.0)):
+        start = spawn(unreal.PlayerStart, (x, y, 100.0), yaw, label=f"PlayerStart_Team{spot}")
+        start.set_editor_property("player_start_tag", f"Team{spot}")
+        forward = (math.cos(math.radians(yaw)), math.sin(math.radians(yaw)))
+        # The units of a spot carry its number; the game mode hands them to the team playing from it.
+        spawn_units(builder, 2, spot, (x - 400.0 * forward[0], y - 400.0 * forward[1], 0.0), yaw)
+        # To the left of the base, seen from the middle.
+        spawn_supply_source((x - 50.0 * forward[0] - 2550.0 * forward[1], y - 50.0 * forward[1] + 2550.0 * forward[0], 0.0),
+                            5000, (3, 3), crate)
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     world.get_world_settings().set_editor_property("default_game_mode", unreal.RTSSkirmishGameMode.static_class())
@@ -528,6 +536,24 @@ def make_skirmish_map(builder, wall, crate):
     plan_rebuild(SKIRMISH_MAP_PATH, ".umap", lambda digest: build_skirmish_map(builder, wall, crate, digest),
                  spec_hash([build_skirmish_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units,
                             spawn_supply_source], SKIRMISH_MAP_PATH, CUBE, builder, wall, crate))
+
+
+def build_menu_map(path, game_mode, digest):
+    """An empty level that only shows the menu screen of game_mode."""
+    if assets.does_asset_exist(path):
+        assets.delete_asset(path)
+    if not levels.new_level(path):
+        raise RuntimeError(f"Could not create {path}")
+    world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    world.get_world_settings().set_editor_property("default_game_mode", game_mode.static_class())
+    assets.set_metadata_tag(world, HASH_TAG, digest)
+    if not levels.save_current_level():
+        raise RuntimeError(f"Could not save {path}")
+
+
+def make_menu_map(path, game_mode):
+    plan_rebuild(path, ".umap", lambda digest: build_menu_map(path, game_mode, digest),
+                 spec_hash([build_menu_map], path, game_mode.static_class().get_name()))
 
 
 def asset_file(path, extension):
@@ -646,5 +672,7 @@ make_faction("DA_TestFaction", "Test Faction", buildings, headquarters, ai_build
 make_ghost_material("M_PlacementGhost")
 make_map(tank, infantry, builder, wall_mesh, crate_mesh)
 make_skirmish_map(builder, wall_mesh, crate_mesh)
+make_menu_map(MAIN_MENU_MAP_PATH, unreal.RTSMainMenuGameMode)
+make_menu_map(LOBBY_MAP_PATH, unreal.RTSLobbyGameMode)
 plan_data_assets()
 write_pending()
