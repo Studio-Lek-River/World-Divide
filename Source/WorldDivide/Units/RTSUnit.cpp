@@ -20,6 +20,7 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/RTSPlayerController.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSUnitAIController.h"
 #include "WorldDivide.h"
@@ -130,7 +131,13 @@ void ARTSUnit::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
+	HealthComponent->OnDamaged.AddDynamic(this, &ThisClass::HandleDamaged);
 	HealthComponent->OnDeath.AddDynamic(this, &ThisClass::HandleDeath);
+}
+
+void ARTSUnit::HandleDamaged(float Amount, AActor* DamageInstigator)
+{
+	ARTSPlayerController::NotifyTeamAttacked(*this, TeamId, DamageInstigator, ERTSAttackAlert::Units);
 }
 
 void ARTSUnit::HandleDeath(AActor* Killer)

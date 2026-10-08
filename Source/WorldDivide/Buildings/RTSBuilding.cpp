@@ -126,21 +126,7 @@ void ARTSBuilding::BeginPlay()
 
 void ARTSBuilding::HandleDamaged(float Amount, AActor* DamageInstigator)
 {
-	// A shell whose shooter has died still comes from the enemy.
-	const IRTSTargetable* Attacker = Cast<IRTSTargetable>(DamageInstigator);
-	if (Attacker && Attacker->GetTeamId() == TeamId)
-	{
-		return;
-	}
-	// Only player controllers: the AI and an empty seat get no warning.
-	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
-	{
-		ARTSPlayerController* Controller = Cast<ARTSPlayerController>(It->Get());
-		if (Controller && Controller->GetTeamId() == TeamId)
-		{
-			Controller->NotifyBuildingAttacked(GetActorLocation());
-		}
-	}
+	ARTSPlayerController::NotifyTeamAttacked(*this, TeamId, DamageInstigator, ERTSAttackAlert::Base);
 }
 
 void ARTSBuilding::HandleDeath(AActor* Killer)

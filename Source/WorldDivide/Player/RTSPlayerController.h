@@ -18,6 +18,14 @@ class UInputAction;
 class UInputMappingContext;
 struct FInputActionValue;
 
+/** What an attack warning is about: the player's buildings, or their units in the field. */
+UENUM()
+enum class ERTSAttackAlert : uint8
+{
+	Base,
+	Units,
+};
+
 /**
  * Turns mouse and keyboard into camera movement, a local selection and FRTSCommands for the server.
  *
@@ -159,20 +167,26 @@ public:
 	void Server_IssueCommand(const TArray<ARTSUnit*>& Units, const FRTSCommand& Command);
 
 	/**
-	 * Server only. One of the player's buildings at Location was hit by the enemy. Warns the player through
-	 * Client_BaseUnderAttack, unless a warning for a spot near Location went out within the last few seconds.
+	 * Server only. Victim, on TeamId, was hit: unless DamageInstigator is on TeamId too, every player controller of
+	 * TeamId gets NotifyAttacked. A null instigator, a shooter that died while its shell flew, counts as the enemy.
 	 */
-	void NotifyBuildingAttacked(const FVector& Location);
+	static void NotifyTeamAttacked(const AActor& Victim, int32 TeamId, AActor* DamageInstigator, ERTSAttackAlert Kind);
 
-	/** Warnings received, for tests; the HUD shows the last one for a few seconds. */
-	int32 GetAttackAlertCount() const { return AttackAlertCount; }
+	/**
+	 * Server only. Something of the player's at Location was hit by the enemy. Warns the player through
+	 * Client_UnderAttack, unless a warning of the same kind for a spot near Location went out within its cooldown.
+	 */
+	void NotifyAttacked(const FVector& Location, ERTSAttackAlert Kind);
 
-	/** False before any warning; else where the last one points and the seconds since it arrived. */
-	bool GetLastAttackAlert(FVector& OutLocation, float& OutAge) const;
+	/** Warnings of Kind received, for tests; the HUD shows the last ones for a few seconds. */
+	int32 GetAttackAlertCount(ERTSAttackAlert Kind) const { return ReceivedAttackAlerts[static_cast<int32>(Kind)].Count; }
 
-	/** Owner only: the attacked building's location, for the HUD's message and marker. */
+	/** False before any warning of Kind; else where the last one points and the seconds since it arrived. */
+	bool GetLastAttackAlert(ERTSAttackAlert Kind, FVector& OutLocation, float& OutAge) const;
+
+	/** Owner only: where the attacked building or unit stood, for the HUD's message and marker. */
 	UFUNCTION(Client, Reliable)
-	void Client_BaseUnderAttack(const FVector& Location);
+	void Client_UnderAttack(const FVector& Location, ERTSAttackAlert Kind);
 
 protected:
 	virtual void SetupInputComponent() override;
@@ -290,13 +304,19 @@ private:
 	{
 		FVector Location;
 		float Time;
+		ERTSAttackAlert Kind;
 	};
 
-	/** Server only. Warnings sent within the cooldown, which hold back further ones near the same spot. */
+	/** Server only. Warnings sent within their cooldown, which hold back further ones of the same kind near the same spot. */
 	TArray<FSentAttackAlert> SentAttackAlerts;
 
-	/** Owning client. */
-	int32 AttackAlertCount = 0;
-	FVector LastAttackAlertLocation = FVector::ZeroVector;
-	float LastAttackAlertTime = 0.f;
+	struct FReceivedAttackAlert
+	{
+		int32 Count = 0;
+		FVector Location = FVector::ZeroVector;
+		float Time = 0.f;
+	};
+
+	/** Owning client. Indexed by ERTSAttackAlert. */
+	FReceivedAttackAlert ReceivedAttackAlerts[2];
 };

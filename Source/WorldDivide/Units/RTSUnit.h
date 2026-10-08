@@ -102,6 +102,10 @@ protected:
 	UFUNCTION()
 	void OnRep_TeamId();
 
+	/** Server only. Warns the team's players unless the instigator is on the unit's own team. */
+	UFUNCTION()
+	void HandleDamaged(float Amount, AActor* DamageInstigator);
+
 	/** Server only. */
 	UFUNCTION()
 	void HandleDeath(AActor* Killer);

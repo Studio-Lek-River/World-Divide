@@ -33,6 +33,7 @@ namespace
 	const FLinearColor ProgressFill(1.f, 0.8f, 0.1f, 0.45f);
 	const FLinearColor VictoryColor(0.3f, 1.f, 0.4f, 1.f);
 	const FLinearColor DefeatColor(1.f, 0.3f, 0.25f, 1.f);
+	const FLinearColor UnitAlertColor(1.f, 0.65f, 0.2f, 1.f);
 	const FLinearColor ResultDim(0.f, 0.f, 0.f, 0.45f);
 	const FLinearColor ResultBackdrop(0.05f, 0.05f, 0.05f, 0.9f);
 
@@ -435,14 +436,45 @@ void ARTSHUD::DrawPower(const ARTSPlayerController& Controller)
 
 void ARTSHUD::DrawAttackAlert(const ARTSPlayerController& Controller)
 {
-	FVector Location;
-	float Age = 0.f;
-	if (!Controller.GetLastAttackAlert(Location, Age) || Age >= AttackAlertSeconds)
+	// Base first: while both are fresh, the message names the base and both spots get a ring.
+	const TCHAR* Text = nullptr;
+	const FLinearColor* TextColor = nullptr;
+	for (const ERTSAttackAlert Kind : { ERTSAttackAlert::Base, ERTSAttackAlert::Units })
+	{
+		FVector Location;
+		float Age = 0.f;
+		if (!Controller.GetLastAttackAlert(Kind, Location, Age) || Age >= AttackAlertSeconds)
+		{
+			continue;
+		}
+		const bool bBase = Kind == ERTSAttackAlert::Base;
+		const FLinearColor& Color = bBase ? DefeatColor : UnitAlertColor;
+		if (!Text)
+		{
+			Text = bBase ? TEXT("Your base is under attack") : TEXT("Your units are under attack");
+			TextColor = &Color;
+		}
+
+		// A ring that pulses twice a second around the building or unit, while the spot is on screen.
+		FVector2D Center;
+		if (!Controller.ProjectWorldLocationToScreen(Location, Center))
+		{
+			continue;
+		}
+		const float Radius = AttackRingRadius + AttackRingPulse * FMath::Abs(FMath::Sin(Age * UE_PI * 2.f));
+		for (int32 Index = 0; Index < AttackRingSegments; ++Index)
+		{
+			const float From = 2.f * UE_PI * Index / AttackRingSegments;
+			const float To = 2.f * UE_PI * (Index + 1) / AttackRingSegments;
+			DrawLine(Center.X + Radius * FMath::Cos(From), Center.Y + Radius * FMath::Sin(From),
+				Center.X + Radius * FMath::Cos(To), Center.Y + Radius * FMath::Sin(To), Color, 2.f);
+		}
+	}
+	if (!Text)
 	{
 		return;
 	}
 
-	const FString Text = TEXT("Your base is under attack");
 	UFont* Font = GEngine->GetLargeFont();
 	float Width = 0.f;
 	float Height = 0.f;
@@ -450,22 +482,7 @@ void ARTSHUD::DrawAttackAlert(const ARTSPlayerController& Controller)
 	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
 	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, MenuMargin);
 	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
-	DrawText(Text, DefeatColor, Min.X + ButtonPadding, Min.Y + ButtonPadding, Font, AttackAlertTextScale);
-
-	// A ring that pulses twice a second around the building, while it is on screen.
-	FVector2D Center;
-	if (!Controller.ProjectWorldLocationToScreen(Location, Center))
-	{
-		return;
-	}
-	const float Radius = AttackRingRadius + AttackRingPulse * FMath::Abs(FMath::Sin(Age * UE_PI * 2.f));
-	for (int32 Index = 0; Index < AttackRingSegments; ++Index)
-	{
-		const float From = 2.f * UE_PI * Index / AttackRingSegments;
-		const float To = 2.f * UE_PI * (Index + 1) / AttackRingSegments;
-		DrawLine(Center.X + Radius * FMath::Cos(From), Center.Y + Radius * FMath::Sin(From),
-			Center.X + Radius * FMath::Cos(To), Center.Y + Radius * FMath::Sin(To), DefeatColor, 2.f);
-	}
+	DrawText(Text, *TextColor, Min.X + ButtonPadding, Min.Y + ButtonPadding, Font, AttackAlertTextScale);
 }
 
 void ARTSHUD::DrawAttackMoveHint(const ARTSPlayerController& Controller)

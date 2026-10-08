@@ -29,7 +29,9 @@
 
 /**
  * Plays L_TestMap as a listen server with one client in the same process. Checks that the host gets team 0 and the
- * client team 1 at their tagged player starts, and that the client sees its own credits but not the host's, then sends a move for every unit the client sees through the client's
+ * client team 1 at their tagged player starts, and that the client sees its own credits but not the host's. The server then
+ * lets a host unit hit the client's headquarters and one of its units: the client, and not the host, must get one base and
+ * one unit warning. Then the client sends a move for every unit the client sees through the client's
  * own controller: the server must move only the client's units, and the client must see them arrive. While its
  * headquarters stands, the client's controller does not start a ghost for a second one and the server refuses the order
  * its builder sends anyway, uncharged. The client then
@@ -140,6 +142,10 @@ namespace RTSListenServerTest
 		FVector RefusedStart = FVector::ZeroVector;
 		int32 RefusedQueue = 0;
 		double RefusedAtWorldTime = 0.0;
+
+		/** The client's warnings, as its own controller counts them, before the server hit its headquarters and unit. */
+		int32 ClientBaseAlerts = 0;
+		int32 ClientUnitAlerts = 0;
 
 		/** The client's credits on the server when it ordered a second headquarters, and when the server took the order. */
 		int32 ClientHeadquartersCredits = 0;
@@ -373,6 +379,79 @@ namespace RTSListenServerTest
 			ClientController ? ClientController->GetCredits() : INDEX_NONE, ServerClientState ? ServerClientState->GetCredits() : 0);
 		Test->TestNotNull(TEXT("The client sees the host's player state"), ClientHostState);
 		Test->TestTrue(TEXT("The client does not see the host's credits"), ClientHostState && ClientHostState->GetCredits() == 0);
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSHitClientAssets, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSHitClientAssets::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		const ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		if (!ServerWorld || !ClientController)
+		{
+			Test->AddError(TEXT("Lost a world or the client's controller"));
+			return true;
+		}
+
+		ARTSUnit* HostUnit = nullptr;
+		ARTSUnit* ClientUnit = nullptr;
+		for (TActorIterator<ARTSUnit> It(ServerWorld); It; ++It)
+		{
+			if (It->GetTeamId() == HostTeam && !HostUnit)
+			{
+				HostUnit = *It;
+			}
+			else if (It->GetTeamId() == ClientTeam && !ClientUnit)
+			{
+				ClientUnit = *It;
+			}
+		}
+		ARTSBuilding* ClientHeadquarters = nullptr;
+		for (TActorIterator<ARTSBuilding> It(ServerWorld); It && !ClientHeadquarters; ++It)
+		{
+			ClientHeadquarters = It->GetTeamId() == ClientTeam ? *It : nullptr;
+		}
+		if (!HostUnit || !ClientUnit || !ClientHeadquarters)
+		{
+			Test->AddError(TEXT("Found no host unit, client unit or client headquarters on the server"));
+			return true;
+		}
+
+		// A scratch each, as if the host unit had fired; nothing the later phases notice.
+		State->ClientBaseAlerts = ClientController->GetAttackAlertCount(ERTSAttackAlert::Base);
+		State->ClientUnitAlerts = ClientController->GetAttackAlertCount(ERTSAttackAlert::Units);
+		ClientHeadquarters->GetHealthComponent()->ApplyDamage(1.f, HostUnit);
+		ClientUnit->GetHealthComponent()->ApplyDamage(1.f, HostUnit);
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientAttackAlerts, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientAttackAlerts::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		const ARTSPlayerController* HostController = ServerWorld ? GetLocalController(*ServerWorld) : nullptr;
+		const ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		if (!HostController || !ClientController)
+		{
+			Test->AddError(TEXT("Lost a controller"));
+			return true;
+		}
+
+		const int32 BaseAlerts = ClientController->GetAttackAlertCount(ERTSAttackAlert::Base) - State->ClientBaseAlerts;
+		const int32 UnitAlerts = ClientController->GetAttackAlertCount(ERTSAttackAlert::Units) - State->ClientUnitAlerts;
+		if ((BaseAlerts == 0 || UnitAlerts == 0) && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
+		{
+			return false;
+		}
+		Test->TestEqual(TEXT("The client gets one base warning"), BaseAlerts, 1);
+		Test->TestEqual(TEXT("The client gets one unit warning"), UnitAlerts, 1);
+		Test->TestEqual(TEXT("The host gets no base warning for the client's headquarters"),
+			HostController->GetAttackAlertCount(ERTSAttackAlert::Base), 0);
+		Test->TestEqual(TEXT("The host gets no unit warning for the client's unit"),
+			HostController->GetAttackAlertCount(ERTSAttackAlert::Units), 0);
 		return true;
 	}
 
@@ -1273,6 +1352,8 @@ namespace RTSListenServerTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSStartListenServerPIE());
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForListenSession(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckTeamsAndStarts(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSHitClientAssets(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientAttackAlerts(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientMove(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientMove(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientOrdersSecondHeadquarters(this, State));

@@ -4,6 +4,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSPlacementGhost.h"
 #include "Buildings/RTSProductionComponent.h"
+#include "Combat/RTSTargetable.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSGameMode.h"
 #include "Core/RTSPlayerState.h"
@@ -28,7 +29,10 @@
 namespace
 {
 	/** Seconds during which hits on the player's buildings near an earlier warning raise no new one. */
-	constexpr float AttackAlertCooldown = 10.f;
+	constexpr float BaseAlertCooldown = 10.f;
+
+	/** The same for units: longer, as a fight in the field drifts and should warn once. */
+	constexpr float UnitAlertCooldown = 15.f;
 
 	/** Ground distance within which hits count as the same base area for the cooldown. */
 	constexpr float AttackAlertRadius = 3000.f;
@@ -941,37 +945,60 @@ void ARTSPlayerController::Server_IssueCommand_Implementation(const TArray<ARTSU
 	}
 }
 
-void ARTSPlayerController::NotifyBuildingAttacked(const FVector& Location)
+void ARTSPlayerController::NotifyTeamAttacked(const AActor& Victim, int32 TeamId, AActor* DamageInstigator, ERTSAttackAlert Kind)
+{
+	const IRTSTargetable* Attacker = Cast<IRTSTargetable>(DamageInstigator);
+	if (Attacker && Attacker->GetTeamId() == TeamId)
+	{
+		return;
+	}
+	// Only player controllers: the AI and an empty seat get no warning.
+	for (FConstPlayerControllerIterator It = Victim.GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		ARTSPlayerController* Controller = Cast<ARTSPlayerController>(It->Get());
+		if (Controller && Controller->GetTeamId() == TeamId)
+		{
+			Controller->NotifyAttacked(Victim.GetActorLocation(), Kind);
+		}
+	}
+}
+
+void ARTSPlayerController::NotifyAttacked(const FVector& Location, ERTSAttackAlert Kind)
 {
 	check(HasAuthority());
 	const float Now = GetWorld()->GetTimeSeconds();
-	SentAttackAlerts.RemoveAll([Now](const FSentAttackAlert& Sent) { return Now - Sent.Time >= AttackAlertCooldown; });
-	const bool bRecentNearby = SentAttackAlerts.ContainsByPredicate([&Location](const FSentAttackAlert& Sent)
+	SentAttackAlerts.RemoveAll([Now](const FSentAttackAlert& Sent)
 	{
-		return FVector::DistSquared2D(Sent.Location, Location) < FMath::Square(AttackAlertRadius);
+		return Now - Sent.Time >= (Sent.Kind == ERTSAttackAlert::Base ? BaseAlertCooldown : UnitAlertCooldown);
+	});
+	const bool bRecentNearby = SentAttackAlerts.ContainsByPredicate([&Location, Kind](const FSentAttackAlert& Sent)
+	{
+		return Sent.Kind == Kind && FVector::DistSquared2D(Sent.Location, Location) < FMath::Square(AttackAlertRadius);
 	});
 	if (bRecentNearby)
 	{
 		return;
 	}
-	SentAttackAlerts.Add({ Location, Now });
-	Client_BaseUnderAttack(Location);
+	SentAttackAlerts.Add({ Location, Now, Kind });
+	Client_UnderAttack(Location, Kind);
 }
 
-void ARTSPlayerController::Client_BaseUnderAttack_Implementation(const FVector& Location)
+void ARTSPlayerController::Client_UnderAttack_Implementation(const FVector& Location, ERTSAttackAlert Kind)
 {
-	++AttackAlertCount;
-	LastAttackAlertLocation = Location;
-	LastAttackAlertTime = GetWorld()->GetTimeSeconds();
+	FReceivedAttackAlert& Received = ReceivedAttackAlerts[static_cast<int32>(Kind)];
+	++Received.Count;
+	Received.Location = Location;
+	Received.Time = GetWorld()->GetTimeSeconds();
 }
 
-bool ARTSPlayerController::GetLastAttackAlert(FVector& OutLocation, float& OutAge) const
+bool ARTSPlayerController::GetLastAttackAlert(ERTSAttackAlert Kind, FVector& OutLocation, float& OutAge) const
 {
-	if (AttackAlertCount == 0)
+	const FReceivedAttackAlert& Received = ReceivedAttackAlerts[static_cast<int32>(Kind)];
+	if (Received.Count == 0)
 	{
 		return false;
 	}
-	OutLocation = LastAttackAlertLocation;
-	OutAge = GetWorld()->GetTimeSeconds() - LastAttackAlertTime;
+	OutLocation = Received.Location;
+	OutAge = GetWorld()->GetTimeSeconds() - Received.Time;
 	return true;
 }
