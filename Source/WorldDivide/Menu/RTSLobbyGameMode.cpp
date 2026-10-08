@@ -1,6 +1,7 @@
 #include "Menu/RTSLobbyGameMode.h"
 
 #include "Data/RTSMapData.h"
+#include "GameFramework/GameSession.h"
 #include "GameFramework/PlayerState.h"
 #include "Menu/RTSLobbyGameState.h"
 #include "Menu/RTSLobbyPlayerController.h"
@@ -114,6 +115,29 @@ bool ARTSLobbyGameMode::SetMap(const APlayerController& Requester, int32 Index)
 	State->SetMapIndex(Index);
 	UE_LOG(LogWorldDivide, Log, TEXT("The lobby plays %s"), *Map->DisplayName.ToString());
 	return true;
+}
+
+bool ARTSLobbyGameMode::RemovePlayer(const APlayerController& Requester, int32 Index)
+{
+	const TArray<FRTSSeat>& Seats = GetLobbyState()->GetSeats();
+	const APlayerState* Player = Requester.GetPlayerState<APlayerState>();
+	if (!Player || !RTSSkirmish::CanRemovePlayer(Seats, Index, IsHost(Requester), Player->GetPlayerId()) || !GameSession)
+	{
+		return false;
+	}
+	const int32 PlayerId = Seats[Index].PlayerId;
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* Removed = It->Get();
+		const APlayerState* RemovedPlayer = Removed ? Removed->GetPlayerState<APlayerState>() : nullptr;
+		if (RemovedPlayer && RemovedPlayer->GetPlayerId() == PlayerId)
+		{
+			UE_LOG(LogWorldDivide, Log, TEXT("The host removes %s from seat %d"), *RemovedPlayer->GetPlayerName(), Index);
+			// Destroys the controller, whose logout opens the seat; the player returns to the main menu.
+			return GameSession->KickPlayer(Removed, FText::FromString(TEXT("Removed by the host")));
+		}
+	}
+	return false;
 }
 
 bool ARTSLobbyGameMode::SetReady(const APlayerController& Requester, bool bReady)

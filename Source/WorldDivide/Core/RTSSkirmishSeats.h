@@ -99,6 +99,9 @@ namespace RTSSkirmish
 	/** Lobby: the host may make a seat Open, Closed or an AI, unless a human holds it. */
 	WORLDDIVIDE_API bool CanChangeType(TConstArrayView<FRTSSeat> Seats, int32 Index, bool bIsHost, ERTSSeatType NewType);
 
+	/** Lobby: the host may remove the human holding seat Index from the lobby, unless that is itself (RequesterPlayerId). */
+	WORLDDIVIDE_API bool CanRemovePlayer(TConstArrayView<FRTSSeat> Seats, int32 Index, bool bIsHost, int32 RequesterPlayerId);
+
 	/**
 	 * Lobby: the host may set the start spot of any seat but a Closed one, a player only that of its own seat. The spot is
 	 * random or in 0..SpotCount-1, and no other seat has it.

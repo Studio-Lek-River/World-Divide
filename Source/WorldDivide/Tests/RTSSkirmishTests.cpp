@@ -139,6 +139,15 @@ namespace RTSSkirmishTests
 		TestFalse(TEXT("A seat is never made human by hand"), RTSSkirmish::CanChangeType(Seats, 3, true, ERTSSeatType::Human));
 		TestFalse(TEXT("A seat that does not exist"), RTSSkirmish::CanChangeType(Seats, 4, true, ERTSSeatType::Open));
 
+		// Removing a player: the host's call, for another human only.
+		TestTrue(TEXT("The host may remove the guest"), RTSSkirmish::CanRemovePlayer(Seats, 2, true, 10));
+		TestFalse(TEXT("The guest may not remove the host"), RTSSkirmish::CanRemovePlayer(Seats, 0, false, 11));
+		TestFalse(TEXT("Nor itself"), RTSSkirmish::CanRemovePlayer(Seats, 2, false, 11));
+		TestFalse(TEXT("The host may not remove itself"), RTSSkirmish::CanRemovePlayer(Seats, 0, true, 10));
+		TestFalse(TEXT("Nobody to remove from an AI seat"), RTSSkirmish::CanRemovePlayer(Seats, 1, true, 10));
+		TestFalse(TEXT("Nor from a closed one"), RTSSkirmish::CanRemovePlayer(Seats, 3, true, 10));
+		TestFalse(TEXT("Nor from a seat that does not exist"), RTSSkirmish::CanRemovePlayer(Seats, 4, true, 10));
+
 		// Start spots: the host sets any played seat's, a guest only its own, and two seats never share one.
 		TestTrue(TEXT("The guest moves itself"), RTSSkirmish::CanChangeStartSpot(Seats, 2, false, 11, 3, 4));
 		TestTrue(TEXT("Back to random"), RTSSkirmish::CanChangeStartSpot(Seats, 2, false, 11, INDEX_NONE, 4));

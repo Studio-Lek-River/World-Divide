@@ -43,6 +43,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_SetReady(bool bReady);
 
+	/** Host only: removes the player holding seat Index from the lobby. */
+	UFUNCTION(Server, Reliable)
+	void Server_RemovePlayer(int32 Index);
+
 	/** The token by which the match gives this player its seat, kept by its URTSLocalPlayer across the travel. */
 	UFUNCTION(Client, Reliable)
 	void Client_SetSeatToken(const FString& Token);
@@ -52,6 +56,9 @@ public:
 
 	/** Back to the main menu; the host closes the lobby for everyone. */
 	void LeaveLobby();
+
+	/** The host removed this player: back to the main menu, which shows KickReason. */
+	virtual void ClientWasKicked_Implementation(const FText& KickReason) override;
 
 	virtual void ReceivedPlayer() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

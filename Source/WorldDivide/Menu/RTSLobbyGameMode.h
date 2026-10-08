@@ -12,7 +12,7 @@ class ARTSLobbyGameState;
  * from its default seats with the closed ones open. A joining player takes the first open seat and gets a token to find it
  * again in the match; one who leaves opens it again. The host sets each seat open, closed or to an AI of a difficulty and
  * the start spot of every seat, each player the start spot of its own. Each player readies its seat, the host's always is;
- * a seat that moves, or a change of map, must be readied again. Once every human is ready, the host's start travels
+ * a seat that moves, or a change of map, must be readied again. The host may remove another player from the lobby. Once every human is ready, the host's start travels
  * everyone to the chosen map with the seats in its Seats option.
  */
 UCLASS()
@@ -42,6 +42,12 @@ public:
 	 * False when RTSSkirmish::CanChangeMap refuses it or there is no such map.
 	 */
 	bool SetMap(const APlayerController& Requester, int32 Index);
+
+	/**
+	 * Requester removes the human holding seat Index from the lobby: its connection is closed with "Removed by the host" and,
+	 * on its logout, the seat opens again. False when RTSSkirmish::CanRemovePlayer refuses it.
+	 */
+	bool RemovePlayer(const APlayerController& Requester, int32 Index);
 
 	/** Requester readies its own seat or takes that back. False when RTSSkirmish::SetReady refuses it. */
 	bool SetReady(const APlayerController& Requester, bool bReady);

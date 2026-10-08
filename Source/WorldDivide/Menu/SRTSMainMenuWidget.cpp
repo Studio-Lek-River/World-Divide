@@ -29,6 +29,14 @@ void SRTSMainMenuWidget::Construct(const FArguments& InArgs)
 				[
 					SNew(STextBlock).Font(FCoreStyle::GetDefaultFontStyle("Bold", 28)).Text(FText::FromString(TEXT("World Divide")))
 				]
+				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.f, 0.f, 0.f, 12.f)
+				[
+					SNew(STextBlock)
+					.Text(InArgs._Message)
+					.ColorAndOpacity(FLinearColor(1.f, 0.6f, 0.3f))
+					.AutoWrapText(true)
+					.Visibility(InArgs._Message.IsEmpty() ? EVisibility::Collapsed : EVisibility::Visible)
+				]
 				+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 4.f)
 				[
 					MakeButton(TEXT("Skirmish"), [](ARTSMainMenuController& Menu) { Menu.PlaySkirmish(); })

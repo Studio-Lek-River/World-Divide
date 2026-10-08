@@ -6,12 +6,13 @@
 class ARTSMainMenuController;
 class SEditableTextBox;
 
-/** The main menu: Skirmish, Host game, Join game with an address field, and Quit. */
+/** The main menu: a message when there is one, such as why the player left a lobby, then Skirmish, Host game, Join game with an address field, and Quit. */
 class WORLDDIVIDE_API SRTSMainMenuWidget : public SCompoundWidget
 {
 public:
 	SLATE_BEGIN_ARGS(SRTSMainMenuWidget) {}
 		SLATE_ARGUMENT(TWeakObjectPtr<ARTSMainMenuController>, Controller)
+		SLATE_ARGUMENT(FText, Message)
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs);

@@ -8,7 +8,8 @@ class SVerticalBox;
 
 /**
  * The lobby screen: the map (a combo of URTSSettings::SkirmishMaps for the host, its name for the others), then one row per seat with its team colour, who plays it (a combo of Open, Closed and the AI difficulties for
- * the host, or the name of the human holding it), its start spot (Random or a base) and whether its human is ready, then
+ * the host, or the name of the human holding it), its start spot (Random or a base), whether its human is ready and, for the
+ * host, Remove next to every other player, then
  * Back, Ready for a joined player and Start for the host.
  * Everything reads the replicated seats each frame; changes go to the server through the controller.
  */

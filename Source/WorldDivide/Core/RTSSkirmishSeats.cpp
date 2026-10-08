@@ -251,6 +251,12 @@ namespace RTSSkirmish
 			&& NewType != ERTSSeatType::Human;
 	}
 
+	bool CanRemovePlayer(TConstArrayView<FRTSSeat> Seats, int32 Index, bool bIsHost, int32 RequesterPlayerId)
+	{
+		return bIsHost && Seats.IsValidIndex(Index) && Seats[Index].Type == ERTSSeatType::Human
+			&& Seats[Index].PlayerId != RequesterPlayerId;
+	}
+
 	bool CanChangeStartSpot(TConstArrayView<FRTSSeat> Seats, int32 Index, bool bIsHost, int32 PlayerId, int32 Spot,
 		int32 SpotCount)
 	{

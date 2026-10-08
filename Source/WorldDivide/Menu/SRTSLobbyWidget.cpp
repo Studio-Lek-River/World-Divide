@@ -357,5 +357,28 @@ TSharedRef<SWidget> SRTSLobbyWidget::MakeRow(int32 Index)
 				return FSlateColor(Seat && Seat->bReady ? FLinearColor(0.3f, 0.9f, 0.3f) : FLinearColor(0.6f, 0.6f, 0.6f));
 			})
 		]
+	]
+	+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(8.f, 0.f, 0.f, 0.f)
+	[
+		SNew(SBox).WidthOverride(80.f)
+		[
+			SNew(SButton)
+			.HAlign(HAlign_Center)
+			.Text(FText::FromString(TEXT("Remove")))
+			.Visibility_Lambda([this, Index]()
+			{
+				const bool bRemovable = Controller.IsValid()
+					&& RTSSkirmish::CanRemovePlayer(Controller->GetSeats(), Index, Controller->IsHost(), Controller->GetOwnPlayerId());
+				return bRemovable ? EVisibility::Visible : EVisibility::Hidden;
+			})
+			.OnClicked_Lambda([this, Index]()
+			{
+				if (Controller.IsValid())
+				{
+					Controller->Server_RemovePlayer(Index);
+				}
+				return FReply::Handled();
+			})
+		]
 	];
 }

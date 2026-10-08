@@ -44,12 +44,14 @@ void ARTSMainMenuController::ReceivedPlayer()
 	{
 		return;
 	}
-	// A seat token from an earlier lobby has no seat to find any more.
+	// A seat token from an earlier lobby has no seat to find any more; its message is shown once.
 	if (URTSLocalPlayer* LocalPlayer = Cast<URTSLocalPlayer>(GetLocalPlayer()))
 	{
 		LocalPlayer->SetSeatToken(FString());
+		Message = LocalPlayer->GetMenuMessage();
+		LocalPlayer->SetMenuMessage(FText::GetEmpty());
 	}
-	Widget = SNew(SRTSMainMenuWidget).Controller(this);
+	Widget = SNew(SRTSMainMenuWidget).Controller(this).Message(Message);
 	Viewport->AddViewportWidgetContent(Widget.ToSharedRef());
 
 	FInputModeUIOnly InputMode;

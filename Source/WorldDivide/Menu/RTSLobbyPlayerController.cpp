@@ -79,6 +79,14 @@ void ARTSLobbyPlayerController::Server_SetReady_Implementation(bool bReady)
 	}
 }
 
+void ARTSLobbyPlayerController::Server_RemovePlayer_Implementation(int32 Index)
+{
+	if (ARTSLobbyGameMode* GameMode = GetWorld()->GetAuthGameMode<ARTSLobbyGameMode>())
+	{
+		GameMode->RemovePlayer(*this, Index);
+	}
+}
+
 void ARTSLobbyPlayerController::Client_SetSeatToken_Implementation(const FString& Token)
 {
 	if (URTSLocalPlayer* LocalPlayer = Cast<URTSLocalPlayer>(GetLocalPlayer()))
@@ -101,6 +109,15 @@ void ARTSLobbyPlayerController::LeaveLobby()
 	}
 	// Opening a map without "listen" also closes a hosted lobby; its clients lose the connection and return to the menu.
 	UGameplayStatics::OpenLevelBySoftObjectPtr(this, GetDefault<URTSSettings>()->MainMenuMap);
+}
+
+void ARTSLobbyPlayerController::ClientWasKicked_Implementation(const FText& KickReason)
+{
+	if (URTSLocalPlayer* LocalPlayer = Cast<URTSLocalPlayer>(GetLocalPlayer()))
+	{
+		LocalPlayer->SetMenuMessage(KickReason);
+	}
+	LeaveLobby();
 }
 
 void ARTSLobbyPlayerController::ReceivedPlayer()

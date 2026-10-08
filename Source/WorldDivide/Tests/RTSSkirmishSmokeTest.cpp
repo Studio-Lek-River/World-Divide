@@ -12,6 +12,7 @@
 #include "Menu/RTSLobbyGameMode.h"
 #include "Menu/RTSLobbyGameState.h"
 #include "Menu/RTSLobbyPlayerController.h"
+#include "Menu/RTSMainMenuController.h"
 #include "PlayInEditorDataTypes.h"
 #include "Player/RTSLocalPlayer.h"
 #include "Player/RTSPlayerController.h"
@@ -27,7 +28,8 @@
  * may move its own start spot but not change other seats, and the match URL carries the seats. The host's start is refused
  * until the client is ready, which both see; a move by the host makes the client ready up again. Then the host picks the
  * two-spot duel map: the seats shrink to two, the client, beyond them, takes the AI's seat and must ready up again, its
- * own pick of map is refused, and the match URL names the duel map. SkirmishSeats: the host
+ * own pick of map is refused, and the match URL names the duel map. Last, the client's removal of the host is refused, the
+ * host removes the client, whose seat opens again, and the client lands on the main menu with the reason. SkirmishSeats: the host
  * moves itself to spot 3, makes the AI Hard and closes the last seat, the client picks spot 0 and readies up, and the host
  * starts the match.
  * In L_Skirmish the host plays team 0 from spot 3, the AI team 1 from spot 1 at Hard, the client team 2 from spot 0 by its
@@ -36,6 +38,7 @@
 namespace RTSSkirmishSmokeTest
 {
 	const TCHAR* LobbyMap = TEXT("/Game/Maps/L_Lobby");
+	const TCHAR* MainMenuMapName = TEXT("L_MainMenu");
 	const TCHAR* SkirmishMapName = TEXT("L_Skirmish");
 	/** L_SkirmishDuel's index in URTSSettings::SkirmishMaps: two start spots. */
 	constexpr int32 DuelMapIndex = 1;
@@ -521,6 +524,75 @@ namespace RTSSkirmishSmokeTest
 		return true;
 	}
 
+	/** The client asks to remove the host, which is refused, and takes back its ready to know the server has the request. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSLobbyRemoveHost, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSLobbyRemoveHost::Update()
+	{
+		ARTSLobbyPlayerController* Client = State->Client.Get();
+		if (!Client)
+		{
+			Test->AddError(TEXT("Lost the client"));
+			return true;
+		}
+		// Reliable calls arrive in order: once the server has the client unready, it has refused the removal.
+		Client->Server_RemovePlayer(0);
+		Client->Server_SetReady(false);
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	/** The host is still seated; then it removes the client. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSLobbyRemoveClient, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSLobbyRemoveClient::Update()
+	{
+		const ARTSLobbyGameState* ServerState = GetLobbyState(State->LobbyServer);
+		ARTSLobbyPlayerController* Host = State->Host.Get();
+		if (!ServerState || !Host || ServerState->GetSeats().Num() != 2)
+		{
+			Test->AddError(TEXT("Lost the lobby"));
+			return true;
+		}
+		const TArray<FRTSSeat>& Seats = ServerState->GetSeats();
+		if (Seats[1].bReady && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
+		{
+			return false;
+		}
+		Test->TestFalse(TEXT("The server has the client's requests"), Seats[1].bReady);
+		Test->TestTrue(TEXT("The client could not remove the host"), Seats[0].Type == ERTSSeatType::Human
+			&& Seats[0].PlayerId == Host->GetOwnPlayerId());
+
+		Host->Server_RemovePlayer(1);
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	/** The client's seat is open again and the client is on the main menu, which tells it why. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyRemoved, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyRemoved::Update()
+	{
+		const ARTSLobbyGameState* ServerState = GetLobbyState(State->LobbyServer);
+		ARTSLobbyPlayerController* Host = State->Host.Get();
+		if (!ServerState || !Host || ServerState->GetSeats().Num() != 2)
+		{
+			Test->AddError(TEXT("Lost the lobby"));
+			return true;
+		}
+		const TArray<FRTSSeat>& Seats = ServerState->GetSeats();
+		UWorld* MenuWorld = FindPIEWorld(NM_Standalone, MainMenuMapName);
+		const ARTSMainMenuController* Menu = MenuWorld ? Cast<ARTSMainMenuController>(MenuWorld->GetFirstPlayerController()) : nullptr;
+		const bool bDone = Seats[1].Type == ERTSSeatType::Open && Menu && !Menu->GetMessage().IsEmpty();
+		if (!bDone && FPlatformTime::Seconds() - State->PhaseStart < SessionTimeout)
+		{
+			return false;
+		}
+		Test->TestEqual(TEXT("The client's seat is open again"), Seats[1].Type, ERTSSeatType::Open);
+		Test->TestEqual(TEXT("With nobody in it"), Seats[1].PlayerId, int32(INDEX_NONE));
+		Test->TestTrue(TEXT("The host keeps its seat"), Seats[0].Type == ERTSSeatType::Human && Seats[0].PlayerId == Host->GetOwnPlayerId());
+		Test->TestNotNull(TEXT("The client is on the main menu"), Menu);
+		Test->TestEqual(TEXT("Which tells it why"), Menu ? Menu->GetMessage().ToString() : FString(), FString(TEXT("Removed by the host")));
+		return true;
+	}
+
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLobbySmokeTest, "WorldDivide.Smoke.Lobby", RTSTests::TestFlags)
 
 	bool FRTSLobbySmokeTest::RunTest(const FString& Parameters)
@@ -538,6 +610,9 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyReady(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyPickMap(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyMap(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyRemoveHost(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyRemoveClient(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyRemoved(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		return true;
 	}

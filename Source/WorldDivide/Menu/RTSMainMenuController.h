@@ -26,9 +26,13 @@ public:
 
 	void QuitGame();
 
+	/** The message the menu shows, such as why the player left a lobby; empty for none. */
+	const FText& GetMessage() const { return Message; }
+
 	virtual void ReceivedPlayer() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
 	TSharedPtr<SRTSMainMenuWidget> Widget;
+	FText Message;
 };
