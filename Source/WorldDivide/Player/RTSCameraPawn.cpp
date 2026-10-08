@@ -49,6 +49,14 @@ void ARTSCameraPawn::AddRotateInput(float Degrees)
 	PendingYaw += Degrees;
 }
 
+void ARTSCameraPawn::JumpTo(const FVector& Location)
+{
+	// The spring arm looks at the pawn, so moving the pawn centres the view; its lag glides the camera after it.
+	const FVector2D Flat = FVector2D(Location).GetClampedToMaxSize(MaxDistanceFromOrigin);
+	SetActorLocation(FVector(Flat.X, Flat.Y, GetActorLocation().Z));
+	PendingPan = FVector2D::ZeroVector;
+}
+
 void ARTSCameraPawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);

@@ -40,6 +40,7 @@ enum class ERTSAttackAlert : uint8
  * With rts.DebugBuild on and no builder selected, 1-9 pick from the faction's buildings and place them without a builder.
  * With an own production building selected, 1-9 or a click on the HUD's menu queue a unit, right click sets the rally point,
  * and a click on a queued unit, or Delete for the last one, cancels it for a refund.
+ * Space centres the camera on the latest attack warning, for up to AttackJumpMaxAge seconds after it.
  * Once the match is over the HUD shows Victory or Defeat, and on the host a restart button.
  */
 UCLASS()
@@ -184,6 +185,18 @@ public:
 	/** False before any warning of Kind; else where the last one points and the seconds since it arrived. */
 	bool GetLastAttackAlert(ERTSAttackAlert Kind, FVector& OutLocation, float& OutAge) const;
 
+	/** As GetLastAttackAlert, for the newest warning of either kind. */
+	bool GetLatestAttackAlert(FVector& OutLocation, float& OutAge) const;
+
+	/** Seconds after which Space no longer jumps to a warning. */
+	static constexpr float AttackJumpMaxAge = 20.f;
+
+	/** Local. Centres the camera on the newest warning; false, changing nothing, without one or once it is too old. */
+	bool JumpToLatestAttack();
+
+	/** Alert sounds played for warnings of Kind, for tests; worlds without audio count them but stay silent. */
+	int32 GetAlertSoundCount(ERTSAttackAlert Kind) const { return ReceivedAttackAlerts[static_cast<int32>(Kind)].SoundCount; }
+
 	/** Owner only: where the attacked building or unit stood, for the HUD's message and marker. */
 	UFUNCTION(Client, Reliable)
 	void Client_UnderAttack(const FVector& Location, ERTSAttackAlert Kind);
@@ -224,6 +237,7 @@ private:
 	void OnBuildHotkey(int32 Index);
 	void OnCancel();
 	void OnCancelConstruction();
+	void OnJumpToAttack();
 
 	void ApplyEdgeScroll() const;
 	void ApplyDragRotate();
@@ -271,6 +285,9 @@ private:
 	TObjectPtr<UInputAction> CancelConstructionAction;
 
 	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> JumpToAttackAction;
+
+	UPROPERTY(Transient)
 	TArray<TObjectPtr<UInputAction>> BuildActions;
 
 	TArray<TWeakObjectPtr<ARTSUnit>> SelectedUnits;
@@ -313,6 +330,7 @@ private:
 	struct FReceivedAttackAlert
 	{
 		int32 Count = 0;
+		int32 SoundCount = 0;
 		FVector Location = FVector::ZeroVector;
 		float Time = 0.f;
 	};

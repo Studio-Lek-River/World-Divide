@@ -28,6 +28,9 @@ public:
 	/** Degrees of yaw. */
 	void AddRotateInput(float Degrees);
 
+	/** Centres the view on Location's ground position at once, within the same bounds as panning. */
+	void JumpTo(const FVector& Location);
+
 	virtual void Tick(float DeltaSeconds) override;
 
 protected:

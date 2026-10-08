@@ -21,6 +21,7 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
+#include "Player/RTSAlertSound.h"
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSHUD.h"
 #include "Units/RTSUnit.h"
@@ -113,6 +114,9 @@ void ARTSPlayerController::CreateInputActions()
 	CancelConstructionAction = MakeAction(this, TEXT("IA_CancelConstruction"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, CancelConstructionAction, EKeys::Delete);
 
+	JumpToAttackAction = MakeAction(this, TEXT("IA_JumpToAttack"), EInputActionValueType::Boolean);
+	MapKey(MappingContext, JumpToAttackAction, EKeys::SpaceBar);
+
 	BuildActions.Reset();
 	for (int32 Index = 0; Index < MaxBuildHotkeys; ++Index)
 	{
@@ -152,6 +156,7 @@ void ARTSPlayerController::SetupInputComponent()
 	Input->BindAction(AttackMoveAction, ETriggerEvent::Started, this, &ThisClass::OnAttackMoveKey);
 	Input->BindAction(CancelAction, ETriggerEvent::Started, this, &ThisClass::OnCancel);
 	Input->BindAction(CancelConstructionAction, ETriggerEvent::Started, this, &ThisClass::OnCancelConstruction);
+	Input->BindAction(JumpToAttackAction, ETriggerEvent::Started, this, &ThisClass::OnJumpToAttack);
 	for (int32 Index = 0; Index < BuildActions.Num(); ++Index)
 	{
 		Input->BindAction(BuildActions[Index], ETriggerEvent::Started, this, &ThisClass::OnBuildHotkey, Index);
@@ -989,6 +994,9 @@ void ARTSPlayerController::Client_UnderAttack_Implementation(const FVector& Loca
 	++Received.Count;
 	Received.Location = Location;
 	Received.Time = GetWorld()->GetTimeSeconds();
+	// Only the owner gets this call, and the server's cooldown already spaces the warnings, so the sound needs no limit of its own.
+	++Received.SoundCount;
+	RTSAlertSound::Play(*this, Kind);
 }
 
 bool ARTSPlayerController::GetLastAttackAlert(ERTSAttackAlert Kind, FVector& OutLocation, float& OutAge) const
@@ -1001,4 +1009,39 @@ bool ARTSPlayerController::GetLastAttackAlert(ERTSAttackAlert Kind, FVector& Out
 	OutLocation = Received.Location;
 	OutAge = GetWorld()->GetTimeSeconds() - Received.Time;
 	return true;
+}
+
+bool ARTSPlayerController::GetLatestAttackAlert(FVector& OutLocation, float& OutAge) const
+{
+	bool bFound = false;
+	for (const ERTSAttackAlert Kind : { ERTSAttackAlert::Base, ERTSAttackAlert::Units })
+	{
+		FVector Location;
+		float Age = 0.f;
+		if (GetLastAttackAlert(Kind, Location, Age) && (!bFound || Age < OutAge))
+		{
+			OutLocation = Location;
+			OutAge = Age;
+			bFound = true;
+		}
+	}
+	return bFound;
+}
+
+bool ARTSPlayerController::JumpToLatestAttack()
+{
+	ARTSCameraPawn* CameraPawn = GetCameraPawn();
+	FVector Location;
+	float Age = 0.f;
+	if (!CameraPawn || !GetLatestAttackAlert(Location, Age) || Age >= AttackJumpMaxAge)
+	{
+		return false;
+	}
+	CameraPawn->JumpTo(Location);
+	return true;
+}
+
+void ARTSPlayerController::OnJumpToAttack()
+{
+	JumpToLatestAttack();
 }

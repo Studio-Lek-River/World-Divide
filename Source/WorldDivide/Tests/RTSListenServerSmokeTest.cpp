@@ -146,6 +146,7 @@ namespace RTSListenServerTest
 		/** The client's warnings, as its own controller counts them, before the server hit its headquarters and unit. */
 		int32 ClientBaseAlerts = 0;
 		int32 ClientUnitAlerts = 0;
+		int32 ClientAlertSounds = 0;
 
 		/** The client's credits on the server when it ordered a second headquarters, and when the server took the order. */
 		int32 ClientHeadquartersCredits = 0;
@@ -421,6 +422,8 @@ namespace RTSListenServerTest
 		// A scratch each, as if the host unit had fired; nothing the later phases notice.
 		State->ClientBaseAlerts = ClientController->GetAttackAlertCount(ERTSAttackAlert::Base);
 		State->ClientUnitAlerts = ClientController->GetAttackAlertCount(ERTSAttackAlert::Units);
+		State->ClientAlertSounds = ClientController->GetAlertSoundCount(ERTSAttackAlert::Base)
+			+ ClientController->GetAlertSoundCount(ERTSAttackAlert::Units);
 		ClientHeadquarters->GetHealthComponent()->ApplyDamage(1.f, HostUnit);
 		ClientUnit->GetHealthComponent()->ApplyDamage(1.f, HostUnit);
 		State->PhaseStart = FPlatformTime::Seconds();
@@ -452,6 +455,10 @@ namespace RTSListenServerTest
 			HostController->GetAttackAlertCount(ERTSAttackAlert::Base), 0);
 		Test->TestEqual(TEXT("The host gets no unit warning for the client's unit"),
 			HostController->GetAttackAlertCount(ERTSAttackAlert::Units), 0);
+		Test->TestEqual(TEXT("The client plays an alert for each warning"), ClientController->GetAlertSoundCount(ERTSAttackAlert::Base)
+			+ ClientController->GetAlertSoundCount(ERTSAttackAlert::Units) - State->ClientAlertSounds, 2);
+		Test->TestEqual(TEXT("The host plays no alert for the client's warnings"),
+			HostController->GetAlertSoundCount(ERTSAttackAlert::Base) + HostController->GetAlertSoundCount(ERTSAttackAlert::Units), 0);
 		return true;
 	}
 

@@ -5,6 +5,8 @@
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Misc/AutomationTest.h"
+#include "Player/RTSAlertSound.h"
+#include "Player/RTSCameraPawn.h"
 #include "Player/RTSPlayerController.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
@@ -160,6 +162,88 @@ bool FRTSUnitAttackAlertTest::RunTest(const FString& Parameters)
 	Hit(*TankAI, TankA);
 	TestEqual(TEXT("A hit on the AI's unit warns no human player"),
 		PlayerA->GetAttackAlertCount(ERTSAttackAlert::Units) + PlayerB->GetAttackAlertCount(ERTSAttackAlert::Units), 3);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAttackAlertJumpTest, "WorldDivide.Combat.AttackAlertJump", TestFlags)
+
+bool FRTSAttackAlertJumpTest::RunTest(const FString& Parameters)
+{
+	constexpr int32 TeamA = 0;
+	constexpr int32 TeamB = 1;
+
+	const FRTSTestWorld TestWorld;
+	TestWorld.SpawnGameState();
+	ARTSPlayerController* PlayerA = SpawnHuman(TestWorld, TeamA);
+	SpawnHuman(TestWorld, TeamB);
+	ARTSCameraPawn* Camera = TestWorld.World->SpawnActor<ARTSCameraPawn>();
+	PlayerA->Possess(Camera);
+
+	URTSBuildingData* BuildingData = NewObject<URTSBuildingData>();
+	BuildingData->Footprint = FIntPoint(3, 3);
+	BuildingData->MaxHealth = 1000.f;
+	URTSUnitData* UnitData = NewObject<URTSUnitData>();
+	UnitData->MaxHealth = 1000.f;
+
+	ARTSBuilding* BaseA = TestWorld.SpawnBuilding(BuildingData, TeamA, FVector(5000.f, 0.f, 0.f));
+	ARTSUnit* ScoutA = TestWorld.SpawnUnit(UnitData, TeamA, FVector(-8000.f, 6000.f, 0.f));
+	ARTSUnit* TankB = TestWorld.SpawnUnit(UnitData, TeamB, FVector(0.f, 0.f, 0.f));
+
+	TestFalse(TEXT("Space does nothing before any warning"), PlayerA->JumpToLatestAttack());
+	TestEqual(TEXT("The camera stays put without a warning"), FVector2D(Camera->GetActorLocation()), FVector2D::ZeroVector);
+
+	Hit(*BaseA, TankB);
+	TestWorld.World->TimeSeconds += 5.f;
+	Hit(*ScoutA, TankB);
+	TestWorld.World->TimeSeconds += 5.f;
+	TestTrue(TEXT("Space jumps to a recent warning"), PlayerA->JumpToLatestAttack());
+	TestEqual(TEXT("The camera centres on the latest warning, the unit hit after the building"),
+		FVector2D(Camera->GetActorLocation()), FVector2D(ScoutA->GetActorLocation()));
+
+	Camera->SetActorLocation(FVector::ZeroVector);
+	TestWorld.World->TimeSeconds += ARTSPlayerController::AttackJumpMaxAge;
+	TestFalse(TEXT("Space does nothing once the warning is too old"), PlayerA->JumpToLatestAttack());
+	TestEqual(TEXT("The camera stays put after a stale warning"), FVector2D(Camera->GetActorLocation()), FVector2D::ZeroVector);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAttackAlertSoundTest, "WorldDivide.Combat.AttackAlertSound", TestFlags)
+
+bool FRTSAttackAlertSoundTest::RunTest(const FString& Parameters)
+{
+	constexpr int32 TeamA = 0;
+	constexpr int32 TeamB = 1;
+
+	const FRTSTestWorld TestWorld;
+	TestWorld.SpawnGameState();
+	ARTSPlayerController* PlayerA = SpawnHuman(TestWorld, TeamA);
+	ARTSPlayerController* PlayerB = SpawnHuman(TestWorld, TeamB);
+
+	URTSBuildingData* BuildingData = NewObject<URTSBuildingData>();
+	BuildingData->Footprint = FIntPoint(3, 3);
+	BuildingData->MaxHealth = 1000.f;
+	URTSUnitData* UnitData = NewObject<URTSUnitData>();
+	UnitData->MaxHealth = 1000.f;
+
+	ARTSBuilding* BaseA = TestWorld.SpawnBuilding(BuildingData, TeamA, FVector::ZeroVector);
+	ARTSUnit* TankA = TestWorld.SpawnUnit(UnitData, TeamA, FVector(10000.f, 0.f, 0.f));
+	ARTSUnit* TankB = TestWorld.SpawnUnit(UnitData, TeamB, FVector(1000.f, 0.f, 0.f));
+
+	Hit(*BaseA, TankB);
+	TestEqual(TEXT("A building warning plays one alert"), PlayerA->GetAlertSoundCount(ERTSAttackAlert::Base), 1);
+	Hit(*BaseA, TankB);
+	TestEqual(TEXT("A hit within the cooldown plays no alert"), PlayerA->GetAlertSoundCount(ERTSAttackAlert::Base), 1);
+
+	Hit(*TankA, TankB);
+	TestEqual(TEXT("A unit warning plays one alert of its own kind"), PlayerA->GetAlertSoundCount(ERTSAttackAlert::Units), 1);
+	TestEqual(TEXT("The unit warning plays no building alert"), PlayerA->GetAlertSoundCount(ERTSAttackAlert::Base), 1);
+	TestEqual(TEXT("The attacker's player hears nothing"),
+		PlayerB->GetAlertSoundCount(ERTSAttackAlert::Base) + PlayerB->GetAlertSoundCount(ERTSAttackAlert::Units), 0);
+
+	const TArray<uint8>& BasePcm = RTSAlertSound::GetPcm(ERTSAttackAlert::Base);
+	const TArray<uint8>& UnitsPcm = RTSAlertSound::GetPcm(ERTSAttackAlert::Units);
+	TestTrue(TEXT("Both alerts have a sound"), !BasePcm.IsEmpty() && !UnitsPcm.IsEmpty());
+	TestTrue(TEXT("The building and unit alerts sound different"), BasePcm != UnitsPcm);
 	return true;
 }
 
