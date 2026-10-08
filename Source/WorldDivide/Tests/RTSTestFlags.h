@@ -49,27 +49,14 @@ namespace RTSTests
 	}
 
 	/**
-	 * PIE copies the editor world's navmesh, and the editor builds it only for the map it started with: a map a test opened
-	 * with AutomationOpenMap, such as L_Skirmish, or L_TestMap again after it, comes into play with a navmesh missing or half
-	 * built. So the first call for a play world rebuilds its navmesh from scratch; true once that build is done and covers
-	 * the world's PlayerStarts.
+	 * True once World's navmesh is not rebuilding and covers its PlayerStarts. The maps are saved with their navmesh built,
+	 * so a play world has it from the start, whichever map the editor opened first.
 	 */
-	inline bool EnsureNavigation(UWorld& World)
+	inline bool IsNavigationReady(UWorld& World)
 	{
 		UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
-		if (!NavSystem || !NavSystem->GetDefaultNavDataInstance() || NavSystem->IsNavigationBuildInProgress())
-		{
-			return false;
-		}
-		static TArray<TWeakObjectPtr<UWorld>> RebuiltWorlds;
-		RebuiltWorlds.RemoveAll([](const TWeakObjectPtr<UWorld>& Rebuilt) { return !Rebuilt.IsValid(); });
-		if (!RebuiltWorlds.Contains(&World))
-		{
-			RebuiltWorlds.Add(&World);
-			NavSystem->Build();
-			return false;
-		}
-		return HasNavigationAtStarts(World);
+		return NavSystem && NavSystem->GetDefaultNavDataInstance() && !NavSystem->IsNavigationBuildInProgress()
+			&& HasNavigationAtStarts(World);
 	}
 
 	/** Runs World at the test time dilation. A listen server replicates it to its clients. */

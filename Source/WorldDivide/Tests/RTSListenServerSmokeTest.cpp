@@ -319,7 +319,7 @@ namespace RTSListenServerTest
 		const bool bReady = ServerWorld && ClientWorld
 			&& ServerControllers == 2
 			&& IsNavMeshReady(*ServerWorld)
-			&& RTSTests::EnsureNavigation(*ServerWorld) && RTSTests::EnsureNavigation(*ClientWorld)
+			&& RTSTests::IsNavigationReady(*ServerWorld) && RTSTests::IsNavigationReady(*ClientWorld)
 			&& ClientController && ClientController->GetTeamId() != INDEX_NONE
 			&& bClientPlayersReady
 			&& CountUnits(*ClientWorld) == 2 * UnitsPerTeam;

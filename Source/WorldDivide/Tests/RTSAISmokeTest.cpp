@@ -178,7 +178,7 @@ bool FRTSWaitForSkirmish::Update()
 	const bool bPlaying = World && World->HasBegunPlay() && Controller && Controller->GetFaction() && Controller->GetCredits() > 0;
 	UNavigationSystemV1* NavSystem = bPlaying ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World) : nullptr;
 	const ARecastNavMesh* NavMesh = NavSystem ? Cast<ARecastNavMesh>(NavSystem->GetDefaultNavDataInstance()) : nullptr;
-	if (!NavMesh || NavMesh->GetNavMeshTilesCount() == 0 || !RTSTests::EnsureNavigation(*World))
+	if (!NavMesh || NavMesh->GetNavMeshTilesCount() == 0 || !RTSTests::IsNavigationReady(*World))
 	{
 		if (FPlatformTime::Seconds() - State->PhaseStart > StartTimeout)
 		{

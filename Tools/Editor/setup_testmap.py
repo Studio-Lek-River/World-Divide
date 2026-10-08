@@ -1,7 +1,7 @@
 """Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters included), AI build order and faction data assets, the placement ghost material, the
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the L_TestMap level with a supply
 source and two builders by each base, and the L_Skirmish level, the same ground without the armies, where an AI opponent
-plays team 1. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
+plays team 1. Both levels are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
 source files that build them and are rebuilt only when those change.
 
@@ -422,6 +422,15 @@ def spawn_supply_source(location, amount, footprint, mesh):
     return source
 
 
+def build_navigation(world, path):
+    """Builds the level's navmesh before it is saved, so any map opened later, or loaded in a packaged build, plays with
+    a full navmesh straight away."""
+    tiles = unreal.RTSEditorScripting.build_navigation(world)
+    if tiles == 0:
+        raise RuntimeError(f"Could not build the navmesh of {path}")
+    unreal.log(f"{path}: navmesh built with {tiles} tiles")
+
+
 def build_map(tank, infantry, builder, wall, crate, digest):
     if assets.does_asset_exist(MAP_PATH):
         assets.delete_asset(MAP_PATH)
@@ -464,6 +473,7 @@ def build_map(tank, infantry, builder, wall, crate, digest):
         spawn_supply_source((x - 50.0 * forward, 2550.0 * forward, 0.0), 5000, (3, 3), crate)
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    build_navigation(world, MAP_PATH)
     assets.set_metadata_tag(world, HASH_TAG, digest)
     if not levels.save_current_level():
         raise RuntimeError(f"Could not save {MAP_PATH}")
@@ -471,7 +481,7 @@ def build_map(tank, infantry, builder, wall, crate, digest):
 
 def make_map(tank, infantry, builder, wall, crate):
     plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, builder, wall, crate, digest),
-                 spec_hash([build_map, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source],
+                 spec_hash([build_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source],
                            MAP_PATH, CUBE, tank, infantry, builder, wall, crate))
 
 
@@ -508,6 +518,7 @@ def build_skirmish_map(builder, wall, crate, digest):
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     world.get_world_settings().set_editor_property("default_game_mode", unreal.RTSSkirmishGameMode.static_class())
+    build_navigation(world, SKIRMISH_MAP_PATH)
     assets.set_metadata_tag(world, HASH_TAG, digest)
     if not levels.save_current_level():
         raise RuntimeError(f"Could not save {SKIRMISH_MAP_PATH}")
@@ -515,7 +526,7 @@ def build_skirmish_map(builder, wall, crate, digest):
 
 def make_skirmish_map(builder, wall, crate):
     plan_rebuild(SKIRMISH_MAP_PATH, ".umap", lambda digest: build_skirmish_map(builder, wall, crate, digest),
-                 spec_hash([build_skirmish_map, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units,
+                 spec_hash([build_skirmish_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units,
                             spawn_supply_source], SKIRMISH_MAP_PATH, CUBE, builder, wall, crate))
 
 
