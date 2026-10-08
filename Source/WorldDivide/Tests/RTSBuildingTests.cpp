@@ -1,6 +1,7 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
+#include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Data/RTSBuilderData.h"
@@ -384,6 +385,60 @@ bool FRTSBuilderPrerequisitesTest::RunTest(const FString& Parameters)
 	Resume.TargetActor = TestWorld.SpawnBuilding(Factory, 0, FVector(-3000.f, 0.f, 0.f));
 	TestTrue(TEXT("Resuming a factory site is accepted without a barracks"), Builder->ChargeOrder(Resume));
 	TestTrue(TEXT("And starts"), Builder->StartBuild(Resume));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBuildLimitTest, "WorldDivide.Buildings.BuildLimit", TestFlags)
+
+bool FRTSBuildLimitTest::RunTest(const FString& Parameters)
+{
+	URTSBuildingData* Headquarters = MakeBuildingData(2.f, nullptr);
+	Headquarters->Cost = 500;
+	Headquarters->MaxCount = 1;
+	URTSBuildingData* Barracks = MakeBuildingData(2.f, nullptr);
+	URTSBuilderData* BuilderData = NewObject<URTSBuilderData>();
+	BuilderData->MaxHealth = 100.f;
+	BuilderData->SelectionRadius = 60.f;
+	BuilderData->Buildings.Add(Headquarters);
+
+	const FRTSTestWorld TestWorld;
+	UWorld& World = *TestWorld.World;
+	ARTSPlayerState* Player = TestWorld.SpawnPlayer(0, 5000);
+	TestWorld.SpawnPlayer(1, 0);
+	URTSBuilderComponent* Builder = TestWorld.SpawnUnit(BuilderData, 0, FVector(220.f, 0.f, 0.f))->GetBuilderComponent();
+	FRTSCommand Order;
+	Order.Type = ERTSCommandType::Build;
+	Order.EntityData = Headquarters;
+	Order.TargetLocation = FVector::ZeroVector;
+
+	TestFalse(TEXT("Without a headquarters the team is below the limit"), RTSProduction::IsAtBuildLimit(World, 0, *Headquarters));
+	TestWorld.SpawnBuilding(Headquarters, 1, FVector(6000.f, 0.f, 0.f))->UpdateConstruction(Headquarters->BuildTime);
+	TestFalse(TEXT("The enemy's headquarters does not count"), RTSProduction::IsAtBuildLimit(World, 0, *Headquarters));
+	TestTrue(TEXT("The enemy is at its own limit"), RTSProduction::IsAtBuildLimit(World, 1, *Headquarters));
+
+	// A construction site counts as soon as it is placed.
+	ARTSBuilding* Site = TestWorld.SpawnBuilding(Headquarters, 0, FVector(3000.f, 0.f, 0.f));
+	TestTrue(TEXT("A construction site reaches the limit"), RTSProduction::IsAtBuildLimit(World, 0, *Headquarters));
+	TestFalse(TEXT("A second headquarters is refused beside a site"), Builder->ChargeOrder(Order));
+	Site->UpdateConstruction(Headquarters->BuildTime);
+	TestTrue(TEXT("A completed one stays at the limit"), RTSProduction::IsAtBuildLimit(World, 0, *Headquarters));
+	TestFalse(TEXT("A second headquarters is refused beside a completed one"), Builder->ChargeOrder(Order));
+	TestEqual(TEXT("Refusals charge nothing"), Player->GetCredits(), 5000);
+	TestEqual(TEXT("The refused order holds nothing"), Order.PaidCost, 0);
+
+	// Once it falls the team may build one again.
+	Site->GetHealthComponent()->ApplyDamage(Headquarters->MaxHealth * 2.f, nullptr);
+	TestFalse(TEXT("The headquarters was destroyed"), IsValid(Site));
+	TestFalse(TEXT("Its loss frees the limit"), RTSProduction::IsAtBuildLimit(World, 0, *Headquarters));
+	TestTrue(TEXT("A new headquarters is accepted"), Builder->ChargeOrder(Order));
+	TestEqual(TEXT("The accepted order is charged"), Player->GetCredits(), 5000 - Headquarters->Cost);
+
+	// Without a limit any number may stand.
+	for (int32 Index = 0; Index < 3; ++Index)
+	{
+		TestWorld.SpawnBuilding(Barracks, 0, FVector(-3000.f * (Index + 1), 0.f, 0.f))->UpdateConstruction(Barracks->BuildTime);
+	}
+	TestFalse(TEXT("A building without a limit never reaches one"), RTSProduction::IsAtBuildLimit(World, 0, *Barracks));
 	return true;
 }
 

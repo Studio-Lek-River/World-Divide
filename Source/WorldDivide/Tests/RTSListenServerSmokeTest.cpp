@@ -30,7 +30,9 @@
 /**
  * Plays L_TestMap as a listen server with one client in the same process. Checks that the host gets team 0 and the
  * client team 1 at their tagged player starts, and that the client sees its own credits but not the host's, then sends a move for every unit the client sees through the client's
- * own controller: the server must move only the client's units, and the client must see them arrive. The client then
+ * own controller: the server must move only the client's units, and the client must see them arrive. While its
+ * headquarters stands, the client's controller does not start a ghost for a second one and the server refuses the order
+ * its builder sends anyway, uncharged. The client then
  * sends its builder to buy a construction site and must see its credits drop before the site is placed, then stops the
  * builder and cancels the site: the site must disappear in both
  * worlds and the client must see its refund while the host's credits stay put. The server then gives the client a
@@ -137,6 +139,10 @@ namespace RTSListenServerTest
 		/** Where the client's tank stood when the server got its order after the match. */
 		FVector RefusedStart = FVector::ZeroVector;
 		double RefusedAtWorldTime = 0.0;
+
+		/** The client's credits on the server when it ordered a second headquarters, and when the server took the order. */
+		int32 ClientHeadquartersCredits = 0;
+		double HeadquartersOrderedAtWorldTime = 0.0;
 	};
 
 	UWorld* FindPIEWorld(ENetMode NetMode)
@@ -419,6 +425,79 @@ namespace RTSListenServerTest
 			CountUnmoved(State->ServerUnits[HostTeam], State->ServerHostStarts), UnitsPerTeam);
 		Test->TestEqual(TEXT("Client sees the host's units where they were"),
 			CountUnmoved(State->ClientUnits[HostTeam], State->ClientHostStarts), UnitsPerTeam);
+		return true;
+	}
+
+	/**
+	 * A team may own one headquarters: while the client's stands, its own controller does not start the ghost, and the
+	 * order its builder sends anyway is refused by the server.
+	 */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSClientOrdersSecondHeadquarters, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSClientOrdersSecondHeadquarters::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		const ARTSPlayerState* ServerClientState = ServerWorld ? ARTSPlayerState::FindForTeam(*ServerWorld, ClientTeam) : nullptr;
+		URTSBuildingData* Headquarters = LoadObject<URTSBuildingData>(nullptr, HeadquartersPath);
+		if (!ClientController || !ServerClientState || !Headquarters)
+		{
+			Test->AddError(TEXT("Lost the client's controller or its player state, or missing the headquarters data"));
+			return true;
+		}
+		ARTSUnit* ClientBuilder = nullptr;
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : State->ClientUnits[ClientTeam])
+		{
+			if (!ClientBuilder && Unit.IsValid() && Cast<URTSBuilderData>(Unit->GetUnitData()))
+			{
+				ClientBuilder = Unit.Get();
+			}
+		}
+		if (!ClientBuilder)
+		{
+			Test->AddError(TEXT("The client has no builder"));
+			return true;
+		}
+		Test->TestTrue(TEXT("The client's builder can build a headquarters"),
+			CastChecked<URTSBuilderData>(ClientBuilder->GetUnitData())->Buildings.Contains(Headquarters));
+		Test->TestTrue(TEXT("The client sees itself at the headquarters limit"), ClientController->IsAtBuildLimit(*Headquarters));
+		ClientController->BeginPlacement(Headquarters);
+		Test->TestNull(TEXT("The client's ghost for a second headquarters does not start"), ClientController->GetPlacementData());
+
+		State->ClientHeadquartersCredits = ServerClientState->GetCredits();
+		State->HeadquartersOrderedAtWorldTime = ServerWorld->GetTimeSeconds();
+		FRTSCommand Build;
+		Build.Type = ERTSCommandType::Build;
+		Build.EntityData = Headquarters;
+		Build.TargetLocation = ClientSiteSpot;
+		ClientController->Server_IssueCommand({ ClientBuilder }, Build);
+		return true;
+	}
+
+	/** An accepted order would be charged at once and leave the builder walking to its site. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifySecondHeadquartersRefused, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifySecondHeadquartersRefused::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		const ARTSPlayerState* ServerClientState = ServerWorld ? ARTSPlayerState::FindForTeam(*ServerWorld, ClientTeam) : nullptr;
+		if (!ServerClientState)
+		{
+			Test->AddError(TEXT("Lost the server world or the client's player state"));
+			return true;
+		}
+		if (ServerWorld->GetTimeSeconds() - State->HeadquartersOrderedAtWorldTime < RefusedOrderSeconds)
+		{
+			return false;
+		}
+		Test->TestEqual(TEXT("The server charged nothing for a second headquarters"), ServerClientState->GetCredits(),
+			State->ClientHeadquartersCredits);
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : State->ServerUnits[ClientTeam])
+		{
+			if (Unit.IsValid() && Cast<URTSBuilderData>(Unit->GetUnitData()))
+			{
+				Test->TestTrue(TEXT("No client builder took the order"), Unit->GetBuilderComponent()->GetState() == ERTSBuildState::Idle);
+			}
+		}
 		return true;
 	}
 
@@ -1190,6 +1269,8 @@ namespace RTSListenServerTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckTeamsAndStarts(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientMove(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientMove(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientOrdersSecondHeadquarters(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifySecondHeadquartersRefused(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientBuysSite(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientCharged(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientSite(this, State));

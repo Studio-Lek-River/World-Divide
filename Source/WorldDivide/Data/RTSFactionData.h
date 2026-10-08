@@ -22,7 +22,7 @@ public:
 
 	/**
 	 * The completed building each team of this faction starts with at its PlayerStart, such as the headquarters that
-	 * produces builders. Not in Buildings, so it cannot be built.
+	 * produces builders. Listed in Buildings as well, a team that lost it can build it again.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production")
 	TObjectPtr<URTSBuildingData> Headquarters;

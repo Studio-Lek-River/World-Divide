@@ -251,11 +251,17 @@ void ARTSHUD::DrawBuildMenu(const ARTSPlayerController& Controller)
 		const bool bPlacing = Controller.GetPlacementData() == Data;
 		FString Text = FString::Printf(TEXT("%d  %s  (%d)"), Index + 1, *Data->DisplayName.ToString(), Data->Cost);
 		const URTSEntityData* Missing = Controller.GetMissingPrerequisite(*Data);
+		const bool bAtLimit = Controller.IsAtBuildLimit(*Data);
 		if (Missing)
 		{
 			Text += FString::Printf(TEXT("  needs %s"), *Missing->DisplayName.ToString());
 		}
-		const FLinearColor Color = bPlacing ? SelectionColor : Controller.CanAfford(*Data) && !Missing ? MenuColor : UnaffordableColor;
+		else if (bAtLimit)
+		{
+			Text += TEXT("  limit reached");
+		}
+		const bool bAvailable = Controller.CanAfford(*Data) && !Missing && !bAtLimit;
+		const FLinearColor Color = bPlacing ? SelectionColor : bAvailable ? MenuColor : UnaffordableColor;
 		DrawText(Text, Color, MenuMargin, Y);
 	}
 	if (Controller.GetPlacementData())

@@ -6,6 +6,7 @@
 
 class ARTSBuilding;
 class ARTSPlayerState;
+class URTSBuildingData;
 class URTSEntityData;
 class URTSUnitData;
 class URTSUpgradeData;
@@ -29,6 +30,12 @@ namespace RTSProduction
 
 	/** Upgrade waits in the queue of one of TeamId's buildings, so it cannot be queued again anywhere. */
 	WORLDDIVIDE_API bool IsUpgradeQueued(const UWorld& World, int32 TeamId, const URTSUpgradeData& Upgrade);
+
+	/**
+	 * TeamId owns Data's MaxCount of it, construction sites included, so it cannot order another. Never true for a building
+	 * without a limit. The client's menus and the server's checks share it.
+	 */
+	WORLDDIVIDE_API bool IsAtBuildLimit(const UWorld& World, int32 TeamId, const URTSBuildingData& Data);
 }
 
 /**

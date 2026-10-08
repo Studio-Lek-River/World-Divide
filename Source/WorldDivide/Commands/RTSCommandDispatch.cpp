@@ -93,6 +93,12 @@ namespace RTSCommands
 			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d may not build %s"), TeamId, *GetNameSafe(Command.EntityData));
 			return nullptr;
 		}
+		// Checked again here: another builder's site may have taken the last one since this order was paid.
+		if (RTSProduction::IsAtBuildLimit(World, TeamId, *Data))
+		{
+			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d already owns %d of %s"), TeamId, Data->MaxCount, *Data->GetName());
+			return nullptr;
+		}
 
 		// Clients pick the spot, so the server snaps and checks it again.
 		FVector Location;

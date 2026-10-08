@@ -68,6 +68,11 @@ bool URTSBuilderComponent::ChargeOrder(FRTSCommand& Command)
 		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d needs %s for %s"), Player->GetTeamId(), *Missing->GetName(), *Data->GetName());
 		return false;
 	}
+	if (RTSProduction::IsAtBuildLimit(*GetWorld(), Player->GetTeamId(), *Data))
+	{
+		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d already owns %d of %s"), Player->GetTeamId(), Data->MaxCount, *Data->GetName());
+		return false;
+	}
 	if (!Player->TrySpendCredits(Data->Cost))
 	{
 		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot afford %s (%d of %d credits)"),

@@ -680,6 +680,11 @@ const URTSEntityData* ARTSPlayerController::GetMissingPrerequisite(const URTSEnt
 	return RTSProduction::FindMissingPrerequisite(*GetWorld(), GetTeamId(), Data);
 }
 
+bool ARTSPlayerController::IsAtBuildLimit(const URTSBuildingData& Data) const
+{
+	return RTSProduction::IsAtBuildLimit(*GetWorld(), GetTeamId(), Data);
+}
+
 bool ARTSPlayerController::CanRequestProduce(const ARTSBuilding* Building, const URTSEntityData* Data) const
 {
 	if (!IsValid(Building) || Building->GetTeamId() != GetTeamId() || !Data)
@@ -786,7 +791,7 @@ void ARTSPlayerController::BeginPlacement(URTSBuildingData* Data)
 {
 	CancelPlacement();
 	CancelAttackMove();
-	if (!Data || GetMissingPrerequisite(*Data))
+	if (!Data || GetMissingPrerequisite(*Data) || IsAtBuildLimit(*Data))
 	{
 		return;
 	}
@@ -849,8 +854,9 @@ void ARTSPlayerController::UpdatePlacement()
 	const bool bSpotValid = Builder
 		? RTSBuildPlacement::CanBuilderPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation, Builder->GetTeamId())
 		: RTSBuildPlacement::CanPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation);
-	// A prerequisite lost while placing turns the ghost red; the server would refuse the order.
-	bPlacementValid = bSpotValid && CanAfford(*PlacementData) && !GetMissingPrerequisite(*PlacementData);
+	// A prerequisite lost or the limit reached while placing turns the ghost red; the server would refuse the order.
+	bPlacementValid = bSpotValid && CanAfford(*PlacementData) && !GetMissingPrerequisite(*PlacementData)
+		&& !IsAtBuildLimit(*PlacementData);
 	PlacementGhost->SetActorLocation(PlacementLocation);
 	PlacementGhost->SetValid(bPlacementValid);
 	PlacementGhost->SetActorHiddenInGame(false);

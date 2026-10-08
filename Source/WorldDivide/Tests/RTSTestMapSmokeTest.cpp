@@ -65,6 +65,8 @@
  * it before they carry on to the target.
  * The headquarters test checks that each team starts with its headquarters on its PlayerStart and that the player's
  * produces a builder, then destroys the enemy's last building but a tower: the player has won and orders are refused.
+ * The rebuild test refuses a second headquarters while the first stands, then destroys it while a power plant keeps the
+ * team in the match: a builder rebuilds it, a second one is refused beside the site, and the new one produces a builder.
  */
 namespace
 {
@@ -327,6 +329,7 @@ namespace
 		// Headquarters test only.
 		FVector RefusedStart = FVector::ZeroVector;
 		double RefusedAtWorldTime = 0.0;
+		bool bSecondHeadquartersChecked = false;
 
 		// Attack-move tests only.
 		bool bHadTarget = false;
@@ -3464,7 +3467,8 @@ bool FRTSCheckHeadquarters::Update()
 	}
 	const URTSFactionData* Faction = Player->GetFaction();
 	Test->TestTrue(TEXT("The faction starts with the test headquarters"), Faction && Faction->Headquarters == HeadquartersData);
-	Test->TestFalse(TEXT("The headquarters cannot be built"), Faction && Faction->Buildings.Contains(HeadquartersData));
+	Test->TestTrue(TEXT("The faction can build the headquarters again"), Faction && Faction->Buildings.Contains(HeadquartersData));
+	Test->TestEqual(TEXT("A team may own one headquarters"), HeadquartersData->MaxCount, 1);
 
 	ARTSBuilding* Own = nullptr;
 	for (int32 Team = 0; Team < 2; ++Team)
@@ -3652,6 +3656,144 @@ bool FRTSHeadquartersSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForHeadquartersBuilder(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSDestroyEnemyBase(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyOrdersRefused(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+/**
+ * One headquarters per team: a second is refused while the first stands. Once it falls, with a power plant keeping the
+ * team in the match, the menu offers it again and a builder is sent to rebuild it on BuildSpot.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSLoseHeadquarters, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSLoseHeadquarters::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	const int32 TeamId = Controller->GetTeamId();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	const ARTSGameState* GameState = World->GetGameState<ARTSGameState>();
+	URTSBuildingData* HeadquartersData = LoadObject<URTSBuildingData>(nullptr, HeadquartersPath);
+	ARTSUnit* Builder = SpawnTestUnit(World, BuilderPath, TeamId, BuilderStart);
+	ARTSUnit* SecondBuilder = SpawnTestUnit(World, BuilderPath, TeamId, SecondBuilderStart);
+	const ARTSBuilding* Plant = SpawnPowerPlant(World, TeamId);
+	if (!Player || !GameState || !HeadquartersData || !Builder || !SecondBuilder || !Plant)
+	{
+		Test->AddError(TEXT("Missing the player state, the game state, the headquarters data, the builders or the power plant"));
+		return true;
+	}
+	ARTSBuilding* Own = nullptr;
+	for (TActorIterator<ARTSBuilding> It(World); It; ++It)
+	{
+		Own = It->GetTeamId() == TeamId && It->GetBuildingData() == HeadquartersData ? *It : Own;
+	}
+	if (!Test->TestNotNull(TEXT("The player starts with a headquarters"), Own))
+	{
+		return true;
+	}
+	Test->TestTrue(TEXT("The builder can build a headquarters"), Builder->GetBuilderComponent()->CanBuild(HeadquartersData));
+
+	// While it stands: the menu is at its limit, the ghost does not start and the server refuses both kinds of order.
+	const int32 Credits = Player->GetCredits();
+	Test->TestTrue(TEXT("The player is at the headquarters limit"), Controller->IsAtBuildLimit(*HeadquartersData));
+	Controller->BeginPlacement(HeadquartersData);
+	Test->TestNull(TEXT("The ghost for a second headquarters does not start"), Controller->GetPlacementData());
+	Controller->Server_IssueCommand({ Builder }, MakeBuild(HeadquartersData, BuildSpot));
+	Test->TestEqual(TEXT("The builder's order for a second headquarters is refused"), Builder->GetQueuedCommandCount(), 0);
+	Test->TestNull(TEXT("Debug build refuses a second headquarters"), RequestBuild(*Controller, HeadquartersData, OtherBuildSpot));
+	Test->TestEqual(TEXT("The refusals charged nothing"), Player->GetCredits(), Credits);
+
+	Own->GetHealthComponent()->ApplyDamage(Own->GetHealthComponent()->GetMaxHealth(), nullptr);
+	Test->TestFalse(TEXT("The headquarters fell"), IsValid(Own) && !Own->IsActorBeingDestroyed());
+	Test->TestTrue(TEXT("The power plant keeps the player in the match"), GameState->GetAliveTeams().Contains(TeamId));
+	Test->TestFalse(TEXT("The match runs on"), GameState->IsMatchOver());
+	Test->TestFalse(TEXT("The limit is free again"), Controller->IsAtBuildLimit(*HeadquartersData));
+	Controller->BeginPlacement(HeadquartersData);
+	Test->TestTrue(TEXT("The ghost for a new headquarters starts"), Controller->GetPlacementData() == HeadquartersData);
+	Controller->CancelPlacement();
+
+	Controller->Server_IssueCommand({ Builder }, MakeBuild(HeadquartersData, BuildSpot));
+	Test->TestEqual(TEXT("The builder took the order"), Builder->GetQueuedCommandCount(), 1);
+	Test->TestEqual(TEXT("The new headquarters is charged at once"), Player->GetCredits(), Credits - HeadquartersData->Cost);
+
+	State->Builder = Builder;
+	State->SecondBuilder = SecondBuilder;
+	State->Player = Player;
+	State->BuilderCredits = Player->GetCredits();
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+/** A site counts towards the limit as soon as it is placed; the builder then finishes it and it produces a builder. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSRebuildHeadquarters, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSRebuildHeadquarters::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	ARTSPlayerState* Player = State->Player.Get();
+	ARTSUnit* SecondBuilder = State->SecondBuilder.Get();
+	URTSBuildingData* HeadquartersData = LoadObject<URTSBuildingData>(nullptr, HeadquartersPath);
+	URTSUnitData* BuilderData = LoadObject<URTSUnitData>(nullptr, BuilderPath);
+	if (!Controller || !Player || !SecondBuilder || !HeadquartersData || !BuilderData)
+	{
+		Test->AddError(TEXT("Lost the controller, the player state or the second builder, or missing the test data"));
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	ARTSBuilding* Site = FindBuildingAt(World, HeadquartersData, BuildSpot);
+	if (Site && !State->bSecondHeadquartersChecked)
+	{
+		State->bSecondHeadquartersChecked = true;
+		Test->TestTrue(TEXT("The site reaches the limit"), Controller->IsAtBuildLimit(*HeadquartersData));
+		Controller->Server_IssueCommand({ SecondBuilder }, MakeBuild(HeadquartersData, OtherBuildSpot));
+		Test->TestEqual(TEXT("A second headquarters is refused beside the site"), SecondBuilder->GetQueuedCommandCount(), 0);
+		Test->TestEqual(TEXT("The refusal charged nothing"), Player->GetCredits(), State->BuilderCredits);
+	}
+	if (!Site || !Site->IsConstructed())
+	{
+		if (FPlatformTime::Seconds() - State->PhaseStart > BuilderTimeout + HeadquartersData->BuildTime)
+		{
+			Test->AddError(FString::Printf(TEXT("The builder never rebuilt the headquarters (site placed %d)"), Site != nullptr));
+			return true;
+		}
+		return false;
+	}
+
+	Test->TestEqual(TEXT("Placing and building charged nothing more"), Player->GetCredits(), State->BuilderCredits);
+	Test->TestEqual(TEXT("The site knows what it cost"), Site->GetPaidCost(), HeadquartersData->Cost);
+	Test->TestTrue(TEXT("The new headquarters can be selected"), Controller->SelectBuilding(Site));
+	Test->TestTrue(TEXT("It is a production building"), Controller->GetProductionBuilding() == Site);
+	for (TActorIterator<ARTSUnit> It(World); It; ++It)
+	{
+		State->UnitsBefore.Add(*It);
+	}
+	Test->TestTrue(TEXT("It queues a builder"), Controller->RequestProduce(Site, BuilderData));
+	Test->TestEqual(TEXT("The builder is charged"), Player->GetCredits(), State->BuilderCredits - BuilderData->Cost);
+	State->Building = Site;
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRebuildHeadquartersSmokeTest, "WorldDivide.Smoke.RebuildHeadquarters",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSRebuildHeadquartersSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSLoseHeadquarters(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSRebuildHeadquarters(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForHeadquartersBuilder(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

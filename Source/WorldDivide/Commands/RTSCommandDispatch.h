@@ -17,8 +17,8 @@ namespace RTSCommands
 	WORLDDIVIDE_API void Dispatch(TConstArrayView<ARTSUnit*> Units, const FRTSCommand& Command);
 
 	/**
-	 * Server only. Spawns the building of a Build command for TeamId once the faction may build it and the snapped spot
-	 * passes placement. Returns the new building, or null when the command is rejected.
+	 * Server only. Spawns the building of a Build command for TeamId once the faction may build it, the team is below its
+	 * MaxCount and the snapped spot passes placement. Returns the new building, or null when the command is rejected.
 	 */
 	WORLDDIVIDE_API ARTSBuilding* PlaceBuilding(UWorld& World, const URTSFactionData* Faction, int32 TeamId, const FRTSCommand& Command);
 

@@ -43,6 +43,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production")
 	TArray<TObjectPtr<URTSUpgradeData>> Upgrades;
 
+	/**
+	 * How many of this building a team may own at once, construction sites included, such as one headquarters. 0 for no
+	 * limit.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production", meta = (ClampMin = "0"))
+	int32 MaxCount = 0;
+
 	/** Harvesters deliver supplies here once it is constructed. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Economy")
 	bool bAcceptsSupply = false;

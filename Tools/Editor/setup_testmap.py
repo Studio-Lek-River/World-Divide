@@ -256,7 +256,8 @@ def make_builder(name, display_name, mesh, scale, radius, health, speed, turn_ra
 
 
 def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw,
-                  spawn_on_complete=None, accepts_supply=False, requires_power=False, units=(), upgrades=(), defense=False):
+                  spawn_on_complete=None, accepts_supply=False, requires_power=False, units=(), upgrades=(), defense=False,
+                  max_count=0):
     return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
         "display_name": unreal.Text(display_name),
         "mesh": mesh,
@@ -275,6 +276,7 @@ def make_building(name, display_name, mesh, scale, footprint, health, weapon, co
         "units": list(units),
         "upgrades": list(upgrades),
         "is_defense": defense,
+        "max_count": max_count,
     })
 
 
@@ -537,11 +539,11 @@ barracks = make_building("DA_TestBarracks", "Test Barracks", barracks_mesh, fit_
 vehicle_factory = make_building("DA_TestVehicleFactory", "Test Vehicle Factory", vehicle_factory_mesh,
                                 fit_scale(vehicle_factory_mesh, 380.0, 380.0), (4, 4), 1200.0, None, 1200, 8.0, 0, 2,
                                 units=[tank, harvester])
-# Every team starts with one at its PlayerStart; it is not in the faction's buildings, so it cannot be built.
+# Every team starts with one at its PlayerStart and may own only one; a team that lost it builds it again.
 headquarters = make_building("DA_TestHeadquarters", "Test Headquarters", headquarters_mesh,
-                             fit_scale(headquarters_mesh, 380.0, 380.0), (4, 4), 3000.0, None, 0, 0.0, 0, 0,
-                             units=[builder])
-buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory]
+                             fit_scale(headquarters_mesh, 380.0, 380.0), (4, 4), 3000.0, None, 2500, 12.0, 0, 0,
+                             units=[builder], max_count=1)
+buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory, headquarters]
 # The headquarters produces the builder, which builds the rest.
 add_properties(builder, {"buildings": buildings})
 # A harvester needs a depot to deliver to, so the factory only offers one once a depot stands.

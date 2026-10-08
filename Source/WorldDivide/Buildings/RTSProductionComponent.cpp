@@ -79,6 +79,24 @@ namespace RTSProduction
 		}
 		return false;
 	}
+
+	bool IsAtBuildLimit(const UWorld& World, int32 TeamId, const URTSBuildingData& Data)
+	{
+		if (Data.MaxCount <= 0)
+		{
+			return false;
+		}
+		int32 Count = 0;
+		for (TActorIterator<ARTSBuilding> It(&World); It; ++It)
+		{
+			if (It->GetTeamId() == TeamId && It->GetBuildingData() == &Data && !It->IsActorBeingDestroyed()
+				&& !It->GetHealthComponent()->IsDead())
+			{
+				++Count;
+			}
+		}
+		return Count >= Data.MaxCount;
+	}
 }
 
 URTSProductionComponent::URTSProductionComponent()

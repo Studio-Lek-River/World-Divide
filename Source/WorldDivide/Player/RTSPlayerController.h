@@ -100,6 +100,9 @@ public:
 	/** The first of Data's prerequisites the local player does not own, or null. The server checks again before it charges. */
 	const URTSEntityData* GetMissingPrerequisite(const URTSEntityData& Data) const;
 
+	/** The local player owns Data's MaxCount of it, construction sites included. The server checks again before it charges. */
+	bool IsAtBuildLimit(const URTSBuildingData& Data) const;
+
 	/**
 	 * Building would take Data as far as the client knows: the player's own, Data on its list, prerequisites owned,
 	 * affordable and the queue not full, and an upgrade neither researched nor queued. The server checks again before it charges.
@@ -117,7 +120,8 @@ public:
 
 	/**
 	 * Local. Shows a ghost of Data under the cursor until the player builds or cancels. Confirming sends the selected
-	 * builder, or without one places the building directly in debug build. Does nothing while a prerequisite is missing.
+	 * builder, or without one places the building directly in debug build. Does nothing while a prerequisite is missing
+	 * or the player is at Data's limit.
 	 */
 	void BeginPlacement(URTSBuildingData* Data);
 	void CancelPlacement();
