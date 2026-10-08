@@ -72,6 +72,8 @@
  * team in the match: a builder rebuilds it, a second one is refused beside the site, and the new one produces a builder.
  * The match-end test sets a tank walking, a tank and an enemy tower firing at each other, a harvester, a builder and the
  * headquarters' queue at work, then destroys the enemy headquarters: from then on nothing moves, fires or advances.
+ * The hovered unit test aims the controller's cursor query at an enemy tank, an own tank and the empty ground between
+ * them, as the HUD does to draw the health bar of the unit under the cursor.
  */
 namespace
 {
@@ -254,6 +256,16 @@ namespace
 	constexpr float AttackMoveShortfall = 1000.f;
 	// A few frames are enough for PlayerTick to notice the emptied selection.
 	constexpr double AttackMoveDisarmTimeout = 5.0;
+
+	/**
+	 * The hovered unit test: an enemy and an own tank on the north strip, out of each other's range (1200 cm), and empty
+	 * ground between them. The cursor ray comes down from the camera's height; a headless editor has no viewport to
+	 * project a real mouse position through.
+	 */
+	const FVector HoverEnemySpot(1000.f, 7000.f, 0.f);
+	const FVector HoverOwnSpot(-1000.f, 7000.f, 0.f);
+	const FVector HoverEmptySpot(0.f, 7000.f, 0.f);
+	const FVector HoverRayOffset(-1700.f, 0.f, 2500.f);
 
 	/**
 	 * The match-end test: a harvester between a depot and a source on the empty strip, as in the harvest test, a tank walking
@@ -3477,6 +3489,55 @@ bool FRTSAttackMoveArmedSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckAttackMoveArming(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAttackMoveDisarmed(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckHoverUnits, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSCheckHoverUnits::Update()
+{
+	const ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	ARTSUnit* Enemy = SpawnTestUnit(World, TankPath, Controller->GetTeamId() + 1, HoverEnemySpot);
+	ARTSUnit* Own = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), HoverOwnSpot);
+	if (!Enemy || !Own)
+	{
+		Test->AddError(TEXT("Could not spawn the test tanks"));
+		return true;
+	}
+
+	// From above and behind, at the camera's default pitch and distance, through the point aimed at.
+	const auto UnitAt = [Controller](const FVector& Target)
+	{
+		return Controller->GetUnitAlongRay(Target + HoverRayOffset, (-HoverRayOffset).GetSafeNormal());
+	};
+	Test->TestTrue(TEXT("Over the enemy tank the controller reports it"), UnitAt(Enemy->GetActorLocation()) == Enemy);
+	Test->TestTrue(TEXT("Over the own tank the controller reports it"), UnitAt(Own->GetActorLocation()) == Own);
+	Test->TestNull(TEXT("Over empty ground the controller reports no unit"), UnitAt(HoverEmptySpot));
+	Enemy->Destroy();
+	Own->Destroy();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSHoveredUnitSmokeTest, "WorldDivide.Smoke.HoveredUnit",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSHoveredUnitSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckHoverUnits(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

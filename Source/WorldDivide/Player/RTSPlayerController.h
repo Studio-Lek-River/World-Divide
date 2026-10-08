@@ -67,6 +67,12 @@ public:
 	/** The building of any team under the mouse cursor, or null. */
 	ARTSBuilding* GetBuildingUnderCursor() const;
 
+	/** The unit of any team under the mouse cursor, or null. */
+	ARTSUnit* GetUnitUnderCursor() const;
+
+	/** The unit of any team first hit by the ray from Origin along the unit vector Direction, as the cursor casts it, or null. */
+	ARTSUnit* GetUnitAlongRay(const FVector& Origin, const FVector& Direction) const;
+
 	/** The local player's faction, or null before the player state has replicated. */
 	URTSFactionData* GetFaction() const;
 

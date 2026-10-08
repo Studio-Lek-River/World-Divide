@@ -209,6 +209,23 @@ ARTSBuilding* ARTSPlayerController::GetBuildingUnderCursor() const
 	return GetHitResultUnderCursor(ECC_Visibility, false, Hit) ? Cast<ARTSBuilding>(Hit.GetActor()) : nullptr;
 }
 
+ARTSUnit* ARTSPlayerController::GetUnitUnderCursor() const
+{
+	FVector Origin;
+	FVector Direction;
+	return DeprojectMousePositionToWorld(Origin, Direction) ? GetUnitAlongRay(Origin, Direction) : nullptr;
+}
+
+ARTSUnit* ARTSPlayerController::GetUnitAlongRay(const FVector& Origin, const FVector& Direction) const
+{
+	// The trace GetHitResultUnderCursor makes from the deprojected cursor.
+	FHitResult Hit;
+	const FCollisionQueryParams Params(SCENE_QUERY_STAT(ClickableTrace), false);
+	return GetWorld()->LineTraceSingleByChannel(Hit, Origin, Origin + Direction * HitResultTraceDistance, ECC_Visibility, Params)
+		? Cast<ARTSUnit>(Hit.GetActor())
+		: nullptr;
+}
+
 bool ARTSPlayerController::SelectBuilding(ARTSBuilding* Building)
 {
 	if (!IsValid(Building) || Building->GetTeamId() != GetTeamId())

@@ -10,7 +10,8 @@ class ARTSUnit;
 enum class ERTSMatchResult : uint8;
 
 /**
- * Draws the drag box, the brackets plus health bar of selected units, construction progress of own buildings,
+ * Draws the drag box, the brackets plus health bar of selected units, the health bar of the unit of any team under the
+ * cursor, construction progress of own buildings,
  * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
  * the player's credits and power, the build menu of the selected builder (or the debug build menu), and the production menu,
  * queue and rally point of a selected production building, a hint while attack-move is armed, and once the match is over
@@ -46,6 +47,15 @@ private:
 	void DrawSelectionBox(const FVector2D& Start, const FVector2D& End);
 	void DrawBrackets(float Left, float Top, float Right, float Bottom);
 	void DrawUnitMarker(const ARTSPlayerController& Controller, const ARTSUnit& Unit);
+
+	/** The health bar a selected unit shows, without the brackets. */
+	void DrawUnitHealth(const ARTSPlayerController& Controller, const ARTSUnit& Unit);
+
+	/** Above the circle, in viewport pixels, that the unit's selection radius covers on screen. */
+	void DrawUnitHealthBar(const FVector2D& Center, float Radius, const ARTSUnit& Unit);
+
+	/** That circle, at least 8 pixels across; false while the unit cannot be projected. */
+	static bool GetUnitScreenCircle(const ARTSPlayerController& Controller, const ARTSUnit& Unit, FVector2D& OutCenter, float& OutRadius);
 	void DrawBuildingMarker(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawCancelButton(const ARTSBuilding& Building);
 	void DrawConstructionBar(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
