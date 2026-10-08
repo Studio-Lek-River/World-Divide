@@ -7,7 +7,7 @@
 
 class SRTSLobbyWidget;
 
-/** A player in the lobby: shows the lobby screen and sends the player's seat changes to the server's ARTSLobbyGameMode. */
+/** A player in the lobby: shows the lobby screen and sends the player's map and seat changes to the server's ARTSLobbyGameMode. */
 UCLASS()
 class WORLDDIVIDE_API ARTSLobbyPlayerController : public APlayerController
 {
@@ -19,6 +19,9 @@ public:
 	/** The lobby's seats as this player sees them; empty until they replicate. */
 	TConstArrayView<FRTSSeat> GetSeats() const;
 
+	/** The index of the lobby's map in URTSSettings::SkirmishMaps, as this player sees it. */
+	int32 GetMapIndex() const;
+
 	/** This player hosts the lobby and may change every seat and start the match. */
 	bool IsHost() const;
 
@@ -27,6 +30,9 @@ public:
 
 	/** The seat this player holds, or null until the seats replicate. */
 	const FRTSSeat* GetOwnSeat() const;
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetMap(int32 Index);
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetSeatType(int32 Index, ERTSSeatType Type, ERTSAIDifficulty Difficulty);

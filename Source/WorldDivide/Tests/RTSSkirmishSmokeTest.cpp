@@ -25,7 +25,9 @@
  * The skirmish lobby end to end, as a listen server with one client in the same process, both starting in L_Lobby. Lobby:
  * both players take an open seat and get a token, the host makes the last seat a Hard AI and the client sees it, the client
  * may move its own start spot but not change other seats, and the match URL carries the seats. The host's start is refused
- * until the client is ready, which both see; a move by the host makes the client ready up again. SkirmishSeats: the host
+ * until the client is ready, which both see; a move by the host makes the client ready up again. Then the host picks the
+ * two-spot duel map: the seats shrink to two, the client, beyond them, takes the AI's seat and must ready up again, its
+ * own pick of map is refused, and the match URL names the duel map. SkirmishSeats: the host
  * moves itself to spot 3, makes the AI Hard and closes the last seat, the client picks spot 0 and readies up, and the host
  * starts the match.
  * In L_Skirmish the host plays team 0 from spot 3, the AI team 1 from spot 1 at Hard, the client team 2 from spot 0 by its
@@ -35,6 +37,8 @@ namespace RTSSkirmishSmokeTest
 {
 	const TCHAR* LobbyMap = TEXT("/Game/Maps/L_Lobby");
 	const TCHAR* SkirmishMapName = TEXT("L_Skirmish");
+	/** L_SkirmishDuel's index in URTSSettings::SkirmishMaps: two start spots. */
+	constexpr int32 DuelMapIndex = 1;
 	constexpr int32 HostTeam = 0;
 	constexpr int32 AITeam = 1;
 	constexpr int32 ClientTeam = 2;
@@ -461,6 +465,62 @@ namespace RTSSkirmishSmokeTest
 		return false;
 	}
 
+	/** The host picks the duel map; the client asks for the first map, which is refused, then readies up again. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSLobbyPickMap, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSLobbyPickMap::Update()
+	{
+		ARTSLobbyPlayerController* Host = State->Host.Get();
+		ARTSLobbyPlayerController* Client = State->Client.Get();
+		const ARTSLobbyGameState* ServerState = GetLobbyState(State->LobbyServer);
+		if (!Host || !Client || !ServerState)
+		{
+			Test->AddError(TEXT("Lost the lobby"));
+			return true;
+		}
+		// The host's call runs at once on the server.
+		Host->Server_SetMap(DuelMapIndex);
+		Test->TestEqual(TEXT("The host picks the duel map"), ServerState->GetMapIndex(), DuelMapIndex);
+		// Reliable calls arrive in order: once the server has the client ready, it has refused the client's map.
+		Client->Server_SetMap(0);
+		Client->Server_SetReady(true);
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyLobbyMap, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyLobbyMap::Update()
+	{
+		const ARTSLobbyGameState* ServerState = GetLobbyState(State->LobbyServer);
+		const ARTSLobbyGameState* ClientState = GetLobbyState(State->LobbyClient);
+		ARTSLobbyGameMode* GameMode = State->LobbyServer.IsValid() ? State->LobbyServer->GetAuthGameMode<ARTSLobbyGameMode>() : nullptr;
+		ARTSLobbyPlayerController* Client = State->Client.Get();
+		if (!ServerState || !ClientState || !GameMode || !Client)
+		{
+			Test->AddError(TEXT("Lost the lobby"));
+			return true;
+		}
+		const TArray<FRTSSeat>& Seats = ServerState->GetSeats();
+		const TArray<FRTSSeat>& Seen = ClientState->GetSeats();
+		const bool bSeen = Seats.Num() == 2 && Seats[1].bReady && ClientState->GetMapIndex() == DuelMapIndex && Seen.Num() == 2
+			&& Seen[1].bReady;
+		if (!bSeen && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
+		{
+			return false;
+		}
+		Test->TestEqual(TEXT("The client could not change the map"), ServerState->GetMapIndex(), DuelMapIndex);
+		Test->TestEqual(TEXT("The client sees the duel map"), ClientState->GetMapIndex(), DuelMapIndex);
+		Test->TestEqual(TEXT("With one seat per start spot"), Seen.Num(), 2);
+		Test->TestTrue(TEXT("The client took the AI's seat"), Seen.Num() == 2 && Seen[1].Type == ERTSSeatType::Human
+			&& Seen[1].PlayerId == Client->GetOwnPlayerId());
+		Test->TestEqual(TEXT("Its base the duel map lacks is random"), Seen.Num() == 2 ? Seen[1].StartSpot : 0, int32(INDEX_NONE));
+		Test->TestTrue(TEXT("And it readied up again"), Seats.Num() == 2 && Seats[1].bReady);
+
+		const FString Expected = FString::Printf(TEXT("/Game/Maps/L_SkirmishDuel?listen?Seats=Human@0~%s,Human~%s"),
+			*GetToken(State->Host.Get()), *GetToken(Client));
+		Test->TestEqual(TEXT("The match starts on the duel map"), GameMode->GetMatchURL(), Expected);
+		return true;
+	}
+
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLobbySmokeTest, "WorldDivide.Smoke.Lobby", RTSTests::TestFlags)
 
 	bool FRTSLobbySmokeTest::RunTest(const FString& Parameters)
@@ -476,6 +536,8 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyChanges(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyChanges(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyReady(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyPickMap(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyMap(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		return true;
 	}

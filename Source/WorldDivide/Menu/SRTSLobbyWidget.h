@@ -7,7 +7,7 @@ class ARTSLobbyPlayerController;
 class SVerticalBox;
 
 /**
- * The lobby screen: one row per seat with its team colour, who plays it (a combo of Open, Closed and the AI difficulties for
+ * The lobby screen: the map (a combo of URTSSettings::SkirmishMaps for the host, its name for the others), then one row per seat with its team colour, who plays it (a combo of Open, Closed and the AI difficulties for
  * the host, or the name of the human holding it), its start spot (Random or a base) and whether its human is ready, then
  * Back, Ready for a joined player and Start for the host.
  * Everything reads the replicated seats each frame; changes go to the server through the controller.
@@ -28,6 +28,9 @@ public:
 	/** The label the seat's type combo shows: Open, Closed or "AI (<difficulty>)". */
 	static FString GetTypeLabel(int32 TypeOption);
 
+	/** The label the map combo shows for map MapIndex of URTSSettings::SkirmishMaps: its display name. */
+	static FString GetMapLabel(int32 MapIndex);
+
 	/** The label the start spot combo shows for Spot: Random, or "Base <Spot + 1>". */
 	static FString GetSpotLabel(int32 Spot);
 
@@ -39,6 +42,9 @@ private:
 	TWeakObjectPtr<ARTSLobbyPlayerController> Controller;
 	TSharedPtr<SVerticalBox> Rows;
 	int32 BuiltSeats = INDEX_NONE;
+
+	/** Indices into URTSSettings::SkirmishMaps. */
+	TArray<TSharedPtr<int32>> MapOptions;
 
 	/** Indices into the type options (Open, Closed, AI Easy, AI Normal, AI Hard) and the spots (INDEX_NONE for Random). */
 	TArray<TSharedPtr<int32>> TypeOptions;

@@ -1,8 +1,8 @@
 """Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters included), AI build order and faction data assets, the placement ghost and shot effect materials, the
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the L_TestMap level with a supply
-source and two builders by each base, the L_Skirmish level, the same ground without the armies and with four start spots,
-where the lobby's seats play, and the empty L_MainMenu and L_Lobby levels for the menu screens. L_TestMap and L_Skirmish
-are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
+source and two builders by each base, the L_Skirmish and L_SkirmishDuel levels, the same ground without the armies and
+with four and two start spots, where the lobby's seats play, the map data assets that offer them in the lobby, and the
+empty L_MainMenu and L_Lobby levels for the menu screens. L_TestMap and the skirmish maps are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
 source files that build them and are rebuilt only when those change.
 
@@ -33,9 +33,11 @@ BUILDING_DIR = "/Game/Data/Buildings"
 UPGRADE_DIR = "/Game/Data/Upgrades"
 FACTION_DIR = "/Game/Data/Factions"
 AI_DIR = "/Game/Data/AI"
+MAP_DATA_DIR = "/Game/Data/Maps"
 MATERIAL_DIR = "/Game/Materials"
 MAP_PATH = "/Game/Maps/L_TestMap"
 SKIRMISH_MAP_PATH = "/Game/Maps/L_Skirmish"
+DUEL_MAP_PATH = "/Game/Maps/L_SkirmishDuel"
 MAIN_MENU_MAP_PATH = "/Game/Maps/L_MainMenu"
 LOBBY_MAP_PATH = "/Game/Maps/L_Lobby"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
@@ -522,14 +524,19 @@ def make_map(tank, infantry, builder, wall, crate):
                            MAP_PATH, CUBE, tank, infantry, builder, wall, crate))
 
 
-def build_skirmish_map(builder, wall, crate, digest):
-    """L_TestMap's ground and obstacles with four start spots, each with only its builders and a supply source, and the
-    skirmish game mode, which plays the seats the lobby chose (by default a player against an AI opponent from spots 0
-    and 1) and lets every side build its army itself."""
-    if assets.does_asset_exist(SKIRMISH_MAP_PATH):
-        assets.delete_asset(SKIRMISH_MAP_PATH)
-    if not levels.new_level(SKIRMISH_MAP_PATH):
-        raise RuntimeError(f"Could not create {SKIRMISH_MAP_PATH}")
+# The start spots of the skirmish maps, facing the middle: west and east as in L_TestMap, south and north on the empty
+# strips. A map with fewer spots takes the first ones.
+SKIRMISH_SPOTS = ((0, -6000.0, 0.0, 0.0), (1, 6000.0, 0.0, 180.0), (2, 0.0, -7000.0, 90.0), (3, 0.0, 7000.0, -90.0))
+
+
+def build_skirmish_map(path, spot_count, builder, wall, crate, digest):
+    """L_TestMap's ground and obstacles with spot_count start spots, each with only its builders and a supply source, and
+    the skirmish game mode, which plays the seats the lobby chose (by default a player against an AI opponent from spots
+    0 and 1) and lets every side build its army itself."""
+    if assets.does_asset_exist(path):
+        assets.delete_asset(path)
+    if not levels.new_level(path):
+        raise RuntimeError(f"Could not create {path}")
 
     spawn_block("Ground", (0.0, 0.0, -50.0), (200.0, 200.0, 1.0))
     spawn_wall("Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0), wall)
@@ -547,8 +554,7 @@ def build_skirmish_map(builder, wall, crate, digest):
     nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
     nav.set_actor_scale3d(unreal.Vector(100.0, 100.0, 10.0))
 
-    # Four start spots facing the middle: west and east as in L_TestMap, south and north on the empty strips.
-    for spot, x, y, yaw in ((0, -6000.0, 0.0, 0.0), (1, 6000.0, 0.0, 180.0), (2, 0.0, -7000.0, 90.0), (3, 0.0, 7000.0, -90.0)):
+    for spot, x, y, yaw in SKIRMISH_SPOTS[:spot_count]:
         start = spawn(unreal.PlayerStart, (x, y, 100.0), yaw, label=f"PlayerStart_Team{spot}")
         start.set_editor_property("player_start_tag", f"Team{spot}")
         forward = (math.cos(math.radians(yaw)), math.sin(math.radians(yaw)))
@@ -560,16 +566,27 @@ def build_skirmish_map(builder, wall, crate, digest):
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     world.get_world_settings().set_editor_property("default_game_mode", unreal.RTSSkirmishGameMode.static_class())
-    build_navigation(world, SKIRMISH_MAP_PATH)
+    build_navigation(world, path)
     assets.set_metadata_tag(world, HASH_TAG, digest)
     if not levels.save_current_level():
-        raise RuntimeError(f"Could not save {SKIRMISH_MAP_PATH}")
+        raise RuntimeError(f"Could not save {path}")
 
 
-def make_skirmish_map(builder, wall, crate):
-    plan_rebuild(SKIRMISH_MAP_PATH, ".umap", lambda digest: build_skirmish_map(builder, wall, crate, digest),
+def make_skirmish_map(path, spot_count, builder, wall, crate):
+    plan_rebuild(path, ".umap", lambda digest: build_skirmish_map(path, spot_count, builder, wall, crate, digest),
                  spec_hash([build_skirmish_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units,
-                            spawn_supply_source], SKIRMISH_MAP_PATH, CUBE, builder, wall, crate))
+                            spawn_supply_source], path, spot_count, SKIRMISH_SPOTS, CUBE, builder, wall, crate))
+
+
+def make_map_data(name, display_name, path, start_spots, default_seats):
+    """default_seats: (seat type, start spot or -1 for random) pairs, at most one per start spot."""
+    return plan_data_asset(name, MAP_DATA_DIR, unreal.RTSMapData, {
+        "display_name": unreal.Text(display_name),
+        "map": unreal.SoftObjectPath(f"{path}.{path.rsplit('/', 1)[1]}"),
+        "start_spots": start_spots,
+        "default_seats": [make_struct(unreal.RTSSeat, {"type": seat_type, "start_spot": spot})
+                          for seat_type, spot in default_seats],
+    })
 
 
 def build_menu_map(path, game_mode, digest):
@@ -712,7 +729,13 @@ make_faction("DA_TestFaction", "Test Faction", buildings, headquarters, ai_build
 make_ghost_material("M_PlacementGhost")
 make_shot_material("M_ShotFx")
 make_map(tank, infantry, builder, wall_mesh, crate_mesh)
-make_skirmish_map(builder, wall_mesh, crate_mesh)
+make_skirmish_map(SKIRMISH_MAP_PATH, 4, builder, wall_mesh, crate_mesh)
+make_skirmish_map(DUEL_MAP_PATH, 2, builder, wall_mesh, crate_mesh)
+# The lobby's maps, listed in Config/DefaultGame.ini: by default a player against an AI opponent; the other seats are open.
+make_map_data("DA_MapSkirmish", "Test Crossroads", SKIRMISH_MAP_PATH, 4,
+              [(unreal.RTSSeatType.OPEN, 0), (unreal.RTSSeatType.AI, 1), (unreal.RTSSeatType.CLOSED, -1),
+               (unreal.RTSSeatType.CLOSED, -1)])
+make_map_data("DA_MapDuel", "Test Duel", DUEL_MAP_PATH, 2, [(unreal.RTSSeatType.OPEN, 0), (unreal.RTSSeatType.AI, 1)])
 make_menu_map(MAIN_MENU_MAP_PATH, unreal.RTSMainMenuGameMode)
 make_menu_map(LOBBY_MAP_PATH, unreal.RTSLobbyGameMode)
 plan_data_assets()

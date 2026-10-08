@@ -8,6 +8,7 @@ class UMaterialInterface;
 class UStaticMesh;
 class UWorld;
 class URTSFactionData;
+class URTSMapData;
 
 /** Project-wide asset references, kept in DefaultGame.ini so they stay reviewable text. */
 UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "World Divide"))
@@ -40,7 +41,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Maps")
 	TSoftObjectPtr<UWorld> LobbyMap;
 
-	/** The map the lobby starts the match on. */
+	/** The maps the host picks from in the lobby, in the order it shows them; the first is the default. */
 	UPROPERTY(Config, EditAnywhere, Category = "Maps")
-	TSoftObjectPtr<UWorld> SkirmishMap;
+	TArray<TSoftObjectPtr<URTSMapData>> SkirmishMaps;
 };

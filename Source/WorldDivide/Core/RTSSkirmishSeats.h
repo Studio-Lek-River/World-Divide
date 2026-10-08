@@ -116,6 +116,24 @@ namespace RTSSkirmish
 	/** Lobby: a player readies its own seat or takes that back. False for the host, which is always ready, or without a seat. */
 	WORLDDIVIDE_API bool SetReady(TArray<FRTSSeat>& Seats, int32 PlayerId, bool bIsHost, bool bReady);
 
+	/**
+	 * Lobby: the seats of a map with SpotCount start spots, one per spot, from its DefaultSeats. Closed and missing seats are
+	 * open for joining players; spots the map lacks are random.
+	 */
+	WORLDDIVIDE_API TArray<FRTSSeat> MakeLobbySeats(TConstArrayView<FRTSSeat> DefaultSeats, int32 SpotCount);
+
+	/** Lobby: the host may pick a map with at least one start spot and a seat for every human. */
+	WORLDDIVIDE_API bool CanChangeMap(TConstArrayView<FRTSSeat> Seats, bool bIsHost, int32 SpotCount);
+
+	/**
+	 * Lobby: resizes Seats to a new map's SpotCount start spots. Seats the map still has are kept, new ones come from
+	 * MakeLobbySeats(DefaultSeats). A human beyond the new seats takes the first seat no human holds; a base the map lacks,
+	 * or now shared with a human's, goes back to Random. Every human but the host must ready up again. False, changing
+	 * nothing, when there are more humans than spots.
+	 */
+	WORLDDIVIDE_API bool ResizeSeats(TArray<FRTSSeat>& Seats, TConstArrayView<FRTSSeat> DefaultSeats, int32 SpotCount,
+		int32 HostPlayerId);
+
 	/** Lobby: at least one human and two seats with a player or an AI, and every human ready. */
 	WORLDDIVIDE_API bool CanStart(TConstArrayView<FRTSSeat> Seats);
 

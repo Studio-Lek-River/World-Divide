@@ -1,6 +1,9 @@
 #include "Menu/SRTSLobbyWidget.h"
 
+#include "Core/RTSSettings.h"
 #include "Core/RTSSkirmishSeats.h"
+#include "Data/RTSMapData.h"
+#include "Menu/RTSLobbyGameState.h"
 #include "Menu/RTSLobbyPlayerController.h"
 #include "Styling/CoreStyle.h"
 #include "Units/RTSUnit.h"
@@ -56,6 +59,12 @@ FString SRTSLobbyWidget::GetTypeLabel(int32 TypeOption)
 	return FString::Printf(TEXT("AI (%s)"), *StaticEnum<ERTSAIDifficulty>()->GetNameStringByValue(Difficulty));
 }
 
+FString SRTSLobbyWidget::GetMapLabel(int32 MapIndex)
+{
+	const URTSMapData* Map = ARTSLobbyGameState::LoadMap(MapIndex);
+	return Map ? Map->DisplayName.ToString() : FString();
+}
+
 FString SRTSLobbyWidget::GetSpotLabel(int32 Spot)
 {
 	return Spot == INDEX_NONE ? TEXT("Random") : FString::Printf(TEXT("Base %d"), Spot + 1);
@@ -67,6 +76,10 @@ void SRTSLobbyWidget::Construct(const FArguments& InArgs)
 	for (int32 Option = 0; Option < TypeOptionCount; ++Option)
 	{
 		TypeOptions.Add(MakeShared<int32>(Option));
+	}
+	for (int32 MapIndex = 0; MapIndex < GetDefault<URTSSettings>()->SkirmishMaps.Num(); ++MapIndex)
+	{
+		MapOptions.Add(MakeShared<int32>(MapIndex));
 	}
 
 	ChildSlot
@@ -82,6 +95,40 @@ void SRTSLobbyWidget::Construct(const FArguments& InArgs)
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 16.f)
 			[
 				SNew(STextBlock).Font(GetFont(24)).Text(FText::FromString(TEXT("Skirmish")))
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 0.f, 0.f, 12.f)
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.f, 0.f, 12.f, 0.f)
+				[
+					SNew(STextBlock).Font(GetFont(14)).Text(FText::FromString(TEXT("Map")))
+				]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)
+				[
+					SNew(SBox).WidthOverride(220.f)
+					[
+						SNew(SComboBox<TSharedPtr<int32>>)
+						.OptionsSource(&MapOptions)
+						.IsEnabled_Lambda([this]() { return Controller.IsValid() && Controller->IsHost(); })
+						.OnGenerateWidget_Lambda([](TSharedPtr<int32> Option)
+						{
+							return SNew(STextBlock).Text(FText::FromString(GetMapLabel(*Option)));
+						})
+						.OnSelectionChanged_Lambda([this](TSharedPtr<int32> Option, ESelectInfo::Type SelectInfo)
+						{
+							if (Option.IsValid() && Controller.IsValid() && SelectInfo != ESelectInfo::Direct)
+							{
+								Controller->Server_SetMap(*Option);
+							}
+						})
+						[
+							SNew(STextBlock).Text_Lambda([this]()
+							{
+								return FText::FromString(Controller.IsValid() ? GetMapLabel(Controller->GetMapIndex()) : FString());
+							})
+						]
+					]
+				]
 			]
 			+ SVerticalBox::Slot().AutoHeight()
 			[
@@ -101,7 +148,7 @@ void SRTSLobbyWidget::Construct(const FArguments& InArgs)
 						[](const FRTSSeat& Seat) { return Seat.Type == ERTSSeatType::Human && !Seat.bReady; });
 					if (Controller->IsHost())
 					{
-						return FText::FromString(bAllReady ? TEXT("Set up the seats, then start the match.")
+						return FText::FromString(bAllReady ? TEXT("Pick the map and set up the seats, then start the match.")
 							: TEXT("Waiting for every player to be ready."));
 					}
 					const FRTSSeat* Own = Controller->GetOwnSeat();

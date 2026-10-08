@@ -1,5 +1,7 @@
 #include "Core/RTSSkirmishSeats.h"
 
+#include "Algo/Count.h"
+
 namespace
 {
 	const TCHAR* GetTypeName(ERTSSeatType Type)
@@ -291,6 +293,83 @@ namespace RTSSkirmish
 			return false;
 		}
 		Seat->bReady = bReady;
+		return true;
+	}
+
+	TArray<FRTSSeat> MakeLobbySeats(TConstArrayView<FRTSSeat> DefaultSeats, int32 SpotCount)
+	{
+		TArray<FRTSSeat> Result;
+		for (int32 Index = 0; Index < SpotCount; ++Index)
+		{
+			FRTSSeat& Seat = Result.Add_GetRef(DefaultSeats.IsValidIndex(Index) ? DefaultSeats[Index] : FRTSSeat());
+			if (Seat.Type == ERTSSeatType::Closed)
+			{
+				Seat.Type = ERTSSeatType::Open;
+			}
+			if (Seat.StartSpot >= SpotCount)
+			{
+				Seat.StartSpot = INDEX_NONE;
+			}
+		}
+		return Result;
+	}
+
+	bool CanChangeMap(TConstArrayView<FRTSSeat> Seats, bool bIsHost, int32 SpotCount)
+	{
+		const int32 Humans = Algo::CountIf(Seats, [](const FRTSSeat& Seat) { return Seat.Type == ERTSSeatType::Human; });
+		return bIsHost && SpotCount >= 1 && Humans <= SpotCount;
+	}
+
+	bool ResizeSeats(TArray<FRTSSeat>& Seats, TConstArrayView<FRTSSeat> DefaultSeats, int32 SpotCount, int32 HostPlayerId)
+	{
+		if (!CanChangeMap(Seats, true, SpotCount))
+		{
+			return false;
+		}
+		TArray<FRTSSeat> Result = MakeLobbySeats(DefaultSeats, SpotCount);
+		for (int32 Index = 0; Index < FMath::Min(Seats.Num(), SpotCount); ++Index)
+		{
+			Result[Index] = Seats[Index];
+		}
+		for (int32 Index = SpotCount; Index < Seats.Num(); ++Index)
+		{
+			if (Seats[Index].Type == ERTSSeatType::Human)
+			{
+				// There is one: no more humans than spots.
+				FRTSSeat* Free = Result.FindByPredicate([](const FRTSSeat& Seat) { return Seat.Type != ERTSSeatType::Human; });
+				*Free = Seats[Index];
+			}
+		}
+
+		// The humans keep their bases first, then the other seats in order; a base taken already or beyond the map is random.
+		TSet<int32> TakenSpots;
+		for (const bool bHumans : { true, false })
+		{
+			for (FRTSSeat& Seat : Result)
+			{
+				if ((Seat.Type == ERTSSeatType::Human) != bHumans || Seat.StartSpot == INDEX_NONE)
+				{
+					continue;
+				}
+				bool bTaken = false;
+				if (IsPlayed(Seat) && Seat.StartSpot < SpotCount)
+				{
+					TakenSpots.Add(Seat.StartSpot, &bTaken);
+				}
+				if (bTaken || Seat.StartSpot >= SpotCount || !IsPlayed(Seat))
+				{
+					Seat.StartSpot = INDEX_NONE;
+				}
+			}
+		}
+		for (FRTSSeat& Seat : Result)
+		{
+			if (Seat.Type == ERTSSeatType::Human && Seat.PlayerId != HostPlayerId)
+			{
+				Seat.bReady = false;
+			}
+		}
+		Seats = MoveTemp(Result);
 		return true;
 	}
 

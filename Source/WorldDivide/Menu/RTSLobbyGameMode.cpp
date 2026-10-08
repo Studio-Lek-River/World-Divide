@@ -1,7 +1,6 @@
 #include "Menu/RTSLobbyGameMode.h"
 
-#include "Core/RTSSettings.h"
-#include "Core/RTSSkirmishGameMode.h"
+#include "Data/RTSMapData.h"
 #include "GameFramework/PlayerState.h"
 #include "Menu/RTSLobbyGameState.h"
 #include "Menu/RTSLobbyPlayerController.h"
@@ -25,17 +24,16 @@ void ARTSLobbyGameMode::InitGameState()
 {
 	Super::InitGameState();
 
-	// The skirmish's defaults with room for every player who joins: the host takes the first open seat, offline the AI
-	// is its opponent, and open seats nobody takes stay out of the match.
-	TArray<FRTSSeat>& Seats = GetLobbyState()->GetMutableSeats();
-	Seats = GetDefault<ARTSSkirmishGameMode>()->Seats;
-	for (FRTSSeat& Seat : Seats)
+	// The map's defaults with room for every player who joins: the host takes the first open seat, offline the AI is its
+	// opponent, and open seats nobody takes stay out of the match.
+	ARTSLobbyGameState* State = GetLobbyState();
+	const URTSMapData* Map = State->GetMap();
+	if (!Map)
 	{
-		if (Seat.Type == ERTSSeatType::Closed)
-		{
-			Seat.Type = ERTSSeatType::Open;
-		}
+		UE_LOG(LogWorldDivide, Error, TEXT("No skirmish maps in the World Divide settings"));
+		return;
 	}
+	State->GetMutableSeats() = RTSSkirmish::MakeLobbySeats(Map->DefaultSeats, Map->StartSpots);
 }
 
 void ARTSLobbyGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -103,6 +101,21 @@ bool ARTSLobbyGameMode::SetStartSpot(const APlayerController& Requester, int32 I
 		State->GetSpotCount());
 }
 
+bool ARTSLobbyGameMode::SetMap(const APlayerController& Requester, int32 Index)
+{
+	ARTSLobbyGameState* State = GetLobbyState();
+	const URTSMapData* Map = ARTSLobbyGameState::LoadMap(Index);
+	const APlayerState* Player = Requester.GetPlayerState<APlayerState>();
+	if (!Map || !Player || !RTSSkirmish::CanChangeMap(State->GetSeats(), IsHost(Requester), Map->StartSpots)
+		|| !RTSSkirmish::ResizeSeats(State->GetMutableSeats(), Map->DefaultSeats, Map->StartSpots, Player->GetPlayerId()))
+	{
+		return false;
+	}
+	State->SetMapIndex(Index);
+	UE_LOG(LogWorldDivide, Log, TEXT("The lobby plays %s"), *Map->DisplayName.ToString());
+	return true;
+}
+
 bool ARTSLobbyGameMode::SetReady(const APlayerController& Requester, bool bReady)
 {
 	const APlayerState* Player = Requester.GetPlayerState<APlayerState>();
@@ -111,7 +124,12 @@ bool ARTSLobbyGameMode::SetReady(const APlayerController& Requester, bool bReady
 
 FString ARTSLobbyGameMode::GetMatchURL() const
 {
-	FString URL = GetDefault<URTSSettings>()->SkirmishMap.ToSoftObjectPath().GetLongPackageName();
+	const URTSMapData* Map = GetLobbyState()->GetMap();
+	if (!Map)
+	{
+		return FString();
+	}
+	FString URL = Map->Map.GetLongPackageName();
 	if (GetNetMode() == NM_ListenServer)
 	{
 		URL += TEXT("?listen");
@@ -126,6 +144,10 @@ bool ARTSLobbyGameMode::StartMatch(const APlayerController& Requester)
 		return false;
 	}
 	const FString URL = GetMatchURL();
+	if (URL.IsEmpty())
+	{
+		return false;
+	}
 	UE_LOG(LogWorldDivide, Log, TEXT("Starting the match: %s"), *URL);
 	// Relative, so the match listens on the lobby's port.
 	return GetWorld()->ServerTravel(URL);

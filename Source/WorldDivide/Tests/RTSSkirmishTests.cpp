@@ -213,6 +213,59 @@ namespace RTSSkirmishTests
 		TestFalse(TEXT("A seat its player left is not ready"), Seats[2].bReady);
 		return true;
 	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLobbyResizeSeatsTest, "WorldDivide.Lobby.ResizeSeats", TestFlags)
+
+	bool FRTSLobbyResizeSeatsTest::RunTest(const FString& Parameters)
+	{
+		const TArray<FRTSSeat> FourDefaults = { MakeSeat(ERTSSeatType::Open, 0), MakeSeat(ERTSSeatType::AI, 1),
+			MakeSeat(ERTSSeatType::Closed) };
+		const TArray<FRTSSeat> TwoDefaults = { MakeSeat(ERTSSeatType::Open, 0), MakeSeat(ERTSSeatType::AI, 1) };
+
+		TArray<FRTSSeat> Seats = RTSSkirmish::MakeLobbySeats(FourDefaults, 4);
+		TestEqual(TEXT("One seat per start spot"), Seats.Num(), 4);
+		TestEqual(TEXT("A closed default is open in the lobby"), Seats[2].Type, ERTSSeatType::Open);
+		TestEqual(TEXT("So is a missing one"), Seats[3].Type, ERTSSeatType::Open);
+		RTSSkirmish::TakeOpenSeat(Seats, 10, TEXT("Host"), TEXT("t10"), true);
+		RTSSkirmish::TakeOpenSeat(Seats, 11, TEXT("Guest"), TEXT("t11"), false);
+		RTSSkirmish::ChangeStartSpot(Seats, 2, false, 11, 3, 4);
+		RTSSkirmish::SetReady(Seats, 11, false, true);
+		Seats[3] = MakeSeat(ERTSSeatType::AI, 2, ERTSAIDifficulty::Hard);
+
+		TestFalse(TEXT("Only the host changes the map"), RTSSkirmish::CanChangeMap(Seats, false, 2));
+		TestTrue(TEXT("To one with a spot for each human"), RTSSkirmish::CanChangeMap(Seats, true, 2));
+		TestFalse(TEXT("Not to one with fewer spots than humans"), RTSSkirmish::CanChangeMap(Seats, true, 1));
+		TArray<FRTSSeat> Unchanged = Seats;
+		TestFalse(TEXT("Which resizes nothing"), RTSSkirmish::ResizeSeats(Unchanged, TwoDefaults, 1, 10));
+		TestTrue(TEXT("Nothing at all"), Unchanged == Seats);
+
+		// Four spots to two: the guest beyond them takes the AI's seat, and its base 3 is gone.
+		TestTrue(TEXT("The seats resize to two spots"), RTSSkirmish::ResizeSeats(Seats, TwoDefaults, 2, 10));
+		TestEqual(TEXT("Two seats"), Seats.Num(), 2);
+		TestEqual(TEXT("The host keeps seat 0"), Seats[0].PlayerId, 10);
+		TestEqual(TEXT("And its base"), Seats[0].StartSpot, 0);
+		TestTrue(TEXT("And stays ready"), Seats[0].bReady);
+		TestEqual(TEXT("The guest takes the seat no human holds"), Seats[1].PlayerId, 11);
+		TestEqual(TEXT("With its token"), Seats[1].PlayerToken, FString(TEXT("t11")));
+		TestEqual(TEXT("Its base the map lacks is random"), Seats[1].StartSpot, int32(INDEX_NONE));
+		TestFalse(TEXT("And it must ready up again"), Seats[1].bReady);
+
+		// Back to four: the humans stay, the new seats are the map's defaults, open.
+		RTSSkirmish::ChangeStartSpot(Seats, 1, false, 11, 1, 2);
+		TestTrue(TEXT("The seats resize to four spots"), RTSSkirmish::ResizeSeats(Seats, FourDefaults, 4, 10));
+		TestEqual(TEXT("Four seats"), Seats.Num(), 4);
+		TestTrue(TEXT("The humans keep their seats"), Seats[0].PlayerId == 10 && Seats[1].PlayerId == 11);
+		TestEqual(TEXT("And their bases"), Seats[1].StartSpot, 1);
+		TestEqual(TEXT("A new seat comes open"), Seats[2].Type, ERTSSeatType::Open);
+		TestEqual(TEXT("Another too"), Seats[3].Type, ERTSSeatType::Open);
+
+		// A default seat whose base a human has goes back to Random.
+		TArray<FRTSSeat> Duel = { MakeHuman(10, TEXT("t10"), 1) };
+		TestTrue(TEXT("One seat grows to two"), RTSSkirmish::ResizeSeats(Duel, TwoDefaults, 2, 10));
+		TestEqual(TEXT("The human keeps base 1"), Duel[0].StartSpot, 1);
+		TestEqual(TEXT("The AI that had it is random"), Duel[1].StartSpot, int32(INDEX_NONE));
+		return true;
+	}
 }
 
 #endif

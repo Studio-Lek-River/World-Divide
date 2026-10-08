@@ -21,6 +21,12 @@ TConstArrayView<FRTSSeat> ARTSLobbyPlayerController::GetSeats() const
 	return State ? TConstArrayView<FRTSSeat>(State->GetSeats()) : TConstArrayView<FRTSSeat>();
 }
 
+int32 ARTSLobbyPlayerController::GetMapIndex() const
+{
+	const ARTSLobbyGameState* State = GetWorld() ? GetWorld()->GetGameState<ARTSLobbyGameState>() : nullptr;
+	return State ? State->GetMapIndex() : INDEX_NONE;
+}
+
 bool ARTSLobbyPlayerController::IsHost() const
 {
 	return ARTSLobbyGameMode::IsHost(*this);
@@ -39,6 +45,14 @@ const FRTSSeat* ARTSLobbyPlayerController::GetOwnSeat() const
 	{
 		return Seat.Type == ERTSSeatType::Human && Seat.PlayerId == PlayerId;
 	});
+}
+
+void ARTSLobbyPlayerController::Server_SetMap_Implementation(int32 Index)
+{
+	if (ARTSLobbyGameMode* GameMode = GetWorld()->GetAuthGameMode<ARTSLobbyGameMode>())
+	{
+		GameMode->SetMap(*this, Index);
+	}
 }
 
 void ARTSLobbyPlayerController::Server_SetSeatType_Implementation(int32 Index, ERTSSeatType Type, ERTSAIDifficulty Difficulty)
