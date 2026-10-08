@@ -17,6 +17,7 @@
 #include "NavAreas/NavArea_Null.h"
 #include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/RTSPlayerController.h"
 #include "Units/RTSUnit.h"
 #include "WorldDivide.h"
 
@@ -107,6 +108,7 @@ void ARTSBuilding::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
+	HealthComponent->OnDamaged.AddDynamic(this, &ThisClass::HandleDamaged);
 	HealthComponent->OnDeath.AddDynamic(this, &ThisClass::HandleDeath);
 }
 
@@ -119,6 +121,25 @@ void ARTSBuilding::BeginPlay()
 		// Before any unit moves another frame towards the footprint.
 		bNavCutPending = true;
 		UpdateNavCut(0.f);
+	}
+}
+
+void ARTSBuilding::HandleDamaged(float Amount, AActor* DamageInstigator)
+{
+	// A shell whose shooter has died still comes from the enemy.
+	const IRTSTargetable* Attacker = Cast<IRTSTargetable>(DamageInstigator);
+	if (Attacker && Attacker->GetTeamId() == TeamId)
+	{
+		return;
+	}
+	// Only player controllers: the AI and an empty seat get no warning.
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		ARTSPlayerController* Controller = Cast<ARTSPlayerController>(It->Get());
+		if (Controller && Controller->GetTeamId() == TeamId)
+		{
+			Controller->NotifyBuildingAttacked(GetActorLocation());
+		}
 	}
 }
 

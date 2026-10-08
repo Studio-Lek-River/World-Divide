@@ -12,7 +12,7 @@
 
 namespace
 {
-	const FName ColorParameter(TEXT("Color"));
+	const FName ShellColorParameter(TEXT("Color"));
 
 	constexpr float MuzzleFlashSeconds = 0.08f;
 	constexpr float ImpactSeconds = 0.25f;
@@ -174,7 +174,7 @@ void ARTSShotEffect::SetGlow(UStaticMeshComponent& Glow, float Brightness) const
 {
 	if (UMaterialInstanceDynamic* Material = Cast<UMaterialInstanceDynamic>(Glow.GetMaterial(0)))
 	{
-		Material->SetVectorParameterValue(ColorParameter, Weapon->ShellColor * GlowStrength * Brightness);
+		Material->SetVectorParameterValue(ShellColorParameter, Weapon->ShellColor * GlowStrength * Brightness);
 	}
 }
 

@@ -158,6 +158,22 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_IssueCommand(const TArray<ARTSUnit*>& Units, const FRTSCommand& Command);
 
+	/**
+	 * Server only. One of the player's buildings at Location was hit by the enemy. Warns the player through
+	 * Client_BaseUnderAttack, unless a warning for a spot near Location went out within the last few seconds.
+	 */
+	void NotifyBuildingAttacked(const FVector& Location);
+
+	/** Warnings received, for tests; the HUD shows the last one for a few seconds. */
+	int32 GetAttackAlertCount() const { return AttackAlertCount; }
+
+	/** False before any warning; else where the last one points and the seconds since it arrived. */
+	bool GetLastAttackAlert(FVector& OutLocation, float& OutAge) const;
+
+	/** Owner only: the attacked building's location, for the HUD's message and marker. */
+	UFUNCTION(Client, Reliable)
+	void Client_BaseUnderAttack(const FVector& Location);
+
 protected:
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
@@ -269,4 +285,18 @@ private:
 
 	/** Set by J until the next left click sends the attack-move, or right click or Esc cancels it. */
 	bool bAttackMoveArmed = false;
+
+	struct FSentAttackAlert
+	{
+		FVector Location;
+		float Time;
+	};
+
+	/** Server only. Warnings sent within the cooldown, which hold back further ones near the same spot. */
+	TArray<FSentAttackAlert> SentAttackAlerts;
+
+	/** Owning client. */
+	int32 AttackAlertCount = 0;
+	FVector LastAttackAlertLocation = FVector::ZeroVector;
+	float LastAttackAlertTime = 0.f;
 };

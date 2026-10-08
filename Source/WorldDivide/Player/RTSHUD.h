@@ -14,7 +14,8 @@ enum class ERTSMatchResult : uint8;
  * cursor, construction progress of own buildings,
  * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
  * the player's credits and power, the build menu of the selected builder (or the debug build menu), and the production menu,
- * queue and rally point of a selected production building, a hint while attack-move is armed, and once the match is over
+ * queue and rally point of a selected production building, a hint while attack-move is armed, a warning when an own
+ * building is attacked, and once the match is over
  * a pop-up with Victory or Defeat and, on the host, a restart button in place of the menus, without any UI assets.
  */
 UCLASS()
@@ -71,6 +72,9 @@ private:
 
 	/** Produced and consumed power under the credits, red while low; nothing for a faction without power. */
 	void DrawPower(const ARTSPlayerController& Controller);
+
+	/** For a few seconds after a warning: a message at the top center and a pulsing ring on the attacked building. */
+	void DrawAttackAlert(const ARTSPlayerController& Controller);
 
 	/** Bottom center, where the cancel button would be: that needs a selected building, attack-move selected units. */
 	void DrawAttackMoveHint(const ARTSPlayerController& Controller);

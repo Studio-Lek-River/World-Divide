@@ -46,6 +46,11 @@ namespace
 	constexpr float ResultPanelMinWidth = 360.f;
 	constexpr float ResultPanelPadding = 24.f;
 	constexpr float ResultBorder = 2.f;
+	constexpr float AttackAlertSeconds = 4.f;
+	constexpr float AttackAlertTextScale = 1.5f;
+	constexpr float AttackRingRadius = 40.f;
+	constexpr float AttackRingPulse = 16.f;
+	constexpr int32 AttackRingSegments = 24;
 }
 
 void ARTSHUD::DrawHUD()
@@ -110,6 +115,10 @@ void ARTSHUD::DrawHUD()
 	}
 	DrawCredits(*Controller);
 	DrawPower(*Controller);
+	if (!bMatchOver)
+	{
+		DrawAttackAlert(*Controller);
+	}
 
 	FVector2D Start;
 	FVector2D End;
@@ -422,6 +431,41 @@ void ARTSHUD::DrawPower(const ARTSPlayerController& Controller)
 	float Height = 0.f;
 	GetTextSize(Text, Width, Height);
 	DrawText(Text, State->IsLowPower() ? LowPowerColor : PowerColor, Canvas->ClipX - MenuMargin - Width, MenuMargin + MenuLineHeight);
+}
+
+void ARTSHUD::DrawAttackAlert(const ARTSPlayerController& Controller)
+{
+	FVector Location;
+	float Age = 0.f;
+	if (!Controller.GetLastAttackAlert(Location, Age) || Age >= AttackAlertSeconds)
+	{
+		return;
+	}
+
+	const FString Text = TEXT("Your base is under attack");
+	UFont* Font = GEngine->GetLargeFont();
+	float Width = 0.f;
+	float Height = 0.f;
+	GetTextSize(Text, Width, Height, Font, AttackAlertTextScale);
+	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, MenuMargin);
+	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
+	DrawText(Text, DefeatColor, Min.X + ButtonPadding, Min.Y + ButtonPadding, Font, AttackAlertTextScale);
+
+	// A ring that pulses twice a second around the building, while it is on screen.
+	FVector2D Center;
+	if (!Controller.ProjectWorldLocationToScreen(Location, Center))
+	{
+		return;
+	}
+	const float Radius = AttackRingRadius + AttackRingPulse * FMath::Abs(FMath::Sin(Age * UE_PI * 2.f));
+	for (int32 Index = 0; Index < AttackRingSegments; ++Index)
+	{
+		const float From = 2.f * UE_PI * Index / AttackRingSegments;
+		const float To = 2.f * UE_PI * (Index + 1) / AttackRingSegments;
+		DrawLine(Center.X + Radius * FMath::Cos(From), Center.Y + Radius * FMath::Sin(From),
+			Center.X + Radius * FMath::Cos(To), Center.Y + Radius * FMath::Sin(To), DefeatColor, 2.f);
+	}
 }
 
 void ARTSHUD::DrawAttackMoveHint(const ARTSPlayerController& Controller)

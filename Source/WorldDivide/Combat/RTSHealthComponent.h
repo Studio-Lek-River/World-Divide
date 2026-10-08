@@ -4,6 +4,7 @@
 #include "Components/ActorComponent.h"
 #include "RTSHealthComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRTSDamagedSignature, float, Amount, AActor*, DamageInstigator);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRTSDeathSignature, AActor*, Killer);
 
 /** Replicated hit points. Only the server changes them; clients read them for health bars. */
@@ -21,13 +22,17 @@ public:
 	/** Server only. Changes the maximum and scales health along, so the health fraction stays; for upgrades. */
 	void SetMaxHealth(float InMaxHealth);
 
-	/** Server only. Clamps at zero and broadcasts OnDeath once; damage to the dead is ignored. */
+	/** Server only. Clamps at zero, broadcasts OnDamaged and then OnDeath once; damage to the dead is ignored. */
 	void ApplyDamage(float Amount, AActor* DamageInstigator);
 
 	float GetHealth() const { return Health; }
 	float GetMaxHealth() const { return MaxHealth; }
 	float GetHealthFraction() const { return MaxHealth > 0.f ? FMath::Clamp(Health / MaxHealth, 0.f, 1.f) : 0.f; }
 	bool IsDead() const { return Health <= 0.f; }
+
+	/** Server only. DamageInstigator is null when the shooter died while its shell was in flight. */
+	UPROPERTY(BlueprintAssignable, Category = "Health")
+	FRTSDamagedSignature OnDamaged;
 
 	/** Server only. */
 	UPROPERTY(BlueprintAssignable, Category = "Health")

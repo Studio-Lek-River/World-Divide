@@ -107,6 +107,10 @@ protected:
 	UFUNCTION()
 	void OnRep_ConstructionProgress();
 
+	/** Server only. Warns the team's players unless the instigator is on the building's own team. */
+	UFUNCTION()
+	void HandleDamaged(float Amount, AActor* DamageInstigator);
+
 	/** Server only. */
 	UFUNCTION()
 	void HandleDeath(AActor* Killer);

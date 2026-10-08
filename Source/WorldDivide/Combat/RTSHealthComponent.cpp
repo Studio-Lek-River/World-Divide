@@ -33,6 +33,7 @@ void URTSHealthComponent::ApplyDamage(float Amount, AActor* DamageInstigator)
 	}
 
 	Health = FMath::Max(Health - Amount, 0.f);
+	OnDamaged.Broadcast(Amount, DamageInstigator);
 	if (IsDead())
 	{
 		OnDeath.Broadcast(DamageInstigator);

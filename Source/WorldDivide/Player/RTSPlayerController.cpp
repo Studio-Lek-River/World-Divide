@@ -27,6 +27,12 @@
 
 namespace
 {
+	/** Seconds during which hits on the player's buildings near an earlier warning raise no new one. */
+	constexpr float AttackAlertCooldown = 10.f;
+
+	/** Ground distance within which hits count as the same base area for the cooldown. */
+	constexpr float AttackAlertRadius = 3000.f;
+
 	UInputAction* MakeAction(UObject* Outer, const TCHAR* Name, EInputActionValueType ValueType)
 	{
 		UInputAction* Action = NewObject<UInputAction>(Outer, Name);
@@ -933,4 +939,39 @@ void ARTSPlayerController::Server_IssueCommand_Implementation(const TArray<ARTSU
 	{
 		RTSCommands::Issue(*State, Units, Command);
 	}
+}
+
+void ARTSPlayerController::NotifyBuildingAttacked(const FVector& Location)
+{
+	check(HasAuthority());
+	const float Now = GetWorld()->GetTimeSeconds();
+	SentAttackAlerts.RemoveAll([Now](const FSentAttackAlert& Sent) { return Now - Sent.Time >= AttackAlertCooldown; });
+	const bool bRecentNearby = SentAttackAlerts.ContainsByPredicate([&Location](const FSentAttackAlert& Sent)
+	{
+		return FVector::DistSquared2D(Sent.Location, Location) < FMath::Square(AttackAlertRadius);
+	});
+	if (bRecentNearby)
+	{
+		return;
+	}
+	SentAttackAlerts.Add({ Location, Now });
+	Client_BaseUnderAttack(Location);
+}
+
+void ARTSPlayerController::Client_BaseUnderAttack_Implementation(const FVector& Location)
+{
+	++AttackAlertCount;
+	LastAttackAlertLocation = Location;
+	LastAttackAlertTime = GetWorld()->GetTimeSeconds();
+}
+
+bool ARTSPlayerController::GetLastAttackAlert(FVector& OutLocation, float& OutAge) const
+{
+	if (AttackAlertCount == 0)
+	{
+		return false;
+	}
+	OutLocation = LastAttackAlertLocation;
+	OutAge = GetWorld()->GetTimeSeconds() - LastAttackAlertTime;
+	return true;
 }
