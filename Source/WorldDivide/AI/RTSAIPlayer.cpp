@@ -107,6 +107,25 @@ namespace RTSAI
 		}
 		return ArmySize >= Settings.Size || (SecondsSinceLastWave >= Settings.Interval && ArmySize >= Settings.MinSize);
 	}
+
+	int32 FindThreat(TConstArrayView<FVector> Enemies, TConstArrayView<FVector> Buildings, float Radius)
+	{
+		int32 Threat = INDEX_NONE;
+		float ThreatDistance = FMath::Square(Radius);
+		for (int32 Index = 0; Index < Enemies.Num(); ++Index)
+		{
+			for (const FVector& Building : Buildings)
+			{
+				const float Distance = FVector::DistSquared2D(Enemies[Index], Building);
+				if (Distance <= ThreatDistance && (Threat == INDEX_NONE || Distance < ThreatDistance))
+				{
+					Threat = Index;
+					ThreatDistance = Distance;
+				}
+			}
+		}
+		return Threat;
+	}
 }
 
 ARTSAIPlayer::ARTSAIPlayer()
@@ -172,6 +191,7 @@ void ARTSAIPlayer::Think(float DeltaSeconds)
 	{
 		SetRallyPoints(*BuildOrder);
 	}
+	DefendBase();
 	UpdateWaves(DeltaSeconds);
 }
 
@@ -234,6 +254,19 @@ TArray<ARTSUnit*> ARTSAIPlayer::GetWaveUnits() const
 {
 	TArray<ARTSUnit*> Units;
 	for (const TWeakObjectPtr<ARTSUnit>& Unit : WaveUnits)
+	{
+		if (IsStanding(Unit.Get()))
+		{
+			Units.Add(Unit.Get());
+		}
+	}
+	return Units;
+}
+
+TArray<ARTSUnit*> ARTSAIPlayer::GetDefenders() const
+{
+	TArray<ARTSUnit*> Units;
+	for (const TWeakObjectPtr<ARTSUnit>& Unit : Defenders)
 	{
 		if (IsStanding(Unit.Get()))
 		{
@@ -479,13 +512,11 @@ void ARTSAIPlayer::KeepHarvesting()
 
 void ARTSAIPlayer::SetRallyPoints(const URTSAIBuildOrderData& BuildOrder)
 {
-	const FVector Base = GetBaseLocation();
-	const ARTSBuilding* Enemy = FindNearestEnemyBuilding(Base);
-	if (!Enemy)
+	FVector Gather;
+	if (!GetGatherPoint(Gather))
 	{
 		return;
 	}
-	const FVector Gather = Base + (Enemy->GetActorLocation() - Base).GetSafeNormal2D() * GatherDistance;
 
 	const int32 TeamId = GetRTSPlayerState()->GetTeamId();
 	for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
@@ -535,8 +566,9 @@ void ARTSAIPlayer::UpdateWaves(float DeltaSeconds)
 		Issue(Done, AttackMove);
 	}
 
+	// The army stays home while it fights off an enemy in the base.
 	TArray<ARTSUnit*> Army = GatherArmy();
-	if (!RTSAI::ShouldLaunchWave(GetWaveSettings(), Army.Num(), SecondsSinceWave))
+	if (bDefending || !RTSAI::ShouldLaunchWave(GetWaveSettings(), Army.Num(), SecondsSinceWave))
 	{
 		return;
 	}
@@ -557,6 +589,102 @@ void ARTSAIPlayer::UpdateWaves(float DeltaSeconds)
 	++Waves;
 	UE_LOG(LogWorldDivide, Log, TEXT("AI team %d sends wave %d of %d units at %s"),
 		GetRTSPlayerState()->GetTeamId(), Waves, Army.Num(), *Target->GetName());
+}
+
+void ARTSAIPlayer::DefendBase()
+{
+	const int32 TeamId = GetRTSPlayerState()->GetTeamId();
+	TArray<FVector> Buildings;
+	for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
+	{
+		if (It->GetTeamId() == TeamId && IsStanding(*It))
+		{
+			Buildings.Add(It->GetActorLocation());
+		}
+	}
+	TArray<FVector> Enemies;
+	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
+	{
+		if (It->GetTeamId() != TeamId && IsStanding(*It))
+		{
+			Enemies.Add(It->GetActorLocation());
+		}
+	}
+	Defenders.RemoveAll([](const TWeakObjectPtr<ARTSUnit>& Unit) { return !IsStanding(Unit.Get()); });
+
+	const int32 Threat = RTSAI::FindThreat(Enemies, Buildings, DefenseRadius);
+	bDefending = Threat != INDEX_NONE;
+	if (!bDefending)
+	{
+		// Each defender goes back to the gather point once its own fight is over.
+		TArray<ARTSUnit*> Done;
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : Defenders)
+		{
+			if (!Unit->GetWeaponComponent()->GetTarget())
+			{
+				Done.Add(Unit.Get());
+			}
+		}
+		FVector Gather;
+		if (!Done.IsEmpty() && GetGatherPoint(Gather))
+		{
+			FRTSCommand AttackMove;
+			AttackMove.Type = ERTSCommandType::AttackMove;
+			AttackMove.TargetLocation = Gather;
+			Issue(Done, AttackMove);
+		}
+		Defenders.RemoveAll([&Done](const TWeakObjectPtr<ARTSUnit>& Unit) { return Done.Contains(Unit.Get()); });
+		return;
+	}
+
+	// The army, and wave units that have not left the base behind yet; those rejoin the army.
+	TArray<ARTSUnit*> Pulled = GatherArmy();
+	for (const TWeakObjectPtr<ARTSUnit>& Unit : WaveUnits)
+	{
+		const FVector Location = Unit->GetActorLocation();
+		if (IsStanding(Unit.Get()) && Buildings.ContainsByPredicate([&Location](const FVector& Building)
+		{
+			return FVector::DistSquared2D(Location, Building) <= FMath::Square(DefenseRadius);
+		}))
+		{
+			Pulled.Add(Unit.Get());
+		}
+	}
+	WaveUnits.RemoveAll([&Pulled](const TWeakObjectPtr<ARTSUnit>& Unit) { return Pulled.Contains(Unit.Get()); });
+
+	// New defenders, and those that have nothing left to fight, go at the threat; the rest are already fighting.
+	TArray<ARTSUnit*> Ordered;
+	for (ARTSUnit* Unit : Pulled)
+	{
+		if (!Defenders.Contains(Unit))
+		{
+			Defenders.Add(Unit);
+			Ordered.Add(Unit);
+		}
+		else if (Unit->GetQueuedCommandCount() == 0 && !Unit->GetWeaponComponent()->GetTarget())
+		{
+			Ordered.Add(Unit);
+		}
+	}
+	if (!Ordered.IsEmpty())
+	{
+		FRTSCommand AttackMove;
+		AttackMove.Type = ERTSCommandType::AttackMove;
+		AttackMove.TargetLocation = Enemies[Threat];
+		Issue(Ordered, AttackMove);
+	}
+}
+
+bool ARTSAIPlayer::GetGatherPoint(FVector& OutLocation) const
+{
+	const FVector Base = GetBaseLocation();
+	const ARTSBuilding* Enemy = FindNearestEnemyBuilding(Base);
+	if (!Enemy)
+	{
+		return false;
+	}
+	OutLocation = Base + (Enemy->GetActorLocation() - Base).GetSafeNormal2D() * GatherDistance;
+	return true;
 }
 
 TArray<ARTSUnit*> ARTSAIPlayer::GatherArmy() const

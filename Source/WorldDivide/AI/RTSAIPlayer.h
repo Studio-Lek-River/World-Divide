@@ -23,13 +23,17 @@ namespace RTSAI
 
 	/** An army of ArmySize goes now: it reached Size, or Interval has passed and it is at least MinSize. */
 	WORLDDIVIDE_API bool ShouldLaunchWave(const FRTSAIWaveSettings& Settings, int32 ArmySize, float SecondsSinceLastWave);
+
+	/** Of Enemies within Radius of any of Buildings (2D), the one nearest a building, or INDEX_NONE. */
+	WORLDDIVIDE_API int32 FindThreat(TConstArrayView<FVector> Enemies, TConstArrayView<FVector> Buildings, float Radius);
 }
 
 /**
  * An AI opponent on the server: a player without a connection, with its own ARTSPlayerState (team, faction, credits) that the
  * game mode sets up like a player's. Every ThinkInterval it follows its faction's URTSAIBuildOrderData: idle builders place
  * the next building near its headquarters, production buildings queue the next unit or upgrade, idle harvesters go back to
- * work and the army gathers ahead of the base until a wave goes at the nearest enemy building. Its orders take the same path
+ * work and the army gathers ahead of the base until a wave goes at the nearest enemy building, unless an enemy unit comes
+ * near its buildings: then the army, and wave units still near the base, fight it off first. Its orders take the same path
  * as a player's (RTSCommands::Issue), paid from its own credits, and it sees what every player sees.
  */
 UCLASS()
@@ -48,6 +52,9 @@ public:
 
 	/** How far ahead of the base, towards the enemy, the army gathers between waves, in cm. */
 	static constexpr float GatherDistance = 1500.f;
+
+	/** How close to one of the AI's buildings an enemy unit comes before the army turns on it, in cm. */
+	static constexpr float DefenseRadius = 2500.f;
 
 	void SetDifficulty(ERTSAIDifficulty InDifficulty) { Difficulty = InDifficulty; }
 	ERTSAIDifficulty GetDifficulty() const { return Difficulty; }
@@ -83,6 +90,12 @@ public:
 
 	/** Units sent in a wave that are still alive. */
 	TArray<ARTSUnit*> GetWaveUnits() const;
+
+	/** An enemy unit is within DefenseRadius of the AI's buildings. */
+	bool IsDefending() const { return bDefending; }
+
+	/** Units pulled in to fight an enemy in the base that are still alive. */
+	TArray<ARTSUnit*> GetDefenders() const;
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -129,6 +142,15 @@ private:
 	/** Sends a wave when the army is ready, and moves wave units that have nothing left to fight on to the next building. */
 	void UpdateWaves(float DeltaSeconds);
 
+	/**
+	 * Sends the army, and wave units still near the base, at the enemy unit nearest the AI's buildings while one is within
+	 * DefenseRadius, and back to the gather point once none is left.
+	 */
+	void DefendBase();
+
+	/** Ahead of the base, towards the nearest enemy building. False without an enemy building. */
+	bool GetGatherPoint(FVector& OutLocation) const;
+
 	/** An own idle builder, not on its way to a pending build, that can build Data (any building when null). */
 	ARTSUnit* FindIdleBuilder(const URTSBuildingData* Data) const;
 
@@ -161,6 +183,10 @@ private:
 	TArray<TWeakObjectPtr<ARTSUnit>> WaveUnits;
 
 	TSet<TWeakObjectPtr<ARTSBuilding>> RalliedBuildings;
+
+	TArray<TWeakObjectPtr<ARTSUnit>> Defenders;
+
+	bool bDefending = false;
 
 	float SecondsSinceWave = 0.f;
 

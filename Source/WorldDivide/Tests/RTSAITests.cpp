@@ -279,7 +279,99 @@ namespace RTSAITests
 		return true;
 	}
 
-	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIIssueTest, "WorldDivide.AI.Issue", TestFlags)
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIFindThreatTest, "WorldDivide.AI.FindThreat", TestFlags)
+
+	bool FRTSAIFindThreatTest::RunTest(const FString& Parameters)
+	{
+		const TArray<FVector> Buildings = { FVector(0.f, 0.f, 0.f), FVector(2000.f, 0.f, 0.f) };
+		const float Radius = 1000.f;
+
+		TestEqual(TEXT("No enemies, no threat"), RTSAI::FindThreat({}, Buildings, Radius), INDEX_NONE);
+		TestEqual(TEXT("Enemies out of reach are no threat"),
+			RTSAI::FindThreat({ FVector(-1500.f, 0.f, 0.f), FVector(1000.f, 1200.f, 0.f) }, Buildings, Radius), INDEX_NONE);
+		TestEqual(TEXT("One within the radius of any building is"),
+			RTSAI::FindThreat({ FVector(-1500.f, 0.f, 0.f), FVector(2800.f, 0.f, 0.f) }, Buildings, Radius), 1);
+		TestEqual(TEXT("Of several, the one nearest a building"),
+			RTSAI::FindThreat({ FVector(900.f, 0.f, 0.f), FVector(2300.f, 0.f, 0.f), FVector(0.f, 500.f, 0.f) }, Buildings, Radius), 1);
+		TestEqual(TEXT("Height does not count"),
+			RTSAI::FindThreat({ FVector(0.f, 500.f, 5000.f) }, Buildings, Radius), 0);
+		TestEqual(TEXT("Without buildings there is nothing to defend"),
+			RTSAI::FindThreat({ FVector(0.f, 0.f, 0.f) }, {}, Radius), INDEX_NONE);
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIDefendTest, "WorldDivide.AI.Defend", TestFlags)
+
+	bool FRTSAIDefendTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		TestWorld.SpawnGameState();
+		URTSUnitData* Tank = MakeUnit(700, MakeWeapon());
+
+		ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
+		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-3000.f, 0.f, 0.f));
+		SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(3000.f, 0.f, 0.f));
+		ARTSUnit* Enemy = TestWorld.SpawnUnit(Tank, PlayerTeam, FVector(-2000.f, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 300.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, -300.f, 0.f));
+
+		FRTSAIWaveSettings Settings;
+		Settings.Size = 3;
+		Settings.MinSize = 2;
+		Settings.Interval = 30.f;
+		AI->SetWaveSettings(Settings);
+
+		AI->Think(1.f);
+		TestFalse(TEXT("An enemy by its own base is no threat"), AI->IsDefending());
+		TestEqual(TEXT("The first wave goes"), AI->GetWaveCount(), 1);
+		const TArray<ARTSUnit*> Wave = AI->GetWaveUnits();
+		TestEqual(TEXT("With three tanks"), Wave.Num(), 3);
+
+		// One wave tank is well on its way; two new tanks gather, too few for a wave.
+		ARTSUnit* FarWaveUnit = Wave[0];
+		FarWaveUnit->SetActorLocation(FVector(-1500.f, 0.f, 0.f));
+		ARTSUnit* ArmyA = TestWorld.SpawnUnit(Tank, AITeam, FVector(1800.f, 0.f, 0.f));
+		ARTSUnit* ArmyB = TestWorld.SpawnUnit(Tank, AITeam, FVector(1800.f, 300.f, 0.f));
+		AI->Think(1.f);
+		TestFalse(TEXT("Still no threat"), AI->IsDefending());
+		TestEqual(TEXT("Nobody defends"), AI->GetDefenders().Num(), 0);
+
+		Enemy->SetActorLocation(FVector(2000.f, 1500.f, 0.f));
+		const int32 IssuedBefore = AI->GetIssuedCommandCount();
+		AI->Think(1.f);
+		TestTrue(TEXT("An enemy near its building puts the AI on the defence"), AI->IsDefending());
+		TestTrue(TEXT("Orders went out"), AI->GetIssuedCommandCount() > IssuedBefore);
+		const TArray<ARTSUnit*> Defenders = AI->GetDefenders();
+		TestEqual(TEXT("The army and the wave tanks still near the base defend"), Defenders.Num(), 4);
+		TestTrue(TEXT("The gathered army defends"), Defenders.Contains(ArmyA) && Defenders.Contains(ArmyB));
+		TestFalse(TEXT("The wave tank far out does not turn back"), Defenders.Contains(FarWaveUnit));
+		TestEqual(TEXT("It stays in its wave"), AI->GetWaveUnits().Num(), 1);
+
+		AI->Think(40.f);
+		TestEqual(TEXT("No wave leaves while the base is under attack"), AI->GetWaveCount(), 1);
+		TestEqual(TEXT("The defenders stay"), AI->GetDefenders().Num(), 4);
+
+		// Waves out of reach for now, so the return is seen on its own.
+		FRTSAIWaveSettings Later = Settings;
+		Later.Size = 10;
+		Later.MinSize = 10;
+		AI->SetWaveSettings(Later);
+		Enemy->GetHealthComponent()->ApplyDamage(Enemy->GetHealthComponent()->GetMaxHealth(), nullptr);
+		const int32 IssuedBeforeReturn = AI->GetIssuedCommandCount();
+		AI->Think(1.f);
+		TestFalse(TEXT("With the enemy gone the defence ends"), AI->IsDefending());
+		TestEqual(TEXT("The defenders are released"), AI->GetDefenders().Num(), 0);
+		TestTrue(TEXT("And sent back to the gather point"), AI->GetIssuedCommandCount() > IssuedBeforeReturn);
+
+		AI->SetWaveSettings(Settings);
+		AI->Think(1.f);
+		TestEqual(TEXT("Back in the army, the four tanks fill the next wave"), AI->GetWaveCount(), 2);
+		TestEqual(TEXT("Joining the tank still out"), AI->GetWaveUnits().Num(), 5);
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIIssueTest,"WorldDivide.AI.Issue", TestFlags)
 
 	bool FRTSAIIssueTest::RunTest(const FString& Parameters)
 	{
