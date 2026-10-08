@@ -43,6 +43,7 @@ namespace
 	constexpr float BarSpacing = 8.f;
 	constexpr float MenuMargin = 16.f;
 	constexpr float MenuLineHeight = 18.f;
+	constexpr float ScoreboardSwatchSize = 12.f;
 	constexpr float ResultTextScale = 3.f;
 	constexpr float ResultPanelMinWidth = 360.f;
 	constexpr float ResultPanelPadding = 24.f;
@@ -116,6 +117,7 @@ void ARTSHUD::DrawHUD()
 	}
 	DrawCredits(*Controller);
 	DrawPower(*Controller);
+	DrawScoreboard();
 	if (!bMatchOver)
 	{
 		DrawAttackAlert(*Controller);
@@ -432,6 +434,43 @@ void ARTSHUD::DrawPower(const ARTSPlayerController& Controller)
 	float Height = 0.f;
 	GetTextSize(Text, Width, Height);
 	DrawText(Text, State->IsLowPower() ? LowPowerColor : PowerColor, Canvas->ClipX - MenuMargin - Width, MenuMargin + MenuLineHeight);
+}
+
+void ARTSHUD::DrawScoreboard()
+{
+	const ARTSGameState* GameState = GetWorld()->GetGameState<ARTSGameState>();
+	if (!GameState)
+	{
+		return;
+	}
+
+	TArray<const ARTSPlayerState*> Players;
+	for (const APlayerState* Player : GameState->PlayerArray)
+	{
+		if (const ARTSPlayerState* RTSPlayer = Cast<ARTSPlayerState>(Player))
+		{
+			Players.Add(RTSPlayer);
+		}
+	}
+	Players.Sort([](const ARTSPlayerState& A, const ARTSPlayerState& B) { return A.GetTeamId() < B.GetTeamId(); });
+
+	// Under the credits and power, one row per player: its team colour, then its name or AI label.
+	float Y = MenuMargin + MenuLineHeight * 3.f;
+	for (const ARTSPlayerState* Player : Players)
+	{
+		const bool bInMatch = GameState->GetAliveTeams().Contains(Player->GetTeamId());
+		const FString Text = Player->GetScoreboardLabel(bInMatch);
+		float Width = 0.f;
+		float Height = 0.f;
+		GetTextSize(Text, Width, Height);
+		const float TextLeft = Canvas->ClipX - MenuMargin - Width;
+		const float SwatchLeft = TextLeft - ButtonPadding - ScoreboardSwatchSize;
+		const float SwatchTop = Y + (MenuLineHeight - ScoreboardSwatchSize) * 0.5f;
+		DrawRect(HealthBackground, SwatchLeft - 1.f, SwatchTop - 1.f, ScoreboardSwatchSize + 2.f, ScoreboardSwatchSize + 2.f);
+		DrawRect(ARTSUnit::GetTeamColor(Player->GetTeamId()), SwatchLeft, SwatchTop, ScoreboardSwatchSize, ScoreboardSwatchSize);
+		DrawText(Text, bInMatch ? MenuColor : UnaffordableColor, TextLeft, Y);
+		Y += MenuLineHeight;
+	}
 }
 
 void ARTSHUD::DrawAttackAlert(const ARTSPlayerController& Controller)

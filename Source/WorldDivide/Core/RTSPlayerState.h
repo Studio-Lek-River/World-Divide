@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/RTSAIBuildOrderData.h"
 #include "Data/RTSUpgradeData.h"
 #include "GameFramework/PlayerState.h"
 #include "RTSPlayerState.generated.h"
@@ -24,6 +25,21 @@ public:
 
 	/** Server only. */
 	void SetFaction(URTSFactionData* InFaction);
+
+	/** The difficulty of an AI opponent (IsABot); Normal and meaningless for a human. */
+	ERTSAIDifficulty GetAIDifficulty() const { return AIDifficulty; }
+
+	/** Server only. */
+	void SetAIDifficulty(ERTSAIDifficulty InDifficulty);
+
+	/**
+	 * How the match HUD's scoreboard names a player: its name, or GetAILabel of its difficulty for an AI, followed by
+	 * " (eliminated)" once its team is out of the match.
+	 */
+	static FString GetScoreboardLabel(const FString& PlayerName, bool bAI, ERTSAIDifficulty Difficulty, bool bInMatch);
+
+	/** GetScoreboardLabel of this player. */
+	FString GetScoreboardLabel(bool bInMatch) const;
 
 	/** Money to build with. Only the owning player sees it replicate. */
 	int32 GetCredits() const { return Credits; }
@@ -94,6 +110,9 @@ private:
 
 	UPROPERTY(Replicated)
 	TObjectPtr<URTSFactionData> Faction;
+
+	UPROPERTY(Replicated)
+	ERTSAIDifficulty AIDifficulty = ERTSAIDifficulty::Normal;
 
 	UPROPERTY(Replicated)
 	int32 Credits = 0;

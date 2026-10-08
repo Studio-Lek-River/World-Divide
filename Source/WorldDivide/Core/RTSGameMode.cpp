@@ -259,6 +259,8 @@ void ARTSGameMode::SpawnAIOpponents()
 		PlayerState->SetTeamId(TeamId);
 		PlayerState->SetFaction(GetDefault<URTSSettings>()->DefaultFaction.LoadSynchronous());
 		PlayerState->AddCredits(StartingCredits - PlayerState->GetCredits());
+		PlayerState->SetIsABot(true);
+		PlayerState->SetAIDifficulty(Seats[TeamId].Difficulty);
 		AI->SetDifficulty(Seats[TeamId].Difficulty);
 		AI->SetStartLocation(Start->GetActorLocation());
 		UE_LOG(LogWorldDivide, Log, TEXT("AI opponent plays team %d from %s"), TeamId, *Start->PlayerStartTag.ToString());

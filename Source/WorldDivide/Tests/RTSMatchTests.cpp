@@ -169,6 +169,22 @@ namespace RTSMatchTests
 		TestTrue(TEXT("No message while the match runs"), ARTSHUD::GetMatchResultMessage(ERTSMatchResult::InProgress).IsEmpty());
 		return true;
 	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSScoreboardLabelTest, "WorldDivide.Match.ScoreboardLabel", TestFlags)
+
+	bool FRTSScoreboardLabelTest::RunTest(const FString& Parameters)
+	{
+		const FString Name = TEXT("Commander");
+		TestEqual(TEXT("A human by its name"), ARTSPlayerState::GetScoreboardLabel(Name, false, ERTSAIDifficulty::Normal, true), Name);
+		TestEqual(TEXT("An easy AI"), ARTSPlayerState::GetScoreboardLabel(Name, true, ERTSAIDifficulty::Easy, true), FString(TEXT("AI (Easy)")));
+		TestEqual(TEXT("A normal AI"), ARTSPlayerState::GetScoreboardLabel(Name, true, ERTSAIDifficulty::Normal, true), FString(TEXT("AI (Normal)")));
+		TestEqual(TEXT("A hard AI"), ARTSPlayerState::GetScoreboardLabel(Name, true, ERTSAIDifficulty::Hard, true), FString(TEXT("AI (Hard)")));
+		TestEqual(TEXT("An eliminated human"), ARTSPlayerState::GetScoreboardLabel(Name, false, ERTSAIDifficulty::Normal, false),
+			FString(TEXT("Commander (eliminated)")));
+		TestEqual(TEXT("An eliminated AI"), ARTSPlayerState::GetScoreboardLabel(Name, true, ERTSAIDifficulty::Hard, false),
+			FString(TEXT("AI (Hard) (eliminated)")));
+		return true;
+	}
 }
 
 #endif

@@ -91,6 +91,11 @@ namespace RTSSkirmish
 		return false;
 	}
 
+	FString GetAILabel(ERTSAIDifficulty Difficulty)
+	{
+		return FString::Printf(TEXT("AI (%s)"), *StaticEnum<ERTSAIDifficulty>()->GetNameStringByValue(static_cast<int64>(Difficulty)));
+	}
+
 	bool ParseSeats(const FString& Text, TArray<FRTSSeat>& OutSeats)
 	{
 		OutSeats.Reset();

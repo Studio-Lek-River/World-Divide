@@ -33,7 +33,8 @@
  * moves itself to spot 3, makes the AI Hard and closes the last seat, the client picks spot 0 and readies up, and the host
  * starts the match.
  * In L_Skirmish the host plays team 0 from spot 3, the AI team 1 from spot 1 at Hard, the client team 2 from spot 0 by its
- * token, and neither the closed team 3 nor spot 2, which nobody plays, has a building or a unit.
+ * token, and neither the closed team 3 nor spot 2, which nobody plays, has a building or a unit. The client's scoreboard
+ * shows the host's name and "AI (Hard)".
  */
 namespace RTSSkirmishSmokeTest
 {
@@ -458,6 +459,7 @@ namespace RTSSkirmishSmokeTest
 		}
 		if (AI->GetIssuedCommandCount() > 0)
 		{
+			State->PhaseStart = FPlatformTime::Seconds();
 			return true;
 		}
 		if (World->GetTimeSeconds() - State->PhaseWorldStart > AIOrderGameSeconds || FPlatformTime::Seconds() - State->PhaseStart > SessionTimeout)
@@ -466,6 +468,38 @@ namespace RTSSkirmishSmokeTest
 			return true;
 		}
 		return false;
+	}
+
+	/** The client's scoreboard names the host by its name and the AI by its difficulty. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientScoreboard, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientScoreboard::Update()
+	{
+		UWorld* ServerWorld = State->MatchServer.Get();
+		UWorld* ClientWorld = State->MatchClient.Get();
+		if (!ServerWorld || !ClientWorld)
+		{
+			Test->AddError(TEXT("Lost the match"));
+			return true;
+		}
+
+		const ARTSPlayerState* ServerHost = ARTSPlayerState::FindForTeam(*ServerWorld, HostTeam);
+		const ARTSPlayerState* ClientHost = ARTSPlayerState::FindForTeam(*ClientWorld, HostTeam);
+		const ARTSPlayerState* ClientAI = ARTSPlayerState::FindForTeam(*ClientWorld, AITeam);
+		const FString HostName = ServerHost ? ServerHost->GetPlayerName() : FString();
+		const FString HostLabel = ClientHost ? ClientHost->GetScoreboardLabel(true) : FString();
+		const FString AILabel = ClientAI ? ClientAI->GetScoreboardLabel(true) : FString();
+		const FString ExpectedAILabel = TEXT("AI (Hard)");
+		const bool bSeen = !HostName.IsEmpty() && HostLabel == HostName && AILabel == ExpectedAILabel;
+		if (!bSeen && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
+		{
+			return false;
+		}
+
+		Test->TestFalse(TEXT("The host has a name"), HostName.IsEmpty());
+		Test->TestEqual(TEXT("The client's scoreboard shows the host's name"), HostLabel, HostName);
+		Test->TestTrue(TEXT("The client sees the AI as a bot"), ClientAI && ClientAI->IsABot());
+		Test->TestEqual(TEXT("The client's scoreboard shows the AI's difficulty"), AILabel, ExpectedAILabel);
+		return true;
 	}
 
 	/** The host picks the duel map; the client asks for the first map, which is refused, then readies up again. */
@@ -634,6 +668,7 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForMatch(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckSeats(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAIPlays(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientScoreboard(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		return true;
 	}

@@ -60,6 +60,9 @@ namespace RTSSkirmish
 	/** Easy, Normal or Hard, ignoring case. */
 	WORLDDIVIDE_API bool ParseDifficulty(const FString& Text, ERTSAIDifficulty& OutDifficulty);
 
+	/** How the lobby and the match HUD name an AI opponent: "AI (Hard)" and the like. */
+	WORLDDIVIDE_API FString GetAILabel(ERTSAIDifficulty Difficulty);
+
 	/**
 	 * Seats from a comma-separated list such as "Human@3~<token>,AI-Hard@1,Open,Closed": the type, for an AI an optional
 	 * difficulty (Normal without one), an optional start spot after '@' and, for a human, an optional token after '~'

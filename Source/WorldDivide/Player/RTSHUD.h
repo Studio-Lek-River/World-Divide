@@ -13,7 +13,7 @@ enum class ERTSMatchResult : uint8;
  * Draws the drag box, the brackets plus health bar of selected units, the health bar of the unit of any team under the
  * cursor, construction progress of own buildings,
  * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
- * the player's credits and power, the build menu of the selected builder (or the debug build menu), and the production menu,
+ * the player's credits and power, a scoreboard of every player's team colour and name, the build menu of the selected builder (or the debug build menu), and the production menu,
  * queue and rally point of a selected production building, a hint while attack-move is armed, a warning when an own
  * building or unit is attacked, and once the match is over
  * a pop-up with Victory or Defeat and, on the host, a restart button in place of the menus, without any UI assets.
@@ -72,6 +72,9 @@ private:
 
 	/** Produced and consumed power under the credits, red while low; nothing for a faction without power. */
 	void DrawPower(const ARTSPlayerController& Controller);
+
+	/** Under the power, every player in the match by team: its colour and GetScoreboardLabel, greyed once eliminated. */
+	void DrawScoreboard();
 
 	/**
 	 * For a few seconds after a warning: a message at the top center, the base's in red over the units' in amber, and a

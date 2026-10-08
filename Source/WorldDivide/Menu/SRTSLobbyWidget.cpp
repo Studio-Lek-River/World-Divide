@@ -55,8 +55,7 @@ FString SRTSLobbyWidget::GetTypeLabel(int32 TypeOption)
 	{
 		return TEXT("Closed");
 	}
-	const int64 Difficulty = TypeOption - FirstAIOption;
-	return FString::Printf(TEXT("AI (%s)"), *StaticEnum<ERTSAIDifficulty>()->GetNameStringByValue(Difficulty));
+	return RTSSkirmish::GetAILabel(static_cast<ERTSAIDifficulty>(TypeOption - FirstAIOption));
 }
 
 FString SRTSLobbyWidget::GetMapLabel(int32 MapIndex)

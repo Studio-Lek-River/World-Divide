@@ -2,6 +2,7 @@
 
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
+#include "Core/RTSSkirmishSeats.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Data/RTSUnitData.h"
@@ -24,6 +25,23 @@ void ARTSPlayerState::SetFaction(URTSFactionData* InFaction)
 	Faction = InFaction;
 	// Whether the faction uses power decides whether its defences are powered.
 	RecalculatePower();
+}
+
+void ARTSPlayerState::SetAIDifficulty(ERTSAIDifficulty InDifficulty)
+{
+	check(HasAuthority());
+	AIDifficulty = InDifficulty;
+}
+
+FString ARTSPlayerState::GetScoreboardLabel(const FString& PlayerName, bool bAI, ERTSAIDifficulty Difficulty, bool bInMatch)
+{
+	const FString Name = bAI ? RTSSkirmish::GetAILabel(Difficulty) : PlayerName;
+	return bInMatch ? Name : Name + TEXT(" (eliminated)");
+}
+
+FString ARTSPlayerState::GetScoreboardLabel(bool bInMatch) const
+{
+	return GetScoreboardLabel(GetPlayerName(), IsABot(), AIDifficulty, bInMatch);
 }
 
 void ARTSPlayerState::AddCredits(int32 Delta)
@@ -168,6 +186,7 @@ void ARTSPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 	DOREPLIFETIME(ARTSPlayerState, TeamId);
 	DOREPLIFETIME(ARTSPlayerState, Faction);
+	DOREPLIFETIME(ARTSPlayerState, AIDifficulty);
 	DOREPLIFETIME_CONDITION(ARTSPlayerState, Credits, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ARTSPlayerState, PowerProduced, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ARTSPlayerState, PowerConsumed, COND_OwnerOnly);
