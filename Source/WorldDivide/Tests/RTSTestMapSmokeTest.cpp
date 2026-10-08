@@ -222,8 +222,8 @@ namespace
 	constexpr double ProductionTimeout = 60.0;
 
 	/**
-	 * The produced-harvester test: a vehicle factory at BuildSpot sends a harvester and a tank to RallySpot, with a source east
-	 * of it and a depot north of that source.
+	 * The produced-harvester tests: a vehicle factory at BuildSpot sends a harvester and a tank to RallySpot, with a source east
+	 * of it and a depot north of that source; or that depot sends only a harvester there.
 	 */
 	const TCHAR* VehicleFactoryPath = TEXT("/Game/Data/Buildings/DA_TestVehicleFactory.DA_TestVehicleFactory");
 	const FVector ProducedSourceSpot(2400.f, 7600.f, 0.f);
@@ -357,6 +357,7 @@ namespace
 		// Produced-harvester test only.
 		TWeakObjectPtr<ARTSUnit> ProducedHarvester;
 		TWeakObjectPtr<ARTSUnit> ProducedTank;
+		bool bDepotProduces = false;
 		bool bHarvesterReachedRally = false;
 		bool bRallyBeforeDelivery = false;
 
@@ -2435,7 +2436,7 @@ bool FRTSQueueProducedHarvester::Update()
 	State->CarryAmount = Harvester->CarryAmount;
 
 	// The depot is the harvester's prerequisite; the harvester it brings is removed, so only the produced one delivers.
-	SpawnBuilding(World, DepotData, TeamId, ProducedDepotSpot, true);
+	ARTSBuilding* Depot = SpawnBuilding(World, DepotData, TeamId, ProducedDepotSpot, true);
 	TArray<ARTSUnit*> DepotHarvesters;
 	for (TActorIterator<ARTSUnit> It(World); It; ++It)
 	{
@@ -2450,19 +2451,35 @@ bool FRTSQueueProducedHarvester::Update()
 		DepotHarvester->Destroy();
 	}
 	State->Source = SpawnSupplySource(World, ProducedSourceSpot, 3 * State->CarryAmount);
-	ARTSBuilding* Factory = SpawnBuilding(World, FactoryData, TeamId, BuildSpot, true);
 
-	// What a right click with the factory selected and two production clicks send. The host's RPCs run right away.
-	Test->TestTrue(TEXT("The rally point request goes out"), Controller->RequestRallyPoint(Factory, RallySpot));
-	Test->TestTrue(TEXT("The harvester is queued"), Controller->RequestProduce(Factory, HarvesterData));
-	Test->TestTrue(TEXT("The tank is queued"), Controller->RequestProduce(Factory, TankData));
-	Test->TestEqual(TEXT("Both are in the queue"), Factory->GetProductionComponent()->GetQueue().Num(), 2);
+	ARTSBuilding* Producer = Depot;
+	if (State->bDepotProduces)
+	{
+		// What selecting the depot, a right click and a production click send. The host's RPCs run right away.
+		Test->TestTrue(TEXT("The depot is selected"), Controller->SelectBuilding(Depot));
+		Test->TestTrue(TEXT("Its menu offers the harvester"), Controller->GetProductionMenu().Contains(HarvesterData));
+		Test->TestTrue(TEXT("The rally point request goes out"), Controller->RequestRallyPoint(Depot, RallySpot));
+		const int32 CreditsBefore = Player->GetCredits();
+		Test->TestTrue(TEXT("The harvester is queued"), Controller->RequestProduce(Depot, HarvesterData));
+		Test->TestEqual(TEXT("It is in the queue"), Depot->GetProductionComponent()->GetQueue().Num(), 1);
+		Test->TestEqual(TEXT("Queueing charges its cost"), Player->GetCredits(), CreditsBefore - HarvesterData->Cost);
+	}
+	else
+	{
+		Producer = SpawnBuilding(World, FactoryData, TeamId, BuildSpot, true);
+
+		// What a right click with the factory selected and two production clicks send. The host's RPCs run right away.
+		Test->TestTrue(TEXT("The rally point request goes out"), Controller->RequestRallyPoint(Producer, RallySpot));
+		Test->TestTrue(TEXT("The harvester is queued"), Controller->RequestProduce(Producer, HarvesterData));
+		Test->TestTrue(TEXT("The tank is queued"), Controller->RequestProduce(Producer, TankData));
+		Test->TestEqual(TEXT("Both are in the queue"), Producer->GetProductionComponent()->GetQueue().Num(), 2);
+	}
 
 	for (TActorIterator<ARTSUnit> It(World); It; ++It)
 	{
 		State->UnitsBefore.Add(*It);
 	}
-	State->Building = Factory;
+	State->Building = Producer;
 	State->LastCredits = Player->GetCredits();
 	State->PhaseStart = FPlatformTime::Seconds();
 	return true;
@@ -2471,16 +2488,16 @@ bool FRTSQueueProducedHarvester::Update()
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyProducedHarvester, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
 bool FRTSVerifyProducedHarvester::Update()
 {
-	const ARTSBuilding* Factory = State->Building.Get();
+	const ARTSBuilding* Producer = State->Building.Get();
 	const ARTSPlayerState* Player = State->Player.Get();
-	if (!Factory || !Player)
+	if (!Producer || !Player)
 	{
-		Test->AddError(TEXT("Lost the factory or the player state"));
+		Test->AddError(TEXT("Lost the producing building or the player state"));
 		return true;
 	}
 
-	// Only the factory adds units during this test; each gets its orders as it comes out.
-	for (TActorIterator<ARTSUnit> It(Factory->GetWorld()); It; ++It)
+	// Only the producing building adds units during this test; each gets its orders as it comes out.
+	for (TActorIterator<ARTSUnit> It(Producer->GetWorld()); It; ++It)
 	{
 		if (State->UnitsBefore.Contains(*It))
 		{
@@ -2514,9 +2531,10 @@ bool FRTSVerifyProducedHarvester::Update()
 		State->LastCredits = Player->GetCredits();
 	}
 
+	// The depot produces only the harvester.
 	const ARTSUnit* Tank = State->ProducedTank.Get();
-	const bool bTankArrived = Tank && Tank->GetQueuedCommandCount() == 0
-		&& FVector::Dist2D(Tank->GetActorLocation(), RallySpot) <= RallyArrivalRadius;
+	const bool bTankArrived = State->bDepotProduces || (Tank && Tank->GetQueuedCommandCount() == 0
+		&& FVector::Dist2D(Tank->GetActorLocation(), RallySpot) <= RallyArrivalRadius);
 	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
 	if ((State->Deposits.IsEmpty() || !bTankArrived) && Elapsed < ProducedHarvesterTimeout)
 	{
@@ -2524,8 +2542,8 @@ bool FRTSVerifyProducedHarvester::Update()
 	}
 
 	Test->AddInfo(FString::Printf(TEXT("Produced harvester test finished after %.1f s"), Elapsed));
-	if (!Test->TestNotNull(TEXT("The factory produced the harvester"), Harvester)
-		|| !Test->TestNotNull(TEXT("The factory produced the tank"), Tank))
+	if (!Test->TestNotNull(TEXT("The building produced the harvester"), Harvester)
+		|| (!State->bDepotProduces && !Test->TestNotNull(TEXT("The factory produced the tank"), Tank)))
 	{
 		return true;
 	}
@@ -2536,6 +2554,11 @@ bool FRTSVerifyProducedHarvester::Update()
 	}
 	Test->TestTrue(TEXT("It harvests the source beside the rally point"), Harvester->GetHarvesterComponent()->GetSource() == State->Source.Get());
 	Test->TestEqual(TEXT("It keeps its Harvest order"), Harvester->GetQueuedCommandCount(), 1);
+	if (State->bDepotProduces)
+	{
+		Test->TestNull(TEXT("The depot produced no other unit"), Tank);
+		return true;
+	}
 
 	const float TankDistance = FVector::Dist2D(Tank->GetActorLocation(), RallySpot);
 	Test->TestTrue(FString::Printf(TEXT("The tank stopped at the rally point (%.0f cm away)"), TankDistance), TankDistance <= RallyArrivalRadius);
@@ -3400,6 +3423,27 @@ bool FRTSProducedHarvesterSmokeTest::RunTest(const FString& Parameters)
 	}
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSQueueProducedHarvester(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyProducedHarvester(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSDepotProducesHarvesterSmokeTest, "WorldDivide.Smoke.DepotProducesHarvester",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSDepotProducesHarvesterSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	State->bDepotProduces = true;
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSQueueProducedHarvester(this, State));

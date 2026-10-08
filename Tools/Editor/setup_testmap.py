@@ -677,9 +677,10 @@ tower = make_building("DA_TestTower", "Test Tower", tower_mesh, fit_scale(tower_
                       tower_gun, 600, 3.0, 0, 2, requires_power=True, defense=True)
 harvester = make_harvester("DA_TestHarvester", "Test Harvester", truck_mesh, fit_scale(truck_mesh, 180.0, 110.0), 70.0,
                            300.0, 450.0, 360.0, 600, 8.0, 100, 3.0, 6000.0)
+# The depot brings one harvester and produces replacements, so a lost harvester needs no vehicle factory.
 supply_depot = make_building("DA_TestSupplyDepot", "Test Supply Depot", supply_depot_mesh,
                              fit_scale(supply_depot_mesh, 280.0, 280.0), (3, 3), 1000.0, None, 1500, 5.0, 0, 1,
-                             spawn_on_complete=harvester, accepts_supply=True)
+                             spawn_on_complete=harvester, accepts_supply=True, units=[harvester])
 builder = make_builder("DA_TestBuilder", "Test Builder", builder_mesh, fit_scale(builder_mesh, 150.0, 100.0), 60.0, 300.0,
                        500.0, 360.0, 1000, 10.0, [])
 barracks = make_building("DA_TestBarracks", "Test Barracks", barracks_mesh, fit_scale(barracks_mesh, 280.0, 280.0), (3, 3),
