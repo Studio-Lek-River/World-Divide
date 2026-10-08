@@ -2,15 +2,18 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Engine/NetSerialization.h"
 #include "RTSWeaponComponent.generated.h"
 
 class URTSWeaponData;
 
 /**
- * Server-side gunner of a unit or building: picks an enemy target, waits out the reload and deals instant-hit damage.
+ * Server-side gunner of a unit or building: picks an enemy target, waits out the reload and fires a shell, whose damage
+ * URTSShotSubsystem deals when it lands (at once for a weapon without shell speed).
  * Enemy units come before enemy buildings when it picks a target on its own.
  * The owner decides what it may shoot (an ordered target, anything in range, or nothing while moving);
- * turning and closing in are the unit's job. Clients never run it; they see the damage through health replication.
+ * turning and closing in are the unit's job. Clients never run it; they see each shot through Multicast_PlayShot and
+ * the damage through health replication.
  */
 UCLASS(ClassGroup = (RTS))
 class WORLDDIVIDE_API URTSWeaponComponent : public UActorComponent
@@ -56,6 +59,10 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
+	/** Every machine but a dedicated server shows the shot. Unreliable: a lost shot is only a missing effect. */
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayShot(URTSWeaponData* Weapon, AActor* ShotTarget, FVector_NetQuantize TargetLocation, float FlightTime);
+
 	/** The nearest enemy unit in range, or failing that the nearest enemy building in range. */
 	AActor* FindNearestEnemyInRange() const;
 

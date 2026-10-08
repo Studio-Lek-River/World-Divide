@@ -45,6 +45,10 @@ namespace
 
 	/** A unit holds short of a new building once this much of its travel time lies between it and the footprint. */
 	constexpr float HoldLookaheadSeconds = 0.2f;
+
+	/** A fire kick jolts the mesh back this many cm per unit of effect scale and eases it home over this long. */
+	constexpr float FireKickPerScale = 8.f;
+	constexpr float FireKickSeconds = 0.15f;
 }
 
 /** Engine basic shapes expose this parameter; real unit and building materials should too. */
@@ -179,7 +183,8 @@ void ARTSUnit::ApplyUnitData()
 	const float HalfHeight = FMath::Max(MeshHalfHeight, Radius);
 	Collision->SetCapsuleSize(Radius, HalfHeight);
 	// Stand the mesh on the bottom of the capsule.
-	Mesh->SetRelativeLocation(FVector(0.f, 0.f, -HalfHeight + MeshHalfHeight - MeshOriginZ));
+	MeshRestLocation = FVector(0.f, 0.f, -HalfHeight + MeshHalfHeight - MeshOriginZ);
+	Mesh->SetRelativeLocation(MeshRestLocation);
 
 	Movement->MaxSpeed = UnitData->MoveSpeed;
 
@@ -234,10 +239,30 @@ FVector ARTSUnit::GetNavAgentLocation() const
 	return GetActorLocation() - FVector(0.f, 0.f, GetGroundOffset());
 }
 
+void ARTSUnit::PlayFireKick(float EffectScale)
+{
+	FireKickDistance = FireKickPerScale * EffectScale;
+	FireKickTimeLeft = FireKickSeconds;
+	UpdateFireKick(0.f);
+}
+
+void ARTSUnit::UpdateFireKick(float DeltaSeconds)
+{
+	if (FireKickTimeLeft <= 0.f)
+	{
+		return;
+	}
+	FireKickTimeLeft = FMath::Max(FireKickTimeLeft - DeltaSeconds, 0.f);
+	// The unit faces its target while it fires, so back is -X.
+	const float Alpha = FMath::Square(FireKickTimeLeft / FireKickSeconds);
+	Mesh->SetRelativeLocation(MeshRestLocation - FVector(FireKickDistance * Alpha, 0.f, 0.f));
+}
+
 void ARTSUnit::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	UpdateFireKick(DeltaSeconds);
 	if (!HasAuthority() || !UnitData)
 	{
 		return;

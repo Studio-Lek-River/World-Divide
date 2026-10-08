@@ -1,4 +1,4 @@
-"""Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters included), AI build order and faction data assets, the placement ghost material, the
+"""Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters included), AI build order and faction data assets, the placement ghost and shot effect materials, the
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the L_TestMap level with a supply
 source and two builders by each base, the L_Skirmish level, the same ground without the armies and with four start spots,
 where the lobby's seats play, and the empty L_MainMenu and L_Lobby levels for the menu screens. L_TestMap and L_Skirmish
@@ -203,11 +203,15 @@ def fit_scale(mesh, length, width, height=None):
     return (scale, scale, height / (box.max.z - box.min.z) if height else scale)
 
 
-def make_weapon(name, weapon_range, damage, reload_seconds):
+def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_scale, shell_color, arc_height=0.0):
     return plan_data_asset(name, WEAPON_DIR, unreal.RTSWeaponData, {
         "range": weapon_range,
         "damage": damage,
         "reload_seconds": reload_seconds,
+        "shell_speed": shell_speed,
+        "shell_arc_height": arc_height,
+        "effect_scale": effect_scale,
+        "shell_color": unreal.LinearColor(*shell_color, 1.0),
     })
 
 
@@ -363,6 +367,36 @@ def build_ghost_material(name, digest):
 def make_ghost_material(name):
     plan_rebuild(f"{MATERIAL_DIR}/{name}", ".uasset", lambda digest: build_ghost_material(name, digest),
                  spec_hash([build_ghost_material], name))
+
+
+def build_shot_material(name, digest):
+    """Unlit additive material glowing in its "Color" parameter, for muzzle flashes, shells and impacts. Additive, so a
+    colour faded to black is gone."""
+    path = f"{MATERIAL_DIR}/{name}"
+    if assets.does_asset_exist(path):
+        material = assets.load_asset(path)
+    else:
+        material = asset_tools.create_asset(name, MATERIAL_DIR, unreal.Material, unreal.MaterialFactoryNew())
+
+    editing = unreal.MaterialEditingLibrary
+    editing.delete_all_material_expressions(material)
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+
+    color = editing.create_material_expression(material, unreal.MaterialExpressionVectorParameter, -400, 0)
+    color.set_editor_property("parameter_name", "Color")
+    color.set_editor_property("default_value", unreal.LinearColor(8.0, 4.0, 1.0, 1.0))
+    editing.connect_material_property(color, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+
+    editing.recompile_material(material)
+    assets.set_metadata_tag(material, HASH_TAG, digest)
+    if not assets.save_loaded_asset(material, only_if_is_dirty=False):
+        raise RuntimeError(f"Could not save {path}")
+
+
+def make_shot_material(name):
+    plan_rebuild(f"{MATERIAL_DIR}/{name}", ".uasset", lambda digest: build_shot_material(name, digest),
+                 spec_hash([build_shot_material], name))
 
 
 def spawn(actor_class, location, yaw=0.0, label=None):
@@ -618,20 +652,21 @@ headquarters_mesh = make_art("Headquarters", "Kenney/CityKitCommercial/building-
 wall_mesh = make_art("Wall", "Kenney/CastleKit/wall.glb", tint=0.0)
 crate_mesh = make_art("SupplyCrate", "Kenney/FactoryKit/box-wide.glb", tint=0.0)
 
-cannon = make_weapon("DA_TestCannon", 1200.0, 40.0, 2.0)
-rifle = make_weapon("DA_TestRifle", 700.0, 8.0, 0.5)
+# Shell speed in cm/s, effect scale, shell colour; the grenade lobs.
+cannon = make_weapon("DA_TestCannon", 1200.0, 40.0, 2.0, 6000.0, 1.6, (1.0, 0.45, 0.1))
+rifle = make_weapon("DA_TestRifle", 700.0, 8.0, 0.5, 9000.0, 0.4, (1.0, 0.85, 0.3))
 tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 260.0, 150.0), 90.0, 200.0, cannon, 600.0,
                  180.0, 700, 10.0)
 infantry = make_unit("DA_TestInfantry", "Test Infantry", infantry_mesh, fit_scale(infantry_mesh, 100.0, 100.0), 30.0, 100.0,
                      rifle, 350.0, 540.0, 150, 4.0)
-grenade = make_weapon("DA_TestGrenade", 600.0, 25.0, 1.5)
+grenade = make_weapon("DA_TestGrenade", 600.0, 25.0, 1.5, 1500.0, 1.0, (1.0, 0.6, 0.2), arc_height=250.0)
 grenadier = make_unit("DA_TestGrenadier", "Test Grenadier", infantry_mesh, fit_scale(infantry_mesh, 130.0, 130.0), 35.0, 120.0,
                       grenade, 320.0, 540.0, 300, 6.0)
 rifle_training = make_upgrade("DA_TestRifleTraining", "Test Rifle Training", 400, 8.0, unreal.RTSUpgradeStat.WEAPON_DAMAGE, 1.5,
                               [infantry])
 # The grenadier comes only once the barracks has researched rifle training.
 add_properties(grenadier, {"prerequisites": [rifle_training]})
-tower_gun = make_weapon("DA_TestTowerGun", 1400.0, 30.0, 1.0)
+tower_gun = make_weapon("DA_TestTowerGun", 1400.0, 30.0, 1.0, 7000.0, 1.2, (0.4, 0.8, 1.0))
 power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", power_plant_mesh, fit_scale(power_plant_mesh, 380.0, 380.0),
                             (4, 4), 800.0, None, 800, 6.0, 5, 0)
 tower = make_building("DA_TestTower", "Test Tower", tower_mesh, fit_scale(tower_mesh, 160.0, 160.0, 260.0), (2, 2), 500.0,
@@ -670,6 +705,7 @@ build_order = make_build_order("DA_TestBuildOrder", [
 })
 make_faction("DA_TestFaction", "Test Faction", buildings, headquarters, ai_build_order=build_order)
 make_ghost_material("M_PlacementGhost")
+make_shot_material("M_ShotFx")
 make_map(tank, infantry, builder, wall_mesh, crate_mesh)
 make_skirmish_map(builder, wall_mesh, crate_mesh)
 make_menu_map(MAIN_MENU_MAP_PATH, unreal.RTSMainMenuGameMode)

@@ -76,6 +76,9 @@ public:
 	/** The edge of the selection circle facing From. */
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
 
+	/** Every machine. Jolts the mesh back for a moment, as a shot recoils; cosmetic only. */
+	void PlayFireKick(float EffectScale);
+
 	/** Distance from the actor origin down to the ground contact point. */
 	float GetGroundOffset() const;
 
@@ -153,6 +156,9 @@ private:
 
 	void FaceTowardYaw(float Yaw, float DeltaSeconds);
 
+	/** Eases the mesh back from a fire kick. */
+	void UpdateFireKick(float DeltaSeconds);
+
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UCapsuleComponent> Collision;
 
@@ -189,4 +195,9 @@ private:
 
 	/** Set while an attack-move stops to fight, so the aborted move does not end the order. */
 	bool bStoppingToFight = false;
+
+	/** Where ApplyUnitData stood the mesh; a fire kick moves it back from here and returns it. */
+	FVector MeshRestLocation = FVector::ZeroVector;
+	float FireKickDistance = 0.f;
+	float FireKickTimeLeft = 0.f;
 };

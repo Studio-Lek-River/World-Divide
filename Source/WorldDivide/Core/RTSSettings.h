@@ -5,6 +5,7 @@
 #include "RTSSettings.generated.h"
 
 class UMaterialInterface;
+class UStaticMesh;
 class UWorld;
 class URTSFactionData;
 
@@ -22,6 +23,14 @@ public:
 	/** Translucent material with a "Color" vector parameter, tinted green or red by placement validity. */
 	UPROPERTY(Config, EditAnywhere, Category = "Placement")
 	TSoftObjectPtr<UMaterialInterface> PlacementGhostMaterial;
+
+	/** Unlit additive material with a "Color" vector parameter, for muzzle flashes, shells and impacts. */
+	UPROPERTY(Config, EditAnywhere, Category = "Effects")
+	TSoftObjectPtr<UMaterialInterface> ShotEffectMaterial;
+
+	/** A sphere 100 cm across, stretched into shells and grown into flashes. */
+	UPROPERTY(Config, EditAnywhere, Category = "Effects")
+	TSoftObjectPtr<UStaticMesh> ShotEffectMesh;
 
 	/** Where the game starts, and where leaving the lobby returns to. */
 	UPROPERTY(Config, EditAnywhere, Category = "Maps")

@@ -2,6 +2,8 @@
 
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
+#include "Combat/RTSShotEffect.h"
+#include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSTargetable.h"
 #include "Core/RTSGameState.h"
 #include "Data/RTSWeaponData.h"
@@ -11,6 +13,8 @@
 URTSWeaponComponent::URTSWeaponComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
+	// For Multicast_PlayShot only; nothing of the weapon replicates.
+	SetIsReplicatedByDefault(true);
 }
 
 void URTSWeaponComponent::SetWeaponData(URTSWeaponData* InWeaponData)
@@ -152,7 +156,33 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 		return;
 	}
 	Cooldown = WeaponData->ReloadSeconds;
-	Cast<IRTSTargetable>(Current)->GetHealthComponent()->ApplyDamage(GetDamage(), GetOwner());
+	const IRTSTargetable* Targetable = Cast<IRTSTargetable>(Current);
+	const FVector Origin = GetOwner()->GetActorLocation();
+	const float FlightTime = WeaponData->GetFlightTime(FVector::Dist2D(Origin, Targetable->GetClosestFootprintPoint(Origin)));
+	// Shown before any damage, which may destroy the target.
+	Multicast_PlayShot(WeaponData, Current, Current->GetActorLocation(), FlightTime);
+	if (FlightTime > 0.f)
+	{
+		GetWorld()->GetSubsystem<URTSShotSubsystem>()->AddShell(*Current, GetDamage(), GetOwner(), FlightTime);
+	}
+	else
+	{
+		Targetable->GetHealthComponent()->ApplyDamage(GetDamage(), GetOwner());
+	}
+}
+
+void URTSWeaponComponent::Multicast_PlayShot_Implementation(URTSWeaponData* Weapon, AActor* ShotTarget, FVector_NetQuantize TargetLocation,
+	float FlightTime)
+{
+	if (!Weapon || GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	ARTSShotEffect::Spawn(*GetOwner(), *Weapon, ShotTarget, TargetLocation, FlightTime);
+	if (ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner()))
+	{
+		Unit->PlayFireKick(Weapon->EffectScale);
+	}
 }
 
 void URTSWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
