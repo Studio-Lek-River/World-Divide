@@ -327,6 +327,9 @@ namespace RTSListenServerTest
 			State->ServerWorld = ServerWorld;
 			State->ClientWorld = ClientWorld;
 			Test->AddInfo(FString::Printf(TEXT("Listen session ready after %.1f s"), FPlatformTime::Seconds() - State->PhaseStart));
+			// The client takes the server's dilation through replication; setting its copy too keeps both in step at once.
+			RTSTests::ApplyTestTimeDilation(*ServerWorld);
+			RTSTests::ApplyTestTimeDilation(*ClientWorld);
 			return true;
 		}
 		if (FPlatformTime::Seconds() - State->PhaseStart > SessionTimeout)

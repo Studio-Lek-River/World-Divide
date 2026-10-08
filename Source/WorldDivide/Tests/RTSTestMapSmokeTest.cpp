@@ -23,6 +23,7 @@
 #include "Economy/RTSHarvesterComponent.h"
 #include "Economy/RTSSupplySource.h"
 #include "Engine/StaticMeshActor.h"
+#include "Editor.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
 #include "HAL/IConsoleManager.h"
@@ -31,6 +32,7 @@
 #include "Player/RTSPlayerController.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
+#include "Tests/RTSTestFlags.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSUnit.h"
 
@@ -109,8 +111,9 @@ namespace
 	constexpr double RouteTimeout = 30.0;
 
 	/**
-	 * The path test places the power plant on BuildSpot once the moving tank's circle is this close to its footprint, well
-	 * before the navmesh can cut the hole. A second tank drives a parallel lane south of it, far from the building.
+	 * The path test places the power plant on BuildSpot just before the moving tank's circle comes closer than this to its
+	 * footprint, well before the navmesh can cut the hole. A second tank drives a parallel lane south of it, far from the
+	 * building.
 	 */
 	constexpr float PathPlacementLead = 40.f;
 	const FVector BystanderStart(-1500.f, 6200.f, 0.f);
@@ -594,18 +597,25 @@ bool FRTSWaitForNavigation::Update()
 		State->PhaseStart = FPlatformTime::Seconds();
 	}
 
-	UWorld* World = AutomationCommon::GetAnyGameWorld();
-	UNavigationSystemV1* NavSystem = World ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World) : nullptr;
+	// AutomationOpenMap starts a PIE session that FStartPIECommand replaces on the next editor tick. Wait until that
+	// replacement has started and the game mode has given its player a team, a faction and credits, or the test would
+	// run in the old session.
+	UWorld* World = GEditor->IsPlaySessionRequestQueued() ? nullptr : AutomationCommon::GetAnyGameWorld();
+	const ARTSPlayerController* Controller = World ? Cast<ARTSPlayerController>(World->GetFirstPlayerController()) : nullptr;
+	const bool bPlaying = World && World->HasBegunPlay() && Controller && Controller->GetTeamId() != INDEX_NONE
+		&& Controller->GetFaction() && Controller->GetCredits() > 0;
+	UNavigationSystemV1* NavSystem = bPlaying ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World) : nullptr;
 	const ARecastNavMesh* NavMesh = NavSystem ? Cast<ARecastNavMesh>(NavSystem->GetDefaultNavDataInstance()) : nullptr;
 	const bool bReady = NavMesh && NavMesh->GetNavMeshTilesCount() > 0 && !NavSystem->IsNavigationBuildInProgress();
 	if (bReady)
 	{
 		Test->AddInfo(FString::Printf(TEXT("Navmesh ready with %d tiles"), NavMesh->GetNavMeshTilesCount()));
+		RTSTests::ApplyTestTimeDilation(*World);
 		return true;
 	}
 	if (FPlatformTime::Seconds() - State->PhaseStart > NavTimeout)
 	{
-		Test->AddError(TEXT("Navmesh was not built in time"));
+		Test->AddError(TEXT("PIE did not start or the navmesh was not built in time"));
 		return true;
 	}
 	return false;
@@ -1044,7 +1054,10 @@ bool FRTSPlaceOnPath::Update()
 	URTSBuildingData* Data = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
 	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Data->Footprint);
 	const float Gap = BuildSpot.X - Extent.X - Walker->GetSelectionRadius() - Walker->GetActorLocation().X;
-	if (Gap > PathPlacementLead)
+	// Placed in the last frame before the gap would drop under the lead, so the tank never gets closer than that, however
+	// far it moves per frame (a dilated test run moves it further).
+	const float NextStep = Walker->GetVelocity().Size2D() * Walker->GetWorld()->GetDeltaSeconds();
+	if (Gap - NextStep > PathPlacementLead)
 	{
 		if (FPlatformTime::Seconds() - State->PhaseStart > RouteTimeout)
 		{
@@ -2750,7 +2763,6 @@ bool FRTSTestMapSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueMoveToAll(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyArrival(this, State));
@@ -2771,7 +2783,6 @@ bool FRTSAttackOrderSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueAttack(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAttack(this, State));
@@ -2793,7 +2804,6 @@ bool FRTSBuildingPlacementSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckPlacement(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyConstruction(this, State));
@@ -2815,7 +2825,6 @@ bool FRTSBuildPrerequisitesSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckBuildPrerequisites(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyPlacedFactoryCompletes(this, State));
@@ -2836,7 +2845,6 @@ bool FRTSRouteAroundBuildingSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceObstacle(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
@@ -2859,7 +2867,6 @@ bool FRTSBuildingOnPathSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueCrossingMoves(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceOnPath(this, State));
@@ -2882,7 +2889,6 @@ bool FRTSAttackBuildingSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceEnemyBuilding(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
@@ -2906,7 +2912,6 @@ bool FRTSAttackBuildingBehindWallSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceBuildingBehindWall(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
@@ -2930,7 +2935,6 @@ bool FRTSUnreachableTargetsSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceUnreachableTargets(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyUnreachableTargets(this, State));
@@ -2951,7 +2955,6 @@ bool FRTSHarvestSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSBuySupplyDepot(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForHarvester(this, State));
@@ -2973,7 +2976,6 @@ bool FRTSHarvestUnreachableDocksSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceUnreachableDocks(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
@@ -2996,7 +2998,6 @@ bool FRTSSolidObstaclesSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckSolidObstacles(this));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
@@ -3016,7 +3017,6 @@ bool FRTSMoveIntoObstacleSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueObstacleMove(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyObstacleMove(this, State));
@@ -3037,7 +3037,6 @@ bool FRTSBuilderConstructsSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueBuilderBuild(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForBuilderSite(this, State));
@@ -3065,7 +3064,6 @@ bool FRTSBuilderClearsSiteSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueEnemyBlockedBuild(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyEnemyBlocksSite(this, State));
@@ -3371,7 +3369,6 @@ bool FRTSProductionSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSQueueProduction(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyProduction(this, State));
@@ -3392,7 +3389,6 @@ bool FRTSProducedHarvesterSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSQueueProducedHarvester(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyProducedHarvester(this, State));
@@ -3413,7 +3409,6 @@ bool FRTSUpgradeResearchSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSQueueResearch(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyResearch(this, State));
@@ -3435,7 +3430,6 @@ bool FRTSAttackMoveSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueMovePastEnemy(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyMovePastEnemy(this, State));
@@ -3458,7 +3452,6 @@ bool FRTSAttackMoveBuildingSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceAttackMoveBuilding(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
@@ -3481,7 +3474,6 @@ bool FRTSAttackMoveArmedSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckAttackMoveArming(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAttackMoveDisarmed(this, State));
@@ -3691,7 +3683,6 @@ bool FRTSHeadquartersSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckHeadquarters(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForHeadquartersBuilder(this, State));
@@ -3830,7 +3821,6 @@ bool FRTSRebuildHeadquartersSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSLoseHeadquarters(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSRebuildHeadquarters(this, State));
@@ -4112,7 +4102,6 @@ bool FRTSMatchEndSmokeTest::RunTest(const FString& Parameters)
 
 	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
 	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(1.f));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSStartMatchEndHarvest(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForMatchEndLoad(this, State));

@@ -5,17 +5,21 @@ Builds, tests or regenerates test content for World Divide from the command line
 .EXAMPLE
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task build
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Commands
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -TimeDilation 1
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup
 
 The engine is taken from $env:UE_ROOT, falling back to G:\Program Files\Epic Games\UE_5.6.
 Exits nonzero on any failure: 2 when the editor is running (build), 3 when setup must rewrite read-only LFS assets.
+The PIE smoke tests run TimeDilation game seconds per real second (default 4); -TimeDilation 1 runs them at real time.
 #>
 param(
 	[Parameter(Mandatory = $true)]
 	[ValidateSet('build', 'test', 'setup')]
 	[string]$Task,
 
-	[string]$Filter = 'WorldDivide'
+	[string]$Filter = 'WorldDivide',
+
+	[double]$TimeDilation = 4
 )
 
 $ErrorActionPreference = 'Stop'
@@ -80,7 +84,7 @@ function Invoke-Test {
 	if (Test-Path $ReportDir) { Remove-Item -Recurse -Force $ReportDir }
 
 	& $EditorCmd $Project "-ExecCmds=Automation RunTests $Filter;Quit" '-TestExit=Automation Test Queue Empty' `
-		"-ReportExportPath=$ReportDir" "-abslog=$LogFile" -unattended -nullrhi -nosplash -nosound
+		"-ReportExportPath=$ReportDir" "-abslog=$LogFile" "-RTSTestTimeDilation=$TimeDilation" -unattended -nullrhi -nosplash -nosound
 	$EditorExit = $LASTEXITCODE
 
 	$Index = Join-Path $ReportDir 'index.json'
