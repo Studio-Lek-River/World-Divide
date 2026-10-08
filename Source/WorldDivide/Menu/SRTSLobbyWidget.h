@@ -8,7 +8,8 @@ class SVerticalBox;
 
 /**
  * The lobby screen: one row per seat with its team colour, who plays it (a combo of Open, Closed and the AI difficulties for
- * the host, or the name of the human holding it) and its start spot (Random or a base), then Start for the host and Back.
+ * the host, or the name of the human holding it), its start spot (Random or a base) and whether its human is ready, then
+ * Back, Ready for a joined player and Start for the host.
  * Everything reads the replicated seats each frame; changes go to the server through the controller.
  */
 class WORLDDIVIDE_API SRTSLobbyWidget : public SCompoundWidget

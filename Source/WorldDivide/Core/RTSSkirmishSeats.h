@@ -47,6 +47,10 @@ struct WORLDDIVIDE_API FRTSSeat
 	UPROPERTY(NotReplicated)
 	FString PlayerToken;
 
+	/** Lobby only: the human holding the seat is done setting it up. The host always is. */
+	UPROPERTY()
+	bool bReady = false;
+
 	bool operator==(const FRTSSeat& Other) const = default;
 };
 
@@ -82,10 +86,14 @@ namespace RTSSkirmish
 	 */
 	WORLDDIVIDE_API int32 FindSeatForPlayer(TConstArrayView<FRTSSeat> Seats, const FString& Token, const TSet<int32>& TakenSeats);
 
-	/** Lobby: the first Open seat becomes Human for this player. Its index, or INDEX_NONE when no seat is open. */
-	WORLDDIVIDE_API int32 TakeOpenSeat(TArray<FRTSSeat>& Seats, int32 PlayerId, const FString& PlayerName, const FString& Token);
+	/**
+	 * Lobby: the first Open seat becomes Human for this player, ready when it is the host's. Its index, or INDEX_NONE when
+	 * no seat is open.
+	 */
+	WORLDDIVIDE_API int32 TakeOpenSeat(TArray<FRTSSeat>& Seats, int32 PlayerId, const FString& PlayerName, const FString& Token,
+		bool bIsHost);
 
-	/** Lobby: the seat PlayerId holds opens again, keeping its start spot. False when PlayerId holds none. */
+	/** Lobby: the seat PlayerId holds opens again, keeping its start spot but not its ready flag. False when PlayerId holds none. */
 	WORLDDIVIDE_API bool ReleaseSeat(TArray<FRTSSeat>& Seats, int32 PlayerId);
 
 	/** Lobby: the host may make a seat Open, Closed or an AI, unless a human holds it. */
@@ -98,9 +106,19 @@ namespace RTSSkirmish
 	WORLDDIVIDE_API bool CanChangeStartSpot(TConstArrayView<FRTSSeat> Seats, int32 Index, bool bIsHost, int32 PlayerId,
 		int32 Spot, int32 SpotCount);
 
-	/** Lobby: at least one human and two seats with a player or an AI. */
+	/**
+	 * Lobby: moves seat Index to Spot once CanChangeStartSpot allows it. A seat that moves must be readied again, unless
+	 * it is the host's own. False, changing nothing, when refused.
+	 */
+	WORLDDIVIDE_API bool ChangeStartSpot(TArray<FRTSSeat>& Seats, int32 Index, bool bIsHost, int32 PlayerId, int32 Spot,
+		int32 SpotCount);
+
+	/** Lobby: a player readies its own seat or takes that back. False for the host, which is always ready, or without a seat. */
+	WORLDDIVIDE_API bool SetReady(TArray<FRTSSeat>& Seats, int32 PlayerId, bool bIsHost, bool bReady);
+
+	/** Lobby: at least one human and two seats with a player or an AI, and every human ready. */
 	WORLDDIVIDE_API bool CanStart(TConstArrayView<FRTSSeat> Seats);
 
-	/** Lobby: the seats the match is played with. Open seats nobody took are closed; names and player ids are dropped. */
+	/** Lobby: the seats the match is played with. Open seats nobody took are closed; names, player ids and ready flags are dropped. */
 	WORLDDIVIDE_API TArray<FRTSSeat> ToMatchSeats(TConstArrayView<FRTSSeat> Seats);
 }

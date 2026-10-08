@@ -25,11 +25,17 @@ public:
 	/** This player's own APlayerState::GetPlayerId, or INDEX_NONE. */
 	int32 GetOwnPlayerId() const;
 
+	/** The seat this player holds, or null until the seats replicate. */
+	const FRTSSeat* GetOwnSeat() const;
+
 	UFUNCTION(Server, Reliable)
 	void Server_SetSeatType(int32 Index, ERTSSeatType Type, ERTSAIDifficulty Difficulty);
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetStartSpot(int32 Index, int32 Spot);
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetReady(bool bReady);
 
 	/** The token by which the match gives this player its seat, kept by its URTSLocalPlayer across the travel. */
 	UFUNCTION(Client, Reliable)

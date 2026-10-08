@@ -55,7 +55,8 @@ void ARTSLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 
 	const APlayerState* Player = NewPlayer->GetPlayerState<APlayerState>();
 	const FString Token = FGuid::NewGuid().ToString(EGuidFormats::Digits);
-	const int32 Seat = RTSSkirmish::TakeOpenSeat(GetLobbyState()->GetMutableSeats(), Player->GetPlayerId(), Player->GetPlayerName(), Token);
+	const int32 Seat = RTSSkirmish::TakeOpenSeat(GetLobbyState()->GetMutableSeats(), Player->GetPlayerId(), Player->GetPlayerName(), Token,
+		IsHost(*NewPlayer));
 	if (Seat == INDEX_NONE)
 	{
 		UE_LOG(LogWorldDivide, Warning, TEXT("No open seat for %s"), *Player->GetPlayerName());
@@ -98,13 +99,14 @@ bool ARTSLobbyGameMode::SetStartSpot(const APlayerController& Requester, int32 I
 {
 	ARTSLobbyGameState* State = GetLobbyState();
 	const APlayerState* Player = Requester.GetPlayerState<APlayerState>();
-	if (!Player || !RTSSkirmish::CanChangeStartSpot(State->GetSeats(), Index, IsHost(Requester), Player->GetPlayerId(), Spot,
-		State->GetSpotCount()))
-	{
-		return false;
-	}
-	State->GetMutableSeats()[Index].StartSpot = Spot;
-	return true;
+	return Player && RTSSkirmish::ChangeStartSpot(State->GetMutableSeats(), Index, IsHost(Requester), Player->GetPlayerId(), Spot,
+		State->GetSpotCount());
+}
+
+bool ARTSLobbyGameMode::SetReady(const APlayerController& Requester, bool bReady)
+{
+	const APlayerState* Player = Requester.GetPlayerState<APlayerState>();
+	return Player && RTSSkirmish::SetReady(GetLobbyState()->GetMutableSeats(), Player->GetPlayerId(), IsHost(Requester), bReady);
 }
 
 FString ARTSLobbyGameMode::GetMatchURL() const

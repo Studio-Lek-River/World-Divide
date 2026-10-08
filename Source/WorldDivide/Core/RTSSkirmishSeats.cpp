@@ -208,7 +208,7 @@ namespace RTSSkirmish
 		return Seat;
 	}
 
-	int32 TakeOpenSeat(TArray<FRTSSeat>& Seats, int32 PlayerId, const FString& PlayerName, const FString& Token)
+	int32 TakeOpenSeat(TArray<FRTSSeat>& Seats, int32 PlayerId, const FString& PlayerName, const FString& Token, bool bIsHost)
 	{
 		for (int32 Index = 0; Index < Seats.Num(); ++Index)
 		{
@@ -219,6 +219,7 @@ namespace RTSSkirmish
 				Seat.PlayerId = PlayerId;
 				Seat.PlayerName = PlayerName;
 				Seat.PlayerToken = Token;
+				Seat.bReady = bIsHost;
 				return Index;
 			}
 		}
@@ -235,6 +236,7 @@ namespace RTSSkirmish
 				Seat.PlayerId = INDEX_NONE;
 				Seat.PlayerName.Reset();
 				Seat.PlayerToken.Reset();
+				Seat.bReady = false;
 				return true;
 			}
 		}
@@ -262,12 +264,46 @@ namespace RTSSkirmish
 		return Spot == INDEX_NONE || (Spot >= 0 && Spot < SpotCount && !IsSpotTaken(Seats, Spot, Index));
 	}
 
+	bool ChangeStartSpot(TArray<FRTSSeat>& Seats, int32 Index, bool bIsHost, int32 PlayerId, int32 Spot, int32 SpotCount)
+	{
+		if (!CanChangeStartSpot(Seats, Index, bIsHost, PlayerId, Spot, SpotCount))
+		{
+			return false;
+		}
+		FRTSSeat& Seat = Seats[Index];
+		const bool bHostsSeat = bIsHost && Seat.Type == ERTSSeatType::Human && Seat.PlayerId == PlayerId;
+		if (Seat.StartSpot != Spot && !bHostsSeat)
+		{
+			Seat.bReady = false;
+		}
+		Seat.StartSpot = Spot;
+		return true;
+	}
+
+	bool SetReady(TArray<FRTSSeat>& Seats, int32 PlayerId, bool bIsHost, bool bReady)
+	{
+		FRTSSeat* Seat = Seats.FindByPredicate([PlayerId](const FRTSSeat& Candidate)
+		{
+			return Candidate.Type == ERTSSeatType::Human && Candidate.PlayerId == PlayerId;
+		});
+		if (bIsHost || !Seat)
+		{
+			return false;
+		}
+		Seat->bReady = bReady;
+		return true;
+	}
+
 	bool CanStart(TConstArrayView<FRTSSeat> Seats)
 	{
 		int32 Humans = 0;
 		int32 Players = 0;
 		for (const FRTSSeat& Seat : Seats)
 		{
+			if (Seat.Type == ERTSSeatType::Human && !Seat.bReady)
+			{
+				return false;
+			}
 			Humans += Seat.Type == ERTSSeatType::Human ? 1 : 0;
 			Players += Seat.Type == ERTSSeatType::Human || Seat.Type == ERTSSeatType::AI ? 1 : 0;
 		}
@@ -287,6 +323,7 @@ namespace RTSSkirmish
 			}
 			MatchSeat.PlayerId = INDEX_NONE;
 			MatchSeat.PlayerName.Reset();
+			MatchSeat.bReady = false;
 		}
 		return Result;
 	}

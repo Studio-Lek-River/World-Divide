@@ -93,8 +93,19 @@ void SRTSLobbyWidget::Construct(const FArguments& InArgs)
 				.Font(GetFont(12))
 				.Text_Lambda([this]()
 				{
-					return FText::FromString(Controller.IsValid() && Controller->IsHost()
-						? TEXT("Set up the seats, then start the match.")
+					if (!Controller.IsValid())
+					{
+						return FText::GetEmpty();
+					}
+					const bool bAllReady = !Controller->GetSeats().ContainsByPredicate(
+						[](const FRTSSeat& Seat) { return Seat.Type == ERTSSeatType::Human && !Seat.bReady; });
+					if (Controller->IsHost())
+					{
+						return FText::FromString(bAllReady ? TEXT("Set up the seats, then start the match.")
+							: TEXT("Waiting for every player to be ready."));
+					}
+					const FRTSSeat* Own = Controller->GetOwnSeat();
+					return FText::FromString(Own && !Own->bReady ? TEXT("Pick your base, then press Ready.")
 						: TEXT("Waiting for the host to start the match."));
 				})
 			]
@@ -110,6 +121,28 @@ void SRTSLobbyWidget::Construct(const FArguments& InArgs)
 						if (Controller.IsValid())
 						{
 							Controller->LeaveLobby();
+						}
+						return FReply::Handled();
+					})
+				]
+				+ SHorizontalBox::Slot().AutoWidth().Padding(0.f, 0.f, 8.f, 0.f)
+				[
+					SNew(SButton)
+					.Text_Lambda([this]()
+					{
+						const FRTSSeat* Own = Controller.IsValid() ? Controller->GetOwnSeat() : nullptr;
+						return FText::FromString(Own && Own->bReady ? TEXT("Not ready") : TEXT("Ready"));
+					})
+					.Visibility_Lambda([this]()
+					{
+						return Controller.IsValid() && !Controller->IsHost() ? EVisibility::Visible : EVisibility::Collapsed;
+					})
+					.IsEnabled_Lambda([this]() { return Controller.IsValid() && Controller->GetOwnSeat() != nullptr; })
+					.OnClicked_Lambda([this]()
+					{
+						if (const FRTSSeat* Own = Controller.IsValid() ? Controller->GetOwnSeat() : nullptr)
+						{
+							Controller->Server_SetReady(!Own->bReady);
 						}
 						return FReply::Handled();
 					})
@@ -257,6 +290,25 @@ TSharedRef<SWidget> SRTSLobbyWidget::MakeRow(int32 Index)
 					return FText::FromString(Seat && RTSSkirmish::IsPlayed(*Seat) ? GetSpotLabel(Seat->StartSpot) : FString());
 				})
 			]
+		]
+	]
+	+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(12.f, 0.f, 0.f, 0.f)
+	[
+		SNew(SBox).WidthOverride(90.f)
+		[
+			SNew(STextBlock)
+			.Font(GetFont(12))
+			.Text_Lambda([this, Index]()
+			{
+				const FRTSSeat* Seat = FindSeat(Controller, Index);
+				const bool bHuman = Seat && Seat->Type == ERTSSeatType::Human;
+				return FText::FromString(!bHuman ? FString() : Seat->bReady ? TEXT("Ready") : TEXT("Not ready"));
+			})
+			.ColorAndOpacity_Lambda([this, Index]()
+			{
+				const FRTSSeat* Seat = FindSeat(Controller, Index);
+				return FSlateColor(Seat && Seat->bReady ? FLinearColor(0.3f, 0.9f, 0.3f) : FLinearColor(0.6f, 0.6f, 0.6f));
+			})
 		]
 	];
 }

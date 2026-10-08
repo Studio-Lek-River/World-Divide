@@ -24,8 +24,10 @@
 /**
  * The skirmish lobby end to end, as a listen server with one client in the same process, both starting in L_Lobby. Lobby:
  * both players take an open seat and get a token, the host makes the last seat a Hard AI and the client sees it, the client
- * may move its own start spot but not change other seats, and the match URL carries the seats. SkirmishSeats: the host
- * moves itself to spot 3, makes the AI Hard and closes the last seat, the client picks spot 0, and the host starts the match.
+ * may move its own start spot but not change other seats, and the match URL carries the seats. The host's start is refused
+ * until the client is ready, which both see; a move by the host makes the client ready up again. SkirmishSeats: the host
+ * moves itself to spot 3, makes the AI Hard and closes the last seat, the client picks spot 0 and readies up, and the host
+ * starts the match.
  * In L_Skirmish the host plays team 0 from spot 3, the AI team 1 from spot 1 at Hard, the client team 2 from spot 0 by its
  * token, and neither the closed team 3 nor spot 2, which nobody plays, has a building or a unit.
  */
@@ -240,12 +242,53 @@ namespace RTSSkirmishSmokeTest
 		const FString Expected = FString::Printf(TEXT("/Game/Maps/L_Skirmish?listen?Seats=Human@0~%s,AI-Normal@1,Human@2~%s,AI-Hard"),
 			*GetToken(State->Host.Get()), *GetToken(State->Client.Get()));
 		Test->TestEqual(TEXT("The match starts with the lobby's seats"), GameMode->GetMatchURL(), Expected);
-		Test->TestTrue(TEXT("The match may start"), RTSSkirmish::CanStart(Seats));
-		Test->TestFalse(TEXT("Only the host starts it"), State->ClientOnServer.IsValid() && GameMode->StartMatch(*State->ClientOnServer));
+		Test->TestTrue(TEXT("The host is ready"), Seats[0].bReady);
+		Test->TestFalse(TEXT("The client is not yet"), Seats[2].bReady);
+		Test->TestFalse(TEXT("So the match may not start"), RTSSkirmish::CanStart(Seats));
+		Test->TestFalse(TEXT("And the host's start is refused"), State->Host.IsValid() && State->Host->RequestStart());
+
+		if (ARTSLobbyPlayerController* Client = State->Client.Get())
+		{
+			Client->Server_SetReady(true);
+		}
+		State->PhaseStart = FPlatformTime::Seconds();
 		return true;
 	}
 
-	/** The host moves itself to spot 3, makes the AI Hard and closes the last seat; the client picks spot 0. */
+	/** The host and the client see the client ready, then the host moves the client, which must ready up again. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyLobbyReady, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyLobbyReady::Update()
+	{
+		const ARTSLobbyGameState* ServerState = GetLobbyState(State->LobbyServer);
+		const ARTSLobbyGameState* ClientState = GetLobbyState(State->LobbyClient);
+		ARTSLobbyGameMode* GameMode = State->LobbyServer.IsValid() ? State->LobbyServer->GetAuthGameMode<ARTSLobbyGameMode>() : nullptr;
+		ARTSLobbyPlayerController* Host = State->Host.Get();
+		if (!ServerState || !ClientState || !GameMode || !Host || ServerState->GetSeats().Num() != 4)
+		{
+			Test->AddError(TEXT("Lost the lobby"));
+			return true;
+		}
+		const TArray<FRTSSeat>& Seats = ServerState->GetSeats();
+		const TArray<FRTSSeat>& Seen = ClientState->GetSeats();
+		const bool bSeen = Seats[2].bReady && Seen.Num() == 4 && Seen[2].bReady;
+		if (!bSeen && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
+		{
+			return false;
+		}
+		Test->TestTrue(TEXT("The host sees the client ready"), Seats[2].bReady);
+		Test->TestTrue(TEXT("So does the client"), Seen.Num() == 4 && Seen[2].bReady);
+		Test->TestTrue(TEXT("The match may start"), RTSSkirmish::CanStart(Seats));
+		Test->TestFalse(TEXT("Only the host starts it"), State->ClientOnServer.IsValid() && GameMode->StartMatch(*State->ClientOnServer));
+
+		// The host's call runs at once on the server.
+		Host->Server_SetStartSpot(2, 3);
+		Test->TestEqual(TEXT("The host moves the client"), Seats[2].StartSpot, 3);
+		Test->TestFalse(TEXT("Which must ready up again"), Seats[2].bReady);
+		Test->TestFalse(TEXT("Before the match may start"), RTSSkirmish::CanStart(Seats));
+		return true;
+	}
+
+	/** The host moves itself to spot 3, makes the AI Hard and closes the last seat; the client picks spot 0 and readies up. */
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSSetUpMatch, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
 	bool FRTSSetUpMatch::Update()
 	{
@@ -261,13 +304,15 @@ namespace RTSSkirmishSmokeTest
 		Host->Server_SetSeatType(1, ERTSSeatType::AI, ERTSAIDifficulty::Hard);
 		Host->Server_SetSeatType(3, ERTSSeatType::Closed, ERTSAIDifficulty::Normal);
 		Client->Server_SetStartSpot(2, TeamSpots[ClientTeam]);
+		// After the move, which would clear it; reliable calls arrive in order.
+		Client->Server_SetReady(true);
 		State->HostToken = GetToken(Host);
 		State->ClientToken = GetToken(Client);
 		State->PhaseStart = FPlatformTime::Seconds();
 		return true;
 	}
 
-	/** Once the server has the client's spot, the host starts the match. */
+	/** Once the server has the client's spot and ready, the host starts the match. */
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSStartMatch, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
 	bool FRTSStartMatch::Update()
 	{
@@ -279,11 +324,11 @@ namespace RTSSkirmishSmokeTest
 			return true;
 		}
 		const TArray<FRTSSeat>& Seats = ServerState->GetSeats();
-		if (Seats[2].StartSpot != TeamSpots[ClientTeam])
+		if (Seats[2].StartSpot != TeamSpots[ClientTeam] || !Seats[2].bReady)
 		{
 			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
 			{
-				Test->AddError(TEXT("The server did not get the client's start spot"));
+				Test->AddError(TEXT("The server did not get the client's start spot and ready"));
 				return true;
 			}
 			return false;
@@ -430,6 +475,7 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForLobby(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyChanges(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyChanges(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyReady(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		return true;
 	}

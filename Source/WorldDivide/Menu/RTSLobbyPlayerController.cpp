@@ -32,6 +32,15 @@ int32 ARTSLobbyPlayerController::GetOwnPlayerId() const
 	return State ? State->GetPlayerId() : INDEX_NONE;
 }
 
+const FRTSSeat* ARTSLobbyPlayerController::GetOwnSeat() const
+{
+	const int32 PlayerId = GetOwnPlayerId();
+	return PlayerId == INDEX_NONE ? nullptr : GetSeats().FindByPredicate([PlayerId](const FRTSSeat& Seat)
+	{
+		return Seat.Type == ERTSSeatType::Human && Seat.PlayerId == PlayerId;
+	});
+}
+
 void ARTSLobbyPlayerController::Server_SetSeatType_Implementation(int32 Index, ERTSSeatType Type, ERTSAIDifficulty Difficulty)
 {
 	if (ARTSLobbyGameMode* GameMode = GetWorld()->GetAuthGameMode<ARTSLobbyGameMode>())
@@ -45,6 +54,14 @@ void ARTSLobbyPlayerController::Server_SetStartSpot_Implementation(int32 Index, 
 	if (ARTSLobbyGameMode* GameMode = GetWorld()->GetAuthGameMode<ARTSLobbyGameMode>())
 	{
 		GameMode->SetStartSpot(*this, Index, Spot);
+	}
+}
+
+void ARTSLobbyPlayerController::Server_SetReady_Implementation(bool bReady)
+{
+	if (ARTSLobbyGameMode* GameMode = GetWorld()->GetAuthGameMode<ARTSLobbyGameMode>())
+	{
+		GameMode->SetReady(*this, bReady);
 	}
 }
 

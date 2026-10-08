@@ -125,11 +125,11 @@ namespace RTSSkirmishTests
 		TArray<FRTSSeat> Seats = { MakeSeat(ERTSSeatType::Open, 0), MakeSeat(ERTSSeatType::AI, 1), MakeSeat(ERTSSeatType::Open),
 			MakeSeat(ERTSSeatType::Closed) };
 		TestFalse(TEXT("No match without a human"), RTSSkirmish::CanStart(Seats));
-		TestEqual(TEXT("The host takes the first open seat"), RTSSkirmish::TakeOpenSeat(Seats, 10, TEXT("Host"), TEXT("t10")), 0);
+		TestEqual(TEXT("The host takes the first open seat"), RTSSkirmish::TakeOpenSeat(Seats, 10, TEXT("Host"), TEXT("t10"), true), 0);
 		TestEqual(TEXT("Its name"), Seats[0].PlayerName, FString(TEXT("Host")));
 		TestTrue(TEXT("A human and an AI can start"), RTSSkirmish::CanStart(Seats));
-		TestEqual(TEXT("A guest takes the next open seat"), RTSSkirmish::TakeOpenSeat(Seats, 11, TEXT("Guest"), TEXT("t11")), 2);
-		TestEqual(TEXT("No seat is left"), RTSSkirmish::TakeOpenSeat(Seats, 12, TEXT("Late"), TEXT("t12")), int32(INDEX_NONE));
+		TestEqual(TEXT("A guest takes the next open seat"), RTSSkirmish::TakeOpenSeat(Seats, 11, TEXT("Guest"), TEXT("t11"), false), 2);
+		TestEqual(TEXT("No seat is left"), RTSSkirmish::TakeOpenSeat(Seats, 12, TEXT("Late"), TEXT("t12"), false), int32(INDEX_NONE));
 
 		// Seat types: the host's call, never for a seat a human holds.
 		TestTrue(TEXT("The host may make an AI harder"), RTSSkirmish::CanChangeType(Seats, 1, true, ERTSSeatType::AI));
@@ -164,7 +164,53 @@ namespace RTSSkirmishTests
 		TestEqual(TEXT("Formatted for the match"), RTSSkirmish::FormatSeats(Match), FString(TEXT("Human@0~t10,AI-Normal@1,Closed,Closed")));
 
 		TArray<FRTSSeat> Alone = { MakeHuman(1, TEXT("t1")), MakeSeat(ERTSSeatType::Open), MakeSeat(ERTSSeatType::Closed) };
+		Alone[0].bReady = true;
 		TestFalse(TEXT("A human alone cannot start"), RTSSkirmish::CanStart(Alone));
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLobbyReadyTest, "WorldDivide.Lobby.Ready", TestFlags)
+
+	bool FRTSLobbyReadyTest::RunTest(const FString& Parameters)
+	{
+		TArray<FRTSSeat> Seats = { MakeSeat(ERTSSeatType::Open, 0), MakeSeat(ERTSSeatType::AI, 1), MakeSeat(ERTSSeatType::Open),
+			MakeSeat(ERTSSeatType::Open) };
+		RTSSkirmish::TakeOpenSeat(Seats, 10, TEXT("Host"), TEXT("t10"), true);
+		RTSSkirmish::TakeOpenSeat(Seats, 11, TEXT("Guest"), TEXT("t11"), false);
+		TestTrue(TEXT("The host is ready from the start"), Seats[0].bReady);
+		TestFalse(TEXT("A guest is not"), Seats[2].bReady);
+		TestFalse(TEXT("No start while a human is not ready"), RTSSkirmish::CanStart(Seats));
+
+		TestFalse(TEXT("The host does not ready up"), RTSSkirmish::SetReady(Seats, 10, true, false));
+		TestTrue(TEXT("So stays ready"), Seats[0].bReady);
+		TestFalse(TEXT("A player without a seat has nothing to ready"), RTSSkirmish::SetReady(Seats, 12, false, true));
+		TestTrue(TEXT("The guest readies up"), RTSSkirmish::SetReady(Seats, 11, false, true));
+		TestTrue(TEXT("Then the match may start"), RTSSkirmish::CanStart(Seats));
+		TestTrue(TEXT("The guest takes it back"), RTSSkirmish::SetReady(Seats, 11, false, false));
+		TestFalse(TEXT("And the match waits again"), RTSSkirmish::CanStart(Seats));
+
+		// Moving a seat makes it ready up again, unless it is the host's own.
+		RTSSkirmish::SetReady(Seats, 11, false, true);
+		TestTrue(TEXT("The guest moves itself"), RTSSkirmish::ChangeStartSpot(Seats, 2, false, 11, 3, 4));
+		TestEqual(TEXT("To its new spot"), Seats[2].StartSpot, 3);
+		TestFalse(TEXT("And must ready up again"), Seats[2].bReady);
+		RTSSkirmish::SetReady(Seats, 11, false, true);
+		TestTrue(TEXT("The host moves the guest"), RTSSkirmish::ChangeStartSpot(Seats, 2, true, 10, 2, 4));
+		TestFalse(TEXT("Which must ready up again"), Seats[2].bReady);
+		RTSSkirmish::SetReady(Seats, 11, false, true);
+		TestTrue(TEXT("Asking for the spot a seat has"), RTSSkirmish::ChangeStartSpot(Seats, 2, false, 11, 2, 4));
+		TestTrue(TEXT("Keeps it ready"), Seats[2].bReady);
+		TestFalse(TEXT("A refused move"), RTSSkirmish::ChangeStartSpot(Seats, 2, false, 11, 0, 4));
+		TestTrue(TEXT("Keeps it ready too"), Seats[2].bReady);
+		TestTrue(TEXT("The host moves itself"), RTSSkirmish::ChangeStartSpot(Seats, 0, true, 10, 3, 4));
+		TestTrue(TEXT("And stays ready"), Seats[0].bReady);
+		TestTrue(TEXT("The host moves the AI"), RTSSkirmish::ChangeStartSpot(Seats, 1, true, 10, 0, 4));
+		TestTrue(TEXT("Which leaves the guest ready"), Seats[2].bReady && RTSSkirmish::CanStart(Seats));
+
+		const TArray<FRTSSeat> Match = RTSSkirmish::ToMatchSeats(Seats);
+		TestTrue(TEXT("Ready is the lobby's alone"), !Match[0].bReady && !Match[2].bReady);
+		RTSSkirmish::ReleaseSeat(Seats, 11);
+		TestFalse(TEXT("A seat its player left is not ready"), Seats[2].bReady);
 		return true;
 	}
 }
