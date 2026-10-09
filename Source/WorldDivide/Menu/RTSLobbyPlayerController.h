@@ -63,6 +63,9 @@ public:
 	virtual void ReceivedPlayer() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	/** The lobby screen this local player sees, or null on a remote player's controller. */
+	TSharedPtr<SRTSLobbyWidget> GetWidget() const { return Widget; }
+
 private:
 	TSharedPtr<SRTSLobbyWidget> Widget;
 };

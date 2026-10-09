@@ -1,13 +1,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Styling/SlateBrush.h"
+#include "UObject/StrongObjectPtr.h"
 #include "Widgets/SCompoundWidget.h"
 
 class ARTSLobbyPlayerController;
+class SConstraintCanvas;
 class SVerticalBox;
+class UTexture2D;
 
 /**
- * The lobby screen: the map (a combo of URTSSettings::SkirmishMaps for the host, its name for the others), then one row per seat with its team colour, who plays it (a combo of Open, Closed and the AI difficulties for
+ * The lobby screen: the map (a combo of URTSSettings::SkirmishMaps for the host, its name for the others), its preview
+ * with each start spot numbered as its base and coloured by the team playing from it, then one row per seat with its team colour, who plays it (a combo of Open, Closed and the AI difficulties for
  * the host, or the name of the human holding it), its start spot (Random or a base), whether its human is ready and, for the
  * host, Remove next to every other player, then
  * Back, Ready for a joined player and Start for the host.
@@ -35,14 +40,32 @@ public:
 	/** The label the start spot combo shows for Spot: Random, or "Base <Spot + 1>". */
 	static FString GetSpotLabel(int32 Spot);
 
+	/** The preview of map MapIndex of URTSSettings::SkirmishMaps, or null when it has none. */
+	static UTexture2D* GetMapPreview(int32 MapIndex);
+
+	/** The preview shown: that of the map the lobby has chosen. */
+	UTexture2D* GetShownPreview() const;
+
 private:
 	/** The seats arrive by replication: the rows are built once their number is known. */
 	void RebuildRows(int32 SeatCount);
 	TSharedRef<SWidget> MakeRow(int32 Index);
 
+	/** One numbered marker per start spot of the chosen map, where its PlayerStart is on the preview. */
+	void RebuildSpotMarkers(int32 MapIndex);
+
+	/** The colour of the team whose seat plays from Spot, grey when no seat does. */
+	FSlateColor GetSpotColor(int32 Spot) const;
+
 	TWeakObjectPtr<ARTSLobbyPlayerController> Controller;
 	TSharedPtr<SVerticalBox> Rows;
 	int32 BuiltSeats = INDEX_NONE;
+
+	TSharedPtr<SConstraintCanvas> SpotMarkers;
+	int32 BuiltMapIndex = INDEX_NONE;
+	FSlateBrush PreviewBrush;
+	/** Keeps the shown preview loaded; the brush does not. */
+	TStrongObjectPtr<UTexture2D> PreviewTexture;
 
 	/** Indices into URTSSettings::SkirmishMaps. */
 	TArray<TSharedPtr<int32>> MapOptions;

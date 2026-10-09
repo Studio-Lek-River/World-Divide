@@ -3,6 +3,7 @@
 #include "Core/RTSSettings.h"
 #include "Core/RTSSkirmishSeats.h"
 #include "Data/RTSMapData.h"
+#include "Engine/Texture2D.h"
 #include "Menu/RTSLobbyGameState.h"
 #include "Menu/RTSLobbyPlayerController.h"
 #include "Styling/CoreStyle.h"
@@ -12,8 +13,10 @@
 #include "Widgets/Input/SComboBox.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/Layout/SConstraintCanvas.h"
 #include "Widgets/Layout/SWidgetSwitcher.h"
 #include "Widgets/SBoxPanel.h"
+#include "Widgets/SOverlay.h"
 #include "Widgets/Text/STextBlock.h"
 
 namespace
@@ -22,6 +25,9 @@ namespace
 	constexpr int32 ClosedOption = 1;
 	constexpr int32 FirstAIOption = 2;
 	constexpr int32 TypeOptionCount = FirstAIOption + 3;
+
+	constexpr float PreviewSize = 256.f;
+	constexpr float SpotMarkerSize = 22.f;
 
 	int32 GetTypeOption(const FRTSSeat& Seat)
 	{
@@ -67,6 +73,17 @@ FString SRTSLobbyWidget::GetMapLabel(int32 MapIndex)
 FString SRTSLobbyWidget::GetSpotLabel(int32 Spot)
 {
 	return Spot == INDEX_NONE ? TEXT("Random") : FString::Printf(TEXT("Base %d"), Spot + 1);
+}
+
+UTexture2D* SRTSLobbyWidget::GetMapPreview(int32 MapIndex)
+{
+	const URTSMapData* Map = ARTSLobbyGameState::LoadMap(MapIndex);
+	return Map ? Cast<UTexture2D>(Map->Preview.TryLoad()) : nullptr;
+}
+
+UTexture2D* SRTSLobbyWidget::GetShownPreview() const
+{
+	return Controller.IsValid() ? GetMapPreview(Controller->GetMapIndex()) : nullptr;
 }
 
 void SRTSLobbyWidget::Construct(const FArguments& InArgs)
@@ -131,7 +148,39 @@ void SRTSLobbyWidget::Construct(const FArguments& InArgs)
 			]
 			+ SVerticalBox::Slot().AutoHeight()
 			[
-				SAssignNew(Rows, SVerticalBox)
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top)
+				[
+					SAssignNew(Rows, SVerticalBox)
+				]
+				+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Top).Padding(24.f, 4.f, 0.f, 0.f)
+				[
+					SNew(SBox)
+					.WidthOverride(PreviewSize)
+					.HeightOverride(PreviewSize)
+					.Visibility_Lambda([this]() { return GetShownPreview() ? EVisibility::Visible : EVisibility::Collapsed; })
+					[
+						SNew(SOverlay)
+						+ SOverlay::Slot()
+						[
+							SNew(SImage).Image_Lambda([this]()
+							{
+								UTexture2D* Preview = GetShownPreview();
+								if (PreviewTexture.Get() != Preview)
+								{
+									PreviewTexture.Reset(Preview);
+									PreviewBrush.SetResourceObject(Preview);
+									PreviewBrush.ImageSize = FVector2D(PreviewSize);
+								}
+								return &PreviewBrush;
+							})
+						]
+						+ SOverlay::Slot()
+						[
+							SAssignNew(SpotMarkers, SConstraintCanvas)
+						]
+					]
+				]
 			]
 			+ SVerticalBox::Slot().AutoHeight().Padding(0.f, 16.f, 0.f, 0.f)
 			[
@@ -227,6 +276,54 @@ void SRTSLobbyWidget::Tick(const FGeometry& AllottedGeometry, const double InCur
 	{
 		RebuildRows(SeatCount);
 	}
+	const int32 MapIndex = Controller.IsValid() ? Controller->GetMapIndex() : INDEX_NONE;
+	if (MapIndex != BuiltMapIndex)
+	{
+		RebuildSpotMarkers(MapIndex);
+	}
+}
+
+void SRTSLobbyWidget::RebuildSpotMarkers(int32 MapIndex)
+{
+	BuiltMapIndex = MapIndex;
+	SpotMarkers->ClearChildren();
+	const URTSMapData* Map = ARTSLobbyGameState::LoadMap(MapIndex);
+	if (!Map)
+	{
+		return;
+	}
+	for (int32 Spot = 0; Spot < Map->StartSpotPositions.Num(); ++Spot)
+	{
+		const FVector2D Position = Map->StartSpotPositions[Spot];
+		SpotMarkers->AddSlot()
+		.Anchors(FAnchors(Position.X, Position.Y))
+		.Alignment(FVector2D(0.5f, 0.5f))
+		.Offset(FMargin(0.f, 0.f, SpotMarkerSize, SpotMarkerSize))
+		[
+			SNew(SBorder)
+			.BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
+			.BorderBackgroundColor_Lambda([this, Spot]() { return GetSpotColor(Spot); })
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
+			.Padding(0.f)
+			[
+				SNew(STextBlock).Font(GetFont(11)).Text(FText::AsNumber(Spot + 1))
+			]
+		];
+	}
+}
+
+FSlateColor SRTSLobbyWidget::GetSpotColor(int32 Spot) const
+{
+	const TConstArrayView<FRTSSeat> Seats = Controller.IsValid() ? Controller->GetSeats() : TConstArrayView<FRTSSeat>();
+	for (int32 Index = 0; Index < Seats.Num(); ++Index)
+	{
+		if (Seats[Index].StartSpot == Spot && RTSSkirmish::IsPlayed(Seats[Index]))
+		{
+			return ARTSUnit::GetTeamColor(Index);
+		}
+	}
+	return FLinearColor(0.35f, 0.35f, 0.35f);
 }
 
 void SRTSLobbyWidget::RebuildRows(int32 SeatCount)

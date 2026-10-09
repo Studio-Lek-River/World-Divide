@@ -1,7 +1,8 @@
 """Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters and superweapon included), AI build order and faction data assets, the placement ghost and shot effect materials, the
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the L_TestMap level with a supply
 source and two builders by each base, the L_Skirmish and L_SkirmishDuel levels, the same ground without the armies and
-with four and two start spots, where the lobby's seats play, the map data assets that offer them in the lobby, and the
+with four and two start spots, where the lobby's seats play, the map data assets that offer them in the lobby with a
+top-down preview of each, and the
 empty L_MainMenu and L_Lobby levels for the menu screens. L_TestMap and the skirmish maps are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
 source files that build them and are rebuilt only when those change.
@@ -19,8 +20,10 @@ import hashlib
 import inspect
 import math
 import os
+import struct
 import subprocess
 import sys
+import zlib
 
 import unreal
 
@@ -604,19 +607,117 @@ def build_skirmish_map(path, spot_count, builder, wall, crate, digest):
 
 
 def make_skirmish_map(path, spot_count, builder, wall, crate):
-    plan_rebuild(path, ".umap", lambda digest: build_skirmish_map(path, spot_count, builder, wall, crate, digest),
-                 spec_hash([build_skirmish_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units,
-                            spawn_supply_source], path, spot_count, SKIRMISH_SPOTS, CUBE, builder, wall, crate))
+    """Queues the level and then its preview; returns the preview texture's path."""
+    digest = spec_hash([build_skirmish_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units,
+                        spawn_supply_source], path, spot_count, SKIRMISH_SPOTS, CUBE, builder, wall, crate)
+    plan_rebuild(path, ".umap", lambda digest: build_skirmish_map(path, spot_count, builder, wall, crate, digest), digest)
+    return make_map_preview(path, digest)
+
+
+# The world XY rectangle the map previews cover, (min x, min y, max x, max y): the 200 x 200 m ground of the maps.
+PREVIEW_AREA = (-10000.0, -10000.0, 10000.0, 10000.0)
+PREVIEW_SIZE = 256
+PREVIEW_GROUND = (86, 98, 70)
+PREVIEW_OBSTACLE = (58, 58, 64)
+PREVIEW_SUPPLY = (214, 176, 62)
+
+
+def preview_position(x, y):
+    """Where world (x, y) is on a preview, from the left and from the top in 0..1, as URTSMapData::ToPreviewPosition:
+    world +X is up, world +Y is right."""
+    min_x, min_y, max_x, max_y = PREVIEW_AREA
+    return (y - min_y) / (max_y - min_y), (max_x - x) / (max_x - min_x)
+
+
+def write_png(file_name, size, pixels):
+    """An 8-bit RGB PNG of size x size pixels, pixels being the rows top to bottom as bytearrays."""
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+    raw = b"".join(b"\x00" + bytes(row) for row in pixels)
+    with open(file_name, "wb") as file:
+        file.write(b"\x89PNG\r\n\x1a\n")
+        file.write(chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0)))
+        file.write(chunk(b"IDAT", zlib.compress(raw, 9)))
+        file.write(chunk(b"IEND", b""))
+
+
+def build_map_preview(map_path, texture_path, digest):
+    """A top-down image of the saved level at map_path: the ground with its obstacles and supply sources, drawn from
+    their bounds. Setup runs without a renderer, so the level is drawn here rather than captured."""
+    if not levels.load_level(map_path):
+        raise RuntimeError(f"Could not load {map_path}")
+    pixels = [bytearray(PREVIEW_GROUND * PREVIEW_SIZE) for _ in range(PREVIEW_SIZE)]
+
+    def fill(actor, color):
+        origin, extent = actor.get_actor_bounds(False)
+        left, top = preview_position(origin.x + extent.x, origin.y - extent.y)
+        right, bottom = preview_position(origin.x - extent.x, origin.y + extent.y)
+        columns = range(max(0, int(left * PREVIEW_SIZE)), min(PREVIEW_SIZE, math.ceil(right * PREVIEW_SIZE)))
+        for row in range(max(0, int(top * PREVIEW_SIZE)), min(PREVIEW_SIZE, math.ceil(bottom * PREVIEW_SIZE))):
+            for column in columns:
+                pixels[row][column * 3:column * 3 + 3] = bytes(color)
+
+    # Sorted, so the image does not depend on the order the level lists its actors in.
+    for actor in sorted(actors.get_all_level_actors(), key=lambda actor: actor.get_actor_label()):
+        label = actor.get_actor_label()
+        if isinstance(actor, unreal.StaticMeshActor) and label.startswith(("Wall_", "Block_")):
+            fill(actor, PREVIEW_OBSTACLE)
+        elif isinstance(actor, unreal.RTSSupplySource):
+            fill(actor, PREVIEW_SUPPLY)
+
+    directory, name = texture_path.rsplit("/", 1)
+    source = os.path.join(PROJECT_DIR, "Saved", "Setup", "Previews", f"{name}.png")
+    os.makedirs(os.path.dirname(source), exist_ok=True)
+    write_png(source, PREVIEW_SIZE, pixels)
+
+    task = unreal.AssetImportTask()
+    task.filename = source
+    task.destination_path = directory
+    task.destination_name = name
+    task.automated = True
+    task.replace_existing = True
+    task.save = False
+    asset_tools.import_asset_tasks([task])
+    texture = unreal.load_asset(texture_path)
+    if not isinstance(texture, unreal.Texture2D):
+        raise RuntimeError(f"Could not import {source}")
+    # Shown as is in the lobby: no mips, no compression artefacts on the thin walls.
+    texture.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_UI)
+    texture.set_editor_property("mip_gen_settings", unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS)
+    texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_EDITOR_ICON)
+    assets.set_metadata_tag(texture, HASH_TAG, digest)
+    if not assets.save_loaded_asset(texture, only_if_is_dirty=False):
+        raise RuntimeError(f"Could not save {texture_path}")
+
+
+def map_preview_path(map_path):
+    return f"{MAP_DATA_DIR}/T_Preview_{map_path.rsplit('/', 1)[1]}"
+
+
+def make_map_preview(map_path, map_digest):
+    """Queued after the level, so it draws the level as just built; rebuilt whenever the level is."""
+    texture_path = map_preview_path(map_path)
+    plan_rebuild(texture_path, ".uasset", lambda digest: build_map_preview(map_path, texture_path, digest),
+                 spec_hash([build_map_preview, preview_position, write_png], map_digest, PREVIEW_AREA, PREVIEW_SIZE,
+                           PREVIEW_GROUND, PREVIEW_OBSTACLE, PREVIEW_SUPPLY))
+    return texture_path
 
 
 def make_map_data(name, display_name, path, start_spots, default_seats):
-    """default_seats: (seat type, start spot or -1 for random) pairs, at most one per start spot."""
+    """default_seats: (seat type, start spot or -1 for random) pairs, at most one per start spot. The start spot positions
+    come from SKIRMISH_SPOTS, which the level's PlayerStarts tagged Team<N> are placed by."""
+    min_x, min_y, max_x, max_y = PREVIEW_AREA
+    preview = map_preview_path(path)
     return plan_data_asset(name, MAP_DATA_DIR, unreal.RTSMapData, {
         "display_name": unreal.Text(display_name),
         "map": unreal.SoftObjectPath(f"{path}.{path.rsplit('/', 1)[1]}"),
         "start_spots": start_spots,
         "default_seats": [make_struct(unreal.RTSSeat, {"type": seat_type, "start_spot": spot})
                           for seat_type, spot in default_seats],
+        "preview": unreal.SoftObjectPath(f"{preview}.{preview.rsplit('/', 1)[1]}"),
+        "preview_area": make_struct(unreal.Box2D, {"min": unreal.Vector2D(min_x, min_y), "max": unreal.Vector2D(max_x, max_y),
+                                                   "is_valid": True}),
+        "start_spot_positions": [unreal.Vector2D(*preview_position(x, y)) for _, x, y, _ in SKIRMISH_SPOTS[:start_spots]],
     })
 
 

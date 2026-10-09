@@ -13,6 +13,7 @@
 #include "Menu/RTSLobbyGameState.h"
 #include "Menu/RTSLobbyPlayerController.h"
 #include "Menu/RTSMainMenuController.h"
+#include "Menu/SRTSLobbyWidget.h"
 #include "PlayInEditorDataTypes.h"
 #include "Player/RTSLocalPlayer.h"
 #include "Player/RTSPlayerController.h"
@@ -538,14 +539,21 @@ namespace RTSSkirmishSmokeTest
 		}
 		const TArray<FRTSSeat>& Seats = ServerState->GetSeats();
 		const TArray<FRTSSeat>& Seen = ClientState->GetSeats();
+		const TSharedPtr<SRTSLobbyWidget> ClientScreen = Client->GetWidget();
+		const UTexture2D* DuelPreview = SRTSLobbyWidget::GetMapPreview(DuelMapIndex);
+		const UTexture2D* ShownPreview = ClientScreen.IsValid() ? ClientScreen->GetShownPreview() : nullptr;
 		const bool bSeen = Seats.Num() == 2 && Seats[1].bReady && ClientState->GetMapIndex() == DuelMapIndex && Seen.Num() == 2
-			&& Seen[1].bReady;
+			&& Seen[1].bReady && ShownPreview && ShownPreview == DuelPreview;
 		if (!bSeen && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
 		{
 			return false;
 		}
 		Test->TestEqual(TEXT("The client could not change the map"), ServerState->GetMapIndex(), DuelMapIndex);
 		Test->TestEqual(TEXT("The client sees the duel map"), ClientState->GetMapIndex(), DuelMapIndex);
+		Test->TestNotNull(TEXT("The duel map has a preview"), DuelPreview);
+		Test->TestTrue(TEXT("Its preview is not the first map's"), DuelPreview != SRTSLobbyWidget::GetMapPreview(0));
+		Test->TestTrue(TEXT("The client has a lobby screen"), ClientScreen.IsValid());
+		Test->TestTrue(TEXT("Which shows the duel map's preview"), ShownPreview && ShownPreview == DuelPreview);
 		Test->TestEqual(TEXT("With one seat per start spot"), Seen.Num(), 2);
 		Test->TestTrue(TEXT("The client took the AI's seat"), Seen.Num() == 2 && Seen[1].Type == ERTSSeatType::Human
 			&& Seen[1].PlayerId == Client->GetOwnPlayerId());
