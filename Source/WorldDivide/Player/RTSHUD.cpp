@@ -37,6 +37,7 @@ namespace
 	const FLinearColor UnitAlertColor(1.f, 0.65f, 0.2f, 1.f);
 	const FLinearColor ResultDim(0.f, 0.f, 0.f, 0.45f);
 	const FLinearColor ResultBackdrop(0.05f, 0.05f, 0.05f, 0.9f);
+	const FLinearColor InGameMenuBorder(0.6f, 0.6f, 0.6f, 1.f);
 
 	constexpr float ConstructionBarWidth = 60.f;
 	constexpr float QueueEntryWidth = 180.f;
@@ -149,6 +150,10 @@ void ARTSHUD::DrawHUD()
 
 	RestartButton = FBox2D(ForceInit);
 	DrawMatchResult(*Controller);
+
+	ResumeButton = FBox2D(ForceInit);
+	LeaveButton = FBox2D(ForceInit);
+	DrawInGameMenu(*Controller);
 }
 
 void ARTSHUD::DrawSelectionBox(const FVector2D& Start, const FVector2D& End)
@@ -749,4 +754,66 @@ void ARTSHUD::DrawMatchResult(const ARTSPlayerController& Controller)
 bool ARTSHUD::IsOnRestartButton(const FVector2D& Point) const
 {
 	return RestartButton.bIsValid && RestartButton.IsInside(Point);
+}
+
+void ARTSHUD::DrawInGameMenu(const ARTSPlayerController& Controller)
+{
+	if (!Controller.IsInGameMenuOpen())
+	{
+		return;
+	}
+
+	const FString Title = TEXT("Menu");
+	const FString Labels[] = { TEXT("Resume"), TEXT("Leave match") };
+	UFont* Font = GEngine->GetLargeFont();
+	FVector2f TitleSize;
+	GetTextSize(Title, TitleSize.X, TitleSize.Y, Font);
+	// Both buttons as wide as the longer label.
+	FVector2f ButtonSize(0.f, 0.f);
+	for (const FString& Label : Labels)
+	{
+		FVector2f LabelSize;
+		GetTextSize(Label, LabelSize.X, LabelSize.Y);
+		ButtonSize.X = FMath::Max(ButtonSize.X, LabelSize.X + ButtonPadding * 4.f);
+		ButtonSize.Y = FMath::Max(ButtonSize.Y, LabelSize.Y + ButtonPadding * 2.f);
+	}
+
+	// Over everything, the result pop-up included: the screen dimmed, then a bordered panel with the title and the buttons.
+	DrawRect(ResultDim, 0.f, 0.f, Canvas->ClipX, Canvas->ClipY);
+	const FVector2D PanelSize(
+		FMath::Max(FMath::Max(TitleSize.X, ButtonSize.X) + ResultPanelPadding * 2.f, ResultPanelMinWidth),
+		ResultPanelPadding * 2.f + TitleSize.Y + MenuLineHeight + ButtonSize.Y * 2.f + MenuLineHeight * 0.5f);
+	const FVector2D Panel((Canvas->ClipX - PanelSize.X) * 0.5f, (Canvas->ClipY - PanelSize.Y) * 0.5f);
+	DrawRect(InGameMenuBorder, Panel.X - ResultBorder, Panel.Y - ResultBorder, PanelSize.X + ResultBorder * 2.f, PanelSize.Y + ResultBorder * 2.f);
+	DrawRect(ResultBackdrop, Panel.X, Panel.Y, PanelSize.X, PanelSize.Y);
+
+	const float CenterX = Panel.X + PanelSize.X * 0.5f;
+	float Y = Panel.Y + ResultPanelPadding;
+	DrawText(Title, MenuColor, CenterX - TitleSize.X * 0.5f, Y, Font);
+	Y += TitleSize.Y + MenuLineHeight;
+
+	FBox2D* Buttons[] = { &ResumeButton, &LeaveButton };
+	FVector2D Mouse;
+	const bool bHasMouse = Controller.GetMousePosition(Mouse.X, Mouse.Y);
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(Labels); ++Index)
+	{
+		const FVector2D Min(CenterX - ButtonSize.X * 0.5f, Y);
+		*Buttons[Index] = FBox2D(Min, Min + FVector2D(ButtonSize));
+		const bool bHovered = bHasMouse && Buttons[Index]->IsInside(Mouse);
+		FVector2f LabelSize;
+		GetTextSize(Labels[Index], LabelSize.X, LabelSize.Y);
+		DrawRect(bHovered ? ButtonHoverFill : ButtonFill, Min.X, Min.Y, ButtonSize.X, ButtonSize.Y);
+		DrawText(Labels[Index], MenuColor, CenterX - LabelSize.X * 0.5f, Min.Y + ButtonPadding);
+		Y += ButtonSize.Y + MenuLineHeight * 0.5f;
+	}
+}
+
+bool ARTSHUD::IsOnResumeButton(const FVector2D& Point) const
+{
+	return ResumeButton.bIsValid && ResumeButton.IsInside(Point);
+}
+
+bool ARTSHUD::IsOnLeaveButton(const FVector2D& Point) const
+{
+	return LeaveButton.bIsValid && LeaveButton.IsInside(Point);
 }

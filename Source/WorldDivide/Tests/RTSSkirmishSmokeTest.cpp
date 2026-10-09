@@ -6,12 +6,11 @@
 #include "Buildings/RTSBuilding.h"
 #include "Core/RTSGameInstance.h"
 #include "Core/RTSGameMode.h"
+#include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
-#include "Core/RTSSettings.h"
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
-#include "Kismet/GameplayStatics.h"
 #include "Menu/RTSLobbyGameMode.h"
 #include "Menu/RTSLobbyGameState.h"
 #include "Menu/RTSLobbyPlayerController.h"
@@ -41,8 +40,9 @@
  * starts the match. Both offer the test maps in the lobby (RTSTests::FRTSUseTestLobbyMaps), so it starts on L_Skirmish.
  * In L_Skirmish the host plays team 0 from spot 3, the AI team 1 from spot 1 at Hard, the client team 2 from spot 0 by its
  * token, and neither the closed team 3 nor spot 2, which nobody plays, has a building or a unit. The client's scoreboard
- * shows the host's name and "AI (Hard)". Then the host leaves the match and the client's main menu shows "The host left
- * the match". LobbyLeave: the client leaves the lobby and its main menu shows no message; the host
+ * shows the host's name and "AI (Hard)". Then the host leaves the match through ARTSPlayerController::LeaveMatch: its own
+ * main menu shows no message and the client's shows "The host left the match". SkirmishLeave: the same match, which the
+ * client leaves: it lands on the main menu without a message while the host's match runs on. LobbyLeave: the client leaves the lobby and its main menu shows no message; the host
  * fills every open seat with an AI and the client's join by address is refused, its main menu showing "The lobby is full";
  * the host opens a seat again, the client joins, and once the host leaves the client's main menu shows "The host closed
  * the lobby".
@@ -89,7 +89,8 @@ namespace RTSSkirmishSmokeTest
 		TWeakObjectPtr<UWorld> MatchClient;
 		TWeakObjectPtr<ARTSAIPlayer> AI;
 
-		/** Leaving the lobby. */
+		/** Leaving the lobby or the match. */
+		TWeakObjectPtr<UGameInstance> HostInstance;
 		TWeakObjectPtr<UGameInstance> ClientInstance;
 		TWeakObjectPtr<ARTSMainMenuController> ClientMenu;
 		FString JoinAddress;
@@ -729,19 +730,25 @@ namespace RTSSkirmishSmokeTest
 		return true;
 	}
 
-	/** The main menu controller of the client's game instance, once it plays L_MainMenu. */
-	ARTSMainMenuController* FindClientMenu(const FSessionState& State)
+	/** The main menu controller of Instance, once it plays L_MainMenu. */
+	ARTSMainMenuController* FindMenu(const UGameInstance* Instance)
 	{
 		for (const FWorldContext& Context : GEngine->GetWorldContexts())
 		{
 			UWorld* World = Context.World();
-			if (Context.WorldType == EWorldType::PIE && World && Context.OwningGameInstance == State.ClientInstance.Get()
+			if (Context.WorldType == EWorldType::PIE && World && Instance && Context.OwningGameInstance == Instance
 				&& World->GetMapName().EndsWith(MainMenuMapName))
 			{
 				return Cast<ARTSMainMenuController>(World->GetFirstPlayerController());
 			}
 		}
 		return nullptr;
+	}
+
+	/** The main menu controller of the client's game instance, once it plays L_MainMenu. */
+	ARTSMainMenuController* FindClientMenu(const FSessionState& State)
+	{
+		return FindMenu(State.ClientInstance.Get());
 	}
 
 	int32 CountHumans(const ARTSLobbyGameState* LobbyState)
@@ -927,37 +934,99 @@ namespace RTSSkirmishSmokeTest
 		return true;
 	}
 
-	/** The host leaves the running match for the main menu, which closes the listen server. */
+	/** The host opens the in-game menu and leaves the running match for the main menu, which closes the listen server. */
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSHostLeavesMatch, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
 	bool FRTSHostLeavesMatch::Update()
 	{
 		UWorld* ServerWorld = State->MatchServer.Get();
 		UWorld* ClientWorld = State->MatchClient.Get();
-		APlayerController* Host = ServerWorld ? ServerWorld->GetFirstPlayerController() : nullptr;
+		ARTSPlayerController* Host = ServerWorld ? Cast<ARTSPlayerController>(ServerWorld->GetFirstPlayerController()) : nullptr;
 		if (!Host || !ClientWorld)
 		{
 			Test->AddError(TEXT("Lost the match"));
 			return true;
 		}
+		State->HostInstance = ServerWorld->GetGameInstance();
 		State->ClientInstance = ClientWorld->GetGameInstance();
-		UGameplayStatics::OpenLevelBySoftObjectPtr(Host, GetDefault<URTSSettings>()->MainMenuMap);
+		Host->HandleEscape();
+		Test->TestTrue(TEXT("Esc opens the host's in-game menu"), Host->IsInGameMenuOpen());
+		Host->LeaveMatch();
 		State->PhaseStart = FPlatformTime::Seconds();
 		return true;
 	}
 
-	/** The client lost the match with its host, and its main menu tells it why. */
+	/** The host is on the main menu without a message; the client lost the match with it, and its main menu tells it why. */
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyHostLeftMatch, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
 	bool FRTSVerifyHostLeftMatch::Update()
 	{
+		const ARTSMainMenuController* HostMenu = FindMenu(State->HostInstance.Get());
 		const ARTSMainMenuController* Menu = FindClientMenu(*State);
-		const bool bDone = Menu && !Menu->GetMessage().IsEmpty();
+		const bool bDone = HostMenu && Menu && !Menu->GetMessage().IsEmpty();
+		if (!bDone && FPlatformTime::Seconds() - State->PhaseStart < SessionTimeout)
+		{
+			return false;
+		}
+		Test->TestNotNull(TEXT("The host is on the main menu"), HostMenu);
+		Test->TestTrue(TEXT("Which has nothing to tell a host that left on its own"), HostMenu && HostMenu->GetMessage().IsEmpty());
+		Test->TestTrue(TEXT("The host forgot its seat token"), HostMenu && GetToken(HostMenu).IsEmpty());
+		Test->TestNotNull(TEXT("The client is on the main menu"), Menu);
+		Test->TestEqual(TEXT("Which tells it the host left the match"), Menu ? Menu->GetMessage().ToString() : FString(),
+			FString(URTSGameInstance::HostLeftMatchMessage));
+		return true;
+	}
+
+	/** The client opens the in-game menu and leaves the running match. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSClientLeavesMatch, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSClientLeavesMatch::Update()
+	{
+		UWorld* ServerWorld = State->MatchServer.Get();
+		UWorld* ClientWorld = State->MatchClient.Get();
+		ARTSPlayerController* Client = ClientWorld ? Cast<ARTSPlayerController>(ClientWorld->GetFirstPlayerController()) : nullptr;
+		if (!ServerWorld || !Client)
+		{
+			Test->AddError(TEXT("Lost the match"));
+			return true;
+		}
+		State->ClientInstance = ClientWorld->GetGameInstance();
+		Client->HandleEscape();
+		Test->TestTrue(TEXT("Esc opens the client's in-game menu"), Client->IsInGameMenuOpen());
+		Client->LeaveMatch();
+		State->PhaseStart = FPlatformTime::Seconds();
+		State->PhaseWorldStart = ServerWorld->GetTimeSeconds();
+		return true;
+	}
+
+	/** The client is on the main menu without a message; the server dropped its controller and the host's match runs on. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientLeftMatch, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientLeftMatch::Update()
+	{
+		UWorld* ServerWorld = State->MatchServer.Get();
+		if (!ServerWorld)
+		{
+			Test->AddError(TEXT("The host lost its match when the client left"));
+			return true;
+		}
+		const ARTSMainMenuController* Menu = FindClientMenu(*State);
+		int32 Controllers = 0;
+		for (TActorIterator<ARTSPlayerController> It(ServerWorld); It; ++It)
+		{
+			Controllers += It->IsActorBeingDestroyed() ? 0 : 1;
+		}
+		// Some game seconds after the client left, so the match has had time to end if it were going to.
+		const bool bDone = Menu && Controllers == 1 && ServerWorld->GetTimeSeconds() - State->PhaseWorldStart > AIOrderGameSeconds;
 		if (!bDone && FPlatformTime::Seconds() - State->PhaseStart < SessionTimeout)
 		{
 			return false;
 		}
 		Test->TestNotNull(TEXT("The client is on the main menu"), Menu);
-		Test->TestEqual(TEXT("Which tells it the host left the match"), Menu ? Menu->GetMessage().ToString() : FString(),
-			FString(URTSGameInstance::HostLeftMatchMessage));
+		Test->TestTrue(TEXT("Which has nothing to tell a player that left on its own"), Menu && Menu->GetMessage().IsEmpty());
+		Test->TestTrue(TEXT("The client forgot its seat token"), Menu && GetToken(Menu).IsEmpty());
+		Test->TestEqual(TEXT("The server dropped the client's controller"), Controllers, 1);
+		const ARTSPlayerController* Host = Cast<ARTSPlayerController>(ServerWorld->GetFirstPlayerController());
+		Test->TestTrue(TEXT("The host still plays its team"), Host && Host->IsLocalController() && Host->GetTeamId() == HostTeam);
+		Test->TestTrue(TEXT("The host's world is still the match"), ServerWorld->GetMapName().EndsWith(SkirmishMapName)
+			&& ServerWorld->GetNetMode() == NM_ListenServer);
+		Test->TestFalse(TEXT("The match runs on"), ARTSGameState::IsMatchOver(*ServerWorld));
 		return true;
 	}
 
@@ -1012,6 +1081,28 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyFull(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSHostLeavesLobby(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyHostClosedLobby(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSUseTestLobbyMaps());
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSSkirmishLeaveSmokeTest, "WorldDivide.Smoke.SkirmishLeave", RTSTests::TestFlags)
+
+	bool FRTSSkirmishLeaveSmokeTest::RunTest(const FString& Parameters)
+	{
+		if (!AutomationOpenMap(LobbyMap))
+		{
+			AddError(FString::Printf(TEXT("Could not open %s"), LobbyMap));
+			return false;
+		}
+		const TSharedRef<FSessionState> State = MakeShared<FSessionState>();
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSStartLobbyPIE());
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForLobby(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSSetUpMatch(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSStartMatch(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForMatch(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientLeavesMatch(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientLeftMatch(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSUseTestLobbyMaps());
 		return true;

@@ -22,10 +22,12 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
+#include "Kismet/GameplayStatics.h"
 #include "Misc/App.h"
 #include "Player/RTSAlertSound.h"
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSHUD.h"
+#include "Player/RTSLocalPlayer.h"
 #include "Units/RTSUnit.h"
 #include "WorldDivide.h"
 
@@ -313,6 +315,41 @@ bool ARTSPlayerController::RequestRestart()
 	return GetWorld()->ServerTravel(GameMode ? GameMode->GetRestartURL() : TEXT("?Restart"));
 }
 
+void ARTSPlayerController::HandleEscape()
+{
+	if (PlacementData || bAttackMoveArmed || bSuperweaponTargeting)
+	{
+		CancelPlacement();
+		CancelAttackMove();
+		CancelSuperweaponTargeting();
+		return;
+	}
+	SetInGameMenuOpen(!bInGameMenuOpen);
+}
+
+void ARTSPlayerController::SetInGameMenuOpen(bool bOpen)
+{
+	if (bOpen)
+	{
+		CancelPlacement();
+		CancelAttackMove();
+		CancelSuperweaponTargeting();
+		bSelecting = false;
+	}
+	bInGameMenuOpen = bOpen;
+}
+
+void ARTSPlayerController::LeaveMatch()
+{
+	bInGameMenuOpen = false;
+	if (URTSLocalPlayer* LocalPlayer = Cast<URTSLocalPlayer>(GetLocalPlayer()))
+	{
+		LocalPlayer->SetSeatToken(FString());
+	}
+	// Opening a map without "listen" also closes a hosted match; its clients lose the connection and return to the menu.
+	UGameplayStatics::OpenLevelBySoftObjectPtr(this, GetDefault<URTSSettings>()->MainMenuMap);
+}
+
 bool ARTSPlayerController::IsOwnUnit(const ARTSUnit* Unit) const
 {
 	return Unit && Unit->GetTeamId() == GetTeamId();
@@ -377,7 +414,7 @@ void ARTSPlayerController::ApplyEdgeScroll() const
 	FVector2D Mouse;
 	int32 ViewportX = 0;
 	int32 ViewportY = 0;
-	if (!CameraPawn || bRotateDragging || !GetMousePosition(Mouse.X, Mouse.Y))
+	if (!CameraPawn || bRotateDragging || bInGameMenuOpen || !GetMousePosition(Mouse.X, Mouse.Y))
 	{
 		return;
 	}
@@ -414,6 +451,24 @@ void ARTSPlayerController::ApplyEdgeScroll() const
 
 void ARTSPlayerController::OnSelectStarted()
 {
+	if (bInGameMenuOpen)
+	{
+		// The menu takes every click; only its buttons do anything.
+		FVector2D Mouse;
+		const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
+		if (RTSHUD && GetMousePosition(Mouse.X, Mouse.Y))
+		{
+			if (RTSHUD->IsOnResumeButton(Mouse))
+			{
+				SetInGameMenuOpen(false);
+			}
+			else if (RTSHUD->IsOnLeaveButton(Mouse))
+			{
+				LeaveMatch();
+			}
+		}
+		return;
+	}
 	if (PlacementData)
 	{
 		ConfirmPlacement();
@@ -567,6 +622,10 @@ void ARTSPlayerController::SelectInBox(const FVector2D& Start, const FVector2D& 
 
 void ARTSPlayerController::OnMoveOrder()
 {
+	if (bInGameMenuOpen)
+	{
+		return;
+	}
 	if (PlacementData)
 	{
 		CancelPlacement();
@@ -627,6 +686,10 @@ void ARTSPlayerController::OnMoveOrder()
 
 void ARTSPlayerController::OnStopOrder()
 {
+	if (bInGameMenuOpen)
+	{
+		return;
+	}
 	FRTSCommand Command;
 	Command.Type = ERTSCommandType::Stop;
 	IssueToSelection(Command);
@@ -639,7 +702,7 @@ void ARTSPlayerController::OnAttackMoveKey()
 
 bool ARTSPlayerController::BeginAttackMove()
 {
-	if (SelectedUnits.IsEmpty())
+	if (SelectedUnits.IsEmpty() || bInGameMenuOpen)
 	{
 		return false;
 	}
@@ -687,7 +750,7 @@ bool ARTSPlayerController::RequestLaunchSuperweapon(ARTSBuilding* Building, cons
 
 bool ARTSPlayerController::BeginSuperweaponTargeting()
 {
-	if (!CanRequestLaunch(GetSelectedSuperweapon()))
+	if (bInGameMenuOpen || !CanRequestLaunch(GetSelectedSuperweapon()))
 	{
 		return false;
 	}
@@ -857,6 +920,10 @@ bool ARTSPlayerController::RequestRallyPoint(ARTSBuilding* Building, const FVect
 
 void ARTSPlayerController::OnBuildHotkey(int32 Index)
 {
+	if (bInGameMenuOpen)
+	{
+		return;
+	}
 	// A selected superweapon has one entry: launch.
 	if (GetSelectedSuperweapon())
 	{
@@ -885,13 +952,15 @@ void ARTSPlayerController::OnBuildHotkey(int32 Index)
 
 void ARTSPlayerController::OnCancel()
 {
-	CancelPlacement();
-	CancelAttackMove();
-	CancelSuperweaponTargeting();
+	HandleEscape();
 }
 
 void ARTSPlayerController::OnCancelConstruction()
 {
+	if (bInGameMenuOpen)
+	{
+		return;
+	}
 	ARTSBuilding* Hovered = GetBuildingUnderCursor();
 	if (RequestCancelConstruction(CanCancelConstruction(Hovered) ? Hovered : GetSelectedBuilding()))
 	{
@@ -912,7 +981,7 @@ void ARTSPlayerController::BeginPlacement(URTSBuildingData* Data)
 {
 	CancelPlacement();
 	CancelAttackMove();
-	if (!Data || GetMissingPrerequisite(*Data) || IsAtBuildLimit(*Data))
+	if (!Data || bInGameMenuOpen || GetMissingPrerequisite(*Data) || IsAtBuildLimit(*Data))
 	{
 		return;
 	}
@@ -1176,5 +1245,9 @@ bool ARTSPlayerController::JumpToLatestAttack()
 
 void ARTSPlayerController::OnJumpToAttack()
 {
+	if (bInGameMenuOpen)
+	{
+		return;
+	}
 	JumpToLatestAttack();
 }

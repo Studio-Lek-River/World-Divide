@@ -52,6 +52,8 @@ enum class ERTSSuperweaponAlert : uint8
  * at the clicked spot, right click, Esc or a change of selection cancels it.
  * Space centres the camera on the latest attack warning, for up to AttackJumpMaxAge seconds after it.
  * Once the match is over the HUD shows Victory or Defeat, and on the host a restart button.
+ * Esc with nothing to cancel opens the in-game menu: Resume, or Leave match for the main menu. While it is open the
+ * match runs on, the camera keys still work and every other input is ignored.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSPlayerController : public APlayerController
@@ -185,6 +187,19 @@ public:
 
 	/** Restarts the match on the same map, taking any clients along; false, changing nothing, when CanRestart refuses. */
 	bool RequestRestart();
+
+	/** Local. What Esc does: cancels placement, attack-move or superweapon targeting while one is armed, else opens or closes the in-game menu. */
+	void HandleEscape();
+
+	/** Local. Opening the in-game menu cancels placement, attack-move and superweapon targeting; nothing new can be armed while it is open. */
+	void SetInGameMenuOpen(bool bOpen);
+	bool IsInGameMenuOpen() const { return bInGameMenuOpen; }
+
+	/**
+	 * Local. Forgets the seat token and opens the main menu. A client's match runs on without it; the host's closes, and its
+	 * clients land on the main menu with "The host left the match".
+	 */
+	void LeaveMatch();
 
 	/**
 	 * The only way orders reach the server. Every order is refused once the match is over. Units not owned by this player's team are ignored.
@@ -363,6 +378,9 @@ private:
 
 	/** Set by 1 or the HUD's launch entry with a ready superweapon selected, until the next left click launches it or it is cancelled. */
 	bool bSuperweaponTargeting = false;
+
+	/** Set by Esc with nothing to cancel, until Esc again or the menu's Resume. */
+	bool bInGameMenuOpen = false;
 
 	struct FSentAttackAlert
 	{

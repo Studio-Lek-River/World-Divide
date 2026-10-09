@@ -17,7 +17,8 @@ enum class ERTSMatchResult : uint8;
  * queue and rally point of a selected production building, a hint while attack-move is armed, a warning when an own
  * building or unit is attacked, every superweapon's countdown, the launch entry of a selected own superweapon and a hint
  * while targeting it, the target of a strike on its way, a warning when a superweapon is built or ready, and once the match is over
- * a pop-up with Victory or Defeat and, on the host, a restart button in place of the menus, without any UI assets.
+ * a pop-up with Victory or Defeat and, on the host, a restart button in place of the menus, and over everything the in-game
+ * menu with Resume and Leave match while it is open, without any UI assets.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSHUD : public AHUD
@@ -32,6 +33,12 @@ public:
 
 	/** Point, in viewport pixels, lies on the restart button drawn last frame. */
 	bool IsOnRestartButton(const FVector2D& Point) const;
+
+	/** Point, in viewport pixels, lies on the in-game menu's Resume button drawn last frame. */
+	bool IsOnResumeButton(const FVector2D& Point) const;
+
+	/** Point, in viewport pixels, lies on the in-game menu's Leave match button drawn last frame. */
+	bool IsOnLeaveButton(const FVector2D& Point) const;
 
 	/** Point, in viewport pixels, lies on the selected superweapon's launch entry drawn last frame. */
 	bool IsOnLaunchButton(const FVector2D& Point) const;
@@ -113,6 +120,9 @@ private:
 	 */
 	void DrawMatchResult(const ARTSPlayerController& Controller);
 
+	/** While the in-game menu is open: the screen dimmed and a pop-up in the middle with Resume and Leave match. */
+	void DrawInGameMenu(const ARTSPlayerController& Controller);
+
 	/** Green to red over a dark backdrop; Top is the bar's upper edge. */
 	void DrawHealthBar(float Left, float Top, float Width, float HealthFraction);
 
@@ -121,6 +131,10 @@ private:
 
 	/** Invalid while no restart button is shown. */
 	FBox2D RestartButton = FBox2D(ForceInit);
+
+	/** Invalid while the in-game menu is closed. */
+	FBox2D ResumeButton = FBox2D(ForceInit);
+	FBox2D LeaveButton = FBox2D(ForceInit);
 
 	/** Invalid while no superweapon is selected. */
 	FBox2D LaunchButton = FBox2D(ForceInit);

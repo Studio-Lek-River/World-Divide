@@ -2786,6 +2786,85 @@ bool FRTSVerifyPlacedFactoryCompletes::Update()
 	return true;
 }
 
+/**
+ * Esc cancels an armed placement or attack-move before it opens the in-game menu; while the menu is open nothing can be
+ * armed, opening it disarms attack-move, and Esc closes it again.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckInGameMenu, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSCheckInGameMenu::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	URTSBuildingData* Barracks = LoadObject<URTSBuildingData>(nullptr, BarracksPath);
+	TArray<ARTSUnit*> Own;
+	for (TActorIterator<ARTSUnit> It(World); It; ++It)
+	{
+		if (It->GetTeamId() == Controller->GetTeamId())
+		{
+			Own.Add(*It);
+		}
+	}
+	if (!Player || !Barracks || Own.IsEmpty())
+	{
+		Test->AddError(TEXT("Missing the player state, the test barracks or the player's units"));
+		return true;
+	}
+	Player->AddCredits(Barracks->Cost);
+	const bool bWasDebugBuild = SetDebugBuild(true);
+
+	Test->TestFalse(TEXT("The menu starts closed"), Controller->IsInGameMenuOpen());
+	Controller->BeginPlacement(Barracks);
+	Test->TestTrue(TEXT("The barracks can be placed"), Controller->GetPlacementData() == Barracks);
+	Controller->HandleEscape();
+	Test->TestNull(TEXT("Esc cancels the placement"), Controller->GetPlacementData());
+	Test->TestFalse(TEXT("Without opening the menu"), Controller->IsInGameMenuOpen());
+
+	Controller->SelectUnits(Own);
+	Test->TestTrue(TEXT("Attack-move arms"), Controller->BeginAttackMove());
+	Controller->HandleEscape();
+	Test->TestFalse(TEXT("Esc disarms attack-move"), Controller->IsAttackMoveArmed());
+	Test->TestFalse(TEXT("Without opening the menu"), Controller->IsInGameMenuOpen());
+
+	Controller->HandleEscape();
+	Test->TestTrue(TEXT("Esc with nothing armed opens the menu"), Controller->IsInGameMenuOpen());
+	Controller->BeginPlacement(Barracks);
+	Test->TestNull(TEXT("No placement starts while it is open"), Controller->GetPlacementData());
+	Test->TestFalse(TEXT("Nor does attack-move"), Controller->BeginAttackMove());
+	Controller->HandleEscape();
+	Test->TestFalse(TEXT("Esc closes the menu"), Controller->IsInGameMenuOpen());
+
+	Test->TestTrue(TEXT("Attack-move arms again"), Controller->BeginAttackMove());
+	Controller->SetInGameMenuOpen(true);
+	Test->TestFalse(TEXT("Opening the menu disarms attack-move"), Controller->IsAttackMoveArmed());
+	Controller->SetInGameMenuOpen(false);
+	SetDebugBuild(bWasDebugBuild);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSInGameMenuSmokeTest, "WorldDivide.Smoke.InGameMenu",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSInGameMenuSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckInGameMenu(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTestMapSmokeTest, "WorldDivide.Smoke.TestMap",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
