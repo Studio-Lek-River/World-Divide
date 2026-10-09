@@ -1,5 +1,6 @@
 #include "Buildings/RTSBuilding.h"
 
+#include "AI/RTSAIPlayer.h"
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
@@ -127,6 +128,7 @@ void ARTSBuilding::BeginPlay()
 void ARTSBuilding::HandleDamaged(float Amount, AActor* DamageInstigator)
 {
 	ARTSPlayerController::NotifyTeamAttacked(*this, TeamId, DamageInstigator, ERTSAttackAlert::Base);
+	ARTSAIPlayer::NotifyBuildingDamaged(*this, DamageInstigator);
 }
 
 void ARTSBuilding::HandleDeath(AActor* Killer)

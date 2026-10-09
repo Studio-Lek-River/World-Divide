@@ -297,6 +297,16 @@ namespace RTSAITests
 			RTSAI::FindThreat({ FVector(0.f, 500.f, 5000.f) }, Buildings, Radius), 0);
 		TestEqual(TEXT("Without buildings there is nothing to defend"),
 			RTSAI::FindThreat({ FVector(0.f, 0.f, 0.f) }, {}, Radius), INDEX_NONE);
+
+		const TArray<FVector> Far = { FVector(-1500.f, 0.f, 0.f), FVector(6000.f, 0.f, 0.f) };
+		TestEqual(TEXT("A recent attacker out of reach is a threat"), RTSAI::FindThreat(Far, Buildings, Radius, { false, true }), 1);
+		TestEqual(TEXT("Unflagged, it is not"), RTSAI::FindThreat(Far, Buildings, Radius, { false, false }), INDEX_NONE);
+		TestEqual(TEXT("An enemy in the base comes before a far attacker"),
+			RTSAI::FindThreat({ FVector(9000.f, 0.f, 0.f), FVector(2500.f, 0.f, 0.f) }, Buildings, Radius, { true, false }), 1);
+		TestEqual(TEXT("Of two attackers, the one nearer a building"),
+			RTSAI::FindThreat({ FVector(9000.f, 0.f, 0.f), FVector(-4000.f, 0.f, 0.f) }, Buildings, Radius, { true, true }), 1);
+		TestEqual(TEXT("An attacker with no building left is nothing to defend"),
+			RTSAI::FindThreat({ FVector(9000.f, 0.f, 0.f) }, {}, Radius, { true }), INDEX_NONE);
 		return true;
 	}
 
@@ -368,6 +378,53 @@ namespace RTSAITests
 		AI->Think(1.f);
 		TestEqual(TEXT("Back in the army, the four tanks fill the next wave"), AI->GetWaveCount(), 2);
 		TestEqual(TEXT("Joining the tank still out"), AI->GetWaveUnits().Num(), 5);
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIDefendOutOfRangeTest, "WorldDivide.AI.DefendOutOfRange", TestFlags)
+
+	bool FRTSAIDefendOutOfRangeTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		TestWorld.SpawnGameState();
+		URTSUnitData* Tank = MakeUnit(700, MakeWeapon());
+
+		ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
+		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-6000.f, 0.f, 0.f));
+		ARTSBuilding* Base = SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(3000.f, 0.f, 0.f));
+		// Well outside DefenseRadius of the AI's only building.
+		ARTSUnit* Shooter = TestWorld.SpawnUnit(Tank, PlayerTeam, FVector(-500.f, 0.f, 0.f));
+		ARTSUnit* Friend = TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 300.f, 0.f));
+
+		// Waves out of reach, so only the defence moves the army.
+		FRTSAIWaveSettings Settings;
+		Settings.Size = 10;
+		Settings.MinSize = 10;
+		Settings.Interval = 1000.f;
+		AI->SetWaveSettings(Settings);
+
+		AI->Think(1.f);
+		TestFalse(TEXT("An enemy out of range that has not fired is no threat"), AI->IsDefending());
+
+		Base->GetHealthComponent()->ApplyDamage(10.f, nullptr);
+		Base->GetHealthComponent()->ApplyDamage(10.f, Friend);
+		AI->Think(1.f);
+		TestFalse(TEXT("Damage without an enemy instigator is no threat"), AI->IsDefending());
+
+		Base->GetHealthComponent()->ApplyDamage(10.f, Shooter);
+		const int32 IssuedBefore = AI->GetIssuedCommandCount();
+		AI->Think(1.f);
+		TestTrue(TEXT("An enemy firing on a building from out of range puts the AI on the defence"), AI->IsDefending());
+		TestEqual(TEXT("Against the shooter"), AI->GetThreat(), Shooter);
+		TestEqual(TEXT("The idle army defends"), AI->GetDefenders().Num(), 2);
+		TestEqual(TEXT("In one attack-move order"), AI->GetIssuedCommandCount(), IssuedBefore + 1);
+
+		AI->Think(ARTSAIPlayer::AttackerMemory - 2.f);
+		TestTrue(TEXT("The attacker is remembered for a while"), AI->IsDefending());
+		AI->Think(2.f);
+		TestFalse(TEXT("Without a new hit it is forgotten"), AI->IsDefending());
+		TestNull(TEXT("And no longer a threat"), AI->GetThreat());
 		return true;
 	}
 

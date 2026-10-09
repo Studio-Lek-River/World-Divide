@@ -108,16 +108,19 @@ namespace RTSAI
 		return ArmySize >= Settings.Size || (SecondsSinceLastWave >= Settings.Interval && ArmySize >= Settings.MinSize);
 	}
 
-	int32 FindThreat(TConstArrayView<FVector> Enemies, TConstArrayView<FVector> Buildings, float Radius)
+	int32 FindThreat(TConstArrayView<FVector> Enemies, TConstArrayView<FVector> Buildings, float Radius, TConstArrayView<bool> Attacked)
 	{
 		int32 Threat = INDEX_NONE;
-		float ThreatDistance = FMath::Square(Radius);
+		float ThreatDistance = TNumericLimits<float>::Max();
 		for (int32 Index = 0; Index < Enemies.Num(); ++Index)
 		{
+			// A recent attacker is a threat at any distance; the rest only within Radius.
+			const bool bAttacked = Attacked.IsValidIndex(Index) && Attacked[Index];
+			const float Reach = bAttacked ? TNumericLimits<float>::Max() : FMath::Square(Radius);
 			for (const FVector& Building : Buildings)
 			{
 				const float Distance = FVector::DistSquared2D(Enemies[Index], Building);
-				if (Distance <= ThreatDistance && (Threat == INDEX_NONE || Distance < ThreatDistance))
+				if (Distance <= Reach && Distance < ThreatDistance)
 				{
 					Threat = Index;
 					ThreatDistance = Distance;
@@ -170,6 +173,23 @@ void ARTSAIPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
+void ARTSAIPlayer::NotifyBuildingDamaged(const ARTSBuilding& Building, AActor* DamageInstigator)
+{
+	ARTSUnit* Attacker = Cast<ARTSUnit>(DamageInstigator);
+	if (!Attacker || Attacker->GetTeamId() == Building.GetTeamId())
+	{
+		return;
+	}
+	for (TActorIterator<ARTSAIPlayer> It(Building.GetWorld()); It; ++It)
+	{
+		const ARTSPlayerState* Player = It->GetRTSPlayerState();
+		if (Player && Player->GetTeamId() == Building.GetTeamId())
+		{
+			It->Attackers.Add(Attacker, 0.f);
+		}
+	}
+}
+
 void ARTSAIPlayer::ThinkOnTimer()
 {
 	Think(ThinkInterval);
@@ -191,7 +211,7 @@ void ARTSAIPlayer::Think(float DeltaSeconds)
 	{
 		SetRallyPoints(*BuildOrder);
 	}
-	DefendBase();
+	DefendBase(DeltaSeconds);
 	UpdateWaves(DeltaSeconds);
 }
 
@@ -591,9 +611,18 @@ void ARTSAIPlayer::UpdateWaves(float DeltaSeconds)
 		GetRTSPlayerState()->GetTeamId(), Waves, Army.Num(), *Target->GetName());
 }
 
-void ARTSAIPlayer::DefendBase()
+void ARTSAIPlayer::DefendBase(float DeltaSeconds)
 {
 	const int32 TeamId = GetRTSPlayerState()->GetTeamId();
+	for (auto It = Attackers.CreateIterator(); It; ++It)
+	{
+		It->Value += DeltaSeconds;
+		if (!IsStanding(It->Key.Get()) || It->Value > AttackerMemory)
+		{
+			It.RemoveCurrent();
+		}
+	}
+
 	TArray<FVector> Buildings;
 	for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
 	{
@@ -602,18 +631,23 @@ void ARTSAIPlayer::DefendBase()
 			Buildings.Add(It->GetActorLocation());
 		}
 	}
+	TArray<ARTSUnit*> EnemyUnits;
 	TArray<FVector> Enemies;
+	TArray<bool> Attacked;
 	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
 	{
 		if (It->GetTeamId() != TeamId && IsStanding(*It))
 		{
+			EnemyUnits.Add(*It);
 			Enemies.Add(It->GetActorLocation());
+			Attacked.Add(Attackers.Contains(*It));
 		}
 	}
 	Defenders.RemoveAll([](const TWeakObjectPtr<ARTSUnit>& Unit) { return !IsStanding(Unit.Get()); });
 
-	const int32 Threat = RTSAI::FindThreat(Enemies, Buildings, DefenseRadius);
-	bDefending = Threat != INDEX_NONE;
+	const int32 ThreatIndex = RTSAI::FindThreat(Enemies, Buildings, DefenseRadius, Attacked);
+	bDefending = ThreatIndex != INDEX_NONE;
+	Threat = bDefending ? EnemyUnits[ThreatIndex] : nullptr;
 	if (!bDefending)
 	{
 		// Each defender goes back to the gather point once its own fight is over.
@@ -670,7 +704,7 @@ void ARTSAIPlayer::DefendBase()
 	{
 		FRTSCommand AttackMove;
 		AttackMove.Type = ERTSCommandType::AttackMove;
-		AttackMove.TargetLocation = Enemies[Threat];
+		AttackMove.TargetLocation = Enemies[ThreatIndex];
 		Issue(Ordered, AttackMove);
 	}
 }
