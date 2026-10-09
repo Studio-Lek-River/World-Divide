@@ -21,6 +21,7 @@
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
+#include "Tests/RTSTestMaps.h"
 #include "Units/RTSUnit.h"
 
 /**
@@ -34,7 +35,7 @@
  * own pick of map is refused, and the match URL names the duel map. Last, the client's removal of the host is refused, the
  * host removes the client, whose seat opens again, and the client lands on the main menu with the reason. SkirmishSeats: the host
  * moves itself to spot 3, makes the AI Hard and closes the last seat, the client picks spot 0 and readies up, and the host
- * starts the match.
+ * starts the match. Both offer the test maps in the lobby (RTSTests::FRTSUseTestLobbyMaps), so it starts on L_Skirmish.
  * In L_Skirmish the host plays team 0 from spot 3, the AI team 1 from spot 1 at Hard, the client team 2 from spot 0 by its
  * token, and neither the closed team 3 nor spot 2, which nobody plays, has a building or a unit. The client's scoreboard
  * shows the host's name and "AI (Hard)".
@@ -44,8 +45,9 @@ namespace RTSSkirmishSmokeTest
 	const TCHAR* LobbyMap = TEXT("/Game/Maps/L_Lobby");
 	const TCHAR* MainMenuMapName = TEXT("L_MainMenu");
 	const TCHAR* SkirmishMapName = TEXT("L_Skirmish");
-	/** L_SkirmishDuel's index in URTSSettings::SkirmishMaps: two start spots. */
-	constexpr int32 DuelMapIndex = 1;
+	/** The data assets of L_Skirmish, where the lobby starts, and of L_SkirmishDuel, with two start spots. */
+	const TCHAR* SkirmishMapAsset = TEXT("DA_MapSkirmish");
+	const TCHAR* DuelMapAsset = TEXT("DA_MapDuel");
 	constexpr int32 HostTeam = 0;
 	constexpr int32 AITeam = 1;
 	constexpr int32 ClientTeam = 2;
@@ -580,11 +582,13 @@ namespace RTSSkirmishSmokeTest
 			Test->AddError(TEXT("Lost the lobby"));
 			return true;
 		}
+		const int32 DuelMapIndex = RTSTests::FindMapIndex(DuelMapAsset);
+		Test->TestEqual(TEXT("The lobby starts on L_Skirmish"), ServerState->GetMapIndex(), RTSTests::FindMapIndex(SkirmishMapAsset));
 		// The host's call runs at once on the server.
 		Host->Server_SetMap(DuelMapIndex);
 		Test->TestEqual(TEXT("The host picks the duel map"), ServerState->GetMapIndex(), DuelMapIndex);
 		// Reliable calls arrive in order: once the server has the client ready, it has refused the client's map.
-		Client->Server_SetMap(0);
+		Client->Server_SetMap(RTSTests::FindMapIndex(SkirmishMapAsset));
 		Client->Server_SetReady(true);
 		State->PhaseStart = FPlatformTime::Seconds();
 		return true;
@@ -602,6 +606,7 @@ namespace RTSSkirmishSmokeTest
 			Test->AddError(TEXT("Lost the lobby"));
 			return true;
 		}
+		const int32 DuelMapIndex = RTSTests::FindMapIndex(DuelMapAsset);
 		const TArray<FRTSSeat>& Seats = ServerState->GetSeats();
 		const TArray<FRTSSeat>& Seen = ClientState->GetSeats();
 		const TSharedPtr<SRTSLobbyWidget> ClientScreen = Client->GetWidget();
@@ -616,7 +621,7 @@ namespace RTSSkirmishSmokeTest
 		Test->TestEqual(TEXT("The client could not change the map"), ServerState->GetMapIndex(), DuelMapIndex);
 		Test->TestEqual(TEXT("The client sees the duel map"), ClientState->GetMapIndex(), DuelMapIndex);
 		Test->TestNotNull(TEXT("The duel map has a preview"), DuelPreview);
-		Test->TestTrue(TEXT("Its preview is not the first map's"), DuelPreview != SRTSLobbyWidget::GetMapPreview(0));
+		Test->TestTrue(TEXT("Its preview is not the first map's"), DuelPreview != SRTSLobbyWidget::GetMapPreview(RTSTests::FindMapIndex(SkirmishMapAsset)));
 		Test->TestTrue(TEXT("The client has a lobby screen"), ClientScreen.IsValid());
 		Test->TestTrue(TEXT("Which shows the duel map's preview"), ShownPreview && ShownPreview == DuelPreview);
 		Test->TestEqual(TEXT("With one seat per start spot"), Seen.Num(), 2);
@@ -723,6 +728,7 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyRemoveClient(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyRemoved(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSUseTestLobbyMaps());
 		return true;
 	}
 
@@ -745,6 +751,7 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAIPlays(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientScoreboard(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSUseTestLobbyMaps());
 		return true;
 	}
 }

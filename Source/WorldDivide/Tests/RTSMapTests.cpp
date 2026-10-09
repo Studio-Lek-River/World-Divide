@@ -8,6 +8,7 @@
 #include "Misc/AutomationTest.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "Tests/RTSTestFlags.h"
+#include "Tests/RTSTestMaps.h"
 #include "UObject/Package.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -34,7 +35,7 @@ namespace
 }
 
 /**
- * L_TestMap and every map the lobby offers are saved with their navmesh built, so a map the editor did not start with,
+ * L_TestMap, every map the lobby offers and the test maps are saved with their navmesh built, so a map the editor did not start with,
  * or one loaded in a packaged build, has a full navmesh from its first frame.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSSavedNavMeshTest, "WorldDivide.Maps.SavedNavMesh", TestFlags)
@@ -42,7 +43,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSSavedNavMeshTest, "WorldDivide.Maps.SavedNa
 bool FRTSSavedNavMeshTest::RunTest(const FString& Parameters)
 {
 	TArray<FString> MapPaths = { TEXT("/Game/Maps/L_TestMap") };
-	for (const TSoftObjectPtr<URTSMapData>& MapPtr : GetDefault<URTSSettings>()->SkirmishMaps)
+	for (const TSoftObjectPtr<URTSMapData>& MapPtr : RTSTests::GetCheckedMaps())
 	{
 		const URTSMapData* Map = MapPtr.LoadSynchronous();
 		if (TestNotNull(FString::Printf(TEXT("%s loads"), *MapPtr.ToString()), Map))
@@ -73,15 +74,14 @@ bool FRTSSavedNavMeshTest::RunTest(const FString& Parameters)
 }
 
 /**
- * Every lobby map holds a preview and, for each PlayerStart tagged Team<N> in its level, the start spot's position on the
+ * Every lobby map and test map holds a preview and, for each PlayerStart tagged Team<N> in its level, the start spot's position on the
  * preview at index N.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMapStartSpotPositionsTest, "WorldDivide.Maps.StartSpotPositions", TestFlags)
 
 bool FRTSMapStartSpotPositionsTest::RunTest(const FString& Parameters)
 {
-	const TArray<TSoftObjectPtr<URTSMapData>>& Maps = GetDefault<URTSSettings>()->SkirmishMaps;
-	TestTrue(TEXT("The lobby offers maps"), Maps.Num() > 0);
+	const TArray<TSoftObjectPtr<URTSMapData>> Maps = RTSTests::GetCheckedMaps();
 	for (const TSoftObjectPtr<URTSMapData>& MapPtr : Maps)
 	{
 		const URTSMapData* Map = MapPtr.LoadSynchronous();
@@ -129,8 +129,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMapPreviewCameraTest, "WorldDivide.Maps.Pre
 
 bool FRTSMapPreviewCameraTest::RunTest(const FString& Parameters)
 {
-	const TArray<TSoftObjectPtr<URTSMapData>>& Maps = GetDefault<URTSSettings>()->SkirmishMaps;
-	TestTrue(TEXT("The lobby offers maps"), Maps.Num() > 0);
+	const TArray<TSoftObjectPtr<URTSMapData>> Maps = RTSTests::GetCheckedMaps();
 	for (const TSoftObjectPtr<URTSMapData>& MapPtr : Maps)
 	{
 		const URTSMapData* Map = MapPtr.LoadSynchronous();
@@ -168,6 +167,24 @@ bool FRTSMapPreviewCameraTest::RunTest(const FString& Parameters)
 			TestTrue(FString::Printf(TEXT("%s: Team%d is at %s on the rendered preview, its marker at %s"), *Name, Start.Key,
 				*OnImage.ToString(), *Marker.ToString()), OnImage.Equals(Marker, 0.001));
 		}
+	}
+	return true;
+}
+
+/** The lobby offers only real maps, and starts on one of them: none of the test maps is among them. */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLobbyMapsTest, "WorldDivide.Maps.LobbyMaps", TestFlags)
+
+bool FRTSLobbyMapsTest::RunTest(const FString& Parameters)
+{
+	const TArray<TSoftObjectPtr<URTSMapData>>& Maps = GetDefault<URTSSettings>()->SkirmishMaps;
+	if (!TestTrue(TEXT("The lobby offers maps"), Maps.Num() > 0))
+	{
+		return true;
+	}
+	TestNotNull(FString::Printf(TEXT("The first, %s, loads"), *Maps[0].ToString()), Maps[0].LoadSynchronous());
+	for (const TSoftObjectPtr<URTSMapData>& TestMap : RTSTests::GetTestSkirmishMaps())
+	{
+		TestFalse(FString::Printf(TEXT("The lobby does not offer %s"), *TestMap.GetAssetName()), Maps.Contains(TestMap));
 	}
 	return true;
 }

@@ -4,7 +4,6 @@
 
 #include "Buildings/RTSBuilding.h"
 #include "Core/RTSPlayerState.h"
-#include "Core/RTSSettings.h"
 #include "Core/RTSSkirmishGameMode.h"
 #include "Data/RTSFactionData.h"
 #include "Data/RTSMapData.h"
@@ -16,11 +15,12 @@
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
+#include "Tests/RTSTestMaps.h"
 #include "Tests/RTSTestPIE.h"
 
 /**
- * Every map the lobby offers, played with all its start spots taken: the player from spot 0 and an AI from each other
- * spot. PIE starts the map with its default seats and travels to it again with these, as the lobby's start and the
+ * Every map the lobby offers and every test map, played with all its start spots taken: the player from spot 0 and an AI
+ * from each other spot. PIE starts the map with its default seats and travels to it again with these, as the lobby's start and the
  * restart do. The map loads with the skirmish game mode, each start spot has its PlayerStart tagged Team<N>, and every team
  * gets its headquarters, completed, on its own spot. The player's camera pans to every corner of the ground, and no
  * further than a small margin past it.
@@ -219,7 +219,7 @@ IMPLEMENT_COMPLEX_AUTOMATION_TEST(FRTSMapSmokeTest, "WorldDivide.Smoke.Maps", RT
 
 void FRTSMapSmokeTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands) const
 {
-	for (const TSoftObjectPtr<URTSMapData>& Map : GetDefault<URTSSettings>()->SkirmishMaps)
+	for (const TSoftObjectPtr<URTSMapData>& Map : RTSTests::GetCheckedMaps())
 	{
 		OutBeautifiedNames.Add(Map.GetAssetName());
 		OutTestCommands.Add(Map.ToSoftObjectPath().ToString());
