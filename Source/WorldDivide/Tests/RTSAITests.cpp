@@ -416,7 +416,7 @@ namespace RTSAITests
 		const int32 IssuedBefore = AI->GetIssuedCommandCount();
 		AI->Think(1.f);
 		TestTrue(TEXT("An enemy firing on a building from out of range puts the AI on the defence"), AI->IsDefending());
-		TestEqual(TEXT("Against the shooter"), AI->GetThreat(), Shooter);
+		TestEqual(TEXT("Against the shooter"), AI->GetThreat(), static_cast<AActor*>(Shooter));
 		TestEqual(TEXT("The idle army defends"), AI->GetDefenders().Num(), 2);
 		TestEqual(TEXT("In one attack-move order"), AI->GetIssuedCommandCount(), IssuedBefore + 1);
 
@@ -425,6 +425,50 @@ namespace RTSAITests
 		AI->Think(2.f);
 		TestFalse(TEXT("Without a new hit it is forgotten"), AI->IsDefending());
 		TestNull(TEXT("And no longer a threat"), AI->GetThreat());
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIDefendAgainstBuildingTest, "WorldDivide.AI.DefendAgainstBuilding", TestFlags)
+
+	bool FRTSAIDefendAgainstBuildingTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		TestWorld.SpawnGameState();
+		URTSUnitData* Tank = MakeUnit(700, MakeWeapon());
+		URTSBuildingData* Defence = MakeBuilding();
+		Defence->Weapon = MakeWeapon();
+
+		ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
+		// Keeps the match going once the tower falls.
+		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-6000.f, 0.f, 0.f));
+		ARTSBuilding* Base = SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(3000.f, 0.f, 0.f));
+		// Well outside DefenseRadius of the AI's only building.
+		ARTSBuilding* Tower = SpawnCompleted(TestWorld, Defence, PlayerTeam, FVector(-500.f, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 300.f, 0.f));
+
+		// Waves out of reach, so only the defence moves the army.
+		FRTSAIWaveSettings Settings;
+		Settings.Size = 10;
+		Settings.MinSize = 10;
+		Settings.Interval = 1000.f;
+		AI->SetWaveSettings(Settings);
+
+		AI->Think(1.f);
+		TestFalse(TEXT("An enemy building that has not fired is no threat"), AI->IsDefending());
+
+		Base->GetHealthComponent()->ApplyDamage(10.f, Tower);
+		const int32 IssuedBefore = AI->GetIssuedCommandCount();
+		AI->Think(1.f);
+		TestTrue(TEXT("An enemy building firing on the base puts the AI on the defence"), AI->IsDefending());
+		TestEqual(TEXT("Against the building"), AI->GetThreat(), static_cast<AActor*>(Tower));
+		TestEqual(TEXT("The idle army defends"), AI->GetDefenders().Num(), 2);
+		TestEqual(TEXT("In one attack-move order"), AI->GetIssuedCommandCount(), IssuedBefore + 1);
+
+		Kill(*Tower);
+		AI->Think(1.f);
+		TestFalse(TEXT("With the building destroyed the defence ends"), AI->IsDefending());
+		TestNull(TEXT("And it is no longer a threat"), AI->GetThreat());
 		return true;
 	}
 

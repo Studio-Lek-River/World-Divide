@@ -5,6 +5,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
+#include "Combat/RTSTargetable.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
@@ -50,6 +51,12 @@ namespace
 	bool IsStanding(const ARTSUnit* Unit)
 	{
 		return Unit && IsStanding(Unit, Unit->GetHealthComponent());
+	}
+
+	bool IsStanding(const AActor* Actor)
+	{
+		const IRTSTargetable* Targetable = Cast<IRTSTargetable>(Actor);
+		return Targetable && IsStanding(Actor, Targetable->GetHealthComponent());
 	}
 
 	/** Two footprints, given by centre and half size, are at least Gap apart along X or along Y. */
@@ -175,7 +182,7 @@ void ARTSAIPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ARTSAIPlayer::NotifyBuildingDamaged(const ARTSBuilding& Building, AActor* DamageInstigator)
 {
-	ARTSUnit* Attacker = Cast<ARTSUnit>(DamageInstigator);
+	const IRTSTargetable* Attacker = Cast<IRTSTargetable>(DamageInstigator);
 	if (!Attacker || Attacker->GetTeamId() == Building.GetTeamId())
 	{
 		return;
@@ -185,7 +192,7 @@ void ARTSAIPlayer::NotifyBuildingDamaged(const ARTSBuilding& Building, AActor* D
 		const ARTSPlayerState* Player = It->GetRTSPlayerState();
 		if (Player && Player->GetTeamId() == Building.GetTeamId())
 		{
-			It->Attackers.Add(Attacker, 0.f);
+			It->Attackers.Add(DamageInstigator, 0.f);
 		}
 	}
 }
@@ -631,23 +638,33 @@ void ARTSAIPlayer::DefendBase(float DeltaSeconds)
 			Buildings.Add(It->GetActorLocation());
 		}
 	}
-	TArray<ARTSUnit*> EnemyUnits;
+	TArray<AActor*> EnemyActors;
 	TArray<FVector> Enemies;
 	TArray<bool> Attacked;
 	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
 	{
 		if (It->GetTeamId() != TeamId && IsStanding(*It))
 		{
-			EnemyUnits.Add(*It);
+			EnemyActors.Add(*It);
 			Enemies.Add(It->GetActorLocation());
 			Attacked.Add(Attackers.Contains(*It));
+		}
+	}
+	// An enemy building is only a threat once it has fired on the base, such as a defence in range of it.
+	for (const TPair<TWeakObjectPtr<AActor>, float>& Attacker : Attackers)
+	{
+		if (ARTSBuilding* Building = Cast<ARTSBuilding>(Attacker.Key.Get()))
+		{
+			EnemyActors.Add(Building);
+			Enemies.Add(Building->GetActorLocation());
+			Attacked.Add(true);
 		}
 	}
 	Defenders.RemoveAll([](const TWeakObjectPtr<ARTSUnit>& Unit) { return !IsStanding(Unit.Get()); });
 
 	const int32 ThreatIndex = RTSAI::FindThreat(Enemies, Buildings, DefenseRadius, Attacked);
 	bDefending = ThreatIndex != INDEX_NONE;
-	Threat = bDefending ? EnemyUnits[ThreatIndex] : nullptr;
+	Threat = bDefending ? EnemyActors[ThreatIndex] : nullptr;
 	if (!bDefending)
 	{
 		// Each defender goes back to the gather point once its own fight is over.

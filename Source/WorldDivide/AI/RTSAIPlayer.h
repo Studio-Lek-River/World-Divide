@@ -37,8 +37,8 @@ namespace RTSAI
  * game mode sets up like a player's. Every ThinkInterval it follows its faction's URTSAIBuildOrderData: idle builders place
  * the next building near its headquarters, production buildings queue the next unit or upgrade, idle harvesters go back to
  * work and the army gathers ahead of the base until a wave goes at the nearest enemy building, unless an enemy unit comes
- * near its buildings or fires on them from further out: then the army, and wave units still near the base, fight it off
- * first. Its orders take the same path as a player's (RTSCommands::Issue), paid from its own credits, and it sees what every
+ * near its buildings, or an enemy unit or building fires on them from further out: then the army, and wave units still near
+ * the base, fight it off first. Its orders take the same path as a player's (RTSCommands::Issue), paid from its own credits, and it sees what every
  * player sees.
  */
 UCLASS()
@@ -61,10 +61,10 @@ public:
 	/** How close to one of the AI's buildings an enemy unit comes before the army turns on it, in cm. */
 	static constexpr float DefenseRadius = 2500.f;
 
-	/** How long an enemy unit that hit one of the AI's buildings stays a threat wherever it is, in seconds. */
+	/** How long an enemy unit or building that hit one of the AI's buildings stays a threat wherever it is, in seconds. */
 	static constexpr float AttackerMemory = 10.f;
 
-	/** Server only. Building was hit: every AI on its team remembers DamageInstigator if it is an enemy unit. */
+	/** Server only. Building was hit: every AI on its team remembers DamageInstigator if it is an enemy unit or building. */
 	static void NotifyBuildingDamaged(const ARTSBuilding& Building, AActor* DamageInstigator);
 
 	void SetDifficulty(ERTSAIDifficulty InDifficulty) { Difficulty = InDifficulty; }
@@ -102,11 +102,14 @@ public:
 	/** Units sent in a wave that are still alive. */
 	TArray<ARTSUnit*> GetWaveUnits() const;
 
-	/** An enemy unit is within DefenseRadius of the AI's buildings, or hit one within the last AttackerMemory seconds. */
+	/**
+	 * An enemy unit is within DefenseRadius of the AI's buildings, or an enemy unit or building hit one within the last
+	 * AttackerMemory seconds.
+	 */
 	bool IsDefending() const { return bDefending; }
 
-	/** The enemy unit the army is sent at while defending, or null. */
-	ARTSUnit* GetThreat() const { return Threat.Get(); }
+	/** The enemy unit or building the army is sent at while defending, or null. */
+	AActor* GetThreat() const { return Threat.Get(); }
 
 	/** Units pulled in to fight an enemy in the base that are still alive. */
 	TArray<ARTSUnit*> GetDefenders() const;
@@ -157,8 +160,9 @@ private:
 	void UpdateWaves(float DeltaSeconds);
 
 	/**
-	 * Sends the army, and wave units still near the base, at the enemy unit nearest the AI's buildings while one is within
-	 * DefenseRadius or a recent attacker, and back to the gather point once none is left. Attackers age by DeltaSeconds.
+	 * Sends the army, and wave units still near the base, at the enemy nearest the AI's buildings while an enemy unit is
+	 * within DefenseRadius or an enemy unit or building is a recent attacker, and back to the gather point once none is left.
+	 * Attackers age by DeltaSeconds.
 	 */
 	void DefendBase(float DeltaSeconds);
 
@@ -200,10 +204,10 @@ private:
 
 	TArray<TWeakObjectPtr<ARTSUnit>> Defenders;
 
-	/** Enemy units that hit an own building, with the seconds since their last hit. */
-	TMap<TWeakObjectPtr<ARTSUnit>, float> Attackers;
+	/** Enemy units and buildings that hit an own building, with the seconds since their last hit. */
+	TMap<TWeakObjectPtr<AActor>, float> Attackers;
 
-	TWeakObjectPtr<ARTSUnit> Threat;
+	TWeakObjectPtr<AActor> Threat;
 
 	bool bDefending = false;
 
