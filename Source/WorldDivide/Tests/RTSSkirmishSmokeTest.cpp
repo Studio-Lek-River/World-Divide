@@ -669,7 +669,9 @@ namespace RTSSkirmishSmokeTest
 	{
 		const ARTSLobbyGameState* ServerState = GetLobbyState(State->LobbyServer);
 		ARTSLobbyPlayerController* Host = State->Host.Get();
-		if (!ServerState || !Host || ServerState->GetSeats().Num() != 2)
+		ARTSLobbyPlayerController* Client = State->Client.Get();
+		const UWorld* ClientWorld = State->LobbyClient.Get();
+		if (!ServerState || !Host || !Client || !ClientWorld || ServerState->GetSeats().Num() != 2)
 		{
 			Test->AddError(TEXT("Lost the lobby"));
 			return true;
@@ -683,12 +685,15 @@ namespace RTSSkirmishSmokeTest
 		Test->TestTrue(TEXT("The client could not remove the host"), Seats[0].Type == ERTSSeatType::Human
 			&& Seats[0].PlayerId == Host->GetOwnPlayerId());
 
+		// The address the client joined the PIE server by, to try again once removed.
+		State->ClientInstance = Client->GetGameInstance();
+		State->JoinAddress = FString::Printf(TEXT("%s:%d"), *ClientWorld->URL.Host, ClientWorld->URL.Port);
 		Host->Server_RemovePlayer(1);
 		State->PhaseStart = FPlatformTime::Seconds();
 		return true;
 	}
 
-	/** The client's seat is open again and the client is on the main menu, which tells it why. */
+	/** The client's seat is open again and the client is on the main menu, which tells it why; then it tries to join again. */
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyRemoved, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
 	bool FRTSVerifyRemoved::Update()
 	{
@@ -701,7 +706,7 @@ namespace RTSSkirmishSmokeTest
 		}
 		const TArray<FRTSSeat>& Seats = ServerState->GetSeats();
 		UWorld* MenuWorld = FindPIEWorld(NM_Standalone, MainMenuMapName);
-		const ARTSMainMenuController* Menu = MenuWorld ? Cast<ARTSMainMenuController>(MenuWorld->GetFirstPlayerController()) : nullptr;
+		ARTSMainMenuController* Menu = MenuWorld ? Cast<ARTSMainMenuController>(MenuWorld->GetFirstPlayerController()) : nullptr;
 		const bool bDone = Seats[1].Type == ERTSSeatType::Open && Menu && !Menu->GetMessage().IsEmpty();
 		if (!bDone && FPlatformTime::Seconds() - State->PhaseStart < SessionTimeout)
 		{
@@ -712,6 +717,12 @@ namespace RTSSkirmishSmokeTest
 		Test->TestTrue(TEXT("The host keeps its seat"), Seats[0].Type == ERTSSeatType::Human && Seats[0].PlayerId == Host->GetOwnPlayerId());
 		Test->TestNotNull(TEXT("The client is on the main menu"), Menu);
 		Test->TestEqual(TEXT("Which tells it why"), Menu ? Menu->GetMessage().ToString() : FString(), FString(TEXT("Removed by the host")));
+		if (Menu)
+		{
+			State->ClientMenu = Menu;
+			Menu->JoinGame(State->JoinAddress);
+			State->PhaseStart = FPlatformTime::Seconds();
+		}
 		return true;
 	}
 
@@ -738,6 +749,36 @@ namespace RTSSkirmishSmokeTest
 			Result += Seat.Type == ERTSSeatType::Human ? 1 : 0;
 		}
 		return Result;
+	}
+
+	/** The lobby refuses the removed client, which lands on a new main menu that tells it why, and its seat stays open. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyRemovedRefused, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyRemovedRefused::Update()
+	{
+		const ARTSLobbyGameState* ServerState = GetLobbyState(State->LobbyServer);
+		const ARTSMainMenuController* Menu = FindClientMenu(*State);
+		if (!ServerState || ServerState->GetSeats().Num() != 2)
+		{
+			Test->AddError(TEXT("Lost the lobby"));
+			return true;
+		}
+		const bool bDone = Menu && Menu != State->ClientMenu.Get() && !Menu->GetMessage().IsEmpty();
+		if (!bDone && FPlatformTime::Seconds() - State->PhaseStart < SessionTimeout)
+		{
+			return false;
+		}
+		if (!bDone)
+		{
+			Test->AddError(TEXT("The removed client is not back on the main menu with a message"));
+			return true;
+		}
+		const TArray<FRTSSeat>& Seats = ServerState->GetSeats();
+		Test->TestEqual(TEXT("The main menu tells the removed client why it cannot join again"), Menu->GetMessage().ToString(),
+			FString(TEXT("Removed by the host")));
+		Test->TestEqual(TEXT("Its seat stays open"), Seats[1].Type, ERTSSeatType::Open);
+		Test->TestEqual(TEXT("With nobody in it"), Seats[1].PlayerId, int32(INDEX_NONE));
+		Test->TestEqual(TEXT("The host is the only human"), CountHumans(ServerState), 1);
+		return true;
 	}
 
 	/** The client leaves the lobby on its own. */
@@ -892,6 +933,9 @@ namespace RTSSkirmishSmokeTest
 			AddError(FString::Printf(TEXT("Could not open %s"), LobbyMap));
 			return false;
 		}
+		// The refused join is a network failure, which the engine logs as errors and warnings.
+		AddExpectedError(TEXT("BroadcastNetworkFailure"), EAutomationExpectedErrorFlags::Contains, 0);
+		AddExpectedError(TEXT("Network Failure:"), EAutomationExpectedErrorFlags::Contains, 0);
 		const TSharedRef<FSessionState> State = MakeShared<FSessionState>();
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSStartLobbyPIE());
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForLobby(this, State));
@@ -905,6 +949,7 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyRemoveHost(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyRemoveClient(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyRemoved(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyRemovedRefused(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSUseTestLobbyMaps());
 		return true;

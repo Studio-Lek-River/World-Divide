@@ -1,6 +1,7 @@
 #include "Menu/RTSLobbyGameMode.h"
 
 #include "Data/RTSMapData.h"
+#include "Engine/NetConnection.h"
 #include "GameFramework/GameSession.h"
 #include "GameFramework/PlayerState.h"
 #include "Menu/RTSLobbyGameState.h"
@@ -40,6 +41,11 @@ void ARTSLobbyGameMode::InitGameState()
 void ARTSLobbyGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
 	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
+	const bool bRemoved = (UniqueId.IsValid() && RemovedIds.Contains(UniqueId)) || RemovedAddresses.Contains(Address);
+	if (ErrorMessage.IsEmpty() && bRemoved)
+	{
+		ErrorMessage = TEXT("Removed by the host");
+	}
 	const bool bAnyOpen = GetLobbyState()->GetSeats().ContainsByPredicate(
 		[](const FRTSSeat& Seat) { return Seat.Type == ERTSSeatType::Open; });
 	if (ErrorMessage.IsEmpty() && !bAnyOpen)
@@ -133,6 +139,15 @@ bool ARTSLobbyGameMode::RemovePlayer(const APlayerController& Requester, int32 I
 		if (RemovedPlayer && RemovedPlayer->GetPlayerId() == PlayerId)
 		{
 			UE_LOG(LogWorldDivide, Log, TEXT("The host removes %s from seat %d"), *RemovedPlayer->GetPlayerName(), Index);
+			// Keeps it out until the lobby closes: by its net id, or by its address when it has none.
+			if (RemovedPlayer->GetUniqueId().IsValid())
+			{
+				RemovedIds.Add(RemovedPlayer->GetUniqueId());
+			}
+			else if (UNetConnection* Connection = Removed->GetNetConnection())
+			{
+				RemovedAddresses.Add(Connection->LowLevelGetRemoteAddress());
+			}
 			// Destroys the controller, whose logout opens the seat; the player returns to the main menu.
 			return GameSession->KickPlayer(Removed, FText::FromString(TEXT("Removed by the host")));
 		}
