@@ -1,3 +1,4 @@
+#include "Core/RTSEditorScripting.h"
 #include "Core/RTSSettings.h"
 #include "Data/RTSMapData.h"
 #include "Engine/Level.h"
@@ -14,6 +15,22 @@
 namespace
 {
 	using RTSTests::TestFlags;
+
+	/** The Team<N> PlayerStarts of a level by N. */
+	TMap<int32, FVector> FindStartSpots(const UWorld& World)
+	{
+		TMap<int32, FVector> Starts;
+		for (const AActor* Actor : World.PersistentLevel->Actors)
+		{
+			const APlayerStart* Start = Cast<APlayerStart>(Actor);
+			const FString Tag = Start ? Start->PlayerStartTag.ToString() : FString();
+			if (Tag.StartsWith(TEXT("Team")))
+			{
+				Starts.Add(FCString::Atoi(*Tag.Mid(4)), Start->GetActorLocation());
+			}
+		}
+		return Starts;
+	}
 }
 
 /**
@@ -73,16 +90,7 @@ bool FRTSMapStartSpotPositionsTest::RunTest(const FString& Parameters)
 			continue;
 		}
 
-		TMap<int32, FVector> Starts;
-		for (const AActor* Actor : World->PersistentLevel->Actors)
-		{
-			const APlayerStart* Start = Cast<APlayerStart>(Actor);
-			const FString Tag = Start ? Start->PlayerStartTag.ToString() : FString();
-			if (Tag.StartsWith(TEXT("Team")))
-			{
-				Starts.Add(FCString::Atoi(*Tag.Mid(4)), Start->GetActorLocation());
-			}
-		}
+		const TMap<int32, FVector> Starts = FindStartSpots(*World);
 		TestEqual(FString::Printf(TEXT("%s: a PlayerStart per start spot"), *Name), Starts.Num(), Map->StartSpots);
 		TestEqual(FString::Printf(TEXT("%s: a position per start spot"), *Name), Map->StartSpotPositions.Num(), Map->StartSpots);
 		for (const TPair<int32, FVector>& Start : Starts)
@@ -98,6 +106,58 @@ bool FRTSMapStartSpotPositionsTest::RunTest(const FString& Parameters)
 				*Position.ToString()), Position.Equals(Expected, 0.001));
 			TestTrue(FString::Printf(TEXT("%s: Team%d is on the preview"), *Name, Start.Key),
 				Position.X >= 0.0 && Position.X <= 1.0 && Position.Y >= 0.0 && Position.Y <= 1.0);
+		}
+	}
+	return true;
+}
+
+/**
+ * The camera that renders a map's preview sees each start spot where the lobby puts its marker: projected the way a scene
+ * capture projects (view axes swapped to x right, y up, orthographic over OrthoWidth), every Team<N> PlayerStart lands on
+ * StartSpotPositions[N].
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMapPreviewCameraTest, "WorldDivide.Maps.PreviewCameraAlignment", TestFlags)
+
+bool FRTSMapPreviewCameraTest::RunTest(const FString& Parameters)
+{
+	const TArray<TSoftObjectPtr<URTSMapData>>& Maps = GetDefault<URTSSettings>()->SkirmishMaps;
+	TestTrue(TEXT("The lobby offers maps"), Maps.Num() > 0);
+	for (const TSoftObjectPtr<URTSMapData>& MapPtr : Maps)
+	{
+		const URTSMapData* Map = MapPtr.LoadSynchronous();
+		if (!TestNotNull(FString::Printf(TEXT("%s loads"), *MapPtr.ToString()), Map))
+		{
+			continue;
+		}
+		const FString Name = Map->GetName();
+		UPackage* Package = LoadPackage(nullptr, *Map->Map.GetLongPackageName(), LOAD_None);
+		const UWorld* World = Package ? UWorld::FindWorldInPackage(Package) : nullptr;
+		if (!TestNotNull(FString::Printf(TEXT("%s: its level loads"), *Name), World) || !World->PersistentLevel)
+		{
+			continue;
+		}
+
+		FVector Location;
+		FRotator Rotation;
+		double OrthoWidth;
+		URTSEditorScripting::GetPreviewCamera(Map->PreviewArea, Location, Rotation, OrthoWidth);
+		const FMatrix View = FTranslationMatrix(-Location) * FInverseRotationMatrix(Rotation)
+			* FMatrix(FPlane(0, 0, 1, 0), FPlane(1, 0, 0, 0), FPlane(0, 1, 0, 0), FPlane(0, 0, 0, 1));
+
+		const TMap<int32, FVector> Starts = FindStartSpots(*World);
+		TestTrue(FString::Printf(TEXT("%s has start spots"), *Name), Starts.Num() > 0);
+		for (const TPair<int32, FVector>& Start : Starts)
+		{
+			if (!Map->StartSpotPositions.IsValidIndex(Start.Key))
+			{
+				continue;
+			}
+			const FVector InView = View.TransformPosition(Start.Value);
+			TestTrue(FString::Printf(TEXT("%s: Team%d is in front of the camera"), *Name, Start.Key), InView.Z > 0.0);
+			const FVector2D OnImage(0.5 + InView.X / OrthoWidth, 0.5 - InView.Y / OrthoWidth);
+			const FVector2D Marker = Map->StartSpotPositions[Start.Key];
+			TestTrue(FString::Printf(TEXT("%s: Team%d is at %s on the rendered preview, its marker at %s"), *Name, Start.Key,
+				*OnImage.ToString(), *Marker.ToString()), OnImage.Equals(Marker, 0.001));
 		}
 	}
 	return true;

@@ -7,10 +7,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task b
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Commands
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -TimeDilation 1
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup -Render
 
 The engine is taken from $env:UE_ROOT, falling back to G:\Program Files\Epic Games\UE_5.6.
 Exits nonzero on any failure: 2 when the editor is running (build), 3 when setup must rewrite read-only LFS assets.
 The PIE smoke tests run TimeDilation game seconds per real second (default 4); -TimeDilation 1 runs them at real time.
+Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
 #>
 param(
 	[Parameter(Mandatory = $true)]
@@ -19,7 +21,9 @@ param(
 
 	[string]$Filter = 'WorldDivide',
 
-	[double]$TimeDilation = 4
+	[double]$TimeDilation = 4,
+
+	[switch]$Render
 )
 
 $ErrorActionPreference = 'Stop'
@@ -60,7 +64,8 @@ function Invoke-Setup {
 	$ReadOnlyReport = Join-Path $RepoRoot 'Saved\Setup\ReadOnlyAssets.txt'
 	if (Test-Path $ReadOnlyReport) { Remove-Item -Force $ReadOnlyReport }
 
-	& $EditorCmd $Project -run=pythonscript "-script=$Script" -unattended -nosplash -nullrhi -nosound -stdout -FullStdOutLogOutput
+	$RenderArgs = if ($Render) { @('-AllowCommandletRendering', '-RenderOffscreen') } else { @('-nullrhi') }
+	& $EditorCmd $Project -run=pythonscript "-script=$Script" -unattended -nosplash @RenderArgs -nosound -stdout -FullStdOutLogOutput
 	if (Test-Path $ReadOnlyReport) {
 		$Files = @(Get-Content $ReadOnlyReport | Where-Object { $_ })
 		Write-Host ''

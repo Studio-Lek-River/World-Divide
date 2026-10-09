@@ -17,4 +17,24 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
 	static int32 BuildNavigation(UObject* WorldContextObject);
+
+	/**
+	 * Whether this process has a renderer, so CapturePreview can work: false under -nullrhi and in a commandlet run
+	 * without -AllowCommandletRendering.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
+	static bool CanRender();
+
+	/**
+	 * Where the camera of a map preview sits over Area and how wide it sees, looking straight down with world +X up and
+	 * world +Y right on the image, as URTSMapData::ToPreviewPosition. Area must be square.
+	 */
+	static void GetPreviewCamera(const FBox2D& Area, FVector& OutLocation, FRotator& OutRotation, double& OutOrthoWidth);
+
+	/**
+	 * Renders WorldContextObject's world top-down over Area into a Size x Size PNG at FileName, through the camera of
+	 * GetPreviewCamera. Returns false when there is no renderer or the image could not be written.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static bool CapturePreview(UObject* WorldContextObject, FBox2D Area, int32 Size, const FString& FileName);
 };
