@@ -4,6 +4,7 @@
 
 #include "AI/RTSAIPlayer.h"
 #include "Buildings/RTSBuilding.h"
+#include "Core/RTSGameInstance.h"
 #include "Core/RTSGameMode.h"
 #include "Core/RTSPlayerState.h"
 #include "Editor.h"
@@ -38,7 +39,10 @@
  * starts the match. Both offer the test maps in the lobby (RTSTests::FRTSUseTestLobbyMaps), so it starts on L_Skirmish.
  * In L_Skirmish the host plays team 0 from spot 3, the AI team 1 from spot 1 at Hard, the client team 2 from spot 0 by its
  * token, and neither the closed team 3 nor spot 2, which nobody plays, has a building or a unit. The client's scoreboard
- * shows the host's name and "AI (Hard)".
+ * shows the host's name and "AI (Hard)". LobbyLeave: the client leaves the lobby and its main menu shows no message; the host
+ * fills every open seat with an AI and the client's join by address is refused, its main menu showing "The lobby is full";
+ * the host opens a seat again, the client joins, and once the host leaves the client's main menu shows "The host closed
+ * the lobby".
  */
 namespace RTSSkirmishSmokeTest
 {
@@ -81,6 +85,12 @@ namespace RTSSkirmishSmokeTest
 		TWeakObjectPtr<UWorld> MatchServer;
 		TWeakObjectPtr<UWorld> MatchClient;
 		TWeakObjectPtr<ARTSAIPlayer> AI;
+
+		/** Leaving the lobby. */
+		TWeakObjectPtr<UGameInstance> ClientInstance;
+		TWeakObjectPtr<ARTSMainMenuController> ClientMenu;
+		FString JoinAddress;
+		TArray<int32> FilledSeats;
 	};
 
 	/** The PIE world of NetMode, on the map named MapName when one is given. */
@@ -705,6 +715,174 @@ namespace RTSSkirmishSmokeTest
 		return true;
 	}
 
+	/** The main menu controller of the client's game instance, once it plays L_MainMenu. */
+	ARTSMainMenuController* FindClientMenu(const FSessionState& State)
+	{
+		for (const FWorldContext& Context : GEngine->GetWorldContexts())
+		{
+			UWorld* World = Context.World();
+			if (Context.WorldType == EWorldType::PIE && World && Context.OwningGameInstance == State.ClientInstance.Get()
+				&& World->GetMapName().EndsWith(MainMenuMapName))
+			{
+				return Cast<ARTSMainMenuController>(World->GetFirstPlayerController());
+			}
+		}
+		return nullptr;
+	}
+
+	int32 CountHumans(const ARTSLobbyGameState* LobbyState)
+	{
+		int32 Result = 0;
+		for (const FRTSSeat& Seat : LobbyState ? LobbyState->GetSeats() : TArray<FRTSSeat>())
+		{
+			Result += Seat.Type == ERTSSeatType::Human ? 1 : 0;
+		}
+		return Result;
+	}
+
+	/** The client leaves the lobby on its own. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSClientLeavesLobby, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSClientLeavesLobby::Update()
+	{
+		ARTSLobbyPlayerController* Client = State->Client.Get();
+		const UWorld* ClientWorld = State->LobbyClient.Get();
+		if (!Client || !ClientWorld)
+		{
+			Test->AddError(TEXT("Lost the lobby"));
+			return true;
+		}
+		// The address the client joined the PIE server by.
+		State->ClientInstance = Client->GetGameInstance();
+		State->JoinAddress = FString::Printf(TEXT("%s:%d"), *ClientWorld->URL.Host, ClientWorld->URL.Port);
+		Client->LeaveLobby();
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	/**
+	 * Once the server has opened the client's seat and the client is on the main menu without a message, the host fills
+	 * every open seat with an AI and the client joins by address.
+	 */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSFillLobbyAndJoin, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSFillLobbyAndJoin::Update()
+	{
+		const ARTSLobbyGameState* ServerState = GetLobbyState(State->LobbyServer);
+		ARTSLobbyGameMode* GameMode = State->LobbyServer.IsValid() ? State->LobbyServer->GetAuthGameMode<ARTSLobbyGameMode>() : nullptr;
+		ARTSLobbyPlayerController* Host = State->Host.Get();
+		ARTSMainMenuController* Menu = FindClientMenu(*State);
+		if (!ServerState || !GameMode || !Host)
+		{
+			Test->AddError(TEXT("Lost the lobby"));
+			return true;
+		}
+		if ((!Menu || CountHumans(ServerState) != 1) && FPlatformTime::Seconds() - State->PhaseStart < SessionTimeout)
+		{
+			return false;
+		}
+		Test->TestEqual(TEXT("The server opens the seat of the client that left"), CountHumans(ServerState), 1);
+		if (!Menu)
+		{
+			Test->AddError(TEXT("The client that left is not on the main menu"));
+			return true;
+		}
+		Test->TestTrue(TEXT("Which has nothing to tell a player that left on its own"), Menu->GetMessage().IsEmpty());
+
+		const TArray<FRTSSeat>& Seats = ServerState->GetSeats();
+		for (int32 Index = 0; Index < Seats.Num(); ++Index)
+		{
+			if (Seats[Index].Type == ERTSSeatType::Open)
+			{
+				Test->TestTrue(TEXT("The host fills an open seat with an AI"),
+					GameMode->SetSeatType(*Host, Index, ERTSSeatType::AI, ERTSAIDifficulty::Normal));
+				State->FilledSeats.Add(Index);
+			}
+		}
+		if (State->FilledSeats.IsEmpty())
+		{
+			Test->AddError(TEXT("The host had no open seat to fill"));
+			return true;
+		}
+		State->ClientMenu = Menu;
+		Menu->JoinGame(State->JoinAddress);
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	/** The full lobby refuses the client, which lands on a new main menu that tells it why; the host opens a seat again and the client joins. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyLobbyFull, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyLobbyFull::Update()
+	{
+		ARTSLobbyGameMode* GameMode = State->LobbyServer.IsValid() ? State->LobbyServer->GetAuthGameMode<ARTSLobbyGameMode>() : nullptr;
+		ARTSLobbyPlayerController* Host = State->Host.Get();
+		ARTSMainMenuController* Menu = FindClientMenu(*State);
+		if (!GameMode || !Host || State->FilledSeats.IsEmpty())
+		{
+			Test->AddError(TEXT("Lost the lobby"));
+			return true;
+		}
+		const bool bDone = Menu && Menu != State->ClientMenu.Get() && !Menu->GetMessage().IsEmpty();
+		if (!bDone && FPlatformTime::Seconds() - State->PhaseStart < SessionTimeout)
+		{
+			return false;
+		}
+		if (!bDone)
+		{
+			Test->AddError(TEXT("The refused client is not back on the main menu with a message"));
+			return true;
+		}
+		Test->TestEqual(TEXT("The main menu tells the refused client why"), Menu->GetMessage().ToString(), FString(TEXT("The lobby is full")));
+
+		Test->TestTrue(TEXT("The host opens a seat again"),
+			GameMode->SetSeatType(*Host, State->FilledSeats.Last(), ERTSSeatType::Open, ERTSAIDifficulty::Normal));
+		Menu->JoinGame(State->JoinAddress);
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	/** Once the client is back in the lobby with a seat, the host leaves it. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSHostLeavesLobby, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSHostLeavesLobby::Update()
+	{
+		const ARTSLobbyGameState* ServerState = GetLobbyState(State->LobbyServer);
+		ARTSLobbyPlayerController* Host = State->Host.Get();
+		if (!ServerState || !Host)
+		{
+			Test->AddError(TEXT("Lost the lobby"));
+			return true;
+		}
+		UWorld* ClientWorld = FindPIEWorld(NM_Client, TEXT("L_Lobby"));
+		const ARTSLobbyPlayerController* Client = ClientWorld ? Cast<ARTSLobbyPlayerController>(ClientWorld->GetFirstPlayerController()) : nullptr;
+		const bool bSeated = CountHumans(ServerState) == 2 && Client && !GetToken(Client).IsEmpty();
+		if (!bSeated && FPlatformTime::Seconds() - State->PhaseStart < SessionTimeout)
+		{
+			return false;
+		}
+		if (!bSeated)
+		{
+			Test->AddError(TEXT("The client did not get a seat in the lobby again"));
+			return true;
+		}
+		Host->LeaveLobby();
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	/** The client lost the lobby with its host, and its main menu tells it why. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyHostClosedLobby, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyHostClosedLobby::Update()
+	{
+		const ARTSMainMenuController* Menu = FindClientMenu(*State);
+		const bool bDone = Menu && !Menu->GetMessage().IsEmpty();
+		if (!bDone && FPlatformTime::Seconds() - State->PhaseStart < SessionTimeout)
+		{
+			return false;
+		}
+		Test->TestNotNull(TEXT("The client is on the main menu"), Menu);
+		Test->TestEqual(TEXT("Which tells it the host closed the lobby"), Menu ? Menu->GetMessage().ToString() : FString(),
+			FString(URTSGameInstance::HostClosedLobbyMessage));
+		return true;
+	}
+
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLobbySmokeTest, "WorldDivide.Smoke.Lobby", RTSTests::TestFlags)
 
 	bool FRTSLobbySmokeTest::RunTest(const FString& Parameters)
@@ -727,6 +905,31 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyRemoveHost(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyRemoveClient(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyRemoved(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSUseTestLobbyMaps());
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLobbyLeaveSmokeTest, "WorldDivide.Smoke.LobbyLeave", RTSTests::TestFlags)
+
+	bool FRTSLobbyLeaveSmokeTest::RunTest(const FString& Parameters)
+	{
+		if (!AutomationOpenMap(LobbyMap))
+		{
+			AddError(FString::Printf(TEXT("Could not open %s"), LobbyMap));
+			return false;
+		}
+		// The refused join and the lost host are network failures, which the engine logs as errors and warnings.
+		AddExpectedError(TEXT("BroadcastNetworkFailure"), EAutomationExpectedErrorFlags::Contains, 0);
+		AddExpectedError(TEXT("Network Failure:"), EAutomationExpectedErrorFlags::Contains, 0);
+		const TSharedRef<FSessionState> State = MakeShared<FSessionState>();
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSStartLobbyPIE());
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForLobby(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientLeavesLobby(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSFillLobbyAndJoin(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyFull(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSHostLeavesLobby(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyHostClosedLobby(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSUseTestLobbyMaps());
 		return true;
