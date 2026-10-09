@@ -472,6 +472,82 @@ namespace RTSAITests
 		return true;
 	}
 
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIPickRespondersTest, "WorldDivide.AI.PickResponders", TestFlags)
+
+	bool FRTSAIPickRespondersTest::RunTest(const FString& Parameters)
+	{
+		const FVector Threat(0.f, 0.f, 0.f);
+		const TArray<FVector> Army = { FVector(3000.f, 0.f, 0.f), FVector(1000.f, 0.f, 0.f), FVector(0.f, 2000.f, 0.f), FVector(0.f, 4000.f, 0.f) };
+		TestEqual(TEXT("No army, no responders"), RTSAI::PickResponders({}, Threat, 0.5f).Num(), 0);
+		TestEqual(TEXT("Half of four, nearest first"), RTSAI::PickResponders(Army, Threat, 0.5f), TArray<int32>({ 1, 2 }));
+		TestEqual(TEXT("A share rounds up"), RTSAI::PickResponders(Army, Threat, 0.6f).Num(), 3);
+		TestEqual(TEXT("A lone unit goes"), RTSAI::PickResponders({ FVector(500.f, 0.f, 0.f) }, Threat, 0.5f), TArray<int32>({ 0 }));
+		TestEqual(TEXT("Even with a tiny share"), RTSAI::PickResponders(Army, Threat, 0.01f).Num(), 1);
+		TestEqual(TEXT("Never more than the army"), RTSAI::PickResponders(Army, Threat, 2.f).Num(), 4);
+		TestEqual(TEXT("Height does not count"),
+			RTSAI::PickResponders({ FVector(1000.f, 0.f, 0.f), FVector(500.f, 0.f, 5000.f) }, Threat, 0.5f), TArray<int32>({ 1 }));
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIDefendUnitsTest, "WorldDivide.AI.DefendUnits", TestFlags)
+
+	bool FRTSAIDefendUnitsTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		TestWorld.SpawnGameState();
+		URTSWeaponData* Weapon = MakeWeapon();
+		URTSUnitData* Tank = MakeUnit(700, Weapon);
+		URTSHarvesterData* HarvesterData = NewObject<URTSHarvesterData>();
+		HarvesterData->MaxHealth = 100.f;
+
+		ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
+		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-12000.f, 0.f, 0.f));
+		SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(3000.f, 0.f, 0.f));
+		// A harvester at a distant source, well outside DefenseRadius of the AI's only building, with an enemy beside it.
+		ARTSUnit* Harvester = TestWorld.SpawnUnit(HarvesterData, AITeam, FVector(-8000.f, 0.f, 0.f));
+		ARTSUnit* Shooter = TestWorld.SpawnUnit(Tank, PlayerTeam, FVector(-8000.f, 400.f, 0.f));
+		// Two tanks nearer the harvester than the other two.
+		ARTSUnit* Near1 = TestWorld.SpawnUnit(Tank, AITeam, FVector(1000.f, 0.f, 0.f));
+		ARTSUnit* Near2 = TestWorld.SpawnUnit(Tank, AITeam, FVector(1000.f, 300.f, 0.f));
+		ARTSUnit* Far = TestWorld.SpawnUnit(Tank, AITeam, FVector(2000.f, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(2000.f, 300.f, 0.f));
+
+		// Waves out of reach, so only the response moves the army.
+		FRTSAIWaveSettings Settings;
+		Settings.Size = 10;
+		Settings.MinSize = 10;
+		Settings.Interval = 1000.f;
+		AI->SetWaveSettings(Settings);
+
+		AI->Think(1.f);
+		Harvester->GetHealthComponent()->ApplyDamage(10.f, nullptr);
+		Harvester->GetHealthComponent()->ApplyDamage(10.f, Far);
+		Far->GetHealthComponent()->ApplyDamage(10.f, Shooter);
+		AI->Think(1.f);
+		TestNull(TEXT("Damage without an enemy instigator, or to an army unit, draws no response"), AI->GetUnitThreat());
+		TestEqual(TEXT("And sends no one"), AI->GetResponders().Num(), 0);
+
+		Harvester->GetHealthComponent()->ApplyDamage(10.f, Shooter);
+		const int32 IssuedBefore = AI->GetIssuedCommandCount();
+		AI->Think(1.f);
+		TestFalse(TEXT("A harvester hit far from the base is no base defence"), AI->IsDefending());
+		TestEqual(TEXT("The shooter is the threat"), AI->GetUnitThreat(), static_cast<AActor*>(Shooter));
+		const TArray<ARTSUnit*> Responders = AI->GetResponders();
+		TestEqual(TEXT("Half the idle army responds"), Responders.Num(), 2);
+		TestTrue(TEXT("The tanks nearest the shooter"), Responders.Contains(Near1) && Responders.Contains(Near2));
+		TestEqual(TEXT("In one attack-move order"), AI->GetIssuedCommandCount(), IssuedBefore + 1);
+
+		AI->Think(1.f);
+		TestEqual(TEXT("The same responders stay on it"), AI->GetResponders().Num(), 2);
+
+		const int32 IssuedBeforeReturn = AI->GetIssuedCommandCount();
+		AI->Think(ARTSAIPlayer::AttackerMemory);
+		TestNull(TEXT("Without a new hit the shooter is forgotten"), AI->GetUnitThreat());
+		TestEqual(TEXT("The responders go back"), AI->GetResponders().Num(), 0);
+		TestEqual(TEXT("To the gather point, in one order"), AI->GetIssuedCommandCount(), IssuedBeforeReturn + 1);
+		return true;
+	}
+
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIIssueTest,"WorldDivide.AI.Issue", TestFlags)
 
 	bool FRTSAIIssueTest::RunTest(const FString& Parameters)

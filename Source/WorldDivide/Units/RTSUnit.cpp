@@ -1,5 +1,6 @@
 #include "Units/RTSUnit.h"
 
+#include "AI/RTSAIPlayer.h"
 #include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
@@ -138,6 +139,7 @@ void ARTSUnit::PostInitializeComponents()
 void ARTSUnit::HandleDamaged(float Amount, AActor* DamageInstigator)
 {
 	ARTSPlayerController::NotifyTeamAttacked(*this, TeamId, DamageInstigator, ERTSAttackAlert::Units);
+	ARTSAIPlayer::NotifyUnitDamaged(*this, DamageInstigator);
 }
 
 void ARTSUnit::HandleDeath(AActor* Killer)

@@ -30,6 +30,9 @@ namespace RTSAI
 	 */
 	WORLDDIVIDE_API int32 FindThreat(TConstArrayView<FVector> Enemies, TConstArrayView<FVector> Buildings, float Radius,
 		TConstArrayView<bool> Attacked = {});
+
+	/** Share of Army (rounded up, at least 1 of a non-empty army) to send at Threat: their indices, nearest first (2D). */
+	WORLDDIVIDE_API TArray<int32> PickResponders(TConstArrayView<FVector> Army, const FVector& Threat, float Share);
 }
 
 /**
@@ -38,8 +41,9 @@ namespace RTSAI
  * the next building near its headquarters, production buildings queue the next unit or upgrade, idle harvesters go back to
  * work and the army gathers ahead of the base until a wave goes at the nearest enemy building, unless an enemy unit comes
  * near its buildings, or an enemy unit or building fires on them from further out: then the army, and wave units still near
- * the base, fight it off first. Its orders take the same path as a player's (RTSCommands::Issue), paid from its own credits, and it sees what every
- * player sees.
+ * the base, fight it off first. An enemy that hits one of its builders or harvesters elsewhere draws part of the army. Its
+ * orders take the same path as a player's (RTSCommands::Issue), paid from its own credits, and it sees what every player
+ * sees.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSAIPlayer : public AAIController
@@ -66,6 +70,15 @@ public:
 
 	/** Server only. Building was hit: every AI on its team remembers DamageInstigator if it is an enemy unit or building. */
 	static void NotifyBuildingDamaged(const ARTSBuilding& Building, AActor* DamageInstigator);
+
+	/** Share of the idle army sent at an enemy that hit one of the AI's builders or harvesters. */
+	static constexpr float ResponseShare = 0.5f;
+
+	/**
+	 * Server only. Unit was hit: if it is a builder or harvester, every AI on its team remembers DamageInstigator for
+	 * AttackerMemory seconds if it is an enemy unit or building.
+	 */
+	static void NotifyUnitDamaged(const ARTSUnit& Unit, AActor* DamageInstigator);
 
 	void SetDifficulty(ERTSAIDifficulty InDifficulty) { Difficulty = InDifficulty; }
 	ERTSAIDifficulty GetDifficulty() const { return Difficulty; }
@@ -113,6 +126,12 @@ public:
 
 	/** Units pulled in to fight an enemy in the base that are still alive. */
 	TArray<ARTSUnit*> GetDefenders() const;
+
+	/** The enemy that most recently hit one of the AI's builders or harvesters, while remembered, or null. */
+	AActor* GetUnitThreat() const { return UnitThreat.Get(); }
+
+	/** Units sent at an enemy that hit one of the AI's builders or harvesters that are still alive. */
+	TArray<ARTSUnit*> GetResponders() const;
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -166,6 +185,12 @@ private:
 	 */
 	void DefendBase(float DeltaSeconds);
 
+	/**
+	 * Sends ResponseShare of the idle army at the enemy that most recently hit an own builder or harvester, unless the base is
+	 * under attack, and back to the gather point once it is forgotten. Its attackers age by DeltaSeconds.
+	 */
+	void RespondToUnitAttacks(float DeltaSeconds);
+
 	/** Ahead of the base, towards the nearest enemy building. False without an enemy building. */
 	bool GetGatherPoint(FVector& OutLocation) const;
 
@@ -208,6 +233,13 @@ private:
 	TMap<TWeakObjectPtr<AActor>, float> Attackers;
 
 	TWeakObjectPtr<AActor> Threat;
+
+	/** Enemy units and buildings that hit an own builder or harvester, with the seconds since their last hit. */
+	TMap<TWeakObjectPtr<AActor>, float> UnitAttackers;
+
+	TWeakObjectPtr<AActor> UnitThreat;
+
+	TArray<TWeakObjectPtr<ARTSUnit>> Responders;
 
 	bool bDefending = false;
 

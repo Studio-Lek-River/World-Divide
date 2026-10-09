@@ -136,6 +136,22 @@ namespace RTSAI
 		}
 		return Threat;
 	}
+
+	TArray<int32> PickResponders(TConstArrayView<FVector> Army, const FVector& Threat, float Share)
+	{
+		TArray<int32> Indices;
+		for (int32 Index = 0; Index < Army.Num(); ++Index)
+		{
+			Indices.Add(Index);
+		}
+		Indices.StableSort([&Army, &Threat](int32 A, int32 B)
+		{
+			return FVector::DistSquared2D(Army[A], Threat) < FVector::DistSquared2D(Army[B], Threat);
+		});
+		const int32 Count = Army.IsEmpty() ? 0 : FMath::Clamp(FMath::CeilToInt(Army.Num() * Share), 1, Army.Num());
+		Indices.SetNum(Count);
+		return Indices;
+	}
 }
 
 ARTSAIPlayer::ARTSAIPlayer()
@@ -197,6 +213,24 @@ void ARTSAIPlayer::NotifyBuildingDamaged(const ARTSBuilding& Building, AActor* D
 	}
 }
 
+void ARTSAIPlayer::NotifyUnitDamaged(const ARTSUnit& Unit, AActor* DamageInstigator)
+{
+	const IRTSTargetable* Attacker = Cast<IRTSTargetable>(DamageInstigator);
+	if (!Attacker || Attacker->GetTeamId() == Unit.GetTeamId()
+		|| (!Unit.GetBuilderComponent()->CanBuild() && !Unit.GetHarvesterComponent()->CanHarvest()))
+	{
+		return;
+	}
+	for (TActorIterator<ARTSAIPlayer> It(Unit.GetWorld()); It; ++It)
+	{
+		const ARTSPlayerState* Player = It->GetRTSPlayerState();
+		if (Player && Player->GetTeamId() == Unit.GetTeamId())
+		{
+			It->UnitAttackers.Add(DamageInstigator, 0.f);
+		}
+	}
+}
+
 void ARTSAIPlayer::ThinkOnTimer()
 {
 	Think(ThinkInterval);
@@ -219,6 +253,7 @@ void ARTSAIPlayer::Think(float DeltaSeconds)
 		SetRallyPoints(*BuildOrder);
 	}
 	DefendBase(DeltaSeconds);
+	RespondToUnitAttacks(DeltaSeconds);
 	UpdateWaves(DeltaSeconds);
 }
 
@@ -294,6 +329,19 @@ TArray<ARTSUnit*> ARTSAIPlayer::GetDefenders() const
 {
 	TArray<ARTSUnit*> Units;
 	for (const TWeakObjectPtr<ARTSUnit>& Unit : Defenders)
+	{
+		if (IsStanding(Unit.Get()))
+		{
+			Units.Add(Unit.Get());
+		}
+	}
+	return Units;
+}
+
+TArray<ARTSUnit*> ARTSAIPlayer::GetResponders() const
+{
+	TArray<ARTSUnit*> Units;
+	for (const TWeakObjectPtr<ARTSUnit>& Unit : Responders)
 	{
 		if (IsStanding(Unit.Get()))
 		{
@@ -593,8 +641,9 @@ void ARTSAIPlayer::UpdateWaves(float DeltaSeconds)
 		Issue(Done, AttackMove);
 	}
 
-	// The army stays home while it fights off an enemy in the base.
+	// The army stays home while it fights off an enemy in the base; responders stay on their own fight.
 	TArray<ARTSUnit*> Army = GatherArmy();
+	Army.RemoveAll([this](const ARTSUnit* Unit) { return Responders.Contains(Unit); });
 	if (bDefending || !RTSAI::ShouldLaunchWave(GetWaveSettings(), Army.Num(), SecondsSinceWave))
 	{
 		return;
@@ -722,6 +771,92 @@ void ARTSAIPlayer::DefendBase(float DeltaSeconds)
 		FRTSCommand AttackMove;
 		AttackMove.Type = ERTSCommandType::AttackMove;
 		AttackMove.TargetLocation = Enemies[ThreatIndex];
+		Issue(Ordered, AttackMove);
+	}
+}
+
+void ARTSAIPlayer::RespondToUnitAttacks(float DeltaSeconds)
+{
+	AActor* Latest = nullptr;
+	float LatestAge = TNumericLimits<float>::Max();
+	for (auto It = UnitAttackers.CreateIterator(); It; ++It)
+	{
+		It->Value += DeltaSeconds;
+		if (!IsStanding(It->Key.Get()) || It->Value > AttackerMemory)
+		{
+			It.RemoveCurrent();
+		}
+		else if (It->Value < LatestAge)
+		{
+			Latest = It->Key.Get();
+			LatestAge = It->Value;
+		}
+	}
+	UnitThreat = Latest;
+	Responders.RemoveAll([](const TWeakObjectPtr<ARTSUnit>& Unit) { return !IsStanding(Unit.Get()); });
+
+	// A fight in the base comes first and pulls the responders in with the rest of the army.
+	if (bDefending)
+	{
+		Responders.Reset();
+		return;
+	}
+
+	if (!Latest)
+	{
+		// Each responder goes back to the gather point once its own fight is over.
+		TArray<ARTSUnit*> Done;
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : Responders)
+		{
+			if (!Unit->GetWeaponComponent()->GetTarget())
+			{
+				Done.Add(Unit.Get());
+			}
+		}
+		FVector Gather;
+		if (!Done.IsEmpty() && GetGatherPoint(Gather))
+		{
+			FRTSCommand AttackMove;
+			AttackMove.Type = ERTSCommandType::AttackMove;
+			AttackMove.TargetLocation = Gather;
+			Issue(Done, AttackMove);
+		}
+		Responders.RemoveAll([&Done](const TWeakObjectPtr<ARTSUnit>& Unit) { return Done.Contains(Unit.Get()); });
+		return;
+	}
+
+	// The first time, part of the idle army goes; after that, only responders with nothing left to fight are sent again.
+	TArray<ARTSUnit*> Ordered;
+	if (Responders.IsEmpty())
+	{
+		TArray<ARTSUnit*> Army = GatherArmy();
+		Army.RemoveAll([this](const ARTSUnit* Unit) { return Defenders.Contains(Unit); });
+		TArray<FVector> Locations;
+		for (const ARTSUnit* Unit : Army)
+		{
+			Locations.Add(Unit->GetActorLocation());
+		}
+		for (const int32 Index : RTSAI::PickResponders(Locations, Latest->GetActorLocation(), ResponseShare))
+		{
+			Responders.Add(Army[Index]);
+			Ordered.Add(Army[Index]);
+		}
+	}
+	else
+	{
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : Responders)
+		{
+			if (Unit->GetQueuedCommandCount() == 0 && !Unit->GetWeaponComponent()->GetTarget())
+			{
+				Ordered.Add(Unit.Get());
+			}
+		}
+	}
+	if (!Ordered.IsEmpty())
+	{
+		FRTSCommand AttackMove;
+		AttackMove.Type = ERTSCommandType::AttackMove;
+		AttackMove.TargetLocation = Latest->GetActorLocation();
 		Issue(Ordered, AttackMove);
 	}
 }
