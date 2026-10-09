@@ -12,7 +12,9 @@ class UTexture2D;
 
 /**
  * The lobby screen: the map (a combo of URTSSettings::SkirmishMaps for the host, its name for the others), its preview
- * with each start spot numbered as its base and coloured by the team playing from it, then one row per seat with its team colour, who plays it (a combo of Open, Closed and the AI difficulties for
+ * with each start spot numbered as its base and coloured by the team playing from it, where a click on a free spot moves the
+ * player's own seat there (the host first picks the seat to move by clicking its team colour), then one row per seat with its
+ * team colour, who plays it (a combo of Open, Closed and the AI difficulties for
  * the host, or the name of the human holding it), its start spot (Random or a base), whether its human is ready and, for the
  * host, Remove next to every other player, then
  * Back, Ready for a joined player and Start for the host.
@@ -46,6 +48,18 @@ public:
 	/** The preview shown: that of the map the lobby has chosen. */
 	UTexture2D* GetShownPreview() const;
 
+	/** Host only: a click on the preview moves seat Index from now on, when it is played. */
+	void SelectSeat(int32 Index);
+
+	/** The seat a click on the preview moves: the host's selected seat while it is played, otherwise the player's own. */
+	int32 GetMovedSeat() const;
+
+	/** Whether a click on Spot would move GetMovedSeat there: the spot is free and the server would allow it. */
+	bool CanPickSpot(int32 Spot) const;
+
+	/** A click on Spot of the preview: asks the server to move GetMovedSeat there when CanPickSpot; returns whether it asked. */
+	bool ClickSpot(int32 Spot);
+
 private:
 	/** The seats arrive by replication: the rows are built once their number is known. */
 	void RebuildRows(int32 SeatCount);
@@ -60,6 +74,8 @@ private:
 	TWeakObjectPtr<ARTSLobbyPlayerController> Controller;
 	TSharedPtr<SVerticalBox> Rows;
 	int32 BuiltSeats = INDEX_NONE;
+	/** The host's choice of seat to move on the preview, or INDEX_NONE for its own. */
+	int32 SelectedSeat = INDEX_NONE;
 
 	TSharedPtr<SConstraintCanvas> SpotMarkers;
 	int32 BuiltMapIndex = INDEX_NONE;

@@ -27,7 +27,9 @@
  * The skirmish lobby end to end, as a listen server with one client in the same process, both starting in L_Lobby. Lobby:
  * both players take an open seat and get a token, the host makes the last seat a Hard AI and the client sees it, the client
  * may move its own start spot but not change other seats, and the match URL carries the seats. The host's start is refused
- * until the client is ready, which both see; a move by the host makes the client ready up again. Then the host picks the
+ * until the client is ready, which both see; a move by the host makes the client ready up again. On the lobby screen's map
+ * preview the client's click on the host's spot changes nothing and its click on the free spot 2 moves it there; the host
+ * selects the last AI's seat and moves it by a click to spot 3. Then the host picks the
  * two-spot duel map: the seats shrink to two, the client, beyond them, takes the AI's seat and must ready up again, its
  * own pick of map is refused, and the match URL names the duel map. Last, the client's removal of the host is refused, the
  * host removes the client, whose seat opens again, and the client lands on the main menu with the reason. SkirmishSeats: the host
@@ -294,6 +296,69 @@ namespace RTSSkirmishSmokeTest
 		Test->TestEqual(TEXT("The host moves the client"), Seats[2].StartSpot, 3);
 		Test->TestFalse(TEXT("Which must ready up again"), Seats[2].bReady);
 		Test->TestFalse(TEXT("Before the match may start"), RTSSkirmish::CanStart(Seats));
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	/**
+	 * Once the client sees the host's move of it to spot 3, it clicks the host's spot on its lobby screen's preview, which
+	 * sends nothing, then the free spot 2.
+	 */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSLobbyClickSpot, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSLobbyClickSpot::Update()
+	{
+		const ARTSLobbyGameState* ClientState = GetLobbyState(State->LobbyClient);
+		const TSharedPtr<SRTSLobbyWidget> ClientScreen = State->Client.IsValid() ? State->Client->GetWidget() : nullptr;
+		if (!ClientState || !ClientScreen.IsValid())
+		{
+			Test->AddError(TEXT("Lost the lobby or the client's lobby screen"));
+			return true;
+		}
+		const TArray<FRTSSeat>& Seen = ClientState->GetSeats();
+		const bool bSeen = Seen.Num() == 4 && Seen[2].StartSpot == 3;
+		if (!bSeen && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
+		{
+			return false;
+		}
+		Test->TestTrue(TEXT("The client sees the host's move of it"), bSeen);
+		Test->TestFalse(TEXT("The host's spot is taken"), ClientScreen->CanPickSpot(0));
+		Test->TestFalse(TEXT("So a click on it asks nothing"), ClientScreen->ClickSpot(0));
+		Test->TestTrue(TEXT("A click on the free spot 2 asks for it"), ClientScreen->ClickSpot(2));
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	/** The server and the client have the client on spot 2; then the host selects the last AI's seat and clicks spot 3. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyLobbyClickedSpot, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyLobbyClickedSpot::Update()
+	{
+		const ARTSLobbyGameState* ServerState = GetLobbyState(State->LobbyServer);
+		const ARTSLobbyGameState* ClientState = GetLobbyState(State->LobbyClient);
+		const TSharedPtr<SRTSLobbyWidget> HostScreen = State->Host.IsValid() ? State->Host->GetWidget() : nullptr;
+		if (!ServerState || !ClientState || !HostScreen.IsValid() || ServerState->GetSeats().Num() != 4)
+		{
+			Test->AddError(TEXT("Lost the lobby or the host's lobby screen"));
+			return true;
+		}
+		const TArray<FRTSSeat>& Seats = ServerState->GetSeats();
+		const TArray<FRTSSeat>& Seen = ClientState->GetSeats();
+		const bool bSeen = Seats[2].StartSpot == 2 && Seen.Num() == 4 && Seen[2].StartSpot == 2;
+		if (!bSeen && FPlatformTime::Seconds() - State->PhaseStart < ReplicationTimeout)
+		{
+			return false;
+		}
+		Test->TestEqual(TEXT("The server moved the client to the spot it clicked"), Seats[2].StartSpot, 2);
+		Test->TestEqual(TEXT("Which the client sees"), Seen.Num() == 4 ? Seen[2].StartSpot : INDEX_NONE, 2);
+		Test->TestEqual(TEXT("The click on the host's spot changed nothing"), Seats[0].StartSpot, 0);
+
+		Test->TestEqual(TEXT("The host's click moves its own seat at first"), HostScreen->GetMovedSeat(), 0);
+		HostScreen->SelectSeat(3);
+		Test->TestEqual(TEXT("Until the host selects the last AI's seat"), HostScreen->GetMovedSeat(), 3);
+		Test->TestFalse(TEXT("The client's new spot is taken"), HostScreen->ClickSpot(2));
+		// The host's call runs at once on the server.
+		Test->TestTrue(TEXT("The spot the client left is free"), HostScreen->ClickSpot(3));
+		Test->TestEqual(TEXT("The host moved the AI there"), Seats[3].StartSpot, 3);
+		Test->TestEqual(TEXT("And not the client"), Seats[2].StartSpot, 2);
 		return true;
 	}
 
@@ -650,6 +715,8 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyChanges(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyChanges(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyReady(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyClickSpot(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyClickedSpot(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyPickMap(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyLobbyMap(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSLobbyRemoveHost(this, State));

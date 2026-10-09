@@ -86,6 +86,52 @@ UTexture2D* SRTSLobbyWidget::GetShownPreview() const
 	return Controller.IsValid() ? GetMapPreview(Controller->GetMapIndex()) : nullptr;
 }
 
+void SRTSLobbyWidget::SelectSeat(int32 Index)
+{
+	const FRTSSeat* Seat = FindSeat(Controller, Index);
+	if (Seat && RTSSkirmish::IsPlayed(*Seat) && Controller->IsHost())
+	{
+		SelectedSeat = Index;
+	}
+}
+
+int32 SRTSLobbyWidget::GetMovedSeat() const
+{
+	if (!Controller.IsValid())
+	{
+		return INDEX_NONE;
+	}
+	const FRTSSeat* Selected = FindSeat(Controller, SelectedSeat);
+	if (Selected && RTSSkirmish::IsPlayed(*Selected) && Controller->IsHost())
+	{
+		return SelectedSeat;
+	}
+	const int32 OwnPlayerId = Controller->GetOwnPlayerId();
+	return Controller->GetSeats().IndexOfByPredicate([OwnPlayerId](const FRTSSeat& Seat)
+	{
+		return Seat.Type == ERTSSeatType::Human && Seat.PlayerId == OwnPlayerId;
+	});
+}
+
+bool SRTSLobbyWidget::CanPickSpot(int32 Spot) const
+{
+	const int32 Moved = GetMovedSeat();
+	const FRTSSeat* Seat = FindSeat(Controller, Moved);
+	const TConstArrayView<FRTSSeat> Seats = Seat ? Controller->GetSeats() : TConstArrayView<FRTSSeat>();
+	return Seat && Seat->StartSpot != Spot && Spot != INDEX_NONE
+		&& RTSSkirmish::CanChangeStartSpot(Seats, Moved, Controller->IsHost(), Controller->GetOwnPlayerId(), Spot, Seats.Num());
+}
+
+bool SRTSLobbyWidget::ClickSpot(int32 Spot)
+{
+	if (!CanPickSpot(Spot))
+	{
+		return false;
+	}
+	Controller->Server_SetStartSpot(GetMovedSeat(), Spot);
+	return true;
+}
+
 void SRTSLobbyWidget::Construct(const FArguments& InArgs)
 {
 	Controller = InArgs._Controller;
@@ -200,7 +246,7 @@ void SRTSLobbyWidget::Construct(const FArguments& InArgs)
 							: TEXT("Waiting for every player to be ready."));
 					}
 					const FRTSSeat* Own = Controller->GetOwnSeat();
-					return FText::FromString(Own && !Own->bReady ? TEXT("Pick your base, then press Ready.")
+					return FText::FromString(Own && !Own->bReady ? TEXT("Pick your base on the map or in the list, then press Ready.")
 						: TEXT("Waiting for the host to start the match."));
 				})
 			]
@@ -294,21 +340,38 @@ void SRTSLobbyWidget::RebuildSpotMarkers(int32 MapIndex)
 	}
 	for (int32 Spot = 0; Spot < Map->StartSpotPositions.Num(); ++Spot)
 	{
+		const TSharedRef<SButton> Marker = SNew(SButton)
+			.ButtonStyle(&FCoreStyle::Get().GetWidgetStyle<FButtonStyle>("NoBorder"))
+			.ContentPadding(0.f)
+			.Cursor_Lambda([this, Spot]() { return TOptional<EMouseCursor::Type>(CanPickSpot(Spot) ? EMouseCursor::Hand : EMouseCursor::Default); })
+			.OnClicked_Lambda([this, Spot]()
+			{
+				ClickSpot(Spot);
+				return FReply::Handled();
+			});
+		Marker->SetContent(
+			SNew(SBorder)
+			.BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
+			.BorderBackgroundColor_Lambda([this, Spot, WeakMarker = TWeakPtr<SButton>(Marker)]()
+			{
+				// A spot the player may pick lights up under the mouse; a taken one keeps its seat's colour.
+				const TSharedPtr<SButton> Hovered = WeakMarker.Pin();
+				return Hovered.IsValid() && Hovered->IsHovered() && CanPickSpot(Spot) ? FSlateColor(FLinearColor(0.7f, 0.7f, 0.7f))
+					: GetSpotColor(Spot);
+			})
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
+			.Padding(0.f)
+			[
+				SNew(STextBlock).Font(GetFont(11)).Text(FText::AsNumber(Spot + 1))
+			]);
 		const FVector2D Position = Map->StartSpotPositions[Spot];
 		SpotMarkers->AddSlot()
 		.Anchors(FAnchors(Position.X, Position.Y))
 		.Alignment(FVector2D(0.5f, 0.5f))
 		.Offset(FMargin(0.f, 0.f, SpotMarkerSize, SpotMarkerSize))
 		[
-			SNew(SBorder)
-			.BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
-			.BorderBackgroundColor_Lambda([this, Spot]() { return GetSpotColor(Spot); })
-			.HAlign(HAlign_Center)
-			.VAlign(VAlign_Center)
-			.Padding(0.f)
-			[
-				SNew(STextBlock).Font(GetFont(11)).Text(FText::AsNumber(Spot + 1))
-			]
+			Marker
 		];
 	}
 }
@@ -349,9 +412,30 @@ TSharedRef<SWidget> SRTSLobbyWidget::MakeRow(int32 Index)
 	[
 		SNew(SBox).WidthOverride(24.f).HeightOverride(24.f)
 		[
-			SNew(SImage)
-			.Image(FCoreStyle::Get().GetBrush("WhiteBrush"))
-			.ColorAndOpacity(ARTSUnit::GetTeamColor(Index))
+			// The host picks the seat a click on the preview moves; it is outlined.
+			SNew(SButton)
+			.ButtonStyle(&FCoreStyle::Get().GetWidgetStyle<FButtonStyle>("NoBorder"))
+			.ContentPadding(0.f)
+			.OnClicked_Lambda([this, Index]()
+			{
+				SelectSeat(Index);
+				return FReply::Handled();
+			})
+			[
+				SNew(SBorder)
+				.BorderImage(FCoreStyle::Get().GetBrush("WhiteBrush"))
+				.BorderBackgroundColor_Lambda([this, Index]()
+				{
+					const bool bOutlined = Controller.IsValid() && Controller->IsHost() && GetMovedSeat() == Index;
+					return FSlateColor(bOutlined ? FLinearColor::White : ARTSUnit::GetTeamColor(Index));
+				})
+				.Padding(2.f)
+				[
+					SNew(SImage)
+					.Image(FCoreStyle::Get().GetBrush("WhiteBrush"))
+					.ColorAndOpacity(ARTSUnit::GetTeamColor(Index))
+				]
+			]
 		]
 	]
 	+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.f, 0.f, 12.f, 0.f)
