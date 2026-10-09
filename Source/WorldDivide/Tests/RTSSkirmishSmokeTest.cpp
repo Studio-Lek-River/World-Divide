@@ -7,9 +7,11 @@
 #include "Core/RTSGameInstance.h"
 #include "Core/RTSGameMode.h"
 #include "Core/RTSPlayerState.h"
+#include "Core/RTSSettings.h"
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
+#include "Kismet/GameplayStatics.h"
 #include "Menu/RTSLobbyGameMode.h"
 #include "Menu/RTSLobbyGameState.h"
 #include "Menu/RTSLobbyPlayerController.h"
@@ -39,7 +41,8 @@
  * starts the match. Both offer the test maps in the lobby (RTSTests::FRTSUseTestLobbyMaps), so it starts on L_Skirmish.
  * In L_Skirmish the host plays team 0 from spot 3, the AI team 1 from spot 1 at Hard, the client team 2 from spot 0 by its
  * token, and neither the closed team 3 nor spot 2, which nobody plays, has a building or a unit. The client's scoreboard
- * shows the host's name and "AI (Hard)". LobbyLeave: the client leaves the lobby and its main menu shows no message; the host
+ * shows the host's name and "AI (Hard)". Then the host leaves the match and the client's main menu shows "The host left
+ * the match". LobbyLeave: the client leaves the lobby and its main menu shows no message; the host
  * fills every open seat with an AI and the client's join by address is refused, its main menu showing "The lobby is full";
  * the host opens a seat again, the client joins, and once the host leaves the client's main menu shows "The host closed
  * the lobby".
@@ -924,6 +927,40 @@ namespace RTSSkirmishSmokeTest
 		return true;
 	}
 
+	/** The host leaves the running match for the main menu, which closes the listen server. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSHostLeavesMatch, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSHostLeavesMatch::Update()
+	{
+		UWorld* ServerWorld = State->MatchServer.Get();
+		UWorld* ClientWorld = State->MatchClient.Get();
+		APlayerController* Host = ServerWorld ? ServerWorld->GetFirstPlayerController() : nullptr;
+		if (!Host || !ClientWorld)
+		{
+			Test->AddError(TEXT("Lost the match"));
+			return true;
+		}
+		State->ClientInstance = ClientWorld->GetGameInstance();
+		UGameplayStatics::OpenLevelBySoftObjectPtr(Host, GetDefault<URTSSettings>()->MainMenuMap);
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	/** The client lost the match with its host, and its main menu tells it why. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyHostLeftMatch, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyHostLeftMatch::Update()
+	{
+		const ARTSMainMenuController* Menu = FindClientMenu(*State);
+		const bool bDone = Menu && !Menu->GetMessage().IsEmpty();
+		if (!bDone && FPlatformTime::Seconds() - State->PhaseStart < SessionTimeout)
+		{
+			return false;
+		}
+		Test->TestNotNull(TEXT("The client is on the main menu"), Menu);
+		Test->TestEqual(TEXT("Which tells it the host left the match"), Menu ? Menu->GetMessage().ToString() : FString(),
+			FString(URTSGameInstance::HostLeftMatchMessage));
+		return true;
+	}
+
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLobbySmokeTest, "WorldDivide.Smoke.Lobby", RTSTests::TestFlags)
 
 	bool FRTSLobbySmokeTest::RunTest(const FString& Parameters)
@@ -989,6 +1026,9 @@ namespace RTSSkirmishSmokeTest
 			AddError(FString::Printf(TEXT("Could not open %s"), LobbyMap));
 			return false;
 		}
+		// The lost host is a network failure, which the engine logs as errors and warnings.
+		AddExpectedError(TEXT("BroadcastNetworkFailure"), EAutomationExpectedErrorFlags::Contains, 0);
+		AddExpectedError(TEXT("Network Failure:"), EAutomationExpectedErrorFlags::Contains, 0);
 		const TSharedRef<FSessionState> State = MakeShared<FSessionState>();
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSStartLobbyPIE());
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForLobby(this, State));
@@ -998,6 +1038,8 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckSeats(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAIPlays(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientScoreboard(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSHostLeavesMatch(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyHostLeftMatch(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSUseTestLobbyMaps());
 		return true;

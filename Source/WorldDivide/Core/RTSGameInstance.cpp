@@ -6,6 +6,7 @@
 #include "Player/RTSLocalPlayer.h"
 
 const TCHAR* URTSGameInstance::HostClosedLobbyMessage = TEXT("The host closed the lobby");
+const TCHAR* URTSGameInstance::HostLeftMatchMessage = TEXT("The host left the match");
 
 void URTSGameInstance::Init()
 {
@@ -35,10 +36,11 @@ void URTSGameInstance::HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver
 			LocalPlayer->SetMenuMessage(FText::FromString(Error));
 		}
 	}
-	// By now the lost connection has taken the replicated lobby actors with it, so the map tells where the client was.
-	else if (World && World->GetNetMode() == NM_Client
-		&& UWorld::RemovePIEPrefix(World->GetOutermost()->GetName()) == GetDefault<URTSSettings>()->LobbyMap.GetLongPackageName())
+	// By now the lost connection has taken the replicated actors with it, so the map tells where the client was: a client
+	// plays either the lobby or a match.
+	else if (World && World->GetNetMode() == NM_Client)
 	{
-		LocalPlayer->SetMenuMessage(FText::FromString(HostClosedLobbyMessage));
+		const bool bInLobby = UWorld::RemovePIEPrefix(World->GetOutermost()->GetName()) == GetDefault<URTSSettings>()->LobbyMap.GetLongPackageName();
+		LocalPlayer->SetMenuMessage(FText::FromString(bInLobby ? HostClosedLobbyMessage : HostLeftMatchMessage));
 	}
 }
