@@ -16,6 +16,7 @@
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
+#include "Tests/RTSTestPIE.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
 
@@ -83,7 +84,7 @@ namespace RTSAirSmokeTest
 		{
 			State->PhaseStart = FPlatformTime::Seconds();
 		}
-		// AutomationOpenMap starts a PIE session that FStartPIECommand replaces; wait for the replacement and its player.
+		// AutomationOpenMap starts a PIE session that FRTSStartStandalonePIE replaces; wait for the replacement and its player.
 		UWorld* World = GEditor->IsPlaySessionRequestQueued() ? nullptr : AutomationCommon::GetAnyGameWorld();
 		const ARTSPlayerController* Controller = World ? Cast<ARTSPlayerController>(World->GetFirstPlayerController()) : nullptr;
 		if (World && World->HasBegunPlay() && Controller && Controller->GetTeamId() != INDEX_NONE && Controller->GetFaction()
@@ -256,7 +257,7 @@ namespace RTSAirSmokeTest
 		}
 
 		const TSharedRef<FAirState> State = MakeShared<FAirState>();
-		ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForAirPlay(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSQueueJet(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForJet(this, State));

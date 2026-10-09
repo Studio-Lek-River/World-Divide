@@ -19,6 +19,7 @@
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
+#include "Tests/RTSTestPIE.h"
 #include "Units/RTSUnit.h"
 
 /**
@@ -425,7 +426,7 @@ namespace RTSAISmokeTest
 			return false;
 		}
 		const TSharedRef<FAISmokeState> State = MakeShared<FAISmokeState>();
-		ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForSkirmish(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAIBuildsBase(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAIAttacks(this, State));
@@ -443,7 +444,7 @@ namespace RTSAISmokeTest
 			return false;
 		}
 		const TSharedRef<FAISmokeState> State = MakeShared<FAISmokeState>();
-		ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForSkirmish(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSGiveAIColumn(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAIWins(this, State));
@@ -462,7 +463,7 @@ namespace RTSAISmokeTest
 			return false;
 		}
 		const TSharedRef<FAISmokeState> State = MakeShared<FAISmokeState>();
-		ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(false));
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForSkirmish(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSDestroyAIBase(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAISilent(this, State));
