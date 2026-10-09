@@ -34,18 +34,27 @@ namespace
 }
 
 /**
- * Both generated maps are saved with their navmesh built, so a map the editor did not start with, or one loaded in a
- * packaged build, has a full navmesh from its first frame.
+ * L_TestMap and every map the lobby offers are saved with their navmesh built, so a map the editor did not start with,
+ * or one loaded in a packaged build, has a full navmesh from its first frame.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSSavedNavMeshTest, "WorldDivide.Maps.SavedNavMesh", TestFlags)
 
 bool FRTSSavedNavMeshTest::RunTest(const FString& Parameters)
 {
-	for (const TCHAR* MapPath : { TEXT("/Game/Maps/L_TestMap"), TEXT("/Game/Maps/L_Skirmish") })
+	TArray<FString> MapPaths = { TEXT("/Game/Maps/L_TestMap") };
+	for (const TSoftObjectPtr<URTSMapData>& MapPtr : GetDefault<URTSSettings>()->SkirmishMaps)
 	{
-		UPackage* Package = LoadPackage(nullptr, MapPath, LOAD_None);
+		const URTSMapData* Map = MapPtr.LoadSynchronous();
+		if (TestNotNull(FString::Printf(TEXT("%s loads"), *MapPtr.ToString()), Map))
+		{
+			MapPaths.Add(Map->Map.GetLongPackageName());
+		}
+	}
+	for (const FString& MapPath : MapPaths)
+	{
+		UPackage* Package = LoadPackage(nullptr, *MapPath, LOAD_None);
 		const UWorld* World = Package ? UWorld::FindWorldInPackage(Package) : nullptr;
-		if (!TestNotNull(FString::Printf(TEXT("%s loads"), MapPath), World) || !World->PersistentLevel)
+		if (!TestNotNull(FString::Printf(TEXT("%s loads"), *MapPath), World) || !World->PersistentLevel)
 		{
 			continue;
 		}
@@ -58,7 +67,7 @@ bool FRTSSavedNavMeshTest::RunTest(const FString& Parameters)
 				Tiles += NavMesh->GetNavMeshTilesCount();
 			}
 		}
-		TestTrue(FString::Printf(TEXT("%s is saved with a built navmesh"), MapPath), Tiles > 0);
+		TestTrue(FString::Printf(TEXT("%s is saved with a built navmesh"), *MapPath), Tiles > 0);
 	}
 	return true;
 }

@@ -1,8 +1,9 @@
 """Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters and superweapon included), AI build order and faction data assets, the placement ghost and shot effect materials, the
-placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the L_TestMap level with a supply
-source and two builders by each base, the L_Skirmish and L_SkirmishDuel levels, the same ground without the armies and
-with four and two start spots, where the lobby's seats play, the map data assets that offer them in the lobby with a
-top-down preview of each (rendered when the run has a renderer, drawn otherwise), and the
+placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the ground and water materials, the L_TestMap level
+with a supply source and two builders by each base, the L_Skirmish and L_SkirmishDuel levels, the same ground without the
+armies and with four and two start spots, the skirmish maps L_RiverFord, L_QuarryCross and L_SixPeaks with two, four and
+six, all where the lobby's seats play, the map data assets that offer them in the lobby with a top-down preview of each
+(rendered when the run has a renderer, drawn otherwise), and the
 empty L_MainMenu and L_Lobby levels for the menu screens. L_TestMap and the skirmish maps are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
 source files that build them and are rebuilt only when those change.
@@ -18,6 +19,7 @@ To render the map previews instead of drawing them, replace -nullrhi with -Allow
 -Render).
 """
 
+import collections
 import hashlib
 import inspect
 import math
@@ -41,8 +43,6 @@ AI_DIR = "/Game/Data/AI"
 MAP_DATA_DIR = "/Game/Data/Maps"
 MATERIAL_DIR = "/Game/Materials"
 MAP_PATH = "/Game/Maps/L_TestMap"
-SKIRMISH_MAP_PATH = "/Game/Maps/L_Skirmish"
-DUEL_MAP_PATH = "/Game/Maps/L_SkirmishDuel"
 MAIN_MENU_MAP_PATH = "/Game/Maps/L_MainMenu"
 LOBBY_MAP_PATH = "/Game/Maps/L_Lobby"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
@@ -67,6 +67,9 @@ levels = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 
 # Assets that need saving: (package path, file extension, already on disk, function that writes it).
 pending = []
+
+# Hashes of the surface materials by package path.
+material_hashes = {}
 
 # Data assets by package path: (asset, already on disk, desired properties). Compared and queued by plan_data_assets once
 # all are planned, so two of them can reference each other.
@@ -442,6 +445,39 @@ def make_shot_material(name):
                  spec_hash([build_shot_material], name))
 
 
+def build_surface_material(name, color, roughness, digest):
+    """Opaque lit material of one colour, for the ground and the water of the maps."""
+    path = f"{MATERIAL_DIR}/{name}"
+    if assets.does_asset_exist(path):
+        material = assets.load_asset(path)
+    else:
+        material = asset_tools.create_asset(name, MATERIAL_DIR, unreal.Material, unreal.MaterialFactoryNew())
+
+    editing = unreal.MaterialEditingLibrary
+    editing.delete_all_material_expressions(material)
+    base = editing.create_material_expression(material, unreal.MaterialExpressionConstant3Vector, -400, 0)
+    base.set_editor_property("constant", unreal.LinearColor(*color, 1.0))
+    editing.connect_material_property(base, "", unreal.MaterialProperty.MP_BASE_COLOR)
+    rough = editing.create_material_expression(material, unreal.MaterialExpressionConstant, -400, 200)
+    rough.set_editor_property("r", roughness)
+    editing.connect_material_property(rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
+
+    editing.recompile_material(material)
+    assets.set_metadata_tag(material, HASH_TAG, digest)
+    if not assets.save_loaded_asset(material, only_if_is_dirty=False):
+        raise RuntimeError(f"Could not save {path}")
+
+
+def make_surface_material(name, color, roughness):
+    """Queued before the maps, which load it by path when they are built. Returns its path; its hash goes in
+    material_hashes, so the maps and their previews are rebuilt when it changes."""
+    path = f"{MATERIAL_DIR}/{name}"
+    digest = spec_hash([build_surface_material], name, color, roughness)
+    plan_rebuild(path, ".uasset", lambda digest: build_surface_material(name, color, roughness, digest), digest)
+    material_hashes[path] = digest
+    return path
+
+
 def spawn(actor_class, location, yaw=0.0, label=None):
     actor = actors.spawn_actor_from_class(actor_class, unreal.Vector(*location), unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw))
     if label:
@@ -511,14 +547,37 @@ def build_navigation(world, path):
     unreal.log(f"{path}: navmesh built with {tiles} tiles")
 
 
-def build_map(tank, infantry, builder, wall, crate, digest):
+def spawn_ground(half_size, material):
+    """The square ground of a map, 2 * half_size across, top face at z = 0."""
+    ground = spawn_block("Ground", (0.0, 0.0, -50.0), (half_size / 50.0, half_size / 50.0, 1.0))
+    ground.static_mesh_component.set_material(0, unreal.load_asset(material))
+    return ground
+
+
+def spawn_water(label, location, scale, material):
+    """A flat strip of water no unit can cross: an obstacle a few centimetres above the ground."""
+    water = spawn_obstacle(label, location, scale)
+    water.static_mesh_component.set_material(0, unreal.load_asset(material))
+    return water
+
+
+def spawn_lighting():
+    sun = spawn(unreal.DirectionalLight, (0.0, 0.0, 2000.0), label="Sun")
+    sun.set_actor_rotation(unreal.Rotator(roll=0.0, pitch=-50.0, yaw=35.0), False)
+    sun.get_component_by_class(unreal.DirectionalLightComponent).set_editor_property("atmosphere_sun_light", True)
+    sky = spawn(unreal.SkyLight, (0.0, 0.0, 1000.0), label="SkyLight")
+    sky.get_component_by_class(unreal.SkyLightComponent).set_editor_property("real_time_capture", True)
+    spawn(unreal.SkyAtmosphere, (0.0, 0.0, 0.0), label="SkyAtmosphere")
+
+
+def build_map(tank, infantry, builder, wall, crate, ground, digest):
     if assets.does_asset_exist(MAP_PATH):
         assets.delete_asset(MAP_PATH)
     if not levels.new_level(MAP_PATH):
         raise RuntimeError(f"Could not create {MAP_PATH}")
 
     # 200 x 200 m ground, top face at z = 0.
-    spawn_block("Ground", (0.0, 0.0, -50.0), (200.0, 200.0, 1.0))
+    spawn_ground(10000.0, ground)
 
     # Obstacles between the two bases so pathfinding has something to do.
     spawn_wall("Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0), wall)
@@ -526,13 +585,7 @@ def build_map(tank, infantry, builder, wall, crate, digest):
     spawn_obstacle("Block_South", (1000.0, -2500.0, 200.0), (8.0, 8.0, 4.0))
     spawn_wall("Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0), wall)
 
-    sun = spawn(unreal.DirectionalLight, (0.0, 0.0, 2000.0), label="Sun")
-    sun.set_actor_rotation(unreal.Rotator(roll=0.0, pitch=-50.0, yaw=35.0), False)
-    sun.get_component_by_class(unreal.DirectionalLightComponent).set_editor_property("atmosphere_sun_light", True)
-
-    sky = spawn(unreal.SkyLight, (0.0, 0.0, 1000.0), label="SkyLight")
-    sky.get_component_by_class(unreal.SkyLightComponent).set_editor_property("real_time_capture", True)
-    spawn(unreal.SkyAtmosphere, (0.0, 0.0, 0.0), label="SkyAtmosphere")
+    spawn_lighting()
 
     # The default volume brush is a 200 uu cube, so this covers the whole ground.
     nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
@@ -559,43 +612,105 @@ def build_map(tank, infantry, builder, wall, crate, digest):
         raise RuntimeError(f"Could not save {MAP_PATH}")
 
 
-def make_map(tank, infantry, builder, wall, crate):
-    plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, builder, wall, crate, digest),
-                 spec_hash([build_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source],
-                           MAP_PATH, CUBE, tank, infantry, builder, wall, crate))
+def make_map(tank, infantry, builder, wall, crate, ground):
+    plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, builder, wall, crate, ground, digest),
+                 spec_hash([build_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source,
+                            spawn_ground, spawn_lighting], MAP_PATH, CUBE, tank, infantry, builder, wall, crate, ground,
+                           material_hashes[ground]))
 
 
-# The start spots of the skirmish maps, facing the middle: west and east as in L_TestMap, south and north on the empty
-# strips. A map with fewer spots takes the first ones.
-SKIRMISH_SPOTS = ((0, -6000.0, 0.0, 0.0), (1, 6000.0, 0.0, 180.0), (2, 0.0, -7000.0, 90.0), (3, 0.0, 7000.0, -90.0))
+def ring(radius, angle):
+    """The point at radius from the middle, angle degrees from world +X towards +Y, rounded to the centimetre."""
+    return round(radius * math.cos(math.radians(angle)), 1), round(radius * math.sin(math.radians(angle)), 1)
 
 
-def build_skirmish_map(path, spot_count, builder, wall, crate, digest):
-    """L_TestMap's ground and obstacles with spot_count start spots, each with only its builders and a supply source, and
+def ring_spots(radius, angles):
+    """Start spots on a circle, each facing the middle: (spot, x, y, yaw) in the order of angles."""
+    return tuple((spot, *ring(radius, angle), angle % 360.0 - 180.0) for spot, angle in enumerate(angles))
+
+
+# A skirmish map: its level, half the width of its square ground, its start spots (spot, x, y, yaw) facing the middle,
+# its obstacles (kind, label, location, scale) of kind "wall" (runs along y), "block" or "water", and the supply sources
+# (x, y, amount) the bases contest, besides the one by each base. The preview covers the whole ground.
+SkirmishMap = collections.namedtuple("SkirmishMap", "path half_size spots obstacles sources")
+
+# L_TestMap's ground and obstacles; west and east as in L_TestMap, south and north on the empty strips.
+TEST_OBSTACLES = (
+    ("wall", "Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0)),
+    ("block", "Block_North", (1000.0, 2500.0, 200.0), (8.0, 8.0, 4.0)),
+    ("block", "Block_South", (1000.0, -2500.0, 200.0), (8.0, 8.0, 4.0)),
+    ("wall", "Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0)),
+)
+TEST_SPOTS = ((0, -6000.0, 0.0, 0.0), (1, 6000.0, 0.0, 180.0), (2, 0.0, -7000.0, 90.0), (3, 0.0, 7000.0, -90.0))
+SKIRMISH_MAP = SkirmishMap("/Game/Maps/L_Skirmish", 10000.0, TEST_SPOTS, TEST_OBSTACLES, ())
+DUEL_MAP = SkirmishMap("/Game/Maps/L_SkirmishDuel", 10000.0, TEST_SPOTS[:2], TEST_OBSTACLES, ())
+
+# 160 x 160 m, west against east across a river running north to south. It is crossed at two fords, each between two
+# rocks, with a supply source by each ford, one on either bank.
+RIVER_FORD_MAP = SkirmishMap("/Game/Maps/L_RiverFord", 8000.0, (
+    (0, -5500.0, 0.0, 0.0), (1, 5500.0, 0.0, 180.0),
+), (
+    ("water", "Water_South", (0.0, -6300.0, 1.0), (8.0, 34.0, 0.1)),
+    ("water", "Water_Middle", (0.0, 0.0, 1.0), (8.0, 68.0, 0.1)),
+    ("water", "Water_North", (0.0, 6300.0, 1.0), (8.0, 34.0, 0.1)),
+    ("block", "Block_FordNorthWest", (-1500.0, 5300.0, 150.0), (5.0, 5.0, 3.0)),
+    ("block", "Block_FordNorthEast", (1500.0, 2700.0, 150.0), (5.0, 5.0, 3.0)),
+    ("block", "Block_FordSouthWest", (-1500.0, -2700.0, 150.0), (5.0, 5.0, 3.0)),
+    ("block", "Block_FordSouthEast", (1500.0, -5300.0, 150.0), (5.0, 5.0, 3.0)),
+    ("wall", "Wall_West", (-3800.0, -4500.0, 150.0), (2.0, 24.0, 3.0)),
+    ("wall", "Wall_East", (3800.0, 4500.0, 150.0), (2.0, 24.0, 3.0)),
+), (
+    (-2500.0, 5500.0, 8000), (2500.0, -5500.0, 8000),
+))
+
+# 220 x 220 m, a base in each corner. A quarry in the middle, walled to the west and east and open to the north and
+# south, holds two rich supply sources; a rock stands between every two neighbouring bases.
+QUARRY_CROSS_MAP = SkirmishMap("/Game/Maps/L_QuarryCross", 11000.0, (
+    (0, -7000.0, -7000.0, 45.0), (1, 7000.0, 7000.0, -135.0), (2, 7000.0, -7000.0, 135.0), (3, -7000.0, 7000.0, -45.0),
+), (
+    ("wall", "Wall_QuarryWest", (-2000.0, 0.0, 150.0), (2.0, 40.0, 3.0)),
+    ("wall", "Wall_QuarryEast", (2000.0, 0.0, 150.0), (2.0, 40.0, 3.0)),
+    ("block", "Block_East", (7000.0, 0.0, 200.0), (8.0, 8.0, 4.0)),
+    ("block", "Block_West", (-7000.0, 0.0, 200.0), (8.0, 8.0, 4.0)),
+    ("block", "Block_North", (0.0, 7000.0, 200.0), (8.0, 8.0, 4.0)),
+    ("block", "Block_South", (0.0, -7000.0, 200.0), (8.0, 8.0, 4.0)),
+), (
+    (0.0, 1000.0, 10000), (0.0, -1000.0, 10000),
+))
+
+# 240 x 240 m, six bases on a ring, each opposite another. A peak stands between every two neighbouring bases and six
+# rocks ring the middle; a supply source lies in front of each peak.
+SIX_PEAKS_MAP = SkirmishMap("/Game/Maps/L_SixPeaks", 12000.0, ring_spots(9000.0, (180.0, 0.0, 240.0, 60.0, 120.0, 300.0)), (
+    *(("block", f"Block_Peak{index}", (*ring(8000.0, 30.0 + 60.0 * index), 250.0), (8.0, 8.0, 5.0)) for index in range(6)),
+    *(("block", f"Block_Middle{index}", (*ring(3000.0, 60.0 * index), 150.0), (6.0, 6.0, 3.0)) for index in range(6)),
+), tuple((*ring(5500.0, 30.0 + 60.0 * index), 6000) for index in range(6)))
+
+
+def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
+    """A level with spec's ground and obstacles and start spots, each with only its builders and a supply source, and
     the skirmish game mode, which plays the seats the lobby chose (by default a player against an AI opponent from spots
     0 and 1) and lets every side build its army itself."""
+    path = spec.path
     if assets.does_asset_exist(path):
         assets.delete_asset(path)
     if not levels.new_level(path):
         raise RuntimeError(f"Could not create {path}")
 
-    spawn_block("Ground", (0.0, 0.0, -50.0), (200.0, 200.0, 1.0))
-    spawn_wall("Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0), wall)
-    spawn_obstacle("Block_North", (1000.0, 2500.0, 200.0), (8.0, 8.0, 4.0))
-    spawn_obstacle("Block_South", (1000.0, -2500.0, 200.0), (8.0, 8.0, 4.0))
-    spawn_wall("Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0), wall)
+    spawn_ground(spec.half_size, ground)
+    for kind, label, location, scale in spec.obstacles:
+        if kind == "wall":
+            spawn_wall(label, location, scale, wall)
+        elif kind == "water":
+            spawn_water(label, location, scale, water)
+        else:
+            spawn_obstacle(label, location, scale)
+    spawn_lighting()
 
-    sun = spawn(unreal.DirectionalLight, (0.0, 0.0, 2000.0), label="Sun")
-    sun.set_actor_rotation(unreal.Rotator(roll=0.0, pitch=-50.0, yaw=35.0), False)
-    sun.get_component_by_class(unreal.DirectionalLightComponent).set_editor_property("atmosphere_sun_light", True)
-    sky = spawn(unreal.SkyLight, (0.0, 0.0, 1000.0), label="SkyLight")
-    sky.get_component_by_class(unreal.SkyLightComponent).set_editor_property("real_time_capture", True)
-    spawn(unreal.SkyAtmosphere, (0.0, 0.0, 0.0), label="SkyAtmosphere")
-
+    # The default volume brush is a 200 uu cube, so this covers the whole ground.
     nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
-    nav.set_actor_scale3d(unreal.Vector(100.0, 100.0, 10.0))
+    nav.set_actor_scale3d(unreal.Vector(spec.half_size / 100.0, spec.half_size / 100.0, 10.0))
 
-    for spot, x, y, yaw in SKIRMISH_SPOTS[:spot_count]:
+    for spot, x, y, yaw in spec.spots:
         start = spawn(unreal.PlayerStart, (x, y, 100.0), yaw, label=f"PlayerStart_Team{spot}")
         start.set_editor_property("player_start_tag", f"Team{spot}")
         forward = (math.cos(math.radians(yaw)), math.sin(math.radians(yaw)))
@@ -604,6 +719,8 @@ def build_skirmish_map(path, spot_count, builder, wall, crate, digest):
         # To the left of the base, seen from the middle.
         spawn_supply_source((x - 50.0 * forward[0] - 2550.0 * forward[1], y - 50.0 * forward[1] + 2550.0 * forward[0], 0.0),
                             5000, (3, 3), crate)
+    for x, y, amount in spec.sources:
+        spawn_supply_source((x, y, 0.0), amount, (3, 3), crate)
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     world.get_world_settings().set_editor_property("default_game_mode", unreal.RTSSkirmishGameMode.static_class())
@@ -613,26 +730,31 @@ def build_skirmish_map(path, spot_count, builder, wall, crate, digest):
         raise RuntimeError(f"Could not save {path}")
 
 
-def make_skirmish_map(path, spot_count, builder, wall, crate):
-    """Queues the level and then its preview; returns the preview texture's path."""
+def make_skirmish_map(spec, builder, wall, crate, ground, water):
+    """Queues the level and then its preview."""
     digest = spec_hash([build_skirmish_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units,
-                        spawn_supply_source], path, spot_count, SKIRMISH_SPOTS, CUBE, builder, wall, crate)
-    plan_rebuild(path, ".umap", lambda digest: build_skirmish_map(path, spot_count, builder, wall, crate, digest), digest)
-    return make_map_preview(path, digest)
+                        spawn_supply_source, spawn_ground, spawn_water, spawn_lighting], spec, CUBE, builder, wall, crate, ground,
+                       water, material_hashes[ground], material_hashes[water])
+    plan_rebuild(spec.path, ".umap", lambda digest: build_skirmish_map(spec, builder, wall, crate, ground, water, digest), digest)
+    make_map_preview(spec, digest)
 
 
-# The world XY rectangle the map previews cover, (min x, min y, max x, max y): the 200 x 200 m ground of the maps.
-PREVIEW_AREA = (-10000.0, -10000.0, 10000.0, 10000.0)
 PREVIEW_SIZE = 256
 PREVIEW_GROUND = (86, 98, 70)
 PREVIEW_OBSTACLE = (58, 58, 64)
+PREVIEW_WATER = (40, 70, 110)
 PREVIEW_SUPPLY = (214, 176, 62)
 
 
-def preview_position(x, y):
-    """Where world (x, y) is on a preview, from the left and from the top in 0..1, as URTSMapData::ToPreviewPosition:
-    world +X is up, world +Y is right."""
-    min_x, min_y, max_x, max_y = PREVIEW_AREA
+def preview_area(spec):
+    """The world XY rectangle the map's preview covers, (min x, min y, max x, max y): its whole ground."""
+    return (-spec.half_size, -spec.half_size, spec.half_size, spec.half_size)
+
+
+def preview_position(area, x, y):
+    """Where world (x, y) is on a preview of area, from the left and from the top in 0..1, as
+    URTSMapData::ToPreviewPosition: world +X is up, world +Y is right."""
+    min_x, min_y, max_x, max_y = area
     return (y - min_y) / (max_y - min_y), (max_x - x) / (max_x - min_x)
 
 
@@ -648,15 +770,15 @@ def write_png(file_name, size, pixels):
         file.write(chunk(b"IEND", b""))
 
 
-def draw_map_preview(file_name):
-    """The loaded level as a PNG at file_name: the ground with its obstacles and supply sources, drawn from their
+def draw_map_preview(area, file_name):
+    """The loaded level as a PNG at file_name: the ground with its obstacles, water and supply sources, drawn from their
     bounds, for runs without a renderer."""
     pixels = [bytearray(PREVIEW_GROUND * PREVIEW_SIZE) for _ in range(PREVIEW_SIZE)]
 
     def fill(actor, color):
         origin, extent = actor.get_actor_bounds(False)
-        left, top = preview_position(origin.x + extent.x, origin.y - extent.y)
-        right, bottom = preview_position(origin.x - extent.x, origin.y + extent.y)
+        left, top = preview_position(area, origin.x + extent.x, origin.y - extent.y)
+        right, bottom = preview_position(area, origin.x - extent.x, origin.y + extent.y)
         columns = range(max(0, int(left * PREVIEW_SIZE)), min(PREVIEW_SIZE, math.ceil(right * PREVIEW_SIZE)))
         for row in range(max(0, int(top * PREVIEW_SIZE)), min(PREVIEW_SIZE, math.ceil(bottom * PREVIEW_SIZE))):
             for column in columns:
@@ -667,26 +789,28 @@ def draw_map_preview(file_name):
         label = actor.get_actor_label()
         if isinstance(actor, unreal.StaticMeshActor) and label.startswith(("Wall_", "Block_")):
             fill(actor, PREVIEW_OBSTACLE)
+        elif isinstance(actor, unreal.StaticMeshActor) and label.startswith("Water_"):
+            fill(actor, PREVIEW_WATER)
         elif isinstance(actor, unreal.RTSSupplySource):
             fill(actor, PREVIEW_SUPPLY)
     write_png(file_name, PREVIEW_SIZE, pixels)
 
 
-def build_map_preview(map_path, texture_path, digest):
-    """A top-down image of the saved level at map_path, rendered over PREVIEW_AREA when the run has a renderer and
+def build_map_preview(spec, texture_path, digest):
+    """A top-down image of the saved level of spec, rendered over its preview area when the run has a renderer and
     drawn otherwise."""
-    if not levels.load_level(map_path):
-        raise RuntimeError(f"Could not load {map_path}")
+    if not levels.load_level(spec.path):
+        raise RuntimeError(f"Could not load {spec.path}")
     directory, name = texture_path.rsplit("/", 1)
     source = os.path.join(PROJECT_DIR, "Saved", "Setup", "Previews", f"{name}.png")
     os.makedirs(os.path.dirname(source), exist_ok=True)
     rendered = unreal.RTSEditorScripting.can_render()
     if rendered:
         world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
-        if not unreal.RTSEditorScripting.capture_preview(world, preview_box(), PREVIEW_SIZE, source):
-            raise RuntimeError(f"Could not render {map_path}")
+        if not unreal.RTSEditorScripting.capture_preview(world, preview_box(preview_area(spec)), PREVIEW_SIZE, source):
+            raise RuntimeError(f"Could not render {spec.path}")
     else:
-        draw_map_preview(source)
+        draw_map_preview(preview_area(spec), source)
 
     task = unreal.AssetImportTask()
     task.filename = source
@@ -713,37 +837,37 @@ def map_preview_path(map_path):
     return f"{MAP_DATA_DIR}/T_Preview_{map_path.rsplit('/', 1)[1]}"
 
 
-def preview_box():
-    min_x, min_y, max_x, max_y = PREVIEW_AREA
+def preview_box(area):
+    min_x, min_y, max_x, max_y = area
     return make_struct(unreal.Box2D, {"min": unreal.Vector2D(min_x, min_y), "max": unreal.Vector2D(max_x, max_y),
                                       "is_valid": True})
 
 
-def make_map_preview(map_path, map_digest):
+def make_map_preview(spec, map_digest):
     """Queued after the level, so it shows the level as just built; rebuilt whenever the level is. A drawn preview is
     rendered again by a run that has a renderer; a run without one keeps a rendered preview of an unchanged level."""
-    texture_path = map_preview_path(map_path)
+    texture_path = map_preview_path(spec.path)
     can_render = unreal.RTSEditorScripting.can_render()
-    plan_rebuild(texture_path, ".uasset", lambda digest: build_map_preview(map_path, texture_path, digest),
-                 spec_hash([build_map_preview, draw_map_preview, preview_box, preview_position, write_png], map_digest,
-                           PREVIEW_AREA, PREVIEW_SIZE, PREVIEW_GROUND, PREVIEW_OBSTACLE, PREVIEW_SUPPLY),
+    plan_rebuild(texture_path, ".uasset", lambda digest: build_map_preview(spec, texture_path, digest),
+                 spec_hash([build_map_preview, draw_map_preview, preview_area, preview_box, preview_position, write_png], map_digest,
+                           PREVIEW_SIZE, PREVIEW_GROUND, PREVIEW_OBSTACLE, PREVIEW_WATER, PREVIEW_SUPPLY),
                  lambda texture: can_render and assets.get_metadata_tag(texture, PREVIEW_SOURCE_TAG) != "Rendered")
-    return texture_path
 
 
-def make_map_data(name, display_name, path, start_spots, default_seats):
+def make_map_data(name, display_name, spec, default_seats):
     """default_seats: (seat type, start spot or -1 for random) pairs, at most one per start spot. The start spot positions
-    come from SKIRMISH_SPOTS, which the level's PlayerStarts tagged Team<N> are placed by."""
-    preview = map_preview_path(path)
+    come from spec's spots, which the level's PlayerStarts tagged Team<N> are placed by."""
+    preview = map_preview_path(spec.path)
+    area = preview_area(spec)
     return plan_data_asset(name, MAP_DATA_DIR, unreal.RTSMapData, {
         "display_name": unreal.Text(display_name),
-        "map": unreal.SoftObjectPath(f"{path}.{path.rsplit('/', 1)[1]}"),
-        "start_spots": start_spots,
+        "map": unreal.SoftObjectPath(f"{spec.path}.{spec.path.rsplit('/', 1)[1]}"),
+        "start_spots": len(spec.spots),
         "default_seats": [make_struct(unreal.RTSSeat, {"type": seat_type, "start_spot": spot})
                           for seat_type, spot in default_seats],
         "preview": unreal.SoftObjectPath(f"{preview}.{preview.rsplit('/', 1)[1]}"),
-        "preview_area": preview_box(),
-        "start_spot_positions": [unreal.Vector2D(*preview_position(x, y)) for _, x, y, _ in SKIRMISH_SPOTS[:start_spots]],
+        "preview_area": preview_box(area),
+        "start_spot_positions": [unreal.Vector2D(*preview_position(area, x, y)) for _, x, y, _ in spec.spots],
     })
 
 
@@ -908,14 +1032,21 @@ build_order = make_build_order("DA_TestBuildOrder", [
 make_faction("DA_TestFaction", "Test Faction", buildings, headquarters, ai_build_order=build_order)
 make_ghost_material("M_PlacementGhost")
 make_shot_material("M_ShotFx")
-make_map(tank, infantry, builder, wall_mesh, crate_mesh)
-make_skirmish_map(SKIRMISH_MAP_PATH, 4, builder, wall_mesh, crate_mesh)
-make_skirmish_map(DUEL_MAP_PATH, 2, builder, wall_mesh, crate_mesh)
+ground = make_surface_material("M_Ground", (0.06, 0.075, 0.04), 0.9)
+water = make_surface_material("M_Water", (0.015, 0.04, 0.08), 0.1)
+make_map(tank, infantry, builder, wall_mesh, crate_mesh, ground)
+for spec in (SKIRMISH_MAP, DUEL_MAP, RIVER_FORD_MAP, QUARRY_CROSS_MAP, SIX_PEAKS_MAP):
+    make_skirmish_map(spec, builder, wall_mesh, crate_mesh, ground, water)
 # The lobby's maps, listed in Config/DefaultGame.ini: by default a player against an AI opponent; the other seats are open.
-make_map_data("DA_MapSkirmish", "Test Crossroads", SKIRMISH_MAP_PATH, 4,
+make_map_data("DA_MapSkirmish", "Test Crossroads", SKIRMISH_MAP,
               [(unreal.RTSSeatType.OPEN, 0), (unreal.RTSSeatType.AI, 1), (unreal.RTSSeatType.CLOSED, -1),
                (unreal.RTSSeatType.CLOSED, -1)])
-make_map_data("DA_MapDuel", "Test Duel", DUEL_MAP_PATH, 2, [(unreal.RTSSeatType.OPEN, 0), (unreal.RTSSeatType.AI, 1)])
+make_map_data("DA_MapDuel", "Test Duel", DUEL_MAP, [(unreal.RTSSeatType.OPEN, 0), (unreal.RTSSeatType.AI, 1)])
+make_map_data("DA_MapRiverFord", "River Ford", RIVER_FORD_MAP, [(unreal.RTSSeatType.OPEN, 0), (unreal.RTSSeatType.AI, 1)])
+make_map_data("DA_MapQuarryCross", "Quarry Cross", QUARRY_CROSS_MAP,
+              [(unreal.RTSSeatType.OPEN, 0), (unreal.RTSSeatType.AI, 1)] + [(unreal.RTSSeatType.CLOSED, -1)] * 2)
+make_map_data("DA_MapSixPeaks", "Six Peaks", SIX_PEAKS_MAP,
+              [(unreal.RTSSeatType.OPEN, 0), (unreal.RTSSeatType.AI, 1)] + [(unreal.RTSSeatType.CLOSED, -1)] * 4)
 make_menu_map(MAIN_MENU_MAP_PATH, unreal.RTSMainMenuGameMode)
 make_menu_map(LOBBY_MAP_PATH, unreal.RTSLobbyGameMode)
 plan_data_assets()
