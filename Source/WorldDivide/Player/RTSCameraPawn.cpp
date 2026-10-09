@@ -2,7 +2,9 @@
 
 #include "Camera/CameraComponent.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "NavMesh/NavMeshBoundsVolume.h"
 
 ARTSCameraPawn::ARTSCameraPawn()
 {
@@ -28,6 +30,16 @@ ARTSCameraPawn::ARTSCameraPawn()
 void ARTSCameraPawn::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Every level setup_testmap.py builds has a NavMeshBoundsVolume over exactly its ground. Level actors load on every
+	// machine, so a client's camera finds the same bounds as the host's.
+	FBox2D MapArea(ForceInit);
+	for (TActorIterator<ANavMeshBoundsVolume> It(GetWorld()); It; ++It)
+	{
+		const FBox Bounds = It->GetBounds().GetBox();
+		MapArea += FBox2D(FVector2D(Bounds.Min), FVector2D(Bounds.Max));
+	}
+	PanArea = (MapArea.bIsValid ? MapArea : FallbackMapArea).ExpandBy(EdgeMargin);
 
 	TargetZoom = FMath::Clamp(DefaultZoom, MinZoom, MaxZoom);
 	SpringArm->TargetArmLength = TargetZoom;
@@ -76,6 +88,12 @@ void ARTSCameraPawn::UpdateArm()
 	}
 }
 
+FVector ARTSCameraPawn::ClampToPanArea(const FVector& Location) const
+{
+	return FVector(FMath::Clamp(Location.X, PanArea.Min.X, PanArea.Max.X), FMath::Clamp(Location.Y, PanArea.Min.Y, PanArea.Max.Y),
+		Location.Z);
+}
+
 void ARTSCameraPawn::AddPanInput(const FVector2D& Input)
 {
 	PendingPan += Input;
@@ -94,8 +112,7 @@ void ARTSCameraPawn::AddRotateInput(float Degrees)
 void ARTSCameraPawn::JumpTo(const FVector& Location)
 {
 	// The spring arm looks at the pawn, so moving the pawn centres the view; its lag glides the camera after it.
-	const FVector2D Flat = FVector2D(Location).GetClampedToMaxSize(MaxDistanceFromOrigin);
-	SetActorLocation(FVector(Flat.X, Flat.Y, GetActorLocation().Z));
+	SetActorLocation(ClampToPanArea(FVector(Location.X, Location.Y, GetActorLocation().Z)));
 	PendingPan = FVector2D::ZeroVector;
 }
 
@@ -119,15 +136,7 @@ void ARTSCameraPawn::Tick(float DeltaSeconds)
 		const FVector Direction = (Forward * PendingPan.Y + Right * PendingPan.X).GetClampedToMaxSize(1.f);
 		const float ZoomScale = SpringArm->TargetArmLength / DefaultZoom;
 
-		FVector NewLocation = GetActorLocation() + Direction * PanSpeed * ZoomScale * DeltaSeconds;
-		const FVector2D Flat(NewLocation);
-		if (Flat.Size() > MaxDistanceFromOrigin)
-		{
-			const FVector2D Clamped = Flat.GetSafeNormal() * MaxDistanceFromOrigin;
-			NewLocation.X = Clamped.X;
-			NewLocation.Y = Clamped.Y;
-		}
-		SetActorLocation(NewLocation);
+		SetActorLocation(ClampToPanArea(GetActorLocation() + Direction * PanSpeed * ZoomScale * DeltaSeconds));
 		PendingPan = FVector2D::ZeroVector;
 	}
 

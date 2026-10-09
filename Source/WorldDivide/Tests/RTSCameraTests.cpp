@@ -125,6 +125,38 @@ namespace RTSCameraTests
 			double(GetSetting(*Camera, TEXT("NearPitch"))), 0.5);
 		return true;
 	}
+
+	/**
+	 * Without a NavMeshBoundsVolume the camera keeps to FallbackMapArea plus EdgeMargin: a rectangle, so panning and JumpTo
+	 * reach its corners, and go no further.
+	 */
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSCameraPanAreaTest, "WorldDivide.Camera.PanArea", TestFlags)
+
+	bool FRTSCameraPanAreaTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		ARTSCameraPawn* Camera = SpawnCamera(TestWorld);
+		const FBox2D* Fallback = ARTSCameraPawn::StaticClass()->FindPropertyByName(TEXT("FallbackMapArea"))
+			->ContainerPtrToValuePtr<FBox2D>(Camera);
+		const FBox2D Expected = Fallback->ExpandBy(GetSetting(*Camera, TEXT("EdgeMargin")));
+		TestTrue(FString::Printf(TEXT("The pan area is %s, not %s"), *Expected.ToString(), *Camera->GetPanArea().ToString()),
+			Camera->GetPanArea().Min.Equals(Expected.Min) && Camera->GetPanArea().Max.Equals(Expected.Max));
+
+		Camera->JumpTo(FVector(1000000.0, -1000000.0, 0.0));
+		TestTrue(TEXT("JumpTo far away stops in the pan area's corner"),
+			FVector2D(Camera->GetActorLocation()).Equals(FVector2D(Expected.Max.X, Expected.Min.Y), 1.0));
+
+		Camera->JumpTo(FVector::ZeroVector);
+		for (int32 Frame = 0; Frame < 600; ++Frame)
+		{
+			// Forward and left: the camera starts unrotated, so towards +X and -Y.
+			Camera->AddPanInput(FVector2D(-1.0, 1.0));
+			Camera->Tick(1.f / 10.f);
+		}
+		TestTrue(TEXT("Panning far out stops in the pan area's corner"),
+			FVector2D(Camera->GetActorLocation()).Equals(FVector2D(Expected.Max.X, Expected.Min.Y), 1.0));
+		return true;
+	}
 }
 
 #endif

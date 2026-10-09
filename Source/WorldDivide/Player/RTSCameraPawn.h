@@ -40,6 +40,9 @@ public:
 	/** Where the camera settles once the spring arm's lag has caught up. */
 	FVector GetCameraGoal() const;
 
+	/** The world XY rectangle the pawn stays in: the map's ground plus EdgeMargin. Set when play begins. */
+	const FBox2D& GetPanArea() const { return PanArea; }
+
 	virtual void Tick(float DeltaSeconds) override;
 
 protected:
@@ -86,13 +89,22 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Camera")
 	float MinCameraHeight = 200.f;
 
-	/** The pawn may not wander further than this from the world origin. */
+	/** How far past the edge of the map the pawn may go. */
 	UPROPERTY(EditAnywhere, Category = "Camera")
-	float MaxDistanceFromOrigin = 15000.f;
+	float EdgeMargin = 500.f;
+
+	/** The map's ground when its level has no NavMeshBoundsVolume, which otherwise covers the ground. */
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	FBox2D FallbackMapArea = FBox2D(FVector2D(-15000.0), FVector2D(15000.0));
 
 private:
 	/** Tilts the arm to match its current length and lifts it clear of the ground or building under the camera. */
 	void UpdateArm();
+
+	/** Location with its X and Y moved into PanArea. */
+	FVector ClampToPanArea(const FVector& Location) const;
+
+	FBox2D PanArea = FBox2D(FVector2D(-15000.0), FVector2D(15000.0));
 
 	FVector2D PendingPan = FVector2D::ZeroVector;
 	float PendingYaw = 0.f;

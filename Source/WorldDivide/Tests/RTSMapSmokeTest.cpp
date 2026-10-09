@@ -11,6 +11,8 @@
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
+#include "Player/RTSCameraPawn.h"
+#include "Player/RTSPlayerController.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
@@ -20,7 +22,8 @@
  * Every map the lobby offers, played with all its start spots taken: the player from spot 0 and an AI from each other
  * spot. PIE starts the map with its default seats and travels to it again with these, as the lobby's start and the
  * restart do. The map loads with the skirmish game mode, each start spot has its PlayerStart tagged Team<N>, and every team
- * gets its headquarters, completed, on its own spot.
+ * gets its headquarters, completed, on its own spot. The player's camera pans to every corner of the ground, and no
+ * further than a small margin past it.
  */
 namespace RTSMapSmokeTest
 {
@@ -29,6 +32,9 @@ namespace RTSMapSmokeTest
 
 	/** How far a headquarters may stand from its PlayerStart, in cm. */
 	constexpr double SpotTolerance = 200.0;
+
+	/** How far past the edge of the ground the camera may go, in cm. */
+	constexpr double MaxEdgeMargin = 1000.0;
 
 	/** The Seats option that plays every spot of a map with StartSpots spots, team N from spot N. */
 	FString MakeSeatsOption(int32 StartSpots)
@@ -63,8 +69,8 @@ namespace RTSMapSmokeTest
 	class FRTSVerifyMapPlays : public IAutomationLatentCommand
 	{
 	public:
-		FRTSVerifyMapPlays(FAutomationTestBase* InTest, FString InName, FString InMapPath, int32 InStartSpots)
-			: Test(InTest), Name(MoveTemp(InName)), MapPath(MoveTemp(InMapPath)), StartSpots(InStartSpots)
+		FRTSVerifyMapPlays(FAutomationTestBase* InTest, FString InName, FString InMapPath, int32 InStartSpots, const FBox2D& InGround)
+			: Test(InTest), Name(MoveTemp(InName)), MapPath(MoveTemp(InMapPath)), StartSpots(InStartSpots), Ground(InGround)
 		{
 		}
 
@@ -152,12 +158,57 @@ namespace RTSMapSmokeTest
 				Test->TestTrue(FString::Printf(TEXT("%s: team %d's headquarters stands on spot %d, %.0f cm from it"), *Name, Spot,
 					Spot, Distance), Distance <= SpotTolerance);
 			}
+
+			const ARTSPlayerController* Player = Cast<ARTSPlayerController>(World.GetFirstPlayerController());
+			ARTSCameraPawn* Camera = Player ? Player->GetPawn<ARTSCameraPawn>() : nullptr;
+			if (Test->TestNotNull(FString::Printf(TEXT("%s: the player has a camera"), *Name), Camera))
+			{
+				VerifyCameraBounds(*Camera);
+			}
+		}
+
+		/** Pans the camera from the middle towards each corner of the ground, and jumps it far past each corner. */
+		void VerifyCameraBounds(ARTSCameraPawn& Camera) const
+		{
+			const FVector2D Corners[] = {
+				Ground.Min, Ground.Max, FVector2D(Ground.Min.X, Ground.Max.Y), FVector2D(Ground.Max.X, Ground.Min.Y) };
+			for (const FVector2D& Corner : Corners)
+			{
+				const FVector2D Outward = (Corner - Ground.GetCenter()).GetSafeNormal();
+
+				Camera.JumpTo(FVector(Ground.GetCenter(), 0.0));
+				const FRotator YawOnly(0.f, Camera.GetActorRotation().Yaw, 0.f);
+				const FVector2D Forward(YawOnly.RotateVector(FVector::ForwardVector));
+				const FVector2D Right(YawOnly.RotateVector(FVector::RightVector));
+				for (int32 Frame = 0; Frame < 600; ++Frame)
+				{
+					Camera.AddPanInput(FVector2D(Outward | Right, Outward | Forward));
+					Camera.Tick(1.f / 10.f);
+				}
+				VerifyAtCorner(Camera, Corner, TEXT("Panning"));
+
+				Camera.JumpTo(FVector(Corner + Outward * 1000000.0, 0.0));
+				VerifyAtCorner(Camera, Corner, TEXT("Jumping"));
+			}
+		}
+
+		/** The camera stands at Corner of the ground or past it, by no more than MaxEdgeMargin along each axis. */
+		void VerifyAtCorner(const ARTSCameraPawn& Camera, const FVector2D& Corner, const TCHAR* How) const
+		{
+			const FVector2D Location(Camera.GetActorLocation());
+			const FVector2D Outward(FMath::Sign(Corner.X - Ground.GetCenter().X), FMath::Sign(Corner.Y - Ground.GetCenter().Y));
+			const FVector2D Past = (Location - Corner) * Outward;
+			Test->TestTrue(FString::Printf(TEXT("%s: %s towards corner %s reaches it, stopping at %s"), *Name, How,
+				*Corner.ToString(), *Location.ToString()),
+				Past.X >= -1.0 && Past.X <= MaxEdgeMargin && Past.Y >= -1.0 && Past.Y <= MaxEdgeMargin);
 		}
 
 		FAutomationTestBase* Test;
 		FString Name;
 		FString MapPath;
 		int32 StartSpots;
+		/** The world XY rectangle of the map's ground. */
+		FBox2D Ground;
 		double StartTime = 0.0;
 		bool bTravelled = false;
 		TWeakObjectPtr<UWorld> FirstWorld;
@@ -190,7 +241,8 @@ bool FRTSMapSmokeTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
-	ADD_LATENT_AUTOMATION_COMMAND(RTSMapSmokeTest::FRTSVerifyMapPlays(this, Map->GetName(), MapPath, Map->StartSpots));
+	ADD_LATENT_AUTOMATION_COMMAND(RTSMapSmokeTest::FRTSVerifyMapPlays(this, Map->GetName(), MapPath, Map->StartSpots,
+		Map->PreviewArea));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }
