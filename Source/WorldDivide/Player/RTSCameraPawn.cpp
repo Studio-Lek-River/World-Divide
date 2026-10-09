@@ -1,6 +1,7 @@
 #include "Player/RTSCameraPawn.h"
 
 #include "Camera/CameraComponent.h"
+#include "Engine/World.h"
 #include "GameFramework/SpringArmComponent.h"
 
 ARTSCameraPawn::ARTSCameraPawn()
@@ -30,8 +31,49 @@ void ARTSCameraPawn::BeginPlay()
 
 	TargetZoom = FMath::Clamp(DefaultZoom, MinZoom, MaxZoom);
 	SpringArm->TargetArmLength = TargetZoom;
-	SpringArm->SetRelativeRotation(FRotator(Pitch, 0.f, 0.f));
 	SetActorRotation(FRotator(0.f, GetActorRotation().Yaw, 0.f));
+	UpdateArm();
+}
+
+float ARTSCameraPawn::GetPitchForZoom(float ArmLength) const
+{
+	const float TiltRange = TiltStartZoom - MinZoom;
+	if (TiltRange <= KINDA_SMALL_NUMBER)
+	{
+		return TopDownPitch;
+	}
+	const float Alpha = FMath::Clamp((ArmLength - MinZoom) / TiltRange, 0.f, 1.f);
+	return FMath::Lerp(NearPitch, TopDownPitch, FMath::SmoothStep(0.f, 1.f, Alpha));
+}
+
+float ARTSCameraPawn::GetZoom() const
+{
+	return SpringArm->TargetArmLength;
+}
+
+FVector ARTSCameraPawn::GetCameraGoal() const
+{
+	const FVector Origin = SpringArm->GetComponentLocation() + SpringArm->TargetOffset;
+	return Origin - SpringArm->GetComponentRotation().Vector() * SpringArm->TargetArmLength;
+}
+
+void ARTSCameraPawn::UpdateArm()
+{
+	SpringArm->SetRelativeRotation(FRotator(GetPitchForZoom(SpringArm->TargetArmLength), 0.f, 0.f));
+
+	// The pivot rests on the ground, so a near-horizontal arm puts the camera at or under ground level.
+	// Lift the whole arm until the camera clears whatever is below it. Units ignore WorldStatic, so only
+	// terrain and buildings lift it, never a unit driving past.
+	SpringArm->TargetOffset = FVector::ZeroVector;
+	const FVector Goal = GetCameraGoal();
+	const FVector TraceStart(Goal.X, Goal.Y, Goal.Z + MaxZoom);
+	const FVector TraceEnd(Goal.X, Goal.Y, Goal.Z - MaxZoom);
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(RTSCameraClearance), false, this);
+	FHitResult Ground;
+	if (GetWorld()->LineTraceSingleByChannel(Ground, TraceStart, TraceEnd, ECC_WorldStatic, Params))
+	{
+		SpringArm->TargetOffset.Z = FMath::Max(0.f, Ground.ImpactPoint.Z + MinCameraHeight - Goal.Z);
+	}
 }
 
 void ARTSCameraPawn::AddPanInput(const FVector2D& Input)
@@ -88,4 +130,6 @@ void ARTSCameraPawn::Tick(float DeltaSeconds)
 		SetActorLocation(NewLocation);
 		PendingPan = FVector2D::ZeroVector;
 	}
+
+	UpdateArm();
 }
