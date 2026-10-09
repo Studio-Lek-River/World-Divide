@@ -25,4 +25,7 @@ public:
 
 	/** The point of the footprint nearest to From, at the target's height. Weapon range is measured to it. */
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const = 0;
+
+	/** In flight, so only weapons that hit air can shoot it. Parked aircraft, like everything else, are on the ground. */
+	virtual bool IsAirborne() const { return false; }
 };

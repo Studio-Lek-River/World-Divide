@@ -18,7 +18,7 @@ namespace
 
 	const FName PlaceholderMeshDir(TEXT("/Game/Art/Placeholder/Meshes"));
 	const TCHAR* TeamMaterialPath = TEXT("/Game/Materials/M_PlaceholderTeam.M_PlaceholderTeam");
-	constexpr int32 PlaceholderMeshCount = 12;
+	constexpr int32 PlaceholderMeshCount = 14;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSPlaceholderWithoutNaniteTest, "WorldDivide.Art.PlaceholderWithoutNanite", TestFlags)

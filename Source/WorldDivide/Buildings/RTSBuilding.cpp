@@ -10,6 +10,7 @@
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
+#include "Data/RTSAircraftData.h"
 #include "Data/RTSUnitData.h"
 #include "Economy/RTSHarvesterComponent.h"
 #include "Engine/World.h"
@@ -19,6 +20,7 @@
 #include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/RTSPlayerController.h"
+#include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
 #include "WorldDivide.h"
 
@@ -84,6 +86,7 @@ void ARTSBuilding::InitFromData(URTSBuildingData* InBuildingData, int32 InTeamId
 	WeaponComponent->SetWeaponData(nullptr);
 	ApplyUpgrades();
 	ApplyBuildingData();
+	Pads.SetNum(GetPadCount());
 
 	// From now on the building keeps its team in the match.
 	ARTSGameState* GameState = GetWorld()->GetGameState<ARTSGameState>();
@@ -263,6 +266,20 @@ void ARTSBuilding::Destroyed()
 		ReleaseHeldUnits();
 	}
 
+	// Aircraft bound here look for another pad.
+	if (HasAuthority())
+	{
+		TArray<TWeakObjectPtr<ARTSUnit>> Bound = MoveTemp(Pads);
+		Pads.Reset();
+		for (const TWeakObjectPtr<ARTSUnit>& Aircraft : Bound)
+		{
+			if (Aircraft.IsValid())
+			{
+				Aircraft->GetAircraftComponent()->NotifyPadLost();
+			}
+		}
+	}
+
 	// Only completed buildings count towards the grid; cancelled or destroyed sites never did.
 	if (HasAuthority() && IsConstructed() && GetWorld())
 	{
@@ -330,6 +347,75 @@ ARTSUnit* ARTSBuilding::SpawnUnitAtExit(URTSUnitData* Data)
 	Transform.AddToTranslation(FVector(0.f, 0.f, Unit->GetGroundOffset()));
 	Unit->FinishSpawning(Transform);
 	return Unit;
+}
+
+int32 ARTSBuilding::GetPadCount() const
+{
+	return BuildingData ? BuildingData->AirfieldPads : 0;
+}
+
+FVector ARTSBuilding::GetPadLocation(int32 Index) const
+{
+	const FVector Center = GetActorLocation();
+	const int32 Count = GetPadCount();
+	if (Count <= 0)
+	{
+		return Center;
+	}
+	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint);
+	const float Spacing = 2.f * Extent.Y / Count;
+	// The collision box spans the building's full height, so its top is the roof.
+	const float Roof = 2.f * Collision->GetUnscaledBoxExtent().Z;
+	return Center + FVector(0.f, -Extent.Y + (Index + 0.5f) * Spacing, Roof);
+}
+
+ARTSUnit* ARTSBuilding::GetPadAircraft(int32 Index) const
+{
+	return Pads.IsValidIndex(Index) ? Pads[Index].Get() : nullptr;
+}
+
+int32 ARTSBuilding::GetFreePadCount() const
+{
+	int32 Free = 0;
+	for (const TWeakObjectPtr<ARTSUnit>& Aircraft : Pads)
+	{
+		Free += Aircraft.IsValid() ? 0 : 1;
+	}
+	for (const TObjectPtr<URTSEntityData>& Queued : ProductionComponent->GetQueue())
+	{
+		Free -= Queued && Queued->IsA<URTSAircraftData>() ? 1 : 0;
+	}
+	return Free;
+}
+
+int32 ARTSBuilding::ClaimPad(ARTSUnit& Aircraft)
+{
+	check(HasAuthority());
+	const int32 Current = Pads.IndexOfByPredicate([&Aircraft](const TWeakObjectPtr<ARTSUnit>& Bound) { return Bound.Get() == &Aircraft; });
+	if (Current != INDEX_NONE)
+	{
+		return Current;
+	}
+	if (GetFreePadCount() <= 0)
+	{
+		return INDEX_NONE;
+	}
+	const int32 Index = Pads.IndexOfByPredicate([](const TWeakObjectPtr<ARTSUnit>& Bound) { return !Bound.IsValid(); });
+	if (Index != INDEX_NONE)
+	{
+		Pads[Index] = &Aircraft;
+	}
+	return Index;
+}
+
+void ARTSBuilding::ReleasePad(const ARTSUnit& Aircraft)
+{
+	check(HasAuthority());
+	const int32 Index = Pads.IndexOfByPredicate([&Aircraft](const TWeakObjectPtr<ARTSUnit>& Bound) { return Bound.Get() == &Aircraft; });
+	if (Index != INDEX_NONE)
+	{
+		Pads[Index] = nullptr;
+	}
 }
 
 FVector ARTSBuilding::GetClosestFootprintPoint(const FVector& From) const

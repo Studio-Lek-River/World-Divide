@@ -8,12 +8,13 @@
 #include "Core/RTSGameState.h"
 #include "Data/RTSWeaponData.h"
 #include "EngineUtils.h"
+#include "Net/UnrealNetwork.h"
 #include "Units/RTSUnit.h"
 
 URTSWeaponComponent::URTSWeaponComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	// For Multicast_PlayShot only; nothing of the weapon replicates.
+	// For Multicast_PlayShot and the ammo count.
 	SetIsReplicatedByDefault(true);
 }
 
@@ -60,7 +61,8 @@ bool URTSWeaponComponent::CanTarget(const AActor* Candidate) const
 	const IRTSTargetable* Targetable = Cast<IRTSTargetable>(Candidate);
 	return Targetable && IsValid(Candidate) && Candidate != GetOwner()
 		&& Targetable->GetTeamId() != TeamId
-		&& !Targetable->GetHealthComponent()->IsDead();
+		&& !Targetable->GetHealthComponent()->IsDead()
+		&& (!WeaponData || WeaponData->CanHit(Targetable->IsAirborne()));
 }
 
 bool URTSWeaponComponent::IsInRange(const AActor* Candidate) const
@@ -151,11 +153,15 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 	}
 
 	// Tolerance so a reload that is a whole number of frames does not slip one frame to float error.
-	if (Cooldown > KINDA_SMALL_NUMBER)
+	if (Cooldown > KINDA_SMALL_NUMBER || Ammo == 0)
 	{
 		return;
 	}
 	Cooldown = WeaponData->ReloadSeconds;
+	if (Ammo > 0)
+	{
+		--Ammo;
+	}
 	const IRTSTargetable* Targetable = Cast<IRTSTargetable>(Current);
 	const FVector Origin = GetOwner()->GetActorLocation();
 	const float FlightTime = WeaponData->GetFlightTime(FVector::Dist2D(Origin, Targetable->GetClosestFootprintPoint(Origin)));
@@ -194,4 +200,11 @@ void URTSWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	{
 		UpdateWeapon(DeltaTime);
 	}
+}
+
+void URTSWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(URTSWeaponComponent, Ammo);
 }

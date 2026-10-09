@@ -59,6 +59,27 @@ public:
 	/** Server only. Spawns a unit of Data for the building's team at the exit. */
 	ARTSUnit* SpawnUnitAtExit(URTSUnitData* Data);
 
+	/** Aircraft pads, from the data; 0 for a building that is not an airfield. */
+	int32 GetPadCount() const;
+
+	/** Where an aircraft stands on pad Index: on the roof, pads side by side across the footprint along Y. */
+	FVector GetPadLocation(int32 Index) const;
+
+	/** The aircraft bound to pad Index, or null while it is free. */
+	ARTSUnit* GetPadAircraft(int32 Index) const;
+
+	/** Pads neither bound to an aircraft nor kept for an aircraft in the production queue. */
+	int32 GetFreePadCount() const;
+
+	/**
+	 * Server only. Binds Aircraft to a free pad and returns its index, or the pad it already has here; INDEX_NONE when none is
+	 * free.
+	 */
+	int32 ClaimPad(ARTSUnit& Aircraft);
+
+	/** Server only. Frees Aircraft's pad here, if it has one. */
+	void ReleasePad(const ARTSUnit& Aircraft);
+
 	/** From clamped to the footprint rectangle. Under construction or not, the building can be shot. */
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
 
@@ -167,4 +188,7 @@ private:
 	bool bNavCutPending = false;
 	float NavCutWaited = 0.f;
 	TArray<TWeakObjectPtr<ARTSUnit>> HeldUnits;
+
+	/** Server only. The aircraft bound to each pad; one destroyed frees its pad by itself. */
+	TArray<TWeakObjectPtr<ARTSUnit>> Pads;
 };

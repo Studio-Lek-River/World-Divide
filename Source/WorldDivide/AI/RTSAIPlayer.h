@@ -212,7 +212,7 @@ private:
 	/** The standing enemy building nearest From, or null. */
 	ARTSBuilding* FindNearestEnemyBuilding(const FVector& From) const;
 
-	/** Own armed units that are neither builders nor harvesters, and are not in a wave. */
+	/** Own armed units that are neither builders, harvesters nor aircraft, and are not in a wave. */
 	TArray<ARTSUnit*> GatherArmy() const;
 
 	ERTSAIDifficulty Difficulty = ERTSAIDifficulty::Normal;

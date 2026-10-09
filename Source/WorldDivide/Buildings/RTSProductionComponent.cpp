@@ -4,6 +4,7 @@
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Core/RTSPlayerState.h"
+#include "Data/RTSAircraftData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSUpgradeData.h"
@@ -11,6 +12,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
+#include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
 #include "WorldDivide.h"
 
@@ -151,6 +153,12 @@ bool URTSProductionComponent::Enqueue(ARTSPlayerState& Player, URTSEntityData* D
 		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d already researched or queued %s"), Player.GetTeamId(), *Data->GetName());
 		return false;
 	}
+	// Each aircraft needs a pad of its own, kept for it from the moment it is queued.
+	if (Data->IsA<URTSAircraftData>() && Building->GetFreePadCount() <= 0)
+	{
+		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d has no free pad at %s for %s"), Player.GetTeamId(), *Building->GetName(), *Data->GetName());
+		return false;
+	}
 	if (Queue.Num() >= MaxQueue || !Player.TrySpendCredits(Data->Cost))
 	{
 		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot queue %s: %d queued, %d of %d credits"),
@@ -214,7 +222,18 @@ void URTSProductionComponent::UpdateProduction(float DeltaSeconds)
 		return;
 	}
 	URTSUnitData* UnitData = Cast<URTSUnitData>(Data);
-	if (ARTSUnit* Unit = UnitData ? Building->SpawnUnitAtExit(UnitData) : nullptr)
+	ARTSUnit* Unit = UnitData ? Building->SpawnUnitAtExit(UnitData) : nullptr;
+	if (Unit && Unit->GetAircraftComponent()->CanFly())
+	{
+		// An aircraft parks on the pad kept for it; should none be free after all, it circles until one is.
+		if (!Unit->GetAircraftComponent()->ParkAt(*Building))
+		{
+			FRTSCommand Stop;
+			Stop.Type = ERTSCommandType::Stop;
+			Unit->ExecuteCommand(Stop);
+		}
+	}
+	else if (Unit)
 	{
 		FRTSCommand Move;
 		Move.Type = ERTSCommandType::Move;

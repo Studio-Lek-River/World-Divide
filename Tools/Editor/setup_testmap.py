@@ -205,12 +205,15 @@ def fit_scale(mesh, length, width, height=None):
     return (scale, scale, height / (box.max.z - box.min.z) if height else scale)
 
 
-def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_scale, shell_color, arc_height=0.0):
+def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_scale, shell_color, arc_height=0.0,
+                ground=True, air=False):
     return plan_data_asset(name, WEAPON_DIR, unreal.RTSWeaponData, {
         "range": weapon_range,
         "damage": damage,
         "reload_seconds": reload_seconds,
         "shell_speed": shell_speed,
+        "can_target_ground": ground,
+        "can_target_air": air,
         "shell_arc_height": arc_height,
         "effect_scale": effect_scale,
         "shell_color": unreal.LinearColor(*shell_color, 1.0),
@@ -272,9 +275,30 @@ def make_builder(name, display_name, mesh, scale, radius, health, speed, turn_ra
     })
 
 
+def make_aircraft(name, display_name, mesh, scale, radius, health, weapon, speed, turn_rate, cost, build_time,
+                  cruise_altitude, climb_rate, max_bank_angle, ammo_per_sortie, rearm_seconds):
+    return plan_data_asset(name, UNIT_DIR, unreal.RTSAircraftData, {
+        "display_name": unreal.Text(display_name),
+        "mesh": mesh,
+        "mesh_scale": unreal.Vector(*scale),
+        "selection_radius": radius,
+        "max_health": health,
+        "weapon": weapon,
+        "move_speed": speed,
+        "turn_rate": turn_rate,
+        "cost": cost,
+        "build_time": build_time,
+        "cruise_altitude": cruise_altitude,
+        "climb_rate": climb_rate,
+        "max_bank_angle": max_bank_angle,
+        "ammo_per_sortie": ammo_per_sortie,
+        "rearm_seconds": rearm_seconds,
+    })
+
+
 def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw,
                   spawn_on_complete=None, accepts_supply=False, requires_power=False, units=(), upgrades=(), defense=False,
-                  max_count=0):
+                  max_count=0, airfield_pads=0):
     return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
         "display_name": unreal.Text(display_name),
         "mesh": mesh,
@@ -294,6 +318,7 @@ def make_building(name, display_name, mesh, scale, footprint, health, weapon, co
         "upgrades": list(upgrades),
         "is_defense": defense,
         "max_count": max_count,
+        "airfield_pads": airfield_pads,
     })
 
 
@@ -668,6 +693,9 @@ vehicle_factory_mesh = make_art("VehicleFactory", "Kenney/CityKitIndustrial/buil
 headquarters_mesh = make_art("Headquarters", "Kenney/CityKitCommercial/building-skyscraper-a.glb")
 wall_mesh = make_art("Wall", "Kenney/CastleKit/wall.glb", tint=0.0)
 crate_mesh = make_art("SupplyCrate", "Kenney/FactoryKit/box-wide.glb", tint=0.0)
+# The Quaternius jet faces +Y once imported like the Kenney vehicles; the airfield is the crate flattened into a slab.
+jet_mesh = make_art("Jet", "Quaternius/Spaceship/spaceship.glb", yaw=-90.0)
+airfield_mesh = make_art("Airfield", "Kenney/FactoryKit/box-wide.glb")
 
 # A defence outranges a standard tank by a quarter, so tanks take fire while they close in.
 TANK_RANGE = 1200.0
@@ -687,7 +715,16 @@ rifle_training = make_upgrade("DA_TestRifleTraining", "Test Rifle Training", 400
                               [infantry])
 # The grenadier comes only once the barracks has researched rifle training.
 add_properties(grenadier, {"prerequisites": [rifle_training]})
-tower_gun = make_weapon("DA_TestTowerGun", TANK_RANGE * TOWER_RANGE_OVER_TANK, 30.0, 1.0, 7000.0, 1.2, (0.4, 0.8, 1.0))
+# The tower hits ground and air alike; the flak truck only aircraft in flight, the jet's missiles only the ground.
+tower_gun = make_weapon("DA_TestTowerGun", TANK_RANGE * TOWER_RANGE_OVER_TANK, 30.0, 1.0, 7000.0, 1.2, (0.4, 0.8, 1.0),
+                        air=True)
+flak = make_weapon("DA_TestFlak", 1400.0, 25.0, 0.6, 8000.0, 0.8, (0.9, 0.9, 0.5), ground=False, air=True)
+flak_truck = make_unit("DA_TestFlakTruck", "Test Flak Truck", truck_mesh, fit_scale(truck_mesh, 200.0, 120.0), 75.0, 250.0,
+                       flak, 450.0, 360.0, 800, 8.0)
+missiles = make_weapon("DA_TestJetMissiles", 900.0, 60.0, 1.0, 4000.0, 1.2, (1.0, 0.3, 0.2))
+# Four missiles a sortie, eight seconds on its pad to rearm.
+jet = make_aircraft("DA_TestJet", "Test Jet", jet_mesh, fit_scale(jet_mesh, 180.0, 150.0), 70.0, 150.0, missiles, 1500.0,
+                    100.0, 1200, 12.0, 900.0, 500.0, 45.0, 4, 8.0)
 power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", power_plant_mesh, fit_scale(power_plant_mesh, 380.0, 380.0),
                             (4, 4), 800.0, None, 800, 6.0, 5, 0)
 tower = make_building("DA_TestTower", "Test Tower", tower_mesh, fit_scale(tower_mesh, 160.0, 160.0, 260.0), (2, 2), 500.0,
@@ -704,18 +741,22 @@ barracks = make_building("DA_TestBarracks", "Test Barracks", barracks_mesh, fit_
                          800.0, None, 500, 5.0, 0, 1, units=[infantry, grenadier], upgrades=[rifle_training])
 vehicle_factory = make_building("DA_TestVehicleFactory", "Test Vehicle Factory", vehicle_factory_mesh,
                                 fit_scale(vehicle_factory_mesh, 380.0, 380.0), (4, 4), 1200.0, None, 1200, 8.0, 0, 2,
-                                units=[tank, harvester])
+                                units=[tank, harvester, flak_truck])
+# Four pads side by side on a low slab; each jet it produces parks on one.
+airfield = make_building("DA_TestAirfield", "Test Airfield", airfield_mesh, fit_scale(airfield_mesh, 380.0, 780.0, 40.0), (4, 8),
+                         1500.0, None, 1000, 10.0, 0, 2, units=[jet], airfield_pads=4)
 # Every team starts with one at its PlayerStart and may own only one; a team that lost it builds it again.
 headquarters = make_building("DA_TestHeadquarters", "Test Headquarters", headquarters_mesh,
                              fit_scale(headquarters_mesh, 380.0, 380.0), (4, 4), 3000.0, None, 2500, 12.0, 0, 0,
                              units=[builder], max_count=1)
-buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory, headquarters]
+buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory, headquarters, airfield]
 # The headquarters produces the builder, which builds the rest.
 add_properties(builder, {"buildings": buildings})
 # A harvester needs a depot to deliver to, so the factory only offers one once a depot stands.
 add_properties(harvester, {"prerequisites": [supply_depot]})
 # The tech tree: vehicles only after infantry, and a tower only once a plant can power it.
 add_properties(vehicle_factory, {"prerequisites": [barracks]})
+add_properties(airfield, {"prerequisites": [vehicle_factory]})
 add_properties(tower, {"prerequisites": [power_plant]})
 # The AI's base: a second plant before the tower, so the tower's draw never puts it on low power.
 build_order = make_build_order("DA_TestBuildOrder", [

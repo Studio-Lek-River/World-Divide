@@ -41,7 +41,8 @@ namespace RTSProduction
 /**
  * The build queue of a production building, such as a barracks: units and upgrades in one queue. Queueing charges the entry's
  * cost, cancelling refunds it. The front entry builds over its BuildTime, slower while the owner is low on power; a finished
- * unit comes out just outside the footprint and walks to the rally point, a finished upgrade goes to the owner's player.
+ * unit comes out just outside the footprint and walks to the rally point, a finished aircraft parks on a pad of the airfield,
+ * a finished upgrade goes to the owner's player.
  * Every building has one; it stays inert unless the building is constructed and its data lists units or upgrades. The server
  * runs it; the queue, progress and rally point replicate for the HUD.
  */
@@ -64,7 +65,8 @@ public:
 	/**
 	 * Server only. Appends Data, a unit or an upgrade, and charges its cost to Player. Refused, changing nothing, unless the
 	 * building is Player's and can produce Data, Player owns its prerequisites and can afford it, and the queue is not full;
-	 * an upgrade also when Player has researched it or it is queued at any of Player's buildings.
+	 * an upgrade also when Player has researched it or it is queued at any of Player's buildings, an aircraft also when the
+	 * building has no free pad for it.
 	 */
 	bool Enqueue(ARTSPlayerState& Player, URTSEntityData* Data);
 

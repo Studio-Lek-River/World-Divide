@@ -45,8 +45,17 @@ public:
 	/** Server only. Without an ordered target, engage the nearest enemy in range while this is set. */
 	void SetAutoAcquire(bool bEnable);
 
-	/** A living IRTSTargetable of another team than the owner's. Buildings under construction count. */
+	/**
+	 * A living IRTSTargetable of another team than the owner's that the weapon can hit, in flight or on the ground. Buildings
+	 * under construction count.
+	 */
 	bool CanTarget(const AActor* Candidate) const;
+
+	/** Server only. Shots left before the weapon holds fire, as an aircraft's load per sortie; INDEX_NONE for no limit. */
+	void SetAmmo(int32 InAmmo) { Ammo = InAmmo; }
+
+	/** Shots left, INDEX_NONE for no limit. Replicates for the HUD. */
+	int32 GetAmmo() const { return Ammo; }
 
 	/** Distance to the edge of the target's footprint is within range. */
 	bool IsInRange(const AActor* Candidate) const;
@@ -57,6 +66,7 @@ public:
 	void UpdateWeapon(float DeltaSeconds);
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
 	/** Every machine but a dedicated server shows the shot. Unreliable: a lost shot is only a missing effect. */
@@ -78,6 +88,9 @@ private:
 	float DamageMultiplier = 1.f;
 	bool bTargetOrdered = false;
 	bool bAutoAcquire = true;
+
+	UPROPERTY(Replicated)
+	int32 Ammo = INDEX_NONE;
 
 	/** Seconds until the next shot; zero means ready, so the first shot on a new target is immediate. */
 	float Cooldown = 0.f;

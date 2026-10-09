@@ -19,6 +19,9 @@ public:
 	/** Seconds the shell flies over Distance cm; 0 for a weapon that hits at once. */
 	float GetFlightTime(float Distance) const { return ShellSpeed > 0.f ? Distance / ShellSpeed : 0.f; }
 
+	/** The weapon can hit a target that is airborne, or one on the ground when bAirborne is false. */
+	bool CanHit(bool bAirborne) const { return bAirborne ? bCanTargetAir : bCanTargetGround; }
+
 	/** Reach in cm, measured to the edge of the target's footprint. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon", meta = (ClampMin = "0"))
 	float Range = 800.f;
@@ -33,6 +36,14 @@ public:
 	/** Shell speed in cm/s, measured to the edge of the target's footprint. 0 hits at once. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon", meta = (ClampMin = "0"))
 	float ShellSpeed = 0.f;
+
+	/** Hits units and buildings on the ground, aircraft parked on their pads included. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	bool bCanTargetGround = true;
+
+	/** Hits aircraft in flight, as anti-air does. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	bool bCanTargetAir = false;
 
 	/** How high the shell arcs above the straight line at mid-flight, in cm; 0 flies straight. Cosmetic. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects", meta = (ClampMin = "0"))

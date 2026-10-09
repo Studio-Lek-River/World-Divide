@@ -16,12 +16,15 @@ required. They are credited here anyway. `Tools/Editor/setup_testmap.py` imports
 | `Kenney/SurvivalKit/tent-canvas.glb` | Barracks | [Survival Kit](https://kenney.nl/assets/survival-kit) | Kenney |
 | `Kenney/TowerDefenseKit/tower-round-build-c.glb` | Tower | [Tower Defense Kit](https://kenney.nl/assets/tower-defense-kit) | Kenney |
 | `Kenney/CastleKit/wall.glb` | Test map walls | [Castle Kit](https://kenney.nl/assets/castle-kit) | Kenney |
-| `Kenney/FactoryKit/box-wide.glb` | Supply source | [Factory Kit](https://kenney.nl/assets/factory-kit) | Kenney |
+| `Kenney/FactoryKit/box-wide.glb` | Supply source, airfield | [Factory Kit](https://kenney.nl/assets/factory-kit) | Kenney |
+| `Quaternius/Spaceship/spaceship.glb` | Jet | [Spaceship](https://poly.pizza/m/uCeLfsdmNP) | Quaternius |
 
 Each Kenney folder also holds that kit's `Textures/colormap.png`.
 
 The tank comes skinned and animated. Unreal places skinned parts wrongly when it imports them as a static mesh, so it
-was flattened into its rest pose with `Tools/Art/bake_gltf_static.py`. The other models are unchanged.
+was flattened into its rest pose with `Tools/Art/bake_gltf_static.py`. The jet came with its texture inside the `.glb`;
+that texture was moved out to `Quaternius/Spaceship/Textures/atlas.png`, since the importer only reads textures next to
+the model. The other models are unchanged.
 
 To swap a model, put the new `.glb` (with its textures next to it) in this folder, point the `make_art` call in
 `setup_testmap.py` at it, and run `ue.ps1 -Task setup`.

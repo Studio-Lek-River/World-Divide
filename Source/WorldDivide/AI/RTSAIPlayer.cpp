@@ -21,6 +21,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "TimerManager.h"
+#include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
 #include "WorldDivide.h"
 
@@ -692,7 +693,8 @@ void ARTSAIPlayer::DefendBase(float DeltaSeconds)
 	TArray<bool> Attacked;
 	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
 	{
-		if (It->GetTeamId() != TeamId && IsStanding(*It))
+		// Aircraft in flight are left to the base's anti-air; the army cannot shoot them.
+		if (It->GetTeamId() != TeamId && IsStanding(*It) && !It->IsAirborne())
 		{
 			EnemyActors.Add(*It);
 			Enemies.Add(It->GetActorLocation());
@@ -882,7 +884,7 @@ TArray<ARTSUnit*> ARTSAIPlayer::GatherArmy() const
 		ARTSUnit* Unit = *It;
 		const URTSUnitData* Data = Unit->GetUnitData();
 		if (Unit->GetTeamId() == TeamId && IsStanding(Unit) && Data && Data->Weapon && !Unit->GetBuilderComponent()->CanBuild()
-			&& !Unit->GetHarvesterComponent()->CanHarvest() && !WaveUnits.Contains(Unit))
+			&& !Unit->GetHarvesterComponent()->CanHarvest() && !Unit->GetAircraftComponent()->CanFly() && !WaveUnits.Contains(Unit))
 		{
 			Army.Add(Unit);
 		}

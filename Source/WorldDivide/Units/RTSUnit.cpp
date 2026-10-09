@@ -9,6 +9,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
+#include "Data/RTSAircraftData.h"
 #include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSHarvesterData.h"
@@ -22,6 +23,7 @@
 #include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/RTSPlayerController.h"
+#include "Units/RTSAircraftComponent.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSUnitAIController.h"
 #include "WorldDivide.h"
@@ -90,6 +92,7 @@ ARTSUnit::ARTSUnit()
 	WeaponComponent = CreateDefaultSubobject<URTSWeaponComponent>(TEXT("Weapon"));
 	HarvesterComponent = CreateDefaultSubobject<URTSHarvesterComponent>(TEXT("Harvester"));
 	BuilderComponent = CreateDefaultSubobject<URTSBuilderComponent>(TEXT("Builder"));
+	AircraftComponent = CreateDefaultSubobject<URTSAircraftComponent>(TEXT("Aircraft"));
 
 	AIControllerClass = ARTSUnitAIController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
@@ -113,6 +116,7 @@ void ARTSUnit::InitFromData(URTSUnitData* InUnitData, int32 InTeamId)
 	ApplyUpgrades();
 	HarvesterComponent->SetHarvesterData(Cast<URTSHarvesterData>(UnitData));
 	BuilderComponent->SetBuilderData(Cast<URTSBuilderData>(UnitData));
+	AircraftComponent->SetAircraftData(Cast<URTSAircraftData>(UnitData));
 	ApplyUnitData();
 }
 
@@ -155,6 +159,7 @@ void ARTSUnit::Destroyed()
 	{
 		ClearCommands();
 		BuilderComponent->StopBuild();
+		AircraftComponent->ReleasePad();
 	}
 	Super::Destroyed();
 }
@@ -232,6 +237,11 @@ float ARTSUnit::GetSelectionRadius() const
 	return UnitData ? UnitData->SelectionRadius : Collision->GetUnscaledCapsuleRadius();
 }
 
+bool ARTSUnit::IsAirborne() const
+{
+	return AircraftComponent->IsAirborne();
+}
+
 FVector ARTSUnit::GetClosestFootprintPoint(const FVector& From) const
 {
 	const FVector Center = GetActorLocation();
@@ -287,6 +297,13 @@ void ARTSUnit::Tick(float DeltaSeconds)
 		return;
 	}
 
+	// Aircraft fly by their own rules, turning and banking included.
+	if (AircraftComponent->CanFly())
+	{
+		AircraftComponent->UpdateAircraft(DeltaSeconds);
+		return;
+	}
+
 	UpdateAttackOrder();
 	UpdateAttackMoveOrder();
 	UpdateHarvestOrder(DeltaSeconds);
@@ -316,6 +333,12 @@ void ARTSUnit::FaceTowardYaw(float Yaw, float DeltaSeconds)
 void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 {
 	check(HasAuthority());
+
+	if (AircraftComponent->CanFly())
+	{
+		AircraftComponent->ExecuteCommand(InCommand);
+		return;
+	}
 
 	FRTSCommand Command = InCommand;
 	// Only ChargeOrder puts credits on an order.
@@ -385,6 +408,11 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 void ARTSUnit::StepAside(const FVector& Location)
 {
 	check(HasAuthority());
+	// Aircraft park on pads and fly over sites.
+	if (AircraftComponent->CanFly())
+	{
+		return;
+	}
 
 	// A Build restarts from its command afterwards, which the builder updates: a placed site to resume, or its payment.
 	if (!CommandQueue.IsEmpty() && CommandQueue[0].Type == ERTSCommandType::Build)
@@ -404,6 +432,10 @@ void ARTSUnit::StepAside(const FVector& Location)
 bool ARTSUnit::HoldShortOf(const FBox& Footprint)
 {
 	check(HasAuthority());
+	if (AircraftComponent->CanFly())
+	{
+		return false;
+	}
 
 	AAIController* AI = GetController<AAIController>();
 	const UPathFollowingComponent* PathFollowing = AI ? AI->GetPathFollowingComponent() : nullptr;

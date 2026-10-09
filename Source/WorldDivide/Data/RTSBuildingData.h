@@ -50,6 +50,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production", meta = (ClampMin = "0"))
 	int32 MaxCount = 0;
 
+	/**
+	 * Pads for aircraft, side by side across the roof: each aircraft the building produces is bound to one and returns there
+	 * to rearm, so it produces aircraft only while a pad is free. 0 for a building that is not an airfield.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production", meta = (ClampMin = "0"))
+	int32 AirfieldPads = 0;
+
 	/** Harvesters deliver supplies here once it is constructed. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Economy")
 	bool bAcceptsSupply = false;

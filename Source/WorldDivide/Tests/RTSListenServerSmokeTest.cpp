@@ -6,10 +6,12 @@
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
+#include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
+#include "Data/RTSAircraftData.h"
 #include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
@@ -25,6 +27,7 @@
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
+#include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
 
 /**
@@ -44,6 +47,9 @@
  * grenadier it gates accepted. Then the server places a host building and the client orders its units to attack it: the client's copy must show the building's
  * health dropping before it disappears. Last, the server gives the client a tank in the empty south strip and puts a host
  * infantry beside its lane; the client attack-moves the tank past it and must see the infantry disappear and the tank arrive.
+ * Then the server gives the client an airfield: the client queues a jet there and must see it parked on a pad, sends it to
+ * attack a host infantry across the south strip and must see it climb, the infantry disappear, the jet land on its pad
+ * again and its spent load come back.
  * Finally the server destroys the host's headquarters, its last building: the client must see Victory for itself and the
  * host Defeat, only the host may restart, and a move the client sends afterwards is refused.
  */
@@ -91,6 +97,21 @@ namespace RTSListenServerTest
 	constexpr float AttackMoveArrivalRadius = 150.f;
 	constexpr double AttackMoveTimeout = 60.0;
 
+	/**
+	 * The client's airfield stands at the east end of the south strip, by its own base; the jet's target, a host infantry, at
+	 * the west end, out of range of every unit. Without a power plant the client produces the jet at the low-power rate.
+	 */
+	const TCHAR* AirfieldPath = TEXT("/Game/Data/Buildings/DA_TestAirfield.DA_TestAirfield");
+	const TCHAR* JetPath = TEXT("/Game/Data/Units/DA_TestJet.DA_TestJet");
+	const FVector ClientAirfieldSpot(6000.f, -8500.f, 0.f);
+	const FVector HostSortieTargetSpot(-2000.f, -9000.f, 0.f);
+	/** How high above its pad the client must see the jet, well into its climb to cruise altitude. */
+	constexpr float SortieClimbSeen = 400.f;
+	/** Replicated movement rounds locations to whole centimetres. */
+	constexpr float ReplicatedLocationTolerance = 5.f;
+	constexpr double JetProductionTimeout = 90.0;
+	constexpr double SortieTimeout = 90.0;
+
 	/** Each team starts with one; the checks on buildings the test places leave them out. */
 	const TCHAR* HeadquartersPath = TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters");
 	/** Game seconds the client's refused order is watched for any movement. */
@@ -137,6 +158,18 @@ namespace RTSListenServerTest
 		TWeakObjectPtr<ARTSUnit> ClientTank;
 		TWeakObjectPtr<ARTSUnit> ServerInfantry;
 		TWeakObjectPtr<ARTSUnit> ClientInfantry;
+
+		/** The client's airfield and jet, the host infantry it attacks, and what the client saw of the sortie. */
+		TWeakObjectPtr<ARTSBuilding> ServerAirfield;
+		TWeakObjectPtr<ARTSBuilding> ClientAirfield;
+		TWeakObjectPtr<ARTSUnit> ServerJet;
+		TWeakObjectPtr<ARTSUnit> ClientJet;
+		TWeakObjectPtr<ARTSUnit> ServerSortieTarget;
+		TWeakObjectPtr<ARTSUnit> ClientSortieTarget;
+		FVector JetPad = FVector::ZeroVector;
+		float ClientJetMaxZ = 0.f;
+		int32 ClientJetLowestAmmo = 0;
+		bool bClientSawLanding = false;
 
 		/** Where the client's tank stood when the server got its order after the match. */
 		FVector RefusedStart = FVector::ZeroVector;
@@ -1249,6 +1282,173 @@ namespace RTSListenServerTest
 		return true;
 	}
 
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSGiveClientAirfield, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSGiveClientAirfield::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		URTSBuildingData* AirfieldData = LoadObject<URTSBuildingData>(nullptr, AirfieldPath);
+		if (!ServerWorld || !AirfieldData)
+		{
+			Test->AddError(TEXT("Lost the server world, or the test airfield is missing"));
+			return true;
+		}
+		const FTransform Transform(ClientAirfieldSpot);
+		ARTSBuilding* Airfield = ServerWorld->SpawnActorDeferred<ARTSBuilding>(
+			ARTSBuilding::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		Airfield->InitFromData(AirfieldData, ClientTeam);
+		Airfield->FinishSpawning(Transform);
+		Airfield->UpdateConstruction(AirfieldData->BuildTime);
+		State->ServerAirfield = Airfield;
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSClientQueuesJet, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSClientQueuesJet::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		const URTSBuildingData* AirfieldData = LoadObject<URTSBuildingData>(nullptr, AirfieldPath);
+		URTSAircraftData* JetData = LoadObject<URTSAircraftData>(nullptr, JetPath);
+		if (!ClientController || !AirfieldData || !JetData || !State->ServerAirfield.IsValid())
+		{
+			Test->AddError(TEXT("Lost the client's controller or the airfield, or the test jet is missing"));
+			return true;
+		}
+
+		for (TActorIterator<ARTSBuilding> It(ClientWorld); It; ++It)
+		{
+			if (It->GetBuildingData() == AirfieldData && It->IsConstructed())
+			{
+				State->ClientAirfield = *It;
+			}
+		}
+		if (!State->ClientAirfield.IsValid())
+		{
+			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+			{
+				Test->AddError(TEXT("The completed airfield never replicated to the client"));
+				return true;
+			}
+			return false;
+		}
+
+		// What 1 with the airfield selected sends.
+		Test->TestTrue(TEXT("The client queues a jet at its airfield"), ClientController->RequestProduce(State->ClientAirfield.Get(), JetData));
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSWaitForClientJet, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSWaitForClientJet::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSBuilding* Airfield = State->ServerAirfield.Get();
+		if (!ClientWorld || !Airfield)
+		{
+			Test->AddError(TEXT("Lost the client world or the airfield"));
+			return true;
+		}
+		ARTSUnit* ServerJet = Airfield->GetPadAircraft(0);
+		ARTSUnit* ClientJet = nullptr;
+		if (ServerJet)
+		{
+			State->JetPad = Airfield->GetPadLocation(0) + FVector(0.f, 0.f, ServerJet->GetGroundOffset());
+			ClientJet = FindUnitNear(*ClientWorld, ClientTeam, State->JetPad);
+		}
+		if (!ClientJet || FVector::Dist(ClientJet->GetActorLocation(), State->JetPad) > ReplicatedLocationTolerance)
+		{
+			if (FPlatformTime::Seconds() - State->PhaseStart > JetProductionTimeout)
+			{
+				Test->AddError(FString::Printf(TEXT("The jet never stood on its pad in the client's world (server jet: %d)"), ServerJet != nullptr));
+				return true;
+			}
+			return false;
+		}
+
+		Test->TestEqual(TEXT("The server's jet is parked"), ServerJet->GetAircraftComponent()->GetState(), ERTSAircraftState::Parked);
+		Test->TestEqual(TEXT("The client sees its full load"), ClientJet->GetWeaponComponent()->GetAmmo(),
+			CastChecked<URTSAircraftData>(ServerJet->GetUnitData())->AmmoPerSortie);
+		State->ServerJet = ServerJet;
+		State->ClientJet = ClientJet;
+		State->ServerSortieTarget = SpawnUnit(*State->ServerWorld.Get(), InfantryPath, HostTeam, HostSortieTargetSpot);
+		if (!State->ServerSortieTarget.IsValid())
+		{
+			Test->AddError(TEXT("The server could not spawn the host infantry"));
+		}
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueClientSortie, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSIssueClientSortie::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		if (!ClientController || !State->ClientJet.IsValid() || !State->ServerSortieTarget.IsValid())
+		{
+			Test->AddError(TEXT("Lost the client's controller, its jet or the host infantry"));
+			return true;
+		}
+		State->ClientSortieTarget = FindUnitNear(*ClientWorld, HostTeam, HostSortieTargetSpot);
+		if (!State->ClientSortieTarget.IsValid())
+		{
+			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+			{
+				Test->AddError(TEXT("The host infantry never replicated to the client"));
+				return true;
+			}
+			return false;
+		}
+
+		// What a right click on the infantry with the jet selected sends: the client names its own copies.
+		FRTSCommand Attack;
+		Attack.Type = ERTSCommandType::Attack;
+		Attack.TargetActor = State->ClientSortieTarget.Get();
+		ClientController->Server_IssueCommand({ State->ClientJet.Get() }, Attack);
+		State->ClientJetMaxZ = State->ClientJet->GetActorLocation().Z;
+		State->ClientJetLowestAmmo = State->ClientJet->GetWeaponComponent()->GetAmmo();
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientSortie, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientSortie::Update()
+	{
+		const ARTSUnit* ClientJet = State->ClientJet.Get();
+		const ARTSUnit* ServerJet = State->ServerJet.Get();
+		if (!ClientJet || !ServerJet)
+		{
+			Test->AddError(TEXT("The client's jet disappeared"));
+			return true;
+		}
+		const int32 FullLoad = CastChecked<URTSAircraftData>(ServerJet->GetUnitData())->AmmoPerSortie;
+		const int32 ClientAmmo = ClientJet->GetWeaponComponent()->GetAmmo();
+		State->ClientJetMaxZ = FMath::Max(State->ClientJetMaxZ, ClientJet->GetActorLocation().Z);
+		State->ClientJetLowestAmmo = FMath::Min(State->ClientJetLowestAmmo, ClientAmmo);
+		const bool bTargetGone = !State->ServerSortieTarget.IsValid() && !State->ClientSortieTarget.IsValid();
+		const bool bOnPad = FVector::Dist(ClientJet->GetActorLocation(), State->JetPad) < ReplicatedLocationTolerance;
+		State->bClientSawLanding |= bTargetGone && bOnPad && State->ClientJetMaxZ > State->JetPad.Z + SortieClimbSeen;
+		const bool bDone = State->bClientSawLanding && ClientAmmo == FullLoad;
+		const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+		if (!bDone && Elapsed < SortieTimeout)
+		{
+			return false;
+		}
+
+		Test->AddInfo(FString::Printf(TEXT("The client's sortie finished after %.1f s"), Elapsed));
+		Test->TestTrue(FString::Printf(TEXT("The client saw its jet take off and climb (%.0f cm above its pad)"),
+			State->ClientJetMaxZ - State->JetPad.Z), State->ClientJetMaxZ > State->JetPad.Z + SortieClimbSeen);
+		Test->TestFalse(TEXT("The jet destroyed the host infantry on the server"), State->ServerSortieTarget.IsValid());
+		Test->TestFalse(TEXT("The infantry disappeared on the client"), State->ClientSortieTarget.IsValid());
+		Test->TestTrue(TEXT("The client saw the jet land back on its pad"), State->bClientSawLanding);
+		Test->TestTrue(FString::Printf(TEXT("The client saw it spend missiles (down to %d of %d)"), State->ClientJetLowestAmmo, FullLoad),
+			State->ClientJetLowestAmmo < FullLoad);
+		Test->TestEqual(TEXT("And saw them come back on the pad"), ClientAmmo, FullLoad);
+		Test->TestEqual(TEXT("The server's jet is parked"), ServerJet->GetAircraftComponent()->GetState(), ERTSAircraftState::Parked);
+		return true;
+	}
+
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSDestroyHostBase, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
 	bool FRTSDestroyHostBase::Update()
 	{
@@ -1386,6 +1586,11 @@ namespace RTSListenServerTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientTank(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientAttackMove(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientAttackMove(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSGiveClientAirfield(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientQueuesJet(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientJet(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientSortie(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientSortie(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSDestroyHostBase(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientVictory(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientOrderRefused(this, State));

@@ -10,6 +10,7 @@ class AAIController;
 class UCapsuleComponent;
 class UStaticMeshComponent;
 class UFloatingPawnMovement;
+class URTSAircraftComponent;
 class URTSBuilderComponent;
 class URTSHarvesterComponent;
 class URTSHealthComponent;
@@ -19,7 +20,8 @@ struct FPathFollowingResult;
 
 /**
  * A light pawn (no ACharacter) so hundreds of units stay cheap. Stats come from URTSUnitData.
- * Orders are executed on the server only; clients see the result through replication.
+ * Orders are executed on the server only; clients see the result through replication. An aircraft, whose data is
+ * URTSAircraftData, hands its orders to its aircraft component and flies instead of walking the navmesh.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSUnit : public APawn, public IRTSTargetable
@@ -45,13 +47,13 @@ public:
 
 	/**
 	 * Server only. Moves to Location ahead of the current order, then picks the queue up again where it was: a builder resumes
-	 * the site it already placed. Used to clear a building site, not a player order.
+	 * the site it already placed. Used to clear a building site, not a player order. Aircraft ignore it.
 	 */
 	void StepAside(const FVector& Location);
 
 	/**
 	 * Server only. Pauses the current move when the next stretch of its path leads into Footprint, a new building whose
-	 * navmesh hole is not built yet, so the unit waits at its edge. Returns true when it paused.
+	 * navmesh hole is not built yet, so the unit waits at its edge. Returns true when it paused. Aircraft never pause.
 	 */
 	bool HoldShortOf(const FBox& Footprint);
 
@@ -70,11 +72,15 @@ public:
 	URTSWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
 	URTSHarvesterComponent* GetHarvesterComponent() const { return HarvesterComponent; }
 	URTSBuilderComponent* GetBuilderComponent() const { return BuilderComponent; }
+	URTSAircraftComponent* GetAircraftComponent() const { return AircraftComponent; }
 	float GetSelectionRadius() const;
 	int32 GetQueuedCommandCount() const { return CommandQueue.Num(); }
 
 	/** The edge of the selection circle facing From. */
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
+
+	/** Server only: an aircraft in flight. Clients see aircraft as on the ground. */
+	virtual bool IsAirborne() const override;
 
 	/** Every machine. Jolts the mesh back for a moment, as a shot recoils; cosmetic only. */
 	void PlayFireKick(float EffectScale);
@@ -183,6 +189,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<URTSBuilderComponent> BuilderComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<URTSAircraftComponent> AircraftComponent;
 
 	UPROPERTY(ReplicatedUsing = OnRep_UnitData)
 	TObjectPtr<URTSUnitData> UnitData;
