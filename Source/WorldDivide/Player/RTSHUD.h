@@ -7,18 +7,20 @@
 class ARTSBuilding;
 class ARTSPlayerController;
 class ARTSUnit;
+class URTSHUDWidget;
 enum class ERTSMatchResult : uint8;
 
 /**
  * Draws the drag box, the brackets plus health bar of selected units, the health bar of the unit of any team under the
  * cursor, construction progress of own buildings,
  * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
- * the player's credits and power, a scoreboard of every player's team colour and name, the build menu of the selected builder (or the debug build menu), and the production menu,
+ * a scoreboard of every player's team colour and name, the build menu of the selected builder (or the debug build menu), and the production menu,
  * queue and rally point of a selected production building, a hint while attack-move is armed, a warning when an own
  * building or unit is attacked, every superweapon's countdown, the launch entry of a selected own superweapon and a hint
  * while targeting it, the target of a strike on its way, a warning when a superweapon is built or ready, and once the match is over
  * a pop-up with Victory or Defeat and, on the host, a restart button in place of the menus, and over everything the in-game
- * menu with Resume and Leave match while it is open, without any UI assets.
+ * menu with Resume and Leave match while it is open, without any UI assets. It also shows the local player the UMG
+ * URTSHUDWidget (the class set in URTSSettings), whose resource bar holds the credits and power, and keeps its top bar clear.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSHUD : public AHUD
@@ -26,7 +28,13 @@ class WORLDDIVIDE_API ARTSHUD : public AHUD
 	GENERATED_BODY()
 
 public:
+	ARTSHUD();
+
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void DrawHUD() override;
+
+	/** The UMG HUD of the local player, or null until its controller is attached to it. */
+	URTSHUDWidget* GetHUDWidget() const { return HUDWidget; }
 
 	/** Point, in viewport pixels, lies on the cancel button drawn last frame. */
 	bool IsOnCancelButton(const FVector2D& Point) const;
@@ -82,13 +90,12 @@ private:
 
 	/** A line from the building to its rally point, and a marker there. */
 	void DrawRallyPoint(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
-	void DrawCredits(const ARTSPlayerController& Controller);
 
-	/** Produced and consumed power under the credits, red while low; nothing for a faction without power. */
-	void DrawPower(const ARTSPlayerController& Controller);
+	/** Creates HUDWidget once the owning controller is local and has its player. */
+	void EnsureHUDWidget();
 
 	/**
-	 * Under the power, every player in the match by team: its colour and GetScoreboardLabel, greyed once eliminated. Returns
+	 * Under the top bar, every player in the match by team: its colour and GetScoreboardLabel, greyed once eliminated. Returns
 	 * the line below it.
 	 */
 	float DrawScoreboard();
@@ -125,6 +132,12 @@ private:
 
 	/** Green to red over a dark backdrop; Top is the bar's upper edge. */
 	void DrawHealthBar(float Left, float Top, float Width, float HealthFraction);
+
+	UPROPERTY(Transient)
+	TObjectPtr<URTSHUDWidget> HUDWidget;
+
+	/** Viewport pixels from the top where the canvas starts drawing, under the widget's top bar. */
+	float TopInset = 0.f;
 
 	/** Invalid while no cancel button is shown. */
 	FBox2D CancelButton = FBox2D(ForceInit);

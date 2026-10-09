@@ -188,6 +188,18 @@ public:
 	/** Restarts the match on the same map, taking any clients along; false, changing nothing, when CanRestart refuses. */
 	bool RequestRestart();
 
+	/**
+	 * Local. What a left-button press at Point, in viewport pixels, does: nothing on a HUD panel, a button of the canvas
+	 * menus, confirms what is armed, else starts a selection there. The mouse input calls it with the cursor.
+	 */
+	void HandleSelectPressed(const FVector2D& Point);
+
+	/** Local. Releasing the left button at Point ends the selection a press started: a click selects under the cursor, a drag the box. */
+	void HandleSelectReleased(const FVector2D& Point);
+
+	/** Point, in viewport pixels, lies on a panel of the UMG HUD, where clicks never select, order or place. */
+	bool IsOnHUDPanel(const FVector2D& Point) const;
+
 	/** Local. What Esc does: cancels placement, attack-move or superweapon targeting while one is armed, else opens or closes the in-game menu. */
 	void HandleEscape();
 

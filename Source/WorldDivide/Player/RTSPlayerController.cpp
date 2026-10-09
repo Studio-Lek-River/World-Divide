@@ -28,6 +28,7 @@
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSHUD.h"
 #include "Player/RTSLocalPlayer.h"
+#include "UI/RTSHUDWidget.h"
 #include "Units/RTSUnit.h"
 #include "WorldDivide.h"
 
@@ -449,24 +450,41 @@ void ARTSPlayerController::ApplyEdgeScroll() const
 	}
 }
 
+bool ARTSPlayerController::IsOnHUDPanel(const FVector2D& Point) const
+{
+	const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
+	const URTSHUDWidget* Widget = RTSHUD ? RTSHUD->GetHUDWidget() : nullptr;
+	return Widget && Widget->IsOnPanel(Point);
+}
+
 void ARTSPlayerController::OnSelectStarted()
 {
+	FVector2D Mouse;
+	if (GetMousePosition(Mouse.X, Mouse.Y))
+	{
+		HandleSelectPressed(Mouse);
+	}
+}
+
+void ARTSPlayerController::HandleSelectPressed(const FVector2D& Mouse)
+{
+	const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
 	if (bInGameMenuOpen)
 	{
 		// The menu takes every click; only its buttons do anything.
-		FVector2D Mouse;
-		const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
-		if (RTSHUD && GetMousePosition(Mouse.X, Mouse.Y))
+		if (RTSHUD && RTSHUD->IsOnResumeButton(Mouse))
 		{
-			if (RTSHUD->IsOnResumeButton(Mouse))
-			{
-				SetInGameMenuOpen(false);
-			}
-			else if (RTSHUD->IsOnLeaveButton(Mouse))
-			{
-				LeaveMatch();
-			}
+			SetInGameMenuOpen(false);
 		}
+		else if (RTSHUD && RTSHUD->IsOnLeaveButton(Mouse))
+		{
+			LeaveMatch();
+		}
+		return;
+	}
+	// The widget keeps the click from the game, but a press that still arrives here must not reach the world either.
+	if (IsOnHUDPanel(Mouse))
+	{
 		return;
 	}
 	if (PlacementData)
@@ -493,9 +511,7 @@ void ARTSPlayerController::OnSelectStarted()
 		CancelSuperweaponTargeting();
 		return;
 	}
-	FVector2D Mouse;
-	const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
-	if (RTSHUD && GetMousePosition(Mouse.X, Mouse.Y))
+	if (RTSHUD)
 	{
 		if (RTSHUD->IsOnRestartButton(Mouse))
 		{
@@ -528,18 +544,26 @@ void ARTSPlayerController::OnSelectStarted()
 			return;
 		}
 	}
-	bSelecting = GetMousePosition(SelectStart.X, SelectStart.Y);
+	bSelecting = true;
+	SelectStart = Mouse;
 	SelectCurrent = SelectStart;
 }
 
 void ARTSPlayerController::OnSelectCompleted()
+{
+	FVector2D Mouse = SelectCurrent;
+	GetMousePosition(Mouse.X, Mouse.Y);
+	HandleSelectReleased(Mouse);
+}
+
+void ARTSPlayerController::HandleSelectReleased(const FVector2D& Point)
 {
 	if (!bSelecting)
 	{
 		return;
 	}
 	bSelecting = false;
-	GetMousePosition(SelectCurrent.X, SelectCurrent.Y);
+	SelectCurrent = Point;
 
 	if (FVector2D::Distance(SelectStart, SelectCurrent) < DragThreshold)
 	{
@@ -642,8 +666,9 @@ void ARTSPlayerController::OnMoveOrder()
 		return;
 	}
 
+	FVector2D Mouse;
 	FHitResult Hit;
-	if (!GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+	if (!GetMousePosition(Mouse.X, Mouse.Y) || IsOnHUDPanel(Mouse) || !GetHitResultUnderCursor(ECC_Visibility, false, Hit))
 	{
 		return;
 	}

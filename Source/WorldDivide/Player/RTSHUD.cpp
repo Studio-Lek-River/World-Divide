@@ -8,6 +8,7 @@
 #include "Combat/RTSHealthComponent.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
+#include "Core/RTSSettings.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Data/RTSUpgradeData.h"
@@ -16,6 +17,7 @@
 #include "Engine/Font.h"
 #include "EngineUtils.h"
 #include "Player/RTSPlayerController.h"
+#include "UI/RTSHUDWidget.h"
 #include "Units/RTSUnit.h"
 
 namespace
@@ -26,9 +28,6 @@ namespace
 	const FLinearColor ConstructionColor(1.f, 0.8f, 0.1f, 1.f);
 	const FLinearColor MenuColor(0.9f, 0.9f, 0.9f, 1.f);
 	const FLinearColor UnaffordableColor(0.45f, 0.45f, 0.45f, 1.f);
-	const FLinearColor CreditsColor(1.f, 0.85f, 0.3f, 1.f);
-	const FLinearColor PowerColor(0.4f, 0.9f, 1.f, 1.f);
-	const FLinearColor LowPowerColor(1.f, 0.25f, 0.2f, 1.f);
 	const FLinearColor ButtonFill(0.35f, 0.08f, 0.05f, 0.85f);
 	const FLinearColor ButtonHoverFill(0.6f, 0.12f, 0.08f, 0.9f);
 	const FLinearColor ProgressFill(1.f, 0.8f, 0.1f, 0.45f);
@@ -70,9 +69,42 @@ namespace
 	}
 }
 
+ARTSHUD::ARTSHUD()
+{
+	PrimaryActorTick.bCanEverTick = true;
+}
+
+void ARTSHUD::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	EnsureHUDWidget();
+}
+
+void ARTSHUD::EnsureHUDWidget()
+{
+	// A joining client's controller gets its local player after the HUD spawns.
+	if (HUDWidget || !PlayerOwner || !PlayerOwner->IsLocalController() || !PlayerOwner->GetLocalPlayer())
+	{
+		return;
+	}
+	TSubclassOf<URTSHUDWidget> WidgetClass = GetDefault<URTSSettings>()->HUDWidgetClass.LoadSynchronous();
+	if (!WidgetClass)
+	{
+		WidgetClass = URTSHUDWidget::StaticClass();
+	}
+	HUDWidget = CreateWidget<URTSHUDWidget>(PlayerOwner, WidgetClass, TEXT("HUDWidget"));
+	if (HUDWidget)
+	{
+		HUDWidget->AddToPlayerScreen();
+	}
+}
+
 void ARTSHUD::DrawHUD()
 {
 	Super::DrawHUD();
+
+	TopInset = MenuMargin + (HUDWidget ? HUDWidget->GetTopBandHeight() : 0.f);
 
 	const ARTSPlayerController* Controller = Cast<ARTSPlayerController>(GetOwningPlayerController());
 	if (!Controller)
@@ -132,8 +164,6 @@ void ARTSHUD::DrawHUD()
 		DrawSuperweaponMenu(*Controller);
 		DrawAttackMoveHint(*Controller);
 	}
-	DrawCredits(*Controller);
-	DrawPower(*Controller);
 	DrawSuperweapons(*Controller, DrawScoreboard() + MenuLineHeight * 0.5f);
 	if (!bMatchOver)
 	{
@@ -310,7 +340,7 @@ void ARTSHUD::DrawBuildMenu(const ARTSPlayerController& Controller)
 		return;
 	}
 
-	float Y = MenuMargin;
+	float Y = TopInset;
 	DrawText(Controller.GetSelectedBuilder() ? TEXT("Build") : TEXT("Build (debug)"), MenuColor, MenuMargin, Y);
 	const int32 Count = FMath::Min(Menu.Num(), ARTSPlayerController::MaxBuildHotkeys);
 	for (int32 Index = 0; Index < Count; ++Index)
@@ -353,7 +383,7 @@ void ARTSHUD::DrawProduction(const ARTSPlayerController& Controller)
 	}
 	DrawRallyPoint(Controller, *Building);
 
-	float Y = MenuMargin;
+	float Y = TopInset;
 	DrawText(TEXT("Produce"), MenuColor, MenuMargin, Y);
 	const TArray<URTSEntityData*> Menu = Controller.GetProductionMenu();
 	const int32 Count = FMath::Min(Menu.Num(), ARTSPlayerController::MaxBuildHotkeys);
@@ -434,34 +464,10 @@ int32 ARTSHUD::GetQueueButtonAt(const FVector2D& Point) const
 	return QueueButtons.IndexOfByPredicate([&Point](const FBox2D& Box) { return Box.bIsValid && Box.IsInside(Point); });
 }
 
-void ARTSHUD::DrawCredits(const ARTSPlayerController& Controller)
-{
-	const FString Text = FString::Printf(TEXT("Credits: %d"), Controller.GetCredits());
-	float Width = 0.f;
-	float Height = 0.f;
-	GetTextSize(Text, Width, Height);
-	DrawText(Text, CreditsColor, Canvas->ClipX - MenuMargin - Width, MenuMargin);
-}
-
-void ARTSHUD::DrawPower(const ARTSPlayerController& Controller)
-{
-	const ARTSPlayerState* State = Controller.GetPlayerState<ARTSPlayerState>();
-	const URTSFactionData* Faction = State ? State->GetFaction() : nullptr;
-	if (!State || (Faction && !Faction->bUsesPower))
-	{
-		return;
-	}
-	const FString Text = FString::Printf(TEXT("Power: %d / %d"), State->GetPowerProduced(), State->GetPowerConsumed());
-	float Width = 0.f;
-	float Height = 0.f;
-	GetTextSize(Text, Width, Height);
-	DrawText(Text, State->IsLowPower() ? LowPowerColor : PowerColor, Canvas->ClipX - MenuMargin - Width, MenuMargin + MenuLineHeight);
-}
-
 float ARTSHUD::DrawScoreboard()
 {
-	// Under the credits and power, one row per player: its team colour, then its name or AI label.
-	float Y = MenuMargin + MenuLineHeight * 3.f;
+	// Under the top bar, one row per player: its team colour, then its name or AI label.
+	float Y = TopInset;
 	const ARTSGameState* GameState = GetWorld()->GetGameState<ARTSGameState>();
 	if (!GameState)
 	{
@@ -553,7 +559,7 @@ void ARTSHUD::DrawSuperweaponMenu(const ARTSPlayerController& Controller)
 		return;
 	}
 	const URTSSuperweaponComponent* Superweapon = Building->GetSuperweaponComponent();
-	float Y = MenuMargin;
+	float Y = TopInset;
 	DrawText(TEXT("Superweapon"), MenuColor, MenuMargin, Y);
 	Y += MenuLineHeight;
 	FString Text = TEXT("1  Launch");
@@ -606,7 +612,7 @@ void ARTSHUD::DrawSuperweaponAlert(const ARTSPlayerController& Controller)
 	float Height = 0.f;
 	GetTextSize(Text, Width, Height, Font, AttackAlertTextScale);
 	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
-	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, MenuMargin + SuperweaponAlertTop);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, TopInset + SuperweaponAlertTop);
 	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
 	DrawText(Text, bOwn ? VictoryColor : DefeatColor, Min.X + ButtonPadding, Min.Y + ButtonPadding, Font, AttackAlertTextScale);
 }
@@ -650,7 +656,7 @@ void ARTSHUD::DrawAttackAlert(const ARTSPlayerController& Controller)
 	float Height = 0.f;
 	GetTextSize(Text, Width, Height, Font, AttackAlertTextScale);
 	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
-	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, MenuMargin);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, TopInset);
 	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
 	DrawText(Text, *TextColor, Min.X + ButtonPadding, Min.Y + ButtonPadding, Font, AttackAlertTextScale);
 }

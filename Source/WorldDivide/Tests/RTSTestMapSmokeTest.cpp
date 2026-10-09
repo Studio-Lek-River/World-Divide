@@ -11,6 +11,7 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
+#include "Components/TextBlock.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuilderData.h"
@@ -23,17 +24,23 @@
 #include "Economy/RTSHarvesterComponent.h"
 #include "Economy/RTSSupplySource.h"
 #include "Engine/StaticMeshActor.h"
+#include "Engine/UserInterfaceSettings.h"
+#include "Input/HittestGrid.h"
+#include "Rendering/DrawElements.h"
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
 #include "HAL/IConsoleManager.h"
 #include "NavigationSystem.h"
 #include "NavMesh/RecastNavMesh.h"
+#include "Player/RTSHUD.h"
 #include "Player/RTSPlayerController.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestPIE.h"
+#include "UI/RTSHUDWidget.h"
+#include "UI/RTSResourceBarWidget.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSUnit.h"
 
@@ -83,6 +90,8 @@ namespace
 	constexpr int32 UnitsPerTeam = 18;
 	constexpr float ArrivalRadius = 800.f;
 	constexpr double NavTimeout = 30.0;
+	constexpr double HUDLayoutTimeout = 10.0;
+	const FVector2D HUDViewportSize(1920.f, 1080.f);
 	constexpr double MoveTimeout = 60.0;
 
 	/** The empty strip north of both bases, far out of range of the map's own units. */
@@ -293,6 +302,10 @@ namespace
 		TArray<TWeakObjectPtr<ARTSUnit>> EnemyUnits;
 		TArray<FVector> EnemyStartLocations;
 		double PhaseStart = 0.0;
+
+		// HUD widget test only.
+		double HUDWaitStart = 0.0;
+		int32 StartingCredits = 0;
 
 		// Attack order test only.
 		TWeakObjectPtr<ARTSUnit> Attacker;
@@ -512,6 +525,22 @@ namespace
 		return BuilderTeam == INDEX_NONE
 			? RTSBuildPlacement::CanPlace(World, Data, Location, Snapped)
 			: RTSBuildPlacement::CanBuilderPlace(World, Data, Location, Snapped, BuilderTeam);
+	}
+
+	/**
+	 * A headless run never paints, so nothing has a layout: lays Widget out and paints it once into a throwaway element list
+	 * over a ViewportSize viewport at the DPI scale for it, as a frame would, so its panels have their geometry.
+	 */
+	void LayOutHeadless(UUserWidget& Widget, const FVector2D& ViewportSize)
+	{
+		const float Scale = GetDefault<UUserInterfaceSettings>()->GetDPIScaleBasedOnSize(FIntPoint(ViewportSize.X, ViewportSize.Y));
+		const TSharedRef<SWidget> Root = Widget.TakeWidget();
+		Root->SlatePrepass(Scale);
+		const FGeometry Geometry = FGeometry::MakeRoot(ViewportSize / Scale, FSlateLayoutTransform(Scale));
+		FHittestGrid Grid;
+		const FPaintArgs Args(nullptr, Grid, FVector2D::ZeroVector, FApp::GetCurrentTime(), FApp::GetDeltaTime());
+		FSlateWindowElementList Elements(nullptr);
+		Root->Paint(Args, Geometry, FSlateRect(FVector2D::ZeroVector, ViewportSize), Elements, 0, FWidgetStyle(), true);
 	}
 
 	ARTSPlayerController* GetTestController(FAutomationTestBase& Test)
@@ -2843,6 +2872,96 @@ bool FRTSCheckInGameMenu::Update()
 	Test->TestFalse(TEXT("Opening the menu disarms attack-move"), Controller->IsAttackMoveArmed());
 	Controller->SetInGameMenuOpen(false);
 	SetDebugBuild(bWasDebugBuild);
+	return true;
+}
+
+/**
+ * Once laid out, the local player's UMG HUD shows its resource bar with the starting credits, and a click on the bar keeps
+ * the selected units selected, while the middle of the battlefield is no panel.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckHUDWidget, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSCheckHUDWidget::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	if (State->HUDWaitStart == 0.0)
+	{
+		State->HUDWaitStart = FPlatformTime::Seconds();
+		State->StartingCredits = Controller->GetCredits();
+	}
+
+	const ARTSHUD* HUD = Controller->GetHUD<ARTSHUD>();
+	URTSHUDWidget* Widget = HUD ? HUD->GetHUDWidget() : nullptr;
+	URTSResourceBarWidget* Bar = Widget ? Widget->GetResourceBar() : nullptr;
+	if (Widget && !FApp::CanEverRender())
+	{
+		LayOutHeadless(*Widget, HUDViewportSize);
+	}
+	const FGeometry BarGeometry = Bar ? Bar->GetCachedGeometry() : FGeometry();
+	if (!Bar || BarGeometry.GetLocalSize().X <= 0.f)
+	{
+		if (FPlatformTime::Seconds() - State->HUDWaitStart > HUDLayoutTimeout)
+		{
+			Test->AddError(Bar ? TEXT("The resource bar was never laid out") : TEXT("The local player has no URTSHUDWidget with a resource bar"));
+			return true;
+		}
+		return false;
+	}
+
+	Test->TestTrue(TEXT("The HUD widget is on the player's screen"), Widget->IsInViewport());
+	Test->TestEqual(TEXT("The resource bar shows the starting credits"), Bar->GetCreditsText()->GetText().ToString(),
+		URTSResourceBarWidget::FormatCredits(State->StartingCredits));
+	Test->TestTrue(TEXT("The canvas keeps the top bar clear"), Widget->GetTopBandHeight() > 0.f);
+
+	TArray<ARTSUnit*> Own;
+	for (TActorIterator<ARTSUnit> It(Controller->GetWorld()); It; ++It)
+	{
+		if (It->GetTeamId() == Controller->GetTeamId())
+		{
+			Own.Add(*It);
+		}
+	}
+	if (Own.IsEmpty())
+	{
+		Test->AddError(TEXT("The player has no units to select"));
+		return true;
+	}
+	Controller->SelectUnits(Own);
+	const int32 Selected = Controller->GetSelectedUnits().Num();
+
+	// In viewport pixels, from the HUD's top left corner.
+	const FGeometry& HUDGeometry = Widget->GetCachedGeometry();
+	FVector2D BarPixel = BarGeometry.GetAbsolutePositionAtCoordinates(FVector2D(0.5f, 0.5f)) - HUDGeometry.GetAbsolutePosition();
+	FVector2D BoxEnd;
+	Test->TestTrue(TEXT("The middle of the resource bar is on a HUD panel"), Controller->IsOnHUDPanel(BarPixel));
+	Controller->HandleSelectPressed(BarPixel);
+	Test->TestFalse(TEXT("A press on the bar starts no selection"), Controller->GetSelectionBox(BarPixel, BoxEnd));
+	Controller->HandleSelectReleased(BarPixel);
+	Test->TestEqual(TEXT("A click on the bar keeps the selection"), Controller->GetSelectedUnits().Num(), Selected);
+
+	Test->TestFalse(TEXT("The middle of the battlefield is no HUD panel"), Controller->IsOnHUDPanel(HUDGeometry.GetAbsoluteSize() * 0.5f));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSHUDWidgetSmokeTest, "WorldDivide.Smoke.HUDWidget",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSHUDWidgetSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckHUDWidget(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }
 

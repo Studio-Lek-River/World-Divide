@@ -9,6 +9,7 @@ class UStaticMesh;
 class UWorld;
 class URTSFactionData;
 class URTSMapData;
+class URTSHUDWidget;
 
 /** Project-wide asset references, kept in DefaultGame.ini so they stay reviewable text. */
 UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "World Divide"))
@@ -44,4 +45,8 @@ public:
 	/** The maps the host picks from in the lobby, in the order it shows them; the first is the default. */
 	UPROPERTY(Config, EditAnywhere, Category = "Maps")
 	TArray<TSoftObjectPtr<URTSMapData>> SkirmishMaps;
+
+	/** The root of the match HUD that ARTSHUD shows the local player; unset is the C++ class. A Widget Blueprint subclass may set it for art. */
+	UPROPERTY(Config, EditAnywhere, Category = "HUD")
+	TSoftClassPtr<URTSHUDWidget> HUDWidgetClass;
 };
