@@ -22,6 +22,7 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
+#include "Misc/App.h"
 #include "Player/RTSAlertSound.h"
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSHUD.h"
@@ -140,7 +141,9 @@ void ARTSPlayerController::SetupInputComponent()
 	}
 
 	FInputModeGameAndUI InputMode;
-	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+	// A headless test run has no real viewport; locking would clip the desktop cursor to a corner.
+	const bool bLockMouse = FApp::CanEverRender() && !GIsAutomationTesting;
+	InputMode.SetLockMouseToViewportBehavior(bLockMouse ? EMouseLockMode::LockAlways : EMouseLockMode::DoNotLock);
 	InputMode.SetHideCursorDuringCapture(false);
 	SetInputMode(InputMode);
 
