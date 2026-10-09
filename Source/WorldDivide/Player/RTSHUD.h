@@ -15,7 +15,8 @@ enum class ERTSMatchResult : uint8;
  * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
  * the player's credits and power, a scoreboard of every player's team colour and name, the build menu of the selected builder (or the debug build menu), and the production menu,
  * queue and rally point of a selected production building, a hint while attack-move is armed, a warning when an own
- * building or unit is attacked, and once the match is over
+ * building or unit is attacked, every superweapon's countdown, the launch entry of a selected own superweapon and a hint
+ * while targeting it, the target of a strike on its way, a warning when a superweapon is built or ready, and once the match is over
  * a pop-up with Victory or Defeat and, on the host, a restart button in place of the menus, without any UI assets.
  */
 UCLASS()
@@ -31,6 +32,12 @@ public:
 
 	/** Point, in viewport pixels, lies on the restart button drawn last frame. */
 	bool IsOnRestartButton(const FVector2D& Point) const;
+
+	/** Point, in viewport pixels, lies on the selected superweapon's launch entry drawn last frame. */
+	bool IsOnLaunchButton(const FVector2D& Point) const;
+
+	/** A superweapon's countdown as the HUD shows it: "Ready", else minutes and seconds left, rounded up, such as "2:05". */
+	static FString FormatCountdown(float Seconds);
 
 	/** Index into the production menu of the entry drawn at Point last frame, or INDEX_NONE. */
 	int32 GetProduceButtonAt(const FVector2D& Point) const;
@@ -73,8 +80,23 @@ private:
 	/** Produced and consumed power under the credits, red while low; nothing for a faction without power. */
 	void DrawPower(const ARTSPlayerController& Controller);
 
-	/** Under the power, every player in the match by team: its colour and GetScoreboardLabel, greyed once eliminated. */
-	void DrawScoreboard();
+	/**
+	 * Under the power, every player in the match by team: its colour and GetScoreboardLabel, greyed once eliminated. Returns
+	 * the line below it.
+	 */
+	float DrawScoreboard();
+
+	/**
+	 * From Y, every superweapon of every team: its team colour and countdown, noting a charge held by low power; and a
+	 * pulsing ring where a strike is on its way.
+	 */
+	void DrawSuperweapons(const ARTSPlayerController& Controller, float Y);
+
+	/** The selected own superweapon's launch entry, greyed while it charges, and a hint at the bottom while targeting. */
+	void DrawSuperweaponMenu(const ARTSPlayerController& Controller);
+
+	/** For a few seconds after a superweapon warning: a message at the top center, under the attack warning's. */
+	void DrawSuperweaponAlert(const ARTSPlayerController& Controller);
 
 	/**
 	 * For a few seconds after a warning: a message at the top center, the base's in red over the units' in amber, and a
@@ -99,6 +121,9 @@ private:
 
 	/** Invalid while no restart button is shown. */
 	FBox2D RestartButton = FBox2D(ForceInit);
+
+	/** Invalid while no superweapon is selected. */
+	FBox2D LaunchButton = FBox2D(ForceInit);
 
 	/** Drawn last frame, by index into the production menu and queue; invalid boxes for entries not drawn. */
 	TArray<FBox2D> ProduceButtons;

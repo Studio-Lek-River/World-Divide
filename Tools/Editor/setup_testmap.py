@@ -1,4 +1,4 @@
-"""Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters included), AI build order and faction data assets, the placement ghost and shot effect materials, the
+"""Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters and superweapon included), AI build order and faction data assets, the placement ghost and shot effect materials, the
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the L_TestMap level with a supply
 source and two builders by each base, the L_Skirmish and L_SkirmishDuel levels, the same ground without the armies and
 with four and two start spots, where the lobby's seats play, the map data assets that offer them in the lobby, and the
@@ -298,7 +298,7 @@ def make_aircraft(name, display_name, mesh, scale, radius, health, weapon, speed
 
 def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw,
                   spawn_on_complete=None, accepts_supply=False, requires_power=False, units=(), upgrades=(), defense=False,
-                  max_count=0, airfield_pads=0):
+                  max_count=0, airfield_pads=0, superweapon=None):
     return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
         "display_name": unreal.Text(display_name),
         "mesh": mesh,
@@ -319,6 +319,12 @@ def make_building(name, display_name, mesh, scale, footprint, health, weapon, co
         "is_defense": defense,
         "max_count": max_count,
         "airfield_pads": airfield_pads,
+        # (charge time, delay, radius, damage, edge damage), or None for a building that is not a superweapon.
+        "superweapon_charge_time": superweapon[0] if superweapon else 0.0,
+        "superweapon_delay": superweapon[1] if superweapon else 3.0,
+        "superweapon_radius": superweapon[2] if superweapon else 1500.0,
+        "superweapon_damage": superweapon[3] if superweapon else 1000.0,
+        "superweapon_edge_damage": superweapon[4] if superweapon else 0.25,
     })
 
 
@@ -749,7 +755,12 @@ airfield = make_building("DA_TestAirfield", "Test Airfield", airfield_mesh, fit_
 headquarters = make_building("DA_TestHeadquarters", "Test Headquarters", headquarters_mesh,
                              fit_scale(headquarters_mesh, 380.0, 380.0), (4, 4), 3000.0, None, 2500, 12.0, 0, 0,
                              units=[builder], max_count=1)
-buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory, headquarters, airfield]
+# The tower's spire scaled up. Two minutes to charge; three seconds after launch the strike lands, 15 m across at full
+# damage near the centre and a quarter of it at the edge. One per team.
+superweapon = make_building("DA_TestSuperweapon", "Test Superweapon", tower_mesh, fit_scale(tower_mesh, 380.0, 380.0, 700.0),
+                            (4, 4), 2000.0, None, 3000, 30.0, 0, 3, max_count=1,
+                            superweapon=(120.0, 3.0, 1500.0, 1500.0, 0.25))
+buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory, headquarters, airfield, superweapon]
 # The headquarters produces the builder, which builds the rest.
 add_properties(builder, {"buildings": buildings})
 # A harvester needs a depot to deliver to, so the factory only offers one once a depot stands.
@@ -757,6 +768,7 @@ add_properties(harvester, {"prerequisites": [supply_depot]})
 # The tech tree: vehicles only after infantry, and a tower only once a plant can power it.
 add_properties(vehicle_factory, {"prerequisites": [barracks]})
 add_properties(airfield, {"prerequisites": [vehicle_factory]})
+add_properties(superweapon, {"prerequisites": [vehicle_factory]})
 add_properties(tower, {"prerequisites": [power_plant]})
 # The AI's base: a second plant before the tower, so the tower's draw never puts it on low power.
 build_order = make_build_order("DA_TestBuildOrder", [

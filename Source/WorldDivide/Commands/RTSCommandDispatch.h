@@ -55,4 +55,10 @@ namespace RTSCommands
 	WORLDDIVIDE_API bool Produce(ARTSPlayerState& Player, const FRTSCommand& Command);
 	WORLDDIVIDE_API bool CancelProduction(ARTSPlayerState& Player, const FRTSCommand& Command);
 	WORLDDIVIDE_API bool SetRallyPoint(ARTSPlayerState& Player, const FRTSCommand& Command);
+
+	/**
+	 * Server only. Launches the command's TargetActor, one of Player's superweapons, at TargetLocation once it is ready.
+	 * Returns false when the command is rejected.
+	 */
+	WORLDDIVIDE_API bool LaunchSuperweapon(ARTSPlayerState& Player, const FRTSCommand& Command);
 }

@@ -4,6 +4,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSPlacementGhost.h"
 #include "Buildings/RTSProductionComponent.h"
+#include "Buildings/RTSSuperweaponComponent.h"
 #include "Combat/RTSTargetable.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSGameMode.h"
@@ -171,6 +172,10 @@ void ARTSPlayerController::PlayerTick(float DeltaTime)
 	if (bAttackMoveArmed && SelectedUnits.IsEmpty())
 	{
 		SetAttackMoveArmed(false);
+	}
+	if (bSuperweaponTargeting && !CanRequestLaunch(GetSelectedSuperweapon()))
+	{
+		SetSuperweaponTargeting(false);
 	}
 
 	if (bSelecting)
@@ -420,6 +425,16 @@ void ARTSPlayerController::OnSelectStarted()
 		}
 		return;
 	}
+	if (bSuperweaponTargeting)
+	{
+		FHitResult Hit;
+		if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+		{
+			RequestLaunchSuperweapon(GetSelectedSuperweapon(), Hit.Location);
+		}
+		CancelSuperweaponTargeting();
+		return;
+	}
 	FVector2D Mouse;
 	const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
 	if (RTSHUD && GetMousePosition(Mouse.X, Mouse.Y))
@@ -427,6 +442,11 @@ void ARTSPlayerController::OnSelectStarted()
 		if (RTSHUD->IsOnRestartButton(Mouse))
 		{
 			RequestRestart();
+			return;
+		}
+		if (RTSHUD->IsOnLaunchButton(Mouse))
+		{
+			BeginSuperweaponTargeting();
 			return;
 		}
 		if (RTSHUD->IsOnCancelButton(Mouse))
@@ -554,6 +574,11 @@ void ARTSPlayerController::OnMoveOrder()
 		CancelAttackMove();
 		return;
 	}
+	if (bSuperweaponTargeting)
+	{
+		CancelSuperweaponTargeting();
+		return;
+	}
 
 	FHitResult Hit;
 	if (!GetHitResultUnderCursor(ECC_Visibility, false, Hit))
@@ -616,6 +641,7 @@ bool ARTSPlayerController::BeginAttackMove()
 		return false;
 	}
 	CancelPlacement();
+	CancelSuperweaponTargeting();
 	SetAttackMoveArmed(true);
 	return true;
 }
@@ -628,7 +654,55 @@ void ARTSPlayerController::CancelAttackMove()
 void ARTSPlayerController::SetAttackMoveArmed(bool bArmed)
 {
 	bAttackMoveArmed = bArmed;
-	CurrentMouseCursor = bArmed ? EMouseCursor::Crosshairs : EMouseCursor::Default;
+	CurrentMouseCursor = bAttackMoveArmed || bSuperweaponTargeting ? EMouseCursor::Crosshairs : EMouseCursor::Default;
+}
+
+ARTSBuilding* ARTSPlayerController::GetSelectedSuperweapon() const
+{
+	ARTSBuilding* Building = GetSelectedBuilding();
+	return Building && Building->GetTeamId() == GetTeamId() && Building->GetSuperweaponComponent()->IsOperational() ? Building : nullptr;
+}
+
+bool ARTSPlayerController::CanRequestLaunch(const ARTSBuilding* Building) const
+{
+	return IsValid(Building) && Building->GetTeamId() == GetTeamId() && Building->GetSuperweaponComponent()->CanLaunch();
+}
+
+bool ARTSPlayerController::RequestLaunchSuperweapon(ARTSBuilding* Building, const FVector& Location)
+{
+	if (!CanRequestLaunch(Building))
+	{
+		return false;
+	}
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::LaunchSuperweapon;
+	Command.TargetActor = Building;
+	Command.TargetLocation = Location;
+	Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+	return true;
+}
+
+bool ARTSPlayerController::BeginSuperweaponTargeting()
+{
+	if (!CanRequestLaunch(GetSelectedSuperweapon()))
+	{
+		return false;
+	}
+	CancelPlacement();
+	CancelAttackMove();
+	SetSuperweaponTargeting(true);
+	return true;
+}
+
+void ARTSPlayerController::CancelSuperweaponTargeting()
+{
+	SetSuperweaponTargeting(false);
+}
+
+void ARTSPlayerController::SetSuperweaponTargeting(bool bTargeting)
+{
+	bSuperweaponTargeting = bTargeting;
+	CurrentMouseCursor = bAttackMoveArmed || bSuperweaponTargeting ? EMouseCursor::Crosshairs : EMouseCursor::Default;
 }
 
 void ARTSPlayerController::ConfirmAttackMove(const FVector& Location, bool bQueue)
@@ -780,6 +854,15 @@ bool ARTSPlayerController::RequestRallyPoint(ARTSBuilding* Building, const FVect
 
 void ARTSPlayerController::OnBuildHotkey(int32 Index)
 {
+	// A selected superweapon has one entry: launch.
+	if (GetSelectedSuperweapon())
+	{
+		if (Index == 0)
+		{
+			BeginSuperweaponTargeting();
+		}
+		return;
+	}
 	if (ARTSBuilding* Producer = GetProductionBuilding())
 	{
 		const TArray<URTSEntityData*> Menu = GetProductionMenu();
@@ -801,6 +884,7 @@ void ARTSPlayerController::OnCancel()
 {
 	CancelPlacement();
 	CancelAttackMove();
+	CancelSuperweaponTargeting();
 }
 
 void ARTSPlayerController::OnCancelConstruction()
@@ -997,6 +1081,52 @@ void ARTSPlayerController::Client_UnderAttack_Implementation(const FVector& Loca
 	// Only the owner gets this call, and the server's cooldown already spaces the warnings, so the sound needs no limit of its own.
 	++Received.SoundCount;
 	RTSAlertSound::Play(*this, Kind);
+}
+
+void ARTSPlayerController::NotifySuperweapon(const ARTSBuilding& Superweapon, ERTSSuperweaponAlert Kind)
+{
+	// Only player controllers: the AI and an empty seat get no warning.
+	for (FConstPlayerControllerIterator It = Superweapon.GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		ARTSPlayerController* Controller = Cast<ARTSPlayerController>(It->Get());
+		if (!Controller)
+		{
+			continue;
+		}
+		const bool bOwn = Controller->GetTeamId() == Superweapon.GetTeamId();
+		if (!bOwn || Kind == ERTSSuperweaponAlert::Ready)
+		{
+			Controller->Client_SuperweaponAlert(Kind, bOwn);
+		}
+	}
+}
+
+void ARTSPlayerController::Client_SuperweaponAlert_Implementation(ERTSSuperweaponAlert Kind, bool bOwn)
+{
+	FReceivedSuperweaponAlert& Received = ReceivedSuperweaponAlerts[static_cast<int32>(Kind)];
+	++Received.Count;
+	Received.bOwn = bOwn;
+	Received.Time = GetWorld()->GetTimeSeconds();
+	// The base alarm until superweapons get a sound of their own.
+	RTSAlertSound::Play(*this, ERTSAttackAlert::Base);
+}
+
+bool ARTSPlayerController::GetLatestSuperweaponAlert(ERTSSuperweaponAlert& OutKind, bool& bOutOwn, float& OutAge) const
+{
+	bool bFound = false;
+	for (const ERTSSuperweaponAlert Kind : { ERTSSuperweaponAlert::Built, ERTSSuperweaponAlert::Ready })
+	{
+		const FReceivedSuperweaponAlert& Received = ReceivedSuperweaponAlerts[static_cast<int32>(Kind)];
+		const float Age = GetWorld()->GetTimeSeconds() - Received.Time;
+		if (Received.Count > 0 && (!bFound || Age < OutAge))
+		{
+			OutKind = Kind;
+			bOutOwn = Received.bOwn;
+			OutAge = Age;
+			bFound = true;
+		}
+	}
+	return bFound;
 }
 
 bool ARTSPlayerController::GetLastAttackAlert(ERTSAttackAlert Kind, FVector& OutLocation, float& OutAge) const

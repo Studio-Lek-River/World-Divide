@@ -3,6 +3,7 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSProductionComponent.h"
+#include "Buildings/RTSSuperweaponComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Core/RTSGameState.h"
@@ -53,6 +54,19 @@ namespace
 	constexpr float AttackRingRadius = 40.f;
 	constexpr float AttackRingPulse = 16.f;
 	constexpr int32 AttackRingSegments = 24;
+	constexpr float SuperweaponAlertTop = 60.f;
+
+	/** A ring around Center, in segments. */
+	void DrawRing(AHUD& HUD, const FVector2D& Center, float Radius, const FLinearColor& Color)
+	{
+		for (int32 Index = 0; Index < AttackRingSegments; ++Index)
+		{
+			const float From = 2.f * UE_PI * Index / AttackRingSegments;
+			const float To = 2.f * UE_PI * (Index + 1) / AttackRingSegments;
+			HUD.DrawLine(Center.X + Radius * FMath::Cos(From), Center.Y + Radius * FMath::Sin(From),
+				Center.X + Radius * FMath::Cos(To), Center.Y + Radius * FMath::Sin(To), Color, 2.f);
+		}
+	}
 }
 
 void ARTSHUD::DrawHUD()
@@ -109,18 +123,21 @@ void ARTSHUD::DrawHUD()
 
 	ProduceButtons.Reset();
 	QueueButtons.Reset();
+	LaunchButton = FBox2D(ForceInit);
 	if (!bMatchOver)
 	{
 		DrawBuildMenu(*Controller);
 		DrawProduction(*Controller);
+		DrawSuperweaponMenu(*Controller);
 		DrawAttackMoveHint(*Controller);
 	}
 	DrawCredits(*Controller);
 	DrawPower(*Controller);
-	DrawScoreboard();
+	DrawSuperweapons(*Controller, DrawScoreboard() + MenuLineHeight * 0.5f);
 	if (!bMatchOver)
 	{
 		DrawAttackAlert(*Controller);
+		DrawSuperweaponAlert(*Controller);
 	}
 
 	FVector2D Start;
@@ -436,12 +453,14 @@ void ARTSHUD::DrawPower(const ARTSPlayerController& Controller)
 	DrawText(Text, State->IsLowPower() ? LowPowerColor : PowerColor, Canvas->ClipX - MenuMargin - Width, MenuMargin + MenuLineHeight);
 }
 
-void ARTSHUD::DrawScoreboard()
+float ARTSHUD::DrawScoreboard()
 {
+	// Under the credits and power, one row per player: its team colour, then its name or AI label.
+	float Y = MenuMargin + MenuLineHeight * 3.f;
 	const ARTSGameState* GameState = GetWorld()->GetGameState<ARTSGameState>();
 	if (!GameState)
 	{
-		return;
+		return Y;
 	}
 
 	TArray<const ARTSPlayerState*> Players;
@@ -454,8 +473,6 @@ void ARTSHUD::DrawScoreboard()
 	}
 	Players.Sort([](const ARTSPlayerState& A, const ARTSPlayerState& B) { return A.GetTeamId() < B.GetTeamId(); });
 
-	// Under the credits and power, one row per player: its team colour, then its name or AI label.
-	float Y = MenuMargin + MenuLineHeight * 3.f;
 	for (const ARTSPlayerState* Player : Players)
 	{
 		const bool bInMatch = GameState->GetAliveTeams().Contains(Player->GetTeamId());
@@ -471,6 +488,122 @@ void ARTSHUD::DrawScoreboard()
 		DrawText(Text, bInMatch ? MenuColor : UnaffordableColor, TextLeft, Y);
 		Y += MenuLineHeight;
 	}
+	return Y;
+}
+
+FString ARTSHUD::FormatCountdown(float Seconds)
+{
+	if (Seconds <= 0.f)
+	{
+		return TEXT("Ready");
+	}
+	const int32 Whole = FMath::CeilToInt(Seconds);
+	return FString::Printf(TEXT("%d:%02d"), Whole / 60, Whole % 60);
+}
+
+void ARTSHUD::DrawSuperweapons(const ARTSPlayerController& Controller, float Y)
+{
+	for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
+	{
+		const URTSSuperweaponComponent* Superweapon = It->GetSuperweaponComponent();
+		if (!Superweapon->IsOperational())
+		{
+			continue;
+		}
+
+		// A row like the scoreboard's: team colour, then the countdown.
+		FString Text = FString::Printf(TEXT("Superweapon  %s"), *FormatCountdown(Superweapon->GetChargeRemaining()));
+		if (Superweapon->IsChargePaused())
+		{
+			Text += TEXT("  (low power)");
+		}
+		float Width = 0.f;
+		float Height = 0.f;
+		GetTextSize(Text, Width, Height);
+		const float TextLeft = Canvas->ClipX - MenuMargin - Width;
+		const float SwatchLeft = TextLeft - ButtonPadding - ScoreboardSwatchSize;
+		const float SwatchTop = Y + (MenuLineHeight - ScoreboardSwatchSize) * 0.5f;
+		DrawRect(HealthBackground, SwatchLeft - 1.f, SwatchTop - 1.f, ScoreboardSwatchSize + 2.f, ScoreboardSwatchSize + 2.f);
+		DrawRect(ARTSUnit::GetTeamColor(It->GetTeamId()), SwatchLeft, SwatchTop, ScoreboardSwatchSize, ScoreboardSwatchSize);
+		const bool bReady = Superweapon->GetChargeRemaining() <= 0.f;
+		DrawText(Text, bReady ? DefeatColor : Superweapon->IsChargePaused() ? UnaffordableColor : MenuColor, TextLeft, Y);
+		Y += MenuLineHeight;
+
+		// Every player sees where a strike is about to land.
+		FVector2D Center;
+		if (Superweapon->IsStrikePending() && Controller.ProjectWorldLocationToScreen(Superweapon->GetStrikeLocation(), Center))
+		{
+			const float Pulse = FMath::Abs(FMath::Sin(GetWorld()->GetTimeSeconds() * UE_PI * 4.f));
+			DrawRing(*this, Center, AttackRingRadius * 2.f + AttackRingPulse * Pulse, DefeatColor);
+			DrawRing(*this, Center, AttackRingRadius * 0.5f, DefeatColor);
+		}
+	}
+}
+
+void ARTSHUD::DrawSuperweaponMenu(const ARTSPlayerController& Controller)
+{
+	const ARTSBuilding* Building = Controller.GetSelectedSuperweapon();
+	if (!Building)
+	{
+		return;
+	}
+	const URTSSuperweaponComponent* Superweapon = Building->GetSuperweaponComponent();
+	float Y = MenuMargin;
+	DrawText(TEXT("Superweapon"), MenuColor, MenuMargin, Y);
+	Y += MenuLineHeight;
+	FString Text = TEXT("1  Launch");
+	if (Superweapon->IsStrikePending())
+	{
+		Text += TEXT("  striking");
+	}
+	else if (Superweapon->GetChargeRemaining() > 0.f)
+	{
+		Text += FString::Printf(TEXT("  charging %s"), *FormatCountdown(Superweapon->GetChargeRemaining()));
+	}
+	float Width = 0.f;
+	float Height = 0.f;
+	GetTextSize(Text, Width, Height);
+	LaunchButton = FBox2D(FVector2D(MenuMargin, Y), FVector2D(MenuMargin + Width, Y + MenuLineHeight));
+	DrawText(Text, Controller.CanRequestLaunch(Building) ? MenuColor : UnaffordableColor, MenuMargin, Y);
+
+	if (!Controller.IsSuperweaponTargeting())
+	{
+		return;
+	}
+	const FString Hint = TEXT("Launch: left click a target    Right click / Esc: cancel");
+	GetTextSize(Hint, Width, Height);
+	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - MenuMargin - Size.Y);
+	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
+	DrawText(Hint, DefeatColor, Min.X + ButtonPadding, Min.Y + ButtonPadding);
+}
+
+bool ARTSHUD::IsOnLaunchButton(const FVector2D& Point) const
+{
+	return LaunchButton.bIsValid && LaunchButton.IsInside(Point);
+}
+
+void ARTSHUD::DrawSuperweaponAlert(const ARTSPlayerController& Controller)
+{
+	ERTSSuperweaponAlert Kind = ERTSSuperweaponAlert::Built;
+	bool bOwn = false;
+	float Age = 0.f;
+	if (!Controller.GetLatestSuperweaponAlert(Kind, bOwn, Age) || Age >= AttackAlertSeconds)
+	{
+		return;
+	}
+	const TCHAR* Text = bOwn ? TEXT("Superweapon ready")
+		: Kind == ERTSSuperweaponAlert::Built ? TEXT("Enemy superweapon built") : TEXT("Enemy superweapon ready");
+
+	// Under the attack warning, which keeps the top.
+	UFont* Font = GEngine->GetLargeFont();
+	float Width = 0.f;
+	float Height = 0.f;
+	GetTextSize(Text, Width, Height, Font, AttackAlertTextScale);
+	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, MenuMargin + SuperweaponAlertTop);
+	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
+	DrawText(Text, bOwn ? VictoryColor : DefeatColor, Min.X + ButtonPadding, Min.Y + ButtonPadding, Font, AttackAlertTextScale);
 }
 
 void ARTSHUD::DrawAttackAlert(const ARTSPlayerController& Controller)
@@ -500,14 +633,7 @@ void ARTSHUD::DrawAttackAlert(const ARTSPlayerController& Controller)
 		{
 			continue;
 		}
-		const float Radius = AttackRingRadius + AttackRingPulse * FMath::Abs(FMath::Sin(Age * UE_PI * 2.f));
-		for (int32 Index = 0; Index < AttackRingSegments; ++Index)
-		{
-			const float From = 2.f * UE_PI * Index / AttackRingSegments;
-			const float To = 2.f * UE_PI * (Index + 1) / AttackRingSegments;
-			DrawLine(Center.X + Radius * FMath::Cos(From), Center.Y + Radius * FMath::Sin(From),
-				Center.X + Radius * FMath::Cos(To), Center.Y + Radius * FMath::Sin(To), Color, 2.f);
-		}
+		DrawRing(*this, Center, AttackRingRadius + AttackRingPulse * FMath::Abs(FMath::Sin(Age * UE_PI * 2.f)), Color);
 	}
 	if (!Text)
 	{

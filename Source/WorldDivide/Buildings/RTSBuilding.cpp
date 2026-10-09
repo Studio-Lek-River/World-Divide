@@ -3,6 +3,7 @@
 #include "AI/RTSAIPlayer.h"
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSProductionComponent.h"
+#include "Buildings/RTSSuperweaponComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/BoxComponent.h"
@@ -68,6 +69,7 @@ ARTSBuilding::ARTSBuilding()
 	HealthComponent = CreateDefaultSubobject<URTSHealthComponent>(TEXT("Health"));
 	WeaponComponent = CreateDefaultSubobject<URTSWeaponComponent>(TEXT("Weapon"));
 	ProductionComponent = CreateDefaultSubobject<URTSProductionComponent>(TEXT("Production"));
+	SuperweaponComponent = CreateDefaultSubobject<URTSSuperweaponComponent>(TEXT("Superweapon"));
 
 	bReplicates = true;
 	SetNetUpdateFrequency(10.f);
@@ -159,7 +161,7 @@ void ARTSBuilding::Tick(float DeltaSeconds)
 	{
 		UpdateNavCut(DeltaSeconds);
 	}
-	// Construction and production hold once the match is over.
+	// Construction, production and a superweapon's charge hold once the match is over.
 	if (!HasAuthority() || ARTSGameState::IsMatchOver(*GetWorld()))
 	{
 		return;
@@ -171,6 +173,7 @@ void ARTSBuilding::Tick(float DeltaSeconds)
 	if (IsConstructed())
 	{
 		ProductionComponent->UpdateProduction(DeltaSeconds);
+		SuperweaponComponent->UpdateCharge(DeltaSeconds);
 	}
 }
 
@@ -199,6 +202,11 @@ void ARTSBuilding::UpdateConstruction(float DeltaSeconds)
 		}
 		SpawnCompletionUnit();
 		ProductionComponent->SetRallyPoint(GetExitLocation(DefaultRallyDistance));
+		if (SuperweaponComponent->IsSuperweapon())
+		{
+			SuperweaponComponent->StartCharging();
+			ARTSPlayerController::NotifySuperweapon(*this, ERTSSuperweaponAlert::Built);
+		}
 	}
 	ApplyConstructionVisual();
 }

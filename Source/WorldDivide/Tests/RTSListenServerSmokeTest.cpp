@@ -5,6 +5,7 @@
 #include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSProductionComponent.h"
+#include "Buildings/RTSSuperweaponComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
@@ -50,6 +51,11 @@
  * Then the server gives the client an airfield: the client queues a jet there and must see it parked on a pad, sends it to
  * attack a host infantry across the south strip and must see it climb, the infantry disappear, the jet land on its pad
  * again and its spent load come back.
+ * Then the server gives the client a superweapon: the host, and not the client, is warned that it was built, and without
+ * power both see its charge held at the same countdown. Once the server gives the client power plants both see it count
+ * down alike; the server then completes the charge, and the host gets the enemy's and the client its own Ready warning. The
+ * client launches it through its controller at a host infantry in the empty north-west corner: it must see the strike on
+ * its way, the infantry disappear and the charge start over.
  * Finally the server destroys the host's headquarters, its last building: the client must see Victory for itself and the
  * host Defeat, only the host may restart, and a move the client sends afterwards is refused.
  */
@@ -112,6 +118,20 @@ namespace RTSListenServerTest
 	constexpr double JetProductionTimeout = 90.0;
 	constexpr double SortieTimeout = 90.0;
 
+	/**
+	 * The client's superweapon and the plants that power it stand in the empty north-east corner; its target, a host infantry,
+	 * in the north-west corner, a strike's radius clear of everything else.
+	 */
+	const TCHAR* SuperweaponPath = TEXT("/Game/Data/Buildings/DA_TestSuperweapon.DA_TestSuperweapon");
+	const FVector ClientSuperweaponSpot(8000.f, 8000.f, 0.f);
+	const FVector ClientPlantSpots[] = { FVector(8000.f, 5500.f, 0.f), FVector(8000.f, 4500.f, 0.f) };
+	const FVector HostStrikeTargetSpot(-7500.f, 5500.f, 0.f);
+	/** Seconds by which the client's countdown may trail the server's: a few network updates at the test time dilation. */
+	constexpr float CountdownTolerance = 1.f;
+	/** Game seconds the client watches its countdown run before comparing it with the server's. */
+	constexpr double CountdownWatchSeconds = 3.0;
+	constexpr double StrikeTimeout = 30.0;
+
 	/** Each team starts with one; the checks on buildings the test places leave them out. */
 	const TCHAR* HeadquartersPath = TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters");
 	/** Game seconds the client's refused order is watched for any movement. */
@@ -170,6 +190,14 @@ namespace RTSListenServerTest
 		float ClientJetMaxZ = 0.f;
 		int32 ClientJetLowestAmmo = 0;
 		bool bClientSawLanding = false;
+
+		/** The client's superweapon, the host infantry it strikes and what the client saw of the strike. */
+		TWeakObjectPtr<ARTSBuilding> ServerSuperweapon;
+		TWeakObjectPtr<ARTSBuilding> ClientSuperweapon;
+		TWeakObjectPtr<ARTSUnit> ServerStrikeTarget;
+		TWeakObjectPtr<ARTSUnit> ClientStrikeTarget;
+		double CountdownStartWorldTime = 0.0;
+		bool bClientSawStrike = false;
 
 		/** Where the client's tank stood when the server got its order after the match. */
 		FVector RefusedStart = FVector::ZeroVector;
@@ -1449,6 +1477,235 @@ namespace RTSListenServerTest
 		return true;
 	}
 
+	/** Server only. A completed building of Data for TeamId at Location, or null when the data is missing. */
+	ARTSBuilding* SpawnCompletedBuilding(UWorld& World, const TCHAR* DataPath, int32 TeamId, const FVector& Location)
+	{
+		URTSBuildingData* Data = LoadObject<URTSBuildingData>(nullptr, DataPath);
+		if (!Data)
+		{
+			return nullptr;
+		}
+		const FTransform Transform(Location);
+		ARTSBuilding* Building = World.SpawnActorDeferred<ARTSBuilding>(
+			ARTSBuilding::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		Building->InitFromData(Data, TeamId);
+		Building->FinishSpawning(Transform);
+		// Twice the build time, since the client builds at the low-power rate.
+		Building->UpdateConstruction(Data->BuildTime * 2.f);
+		return Building;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSGiveClientSuperweapon, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSGiveClientSuperweapon::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		ARTSBuilding* Superweapon = ServerWorld ? SpawnCompletedBuilding(*ServerWorld, SuperweaponPath, ClientTeam, ClientSuperweaponSpot) : nullptr;
+		if (!Superweapon)
+		{
+			Test->AddError(TEXT("Lost the server world, or the test superweapon is missing"));
+			return true;
+		}
+		Test->TestTrue(TEXT("The client's superweapon is complete"), Superweapon->GetSuperweaponComponent()->IsOperational());
+		Test->TestTrue(TEXT("Without power plants the client is low on power"), ARTSPlayerState::IsLowPowerForTeam(*ServerWorld, ClientTeam));
+		State->ServerSuperweapon = Superweapon;
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifySuperweaponBuilt, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifySuperweaponBuilt::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* HostController = ServerWorld ? GetLocalController(*ServerWorld) : nullptr;
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		const URTSBuildingData* SuperweaponData = LoadObject<URTSBuildingData>(nullptr, SuperweaponPath);
+		if (!HostController || !ClientController || !SuperweaponData || !State->ServerSuperweapon.IsValid())
+		{
+			Test->AddError(TEXT("Lost a controller or the client's superweapon"));
+			return true;
+		}
+
+		for (TActorIterator<ARTSBuilding> It(ClientWorld); It; ++It)
+		{
+			if (It->GetBuildingData() == SuperweaponData && It->GetSuperweaponComponent()->IsOperational())
+			{
+				State->ClientSuperweapon = *It;
+			}
+		}
+		const URTSSuperweaponComponent* ClientCharge = State->ClientSuperweapon.IsValid() ? State->ClientSuperweapon->GetSuperweaponComponent() : nullptr;
+		if (!ClientCharge || !ClientCharge->IsChargePaused() || HostController->GetSuperweaponAlertCount(ERTSSuperweaponAlert::Built) == 0)
+		{
+			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+			{
+				Test->AddError(FString::Printf(TEXT("The client never saw its held superweapon (%d) or the host was never warned (%d)"),
+					ClientCharge != nullptr, HostController->GetSuperweaponAlertCount(ERTSSuperweaponAlert::Built)));
+				return true;
+			}
+			return false;
+		}
+
+		const URTSSuperweaponComponent* ServerCharge = State->ServerSuperweapon->GetSuperweaponComponent();
+		Test->TestEqual(TEXT("The host is warned once that an enemy superweapon was built"), HostController->GetSuperweaponAlertCount(ERTSSuperweaponAlert::Built), 1);
+		Test->TestEqual(TEXT("The client gets no warning about its own"), ClientController->GetSuperweaponAlertCount(ERTSSuperweaponAlert::Built), 0);
+		Test->TestTrue(TEXT("On the server the charge holds on low power"), ServerCharge->IsChargePaused());
+		Test->TestEqual(TEXT("Held at the full charge time"), ServerCharge->GetChargeRemaining(), SuperweaponData->SuperweaponChargeTime);
+		Test->TestEqual(TEXT("The client sees the same countdown"), ClientCharge->GetChargeRemaining(), ServerCharge->GetChargeRemaining());
+
+		// Power for the client: its charge runs from now on.
+		for (const FVector& Spot : ClientPlantSpots)
+		{
+			SpawnCompletedBuilding(*ServerWorld, PowerPlantPath, ClientTeam, Spot);
+		}
+		Test->TestFalse(TEXT("The plants cover the client's draw"), ARTSPlayerState::IsLowPowerForTeam(*ServerWorld, ClientTeam));
+		State->CountdownStartWorldTime = ServerWorld->GetTimeSeconds();
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifySuperweaponCountdown, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifySuperweaponCountdown::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		const ARTSBuilding* ServerSuperweapon = State->ServerSuperweapon.Get();
+		const ARTSBuilding* ClientSuperweapon = State->ClientSuperweapon.Get();
+		const URTSBuildingData* SuperweaponData = LoadObject<URTSBuildingData>(nullptr, SuperweaponPath);
+		if (!ServerWorld || !ServerSuperweapon || !ClientSuperweapon || !SuperweaponData)
+		{
+			Test->AddError(TEXT("Lost the server world or the client's superweapon"));
+			return true;
+		}
+		const URTSSuperweaponComponent* ClientCharge = ClientSuperweapon->GetSuperweaponComponent();
+		const bool bWatched = ServerWorld->GetTimeSeconds() - State->CountdownStartWorldTime >= CountdownWatchSeconds;
+		if (!bWatched || ClientCharge->IsChargePaused())
+		{
+			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+			{
+				Test->AddError(TEXT("The client never saw its superweapon charge again"));
+				return true;
+			}
+			return false;
+		}
+
+		// The same frame in both worlds: the client's countdown trails the server's by a few updates at most.
+		const URTSSuperweaponComponent* ServerCharge = ServerSuperweapon->GetSuperweaponComponent();
+		const float Server = ServerCharge->GetChargeRemaining();
+		const float Client = ClientCharge->GetChargeRemaining();
+		Test->TestFalse(TEXT("The server's charge runs with power"), ServerCharge->IsChargePaused());
+		Test->TestTrue(FString::Printf(TEXT("The server's countdown went down (%.1f s left)"), Server), Server < SuperweaponData->SuperweaponChargeTime);
+		Test->TestTrue(FString::Printf(TEXT("The client's countdown matches the server's (%.2f s against %.2f s)"), Client, Server),
+			FMath::Abs(Client - Server) <= CountdownTolerance);
+
+		// The rest of the charge at once.
+		State->ServerSuperweapon->GetSuperweaponComponent()->UpdateCharge(Server);
+		Test->TestTrue(TEXT("Charged, the server's superweapon can launch"), ServerCharge->CanLaunch());
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifySuperweaponReady, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifySuperweaponReady::Update()
+	{
+		UWorld* ServerWorld = State->ServerWorld.Get();
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* HostController = ServerWorld ? GetLocalController(*ServerWorld) : nullptr;
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		if (!HostController || !ClientController || !State->ClientSuperweapon.IsValid())
+		{
+			Test->AddError(TEXT("Lost a controller or the client's superweapon"));
+			return true;
+		}
+		const bool bClientReady = ClientController->CanRequestLaunch(State->ClientSuperweapon.Get());
+		if (!bClientReady || ClientController->GetSuperweaponAlertCount(ERTSSuperweaponAlert::Ready) == 0)
+		{
+			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+			{
+				Test->AddError(FString::Printf(TEXT("The client never saw its superweapon ready (%d) or was never told (%d)"),
+					bClientReady, ClientController->GetSuperweaponAlertCount(ERTSSuperweaponAlert::Ready)));
+				return true;
+			}
+			return false;
+		}
+
+		ERTSSuperweaponAlert Kind = ERTSSuperweaponAlert::Built;
+		bool bOwn = false;
+		float Age = 0.f;
+		Test->TestEqual(TEXT("The host is warned once that the enemy superweapon is ready"), HostController->GetSuperweaponAlertCount(ERTSSuperweaponAlert::Ready), 1);
+		Test->TestTrue(TEXT("As the newest warning, about an enemy's"),
+			HostController->GetLatestSuperweaponAlert(Kind, bOwn, Age) && Kind == ERTSSuperweaponAlert::Ready && !bOwn);
+		Test->TestEqual(TEXT("The client is told once that its own is ready"), ClientController->GetSuperweaponAlertCount(ERTSSuperweaponAlert::Ready), 1);
+		Test->TestTrue(TEXT("As its own"), ClientController->GetLatestSuperweaponAlert(Kind, bOwn, Age) && Kind == ERTSSuperweaponAlert::Ready && bOwn);
+		Test->TestEqual(TEXT("The client sees the countdown at zero"), State->ClientSuperweapon->GetSuperweaponComponent()->GetChargeRemaining(), 0.f);
+
+		State->ServerStrikeTarget = SpawnUnit(*ServerWorld, InfantryPath, HostTeam, HostStrikeTargetSpot);
+		if (!State->ServerStrikeTarget.IsValid())
+		{
+			Test->AddError(TEXT("The server could not spawn the host infantry"));
+		}
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSClientLaunchesSuperweapon, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSClientLaunchesSuperweapon::Update()
+	{
+		UWorld* ClientWorld = State->ClientWorld.Get();
+		ARTSPlayerController* ClientController = ClientWorld ? GetLocalController(*ClientWorld) : nullptr;
+		if (!ClientController || !State->ClientSuperweapon.IsValid() || !State->ServerStrikeTarget.IsValid())
+		{
+			Test->AddError(TEXT("Lost the client's controller, its superweapon or the host infantry"));
+			return true;
+		}
+		State->ClientStrikeTarget = FindUnitNear(*ClientWorld, HostTeam, HostStrikeTargetSpot);
+		if (!State->ClientStrikeTarget.IsValid())
+		{
+			if (FPlatformTime::Seconds() - State->PhaseStart > ReplicationTimeout)
+			{
+				Test->AddError(TEXT("The host infantry never replicated to the client"));
+				return true;
+			}
+			return false;
+		}
+
+		// What a click on the superweapon, 1 and a left click on the infantry send.
+		Test->TestTrue(TEXT("The client selects its superweapon"), ClientController->SelectBuilding(State->ClientSuperweapon.Get()));
+		Test->TestTrue(TEXT("Its controller arms targeting"), ClientController->BeginSuperweaponTargeting());
+		Test->TestTrue(TEXT("And launches at the infantry"),
+			ClientController->RequestLaunchSuperweapon(State->ClientSuperweapon.Get(), State->ClientStrikeTarget->GetActorLocation()));
+		ClientController->CancelSuperweaponTargeting();
+		State->PhaseStart = FPlatformTime::Seconds();
+		return true;
+	}
+
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientStrike, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
+	bool FRTSVerifyClientStrike::Update()
+	{
+		const ARTSBuilding* ClientSuperweapon = State->ClientSuperweapon.Get();
+		if (!ClientSuperweapon)
+		{
+			Test->AddError(TEXT("The client's superweapon disappeared"));
+			return true;
+		}
+		const URTSSuperweaponComponent* ClientCharge = ClientSuperweapon->GetSuperweaponComponent();
+		State->bClientSawStrike |= ClientCharge->IsStrikePending()
+			&& FVector::Dist2D(ClientCharge->GetStrikeLocation(), HostStrikeTargetSpot) < 200.f;
+		const bool bTargetGone = !State->ServerStrikeTarget.IsValid() && !State->ClientStrikeTarget.IsValid();
+		const bool bDone = bTargetGone && !ClientCharge->IsStrikePending() && ClientCharge->GetChargeRemaining() > 0.f;
+		const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+		if (!bDone && Elapsed < StrikeTimeout)
+		{
+			return false;
+		}
+
+		Test->AddInfo(FString::Printf(TEXT("The client's strike landed after %.1f s"), Elapsed));
+		Test->TestTrue(TEXT("The client saw the strike on its way to the infantry"), State->bClientSawStrike);
+		Test->TestFalse(TEXT("The strike destroyed the host infantry on the server"), State->ServerStrikeTarget.IsValid());
+		Test->TestFalse(TEXT("The infantry disappeared on the client"), State->ClientStrikeTarget.IsValid());
+		Test->TestTrue(FString::Printf(TEXT("The client sees the charge start over (%.0f s left)"), ClientCharge->GetChargeRemaining()),
+			ClientCharge->GetChargeRemaining() > 0.f);
+		return true;
+	}
+
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSDestroyHostBase, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
 	bool FRTSDestroyHostBase::Update()
 	{
@@ -1591,6 +1848,12 @@ namespace RTSListenServerTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForClientJet(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueClientSortie(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientSortie(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSGiveClientSuperweapon(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifySuperweaponBuilt(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifySuperweaponCountdown(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifySuperweaponReady(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSClientLaunchesSuperweapon(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientStrike(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSDestroyHostBase(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientVictory(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyClientOrderRefused(this, State));

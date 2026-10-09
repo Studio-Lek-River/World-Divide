@@ -11,6 +11,7 @@ class UStaticMeshComponent;
 class URTSBuildingData;
 class URTSHealthComponent;
 class URTSProductionComponent;
+class URTSSuperweaponComponent;
 class URTSUnitData;
 class URTSWeaponComponent;
 
@@ -36,7 +37,8 @@ public:
 
 	/**
 	 * Server only. Advances construction, slower while the owner is low on power; completing it arms the weapon, adds the
-	 * building to the owner's power grid, spawns the SpawnOnComplete unit and puts the rally point in front of the exit.
+	 * building to the owner's power grid, spawns the SpawnOnComplete unit, puts the rally point in front of the exit and,
+	 * for a superweapon, starts its charge and warns the opponents.
 	 * Public so tests and builders can drive it.
 	 */
 	void UpdateConstruction(float DeltaSeconds);
@@ -49,6 +51,7 @@ public:
 	virtual URTSHealthComponent* GetHealthComponent() const override { return HealthComponent; }
 	URTSWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
 	URTSProductionComponent* GetProductionComponent() const { return ProductionComponent; }
+	URTSSuperweaponComponent* GetSuperweaponComponent() const { return SuperweaponComponent; }
 
 	/**
 	 * Where units leave the building: outside the +X edge, the front until buildings can rotate, Clearance beyond it, nudged
@@ -169,6 +172,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<URTSProductionComponent> ProductionComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<URTSSuperweaponComponent> SuperweaponComponent;
 
 	UPROPERTY(ReplicatedUsing = OnRep_BuildingData)
 	TObjectPtr<URTSBuildingData> BuildingData;

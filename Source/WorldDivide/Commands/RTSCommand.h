@@ -35,6 +35,8 @@ enum class ERTSCommandType : uint8
 	SetRallyPoint,
 	/** Move to TargetLocation, stopping to fight enemies that come into range and moving on once none is left. */
 	AttackMove,
+	/** Launch TargetActor, an own superweapon that is ready, at TargetLocation. */
+	LaunchSuperweapon,
 };
 
 /**

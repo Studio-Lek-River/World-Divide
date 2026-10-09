@@ -3,6 +3,7 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSProductionComponent.h"
+#include "Buildings/RTSSuperweaponComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSFormation.h"
 #include "Core/RTSGameState.h"
@@ -125,6 +126,9 @@ namespace RTSCommands
 		case ERTSCommandType::SetRallyPoint:
 			SetRallyPoint(Player, Command);
 			return;
+		case ERTSCommandType::LaunchSuperweapon:
+			LaunchSuperweapon(Player, Command);
+			return;
 		default:
 			break;
 		}
@@ -227,6 +231,17 @@ namespace RTSCommands
 			return false;
 		}
 		Building->GetProductionComponent()->SetRallyPoint(Command.TargetLocation);
+		return true;
+	}
+
+	bool LaunchSuperweapon(ARTSPlayerState& Player, const FRTSCommand& Command)
+	{
+		const ARTSBuilding* Building = Cast<ARTSBuilding>(Command.TargetActor);
+		if (!IsValid(Building) || Building->GetTeamId() != Player.GetTeamId() || !Building->GetSuperweaponComponent()->Launch(Command.TargetLocation))
+		{
+			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot launch %s"), Player.GetTeamId(), *GetNameSafe(Command.TargetActor));
+			return false;
+		}
 		return true;
 	}
 }

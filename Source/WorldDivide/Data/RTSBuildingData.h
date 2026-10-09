@@ -67,4 +67,27 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Match")
 	bool bIsDefense = false;
+
+	/**
+	 * Seconds a superweapon takes to charge once constructed, and again after each launch; the charge holds while the owner
+	 * is low on power. 0 for a building that is not a superweapon.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Superweapon", meta = (ClampMin = "0"))
+	float SuperweaponChargeTime = 0.f;
+
+	/** Seconds from launch until the strike lands at the target point. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Superweapon", meta = (ClampMin = "0"))
+	float SuperweaponDelay = 3.f;
+
+	/** Ground distance from the target point, to a unit or to a building's footprint edge, within which the strike deals damage. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Superweapon", meta = (ClampMin = "0"))
+	float SuperweaponRadius = 1500.f;
+
+	/** Damage at the target point; it falls off linearly to SuperweaponEdgeDamage of it at the radius. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Superweapon", meta = (ClampMin = "0"))
+	float SuperweaponDamage = 1000.f;
+
+	/** The share of SuperweaponDamage dealt right at the radius. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Superweapon", meta = (ClampMin = "0", ClampMax = "1"))
+	float SuperweaponEdgeDamage = 0.25f;
 };

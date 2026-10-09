@@ -26,6 +26,14 @@ enum class ERTSAttackAlert : uint8
 	Units,
 };
 
+/** What a superweapon warning is about: a superweapon completed, or one charged and ready to launch. */
+UENUM()
+enum class ERTSSuperweaponAlert : uint8
+{
+	Built,
+	Ready,
+};
+
 /**
  * Turns mouse and keyboard into camera movement, a local selection and FRTSCommands for the server.
  *
@@ -40,6 +48,8 @@ enum class ERTSAttackAlert : uint8
  * With rts.DebugBuild on and no builder selected, 1-9 pick from the faction's buildings and place them without a builder.
  * With an own production building selected, 1-9 or a click on the HUD's menu queue a unit, right click sets the rally point,
  * and a click on a queued unit, or Delete for the last one, cancels it for a refund.
+ * With an own superweapon selected that is ready, 1 or a click on the HUD's launch entry arms targeting: left click launches it
+ * at the clicked spot, right click, Esc or a change of selection cancels it.
  * Space centres the camera on the latest attack warning, for up to AttackJumpMaxAge seconds after it.
  * Once the match is over the HUD shows Victory or Defeat, and on the host a restart button.
  */
@@ -142,6 +152,23 @@ public:
 	void CancelPlacement();
 	URTSBuildingData* GetPlacementData() const { return PlacementData; }
 
+	/** The selected building while it is the player's own constructed, standing superweapon, or null. */
+	ARTSBuilding* GetSelectedSuperweapon() const;
+
+	/** Building is the player's own superweapon and ready to launch as far as the client knows. The server checks again. */
+	bool CanRequestLaunch(const ARTSBuilding* Building) const;
+
+	/** Asks the server to launch Building at Location; false when CanRequestLaunch refuses it locally. */
+	bool RequestLaunchSuperweapon(ARTSBuilding* Building, const FVector& Location);
+
+	/**
+	 * Local. Arms targeting for the selected superweapon until the next left click launches it, or it is cancelled; false,
+	 * changing nothing, unless CanRequestLaunch accepts the selected superweapon.
+	 */
+	bool BeginSuperweaponTargeting();
+	void CancelSuperweaponTargeting();
+	bool IsSuperweaponTargeting() const { return bSuperweaponTargeting; }
+
 	/** Local. Arms attack-move for the selected units until it is sent or cancelled; false, changing nothing, without units. */
 	bool BeginAttackMove();
 	void CancelAttackMove();
@@ -201,6 +228,22 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_UnderAttack(const FVector& Location, ERTSAttackAlert Kind);
 
+	/**
+	 * Server only. Superweapon was built or is ready: every player controller of another team gets the warning, and for Ready
+	 * the superweapon's own players too.
+	 */
+	static void NotifySuperweapon(const ARTSBuilding& Superweapon, ERTSSuperweaponAlert Kind);
+
+	/** Superweapon warnings of Kind received, for tests; the HUD shows the last one for a few seconds. */
+	int32 GetSuperweaponAlertCount(ERTSSuperweaponAlert Kind) const { return ReceivedSuperweaponAlerts[static_cast<int32>(Kind)].Count; }
+
+	/** False before any superweapon warning; else the newest one's kind, whether it is about the player's own superweapon, and the seconds since it arrived. */
+	bool GetLatestSuperweaponAlert(ERTSSuperweaponAlert& OutKind, bool& bOutOwn, float& OutAge) const;
+
+	/** Owner only: a superweapon, the player's own when bOwn, was built or is ready. */
+	UFUNCTION(Client, Reliable)
+	void Client_SuperweaponAlert(ERTSSuperweaponAlert Kind, bool bOwn);
+
 protected:
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
@@ -247,6 +290,7 @@ private:
 	void UpdatePlacement();
 	void ConfirmPlacement();
 	void SetAttackMoveArmed(bool bArmed);
+	void SetSuperweaponTargeting(bool bTargeting);
 	bool IsOwnUnit(const ARTSUnit* Unit) const;
 	bool IsShiftDown() const;
 	ARTSCameraPawn* GetCameraPawn() const;
@@ -317,6 +361,9 @@ private:
 	/** Set by J until the next left click sends the attack-move, or right click or Esc cancels it. */
 	bool bAttackMoveArmed = false;
 
+	/** Set by 1 or the HUD's launch entry with a ready superweapon selected, until the next left click launches it or it is cancelled. */
+	bool bSuperweaponTargeting = false;
+
 	struct FSentAttackAlert
 	{
 		FVector Location;
@@ -337,4 +384,14 @@ private:
 
 	/** Owning client. Indexed by ERTSAttackAlert. */
 	FReceivedAttackAlert ReceivedAttackAlerts[2];
+
+	struct FReceivedSuperweaponAlert
+	{
+		int32 Count = 0;
+		bool bOwn = false;
+		float Time = 0.f;
+	};
+
+	/** Owning client. Indexed by ERTSSuperweaponAlert. */
+	FReceivedSuperweaponAlert ReceivedSuperweaponAlerts[2];
 };
