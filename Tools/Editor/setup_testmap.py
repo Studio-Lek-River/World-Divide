@@ -54,6 +54,9 @@ TEAM_TINT = 0.7
 HASH_TAG = "SetupHash"
 # Package metadata key telling whether a map preview was rendered or drawn.
 PREVIEW_SOURCE_TAG = "PreviewSource"
+# The navmesh a map is saved with is serialized for the engine it was built in, so the maps are rebuilt when the engine
+# moves to another major or minor version.
+ENGINE_VERSION = ".".join(unreal.SystemLibrary.get_engine_version().split(".")[:2])
 
 PROJECT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 CONTENT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir())
@@ -167,6 +170,20 @@ def plan_now(path, build, digest):
             raise RuntimeError(f"Could not save {path}")
     pending.append((path, ".uasset", exists, write))
     return asset
+
+
+def new_level(path):
+    """Replaces the level at path with a new, empty one. Unreal 5.8 deletes the world from memory but leaves its file and
+    its asset registry entry behind when run as a commandlet, which makes new_level refuse the path: remove the file and
+    rescan it, so the registry drops it too."""
+    if assets.does_asset_exist(path):
+        assets.delete_asset(path)
+        file = os.path.join(CONTENT_DIR, path[len("/Game/"):] + ".umap")
+        if os.path.exists(file):
+            os.remove(file)
+            unreal.AssetRegistryHelpers.get_asset_registry().scan_files_synchronous([file], force_rescan=True)
+    if not levels.new_level(path):
+        raise RuntimeError(f"Could not create {path}")
 
 
 def file_hash(path):
@@ -571,10 +588,7 @@ def spawn_lighting():
 
 
 def build_map(tank, infantry, builder, wall, crate, ground, digest):
-    if assets.does_asset_exist(MAP_PATH):
-        assets.delete_asset(MAP_PATH)
-    if not levels.new_level(MAP_PATH):
-        raise RuntimeError(f"Could not create {MAP_PATH}")
+    new_level(MAP_PATH)
 
     # 200 x 200 m ground, top face at z = 0.
     spawn_ground(10000.0, ground)
@@ -616,7 +630,7 @@ def make_map(tank, infantry, builder, wall, crate, ground):
     plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, builder, wall, crate, ground, digest),
                  spec_hash([build_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source,
                             spawn_ground, spawn_lighting], MAP_PATH, CUBE, tank, infantry, builder, wall, crate, ground,
-                           material_hashes[ground]))
+                           material_hashes[ground], ENGINE_VERSION))
 
 
 def ring(radius, angle):
@@ -691,10 +705,7 @@ def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
     the skirmish game mode, which plays the seats the lobby chose (by default a player against an AI opponent from spots
     0 and 1) and lets every side build its army itself."""
     path = spec.path
-    if assets.does_asset_exist(path):
-        assets.delete_asset(path)
-    if not levels.new_level(path):
-        raise RuntimeError(f"Could not create {path}")
+    new_level(path)
 
     spawn_ground(spec.half_size, ground)
     for kind, label, location, scale in spec.obstacles:
@@ -734,7 +745,7 @@ def make_skirmish_map(spec, builder, wall, crate, ground, water):
     """Queues the level and then its preview."""
     digest = spec_hash([build_skirmish_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units,
                         spawn_supply_source, spawn_ground, spawn_water, spawn_lighting], spec, CUBE, builder, wall, crate, ground,
-                       water, material_hashes[ground], material_hashes[water])
+                       water, material_hashes[ground], material_hashes[water], ENGINE_VERSION)
     plan_rebuild(spec.path, ".umap", lambda digest: build_skirmish_map(spec, builder, wall, crate, ground, water, digest), digest)
     make_map_preview(spec, digest)
 
@@ -873,10 +884,7 @@ def make_map_data(name, display_name, spec, default_seats):
 
 def build_menu_map(path, game_mode, digest):
     """An empty level that only shows the menu screen of game_mode."""
-    if assets.does_asset_exist(path):
-        assets.delete_asset(path)
-    if not levels.new_level(path):
-        raise RuntimeError(f"Could not create {path}")
+    new_level(path)
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     world.get_world_settings().set_editor_property("default_game_mode", game_mode.static_class())
     assets.set_metadata_tag(world, HASH_TAG, digest)

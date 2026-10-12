@@ -1,5 +1,6 @@
 #include "Core/RTSEditorScripting.h"
 
+#include "AssetCompilingManager.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "ContentStreaming.h"
 #include "Engine/Engine.h"
@@ -31,6 +32,11 @@ int32 URTSEditorScripting::BuildNavigation(UObject* WorldContextObject)
 	{
 		return 0;
 	}
+	// An editor world holds its navmesh build until the assets it loaded have compiled and registers new navmesh bounds and
+	// geometry on its tick, none of which a commandlet reaches: finish the assets, lift the hold and tick once here.
+	FAssetCompilingManager::Get().FinishAllCompilation();
+	NavSystem->RemoveNavigationBuildLock(ENavigationBuildLock::AsyncLoadLock, UNavigationSystemV1::ELockRemovalRebuildAction::NoRebuild);
+	NavSystem->Tick(0.f);
 	// Spawns the navmesh if the world has none yet, rebuilds every tile and blocks until done.
 	NavSystem->Build();
 	const ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(NavSystem->GetDefaultNavDataInstance());
