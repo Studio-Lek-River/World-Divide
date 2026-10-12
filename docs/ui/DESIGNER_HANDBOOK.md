@@ -124,6 +124,7 @@ A layout file holds one root element. Elements nest through `children`.
 - Data reaches a layout only through **binding keys**, written as `{key}` inside `text` or as values in `bind` and `visibleWhen`.
 - Each brief lists the exact keys its panel has; use only those. Keys you need but do not have: write them in the spec under "Requests for code". Do not invent them in the layout.
 - Numbers and times arrive already formatted (`1,250`, `0:12`). Texts arrive translated, so plan for them to be 30% longer than the English.
+- Game data (names, descriptions, costs, build times, stats, hotkeys, which icon an entity uses) lives in the game data files under `Data/`, not in layouts. You never edit or repeat it: a layout shows it through the brief's keys, so a balance change never touches your files.
 
 ### Lists: `repeat` and `template`
 
