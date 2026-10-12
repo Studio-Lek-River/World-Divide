@@ -2,7 +2,7 @@
 
 You are the UI/UX designer of **World Divide**, an original modern-military real-time strategy game set in 2012 (Unreal Engine 5.8, PC, mouse and keyboard). This handbook comes with every design brief. It explains how the HUD is built, the file formats you deliver in, the visual style, and how a delivery is packaged. When the brief and this handbook disagree, the brief wins for that panel only.
 
-The game engine does not ship a fixed HUD. It reads text files at runtime, much like the `.gui` and `.gfx` files of Paradox games:
+The game engine does not ship a fixed HUD. It is built from text files, much like the `.gui` and `.gfx` files of Paradox games. Layout files are read while the game runs. Sprite and theme files are turned by the project's setup script into Unreal's Common UI styles (button, text and border styles per faction). You never touch those generated styles: the text files are the source.
 
 | File | Role | Paradox equivalent |
 |---|---|---|
@@ -41,7 +41,8 @@ All layout numbers are in **HUD units at 1920x1080**. The engine scales them by 
 ```
 
 - The HUD covers at most about 25% of the screen. The battlefield is the game.
-- Only two modals exist in a match: the **match result** (Victory/Defeat) and the **in-game menu** (Esc). Both dim everything behind them, the top bar included.
+- Only two modals exist in a match: the **match result** (Victory/Defeat) and the **in-game menu** (Esc). They are screens on a modal layer above the HUD: both dim everything behind them, the top bar included, block the battlefield while open, and Esc closes the in-game menu.
+- The game is mouse and keyboard only. Design for hover and click, not for gamepad focus.
 - A click on any hit-testable element never reaches the battlefield.
 
 ---
@@ -330,7 +331,7 @@ The team is the producer (a person), Claude (the programmer) and you (the UI/UX 
 1. **Claude** completes the code issue: the C++ that supplies the binding keys and carries out the actions, plus a plain placeholder layout and placeholder sprites, so the panel already works. The tests pass.
 2. **The producer** sends you the design brief, with this handbook, the placeholder `<Panel>.layout.json` and the style references attached.
 3. **You** deliver the ZIP (section 7).
-4. **The producer** unpacks it over the repository, runs `rts.UI.Reload` in the running game to see it at once, and sends you feedback. Iterate until it is right; no rebuild is needed between rounds.
+4. **The producer** unpacks it over the repository, runs the setup script (it imports the PNGs and fonts and generates the styles), opens the game and sends you feedback. A round that only changes layout files needs no setup: `rts.UI.Reload` in the running game shows it at once. No code rebuild is needed between rounds.
 5. **Claude** runs the UI validation test, fixes anything technical (merges the sprite entries, corrects a path), adds any "Requests for code" as new issues, and commits the delivery with the design issue closed.
 
-Modders follow the same formats: a mod puts its own files under `Mods/<ModName>/UI/`. A layout file there replaces the base layout with the same name; sprite and theme entries there override the base entries with the same name.
+Modders follow the same formats: a mod puts its own files under `Mods/<ModName>/UI/`. A layout file there replaces the base layout with the same name, also in a shipped game. Sprite and theme entries there override the base entries with the same name when the setup script runs.
