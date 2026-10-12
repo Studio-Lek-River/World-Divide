@@ -11,7 +11,7 @@ setup_testmap.py leaves it alone. To undo the swap for good:
   git update-index --no-skip-worktree Content/Data/Units/DA_TestTank.uasset
   git checkout -- Content/Data/Units/DA_TestTank.uasset
 
-  "<UE_5.6>/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "<repo>/WorldDivide.uproject"
+  "<UE_5.8>/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "<repo>/WorldDivide.uproject"
       -run=pythonscript -script="<repo>/Tools/Editor/import_local_art.py" -unattended -nosplash -nullrhi
 """
 

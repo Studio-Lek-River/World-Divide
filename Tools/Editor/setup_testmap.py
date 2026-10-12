@@ -13,7 +13,7 @@ is written: the files are listed in Saved/Setup/ReadOnlyAssets.txt and the run s
 Assets marked skip-worktree, such as DA_TestTank swapped for local art by import_local_art.py, are left as they are.
 
 Run from the repo root (adjust the engine path), or use Tools/Scripts/ue.ps1 -Task setup:
-  "G:/Program Files/Epic Games/UE_5.6/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "%CD%/WorldDivide.uproject"
+  "D:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "%CD%/WorldDivide.uproject"
       -run=pythonscript -script="%CD%/Tools/Editor/setup_testmap.py" -unattended -nosplash -nullrhi
 To render the map previews instead of drawing them, replace -nullrhi with -AllowCommandletRendering (ue.ps1 -Task setup
 -Render).

@@ -1,6 +1,6 @@
 ---
 name: fix-issue
-description: Take a World-Divide GitHub issue number, investigate it against the UE 5.6 codebase, propose a fix and wait for approval, then implement it on main, build, run the automation tests and commit with Closes #n. Wraps the birds-ai issue flow (D:\birds-ai\commands\issue\body.md) with the Unreal and repo rules of this project. Use with /fix-issue <number>.
+description: Take a World-Divide GitHub issue number, investigate it against the UE 5.8 codebase, propose a fix and wait for approval, then implement it on main, build, run the automation tests and commit with Closes #n. Wraps the birds-ai issue flow (D:\birds-ai\commands\issue\body.md) with the Unreal and repo rules of this project. Use with /fix-issue <number>.
 user-invocable: true
 argument-hint: "<issue number>"
 ---
@@ -54,7 +54,7 @@ Once approved:
 
 ## 5. Verify
 
-All through `Tools/Scripts/ue.ps1` (engine from `UE_ROOT`, default `G:\Program Files\Epic Games\UE_5.6`):
+All through `Tools/Scripts/ue.ps1` (engine from `UE_ROOT`, default `D:\Program Files\Epic Games\UE_5.8`):
 
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task build

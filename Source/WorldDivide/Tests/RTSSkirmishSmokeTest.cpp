@@ -9,6 +9,7 @@
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Editor.h"
+#include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
 #include "Menu/RTSLobbyGameMode.h"
@@ -1030,6 +1031,31 @@ namespace RTSSkirmishSmokeTest
 		return true;
 	}
 
+	/**
+	 * Makes the engine log every network failure while it lives. The viewport logs "Network Failure:" at most once per
+	 * NetErrorLogInterval across the whole process, so a test right after another one's failure would miss the message it
+	 * expects. Add it as a test's last latent command, like RTSTests::FRTSUseTestLobbyMaps.
+	 */
+	class FRTSLogEveryNetworkFailure : public IAutomationLatentCommand
+	{
+	public:
+		FRTSLogEveryNetworkFailure()
+			: SavedInterval(GEngine->NetErrorLogInterval)
+		{
+			GEngine->NetErrorLogInterval = -1.f;
+		}
+
+		virtual ~FRTSLogEveryNetworkFailure() override
+		{
+			GEngine->NetErrorLogInterval = SavedInterval;
+		}
+
+		virtual bool Update() override { return true; }
+
+	private:
+		float SavedInterval;
+	};
+
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLobbySmokeTest, "WorldDivide.Smoke.Lobby", RTSTests::TestFlags)
 
 	bool FRTSLobbySmokeTest::RunTest(const FString& Parameters)
@@ -1058,6 +1084,7 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyRemovedRefused(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSUseTestLobbyMaps());
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSLogEveryNetworkFailure());
 		return true;
 	}
 
@@ -1083,6 +1110,7 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyHostClosedLobby(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSUseTestLobbyMaps());
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSLogEveryNetworkFailure());
 		return true;
 	}
 
@@ -1133,6 +1161,7 @@ namespace RTSSkirmishSmokeTest
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyHostLeftMatch(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSUseTestLobbyMaps());
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSLogEveryNetworkFailure());
 		return true;
 	}
 }

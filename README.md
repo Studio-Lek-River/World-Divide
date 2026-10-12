@@ -1,10 +1,10 @@
 # World Divide
 
-A real-time strategy game in the spirit of C&C Generals Zero Hour, built in Unreal Engine 5.6. Gameplay logic is C++; content and UI go in Blueprint and data assets. Nothing is taken from Generals itself: no names, art, audio, UI or code.
+A real-time strategy game in the spirit of C&C Generals Zero Hour, built in Unreal Engine 5.8. Gameplay logic is C++; content and UI go in Blueprint and data assets. Nothing is taken from Generals itself: no names, art, audio, UI or code.
 
 ## Requirements
 
-- Unreal Engine 5.6
+- Unreal Engine 5.8
 - Visual Studio 2022 with the "Game development with C++" workload
 - Git LFS (`git lfs install` once per machine) — all `.uasset`/`.umap` files live in LFS and are lockable
 
@@ -18,7 +18,7 @@ A real-time strategy game in the spirit of C&C Generals Zero Hour, built in Unre
 Command-line build:
 
 ```
-"<UE_5.6>\Engine\Build\BatchFiles\Build.bat" WorldDivideEditor Win64 Development -Project="<repo>\WorldDivide.uproject" -WaitMutex
+"<UE_5.8>\Engine\Build\BatchFiles\Build.bat" WorldDivideEditor Win64 Development -Project="<repo>\WorldDivide.uproject" -WaitMutex
 ```
 
 ## Controls
@@ -82,10 +82,10 @@ An AI seat gets an `ARTSAIPlayer` when play starts, a player without a connectio
 
 ## Tests
 
-`Tools/Scripts/ue.ps1 -Task build|test|setup` wraps the commands below and exits nonzero on failure. It uses `UE_ROOT` as the engine folder, falling back to `G:\Program Files\Epic Games\UE_5.6`.
+`Tools/Scripts/ue.ps1 -Task build|test|setup` wraps the commands below and exits nonzero on failure. It uses `UE_ROOT` as the engine folder, falling back to `D:\Program Files\Epic Games\UE_5.8`.
 
 ```
-"<UE_5.6>\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -ExecCmds="Automation RunTests WorldDivide;Quit" -RTSTestTimeDilation=4 -unattended -nullrhi
+"<UE_5.8>\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -ExecCmds="Automation RunTests WorldDivide;Quit" -RTSTestTimeDilation=4 -unattended -nullrhi
 ```
 
 PIE copies the editor world's navmesh. `setup_testmap.py` saves every map with its navmesh built, so every map plays with a full navmesh whichever one the editor opened first; the PIE smoke tests only wait until it covers the start spots (`RTSTests::IsNavigationReady`). `WorldDivide.Maps.SavedNavMesh` checks that `L_TestMap` and every lobby map carry a built navmesh. `WorldDivide.Smoke.Maps.<map data>` plays each lobby map in PIE with every start spot taken, the player at spot 0 and an AI at each other, travelling there with the `Seats` option as the lobby does: the map plays with the skirmish game mode, has one `PlayerStart` tagged `Team<N>` per start spot, and every team gets its completed headquarters on its own spot.
@@ -99,7 +99,7 @@ Idle units fire at the nearest enemy in range on their own, enemy units before e
 To rebuild the test content after changing `setup_testmap.py` or a data asset class, run `ue.ps1 -Task setup` (after `-Task build`), or directly:
 
 ```
-"<UE_5.6>\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -run=pythonscript -script="<repo>\Tools\Editor\setup_testmap.py" -unattended -nullrhi
+"<UE_5.8>\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -run=pythonscript -script="<repo>\Tools\Editor\setup_testmap.py" -unattended -nullrhi
 ```
 
 Setup only saves assets that differ from the script: data assets are compared property by property, and the materials, the imported models and `L_TestMap` store a hash of the code and source files that build them and are rebuilt only when those change. A run without script changes writes nothing and leaves `git status` clean.

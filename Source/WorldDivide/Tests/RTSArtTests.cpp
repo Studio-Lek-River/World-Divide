@@ -46,7 +46,7 @@ bool FRTSPlaceholderWithoutNaniteTest::RunTest(const FString& Parameters)
 	const UMaterial* TeamMaterial = LoadObject<UMaterial>(nullptr, TeamMaterialPath);
 	if (TestNotNull(TEXT("M_PlaceholderTeam loads"), TeamMaterial))
 	{
-		TestFalse(TEXT("M_PlaceholderTeam is not flagged for Nanite"), static_cast<bool>(TeamMaterial->bUsedWithNanite));
+		TestFalse(TEXT("M_PlaceholderTeam is not flagged for Nanite"), TeamMaterial->GetUsageByFlag(MATUSAGE_Nanite));
 	}
 	return true;
 }

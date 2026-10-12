@@ -9,7 +9,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task t
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup -Render
 
-The engine is taken from $env:UE_ROOT, falling back to G:\Program Files\Epic Games\UE_5.6.
+The engine is taken from $env:UE_ROOT, falling back to D:\Program Files\Epic Games\UE_5.8.
 Exits nonzero on any failure: 2 when the editor is running (build), 3 when setup must rewrite read-only LFS assets.
 The PIE smoke tests run TimeDilation game seconds per real second (default 4); -TimeDilation 1 runs them at real time.
 Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
@@ -32,9 +32,9 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $Project = Join-Path $RepoRoot 'WorldDivide.uproject'
 
 $UERoot = $env:UE_ROOT
-if (-not $UERoot) { $UERoot = 'G:\Program Files\Epic Games\UE_5.6' }
+if (-not $UERoot) { $UERoot = 'D:\Program Files\Epic Games\UE_5.8' }
 if (-not (Test-Path (Join-Path $UERoot 'Engine'))) {
-	Write-Error "Unreal Engine 5.6 not found at '$UERoot'. Set UE_ROOT to the engine install folder."
+	Write-Error "Unreal Engine 5.8 not found at '$UERoot'. Set UE_ROOT to the engine install folder."
 }
 
 $BuildBat = Join-Path $UERoot 'Engine\Build\BatchFiles\Build.bat'
