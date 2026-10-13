@@ -17,8 +17,8 @@ public:
 	 * During Play-In-Editor it runs on the first local player of the PIE session, so stat overlays show in the
 	 * PIE viewport; otherwise it runs in the editor world.
 	 * @param Command The console command line to run.
-	 * @return The text the command printed, or a note that it printed nothing. Raises a script error when the
-	 *   command is empty or not recognised.
+	 * @return The text the command printed, or a note that it printed nothing. An empty, unknown or refused
+	 *   command raises a script error, which the MCP caller receives as a tool error with the reason.
 	 */
 	UFUNCTION(meta = (AICallable), Category = "RTSConsoleToolset")
 	static FString ExecuteConsoleCommand(const FString& Command);

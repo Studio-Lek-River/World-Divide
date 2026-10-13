@@ -4,23 +4,34 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "Internationalization/Regex.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Misc/OutputDeviceRedirector.h"
 #include "Misc/StringOutputDevice.h"
 #include "UObject/Script.h"
+
+namespace
+{
+	// Logs the reason and raises it as a script error, which the ToolsetRegistry hands the MCP caller as a tool error.
+	FString Refuse(const FString& Message)
+	{
+		const FString Full = FString::Printf(TEXT("ExecuteConsoleCommand: %s"), *Message);
+		FFrame::KismetExecutionMessage(*Full, ELogVerbosity::Error);
+		UKismetSystemLibrary::RaiseScriptError(Full);
+		return FString();
+	}
+}
 
 FString URTSConsoleToolset::ExecuteConsoleCommand(const FString& Command)
 {
 	const FString Trimmed = Command.TrimStartAndEnd();
 	if (Trimmed.IsEmpty())
 	{
-		FFrame::KismetExecutionMessage(TEXT("ExecuteConsoleCommand: the command is empty."), ELogVerbosity::Error);
-		return FString();
+		return Refuse(TEXT("the command is empty."));
 	}
 	if (!GEditor)
 	{
-		FFrame::KismetExecutionMessage(TEXT("ExecuteConsoleCommand: no editor is running."), ELogVerbosity::Error);
-		return FString();
+		return Refuse(TEXT("no editor is running."));
 	}
 
 	// The AI team looks and plays; editor Python and commands that save or delete stay with the producer.
@@ -31,8 +42,7 @@ FString URTSConsoleToolset::ExecuteConsoleCommand(const FString& Command)
 		FRegexMatcher Matcher(FRegexPattern(Pattern, ERegexPatternFlags::CaseInsensitive), Trimmed);
 		if (Matcher.FindNext())
 		{
-			FFrame::KismetExecutionMessage(*FString::Printf(TEXT("ExecuteConsoleCommand: '%s' is not allowed over MCP; ask the producer."), *Trimmed), ELogVerbosity::Error);
-			return FString();
+			return Refuse(FString::Printf(TEXT("'%s' is not allowed over MCP; ask the producer."), *Trimmed));
 		}
 	}
 
@@ -57,8 +67,7 @@ FString URTSConsoleToolset::ExecuteConsoleCommand(const FString& Command)
 
 	if (!bHandled)
 	{
-		FFrame::KismetExecutionMessage(*FString::Printf(TEXT("ExecuteConsoleCommand: '%s' is not a known command."), *Trimmed), ELogVerbosity::Error);
-		return FString();
+		return Refuse(FString::Printf(TEXT("'%s' is not a known command."), *Trimmed));
 	}
 	return Output.IsEmpty() ? FString::Printf(TEXT("'%s' ran and printed nothing."), *Trimmed) : FString(Output);
 }
