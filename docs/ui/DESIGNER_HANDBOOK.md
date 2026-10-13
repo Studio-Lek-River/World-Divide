@@ -93,9 +93,9 @@ A layout file holds one root element. Elements nest through `children`.
 
 | Type | What it is | Extra properties |
 |---|---|---|
-| `Panel` | a container with an optional background sprite; children are placed freely by anchor and position | `sprite` |
-| `HBox` / `VBox` | a row / column; children are placed one after another | `spacing`, `align` (`Start`, `Center`, `End`, `Fill`) |
-| `Grid` | fixed cells | `columns`, `rows`, `cellSize` [w,h], `spacing` |
+| `Panel` | a container with an optional background sprite; without a sprite, `color` fills it flat (such as a dimmed backdrop); children are placed freely by anchor and position | `sprite` |
+| `HBox` / `VBox` | a row / column; children are placed one after another; a child stretched along the row or column (`Fill`, or `TopStretch`/`BottomStretch` in an `HBox`, `LeftStretch`/`RightStretch` in a `VBox`) takes the room the others leave | `spacing`, `align` across the row or column (`Start`, `Center`, `End`, `Fill`; default `Center`) |
+| `Grid` | fixed cells: a hidden cell keeps its place | `columns`, `rows`, `cellSize` [w,h], `spacing` |
 | `Image` | a sprite | `sprite`, `color` (tint, for `tint` sprites) |
 | `Text` | a label | `text`, `font` (`Title`, `Body`, `Number`), `fontSize`, `align` (`Left`, `Center`, `Right`), `wrap` (true/false), `maxLines` |
 | `Button` | clickable; draws the state of its sprite (Normal, Hover, Pressed, Disabled, Selected) and can hold children (icon, hotkey plate, cost) | `sprite`, `action`, `tooltip` (true: hovering fills the tooltip with this item) |
@@ -123,7 +123,8 @@ A layout file holds one root element. Elements nest through `children`.
 
 - Data reaches a layout only through **binding keys**, written as `{key}` inside `text` or as values in `bind` and `visibleWhen`.
 - Each brief lists the exact keys its panel has; use only those. Keys you need but do not have: write them in the spec under "Requests for code". Do not invent them in the layout.
-- Numbers and times arrive already formatted (`1,250`, `0:12`). Texts arrive translated, so plan for them to be 30% longer than the English.
+- Numbers and times arrive already formatted for the player's language (`1,250`, `0:12`). Texts arrive translated, so plan for them to be 30% longer than the English.
+- A key that does not exist shows as `{key}` in the game and is logged, so a typo is visible; the validation test fails on it.
 - Game data (names, descriptions, costs, build times, stats, hotkeys, which icon an entity uses) lives in the game data files under `Data/`, not in layouts. You never edit or repeat it: a layout shows it through the brief's keys, so a balance change never touches your files.
 
 ### Lists: `repeat` and `template`
@@ -157,6 +158,10 @@ Command buttons, queue slots, selection tiles, notifications and scoreboard rows
 ```
 
 `count` fixes the number of copies; items beyond the data get `item.empty` = true, so you decide what an empty slot looks like.
+
+### Modal screens
+
+The HUD layout (`HUD.layout.json`) names the layouts shown as screens over it in a root list, `"modals": ["MatchResult", "InGameMenu"]`. Each is a layout file of its own, built over the whole screen while it is open: its root is usually a `Fill` panel with a flat dark `color` and `"hitTest": true`, so it dims everything and takes every click. Esc closes the in-game menu; on the match result it opens the in-game menu over it.
 
 ### Actions
 

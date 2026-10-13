@@ -11,7 +11,7 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
-#include "Components/TextBlock.h"
+#include "CommonTextBlock.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuilderData.h"
@@ -24,9 +24,8 @@
 #include "Economy/RTSHarvesterComponent.h"
 #include "Economy/RTSSupplySource.h"
 #include "Engine/StaticMeshActor.h"
-#include "Engine/UserInterfaceSettings.h"
-#include "Input/HittestGrid.h"
-#include "Rendering/DrawElements.h"
+#include "Engine/GameViewportClient.h"
+#include "GenericPlatform/GenericPlatformInputDeviceMapper.h"
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
@@ -39,8 +38,10 @@
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestPIE.h"
+#include "Tests/RTSTestUI.h"
+#include "UI/Layout/RTSLayoutScreen.h"
+#include "UI/Layout/RTSLayoutWidget.h"
 #include "UI/RTSHUDWidget.h"
-#include "UI/RTSResourceBarWidget.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSUnit.h"
 
@@ -547,22 +548,6 @@ namespace
 		return BuilderTeam == INDEX_NONE
 			? RTSBuildPlacement::CanPlace(World, Data, Location, Snapped)
 			: RTSBuildPlacement::CanBuilderPlace(World, Data, Location, Snapped, BuilderTeam);
-	}
-
-	/**
-	 * A headless run never paints, so nothing has a layout: lays Widget out and paints it once into a throwaway element list
-	 * over a ViewportSize viewport at the DPI scale for it, as a frame would, so its panels have their geometry.
-	 */
-	void LayOutHeadless(UUserWidget& Widget, const FVector2D& ViewportSize)
-	{
-		const float Scale = GetDefault<UUserInterfaceSettings>()->GetDPIScaleBasedOnSize(FIntPoint(ViewportSize.X, ViewportSize.Y));
-		const TSharedRef<SWidget> Root = Widget.TakeWidget();
-		Root->SlatePrepass(Scale);
-		const FGeometry Geometry = FGeometry::MakeRoot(ViewportSize / Scale, FSlateLayoutTransform(Scale));
-		FHittestGrid Grid;
-		const FPaintArgs Args(nullptr, Grid, FVector2D::ZeroVector, FApp::GetCurrentTime(), FApp::GetDeltaTime());
-		FSlateWindowElementList Elements(nullptr);
-		Root->Paint(Args, Geometry, FSlateRect(FVector2D::ZeroVector, ViewportSize), Elements, 0, FWidgetStyle(), true);
 	}
 
 	ARTSPlayerController* GetTestController(FAutomationTestBase& Test)
@@ -3093,8 +3078,8 @@ bool FRTSCheckInGameMenu::Update()
 }
 
 /**
- * Once laid out, the local player's UMG HUD shows its resource bar with the starting credits, and a click on the bar keeps
- * the selected units selected, while the middle of the battlefield is no panel.
+ * Once laid out, the local player's HUD is built from HUD.layout.json and shows its resource bar with the starting credits,
+ * and a click on the bar keeps the selected units selected, while the middle of the battlefield is no panel.
  */
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckHUDWidget, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
 bool FRTSCheckHUDWidget::Update()
@@ -3112,25 +3097,29 @@ bool FRTSCheckHUDWidget::Update()
 
 	const ARTSHUD* HUD = Controller->GetHUD<ARTSHUD>();
 	URTSHUDWidget* Widget = HUD ? HUD->GetHUDWidget() : nullptr;
-	URTSResourceBarWidget* Bar = Widget ? Widget->GetResourceBar() : nullptr;
+	URTSLayoutWidget* Layout = Widget ? Widget->GetLayout() : nullptr;
+	UWidget* Bar = Layout ? Layout->FindElement(TEXT("ResourceBar")) : nullptr;
 	if (Widget && !FApp::CanEverRender())
 	{
-		LayOutHeadless(*Widget, HUDViewportSize);
+		RTSTests::LayOutHeadless(*Widget, HUDViewportSize);
 	}
 	const FGeometry BarGeometry = Bar ? Bar->GetCachedGeometry() : FGeometry();
 	if (!Bar || BarGeometry.GetLocalSize().X <= 0.f)
 	{
 		if (FPlatformTime::Seconds() - State->HUDWaitStart > HUDLayoutTimeout)
 		{
-			Test->AddError(Bar ? TEXT("The resource bar was never laid out") : TEXT("The local player has no URTSHUDWidget with a resource bar"));
+			Test->AddError(Bar ? TEXT("The resource bar was never laid out") : TEXT("The local player's HUD has no layout with a ResourceBar"));
 			return true;
 		}
 		return false;
 	}
 
 	Test->TestTrue(TEXT("The HUD widget is on the player's screen"), Widget->IsInViewport());
-	Test->TestEqual(TEXT("The resource bar shows the starting credits"), Bar->GetCreditsText()->GetText().ToString(),
-		URTSResourceBarWidget::FormatCredits(State->StartingCredits));
+	Layout->UpdateBindings();
+	const UCommonTextBlock* Credits = Cast<UCommonTextBlock>(Layout->FindElement(TEXT("CreditsText")));
+	Test->TestEqual(TEXT("The resource bar shows the starting credits"), Credits ? Credits->GetText().ToString() : FString(),
+		FText::AsNumber(State->StartingCredits).ToString());
+	Test->TestEqual(TEXT("The bar is 48 high at 1080p"), BarGeometry.GetLocalSize().Y, URTSHUDWidget::TopBarHeight, 0.5f);
 	Test->TestTrue(TEXT("The canvas keeps the top bar clear"), Widget->GetTopBandHeight() > 0.f);
 
 	TArray<ARTSUnit*> Own;
@@ -3160,6 +3149,152 @@ bool FRTSCheckHUDWidget::Update()
 	Test->TestEqual(TEXT("A click on the bar keeps the selection"), Controller->GetSelectedUnits().Num(), Selected);
 
 	Test->TestFalse(TEXT("The middle of the battlefield is no HUD panel"), Controller->IsOnHUDPanel(HUDGeometry.GetAbsoluteSize() * 0.5f));
+	return true;
+}
+
+namespace
+{
+	/** The modal input test, one step every few frames, so input reaches the controller on its tick. */
+	struct FModalState
+	{
+		int32 Step = 0;
+		int32 Frames = 0;
+		int32 TotalFrames = 0;
+		bool bWasDebugBuild = false;
+		TWeakObjectPtr<URTSLayoutScreen> Screen;
+	};
+
+	/** Sends Key to the game viewport as the local player's keyboard would: through Common UI first, then the controller. */
+	void SendKey(ARTSPlayerController& Controller, const FKey& Key, EInputEvent Event)
+	{
+		UGameViewportClient* Viewport = Controller.GetWorld()->GetGameViewport();
+		const ULocalPlayer* LocalPlayer = Controller.GetLocalPlayer();
+		if (!Viewport || !LocalPlayer)
+		{
+			return;
+		}
+		const FInputDeviceId Device = IPlatformInputDeviceMapper::Get().GetPrimaryInputDeviceForUser(LocalPlayer->GetPlatformUserId());
+		Viewport->InputKey(FInputKeyEventArgs::CreateSimulated(Key, Event, Event == IE_Pressed ? 1.f : 0.f, -1, Device, false, Viewport->Viewport));
+	}
+}
+
+/**
+ * Through the game viewport with Common UI routing input: while a screen is shown on the HUD's Modal layer the build hotkey
+ * 1 does not reach the battlefield, once it closes the same key starts a placement again, and Esc on the in-game menu
+ * closes it through Common UI's back action.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckModalInput, FAutomationTestBase*, Test, TSharedRef<FModalState>, State);
+bool FRTSCheckModalInput::Update()
+{
+	constexpr int32 SettleFrames = 3;
+	constexpr int32 MaxFrames = 600;
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	const ARTSHUD* HUD = Controller ? Controller->GetHUD<ARTSHUD>() : nullptr;
+	URTSHUDWidget* Widget = HUD ? HUD->GetHUDWidget() : nullptr;
+	if (++State->TotalFrames > MaxFrames)
+	{
+		Test->AddError(Widget ? FString::Printf(TEXT("The modal input test stalled at step %d"), State->Step)
+			: FString(TEXT("The local player has no URTSHUDWidget")));
+		SetDebugBuild(State->bWasDebugBuild);
+		return true;
+	}
+	// Common UI picks the active screen by the layer it painted on, so a headless run paints the HUD every frame.
+	if (Widget && !FApp::CanEverRender())
+	{
+		RTSTests::LayOutHeadless(*Widget, HUDViewportSize);
+	}
+	// Each step waits for the one before it to reach the controller's tick.
+	if (!Widget || ++State->Frames < SettleFrames)
+	{
+		return false;
+	}
+	State->Frames = 0;
+
+	switch (State->Step++)
+	{
+	case 0:
+	{
+		const URTSFactionData* Faction = Controller->GetFaction();
+		ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+		if (!Faction || Faction->Buildings.IsEmpty() || !Player)
+		{
+			Test->AddError(TEXT("The player has no state or faction with buildings for the debug build menu"));
+			return true;
+		}
+		// Common UI applies a screen's input mode only while the player's viewport has keyboard focus, as it does in play.
+		if (const TSharedPtr<SViewport> ViewportWidget = Controller->GetLocalPlayer()->ViewportClient->GetGameViewportWidget())
+		{
+			FSlateApplication::Get().SetUserFocus(0, ViewportWidget, EFocusCause::SetDirectly);
+		}
+		State->bWasDebugBuild = SetDebugBuild(true);
+		Controller->SelectUnits(TArray<ARTSUnit*>());
+		Player->AddCredits(Faction->Buildings[0]->Cost);
+		State->Screen = Widget->PushModal(URTSHUDWidget::InGameMenuLayout, false);
+		Test->TestTrue(TEXT("A screen is pushed onto the Modal layer"), State->Screen.IsValid());
+		Test->TestTrue(TEXT("While it is open the whole screen is HUD, so no click reaches the battlefield"),
+			Controller->IsOnHUDPanel(FVector2D(960.f, 540.f)));
+		return false;
+	}
+	case 1:
+		Test->TestTrue(TEXT("The modal screen is active"), State->Screen.IsValid() && State->Screen->IsActivated());
+		SendKey(*Controller, EKeys::One, IE_Pressed);
+		return false;
+	case 2:
+		SendKey(*Controller, EKeys::One, IE_Released);
+		return false;
+	case 3:
+		Test->TestNull(TEXT("The build hotkey does not reach the battlefield while a modal screen is open"), Controller->GetPlacementData());
+		Widget->ClearModals();
+		return false;
+	case 4:
+		Test->TestEqual(TEXT("The Modal layer is empty again"), Widget->GetModals().Num(), 0);
+		SendKey(*Controller, EKeys::One, IE_Pressed);
+		return false;
+	case 5:
+		SendKey(*Controller, EKeys::One, IE_Released);
+		return false;
+	case 6:
+		Test->TestNotNull(TEXT("Once it is closed the build hotkey starts a placement"), Controller->GetPlacementData());
+		Controller->CancelPlacement();
+		Controller->HandleEscape();
+		Test->TestTrue(TEXT("Esc opens the in-game menu"), Controller->IsInGameMenuOpen());
+		return false;
+	case 7:
+	{
+		const TArray<URTSLayoutScreen*> Modals = Widget->GetModals();
+		Test->TestEqual(TEXT("The in-game menu is the one screen on the Modal layer"), Modals.Num(), 1);
+		Test->TestTrue(TEXT("built from its layout and active"), Modals.Num() == 1
+			&& Modals[0]->GetLayoutName() == URTSHUDWidget::InGameMenuLayout && Modals[0]->IsActivated());
+		SendKey(*Controller, EKeys::Escape, IE_Pressed);
+		return false;
+	}
+	case 8:
+		SendKey(*Controller, EKeys::Escape, IE_Released);
+		return false;
+	default:
+		Test->TestFalse(TEXT("Esc closes the in-game menu through the back action"), Controller->IsInGameMenuOpen());
+		Test->TestEqual(TEXT("and its screen"), Widget->GetModals().Num(), 0);
+		SetDebugBuild(State->bWasDebugBuild);
+		return true;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSModalInputSmokeTest, "WorldDivide.Smoke.ModalInput",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSModalInputSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckModalInput(this, MakeShared<FModalState>()));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }
 

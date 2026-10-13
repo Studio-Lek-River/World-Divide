@@ -1,0 +1,44 @@
+{
+  "name": "InGameMenu",
+  "type": "Panel",
+  "anchor": "Fill",
+  "color": "#000000A0",
+  "hitTest": true,
+  "children": [
+    {
+      "name": "Window",
+      "type": "Panel",
+      "anchor": "Center",
+      "size": [360, 220],
+      "sprite": "Panel",
+      "children": [
+        { "name": "Title", "type": "Text", "anchor": "Top", "position": [0, 24], "text": "Menu", "font": "Title", "color": "Text" },
+        {
+          "name": "Buttons",
+          "type": "VBox",
+          "anchor": "Top",
+          "position": [0, 72],
+          "spacing": 12,
+          "children": [
+            {
+              "name": "Resume",
+              "type": "Button",
+              "sprite": "Button",
+              "action": "Resume",
+              "size": [240, 44],
+              "children": [{ "type": "Text", "anchor": "Center", "text": "Resume", "font": "Body", "color": "Text" }]
+            },
+            {
+              "name": "Leave",
+              "type": "Button",
+              "sprite": "Button",
+              "action": "Leave",
+              "size": [240, 44],
+              "children": [{ "type": "Text", "anchor": "Center", "text": "Leave match", "font": "Body", "color": "Text" }]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

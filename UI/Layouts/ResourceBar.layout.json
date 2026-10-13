@@ -1,0 +1,34 @@
+{
+  "name": "ResourceBar",
+  "type": "Panel",
+  "anchor": "Fill",
+  "sprite": "Panel",
+  "children": [
+    {
+      "name": "Credits",
+      "type": "HBox",
+      "anchor": "Left",
+      "position": [16, 0],
+      "spacing": 8,
+      "children": [
+        { "name": "CreditsIcon", "type": "Image", "sprite": "Icon.Credits", "size": [28, 28], "color": "Accent" },
+        { "name": "CreditsText", "type": "Text", "text": "{player.credits}", "font": "Number", "color": "Text" }
+      ]
+    },
+    {
+      "name": "Power",
+      "type": "HBox",
+      "anchor": "Left",
+      "position": [220, 0],
+      "spacing": 8,
+      "visibleWhen": "player.usesPower",
+      "children": [
+        { "name": "PowerIcon", "type": "Image", "sprite": "Icon.Power", "size": [28, 28], "color": "Accent", "visibleWhen": "!player.power.low" },
+        { "name": "PowerLowIcon", "type": "Image", "sprite": "Icon.PowerLow", "size": [28, 28], "color": "Warning", "visibleWhen": "player.power.low" },
+        { "name": "PowerText", "type": "Text", "text": "{player.power.produced} / {player.power.consumed}", "font": "Number", "color": "Text",
+          "bind": { "color": "player.power.color" } }
+      ]
+    },
+    { "name": "Faction", "type": "Text", "anchor": "Right", "position": [16, 0], "text": "{player.faction}", "font": "Body", "color": "MutedText" }
+  ]
+}

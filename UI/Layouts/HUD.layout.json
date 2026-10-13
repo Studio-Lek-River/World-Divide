@@ -1,0 +1,33 @@
+{
+  "name": "HUD",
+  "type": "Panel",
+  "anchor": "Fill",
+  "modals": ["MatchResult", "InGameMenu"],
+  "children": [
+    { "name": "TopBar", "type": "Slot", "anchor": "TopStretch", "size": [0, 48], "layout": "ResourceBar" },
+    { "name": "Notifications", "type": "Slot", "anchor": "TopLeft", "position": [16, 64], "size": [480, 200], "widget": "Notifications" },
+    { "name": "Scoreboard", "type": "Slot", "anchor": "TopRight", "position": [16, 64], "size": [360, 300], "widget": "Scoreboard" },
+    { "name": "Tooltip", "type": "Slot", "anchor": "BottomRight", "position": [16, 246], "size": [460, 240], "widget": "Tooltip" },
+    {
+      "name": "BottomBand",
+      "type": "HBox",
+      "anchor": "BottomStretch",
+      "size": [0, 230],
+      "align": "Fill",
+      "children": [
+        { "name": "Minimap", "type": "Slot", "size": [230, 230], "widget": "Minimap" },
+        { "name": "Selection", "type": "Slot", "anchor": "Fill", "widget": "Selection" },
+        {
+          "name": "QueueAndCommands",
+          "type": "VBox",
+          "size": [460, 230],
+          "align": "Fill",
+          "children": [
+            { "name": "Queue", "type": "Slot", "size": [460, 64], "widget": "Queue" },
+            { "name": "Commands", "type": "Slot", "anchor": "Fill", "widget": "Commands" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -329,6 +329,9 @@ private:
 	void OnJumpToAttack();
 	void OnRotatePlacement();
 
+	/** F5 outside shipping builds: rereads the UI layout files, as rts.UI.Reload does. */
+	void OnReloadUI();
+
 	void ApplyEdgeScroll() const;
 	void ApplyDragRotate();
 	void SelectUnderCursor(bool bAdditive);
@@ -379,6 +382,10 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> RotatePlacementAction;
+
+	/** Mapped outside shipping builds only. */
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ReloadUIAction;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UInputAction>> BuildActions;

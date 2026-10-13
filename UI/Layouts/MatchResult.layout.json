@@ -1,0 +1,49 @@
+{
+  "name": "MatchResult",
+  "type": "Panel",
+  "anchor": "Fill",
+  "color": "#000000A0",
+  "hitTest": true,
+  "children": [
+    {
+      "name": "Window",
+      "type": "Panel",
+      "anchor": "Center",
+      "size": [520, 260],
+      "sprite": "Panel",
+      "children": [
+        { "name": "Title", "type": "Text", "anchor": "Top", "position": [0, 24], "text": "{match.result.title}", "font": "Title",
+          "color": "Text", "bind": { "color": "match.result.color" } },
+        { "name": "Message", "type": "Text", "anchor": "Top", "position": [0, 72], "text": "{match.result.message}", "font": "Body", "color": "Text" },
+        { "name": "Waiting", "type": "Text", "anchor": "Top", "position": [0, 120], "text": "Waiting for the host to restart", "font": "Body",
+          "color": "MutedText", "visibleWhen": "!match.canRestart" },
+        {
+          "name": "Buttons",
+          "type": "HBox",
+          "anchor": "Bottom",
+          "position": [0, 32],
+          "spacing": 16,
+          "children": [
+            {
+              "name": "Restart",
+              "type": "Button",
+              "sprite": "Button",
+              "action": "Restart",
+              "size": [200, 44],
+              "visibleWhen": "match.canRestart",
+              "children": [{ "type": "Text", "anchor": "Center", "text": "Restart", "font": "Body", "color": "Text" }]
+            },
+            {
+              "name": "Leave",
+              "type": "Button",
+              "sprite": "Button",
+              "action": "Leave",
+              "size": [200, 44],
+              "children": [{ "type": "Text", "anchor": "Center", "text": "Leave match", "font": "Body", "color": "Text" }]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

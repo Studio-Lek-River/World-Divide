@@ -126,6 +126,11 @@ void ARTSPlayerController::CreateInputActions()
 	RotatePlacementAction = MakeAction(this, TEXT("IA_RotatePlacement"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, RotatePlacementAction, EKeys::R);
 
+#if !UE_BUILD_SHIPPING
+	ReloadUIAction = MakeAction(this, TEXT("IA_ReloadUI"), EInputActionValueType::Boolean);
+	MapKey(MappingContext, ReloadUIAction, EKeys::F5);
+#endif
+
 	BuildActions.Reset();
 	for (int32 Index = 0; Index < MaxBuildHotkeys; ++Index)
 	{
@@ -169,6 +174,9 @@ void ARTSPlayerController::SetupInputComponent()
 	Input->BindAction(CancelConstructionAction, ETriggerEvent::Started, this, &ThisClass::OnCancelConstruction);
 	Input->BindAction(JumpToAttackAction, ETriggerEvent::Started, this, &ThisClass::OnJumpToAttack);
 	Input->BindAction(RotatePlacementAction, ETriggerEvent::Started, this, &ThisClass::OnRotatePlacement);
+#if !UE_BUILD_SHIPPING
+	Input->BindAction(ReloadUIAction, ETriggerEvent::Started, this, &ThisClass::OnReloadUI);
+#endif
 	for (int32 Index = 0; Index < BuildActions.Num(); ++Index)
 	{
 		Input->BindAction(BuildActions[Index], ETriggerEvent::Started, this, &ThisClass::OnBuildHotkey, Index);
@@ -473,18 +481,9 @@ void ARTSPlayerController::OnSelectStarted()
 
 void ARTSPlayerController::HandleSelectPressed(const FVector2D& Mouse)
 {
-	const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
+	// The menu is a modal screen of the HUD widget, which takes every click while it is open.
 	if (bInGameMenuOpen)
 	{
-		// The menu takes every click; only its buttons do anything.
-		if (RTSHUD && RTSHUD->IsOnResumeButton(Mouse))
-		{
-			SetInGameMenuOpen(false);
-		}
-		else if (RTSHUD && RTSHUD->IsOnLeaveButton(Mouse))
-		{
-			LeaveMatch();
-		}
 		return;
 	}
 	// The widget keeps the click from the game, but a press that still arrives here must not reach the world either.
@@ -516,13 +515,8 @@ void ARTSPlayerController::HandleSelectPressed(const FVector2D& Mouse)
 		CancelSuperweaponTargeting();
 		return;
 	}
-	if (RTSHUD)
+	if (const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>())
 	{
-		if (RTSHUD->IsOnRestartButton(Mouse))
-		{
-			RequestRestart();
-			return;
-		}
 		if (RTSHUD->IsOnLaunchButton(Mouse))
 		{
 			BeginSuperweaponTargeting();
@@ -983,6 +977,11 @@ void ARTSPlayerController::OnBuildHotkey(int32 Index)
 void ARTSPlayerController::OnCancel()
 {
 	HandleEscape();
+}
+
+void ARTSPlayerController::OnReloadUI()
+{
+	URTSHUDWidget::ReloadAll(GetWorld());
 }
 
 void ARTSPlayerController::OnCancelConstruction()
