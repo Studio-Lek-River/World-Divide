@@ -66,12 +66,14 @@ ARTSUnit::ARTSUnit()
 	Collision->InitCapsuleSize(60.f, 60.f);
 	// Units steer by the navmesh, which already routes around obstacles, so they don't sweep against the world:
 	// a capsule resting on the ground counts as penetrating it and would block every move.
-	// They overlap each other until proper avoidance exists, and block mouse traces for picking.
+	// They overlap each other, URTSAvoidanceSubsystem pushes them apart, and they block mouse traces for picking.
 	Collision->SetCollisionProfileName(UCollisionProfile::Pawn_ProfileName);
 	Collision->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Ignore);
 	Collision->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Ignore);
 	Collision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	Collision->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+	// Nothing listens for overlap events, and every move and avoidance push would pay for them.
+	Collision->SetGenerateOverlapEvents(false);
 	// Otherwise the navmesh grows on top of units and paths start on their roofs.
 	Collision->SetCanEverAffectNavigation(false);
 	RootComponent = Collision;
@@ -563,6 +565,8 @@ bool ARTSUnit::RequestMove(AAIController& AI, const FVector& Location)
 		}
 	}
 
+	MoveGoal = Destination;
+
 	// The AI controller may report AlreadyAtGoal or a failure back through NotifyMoveFinished
 	// before MoveToLocation returns; that is handled here instead of re-entering the queue.
 	bRequestingMove = true;
@@ -586,6 +590,7 @@ bool ARTSUnit::StartCommand(AAIController& AI, FRTSCommand& Command)
 	{
 		return RequestMove(AI, Command.TargetLocation);
 	}
+	MoveGoal.Reset();
 
 	if (Command.Type == ERTSCommandType::Attack)
 	{
@@ -786,6 +791,20 @@ void ARTSUnit::NotifyMoveFinished(const FPathFollowingResult& Result)
 		PopCommand();
 	}
 	StartNextCommand();
+}
+
+void ARTSUnit::ArriveInCrowd()
+{
+	check(HasAuthority());
+
+	const bool bMoveOrder = !CommandQueue.IsEmpty()
+		&& (CommandQueue[0].Type == ERTSCommandType::Move || CommandQueue[0].Type == ERTSCommandType::AttackMove);
+	AAIController* AI = GetController<AAIController>();
+	if (bMoveOrder && AI && AI->GetMoveStatus() == EPathFollowingStatus::Moving)
+	{
+		// NotifyMoveFinished ends the order and starts the next one.
+		AI->StopMovement();
+	}
 }
 
 void ARTSUnit::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

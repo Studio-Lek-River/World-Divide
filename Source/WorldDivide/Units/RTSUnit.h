@@ -66,6 +66,15 @@ public:
 	/** Server only. Called by the AI controller whenever a path-following request ends. */
 	void NotifyMoveFinished(const FPathFollowingResult& Result);
 
+	/** Server only. Where the last move order sent the unit, unset once an order of another kind starts. */
+	TOptional<FVector> GetMoveGoal() const { return MoveGoal; }
+
+	/**
+	 * Server only. Ends a move or attack-move under way as done, for a unit that reached the crowd already standing on its
+	 * goal. See URTSAvoidanceSubsystem.
+	 */
+	void ArriveInCrowd();
+
 	URTSUnitData* GetUnitData() const { return UnitData; }
 	virtual int32 GetTeamId() const override { return TeamId; }
 	virtual URTSHealthComponent* GetHealthComponent() const override { return HealthComponent; }
@@ -208,6 +217,8 @@ private:
 
 	/** Set while an attack-move stops to fight, so the aborted move does not end the order. */
 	bool bStoppingToFight = false;
+
+	TOptional<FVector> MoveGoal;
 
 	/** Where ApplyUnitData stood the mesh; a fire kick moves it back from here and returns it. */
 	FVector MeshRestLocation = FVector::ZeroVector;
