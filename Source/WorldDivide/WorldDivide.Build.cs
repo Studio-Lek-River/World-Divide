@@ -22,13 +22,15 @@ public class WorldDivide : ModuleRules
 			"Slate",
 			"SlateCore",
 			"UMG",
+			"CommonUI",
+			"CommonInput",
 			"Projects",
 		});
 
-		// PIE-driven smoke tests, the placeholder art test and the map preview capture only.
+		// PIE-driven smoke tests, the placeholder art test, the UI source file test and the map preview capture only.
 		if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "AssetRegistry", "ImageCore", "RenderCore" });
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "AssetRegistry", "ImageCore", "RenderCore", "Json" });
 		}
 	}
 }

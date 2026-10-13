@@ -4,6 +4,9 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "RTSEditorScripting.generated.h"
 
+class UFont;
+class UFontFace;
+
 /** Engine calls Tools/Editor scripts need that Unreal does not expose to Python. */
 UCLASS()
 class WORLDDIVIDE_API URTSEditorScripting : public UBlueprintFunctionLibrary
@@ -37,4 +40,19 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
 	static bool CapturePreview(UObject* WorldContextObject, FBox2D Area, int32 Size, const FString& FileName);
+
+	/**
+	 * Makes Font a runtime font whose default typeface is Face alone, for the UI fonts setup_testmap.py imports: Python
+	 * cannot set the font face of a typeface entry. Returns false without a font or a face.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
+	static bool BuildFont(UFont* Font, UFontFace* Face);
+
+	/**
+	 * Imports the TTF or OTF at FileName as the font face asset AssetPath (such as /Game/UI/Fonts/FF_Name), replacing the
+	 * one there, with its data inline. The engine's font import flushes the Slate font cache, which a commandlet does not
+	 * have. Returns null when the file cannot be read.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
+	static UFontFace* ImportFontFace(const FString& FileName, const FString& AssetPath);
 };

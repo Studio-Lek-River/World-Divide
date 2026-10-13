@@ -10,6 +10,7 @@ class UWorld;
 class URTSFactionData;
 class URTSMapData;
 class URTSHUDWidget;
+class URTSUIStyleSet;
 
 /** Project-wide asset references, kept in DefaultGame.ini so they stay reviewable text. */
 UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "World Divide"))
@@ -49,4 +50,12 @@ public:
 	/** The root of the match HUD that ARTSHUD shows the local player; unset is the C++ class. A Widget Blueprint subclass may set it for art. */
 	UPROPERTY(Config, EditAnywhere, Category = "HUD")
 	TSoftClassPtr<URTSHUDWidget> HUDWidgetClass;
+
+	/** The shared sprites, tried after the local player's faction style; generated from UI/Sprites/Common.sprites.json. */
+	UPROPERTY(Config, EditAnywhere, Category = "HUD")
+	TSoftObjectPtr<URTSUIStyleSet> CommonUIStyle;
+
+	/** The neutral theme, tried after Common; generated from UI/Themes/Neutral.theme.json. */
+	UPROPERTY(Config, EditAnywhere, Category = "HUD")
+	TSoftObjectPtr<URTSUIStyleSet> NeutralUIStyle;
 };

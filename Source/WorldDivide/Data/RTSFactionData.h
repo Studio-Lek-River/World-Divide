@@ -6,6 +6,7 @@
 
 class URTSAIBuildOrderData;
 class URTSBuildingData;
+class URTSUIStyleSet;
 
 /** What one faction can build. The player state references the faction the player plays. */
 UCLASS(BlueprintType)
@@ -35,4 +36,8 @@ public:
 	/** What an AI opponent playing this faction builds and when it attacks. Without one the AI only harvests. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
 	TObjectPtr<URTSAIBuildOrderData> AIBuildOrder;
+
+	/** The HUD look of a player of this faction, generated from UI/; unset uses the Common and Neutral looks. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+	TSoftObjectPtr<URTSUIStyleSet> UIStyle;
 };

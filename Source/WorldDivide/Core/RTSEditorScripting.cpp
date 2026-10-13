@@ -1,15 +1,20 @@
 #include "Core/RTSEditorScripting.h"
 
 #include "AssetCompilingManager.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "ContentStreaming.h"
 #include "Engine/Engine.h"
+#include "Engine/Font.h"
+#include "Engine/FontFace.h"
 #include "Engine/SceneCapture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
 #include "ImageCore.h"
 #include "ImageUtils.h"
 #include "Misc/App.h"
+#include "Misc/FileHelper.h"
+#include "Misc/PackageName.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "NavigationSystem.h"
 #include "RenderingThread.h"
@@ -133,5 +138,52 @@ bool URTSEditorScripting::CapturePreview(UObject* WorldContextObject, FBox2D Are
 	return FImageUtils::SaveImageByExtension(*FileName, Image);
 #else
 	return false;
+#endif
+}
+
+bool URTSEditorScripting::BuildFont(UFont* Font, UFontFace* Face)
+{
+	if (!Font || !Face)
+	{
+		return false;
+	}
+	Font->FontCacheType = EFontCacheType::Runtime;
+	FCompositeFont& CompositeFont = Font->GetMutableInternalCompositeFont();
+	CompositeFont = FCompositeFont();
+	FTypefaceEntry& Entry = CompositeFont.DefaultTypeface.Fonts.Add_GetRef(FTypefaceEntry(TEXT("Regular")));
+	Entry.Font = FFontData(Face);
+	Font->LegacyFontName = TEXT("Regular");
+	// Not PostEditChange: a font's change notification flushes the Slate font cache, which a commandlet does not have.
+	Font->MarkPackageDirty();
+	return true;
+}
+
+UFontFace* URTSEditorScripting::ImportFontFace(const FString& FileName, const FString& AssetPath)
+{
+#if WITH_EDITOR
+	TArray<uint8> Data;
+	if (!FFileHelper::LoadFileToArray(Data, *FileName) || Data.IsEmpty())
+	{
+		return nullptr;
+	}
+	const FString Name = FPackageName::GetShortName(AssetPath);
+	UPackage* Package = CreatePackage(*AssetPath);
+	Package->FullyLoad();
+	UFontFace* Face = FindObject<UFontFace>(Package, *Name);
+	const bool bCreated = !Face;
+	if (bCreated)
+	{
+		Face = NewObject<UFontFace>(Package, *Name, RF_Public | RF_Standalone);
+	}
+	Face->LoadingPolicy = EFontLoadingPolicy::Inline;
+	Face->InitializeFromBulkData(FileName, EFontHinting::Default, Data.GetData(), Data.Num());
+	Face->MarkPackageDirty();
+	if (bCreated)
+	{
+		FAssetRegistryModule::AssetCreated(Face);
+	}
+	return Face;
+#else
+	return nullptr;
 #endif
 }

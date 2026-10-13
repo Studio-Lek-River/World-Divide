@@ -4,7 +4,8 @@ with a supply source and two builders by each base, the L_Skirmish and L_Skirmis
 armies and with four and two start spots, the skirmish maps L_RiverFord, L_QuarryCross and L_SixPeaks with two, four and
 six, all where the lobby's seats play, the map data assets that offer them in the lobby with a top-down preview of each
 (rendered when the run has a renderer, drawn otherwise), and the
-empty L_MainMenu and L_Lobby levels for the menu screens. L_TestMap and the skirmish maps are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
+empty L_MainMenu and L_Lobby levels for the menu screens, and the Common UI styles of UI/ and Mods/*/UI/ (see
+make_ui_styles). L_TestMap and the skirmish maps are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
 source files that build them and are rebuilt only when those change.
 
@@ -33,6 +34,7 @@ import unreal
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import placeholder_art as art  # noqa: E402
+import ui_sources  # noqa: E402
 
 UNIT_DIR = "/Game/Data/Units"
 WEAPON_DIR = "/Game/Data/Weapons"
@@ -41,6 +43,7 @@ UPGRADE_DIR = "/Game/Data/Upgrades"
 FACTION_DIR = "/Game/Data/Factions"
 AI_DIR = "/Game/Data/AI"
 MAP_DATA_DIR = "/Game/Data/Maps"
+UI_STYLE_DIR = "/Game/UI/Styles"
 MATERIAL_DIR = "/Game/Materials"
 MAP_PATH = "/Game/Maps/L_TestMap"
 MAIN_MENU_MAP_PATH = "/Game/Maps/L_MainMenu"
@@ -897,6 +900,213 @@ def make_menu_map(path, game_mode):
                  spec_hash([build_menu_map], path, game_mode.static_class().get_name()))
 
 
+def import_ui_file(source, directory, name):
+    """Imports a PNG of UI/ as directory/name, replacing the asset there."""
+    task = unreal.AssetImportTask()
+    task.filename = source.path
+    task.destination_path = directory
+    task.destination_name = name
+    task.automated = True
+    task.replace_existing = True
+    task.save = False
+    asset_tools.import_asset_tasks([task])
+    return unreal.load_asset(f"{directory}/{name}")
+
+
+def import_ui_font_face(source, path):
+    face = unreal.RTSEditorScripting.import_font_face(source.path, path)
+    if not face:
+        raise RuntimeError(f"Could not import {source.path}")
+    return face
+
+
+def import_ui_texture(source, name):
+    """A UI PNG as a texture shown pixel for pixel: the UI group, no mips, no compression artefacts."""
+    texture = import_ui_file(source, source.asset_directory(), name)
+    if not isinstance(texture, unreal.Texture2D):
+        raise RuntimeError(f"Could not import {source.path}")
+    texture.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_UI)
+    texture.set_editor_property("mip_gen_settings", unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS)
+    texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_EDITOR_ICON)
+    texture.set_editor_property("srgb", True)
+    return texture
+
+
+def make_ui_texture(source):
+    """UI/Textures/<folder>/<name>.png becomes /Game/UI/Textures/<folder>/<name>; a mod's under /Game/UI/Mods/<Mod>."""
+    name = source.stem()
+    return plan_now(f"{source.asset_directory()}/{name}", lambda: import_ui_texture(source, name),
+                    spec_hash([import_ui_file, import_ui_texture], name, file_hash(source.path)))
+
+
+def build_ui_font(source, face, name):
+    path = f"{source.asset_directory()}/{name}"
+    font = assets.load_asset(path) if assets.does_asset_exist(path) else asset_tools.create_asset(
+        name, source.asset_directory(), unreal.Font, unreal.FontFactory())
+    if not unreal.RTSEditorScripting.build_font(font, face):
+        raise RuntimeError(f"Could not build {path}")
+    return font
+
+
+def make_ui_font(source):
+    """A font file becomes a font face FF_<name> and a runtime font F_<name> with that face as its only typeface."""
+    directory = source.asset_directory()
+    face_name, font_name = f"FF_{source.stem()}", f"F_{source.stem()}"
+    face = plan_now(f"{directory}/{face_name}", lambda: import_ui_font_face(source, f"{directory}/{face_name}"),
+                    spec_hash([import_ui_font_face], face_name, file_hash(source.path)))
+    return plan_now(f"{directory}/{font_name}", lambda: build_ui_font(source, face, font_name),
+                    spec_hash([build_ui_font], font_name, face))
+
+
+def build_style_class(directory, name, parent, properties):
+    """A Blueprint subclass of parent whose class defaults are properties: Common UI reads its styles as classes."""
+    path = f"{directory}/{name}"
+    if assets.does_asset_exist(path):
+        blueprint = assets.load_asset(path)
+    else:
+        factory = unreal.BlueprintFactory()
+        factory.set_editor_property("parent_class", parent)
+        blueprint = asset_tools.create_asset(name, directory, unreal.Blueprint, factory)
+    unreal.BlueprintEditorLibrary.compile_blueprint(blueprint)
+    defaults = unreal.get_default_object(unreal.BlueprintEditorLibrary.generated_class(blueprint))
+    for key, value in properties.items():
+        defaults.set_editor_property(key, value)
+    return blueprint
+
+
+def style_value(value):
+    """A style property value as text, for the hash of the style class."""
+    if isinstance(value, unreal.StructBase):
+        return value.export_text()
+    if value is None or isinstance(value, unreal.Object):
+        return object_path(value)
+    return repr(value)
+
+
+def make_style_class(directory, name, parent, properties):
+    """The generated class of the style Blueprint, rebuilt only when its parent or properties change."""
+    digest = spec_hash([build_style_class], name, parent.static_class().get_name(),
+                       sorted((key, style_value(value)) for key, value in properties.items()))
+    blueprint = plan_now(f"{directory}/{name}", lambda: build_style_class(directory, name, parent, properties), digest)
+    return unreal.BlueprintEditorLibrary.generated_class(blueprint)
+
+
+def ui_brush(texture, sprite):
+    """The brush of one PNG of a sprite: a 9-slice Box brush when it has a margin, else an image that scales."""
+    width, height = sprite["size"]
+    brush = unreal.SlateBrush()
+    brush.set_editor_property("resource_object", texture)
+    size = unreal.DeprecateSlateVector2D()
+    size.set_editor_property("x", float(width))
+    size.set_editor_property("y", float(height))
+    brush.set_editor_property("image_size", size)
+    if sprite["margin"]:
+        left, top, right, bottom = sprite["margin"]
+        brush.set_editor_property("draw_as", unreal.SlateBrushDrawType.BOX)
+        brush.set_editor_property("margin", unreal.Margin(left / width, top / height, right / width, bottom / height))
+    else:
+        brush.set_editor_property("draw_as", unreal.SlateBrushDrawType.IMAGE)
+    return brush
+
+
+def make_text_styles(set_name, theme, fonts):
+    """TS_<Set>_<Font>_<Color> for every font role and theme colour, by "<Font>.<Color>"."""
+    directory = f"{UI_STYLE_DIR}/{set_name}"
+    styles = {}
+    for role, font in sorted(theme["fonts"].items()):
+        for color_name, color in sorted(theme["colors"].items()):
+            info = unreal.SlateFontInfo()
+            info.set_editor_property("font_object", fonts[font["file"].path])
+            info.set_editor_property("typeface_font_name", "Regular")
+            info.set_editor_property("size", float(font["size"]))
+            styles[f"{role}.{color_name}"] = make_style_class(directory, f"TS_{set_name}_{role}_{color_name}",
+                                                              unreal.CommonTextStyle, {
+                "font": info,
+                "color": unreal.LinearColor(*ui_sources.srgb_to_linear(color)),
+            })
+    return styles
+
+
+def make_ui_style_set(set_name, sprites, theme, text_styles, button_text_styles, textures):
+    """DA_UIStyle_<Set> with its sprites' brushes, their BS_ button and BdS_ border style classes, and its theme's
+    colours and text styles. button_text_styles are the text styles of the theme its buttons use."""
+    directory = f"{UI_STYLE_DIR}/{set_name}"
+    entries, button_styles, border_styles = {}, {}, {}
+    for name, sprite in sorted(sprites.items()):
+        brushes = {state: ui_brush(textures[source.path], sprite) for state, source in sprite["textures"].items()}
+        normal = brushes["Normal"]
+        entries[name] = make_struct(unreal.RTSUISprite, {
+            "brush": normal,
+            "tint": sprite["tint"],
+            "frames": sprite["frames"],
+            "frame_size": unreal.IntPoint(*sprite["frame_size"]),
+            "fps": sprite["fps"],
+        })
+        class_name = name.replace(".", "_")
+        if sprite["button"]:
+            # A missing state looks like Normal; the text is the theme's Body text, dimmed when disabled.
+            text, disabled_text, selected_text = (button_text_styles.get(f"Body.{color}")
+                                                  for color in ("Text", "Disabled", "Accent"))
+            button_styles[name] = make_style_class(directory, f"BS_{set_name}_{class_name}", unreal.CommonButtonStyle, {
+                "normal_base": normal,
+                "normal_hovered": brushes.get("Hover", normal),
+                "normal_pressed": brushes.get("Pressed", normal),
+                "selected_base": brushes.get("Selected", normal),
+                "selected_hovered": brushes.get("Selected", normal),
+                "selected_pressed": brushes.get("Pressed", normal),
+                "disabled": brushes.get("Disabled", normal),
+                "normal_text_style": text,
+                "normal_hovered_text_style": text,
+                "selected_text_style": selected_text,
+                "selected_hovered_text_style": selected_text,
+                "disabled_text_style": disabled_text,
+            })
+        elif sprite["margin"]:
+            border_styles[name] = make_style_class(directory, f"BdS_{set_name}_{class_name}", unreal.CommonBorderStyle,
+                                                   {"background": normal})
+    colors = {name: unreal.LinearColor(*ui_sources.srgb_to_linear(color))
+              for name, color in sorted(theme["colors"].items())} if theme else {}
+    return plan_data_asset(f"DA_UIStyle_{set_name}", UI_STYLE_DIR, unreal.RTSUIStyleSet, {
+        "sprites": entries,
+        "button_styles": button_styles,
+        "border_styles": border_styles,
+        "colors": colors,
+        "text_styles": text_styles,
+    })
+
+
+def make_ui_styles():
+    """The Common UI styles of UI/ and the mods' UI/ folders: a style set per sprite file and theme, plus Common and
+    Neutral. A set without its own theme has no colours or text styles, and its buttons use Neutral's text; the
+    subsystem falls back to Neutral for those. Problems are logged, and only their entries are skipped."""
+    report = ui_sources.Report(PROJECT_DIR)
+    sprite_sets = ui_sources.read_sprites(PROJECT_DIR, report)
+    themes = ui_sources.read_themes(PROJECT_DIR, report)
+
+    textures = {}
+    for sprites in sprite_sets.values():
+        for sprite in sprites.values():
+            for source in sprite["textures"].values():
+                if source.path not in textures:
+                    textures[source.path] = make_ui_texture(source)
+    fonts = {}
+    for theme in themes.values():
+        for font in theme["fonts"].values():
+            if font["file"].path not in fonts:
+                fonts[font["file"].path] = make_ui_font(font["file"])
+
+    text_styles = {name: make_text_styles(name, theme, fonts) for name, theme in sorted(themes.items())}
+    for set_name in sorted(set(sprite_sets) | set(themes) | {ui_sources.COMMON, ui_sources.NEUTRAL}):
+        own = text_styles.get(set_name, {})
+        make_ui_style_set(set_name, sprite_sets.get(set_name, {}), themes.get(set_name), own,
+                          own or text_styles.get(ui_sources.NEUTRAL, {}), textures)
+
+    for problem in report.problems:
+        unreal.log_warning(f"setup_testmap: {problem}")
+    if report.problems:
+        unreal.log_warning(f"setup_testmap: {len(report.problems)} UI problems, those entries were skipped")
+
+
 def asset_file(path, extension):
     return os.path.join(CONTENT_DIR, path[len("/Game/"):] + extension)
 
@@ -1057,5 +1267,6 @@ make_map_data("DA_MapSixPeaks", "Six Peaks", SIX_PEAKS_MAP,
               [(unreal.RTSSeatType.OPEN, 0), (unreal.RTSSeatType.AI, 1)] + [(unreal.RTSSeatType.CLOSED, -1)] * 4)
 make_menu_map(MAIN_MENU_MAP_PATH, unreal.RTSMainMenuGameMode)
 make_menu_map(LOBBY_MAP_PATH, unreal.RTSLobbyGameMode)
+make_ui_styles()
 plan_data_assets()
 write_pending()

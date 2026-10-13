@@ -1,0 +1,19 @@
+{
+  "colors": {
+    "Primary": "#4A5059",
+    "Secondary": "#23272E",
+    "Accent": "#C8CDD4",
+    "Panel": "#181B20EE",
+    "Text": "#E6E9EE",
+    "MutedText": "#9AA3B0",
+    "Disabled": "#5A616B",
+    "Warning": "#E0A030",
+    "Danger": "#D0453A",
+    "Positive": "#5FB36A"
+  },
+  "fonts": {
+    "Title": { "file": "Fonts/NotoSans-SemiBold.ttf", "size": 18 },
+    "Body": { "file": "Fonts/NotoSans-Regular.ttf", "size": 14 },
+    "Number": { "file": "Fonts/NotoSans-Medium.ttf", "size": 16 }
+  }
+}

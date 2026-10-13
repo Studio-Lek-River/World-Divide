@@ -1,0 +1,17 @@
+{
+  "sprites": {
+    "Common.Panel": { "texture": "Textures/Common/T_UI_Common_Panel.png", "size": [64, 64], "margin": [16, 16, 16, 16] },
+    "Common.Button": { "states": {
+                         "Normal": "Textures/Common/T_UI_Common_Button_Normal.png",
+                         "Hover": "Textures/Common/T_UI_Common_Button_Hover.png",
+                         "Pressed": "Textures/Common/T_UI_Common_Button_Pressed.png",
+                         "Disabled": "Textures/Common/T_UI_Common_Button_Disabled.png",
+                         "Selected": "Textures/Common/T_UI_Common_Button_Selected.png" },
+                       "size": [64, 64], "margin": [16, 16, 16, 16] },
+    "Common.ProgressBar.Background": { "texture": "Textures/Common/T_UI_Common_ProgressBar_Background.png", "size": [32, 16], "margin": [4, 4, 4, 4] },
+    "Common.ProgressBar.Fill": { "texture": "Textures/Common/T_UI_Common_ProgressBar_Fill.png", "size": [32, 16], "margin": [4, 4, 4, 4], "tint": true },
+    "Common.Icon.Credits": { "texture": "Textures/Common/T_UI_Common_Icon_Credits.png", "size": [64, 64], "tint": true },
+    "Common.Icon.Power": { "texture": "Textures/Common/T_UI_Common_Icon_Power.png", "size": [64, 64], "tint": true },
+    "Common.Icon.PowerLow": { "texture": "Textures/Common/T_UI_Common_Icon_PowerLow.png", "size": [64, 64], "tint": true }
+  }
+}

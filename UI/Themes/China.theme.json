@@ -1,0 +1,14 @@
+{
+  "colors": {
+    "Primary": "#7A2420",
+    "Secondary": "#2B1716",
+    "Accent": "#D9B648",
+    "Panel": "#1C1514EE",
+    "Text": "#EEE6E3",
+    "MutedText": "#B09C98",
+    "Disabled": "#6B5C5A",
+    "Warning": "#E0A030",
+    "Danger": "#E0503F",
+    "Positive": "#6BB36A"
+  }
+}
