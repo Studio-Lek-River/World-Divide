@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Builds, tests or regenerates test content for World Divide from the command line.
+Builds, tests, regenerates test content for or opens World Divide from the command line.
 
 .EXAMPLE
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task build
@@ -8,15 +8,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task t
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -TimeDilation 1
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup -Render
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task editor
 
 The engine is taken from $env:UE_ROOT, falling back to D:\Program Files\Epic Games\UE_5.8.
-Exits nonzero on any failure: 2 when the editor is running (build), 3 when setup must rewrite read-only LFS assets.
+Exits nonzero on any failure: 2 when the editor is running (build, editor), 3 when setup must rewrite read-only LFS assets.
 The PIE smoke tests run TimeDilation game seconds per real second (default 4); -TimeDilation 1 runs them at real time.
 Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
+Editor opens the editor with the Unreal MCP server at http://127.0.0.1:8000/mcp (docs/ui/AI_TEAM.md); test and setup run without it.
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup')]
+	[ValidateSet('build', 'test', 'setup', 'editor')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -39,11 +41,16 @@ if (-not (Test-Path (Join-Path $UERoot 'Engine'))) {
 
 $BuildBat = Join-Path $UERoot 'Engine\Build\BatchFiles\Build.bat'
 $EditorCmd = Join-Path $UERoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
+$EditorExe = Join-Path $UERoot 'Engine\Binaries\Win64\UnrealEditor.exe'
 
-function Assert-EditorClosed {
+# Editor-only plugins of the AI team's MCP connection; the headless runs do not load them.
+$NoMCPPlugins = '-DisablePlugins=ModelContextProtocol,EditorToolset,SlateInspectorToolset,WorldDivideMCP'
+$MCPUrl = 'http://127.0.0.1:8000/mcp'
+
+function Assert-EditorClosed([string]$Reason = 'Live Coding locks the module DLL and the build will fail.') {
 	$Running = Get-Process -Name 'UnrealEditor' -ErrorAction SilentlyContinue
 	if ($Running) {
-		Write-Host 'UnrealEditor is running. Close it first: Live Coding locks the module DLL and the build will fail.'
+		Write-Host "UnrealEditor is running. Close it first: $Reason"
 		exit 2
 	}
 }
@@ -65,7 +72,7 @@ function Invoke-Setup {
 	if (Test-Path $ReadOnlyReport) { Remove-Item -Force $ReadOnlyReport }
 
 	$RenderArgs = if ($Render) { @('-AllowCommandletRendering', '-RenderOffscreen') } else { @('-nullrhi') }
-	& $EditorCmd $Project -run=pythonscript "-script=$Script" -unattended -nosplash @RenderArgs -nosound -stdout -FullStdOutLogOutput
+	& $EditorCmd $Project -run=pythonscript "-script=$Script" $NoMCPPlugins -unattended -nosplash @RenderArgs -nosound -stdout -FullStdOutLogOutput
 	if (Test-Path $ReadOnlyReport) {
 		$Files = @(Get-Content $ReadOnlyReport | Where-Object { $_ })
 		Write-Host ''
@@ -89,7 +96,7 @@ function Invoke-Test {
 	if (Test-Path $ReportDir) { Remove-Item -Recurse -Force $ReportDir }
 
 	& $EditorCmd $Project "-ExecCmds=Automation RunTests $Filter;Quit" '-TestExit=Automation Test Queue Empty' `
-		"-ReportExportPath=$ReportDir" "-abslog=$LogFile" "-RTSTestTimeDilation=$TimeDilation" -unattended -nullrhi -nosplash -nosound
+		"-ReportExportPath=$ReportDir" "-abslog=$LogFile" "-RTSTestTimeDilation=$TimeDilation" $NoMCPPlugins -unattended -nullrhi -nosplash -nosound
 	$EditorExit = $LASTEXITCODE
 
 	$Index = Join-Path $ReportDir 'index.json'
@@ -128,8 +135,15 @@ function Invoke-Test {
 	Write-Host 'TESTS PASSED'
 }
 
+function Invoke-Editor {
+	Assert-EditorClosed 'a second editor cannot serve MCP on the same port.'
+	Start-Process -FilePath $EditorExe -ArgumentList @("`"$Project`"", '-ModelContextProtocolStartServer')
+	Write-Host "Editor starting. The Unreal MCP server answers at $MCPUrl once the editor has loaded."
+}
+
 switch ($Task) {
 	'build' { Invoke-Build }
 	'test' { Invoke-Test }
 	'setup' { Invoke-Setup }
+	'editor' { Invoke-Editor }
 }

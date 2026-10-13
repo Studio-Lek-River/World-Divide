@@ -22,6 +22,7 @@ public class WorldDivide : ModuleRules
 			"Slate",
 			"SlateCore",
 			"UMG",
+			"Projects",
 		});
 
 		// PIE-driven smoke tests, the placeholder art test and the map preview capture only.

@@ -327,7 +327,7 @@ Keep it under two pages. It is a working document for the programmers, not a pit
 
 ## 8. Team workflow
 
-The team is the producer (a person), Claude (the programmer) and you (the UI/UX designer). Each panel has a **code issue** and a **design issue** on GitHub.
+The team is the producer (a person), Claude (the programmer) and you (the UI/UX designer). Each panel has a **code issue** and a **design issue** on GitHub. Who does what, the reviewer, and how each of you reaches the running editor through Unreal MCP is in [`AI_TEAM.md`](AI_TEAM.md).
 
 1. **Claude** completes the code issue: the C++ that supplies the binding keys and carries out the actions, plus a plain placeholder layout and placeholder sprites, so the panel already works. The tests pass.
 2. **The producer** sends you the design brief, with this handbook, the placeholder `<Panel>.layout.json` and the style references attached.

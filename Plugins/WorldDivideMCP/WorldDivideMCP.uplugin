@@ -1,0 +1,25 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "World Divide MCP",
+	"Description": "Editor-only tools World Divide adds to the Unreal MCP server: running console commands in the editor or PIE.",
+	"Category": "Other",
+	"CreatedBy": "Lek River Studio",
+	"EditorOnly": true,
+	"CanContainContent": false,
+	"Modules": [
+		{
+			"Name": "WorldDivideMCP",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit",
+			"TargetAllowList": [ "Editor" ]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ToolsetRegistry",
+			"Enabled": true
+		}
+	]
+}
