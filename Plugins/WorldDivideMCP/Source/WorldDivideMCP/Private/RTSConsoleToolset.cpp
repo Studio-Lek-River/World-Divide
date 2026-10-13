@@ -8,16 +8,13 @@
 #include "Misc/ConfigCacheIni.h"
 #include "Misc/OutputDeviceRedirector.h"
 #include "Misc/StringOutputDevice.h"
-#include "UObject/Script.h"
 
 namespace
 {
-	// Logs the reason and raises it as a script error, which the ToolsetRegistry hands the MCP caller as a tool error.
+	// Raises the reason as a script error: the editor logs it, and the ToolsetRegistry hands it to the MCP caller as a tool error.
 	FString Refuse(const FString& Message)
 	{
-		const FString Full = FString::Printf(TEXT("ExecuteConsoleCommand: %s"), *Message);
-		FFrame::KismetExecutionMessage(*Full, ELogVerbosity::Error);
-		UKismetSystemLibrary::RaiseScriptError(Full);
+		UKismetSystemLibrary::RaiseScriptError(FString::Printf(TEXT("ExecuteConsoleCommand: %s"), *Message));
 		return FString();
 	}
 }
