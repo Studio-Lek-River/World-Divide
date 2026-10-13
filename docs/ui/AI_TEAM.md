@@ -19,13 +19,25 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task e
 
 opens the editor with Epic's experimental Unreal MCP server at `http://127.0.0.1:8000/mcp`: loopback only and without authentication, so it is never exposed beyond this machine. The editor loads the plugins `ModelContextProtocol`, `EditorToolset` and `SlateInspectorToolset`, and the project's `WorldDivideMCP`, which adds `ExecuteConsoleCommand`. A packaged game and the headless `ue.ps1 -Task test` and `-Task setup` runs load none of them.
 
-The server lists three tools (`list_toolsets`, `describe_toolset`, `call_tool`) and reaches the rest through them. MCP is for **looking and playing**: the actors in the level, PIE start and stop, viewport and widget screenshots, the Slate widget tree, the output log, console commands such as `stat fps` and `rts.UI.Reload`. It is never for saving assets or editing Blueprints: every `.uasset` is generated from text files by `setup_testmap.py`. The `EditorToolset` also offers tools that write; the instructions forbid them, and the reviewer runs where it cannot call them.
+The server lists three tools (`list_toolsets`, `describe_toolset`, `call_tool`) and reaches the rest through them. MCP is for **looking and playing**, and offers nothing else:
+
+| Toolset | What remains |
+|---|---|
+| `EditorToolset.EditorAppToolset` | PIE start, stop and status; viewport, editor and asset-thumbnail captures; visible and selected actors, selecting and focusing actors, the viewport camera; CVar search |
+| `EditorToolset.LogsToolset` | The output log, log categories and their verbosity |
+| `SlateInspectorToolset.SlateInspectorToolset` | The Slate widget tree (`Snapshot`, `Observe`), widget screenshots, windows, `WaitFor`, `Hover` |
+| `editor_toolset.toolsets.scene.SceneTools` | Finding actors, the current level, outliner folders, world traces |
+| `editor_toolset.toolsets.actor.ActorTools` | Actor transforms, bounds, components, labels and tags (read only) |
+| `editor_toolset.toolsets.object.ObjectTools` | Object properties and classes (read only) |
+| `WorldDivideMCP.RTSConsoleToolset` | `ExecuteConsoleCommand`, e.g. `stat fps`, `rts.UI.Reload` |
+
+Everything else is hidden by the allow-list in `Config/DefaultEditorPerProjectUserSettings.ini` (`ToolsetRegistrySettings`): the asset, Blueprint, material, data, mesh, texture and primitive toolsets, the programmatic and skill toolsets, every setter, and the Slate tools that click or type, since those can reach Save. `ExecuteConsoleCommand` refuses editor Python and commands that save or delete (`[WorldDivideMCP] BlockedConsoleCommands` in the same file). A toolset added by an engine update stays hidden until it is put on the list. Every `.uasset` is generated from text files by `setup_testmap.py`.
 
 ## Connecting each client
 
 Each client connects once; the editor must be running for the server to answer.
 
-- **Claude Code**: `.mcp.json` in the repository root defines the server `unreal`. Approve it once when Claude Code asks, then `/mcp` shows it and its tools.
+- **Claude Code**: `.mcp.json` in the repository root defines the server `unreal`. Approve it once when Claude Code asks, then `/mcp` shows it and its tools; `.claude/settings.json` allows its tools without asking per call.
 - **Antigravity CLI** (`agy`, signed in with the Google account): MCP servers are per user, so run once
   ```
   agy mcp add unreal http://127.0.0.1:8000/mcp

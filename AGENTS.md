@@ -13,9 +13,6 @@ Never touch `Source/`, `Content/`, `Data/` or any other file. Never commit, push
 
 ## The running editor (Unreal MCP)
 
-When the producer has the editor open with `ue.ps1 -Task editor`, the MCP server `unreal` is at `http://127.0.0.1:8000/mcp`. Use it to look and play, never to build:
+When the producer has the editor open with `ue.ps1 -Task editor`, the MCP server `unreal` is at `http://127.0.0.1:8000/mcp`. It only offers looking and playing: reading the level and its actors, starting and stopping PIE, viewport and widget screenshots, the Slate widget tree, the output log, and `ExecuteConsoleCommand` for commands such as `stat fps` or `rts.UI.Reload`. The tools that save or edit assets, Blueprints and levels are hidden, and the console refuses editor Python and commands that save or delete; the full list is in [`docs/ui/AI_TEAM.md`](docs/ui/AI_TEAM.md).
 
-- allowed: listing toolsets, reading the level and its actors, starting and stopping PIE, viewport and widget screenshots, the Slate widget tree, the output log, and `ExecuteConsoleCommand` for commands such as `stat fps` or `rts.UI.Reload`;
-- never: saving or creating assets, editing Blueprints, materials, data assets or levels, changing project settings, or running a console command that saves or deletes anything.
-
-If a tool would change something in the editor that is not PIE, do not call it; ask the producer instead.
+If you need something changed in the editor outside PIE, ask the producer.

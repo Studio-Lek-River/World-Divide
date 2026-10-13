@@ -3,6 +3,8 @@
 #include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "Internationalization/Regex.h"
+#include "Misc/ConfigCacheIni.h"
 #include "Misc/OutputDeviceRedirector.h"
 #include "Misc/StringOutputDevice.h"
 #include "UObject/Script.h"
@@ -19,6 +21,19 @@ FString URTSConsoleToolset::ExecuteConsoleCommand(const FString& Command)
 	{
 		FFrame::KismetExecutionMessage(TEXT("ExecuteConsoleCommand: no editor is running."), ELogVerbosity::Error);
 		return FString();
+	}
+
+	// The AI team looks and plays; editor Python and commands that save or delete stay with the producer.
+	TArray<FString> BlockedPatterns;
+	GConfig->GetArray(TEXT("WorldDivideMCP"), TEXT("BlockedConsoleCommands"), BlockedPatterns, GEditorPerProjectIni);
+	for (const FString& Pattern : BlockedPatterns)
+	{
+		FRegexMatcher Matcher(FRegexPattern(Pattern, ERegexPatternFlags::CaseInsensitive), Trimmed);
+		if (Matcher.FindNext())
+		{
+			FFrame::KismetExecutionMessage(*FString::Printf(TEXT("ExecuteConsoleCommand: '%s' is not allowed over MCP; ask the producer."), *Trimmed), ELogVerbosity::Error);
+			return FString();
+		}
 	}
 
 	// Most commands report through the log rather than the device they are given, so capture both.
