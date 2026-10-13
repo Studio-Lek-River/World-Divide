@@ -12,6 +12,8 @@ Build/
 .vscode/
 .idea/
 *.sln
+*.slnx
+.vsconfig
 *.suo
 *.opensdf
 *.sdf
