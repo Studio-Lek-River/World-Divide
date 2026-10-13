@@ -383,6 +383,27 @@ def make_faction(name, display_name, buildings, headquarters=None, uses_power=Tr
     })
 
 
+def struct_from_text(struct_class, text):
+    """A struct from its exported text, for structs such as GameplayTag and Key whose fields Python cannot set."""
+    struct = struct_class()
+    struct.import_text(text)
+    return struct
+
+
+def gameplay_tag(name):
+    return struct_from_text(unreal.GameplayTag, f'(TagName="{name}")')
+
+
+def present(entity, faction_tag, icon, hotkey, description):
+    """What the UI shows of an entity: its icon sprite (resolved by its faction's style), hotkey and description."""
+    add_properties(entity, {
+        "faction_tag": faction_tag,
+        "icon_sprite": unreal.Name(icon),
+        "hotkey": struct_from_text(unreal.Key, hotkey),
+        "description": unreal.Text(description),
+    })
+
+
 def make_struct(struct_class, properties):
     struct = struct_class()
     for key, value in properties.items():
@@ -1271,7 +1292,29 @@ build_order = make_build_order("DA_TestBuildOrder", [
     unreal.RTSAIDifficulty.EASY: (1.5, 0.5),
     unreal.RTSAIDifficulty.HARD: (0.67, 1.5),
 })
-make_faction("DA_TestFaction", "Test Faction", buildings, headquarters, ai_build_order=build_order)
+test_faction = make_faction("DA_TestFaction", "Test Faction", buildings, headquarters, ai_build_order=build_order)
+# Hotkeys are unique per producer: the builder, the headquarters, the barracks, the factory, the depot and the airfield.
+TEST_FACTION_TAG = gameplay_tag("Faction.Test")
+add_properties(test_faction, {"faction_tag": TEST_FACTION_TAG})
+for entity, icon, hotkey, description in (
+    (tank, "Icon.Tank", "T", "Main battle tank. Strong against vehicles and buildings."),
+    (infantry, "Icon.Infantry", "I", "Rifle squad. Cheap, and quick to train."),
+    (grenadier, "Icon.Grenadier", "G", "Infantry with a grenade launcher that lobs over cover. Needs rifle training."),
+    (flak_truck, "Icon.FlakTruck", "F", "Anti-aircraft truck. Hits only aircraft in flight."),
+    (jet, "Icon.Jet", "J", "Strike jet. Fires its missiles at ground targets and rearms on its airfield pad."),
+    (harvester, "Icon.Harvester", "H", "Gathers supplies and delivers them to a supply depot."),
+    (builder, "Icon.Builder", "B", "Builds and places every building."),
+    (rifle_training, "Icon.RifleTraining", "R", "Infantry rifles deal half again as much damage."),
+    (power_plant, "Icon.PowerPlant", "P", "Generates the power other buildings draw."),
+    (tower, "Icon.Tower", "T", "Defensive gun tower against ground and air. Needs power."),
+    (supply_depot, "Icon.SupplyDepot", "S", "Receives supplies from harvesters and comes with one."),
+    (barracks, "Icon.Barracks", "B", "Trains infantry and researches rifle training."),
+    (vehicle_factory, "Icon.VehicleFactory", "V", "Builds tanks, harvesters and flak trucks."),
+    (airfield, "Icon.Airfield", "A", "Builds jets and gives each one a pad to rearm on."),
+    (headquarters, "Icon.Headquarters", "H", "The command centre every team starts with. Produces builders."),
+    (superweapon, "Icon.Superweapon", "W", "Charges a strike that lands anywhere on the map. One per team."),
+):
+    present(entity, TEST_FACTION_TAG, icon, hotkey, description)
 make_ghost_material("M_PlacementGhost")
 make_shot_material("M_ShotFx")
 ground = make_surface_material("M_Ground", (0.06, 0.075, 0.04), 0.9)

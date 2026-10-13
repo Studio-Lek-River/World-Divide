@@ -8,6 +8,8 @@
 #include "UI/RTSUIStyleSet.h"
 #include "RTSUIStyleSubsystem.generated.h"
 
+class URTSFactionData;
+
 /** What a button looks like when no style set has the sprite asked for: flat grey states, placeholder text. */
 UCLASS()
 class WORLDDIVIDE_API URTSPlaceholderButtonStyle : public UCommonButtonStyle
@@ -51,6 +53,9 @@ class WORLDDIVIDE_API URTSUIStyleSubsystem : public UGameInstanceSubsystem
 public:
 	/** The local player's faction set, Common and Neutral, those that exist, in the order they are tried. */
 	TArray<const URTSUIStyleSet*> GetStyleChain() const;
+
+	/** The given faction's set (URTSFactionData::UIStyle), Common and Neutral; for what belongs to that faction, such as icons. */
+	TArray<const URTSUIStyleSet*> GetStyleChain(const URTSFactionData* Faction) const;
 
 	UFUNCTION(BlueprintPure, Category = "UI Style")
 	FSlateBrush FindBrush(FName Sprite) const;

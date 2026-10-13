@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "GameplayTagContainer.h"
 #include "RTSFactionData.generated.h"
 
 class URTSAIBuildOrderData;
@@ -17,6 +18,10 @@ class WORLDDIVIDE_API URTSFactionData : public UPrimaryDataAsset
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FText DisplayName;
+
+	/** The tag its entities carry in URTSEntityData::FactionTag. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+	FGameplayTag FactionTag;
 
 	/** In build menu order. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Production")
@@ -40,4 +45,7 @@ public:
 	/** The HUD look of a player of this faction, generated from UI/; unset uses the Common and Neutral looks. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	TSoftObjectPtr<URTSUIStyleSet> UIStyle;
+
+	/** The faction of URTSSettings::Factions or DefaultFaction with this tag, loaded; null for none. */
+	static const URTSFactionData* FindByTag(FGameplayTag Tag);
 };

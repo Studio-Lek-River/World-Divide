@@ -202,7 +202,7 @@ Layouts refer to sprites **without** the set prefix: `"sprite": "Button"`. The e
 - a shared piece gets one entry in `Common`;
 - a faction may override a `Common` piece by giving its own entry under the same name.
 
-Unit, building and upgrade icons are `Icon.<Entity>` (for example `USA.Icon.Tank`). They resolve by the faction of **the entity**, not of the player.
+Unit, building and upgrade icons are `Icon.<Entity>` (for example `USA.Icon.Tank`). They resolve by the faction of **the entity**, not of the player: `<Faction>.Icon.<Entity>`, then `Common.Icon.<Entity>`, then `Common.Icon.Placeholder`, then the grey placeholder.
 
 ---
 

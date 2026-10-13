@@ -44,15 +44,17 @@ URTSPlaceholderBorderStyle::URTSPlaceholderBorderStyle()
 
 TArray<const URTSUIStyleSet*> URTSUIStyleSubsystem::GetStyleChain() const
 {
-	TArray<const URTSUIStyleSet*> Chain;
 	const APlayerController* Controller = GetGameInstance() ? GetGameInstance()->GetFirstLocalPlayerController() : nullptr;
 	const ARTSPlayerState* PlayerState = Controller ? Controller->GetPlayerState<ARTSPlayerState>() : nullptr;
-	if (const URTSFactionData* Faction = PlayerState ? PlayerState->GetFaction() : nullptr)
+	return GetStyleChain(PlayerState ? PlayerState->GetFaction() : nullptr);
+}
+
+TArray<const URTSUIStyleSet*> URTSUIStyleSubsystem::GetStyleChain(const URTSFactionData* Faction) const
+{
+	TArray<const URTSUIStyleSet*> Chain;
+	if (const URTSUIStyleSet* StyleSet = Faction ? LoadStyleSet(Faction->UIStyle) : nullptr)
 	{
-		if (const URTSUIStyleSet* StyleSet = LoadStyleSet(Faction->UIStyle))
-		{
-			Chain.Add(StyleSet);
-		}
+		Chain.Add(StyleSet);
 	}
 	const URTSSettings* Settings = GetDefault<URTSSettings>();
 	for (const TSoftObjectPtr<URTSUIStyleSet>& Fallback : { Settings->CommonUIStyle, Settings->NeutralUIStyle })

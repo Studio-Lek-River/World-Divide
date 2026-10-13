@@ -23,6 +23,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Factions")
 	TSoftObjectPtr<URTSFactionData> DefaultFaction;
 
+	/** Every faction an entity can belong to, found by URTSEntityData::FactionTag; DefaultFaction counts as listed. */
+	UPROPERTY(Config, EditAnywhere, Category = "Factions")
+	TArray<TSoftObjectPtr<URTSFactionData>> Factions;
+
 	/** Translucent material with a "Color" vector parameter, tinted green or red by placement validity. */
 	UPROPERTY(Config, EditAnywhere, Category = "Placement")
 	TSoftObjectPtr<UMaterialInterface> PlacementGhostMaterial;
