@@ -62,6 +62,17 @@ bool FRTSBuildGridTest::RunTest(const FString& Parameters)
 			FMath::IsNearlyZero(FMath::Fmod(FMath::Abs(Corner.X), RTSBuildPlacement::GridSize))
 			&& FMath::IsNearlyZero(FMath::Fmod(FMath::Abs(Corner.Y), RTSBuildPlacement::GridSize)));
 	}
+
+	// Quarter turns swap a footprint's sides on odd turns, and snapping follows the turned footprint.
+	TestEqual(TEXT("No turn keeps the footprint"), RTSBuildPlacement::GetRotatedFootprint(FIntPoint(4, 8), 0), FIntPoint(4, 8));
+	TestEqual(TEXT("A quarter turn swaps its sides"), RTSBuildPlacement::GetRotatedFootprint(FIntPoint(4, 8), 1), FIntPoint(8, 4));
+	TestEqual(TEXT("A half turn keeps them"), RTSBuildPlacement::GetRotatedFootprint(FIntPoint(3, 2), 2), FIntPoint(3, 2));
+	TestEqual(TEXT("Three quarter turns swap them"), RTSBuildPlacement::GetRotatedFootprint(FIntPoint(3, 2), 3), FIntPoint(2, 3));
+	TestEqual(TEXT("A turned 3x2 snaps as a 2x3"),
+		RTSBuildPlacement::SnapToGrid(Cursor, RTSBuildPlacement::GetRotatedFootprint(FIntPoint(3, 2), 1)), FVector(100.f, -50.f, 7.f));
+	TestEqual(TEXT("Yaw of a quarter turn"), RTSBuildPlacement::GetYaw(1), 90.f);
+	TestEqual(TEXT("Turns of a yaw, any sign"), RTSBuildPlacement::GetQuarterTurns(-90.f), 3);
+	TestEqual(TEXT("Turns of a full turn"), RTSBuildPlacement::GetQuarterTurns(360.f), 0);
 	return true;
 }
 

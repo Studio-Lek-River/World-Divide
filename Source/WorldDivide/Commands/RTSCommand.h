@@ -65,6 +65,10 @@ struct WORLDDIVIDE_API FRTSCommand
 	UPROPERTY(BlueprintReadWrite, Category = "Command")
 	bool bQueue = false;
 
+	/** Build: 90-degree turns of the new building, 0 to 3 (RTSBuildPlacement::GetRotatedFootprint). */
+	UPROPERTY(BlueprintReadWrite, Category = "Command")
+	uint8 QuarterTurns = 0;
+
 	/** Server only, never sent by clients: credits already taken for this order, refunded if it ends before its building is placed. */
 	UPROPERTY(NotReplicated)
 	int32 PaidCost = 0;

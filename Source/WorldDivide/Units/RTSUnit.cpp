@@ -399,6 +399,7 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 	if (Command.Type != ERTSCommandType::Build || BuilderComponent->ChargeOrder(Command))
 	{
 		CommandQueue.Add(Command);
+		BuilderComponent->UpdatePlannedSites(CommandQueue);
 	}
 
 	if (!Command.bQueue || bWasIdle)
@@ -428,6 +429,7 @@ void ARTSUnit::StepAside(const FVector& Location)
 	Move.Type = ERTSCommandType::Move;
 	Move.TargetLocation = Location;
 	CommandQueue.Insert(Move, 0);
+	BuilderComponent->UpdatePlannedSites(CommandQueue);
 	StartNextCommand();
 }
 
@@ -530,12 +532,14 @@ void ARTSUnit::ClearCommands()
 		BuilderComponent->RefundOrder(Command);
 	}
 	CommandQueue.Reset();
+	BuilderComponent->UpdatePlannedSites(CommandQueue);
 }
 
 void ARTSUnit::PopCommand()
 {
 	BuilderComponent->RefundOrder(CommandQueue[0]);
 	CommandQueue.RemoveAt(0);
+	BuilderComponent->UpdatePlannedSites(CommandQueue);
 }
 
 bool ARTSUnit::RequestMove(AAIController& AI, const FVector& Location)
@@ -633,6 +637,11 @@ void ARTSUnit::UpdateBuildOrder(float DeltaSeconds)
 		PopCommand();
 		StartNextCommand();
 	}
+	else if (BuilderComponent->GetSite() && !BuilderComponent->GetPlannedSites().IsEmpty())
+	{
+		// The front site may just have been placed; it is a building now.
+		BuilderComponent->UpdatePlannedSites(CommandQueue);
+	}
 }
 
 void ARTSUnit::UpdateAttackOrder()
@@ -680,7 +689,7 @@ void ARTSUnit::UpdateAttackOrder()
 			// facing side first. With no reachable spot in range, or a move that cannot start, the order is over.
 			FVector Spot;
 			const bool bFound = Building->GetBuildingData()
-				&& RTSApproach::FindReachableSpot(*this, Building->GetActorLocation(), Building->GetBuildingData()->Footprint,
+				&& RTSApproach::FindReachableSpot(*this, Building->GetActorLocation(), Building->GetFootprint(),
 					Range * BuildingApproachFraction, Range - MoveAcceptanceRadius, Spot);
 			const EPathFollowingRequestResult::Type Result = bFound
 				? AI->MoveToLocation(Spot, MoveAcceptanceRadius,

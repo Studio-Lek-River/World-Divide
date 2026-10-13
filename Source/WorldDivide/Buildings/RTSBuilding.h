@@ -54,8 +54,8 @@ public:
 	URTSSuperweaponComponent* GetSuperweaponComponent() const { return SuperweaponComponent; }
 
 	/**
-	 * Where units leave the building: outside the +X edge, the front until buildings can rotate, Clearance beyond it, nudged
-	 * onto the navmesh when one exists.
+	 * Where units leave the building: outside its front edge (the data's +X edge, turned with the building), Clearance beyond
+	 * it, nudged onto the navmesh when one exists.
 	 */
 	FVector GetExitLocation(float Clearance) const;
 
@@ -65,7 +65,7 @@ public:
 	/** Aircraft pads, from the data; 0 for a building that is not an airfield. */
 	int32 GetPadCount() const;
 
-	/** Where an aircraft stands on pad Index: on the roof, pads side by side across the footprint along Y. */
+	/** Where an aircraft stands on pad Index: on the roof, pads side by side across the footprint along the data's Y. */
 	FVector GetPadLocation(int32 Index) const;
 
 	/** The aircraft bound to pad Index, or null while it is free. */
@@ -82,6 +82,9 @@ public:
 
 	/** Server only. Frees Aircraft's pad here, if it has one. */
 	void ReleasePad(const ARTSUnit& Aircraft);
+
+	/** The data's footprint in world cells, turned with the building (RTSBuildPlacement::GetRotatedFootprint). */
+	FIntPoint GetFootprint() const;
 
 	/** From clamped to the footprint rectangle. Under construction or not, the building can be shot. */
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;

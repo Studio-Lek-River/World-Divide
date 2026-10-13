@@ -11,6 +11,7 @@
 #include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSUnit.h"
 #include "WorldDivide.h"
@@ -39,6 +40,34 @@ URTSBuilderComponent::URTSBuilderComponent()
 {
 	// The unit's Build order drives the work from the unit's tick.
 	PrimaryComponentTick.bCanEverTick = false;
+	SetIsReplicatedByDefault(true);
+}
+
+void URTSBuilderComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(URTSBuilderComponent, PlannedSites);
+}
+
+void URTSBuilderComponent::UpdatePlannedSites(const TArray<FRTSCommand>& Queue)
+{
+	TArray<FRTSPlannedSite> Sites;
+	for (int32 Index = 0; Index < Queue.Num(); ++Index)
+	{
+		const FRTSCommand& Command = Queue[Index];
+		URTSBuildingData* Data = Cast<URTSBuildingData>(Command.EntityData);
+		// A site named by the order, or the current one once placed, is a building already.
+		if (Command.Type != ERTSCommandType::Build || !Data || Command.TargetActor || (Index == 0 && Site.IsValid()))
+		{
+			continue;
+		}
+		FRTSPlannedSite& Planned = Sites.AddDefaulted_GetRef();
+		Planned.Data = Data;
+		Planned.QuarterTurns = Command.QuarterTurns % 4;
+		Planned.Location = RTSBuildPlacement::SnapToGrid(Command.TargetLocation,
+			RTSBuildPlacement::GetRotatedFootprint(Data->Footprint, Planned.QuarterTurns));
+	}
+	PlannedSites = MoveTemp(Sites);
 }
 
 bool URTSBuilderComponent::CanBuild(const URTSBuildingData* Data) const
@@ -71,6 +100,12 @@ bool URTSBuilderComponent::ChargeOrder(FRTSCommand& Command)
 	if (RTSProduction::IsAtBuildLimit(*GetWorld(), Player->GetTeamId(), *Data))
 	{
 		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d already owns %d of %s"), Player->GetTeamId(), Data->MaxCount, *Data->GetName());
+		return false;
+	}
+	// The earlier order keeps its spot, as the ghost shows.
+	if (RTSBuildPlacement::OverlapsPlannedSite(*GetWorld(), Player->GetTeamId(), *Data, Command.TargetLocation, Command.QuarterTurns))
+	{
+		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d already plans a building where %s would go"), Player->GetTeamId(), *Data->GetName());
 		return false;
 	}
 	if (!Player->TrySpendCredits(Data->Cost))
@@ -124,7 +159,9 @@ bool URTSBuilderComponent::StartBuild(FRTSCommand& Command)
 		}
 		// The spot itself is checked on arrival, when whatever stands there now may have moved on.
 		PlannedData = Data;
-		PlannedLocation = RTSBuildPlacement::SnapToGrid(Command.TargetLocation, Data->Footprint);
+		PlannedQuarterTurns = Command.QuarterTurns % 4;
+		PlannedLocation = RTSBuildPlacement::SnapToGrid(Command.TargetLocation,
+			RTSBuildPlacement::GetRotatedFootprint(Data->Footprint, PlannedQuarterTurns));
 		PlannedCost = Command.PaidCost;
 		Command.PaidCost = 0;
 	}
@@ -147,6 +184,7 @@ void URTSBuilderComponent::StopBuild()
 	PlannedCost = 0;
 	State = ERTSBuildState::Idle;
 	PlannedData = nullptr;
+	PlannedQuarterTurns = 0;
 	Site.Reset();
 	bHasSite = false;
 	RetryCooldown = 0.f;
@@ -191,7 +229,9 @@ bool URTSBuilderComponent::UpdateBuild(float DeltaSeconds)
 		return EndBuild(TEXT("has nothing to build"));
 	}
 	const FVector Center = Building ? Building->GetActorLocation() : PlannedLocation;
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Data->Footprint);
+	const FIntPoint Footprint = Building
+		? Building->GetFootprint() : RTSBuildPlacement::GetRotatedFootprint(Data->Footprint, PlannedQuarterTurns);
+	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Footprint);
 	const FVector Location = GetOwner()->GetActorLocation();
 	const FVector Edge(
 		FMath::Clamp(Location.X, Center.X - Extent.X, Center.X + Extent.X),
@@ -200,7 +240,7 @@ bool URTSBuilderComponent::UpdateBuild(float DeltaSeconds)
 	if (!IsDocked(Edge))
 	{
 		State = ERTSBuildState::ToSite;
-		return ApproachSite(Center, Data->Footprint) || EndBuild(TEXT("cannot reach its site"));
+		return ApproachSite(Center, Footprint) || EndBuild(TEXT("cannot reach its site"));
 	}
 
 	if (State == ERTSBuildState::ToSite)
@@ -242,6 +282,7 @@ bool URTSBuilderComponent::PlaceSite()
 	Command.Type = ERTSCommandType::Build;
 	Command.EntityData = PlannedData;
 	Command.TargetLocation = PlannedLocation;
+	Command.QuarterTurns = PlannedQuarterTurns;
 	ARTSBuilding* Building = RTSCommands::PlaceBuilding(*GetWorld(), Player->GetFaction(), Player->GetTeamId(), Command);
 	if (!Building)
 	{
@@ -276,7 +317,8 @@ bool URTSBuilderComponent::ClearSite(float DeltaSeconds)
 	}
 	FVector Center;
 	TArray<AActor*> Blockers;
-	if (RTSBuildPlacement::CanPlace(*GetWorld(), *PlannedData, PlannedLocation, Center, &Blockers) || Blockers.IsEmpty())
+	if (RTSBuildPlacement::CanPlace(*GetWorld(), *PlannedData, PlannedLocation, Center, &Blockers, PlannedQuarterTurns)
+		|| Blockers.IsEmpty())
 	{
 		return false;
 	}
@@ -299,6 +341,7 @@ bool URTSBuilderComponent::ClearSite(float DeltaSeconds)
 	}
 
 	// Each unit is sent once; one that finds no spot or wanders back runs out the timeout.
+	const FIntPoint Footprint = RTSBuildPlacement::GetRotatedFootprint(PlannedData->Footprint, PlannedQuarterTurns);
 	for (ARTSUnit* Other : OwnUnits)
 	{
 		if (ClearedUnits.Contains(Other))
@@ -308,7 +351,7 @@ bool URTSBuilderComponent::ClearSite(float DeltaSeconds)
 		ClearedUnits.Add(Other);
 		const float Radius = Other->GetSelectionRadius();
 		FVector Spot;
-		if (RTSApproach::FindReachableSpot(*Other, Center, PlannedData->Footprint, Radius + ClearOffset, Radius + SiteReach, Spot))
+		if (RTSApproach::FindReachableSpot(*Other, Center, Footprint, Radius + ClearOffset, Radius + SiteReach, Spot))
 		{
 			Other->StepAside(Spot);
 		}

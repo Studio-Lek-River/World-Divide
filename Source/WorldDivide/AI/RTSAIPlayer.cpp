@@ -943,7 +943,7 @@ bool ARTSAIPlayer::HasRoom(const URTSBuildingData& Data, const FVector& Location
 		{
 			continue;
 		}
-		const FVector OtherExtent = RTSBuildPlacement::GetFootprintExtent(Other->Footprint);
+		const FVector OtherExtent = RTSBuildPlacement::GetFootprintExtent(It->GetFootprint());
 		if (!AreApart(Location, Extent, It->GetActorLocation(), OtherExtent, BuildingGap))
 		{
 			return false;

@@ -64,6 +64,10 @@
  * away and once a second builder dies there, the first finishes it, then builds two buildings queued with Shift. The site
  * clearing test checks that an enemy on the spot refuses a builder, while own units on it step aside, keeping their orders;
  * the builder's ghost turns red over the enemy but stays green over own units, which the debug ghost does not.
+ * The rotation test places the 4x8 airfield turned a quarter through the debug ghost: it blocks, answers range queries and
+ * cuts the navmesh along its turned footprint, and client and server agree on the plants beside it. The Shift placement test
+ * places three plants without leaving placement mode until the last click without Shift. The queued-site test checks that
+ * the ghost and the server keep the spots of a builder's unplaced buildings free, flush neighbours aside.
  * The production test selects a barracks, sets its rally point and queues three infantry through the controller, as the
  * HUD does: they must come out one build time apart and each walk to the rally point. The produced-harvester test has a
  * vehicle factory send a harvester and a tank to a rally point beside a source: the harvester walks there, then delivers a
@@ -295,6 +299,24 @@ namespace
 	constexpr double MatchEndFrozenSeconds = 3.0;
 	/** A unit may still move in the frame the match ends, before its own tick stops it. */
 	constexpr float MatchEndStopTolerance = 50.f;
+
+	/**
+	 * The rotation test turns the 4x8 airfield a quarter at BuildSpot, so it spans 8 cells along X and 4 along Y. A plant
+	 * beside it east fits only beside the unturned airfield, one north only beside the turned one; a point inside the turned
+	 * footprint only must lose its navmesh.
+	 */
+	const TCHAR* AirfieldPath = TEXT("/Game/Data/Buildings/DA_TestAirfield.DA_TestAirfield");
+	const FVector RotatedEastSpot(500.f, 7000.f, 0.f);
+	const FVector RotatedNorthSpot(0.f, 7500.f, 0.f);
+	const FVector RotatedOnlyPoint(300.f, 7000.f, 0.f);
+	const FVector PrerequisiteFactorySpot(3000.f, -7000.f, 0.f);
+
+	/**
+	 * The queued-site test: a builder walks to a plant at UnitSpot with another queued at OtherBuildSpot. A plant overlapping
+	 * the queued one is refused; one flush beside it is accepted.
+	 */
+	const FVector QueuedOverlapSpot(-3000.f, 7200.f, 0.f);
+	const FVector QueuedFlushSpot(-3000.f, 7400.f, 0.f);
 
 	struct FSmokeState
 	{
@@ -2164,6 +2186,201 @@ bool FRTSVerifyQueuedBuilds::Update()
 	return true;
 }
 
+/**
+ * Places an airfield turned a quarter through the controller's debug ghost, then checks that its footprint, its blocking
+ * and the server's answers follow the turn.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSPlaceRotatedAirfield, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSPlaceRotatedAirfield::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	URTSBuildingData* Airfield = LoadObject<URTSBuildingData>(nullptr, AirfieldPath);
+	URTSBuildingData* Plant = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+	URTSBuildingData* Factory = LoadObject<URTSBuildingData>(nullptr, VehicleFactoryPath);
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	if (!Airfield || !Plant || !Factory || !Player)
+	{
+		Test->AddError(TEXT("Missing the airfield, plant or factory data, or the player"));
+		return true;
+	}
+	Test->TestEqual(TEXT("The test airfield is not square"), Airfield->Footprint, FIntPoint(4, 8));
+	// The airfield needs a vehicle factory.
+	SpawnBuilding(World, Factory, Controller->GetTeamId(), PrerequisiteFactorySpot, /*bConstructed*/ true);
+	Player->AddCredits(Airfield->Cost + 2 * Plant->Cost);
+
+	const bool bWasDebugBuild = SetDebugBuild(true);
+	Controller->BeginPlacement(Airfield);
+	Controller->RotatePlacement();
+	Test->TestEqual(TEXT("R turns the ghost a quarter"), Controller->GetPlacementQuarterTurns(), 1);
+	Controller->UpdatePlacementAt(BuildSpot);
+	Test->TestTrue(TEXT("The turned ghost is green on the open strip"), Controller->IsPlacementValid());
+	Controller->ConfirmPlacement(/*bKeepPlacing*/ false);
+	SetDebugBuild(bWasDebugBuild);
+	Test->TestNull(TEXT("Placement ends without Shift"), Controller->GetPlacementData());
+
+	ARTSBuilding* Building = nullptr;
+	for (TActorIterator<ARTSBuilding> It(World); It; ++It)
+	{
+		Building = It->GetBuildingData() == Airfield ? *It : Building;
+	}
+	if (!Building)
+	{
+		Test->AddError(TEXT("The server refused the turned airfield"));
+		return true;
+	}
+	State->Building = Building;
+	State->PhaseStart = FPlatformTime::Seconds();
+
+	Test->TestTrue(FString::Printf(TEXT("The airfield is turned a quarter (yaw %.1f)"), Building->GetActorRotation().Yaw),
+		FMath::IsNearlyEqual(FRotator::NormalizeAxis(Building->GetActorRotation().Yaw), 90.f, 1.f));
+	Test->TestEqual(TEXT("Its footprint is 8 by 4 cells"), Building->GetFootprint(), FIntPoint(8, 4));
+	Test->TestTrue(TEXT("It stands where the ghost snapped"),
+		FVector::Dist2D(Building->GetActorLocation(), RTSBuildPlacement::SnapToGrid(BuildSpot, FIntPoint(8, 4))) < 1.f);
+	Test->TestEqual(TEXT("Its east edge lies 4 cells out"),
+		Building->GetClosestFootprintPoint(BuildSpot + FVector(1000.f, 0.f, 0.f)).X, BuildSpot.X + 400.0);
+	Test->TestEqual(TEXT("Its north edge lies 2 cells out"),
+		Building->GetClosestFootprintPoint(BuildSpot + FVector(0.f, 1000.f, 0.f)).Y, BuildSpot.Y + 200.0);
+
+	// Client and server agree, along the turned footprint rather than the data's.
+	Test->TestFalse(TEXT("Client rejects a plant on the turned airfield's east wing"), ClientAccepts(*World, *Plant, RotatedEastSpot));
+	Test->TestNull(TEXT("Server rejects a plant on the turned airfield's east wing"), RequestBuild(*Controller, Plant, RotatedEastSpot));
+	Test->TestTrue(TEXT("Client accepts a plant where the unturned airfield would reach"), ClientAccepts(*World, *Plant, RotatedNorthSpot));
+	Test->TestNotNull(TEXT("Server accepts a plant where the unturned airfield would reach"),
+		RequestBuild(*Controller, Plant, RotatedNorthSpot));
+	return true;
+}
+
+/** Once the airfield's hole is built, the turned footprint has no navmesh. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyRotatedNavCut, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyRotatedNavCut::Update()
+{
+	const ARTSBuilding* Building = State->Building.Get();
+	UWorld* World = Building ? Building->GetWorld() : nullptr;
+	UNavigationSystemV1* NavSystem = World ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World) : nullptr;
+	if (!NavSystem)
+	{
+		Test->AddError(TEXT("No airfield or navigation system"));
+		return true;
+	}
+	FNavLocation Projected;
+	Test->TestFalse(TEXT("No navmesh inside the turned footprint beyond the data's"),
+		NavSystem->ProjectPointToNavigation(RotatedOnlyPoint, Projected, FVector(10.f, 10.f, 250.f)));
+	return true;
+}
+
+/** Places plants through the debug ghost with Shift held: placement stays on until a click without it. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckShiftPlacement, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSCheckShiftPlacement::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	URTSBuildingData* Plant = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	if (!Plant || !Player)
+	{
+		Test->AddError(TEXT("Missing the plant data or the player"));
+		return true;
+	}
+	Player->AddCredits(3 * Plant->Cost);
+	const int32 CreditsBefore = Player->GetCredits();
+
+	const bool bWasDebugBuild = SetDebugBuild(true);
+	Controller->BeginPlacement(Plant);
+	Controller->UpdatePlacementAt(OtherBuildSpot);
+	Controller->ConfirmPlacement(/*bKeepPlacing*/ true);
+	Test->TestNotNull(TEXT("The first plant stands"), FindBuildingAt(World, Plant, OtherBuildSpot));
+	Test->TestEqual(TEXT("Shift keeps placing"), Controller->GetPlacementData(), Plant);
+
+	Controller->UpdatePlacementAt(OtherBuildSpot);
+	Test->TestFalse(TEXT("The ghost is red on the plant just placed"), Controller->IsPlacementValid());
+	Controller->UpdatePlacementAt(BuildSpot);
+	Controller->ConfirmPlacement(/*bKeepPlacing*/ true);
+	Test->TestNotNull(TEXT("The second plant stands"), FindBuildingAt(World, Plant, BuildSpot));
+	Test->TestEqual(TEXT("Shift still keeps placing"), Controller->GetPlacementData(), Plant);
+
+	Controller->UpdatePlacementAt(UnitSpot);
+	Controller->ConfirmPlacement(/*bKeepPlacing*/ false);
+	SetDebugBuild(bWasDebugBuild);
+	Test->TestNotNull(TEXT("The third plant stands"), FindBuildingAt(World, Plant, UnitSpot));
+	Test->TestNull(TEXT("A click without Shift ends placement"), Controller->GetPlacementData());
+	Test->TestEqual(TEXT("Each plant was charged"), Player->GetCredits(), CreditsBefore - 3 * Plant->Cost);
+	return true;
+}
+
+/**
+ * Gives a builder a plant to walk to and another queued behind it, then checks that the ghost and the server keep both
+ * spots free until they are placed, and that a stop gives the spots and the credits back.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckQueuedSiteOverlap, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSCheckQueuedSiteOverlap::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	URTSBuildingData* Plant = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	ARTSUnit* Builder = SpawnTestUnit(World, BuilderPath, Controller->GetTeamId(), BuilderStart);
+	if (!Plant || !Player || !Builder)
+	{
+		Test->AddError(TEXT("Missing the plant data, the player or the builder"));
+		return true;
+	}
+	Player->AddCredits(4 * Plant->Cost);
+	const int32 CreditsBefore = Player->GetCredits();
+
+	Controller->Server_IssueCommand({ Builder }, MakeBuild(Plant, UnitSpot));
+	Controller->Server_IssueCommand({ Builder }, MakeBuild(Plant, OtherBuildSpot, /*bQueue*/ true));
+	const TArray<FRTSPlannedSite>& Planned = Builder->GetBuilderComponent()->GetPlannedSites();
+	Test->TestEqual(TEXT("The builder plans both plants"), Planned.Num(), 2);
+	Test->TestTrue(TEXT("Neither is placed yet"), !FindBuildingAt(World, Plant, UnitSpot) && !FindBuildingAt(World, Plant, OtherBuildSpot));
+
+	// Overlapping the queued plant: the debug ghost is red and the server refuses it, from a builder or directly.
+	const bool bWasDebugBuild = SetDebugBuild(true);
+	Controller->BeginPlacement(Plant);
+	Controller->UpdatePlacementAt(QueuedOverlapSpot);
+	Test->TestTrue(TEXT("The spot itself is free"), ClientAccepts(*World, *Plant, QueuedOverlapSpot));
+	Test->TestFalse(TEXT("The ghost is red over the queued plant"), Controller->IsPlacementValid());
+	Controller->UpdatePlacementAt(UnitSpot);
+	Test->TestFalse(TEXT("The ghost is red over the plant the builder walks to"), Controller->IsPlacementValid());
+	Controller->CancelPlacement();
+	Test->TestNull(TEXT("The server refuses a plant on the queued one"), RequestBuild(*Controller, Plant, QueuedOverlapSpot));
+	SetDebugBuild(bWasDebugBuild);
+	Controller->Server_IssueCommand({ Builder }, MakeBuild(Plant, QueuedOverlapSpot, /*bQueue*/ true));
+	Test->TestEqual(TEXT("The builder refuses a plant on its queued one"), Builder->GetQueuedCommandCount(), 2);
+	Test->TestEqual(TEXT("Refused orders cost nothing"), Player->GetCredits(), CreditsBefore - 2 * Plant->Cost);
+
+	// Flush beside it: green, and the server takes it.
+	SetDebugBuild(true);
+	Controller->BeginPlacement(Plant);
+	Controller->UpdatePlacementAt(QueuedFlushSpot);
+	Test->TestTrue(TEXT("The ghost is green flush beside the queued plant"), Controller->IsPlacementValid());
+	Controller->CancelPlacement();
+	SetDebugBuild(bWasDebugBuild);
+	Controller->Server_IssueCommand({ Builder }, MakeBuild(Plant, QueuedFlushSpot, /*bQueue*/ true));
+	Test->TestEqual(TEXT("The builder queues a plant flush beside it"), Builder->GetQueuedCommandCount(), 3);
+	Test->TestEqual(TEXT("It plans all three"), Planned.Num(), 3);
+
+	// A stop drops the plans and refunds them.
+	FRTSCommand Stop;
+	Stop.Type = ERTSCommandType::Stop;
+	Controller->Server_IssueCommand({ Builder }, Stop);
+	Test->TestTrue(TEXT("A stop drops the planned sites"), Planned.IsEmpty());
+	Test->TestEqual(TEXT("And refunds them"), Player->GetCredits(), CreditsBefore);
+	return true;
+}
+
 /** Parks an unarmed enemy on OtherBuildSpot and orders a builder to put a tower there. */
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueEnemyBlockedBuild, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
 bool FRTSIssueEnemyBlockedBuild::Update()
@@ -3042,6 +3259,65 @@ bool FRTSBuildingPlacementSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckPlacement(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyConstruction(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckCancelConstruction(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRotatedBuildingSmokeTest, "WorldDivide.Smoke.RotatedBuilding",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSRotatedBuildingSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSPlaceRotatedAirfield(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavCut(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyRotatedNavCut(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSShiftPlacementSmokeTest, "WorldDivide.Smoke.ShiftPlacement",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSShiftPlacementSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckShiftPlacement(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSQueuedSitesOverlapSmokeTest, "WorldDivide.Smoke.QueuedSitesOverlap",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSQueuedSitesOverlapSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckQueuedSiteOverlap(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

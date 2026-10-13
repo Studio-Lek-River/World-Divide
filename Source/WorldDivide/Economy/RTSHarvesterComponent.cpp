@@ -166,7 +166,7 @@ bool URTSHarvesterComponent::UpdateHarvest(float DeltaSeconds)
 	}
 	if (!IsDocked(Depot->GetClosestFootprintPoint(Location)))
 	{
-		return ApproachDock(Depot->GetActorLocation(), Depot->GetBuildingData()->Footprint) || SkipUnreachableDepot();
+		return ApproachDock(Depot->GetActorLocation(), Depot->GetFootprint()) || SkipUnreachableDepot();
 	}
 
 	StopOwnerMovement();

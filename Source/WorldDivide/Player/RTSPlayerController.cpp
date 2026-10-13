@@ -122,6 +122,10 @@ void ARTSPlayerController::CreateInputActions()
 	JumpToAttackAction = MakeAction(this, TEXT("IA_JumpToAttack"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, JumpToAttackAction, EKeys::SpaceBar);
 
+	// Not the mouse wheel: that zooms the camera, also while placing.
+	RotatePlacementAction = MakeAction(this, TEXT("IA_RotatePlacement"), EInputActionValueType::Boolean);
+	MapKey(MappingContext, RotatePlacementAction, EKeys::R);
+
 	BuildActions.Reset();
 	for (int32 Index = 0; Index < MaxBuildHotkeys; ++Index)
 	{
@@ -164,6 +168,7 @@ void ARTSPlayerController::SetupInputComponent()
 	Input->BindAction(CancelAction, ETriggerEvent::Started, this, &ThisClass::OnCancel);
 	Input->BindAction(CancelConstructionAction, ETriggerEvent::Started, this, &ThisClass::OnCancelConstruction);
 	Input->BindAction(JumpToAttackAction, ETriggerEvent::Started, this, &ThisClass::OnJumpToAttack);
+	Input->BindAction(RotatePlacementAction, ETriggerEvent::Started, this, &ThisClass::OnRotatePlacement);
 	for (int32 Index = 0; Index < BuildActions.Num(); ++Index)
 	{
 		Input->BindAction(BuildActions[Index], ETriggerEvent::Started, this, &ThisClass::OnBuildHotkey, Index);
@@ -489,7 +494,7 @@ void ARTSPlayerController::HandleSelectPressed(const FVector2D& Mouse)
 	}
 	if (PlacementData)
 	{
-		ConfirmPlacement();
+		ConfirmPlacement(IsShiftDown());
 		return;
 	}
 	if (bAttackMoveArmed)
@@ -1024,6 +1029,7 @@ void ARTSPlayerController::BeginPlacement(URTSBuildingData* Data)
 	PlacementData = Data;
 	PlacementBuilder = GetSelectedBuilder();
 	bPlacementDebug = !PlacementBuilder.IsValid();
+	PlacementQuarterTurns = 0;
 	// A half-dragged selection box would otherwise finish on the confirming click.
 	bSelecting = false;
 }
@@ -1039,6 +1045,15 @@ void ARTSPlayerController::CancelPlacement()
 	PlacementBuilder = nullptr;
 	bPlacementDebug = false;
 	bPlacementValid = false;
+	PlacementQuarterTurns = 0;
+}
+
+void ARTSPlayerController::RotatePlacement()
+{
+	if (PlacementData)
+	{
+		PlacementQuarterTurns = (PlacementQuarterTurns + 1) % 4;
+	}
 }
 
 void ARTSPlayerController::UpdatePlacement()
@@ -1062,22 +1077,37 @@ void ARTSPlayerController::UpdatePlacement()
 		PlacementGhost->SetActorHiddenInGame(true);
 		return;
 	}
+	UpdatePlacementAt(Hit.Location);
+}
+
+void ARTSPlayerController::UpdatePlacementAt(const FVector& CursorLocation)
+{
+	if (!PlacementData || !PlacementGhost)
+	{
+		return;
+	}
 
 	// The same checks the server repeats, so a green ghost is a spot the server accepts. Own units may stand on a builder's
 	// spot: it sends them off when it arrives.
 	const ARTSUnit* Builder = PlacementBuilder.Get();
+	const int32 TeamId = GetTeamId();
 	const bool bSpotValid = Builder
-		? RTSBuildPlacement::CanBuilderPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation, Builder->GetTeamId())
-		: RTSBuildPlacement::CanPlace(*GetWorld(), *PlacementData, Hit.Location, PlacementLocation);
+		? RTSBuildPlacement::CanBuilderPlace(*GetWorld(), *PlacementData, CursorLocation, PlacementLocation, Builder->GetTeamId(),
+			PlacementQuarterTurns)
+		: RTSBuildPlacement::CanPlace(*GetWorld(), *PlacementData, CursorLocation, PlacementLocation, nullptr, PlacementQuarterTurns);
+	// Sites own builders still have to place keep their spot. Without Shift the builder's own are dropped by the new order.
+	const ARTSUnit* Replaced = IsShiftDown() ? nullptr : Builder;
+	const bool bPlanned = RTSBuildPlacement::OverlapsPlannedSite(*GetWorld(), TeamId, *PlacementData, CursorLocation,
+		PlacementQuarterTurns, Replaced);
 	// A prerequisite lost or the limit reached while placing turns the ghost red; the server would refuse the order.
-	bPlacementValid = bSpotValid && CanAfford(*PlacementData) && !GetMissingPrerequisite(*PlacementData)
+	bPlacementValid = bSpotValid && !bPlanned && CanAfford(*PlacementData) && !GetMissingPrerequisite(*PlacementData)
 		&& !IsAtBuildLimit(*PlacementData);
-	PlacementGhost->SetActorLocation(PlacementLocation);
+	PlacementGhost->SetActorLocationAndRotation(PlacementLocation, FRotator(0.f, RTSBuildPlacement::GetYaw(PlacementQuarterTurns), 0.f));
 	PlacementGhost->SetValid(bPlacementValid);
 	PlacementGhost->SetActorHiddenInGame(false);
 }
 
-void ARTSPlayerController::ConfirmPlacement()
+void ARTSPlayerController::ConfirmPlacement(bool bKeepPlacing)
 {
 	if (!bPlacementValid)
 	{
@@ -1088,22 +1118,22 @@ void ARTSPlayerController::ConfirmPlacement()
 	Command.Type = ERTSCommandType::Build;
 	Command.EntityData = PlacementData;
 	Command.TargetLocation = PlacementLocation;
+	Command.QuarterTurns = static_cast<uint8>(PlacementQuarterTurns);
 	if (ARTSUnit* Builder = PlacementBuilder.Get())
 	{
-		// The builder walks there, places the building and constructs it. Shift queues it and keeps placing.
-		Command.bQueue = IsShiftDown();
+		// The builder walks there, places the building and constructs it. Shift queues it behind its other orders.
+		Command.bQueue = bKeepPlacing;
 		Server_IssueCommand({ Builder }, Command);
-		if (Command.bQueue)
-		{
-			return;
-		}
 	}
 	else if (bPlacementDebug)
 	{
 		// The debug menu sends the order without units and the server places the building directly.
 		Server_IssueCommand(TArray<ARTSUnit*>(), Command);
 	}
-	CancelPlacement();
+	if (!bKeepPlacing)
+	{
+		CancelPlacement();
+	}
 }
 
 void ARTSPlayerController::IssueToSelection(const FRTSCommand& Command)
@@ -1275,4 +1305,13 @@ void ARTSPlayerController::OnJumpToAttack()
 		return;
 	}
 	JumpToLatestAttack();
+}
+
+void ARTSPlayerController::OnRotatePlacement()
+{
+	if (bInGameMenuOpen)
+	{
+		return;
+	}
+	RotatePlacement();
 }

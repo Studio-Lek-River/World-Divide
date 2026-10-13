@@ -43,9 +43,11 @@ enum class ERTSSuperweaponAlert : uint8
  * the clicked spot (Shift queues and keeps attack-move armed); right click, Esc or an emptied selection cancels it, and the
  * HUD shows a hint while it is armed. Delete cancels the own
  * construction site under the cursor, or else the selected one, as does the HUD's cancel button.
- * With a builder selected, 1-9 pick a building from its list to place: left click sends the builder (Shift queues it and
- * keeps placing), right click or Esc cancels. A right click on an own construction site sends builders to resume it.
- * With rts.DebugBuild on and no builder selected, 1-9 pick from the faction's buildings and place them without a builder.
+ * With a builder selected, 1-9 pick a building from its list to place: R turns it a quarter turn, left click sends the
+ * builder (Shift queues it and keeps placing), right click or Esc cancels. The ghost turns red over sites own builders
+ * were ordered to place and have not placed yet. A right click on an own construction site sends builders to resume it.
+ * With rts.DebugBuild on and no builder selected, 1-9 pick from the faction's buildings and place them without a builder,
+ * turned and kept placing with Shift the same way.
  * With an own production building selected, 1-9 or a click on the HUD's menu queue a unit, right click sets the rally point,
  * and a click on a queued unit, or Delete for the last one, cancels it for a refund.
  * With an own superweapon selected that is ready, 1 or a click on the HUD's launch entry arms targeting: left click launches it
@@ -153,6 +155,23 @@ public:
 	void BeginPlacement(URTSBuildingData* Data);
 	void CancelPlacement();
 	URTSBuildingData* GetPlacementData() const { return PlacementData; }
+
+	/** Local. Turns the ghost a quarter turn clockwise while placing (R). */
+	void RotatePlacement();
+	int32 GetPlacementQuarterTurns() const { return PlacementQuarterTurns; }
+
+	/**
+	 * Local. Moves the ghost to the spot under CursorLocation and checks it as the server will, including the sites own
+	 * builders plan; the cursor drives it every tick.
+	 */
+	void UpdatePlacementAt(const FVector& CursorLocation);
+	bool IsPlacementValid() const { return bPlacementValid; }
+
+	/**
+	 * Local. Sends the ghost's building when its spot is valid. bKeepPlacing (Shift) keeps placement on for the next one and
+	 * queues a builder's order behind its others; otherwise placement ends.
+	 */
+	void ConfirmPlacement(bool bKeepPlacing);
 
 	/** The selected building while it is the player's own constructed, standing superweapon, or null. */
 	ARTSBuilding* GetSelectedSuperweapon() const;
@@ -308,6 +327,7 @@ private:
 	void OnCancel();
 	void OnCancelConstruction();
 	void OnJumpToAttack();
+	void OnRotatePlacement();
 
 	void ApplyEdgeScroll() const;
 	void ApplyDragRotate();
@@ -315,7 +335,6 @@ private:
 	void SelectInBox(const FVector2D& Start, const FVector2D& End, bool bAdditive);
 	void IssueToSelection(const FRTSCommand& Command);
 	void UpdatePlacement();
-	void ConfirmPlacement();
 	void SetAttackMoveArmed(bool bArmed);
 	void SetSuperweaponTargeting(bool bTargeting);
 	bool IsOwnUnit(const ARTSUnit* Unit) const;
@@ -359,6 +378,9 @@ private:
 	TObjectPtr<UInputAction> JumpToAttackAction;
 
 	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> RotatePlacementAction;
+
+	UPROPERTY(Transient)
 	TArray<TObjectPtr<UInputAction>> BuildActions;
 
 	TArray<TWeakObjectPtr<ARTSUnit>> SelectedUnits;
@@ -384,6 +406,9 @@ private:
 
 	FVector PlacementLocation = FVector::ZeroVector;
 	bool bPlacementValid = false;
+
+	/** 90-degree turns of the ghost, 0 to 3. */
+	int32 PlacementQuarterTurns = 0;
 
 	/** Set by J until the next left click sends the attack-move, or right click or Esc cancels it. */
 	bool bAttackMoveArmed = false;

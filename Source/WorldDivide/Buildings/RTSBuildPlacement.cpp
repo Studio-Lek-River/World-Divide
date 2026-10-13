@@ -1,9 +1,11 @@
 #include "Buildings/RTSBuildPlacement.h"
 
+#include "Buildings/RTSBuilderComponent.h"
 #include "Data/RTSBuildingData.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "NavigationSystem.h"
 #include "Units/RTSUnit.h"
 
@@ -36,14 +38,30 @@ namespace RTSBuildPlacement
 		return FVector(Footprint.X * GridSize * 0.5f, Footprint.Y * GridSize * 0.5f, 0.f);
 	}
 
+	FIntPoint GetRotatedFootprint(const FIntPoint& Footprint, int32 QuarterTurns)
+	{
+		return QuarterTurns % 2 == 0 ? Footprint : FIntPoint(Footprint.Y, Footprint.X);
+	}
+
+	float GetYaw(int32 QuarterTurns)
+	{
+		return (((QuarterTurns % 4) + 4) % 4) * 90.f;
+	}
+
+	int32 GetQuarterTurns(float Yaw)
+	{
+		return ((FMath::RoundToInt(Yaw / 90.f) % 4) + 4) % 4;
+	}
+
 	bool CanPlace(const UWorld& World, const URTSBuildingData& Data, const FVector& RequestedLocation, FVector& OutLocation,
-		TArray<AActor*>* OutBlockers)
+		TArray<AActor*>* OutBlockers, int32 QuarterTurns)
 	{
 		if (OutBlockers)
 		{
 			OutBlockers->Reset();
 		}
-		OutLocation = SnapToGrid(RequestedLocation, Data.Footprint);
+		const FIntPoint Footprint = GetRotatedFootprint(Data.Footprint, QuarterTurns);
+		OutLocation = SnapToGrid(RequestedLocation, Footprint);
 
 		const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
 		if (!NavSystem)
@@ -67,7 +85,7 @@ namespace RTSBuildPlacement
 			OutLocation.Z = GroundHit.Location.Z;
 		}
 
-		const FVector Extent = GetFootprintExtent(Data.Footprint);
+		const FVector Extent = GetFootprintExtent(Footprint);
 		for (const FVector2D Corner : { FVector2D(-1.f, -1.f), FVector2D(-1.f, 1.f), FVector2D(1.f, -1.f), FVector2D(1.f, 1.f) })
 		{
 			const FVector Point = OutLocation + FVector(Corner.X * Extent.X, Corner.Y * Extent.Y, 0.f);
@@ -103,10 +121,10 @@ namespace RTSBuildPlacement
 	}
 
 	bool CanBuilderPlace(const UWorld& World, const URTSBuildingData& Data, const FVector& RequestedLocation, FVector& OutLocation,
-		int32 TeamId)
+		int32 TeamId, int32 QuarterTurns)
 	{
 		TArray<AActor*> Blockers;
-		if (CanPlace(World, Data, RequestedLocation, OutLocation, &Blockers))
+		if (CanPlace(World, Data, RequestedLocation, OutLocation, &Blockers, QuarterTurns))
 		{
 			return true;
 		}
@@ -124,6 +142,36 @@ namespace RTSBuildPlacement
 			}
 		}
 		return true;
+	}
+
+	bool OverlapsPlannedSite(const UWorld& World, int32 TeamId, const URTSBuildingData& Data, const FVector& RequestedLocation,
+		int32 QuarterTurns, const ARTSUnit* IgnoreBuilder)
+	{
+		const FIntPoint Footprint = GetRotatedFootprint(Data.Footprint, QuarterTurns);
+		const FVector Location = SnapToGrid(RequestedLocation, Footprint);
+		const FVector Extent = GetFootprintExtent(Footprint);
+		for (TActorIterator<ARTSUnit> It(&World); It; ++It)
+		{
+			if (*It == IgnoreBuilder || It->GetTeamId() != TeamId || It->IsActorBeingDestroyed())
+			{
+				continue;
+			}
+			for (const FRTSPlannedSite& Site : It->GetBuilderComponent()->GetPlannedSites())
+			{
+				if (!Site.Data)
+				{
+					continue;
+				}
+				const FVector SiteExtent = GetFootprintExtent(GetRotatedFootprint(Site.Data->Footprint, Site.QuarterTurns));
+				// A centimetre of slack, as in CanPlace, so buildings may stand flush.
+				if (FMath::Abs(Location.X - Site.Location.X) < Extent.X + SiteExtent.X - 1.f
+					&& FMath::Abs(Location.Y - Site.Location.Y) < Extent.Y + SiteExtent.Y - 1.f)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	void GetMeshPlacement(const URTSEntityData& Data, float& OutBaseOffset, float& OutHeight)

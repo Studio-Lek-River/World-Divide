@@ -265,7 +265,7 @@ void ARTSHUD::DrawBuildingMarker(const ARTSPlayerController& Controller, const A
 
 	// Brackets around the screen bounds of the footprint's ground corners.
 	const FVector Center = Building.GetActorLocation();
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Data->Footprint);
+	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Building.GetFootprint());
 	FBox2D Bounds(ForceInit);
 	for (const FVector2D Corner : { FVector2D(-1.f, -1.f), FVector2D(-1.f, 1.f), FVector2D(1.f, -1.f), FVector2D(1.f, 1.f) })
 	{
@@ -370,7 +370,7 @@ void ARTSHUD::DrawBuildMenu(const ARTSPlayerController& Controller)
 	if (Controller.GetPlacementData())
 	{
 		Y += MenuLineHeight;
-		DrawText(TEXT("Left click: build (Shift: queue)    Right click / Esc: cancel"), MenuColor, MenuMargin, Y);
+		DrawText(TEXT("Left click: build (Shift: keep placing)    R: rotate    Right click / Esc: cancel"), MenuColor, MenuMargin, Y);
 	}
 }
 

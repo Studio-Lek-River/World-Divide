@@ -11,6 +11,23 @@ class URTSBuilderData;
 class URTSBuildingData;
 struct FRTSCommand;
 
+/** A building a builder has been ordered to place but has not placed yet: the current order's or a Shift-queued one. */
+USTRUCT()
+struct WORLDDIVIDE_API FRTSPlannedSite
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TObjectPtr<URTSBuildingData> Data = nullptr;
+
+	/** Snapped footprint centre. */
+	UPROPERTY()
+	FVector Location = FVector::ZeroVector;
+
+	UPROPERTY()
+	uint8 QuarterTurns = 0;
+};
+
 UENUM()
 enum class ERTSBuildState : uint8
 {
@@ -46,8 +63,9 @@ public:
 
 	/**
 	 * Server only. Pays for a Build order's new building: takes its cost from the owner's player and puts it on the command.
-	 * False when the builder cannot build it, the player lacks one of its prerequisites or cannot afford it; nothing is charged
-	 * then. An order naming an own construction site costs nothing and needs no prerequisites.
+	 * False when the builder cannot build it, the player lacks one of its prerequisites, it overlaps a site an own builder
+	 * plans (RTSBuildPlacement::OverlapsPlannedSite) or the player cannot afford it; nothing is charged then. An order naming
+	 * an own construction site costs nothing and needs no prerequisites.
 	 */
 	bool ChargeOrder(FRTSCommand& Command);
 
@@ -80,6 +98,14 @@ public:
 
 	/** The building being constructed, or null before it is placed. */
 	ARTSBuilding* GetSite() const { return Site.Get(); }
+
+	/** Buildings this builder was ordered to place and has not placed yet, in order. Replicated so ghosts can avoid them. */
+	const TArray<FRTSPlannedSite>& GetPlannedSites() const { return PlannedSites; }
+
+	/** Server only. Rebuilds the planned sites from the owner's order queue; the owner calls it whenever the queue changes. */
+	void UpdatePlannedSites(const TArray<FRTSCommand>& Queue);
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
 	/** Places the planned building next to the builder, already paid. False when the placement is refused. */
@@ -117,6 +143,8 @@ private:
 
 	FVector PlannedLocation = FVector::ZeroVector;
 
+	uint8 PlannedQuarterTurns = 0;
+
 	/** What was paid for the planned building: the site's paid cost once placed, refunded if it never is. */
 	int32 PlannedCost = 0;
 
@@ -135,4 +163,7 @@ private:
 
 	/** Own units already sent off the planned footprint. */
 	TArray<TWeakObjectPtr<ARTSUnit>> ClearedUnits;
+
+	UPROPERTY(Replicated)
+	TArray<FRTSPlannedSite> PlannedSites;
 };

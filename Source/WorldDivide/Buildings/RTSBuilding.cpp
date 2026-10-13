@@ -241,7 +241,7 @@ void ARTSBuilding::UpdateNavCut(float DeltaSeconds)
 	}
 
 	const FVector Center = GetActorLocation();
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint);
+	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(GetFootprint());
 	const FBox Footprint(Center - FVector(Extent.X, Extent.Y, 0.f), Center + FVector(Extent.X, Extent.Y, 0.f));
 	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
 	{
@@ -323,7 +323,7 @@ void ARTSBuilding::SpawnCompletionUnit()
 FVector ARTSBuilding::GetExitLocation(float Clearance) const
 {
 	const FVector Extent = BuildingData ? RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint) : FVector::ZeroVector;
-	FVector Location = GetActorLocation() + FVector(Extent.X + Clearance, 0.f, 0.f);
+	FVector Location = GetActorLocation() + GetActorForwardVector() * (Extent.X + Clearance);
 	if (const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
 	{
 		FNavLocation NavPoint;
@@ -374,7 +374,7 @@ FVector ARTSBuilding::GetPadLocation(int32 Index) const
 	const float Spacing = 2.f * Extent.Y / Count;
 	// The collision box spans the building's full height, so its top is the roof.
 	const float Roof = 2.f * Collision->GetUnscaledBoxExtent().Z;
-	return Center + FVector(0.f, -Extent.Y + (Index + 0.5f) * Spacing, Roof);
+	return Center + GetActorRotation().RotateVector(FVector(0.f, -Extent.Y + (Index + 0.5f) * Spacing, Roof));
 }
 
 ARTSUnit* ARTSBuilding::GetPadAircraft(int32 Index) const
@@ -433,12 +433,19 @@ FVector ARTSBuilding::GetClosestFootprintPoint(const FVector& From) const
 	{
 		return Center;
 	}
-	// Buildings are never rotated, so the footprint is axis aligned.
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint);
+	// Buildings only turn in quarter turns, so the footprint stays axis aligned.
+	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(GetFootprint());
 	return FVector(
 		FMath::Clamp(From.X, Center.X - Extent.X, Center.X + Extent.X),
 		FMath::Clamp(From.Y, Center.Y - Extent.Y, Center.Y + Extent.Y),
 		Center.Z);
+}
+
+FIntPoint ARTSBuilding::GetFootprint() const
+{
+	return BuildingData
+		? RTSBuildPlacement::GetRotatedFootprint(BuildingData->Footprint, RTSBuildPlacement::GetQuarterTurns(GetActorRotation().Yaw))
+		: FIntPoint::ZeroValue;
 }
 
 void ARTSBuilding::OnRep_BuildingData()
@@ -468,6 +475,7 @@ void ARTSBuilding::ApplyBuildingData()
 	Mesh->SetStaticMesh(BuildingData->Mesh);
 
 	const float Height = MeshHeight > 0.f ? MeshHeight : DefaultHeight;
+	// In the actor's own frame: the box turns with the actor, and the navmesh hole with it.
 	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint);
 	Collision->SetBoxExtent(FVector(Extent.X, Extent.Y, Height * 0.5f));
 	Collision->SetRelativeLocation(FVector(0.f, 0.f, Height * 0.5f));

@@ -152,13 +152,14 @@ namespace RTSCommands
 
 		// Clients pick the spot, so the server snaps and checks it again.
 		FVector Location;
-		if (!RTSBuildPlacement::CanPlace(World, *Data, Command.TargetLocation, Location))
+		const int32 QuarterTurns = Command.QuarterTurns % 4;
+		if (!RTSBuildPlacement::CanPlace(World, *Data, Command.TargetLocation, Location, nullptr, QuarterTurns))
 		{
 			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot place %s at %s"), TeamId, *Data->GetName(), *Location.ToString());
 			return nullptr;
 		}
 
-		const FTransform Transform(Location);
+		const FTransform Transform(FRotator(0.f, RTSBuildPlacement::GetYaw(QuarterTurns), 0.f), Location);
 		ARTSBuilding* Building = World.SpawnActorDeferred<ARTSBuilding>(
 			ARTSBuilding::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		if (Building)
@@ -177,6 +178,13 @@ namespace RTSCommands
 		if (Missing)
 		{
 			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d needs %s for %s"), Player.GetTeamId(), *Missing->GetName(), *Command.EntityData->GetName());
+			return nullptr;
+		}
+		// The debug ghost shows the builders' planned sites too, and those keep their spot.
+		const URTSBuildingData* Data = Cast<URTSBuildingData>(Command.EntityData);
+		if (Data && RTSBuildPlacement::OverlapsPlannedSite(World, Player.GetTeamId(), *Data, Command.TargetLocation, Command.QuarterTurns))
+		{
+			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d already plans a building where %s would go"), Player.GetTeamId(), *Data->GetName());
 			return nullptr;
 		}
 		if (Player.GetCredits() < Cost)
