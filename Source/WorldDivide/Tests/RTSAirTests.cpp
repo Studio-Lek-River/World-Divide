@@ -8,6 +8,8 @@
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
 #include "EngineUtils.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/RTSTestFlags.h"
@@ -99,6 +101,17 @@ namespace RTSAirTests
 		ARTSUnit* Jet = TestWorld.SpawnUnit(Data, Airfield.GetTeamId(), Airfield.GetActorLocation());
 		Jet->GetAircraftComponent()->ParkAt(Airfield);
 		return Jet;
+	}
+
+	/** An engine cube scaled to Size cm, centred on Center: ground or a mountain. */
+	AStaticMeshActor* SpawnBlock(const FRTSTestWorld& TestWorld, const FVector& Center, const FVector& Size)
+	{
+		AStaticMeshActor* Block = TestWorld.World->SpawnActor<AStaticMeshActor>(Center, FRotator::ZeroRotator);
+		// Static meshes cannot change on a static component in a game world.
+		Block->SetMobility(EComponentMobility::Movable);
+		Block->GetStaticMeshComponent()->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube")));
+		Block->SetActorScale3D(Size / 100.f);
+		return Block;
 	}
 
 	void Kill(AActor& Actor)
@@ -503,6 +516,47 @@ namespace RTSAirTests
 		Kill(*Jets[0]);
 		TestEqual(TEXT("A lost jet frees its pad"), Airfield->GetFreePadCount(), 1);
 		TestTrue(TEXT("So a replacement can be queued"), Production->Enqueue(*Player, JetData));
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSFollowsTerrainTest, "WorldDivide.Air.FollowsTerrain", TestFlags)
+
+	bool FRTSFollowsTerrainTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		// Flat ground with its top at z = 0, and a mountain 15 m high from x = 7000 to 9000 across the jet's way east.
+		SpawnBlock(TestWorld, FVector(10000.f, 0.f, -50.f), FVector(40000.f, 10000.f, 100.f));
+		constexpr float MountainTop = 1500.f;
+		SpawnBlock(TestWorld, FVector(8000.f, 0.f, MountainTop / 2.f), FVector(2000.f, 4000.f, MountainTop));
+		URTSAircraftData* JetData = MakeJet(MakeWeapon(600.f, 40.f, true, false));
+		ARTSBuilding* Airfield = SpawnCompleted(TestWorld, MakeAirfield(1), 0, FVector::ZeroVector);
+		ARTSUnit* Jet = SpawnParked(TestWorld, JetData, *Airfield);
+
+		Jet->ExecuteCommand(MakeCommand(ERTSCommandType::Move, nullptr, FVector(20000.f, 0.f, 0.f)));
+		const float FlatCruiseZ = Jet->GetGroundOffset() + JetData->CruiseAltitude;
+		const float MountainCruiseZ = MountainTop + FlatCruiseZ;
+
+		TestTrue(TEXT("The jet reaches the mountain"), StepUntil({ Jet }, 20.f, [&] { return Jet->GetActorLocation().X >= 7000.f; }) >= 0.f);
+		FVector LowestOver(0.f, 0.f, TNumericLimits<float>::Max());
+		StepUntil({ Jet }, 10.f, [&]
+		{
+			const FVector Location = Jet->GetActorLocation();
+			if (Location.X > 9000.f)
+			{
+				return true;
+			}
+			if (Location.Z < LowestOver.Z)
+			{
+				LowestOver = Location;
+			}
+			return false;
+		});
+		TestTrue(FString::Printf(TEXT("It climbed before the mountain and holds cruise altitude over it (lowest %s, needed %.0f)"),
+			*LowestOver.ToCompactString(), MountainCruiseZ), LowestOver.Z >= MountainCruiseZ - 1.f);
+
+		TestTrue(TEXT("It flies on east"), StepUntil({ Jet }, 20.f, [&] { return Jet->GetActorLocation().X >= 15000.f; }) >= 0.f);
+		TestNearlyEqual(TEXT("Past the mountain it descends to cruise altitude over the ground again"), static_cast<float>(Jet->GetActorLocation().Z),
+			FlatCruiseZ, 1.f);
 		return true;
 	}
 }

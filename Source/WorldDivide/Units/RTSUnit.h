@@ -97,6 +97,15 @@ public:
 	/** Distance from the actor origin down to the ground contact point. */
 	float GetGroundOffset() const;
 
+	/**
+	 * Server only. Stands a ground unit on the ground under it, which the movement does not follow by itself; aircraft keep
+	 * their own height. Leaves the unit where it is over no ground. Runs every tick; public so tests can step it.
+	 */
+	void SnapToGround();
+
+	/** Every machine. How far the mesh leans with the slope under a vehicle that tilts to the ground; zero for the rest. */
+	FRotator GetMeshTilt() const { return MeshTilt; }
+
 	static FLinearColor GetTeamColor(int32 InTeamId);
 
 	/** Material vector parameter that receives the team colour, on units and buildings alike. */
@@ -173,10 +182,22 @@ private:
 	 */
 	void ApplyWeaponMode();
 
+	/** Server only. Each tick: runs the current order, stands the unit on the ground and turns it, or flies it. */
+	void TickOrders(float DeltaSeconds);
+
 	void FaceTowardYaw(float Yaw, float DeltaSeconds);
 
-	/** Eases the mesh back from a fire kick. */
-	void UpdateFireKick(float DeltaSeconds);
+	/** Eases the mesh back from a fire kick. Returns true when the mesh has to move. */
+	bool UpdateFireKick(float DeltaSeconds);
+
+	/**
+	 * Eases the mesh of a vehicle that tilts to the ground toward the slope under it, and every other mesh back upright.
+	 * Returns true when the mesh has to move.
+	 */
+	bool UpdateTilt(float DeltaSeconds);
+
+	/** Places the mesh from its rest location, tilt and fire kick; it leans around the bottom of the capsule. */
+	void UpdateMeshTransform();
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UCapsuleComponent> Collision;
@@ -224,4 +245,9 @@ private:
 	FVector MeshRestLocation = FVector::ZeroVector;
 	float FireKickDistance = 0.f;
 	float FireKickTimeLeft = 0.f;
+
+	FRotator MeshTilt = FRotator::ZeroRotator;
+
+	/** Server only. The ground's normal where SnapToGround last stood the unit; clients trace their own. */
+	TOptional<FVector> GroundNormal;
 };

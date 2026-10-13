@@ -522,6 +522,24 @@ def spawn_obstacle(label, location, scale):
     return block
 
 
+def spawn_hill(label, x, width, length, height, slope, material):
+    """A walkable ridge running along y at x: a ramp of slope degrees up from the west, a flat top width across and height
+    high, and a ramp down to the east. Ramps are slabs tilted into the ground, their top face meeting the ground and the top."""
+    top = spawn_block(f"{label}_Top", (x, 0.0, height / 2.0), (width / 100.0, length / 100.0, height / 100.0))
+    top.static_mesh_component.set_material(0, unreal.load_asset(material))
+    angle = math.radians(slope)
+    run = height / math.tan(angle)
+    thickness = 100.0
+    for side, name in ((-1.0, "West"), (1.0, "East")):
+        # The middle of the ramp's top face, and the slab's centre half its thickness below it, along the face's normal.
+        middle_x = x + side * (width + run) / 2.0
+        center = (middle_x - side * thickness / 2.0 * math.sin(angle), 0.0, height / 2.0 - thickness / 2.0 * math.cos(angle))
+        ramp = spawn_block(f"{label}_{name}Ramp", center, (run / math.cos(angle) / 100.0, length / 100.0, thickness / 100.0))
+        ramp.set_actor_rotation(unreal.Rotator(roll=0.0, pitch=-side * slope, yaw=0.0), False)
+        ramp.static_mesh_component.set_material(0, unreal.load_asset(material))
+    return top
+
+
 def spawn_units(unit, count, team_id, location, yaw):
     spawner = spawn(unreal.RTSUnitSpawner, location, yaw, label=f"Spawn_Team{team_id}_{unit.get_name()}")
     spawner.set_editor_property("unit_data", unit)
@@ -601,6 +619,9 @@ def build_map(tank, infantry, builder, wall, crate, ground, digest):
     spawn_obstacle("Block_North", (1000.0, 2500.0, 200.0), (8.0, 8.0, 4.0))
     spawn_obstacle("Block_South", (1000.0, -2500.0, 200.0), (8.0, 8.0, 4.0))
     spawn_wall("Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0), wall)
+    # A ridge between Wall_East and the east base, which the east army crosses on its way to the middle. Not labelled Wall_ or
+    # Block_: the tests take those to be the obstacles.
+    spawn_hill("Hill_East", 4500.0, 300.0, 4000.0, 100.0, 15.0, ground)
 
     spawn_lighting()
 
@@ -631,7 +652,7 @@ def build_map(tank, infantry, builder, wall, crate, ground, digest):
 
 def make_map(tank, infantry, builder, wall, crate, ground):
     plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, builder, wall, crate, ground, digest),
-                 spec_hash([build_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source,
+                 spec_hash([build_map, build_navigation, spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source,
                             spawn_ground, spawn_lighting], MAP_PATH, CUBE, tank, infantry, builder, wall, crate, ground,
                            material_hashes[ground], ENGINE_VERSION))
 
@@ -1232,6 +1253,9 @@ superweapon = make_building("DA_TestSuperweapon", "Test Superweapon", tower_mesh
 buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory, headquarters, airfield, superweapon]
 # The headquarters produces the builder, which builds the rest.
 add_properties(builder, {"buildings": buildings})
+# Vehicles lean with the slope; infantry stays upright.
+for vehicle in (tank, harvester, builder, flak_truck):
+    add_properties(vehicle, {"tilts_to_ground": True})
 # A harvester needs a depot to deliver to, so the factory only offers one once a depot stands.
 add_properties(harvester, {"prerequisites": [supply_depot]})
 # The tech tree: vehicles only after infantry, and a tower only once a plant can power it.

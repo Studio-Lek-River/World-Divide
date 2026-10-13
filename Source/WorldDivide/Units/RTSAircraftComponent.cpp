@@ -5,6 +5,7 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Data/RTSAircraftData.h"
 #include "EngineUtils.h"
+#include "Units/RTSGround.h"
 #include "Units/RTSUnit.h"
 
 namespace
@@ -17,6 +18,18 @@ namespace
 
 	/** Beyond its turning circle, so the aircraft can always reach the pad in a straight glide from where it starts landing. */
 	constexpr float LandingMargin = 100.f;
+
+	/**
+	 * In flight the aircraft looks this many seconds ahead, at this interval, for ground it has to start climbing for now to
+	 * clear it at cruise altitude.
+	 */
+	constexpr float ClimbLookaheadSeconds = 5.f;
+	constexpr float ClimbLookaheadInterval = 0.25f;
+	/** It plans its climb at this share of its climb rate, so it reaches the height with time to spare. */
+	constexpr float ClimbPlanningShare = 0.8f;
+
+	/** The ground under an aircraft is looked for over this span above and below it: higher than any mountain, deeper than any valley. */
+	constexpr float TerrainTraceSpan = 100000.f;
 }
 
 URTSAircraftComponent::URTSAircraftComponent()
@@ -67,6 +80,26 @@ FVector URTSAircraftComponent::GetPadParkLocation() const
 float URTSAircraftComponent::GetGroundZ() const
 {
 	return Airfield.IsValid() ? Airfield->GetActorLocation().Z : LastGroundZ;
+}
+
+float URTSAircraftComponent::GetTerrainZ(const FVector& Location, float Yaw) const
+{
+	const UWorld& World = *GetWorld();
+	const FVector Heading = FRotator(0.f, Yaw, 0.f).Vector();
+	float Highest = -UE_BIG_NUMBER;
+	for (float Seconds = 0.f; Seconds <= ClimbLookaheadSeconds; Seconds += ClimbLookaheadInterval)
+	{
+		float GroundZ = 0.f;
+		if (RTSGround::Trace(World, Location + Heading * AircraftData->MoveSpeed * Seconds, TerrainTraceSpan, TerrainTraceSpan, GroundZ))
+		{
+			// Ground ahead counts for less by what the aircraft climbs before it gets there, counted from the sample before,
+			// since the ground may rise anywhere between the two.
+			const float ClimbSeconds = FMath::Max(Seconds - ClimbLookaheadInterval, 0.f);
+			Highest = FMath::Max(Highest, GroundZ - AircraftData->ClimbRate * ClimbPlanningShare * ClimbSeconds);
+		}
+	}
+	// Off the map there is no ground to clear; the airfield's, or the last, height then.
+	return Highest > -UE_BIG_NUMBER ? Highest : GetGroundZ();
 }
 
 bool URTSAircraftComponent::ParkAt(ARTSBuilding& InAirfield)
@@ -287,7 +320,7 @@ void URTSAircraftComponent::FlyToward(const FVector& Goal, float DeltaSeconds)
 
 	const float Horizontal = AircraftData->MoveSpeed * DeltaSeconds;
 	FVector NewLocation = Location + FRotator(0.f, NewYaw, 0.f).Vector() * Horizontal;
-	const float CruiseZ = GetGroundZ() + GetUnit()->GetGroundOffset() + AircraftData->CruiseAltitude;
+	const float CruiseZ = GetTerrainZ(NewLocation, NewYaw) + GetUnit()->GetGroundOffset() + AircraftData->CruiseAltitude;
 	NewLocation.Z = FMath::FInterpConstantTo(Location.Z, CruiseZ, DeltaSeconds, AircraftData->ClimbRate);
 
 	// Positive roll dips the right wing, into a turn to the right.

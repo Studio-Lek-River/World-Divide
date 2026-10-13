@@ -92,6 +92,13 @@ private:
 	/** Height of the ground under the aircraft: its airfield's, or where it last stood. */
 	float GetGroundZ() const;
 
+	/**
+	 * The ground height the aircraft holds its cruise altitude over in flight: the ground under Location, or higher ground
+	 * ahead along Yaw less what it climbs before it gets there, so it clears a mountain at cruise altitude. GetGroundZ where
+	 * there is no ground.
+	 */
+	float GetTerrainZ(const FVector& Location, float Yaw) const;
+
 	/** Leaves the pad, or the ground, if parked; the mission decides where it flies. */
 	void TakeOff();
 

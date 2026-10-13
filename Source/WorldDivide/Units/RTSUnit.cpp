@@ -25,6 +25,7 @@
 #include "Player/RTSPlayerController.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSApproach.h"
+#include "Units/RTSGround.h"
 #include "Units/RTSUnitAIController.h"
 #include "WorldDivide.h"
 
@@ -53,6 +54,16 @@ namespace
 	/** A fire kick jolts the mesh back this many cm per unit of effect scale and eases it home over this long. */
 	constexpr float FireKickPerScale = 8.f;
 	constexpr float FireKickSeconds = 0.15f;
+
+	/**
+	 * The ground is looked for from this far above a unit's feet, enough for the steepest ramp it climbs in a frame, down to
+	 * this far below them, enough for a unit spawned above the ground.
+	 */
+	constexpr float GroundTraceUp = 100.f;
+	constexpr float GroundTraceDown = 2000.f;
+
+	/** A tilting vehicle eases its mesh toward the slope at this rate, so it rolls over a crest instead of snapping. */
+	constexpr float TiltInterpSpeed = 10.f;
 }
 
 /** Engine basic shapes expose this parameter; real unit and building materials should too. */
@@ -85,8 +96,7 @@ ARTSUnit::ARTSUnit()
 
 	Movement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("Movement"));
 	Movement->UpdatedComponent = Collision;
-	Movement->SetPlaneConstraintNormal(FVector::UpVector);
-	Movement->SetPlaneConstraintEnabled(true);
+	// No plane constraint: the path climbs and descends with the navmesh, and SnapToGround stands the unit on the ground.
 	// Path following feeds acceleration input, so MaxSpeed and braking behave like player input would.
 	Movement->GetNavMovementProperties()->bUseAccelerationForPaths = true;
 
@@ -140,6 +150,8 @@ void ARTSUnit::PostInitializeComponents()
 
 	HealthComponent->OnDamaged.AddDynamic(this, &ThisClass::HandleDamaged);
 	HealthComponent->OnDeath.AddDynamic(this, &ThisClass::HandleDeath);
+	// SnapToGround corrects this frame's move rather than the last one.
+	AddTickPrerequisiteComponent(Movement);
 }
 
 void ARTSUnit::HandleDamaged(float Amount, AActor* DamageInstigator)
@@ -200,7 +212,7 @@ void ARTSUnit::ApplyUnitData()
 	Collision->SetCapsuleSize(Radius, HalfHeight);
 	// Stand the mesh on the bottom of the capsule.
 	MeshRestLocation = FVector(0.f, 0.f, -HalfHeight + MeshHalfHeight - MeshOriginZ);
-	Mesh->SetRelativeLocation(MeshRestLocation);
+	UpdateMeshTransform();
 
 	Movement->MaxSpeed = UnitData->MoveSpeed;
 
@@ -266,30 +278,103 @@ void ARTSUnit::PlayFireKick(float EffectScale)
 {
 	FireKickDistance = FireKickPerScale * EffectScale;
 	FireKickTimeLeft = FireKickSeconds;
-	UpdateFireKick(0.f);
+	UpdateMeshTransform();
 }
 
-void ARTSUnit::UpdateFireKick(float DeltaSeconds)
+bool ARTSUnit::UpdateFireKick(float DeltaSeconds)
 {
 	if (FireKickTimeLeft <= 0.f)
 	{
-		return;
+		return false;
 	}
 	FireKickTimeLeft = FMath::Max(FireKickTimeLeft - DeltaSeconds, 0.f);
+	return true;
+}
+
+bool ARTSUnit::UpdateTilt(float DeltaSeconds)
+{
+	FRotator Target = FRotator::ZeroRotator;
+	if (UnitData && UnitData->bTiltsToGround && !AircraftComponent->CanFly())
+	{
+		FVector Normal = FVector::UpVector;
+		float GroundZ = 0.f;
+		if (HasAuthority())
+		{
+			Normal = GroundNormal.Get(FVector::UpVector);
+		}
+		else
+		{
+			RTSGround::Trace(*GetWorld(), GetNavAgentLocation(), GroundTraceUp, GroundTraceDown, GroundZ, &Normal);
+		}
+		// The slope in the unit's own frame: the mesh's up follows the normal, its nose stays on the unit's heading.
+		Target = FRotationMatrix::MakeFromZX(GetActorRotation().UnrotateVector(Normal), FVector::XAxisVector).Rotator();
+		Target.Yaw = 0.f;
+	}
+	if (MeshTilt.Equals(Target, 0.01f))
+	{
+		if (MeshTilt == Target)
+		{
+			return false;
+		}
+		MeshTilt = Target;
+		return true;
+	}
+	MeshTilt = FMath::RInterpTo(MeshTilt, Target, DeltaSeconds, TiltInterpSpeed);
+	return true;
+}
+
+void ARTSUnit::UpdateMeshTransform()
+{
 	// The unit faces its target while it fires, so back is -X.
-	const float Alpha = FMath::Square(FireKickTimeLeft / FireKickSeconds);
-	Mesh->SetRelativeLocation(MeshRestLocation - FVector(FireKickDistance * Alpha, 0.f, 0.f));
+	const float KickAlpha = FMath::Square(FireKickTimeLeft / FireKickSeconds);
+	const FVector Kick(-FireKickDistance * KickAlpha, 0.f, 0.f);
+	// Leaning around the bottom of the capsule keeps the tracks on the slope.
+	const FVector Pivot(0.f, 0.f, -Collision->GetUnscaledCapsuleHalfHeight());
+	const FQuat Tilt = MeshTilt.Quaternion();
+	Mesh->SetRelativeLocationAndRotation(Pivot + Tilt.RotateVector(MeshRestLocation + Kick - Pivot), Tilt);
+}
+
+void ARTSUnit::SnapToGround()
+{
+	check(HasAuthority());
+	if (AircraftComponent->CanFly())
+	{
+		return;
+	}
+	float GroundZ = 0.f;
+	FVector Normal = FVector::UpVector;
+	if (!RTSGround::Trace(*GetWorld(), GetNavAgentLocation(), GroundTraceUp, GroundTraceDown, GroundZ, &Normal))
+	{
+		return;
+	}
+	GroundNormal = Normal;
+	FVector Location = GetActorLocation();
+	const float StandZ = GroundZ + GetGroundOffset();
+	if (!FMath::IsNearlyEqual(Location.Z, StandZ, 0.1f))
+	{
+		Location.Z = StandZ;
+		SetActorLocation(Location);
+	}
 }
 
 void ARTSUnit::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	UpdateFireKick(DeltaSeconds);
-	if (!HasAuthority() || !UnitData)
+	if (HasAuthority() && UnitData)
 	{
-		return;
+		TickOrders(DeltaSeconds);
 	}
+	// Cosmetic, on every machine, after the server moved and grounded the unit this frame.
+	const bool bTilted = UpdateTilt(DeltaSeconds);
+	if (UpdateFireKick(DeltaSeconds) || bTilted)
+	{
+		UpdateMeshTransform();
+	}
+}
+
+void ARTSUnit::TickOrders(float DeltaSeconds)
+{
 	// Once the match is over the unit stands where it is; its orders stay queued but never run again.
 	if (ARTSGameState::IsMatchOver(*GetWorld()))
 	{
@@ -312,6 +397,7 @@ void ARTSUnit::Tick(float DeltaSeconds)
 	UpdateAttackMoveOrder();
 	UpdateHarvestOrder(DeltaSeconds);
 	UpdateBuildOrder(DeltaSeconds);
+	SnapToGround();
 
 	// Turn toward the direction of travel, or toward the target while standing. Rotation replicates with movement.
 	if (Movement->Velocity.SizeSquared2D() > FMath::Square(10.f))
