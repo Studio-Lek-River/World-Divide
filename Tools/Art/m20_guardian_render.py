@@ -176,6 +176,9 @@ def render_all(render_dir, parts, previous_front34=None, preview=False):
     if preview:
         shoot(camera, path("rear34"), (-9.0, 7.0, 4.0), (-0.6, 0.0, 1.1), lens=50.0, size=(1600, 1000))
         shoot(camera, path("close_turret"), (4.8, -4.4, 3.6), (0.3, 0.0, 1.85), lens=60.0, size=(1600, 1000))
+        shoot(camera, path("close_smoke"), (2.5, -3.2, 3.0), (0.35, -1.20, 2.15), lens=75.0, size=(1600, 1000))
+        shoot(camera, path("close_mantlet"), (4.3, -1.9, 2.4), (1.65, 0.0, 1.85), lens=65.0, size=(1600, 1000))
+        shoot(camera, path("close_commander"), (1.5, -3.2, 3.3), (-0.30, -0.50, 2.35), lens=70.0, size=(1600, 1000))
         shoot(camera, path("close_running_gear"), (2.6, -5.8, 0.95), (-0.2, -1.5, 0.5), lens=50.0,
               size=(1600, 1000))
         teardown()
@@ -183,7 +186,9 @@ def render_all(render_dir, parts, previous_front34=None, preview=False):
     shoot(camera, path("hero34"), (8.6, -6.9, 3.0), (0.35, 0.0, 1.05), lens=58.0)
     shoot(camera, path("rear34"), (-8.6, 6.4, 3.6), (-0.6, 0.0, 1.1), lens=55.0)
     shoot(camera, path("close_turret"), (4.6, -4.1, 3.5), (0.35, 0.0, 1.85), lens=62.0)
-    shoot(camera, path("close_commander"), (1.4, -3.4, 3.2), (-0.45, -0.6, 2.35), lens=70.0)
+    shoot(camera, path("close_commander"), (1.5, -3.2, 3.3), (-0.30, -0.50, 2.35), lens=70.0)
+    shoot(camera, path("close_smoke"), (2.5, -3.2, 3.0), (0.35, -1.20, 2.15), lens=75.0)
+    shoot(camera, path("close_mantlet"), (4.3, -1.9, 2.4), (1.65, 0.0, 1.85), lens=65.0)
     shoot(camera, path("close_running_gear"), (2.4, -5.6, 0.9), (-0.3, -1.5, 0.5), lens=50.0)
     for name, arm in (("rts_default", RTS_DEFAULT_ARM), ("rts_mid", 15.0)):
         location, target = rts_camera(arm, rts_pitch(arm), 215.0)
@@ -197,4 +202,4 @@ def render_all(render_dir, parts, previous_front34=None, preview=False):
         parts[key].rotation_euler = (0.0, 0.0, 0.0)
     teardown()
     if previous_front34 and os.path.exists(previous_front34):
-        side_by_side(previous_front34, path("front34"), path("v1_v2_compare"))
+        side_by_side(previous_front34, path("front34"), path("v2_v3_compare"))

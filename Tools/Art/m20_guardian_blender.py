@@ -40,7 +40,7 @@ BLEND = os.path.join(OUT_DIR, "source", "m20_guardian.blend")
 FBX_DIR = os.path.join(OUT_DIR, "fbx")
 RENDER_DIR = os.path.join(OUT_DIR, "renders")
 TEXTURE_DIR = os.path.join(OUT_DIR, "textures")
-V1_FRONT34 = os.path.join(OUT_DIR, "_v1", "renders", "m20_front34.png")
+PREVIOUS_FRONT34 = os.path.join(OUT_DIR, "_v2", "renders", "m20_front34.png")
 
 # ---- dimensions ----
 HULL_ROOF = 1.40
@@ -583,7 +583,14 @@ def build_front(hull):
     # Nose: headlight clusters in guards, tow eyes on the lower plate, a lower add-on plate.
     for side in (1, -1):
         y = side * 1.36
-        hull.add("Olive", box(3.40, 3.49, y - 0.14, y + 0.14, 0.955, 1.095), SMALL)
+        # Lamp cluster: a bolted base plate on the nose, the armoured housing, and a brow over the lamps.
+        hull.add("Paint", box(3.40, 3.42, y - 0.20, y + 0.20, 0.94, 1.115), SMALL)
+        plate = Quad((3.42, y - 0.20, 0.94), (3.42, y + 0.20, 0.94), (3.42, y - 0.20, 1.115), (3.42, y + 0.20, 1.115),
+                     (0.0, y, 1.0))
+        bolt_frame(hull, plate, 0.04, 0.96, 0.08, 0.92, 0.0, spacing=0.10)
+        hull.add("Olive", plan_prism(rect(3.42, 3.49, y - 0.14, y + 0.14), 0.955, 1.095,
+                                     rect(3.42, 3.48, y - 0.13, y + 0.13)), SMALL)
+        hull.add("Olive", box(3.42, 3.52, y - 0.145, y + 0.145, 1.085, 1.10), SMALL)
         for dy in (-0.07, 0.07):
             hull.add("Dark", tube((3.495, y + dy, 1.025), (1, 0, 0), 0.04, 0.052, 0.02, segments=12), SMALL)
             hull.add("LightWhite", cylinder((3.49, y + dy, 1.025), (1, 0, 0), 0.042, 0.01, segments=12), bevel=False)
@@ -591,11 +598,11 @@ def build_front(hull):
                         0.05)
         hull.add("Dark", polyline_tube(guard, 0.014), False)
         for dy in (-0.18, 0.18):
-            hull.add("Dark", polyline_tube([(3.56, y + dy, 1.11), (3.56, y + dy, 0.95), (3.40, y + dy, 0.95)], 0.012),
+            hull.add("Dark", polyline_tube([(3.56, y + dy, 1.11), (3.56, y + dy, 0.95), (3.42, y + dy, 0.95)], 0.012),
                      False)
-        eye = Vector((3.40, side * 0.62, 0.70))
-        hull.add("Metal", box(3.36, 3.44, eye.y - 0.07, eye.y + 0.07, eye.z - 0.08, eye.z + 0.08), SMALL)
-        hull.add("Metal", torus(eye + Vector((0.07, 0.0, 0.0)), (0, 1, 0), 0.055, 0.02, segments=12), SMALL)
+            for z in (0.95, 1.11):
+                hull.add("Dark", box(3.42, 3.445, y + dy - 0.022, y + dy + 0.022, z - 0.022, z + 0.022), False)
+        clevis(hull, Vector((3.40, side * 0.62, 0.70)), 1.0)
     belly = Quad((2.70, -LOWER_HALF_WIDTH, 0.36), (2.70, LOWER_HALF_WIDTH, 0.36),
                  (3.38, -LOWER_HALF_WIDTH, 0.80), (3.38, LOWER_HALF_WIDTH, 0.80), (0.0, 0.0, 0.8))
     hull.add("Paint", belly.panel(0.05, 0.95, 0.12, 0.88, 0.035, taper=0.015), SMALL)
@@ -610,10 +617,15 @@ def build_front(hull):
     hull.add("Metal", polyline_tube(rounded([(hatch.x + 0.05, -0.08, HULL_ROOF + 0.075), (hatch.x + 0.05, -0.08,
                                              HULL_ROOF + 0.12), (hatch.x + 0.05, 0.08, HULL_ROOF + 0.12),
                                              (hatch.x + 0.05, 0.08, HULL_ROOF + 0.075)], 0.03), 0.012), False)
+    # One welded hood strip over the three periscopes, with dividers between the windows.
+    hull.add("Paint", plan_prism(rect(2.16, 2.38, -0.36, 0.36), HULL_ROOF - 0.01, HULL_ROOF + 0.025,
+                                 rect(2.165, 2.375, -0.355, 0.355)), SMALL)
+    hull.add("Paint", plan_prism([(2.18, -0.34), (2.36, -0.34), (2.36, 0.34), (2.18, 0.34)], HULL_ROOF + 0.02,
+                                 HULL_ROOF + 0.10, [(2.18, -0.33), (2.30, -0.33), (2.30, 0.33), (2.18, 0.33)]), SMALL)
+    hull.add("Paint", box(2.27, 2.40, -0.35, 0.35, HULL_ROOF + 0.095, HULL_ROOF + 0.11), SMALL)
     for y in (-0.24, 0.0, 0.24):
-        hull.add("Paint", plan_prism(rect(2.20, 2.36, y - 0.09, y + 0.09), HULL_ROOF - 0.01, HULL_ROOF + 0.09,
-                                     rect(2.20, 2.32, y - 0.08, y + 0.08)), SMALL)
-        hull.add("Optics", box(2.33, 2.345, y - 0.065, y + 0.065, HULL_ROOF + 0.015, HULL_ROOF + 0.06), bevel=False)
+        hull.add("Optics", box(2.345, 2.355, y - 0.075, y + 0.075, HULL_ROOF + 0.035, HULL_ROOF + 0.08), bevel=False)
+    weld(hull, [(2.16, -0.36, HULL_ROOF), (2.16, 0.36, HULL_ROOF)])
 
 
 def build_deck(hull):
@@ -649,20 +661,45 @@ def build_deck(hull):
         for x in (-3.10, -2.85):
             hull.add("Dark", box(x - 0.03, x + 0.03, side * 1.37 - 0.004, side * 1.37 + 0.02, roof + 0.14,
                                  roof + 0.21), bevel=False)
+        for x in (-3.25, -2.70):
+            for y in (side * 0.93, side * 1.37):
+                hull.add("Dark", box(x - 0.02, x + 0.02, y - 0.03, y + 0.03, roof, roof + 0.07), False)
         for x in (-2.58, -2.40):
             jerry(hull, Vector((x, side * 1.33, roof)))
+        # Jerry can rack: a base tray and an end stop.
+        hull.add("Dark", box(-2.69, -2.29, side * 1.33 - 0.19, side * 1.33 + 0.19, roof, roof + 0.012), bevel=False)
+        hull.add("Dark", box(-2.30, -2.28, side * 1.33 - 0.19, side * 1.33 + 0.19, roof, roof + 0.22), False)
         hull.add("Dark", polyline_tube([(-2.70, side * 1.48, roof + 0.18), (-2.30, side * 1.48, roof + 0.18)], 0.012),
                  False)
         # Lifting eyes at the deck corners and ahead of the turret.
         for x in (-3.05, 1.45):
-            hull.add("Metal", box(x - 0.06, x + 0.06, side * 1.50 - 0.03, side * 1.50 + 0.03, roof, roof + 0.03),
+            hull.add("Paint", plan_prism(rect(x - 0.09, x + 0.09, side * 1.50 - 0.06, side * 1.50 + 0.06),
+                                         roof - 0.01, roof + 0.02, rect(x - 0.08, x + 0.08, side * 1.50 - 0.05,
+                                                                        side * 1.50 + 0.05)), False)
+            hull.add("Metal", box(x - 0.06, x + 0.06, side * 1.50 - 0.03, side * 1.50 + 0.03, roof, roof + 0.045),
                      SMALL)
-            hull.add("Metal", torus((x, side * 1.50, roof + 0.07), (0, 1, 0), 0.045, 0.014), SMALL)
+            hull.add("Metal", torus((x, side * 1.50, roof + 0.085), (0, 1, 0), 0.045, 0.014), SMALL)
         # Bolts along the deck edges (normal map).
         for i in range(15):
             x = -3.10 + i * 0.38
             hull.add("Metal", cylinder((x, side * 1.55, roof + 0.011), (0, 0, 1), 0.02, 0.022, segments=6),
                      bevel=False, high=True)
+
+
+def clevis(part, eye, forward):
+    """A tow eye: two lug plates welded to the plate behind, a pin through them, and the shackle ring on the pin. eye is
+    the pin; forward is +1 at the nose (the lugs reach back down the lower glacis) and -1 at the rear plate."""
+    if forward > 0:
+        profile = [(3.08, 0.60), (3.30, 0.57), (3.47, 0.65), (3.47, 0.75), (3.41, 0.81), (3.36, 0.80)]
+    else:
+        profile = [(-3.29, 0.58), (-3.40, 0.62), (-3.43, 0.67), (-3.40, 0.73), (-3.29, 0.77)]
+    for dy in (-0.05, 0.05):
+        part.add("Paint", side_prism(profile, eye.y + dy - 0.014, eye.y + dy + 0.014), SMALL)
+    part.add("Metal", cylinder(eye, (0, 1, 0), 0.022, 0.14, segments=10), SMALL)
+    for dy in (-0.072, 0.072):
+        part.add("Metal", cylinder(eye + Vector((0.0, dy, 0.0)), (0, 1, 0), 0.032, 0.012, segments=10), SMALL)
+    part.add("Metal", torus(eye + Vector((forward * 0.07, 0.0, -0.02)), (0, 1, 0), 0.06, 0.018, segments=12), SMALL)
+    weld(part, [(profile[0][0], eye.y - 0.07, profile[0][1]), (profile[0][0], eye.y + 0.07, profile[0][1])])
 
 
 def jerry(part, base):
@@ -706,17 +743,21 @@ def build_rear(hull):
         grille(side * 0.82, 0.16, 0.74, 1.20, 6, 0.07)
         # Tail lamps in a guard on the sponson corners.
         y = side * 1.45
-        hull.add("Olive", box(x - 0.06, x, y - 0.10, y + 0.10, 1.16, 1.32), SMALL)
+        hull.add("Paint", box(x - 0.015, x, y - 0.15, y + 0.15, 1.13, 1.36), SMALL)
+        hull.add("Olive", box(x - 0.06, x - 0.015, y - 0.10, y + 0.10, 1.16, 1.32), SMALL)
         hull.add("LightRed", box(x - 0.065, x - 0.06, y - 0.08, y - 0.01, 1.20, 1.29), bevel=False)
         hull.add("LightWhite", box(x - 0.065, x - 0.06, y + 0.01, y + 0.08, 1.20, 1.29), bevel=False)
-        hull.add("Dark", polyline_tube(rounded([(x, y - 0.13, 1.34), (x - 0.12, y - 0.13, 1.34),
-                                                (x - 0.12, y + 0.13, 1.34), (x, y + 0.13, 1.34)], 0.04), 0.012),
-                 False)
-        # Rear tow eyes.
-        hull.add("Metal", box(x - 0.08, x, side * 0.62 - 0.07, side * 0.62 + 0.07, 0.60, 0.74), SMALL)
-        hull.add("Metal", torus((x - 0.10, side * 0.62, 0.67), (0, 1, 0), 0.05, 0.018, segments=12), SMALL)
+        hull.add("Dark", polyline_tube(rounded([(x - 0.015, y - 0.13, 1.34), (x - 0.12, y - 0.13, 1.34),
+                                                (x - 0.12, y + 0.13, 1.34), (x - 0.015, y + 0.13, 1.34)], 0.04),
+                                       0.012), False)
+        # Rear tow eyes and the cable clamps on the plate.
+        clevis(hull, Vector((-3.38, side * 0.62, 0.67)), -1.0)
+        for cy in (0.45, 0.95):
+            hull.add("Dark", box(x - 0.06, x, side * cy - 0.03, side * cy + 0.03, 0.54, 0.64), False)
     # Towing pintle and the tow cable looped across the plate.
-    hull.add("Metal", box(x - 0.14, x, -0.08, 0.08, 0.56, 0.64), SMALL)
+    hull.add("Paint", box(x - 0.02, x, -0.14, 0.14, 0.50, 0.70), SMALL)
+    hull.add("Metal", box(x - 0.14, x - 0.02, -0.08, 0.08, 0.56, 0.64), SMALL)
+    hull.add("Metal", cylinder((x - 0.10, 0.0, 0.66), (0, 0, 1), 0.018, 0.08, segments=8), SMALL)
     hull.add("Dark", polyline_tube(rounded([(x - 0.02, -0.98, 0.62), (x - 0.04, -0.98, 0.58), (x - 0.05, -0.4, 0.56),
                                             (x - 0.05, 0.4, 0.56), (x - 0.04, 0.98, 0.58), (x - 0.02, 0.98, 0.62)],
                                            0.12), 0.022, segments=8), False)
@@ -788,19 +829,60 @@ def build_turret_armour(turret):
             turret.add(material, flank.panel(u0 + 0.022, u1 - 0.022, 0.24, 0.76, 0.015, gap=0.108), SMALL)
             bolt_frame(turret, flank, u0 + 0.01, u1 - 0.01, 0.12, 0.85, 0.108, spacing=0.2)
             turret.add("Olive", flank.block((u0 + u1) / 2.0, 0.94, 0.05, 0.025, -0.01, 0.09), SMALL)
-        # Smoke grenade dischargers: two rows of four on a bracket at each front roof corner.
-        corner = Vector((0.82, side * 1.02, TURRET_ROOF))
-        direction = Vector((0.55, side * 0.42, 0.72)).normalized()
-        turret.add("Olive", box(corner.x - 0.16, corner.x + 0.16, corner.y - 0.15, corner.y + 0.15, corner.z,
-                                corner.z + 0.06), SMALL)
-        turret.add("Olive", box(corner.x - 0.14, corner.x + 0.10, corner.y - 0.13, corner.y + 0.13, corner.z + 0.06,
-                                corner.z + 0.12), SMALL)
-        for row, (dz, dx) in enumerate(((0.15, 0.04), (0.24, -0.06))):
-            for k in range(4):
-                centre = corner + Vector((dx, side * (-0.105 + 0.07 * k), dz))
-                turret.add("Dark", lathe(centre, direction, [(-0.11, 0.032), (0.08, 0.032), (0.08, 0.039),
-                                                             (0.11, 0.039), (0.11, 0.026), (0.06, 0.026)],
-                                         segments=10, closed=False), False)
+        build_smoke_dischargers(turret, side)
+
+
+def build_smoke_dischargers(turret, side):
+    """Smoke grenade dischargers: an armoured housing on the roof edge just behind the cheek module, its outboard face
+    flush with the flank slabs below so it caps them, its front face turned out and back. The two rows of four tubes
+    are buried in it and only their muzzles stand out under a brow; a junction box and an armoured conduit at the back
+    take the firing cable into the roof."""
+    roof = TURRET_ROOF
+    z0, z1 = 1.985, roof + 0.22
+    # Plan outline (x, y) of the left housing: rear inboard, rear outboard, front outboard, front inboard.
+    plan = [(0.06, 1.04), (0.06, 1.43), (0.52, 1.43), (0.68, 1.04)]
+    top = [(0.10, 1.07), (0.10, 1.39), (0.44, 1.39), (0.58, 1.07)]
+    flip = [(x, side * y) for x, y in plan]
+    flip_top = [(x, side * y) for x, y in top]
+    turret.add("Paint", plan_prism(flip, z0, z1, flip_top))
+    # Welded mounting pad under its inboard half on the roof, and gussets to the shell top behind it.
+    turret.add("Paint", plan_prism([(x, side * y) for x, y in [(0.0, 1.0), (0.0, 1.24), (0.62, 1.24), (0.66, 1.0)]],
+                                   roof - 0.01, roof + 0.025), SMALL)
+    turret.add("Paint", side_prism([(-0.14, SHELL_TOP), (0.07, SHELL_TOP), (0.07, roof + 0.16)], side * 1.25,
+                                   side * 1.28), SMALL)
+    weld(turret, [(0.0, side * 1.0, roof + 0.025), (0.66, side * 1.0, roof + 0.025)])
+    weld(turret, [(0.06, side * 1.04, roof + 0.025), (0.06, side * 1.43, roof + 0.025)])
+    # Top access cover, bolted.
+    cover = Quad((0.16, side * 1.10, z1), (0.16, side * 1.36, z1), (0.46, side * 1.10, z1), (0.46, side * 1.36, z1),
+                 (0.3, side * 1.2, z0))
+    turret.add("Paint", cover.panel(0.0, 1.0, 0.0, 1.0, 0.014, gap=0.0, taper=0.008), SMALL)
+    bolt_frame(turret, cover, 0.08, 0.92, 0.1, 0.9, 0.014, spacing=0.11)
+    # Front face: the sloped front of the housing from just above the roof pad to its top edge, so it looks out and up.
+    t = (roof + 0.035 - z0) / (z1 - z0)
+    (fx0, fy0), (fx1, fy1) = [Vector(b).lerp(Vector(a), t) for b, a in ((plan[3], top[3]), (plan[2], top[2]))]
+    (tx0, ty0), (tx1, ty1) = top[3], top[2]
+    face = Quad((fx0, side * fy0, roof + 0.035), (fx1, side * fy1, roof + 0.035), (tx0, side * ty0, z1),
+                (tx1, side * ty1, z1), (0.2, side * 1.2, 2.1))
+    # A raised frame round the tube field, a brow over it and side cheeks: the tubes sit in a shallow bay.
+    turret.add("Paint", face.block(0.5, 0.95, face.u_len * 0.5, 0.025, 0.0, 0.08), SMALL)
+    for u in (0.03, 0.97):
+        turret.add("Paint", face.block(u, 0.55, 0.018, face.v_len * 0.40, 0.0, 0.06), SMALL)
+    turret.add("Dark", face.panel(0.07, 0.93, 0.12, 0.84, 0.01, gap=0.0), SMALL)
+    direction = (face.normal + Vector((0.0, 0.0, 0.18))).normalized()
+    for v in (0.29, 0.71):
+        for k in range(4):
+            u = 0.17 + 0.22 * k
+            turret.add("Dark", lathe(face.at(u, v, 0.0), direction,
+                                     [(-0.10, 0.034), (0.025, 0.034), (0.025, 0.042), (0.05, 0.042), (0.05, 0.029),
+                                      (0.012, 0.029)], segments=8, closed=False), False)
+            turret.add("Metal", torus(face.at(u, v, 0.012), direction, 0.04, 0.006, segments=12, sides=4), False,
+                       high=True)
+    # Junction box at the back with the firing cable in an armoured conduit down into the roof.
+    turret.add("Olive", plan_prism(rect(-0.08, 0.07, side * 1.12 - 0.08, side * 1.12 + 0.08), roof + 0.02, roof + 0.14,
+                                   rect(-0.07, 0.07, side * 1.12 - 0.07, side * 1.12 + 0.07)), SMALL)
+    turret.add("Dark", polyline_tube(rounded([(-0.04, side * 1.07, roof + 0.08), (-0.16, side * 1.07, roof + 0.08),
+                                              (-0.22, side * 1.04, roof - 0.01)], 0.05), 0.018, segments=8), False)
+    turret.add("Metal", cylinder((-0.22, side * 1.04, roof + 0.012), (0, 0, 1), 0.035, 0.025, segments=10), SMALL)
 
 
 def build_bustle(turret):
@@ -810,24 +892,42 @@ def build_bustle(turret):
         for u0, u1 in ((0.04, 0.48), (0.52, 0.96)):
             turret.add("Olive", bustle.panel(u0, u1, 0.10, 0.88, 0.22, gap=0.008, taper=0.02))
             for u in (u0 + 0.12, u1 - 0.12):
-                turret.add("Dark", bustle.block(u, 0.80, 0.025, 0.035, 0.22, 0.25), SMALL)
+                turret.add("Dark", bustle.block(u, 0.80, 0.025, 0.035, 0.22, 0.25), False)
             turret.add("Dark", polyline_tube([bustle.at(u0 + 0.03, 0.9, 0.12), bustle.at(u1 - 0.03, 0.9, 0.12)],
                                              0.012), False)
+            for u in (u0 + 0.05, (u0 + u1) / 2.0, u1 - 0.05):
+                turret.add("Metal", cylinder(bustle.at(u, 0.9, 0.12), bustle.u_dir, 0.02, 0.05, segments=8), SMALL)
     # Bustle rack: round bar rails and posts holding containers, jerry cans and a rolled tarp on a mesh floor.
-    rack_x0, rack_x1, rack_y = -1.55, -2.62, 1.46
+    # The side rails run clear of the bins; their posts hang from arms welded to the bustle wall between the bins.
+    rack_x0, rack_x1, rack_y = -1.46, -2.62, 1.58
     for z in (1.62, 2.00):
         turret.add("Metal", polyline_tube(rounded([(rack_x0, rack_y, z), (rack_x1, rack_y, z), (rack_x1, -rack_y, z),
                                                    (rack_x0, -rack_y, z)], 0.10), 0.02, segments=8), SMALL)
     for x, y in ((rack_x0, rack_y), (rack_x0, -rack_y), (rack_x1 + 0.03, rack_y - 0.03), (rack_x1 + 0.03, -rack_y + 0.03),
-                 (rack_x1, 0.0), (rack_x1, 0.75), (rack_x1, -0.75), (-2.1, rack_y), (-2.1, -rack_y)):
-        turret.add("Metal", polyline_tube([(x, y, 1.55), (x, y, 2.02)], 0.02, segments=8), SMALL)
-    turret.add("Dark", box(rack_x1 + 0.02, -2.32, -rack_y, rack_y, 1.575, 1.595), bevel=False)
+                 (rack_x1, 0.0), (rack_x1, 0.75), (rack_x1, -0.75), (-1.90, rack_y), (-1.90, -rack_y)):
+        turret.add("Metal", polyline_tube([(x, y, 1.58), (x, y, 2.02)], 0.02, segments=8), SMALL)
+    for side in (1, -1):
+        for x, base_y in ((rack_x0, 1.30), (-1.90, 1.26)):
+            for z in (1.66, 1.96):
+                wall_y = base_y - 0.06 * (z - TURRET_SKIRT_TOP) / (SHELL_TOP - TURRET_SKIRT_TOP)
+                turret.add("Metal", beam((x, side * wall_y, z), (x, side * rack_y, z), (0, 0, 1), 0.012, 0.02), False)
+                turret.add("Paint", box(x - 0.018, x + 0.018, side * (wall_y - 0.02), side * (wall_y + 0.012),
+                                        z - 0.05, z + 0.05), False)
+    turret.add("Dark", box(rack_x1 + 0.02, -2.32, -rack_y + 0.02, rack_y - 0.02, 1.575, 1.595), bevel=False)
+    # Gussets carry the rack floor off the bustle's rear wall.
+    for y in (-1.0, 0.0, 1.0):
+        turret.add("Paint", side_prism([(-2.36, 1.52), (-2.36, 1.575), (-2.58, 1.575)], y - 0.012, y + 0.012), False)
     for y0, y1 in ((-1.25, -0.66), (-0.60, 0.02)):
         turret.add("Olive", plan_prism(rect(-2.58, -2.36, y0, y1), 1.60, 1.94, rect(-2.575, -2.365, y0 + 0.005,
                                                                                      y1 - 0.005)))
         turret.add("Olive", box(-2.585, -2.355, y0 - 0.005, y1 + 0.005, 1.90, 1.96), SMALL)
         for y in (y0 + 0.12, y1 - 0.12):
             turret.add("Dark", box(-2.60, -2.585, y - 0.025, y + 0.025, 1.84, 1.90), bevel=False)
+        turret.add("Metal", box(-2.598, -2.588, (y0 + y1) / 2.0 - 0.03, (y0 + y1) / 2.0 + 0.03, 1.70, 1.76), False)
+        # Ratchet straps over the lid and down both faces to the rack floor.
+        for y in ((y0 + y1) / 2.0 - 0.07, (y0 + y1) / 2.0 + 0.07):
+            turret.add("Dark", polyline_tube([(-2.595, y, 1.60), (-2.595, y, 1.965), (-2.345, y, 1.965),
+                                              (-2.345, y, 1.60)], 0.007, segments=4), False)
     for y in (0.16, 0.36):
         jerry(turret, Vector((-2.47, y, 1.60)))
     turret.add("Olive", lathe((-2.47, 0.98, 1.74), (0, 1, 0), [(-0.30, 0.10), (-0.32, 0.115), (-0.30, 0.13),
@@ -842,8 +942,23 @@ def build_turret_roof(turret):
     roof = TURRET_ROOF
     # Gunner's primary sight, left front: armoured housing with a sloped face, two windows, open shutters and a hood.
     g = Vector((0.55, 0.78, roof))
-    turret.add("Paint", plan_prism(rect(g.x - 0.26, g.x + 0.20, g.y - 0.21, g.y + 0.21), roof, roof + 0.30,
-                                   rect(g.x - 0.24, g.x + 0.10, g.y - 0.19, g.y + 0.19)))
+    # Base flange bolted to the roof, then the housing: chamfered rear corners and sides that lean in.
+    turret.add("Paint", plan_prism(rect(g.x - 0.31, g.x + 0.24, g.y - 0.25, g.y + 0.22), roof - 0.01, roof + 0.03,
+                                   rect(g.x - 0.30, g.x + 0.23, g.y - 0.24, g.y + 0.21)), SMALL)
+    flange = Quad((g.x - 0.31, g.y - 0.25, roof + 0.03), (g.x + 0.24, g.y - 0.25, roof + 0.03),
+                  (g.x - 0.31, g.y + 0.22, roof + 0.03), (g.x + 0.24, g.y + 0.22, roof + 0.03), (g.x, g.y, roof))
+    bolt_frame(turret, flange, 0.04, 0.96, 0.05, 0.95, 0.0, spacing=0.12)
+    turret.add("Paint", plan_prism([(g.x - 0.26, g.y - 0.15), (g.x - 0.20, g.y - 0.21), (g.x + 0.20, g.y - 0.21),
+                                    (g.x + 0.20, g.y + 0.21), (g.x - 0.20, g.y + 0.21), (g.x - 0.26, g.y + 0.15)],
+                                   roof + 0.03, roof + 0.30,
+                                   [(g.x - 0.23, g.y - 0.12), (g.x - 0.18, g.y - 0.17), (g.x + 0.10, g.y - 0.17),
+                                    (g.x + 0.10, g.y + 0.17), (g.x - 0.18, g.y + 0.17), (g.x - 0.23, g.y + 0.12)]))
+    # Side access plate and the cable gland at the back.
+    side = Quad((g.x - 0.20, g.y + 0.21, roof + 0.03), (g.x + 0.20, g.y + 0.21, roof + 0.03),
+                (g.x - 0.18, g.y + 0.17, roof + 0.30), (g.x + 0.10, g.y + 0.17, roof + 0.30), g)
+    turret.add("Paint", side.panel(0.12, 0.62, 0.18, 0.78, 0.012, gap=0.0, taper=0.006), SMALL)
+    turret.add("Dark", polyline_tube(rounded([(g.x - 0.24, g.y, roof + 0.14), (g.x - 0.33, g.y, roof + 0.14),
+                                              (g.x - 0.38, g.y - 0.05, roof)], 0.05), 0.016, segments=8), False)
     face = Quad((g.x + 0.20, g.y - 0.21, roof), (g.x + 0.20, g.y + 0.21, roof), (g.x + 0.10, g.y - 0.19, roof + 0.30),
                 (g.x + 0.10, g.y + 0.19, roof + 0.30), g + Vector((-0.1, 0.0, 0.15)))
     turret.add("Dark", face.panel(0.08, 0.92, 0.18, 0.86, 0.015), SMALL)
@@ -851,15 +966,38 @@ def build_turret_roof(turret):
     turret.add("Optics", cylinder(face.at(0.33, 0.52, 0.02), face.normal, 0.075, 0.02, segments=20), bevel=False)
     turret.add("Optics", face.panel(0.60, 0.88, 0.32, 0.72, 0.008, gap=0.02), bevel=False)
     turret.add("Paint", face.block(0.5, 1.05, 0.23, 0.02, 0.0, 0.10), SMALL)
+    # Armoured door frame round the windows, and the opened shutters on their hinges.
+    for v in (0.12, 0.92):
+        turret.add("Paint", face.block(0.5, v, 0.20, 0.018, 0.0, 0.035), SMALL)
     for u in (-0.04, 1.04):
         turret.add("Paint", oriented_box(face.at(u, 0.5, 0.07), face.normal, face.v_dir, face.u_dir, 0.07, 0.11,
                                          0.012), SMALL)
+        turret.add("Metal", cylinder(face.at(min(max(u, 0.0), 1.0), 0.5, 0.015), face.v_dir, 0.014, 0.20,
+                                     segments=8), SMALL)
     # Commander's independent sight on a pedestal: armoured head with a large window, a rangefinder and a sun hood.
-    c = Vector((-0.05, -0.30, roof))
-    turret.add("Metal", lathe(c, (0, 0, 1), [(0.0, 0.16), (0.04, 0.16), (0.06, 0.10), (0.20, 0.09)], segments=16,
-                              closed=False), SMALL)
-    turret.add("Olive", plan_prism(rect(c.x - 0.18, c.x + 0.17, c.y - 0.16, c.y + 0.16), roof + 0.20, roof + 0.46,
-                                   rect(c.x - 0.16, c.x + 0.15, c.y - 0.14, c.y + 0.14)))
+    c = Vector((0.03, -0.24, roof))
+    # Pedestal: bolted base flange, armoured column, the traverse ring and a cable entry, then the head.
+    turret.add("Paint", lathe(c, (0, 0, 1), [(-0.01, 0.04), (-0.01, 0.20), (0.025, 0.20), (0.035, 0.18),
+                                              (0.035, 0.04)], segments=20, closed=False), SMALL)
+    for i in range(8):
+        t = 2.0 * math.pi * (i + 0.5) / 8
+        turret.add("Metal", cylinder(c + Vector((math.cos(t) * 0.165, math.sin(t) * 0.165, 0.045)), (0, 0, 1),
+                                     0.016, 0.02, segments=6), bevel=False, high=True)
+    turret.add("Olive", lathe(c, (0, 0, 1), [(0.03, 0.04), (0.03, 0.12), (0.06, 0.11), (0.15, 0.10), (0.165, 0.125),
+                                             (0.19, 0.125), (0.20, 0.09), (0.20, 0.04)], segments=16, closed=False),
+               SMALL)
+    turret.add("Dark", tube(c + Vector((0.0, 0.0, 0.178)), (0, 0, 1), 0.10, 0.13, 0.025, segments=16), SMALL)
+    turret.add("Dark", polyline_tube(rounded([(c.x - 0.10, c.y + 0.03, roof + 0.13), (c.x - 0.22, c.y + 0.03,
+                                              roof + 0.13), (c.x - 0.26, c.y + 0.03, roof)], 0.05), 0.014),
+               False)
+    turret.add("Olive", plan_prism([(c.x - 0.18, c.y - 0.11), (c.x - 0.13, c.y - 0.16), (c.x + 0.17, c.y - 0.16),
+                                    (c.x + 0.17, c.y + 0.16), (c.x - 0.13, c.y + 0.16), (c.x - 0.18, c.y + 0.11)],
+                                   roof + 0.20, roof + 0.46,
+                                   [(c.x - 0.16, c.y - 0.09), (c.x - 0.11, c.y - 0.14), (c.x + 0.15, c.y - 0.14),
+                                    (c.x + 0.15, c.y + 0.14), (c.x - 0.11, c.y + 0.14), (c.x - 0.16, c.y + 0.09)]))
+    for sy in (1, -1):
+        turret.add("Olive", box(c.x - 0.10, c.x + 0.08, c.y + sy * 0.150, c.y + sy * 0.163, roof + 0.25, roof + 0.40),
+                   SMALL)
     turret.add("Dark", box(c.x + 0.165, c.x + 0.18, c.y - 0.13, c.y + 0.13, roof + 0.23, roof + 0.43), SMALL)
     turret.add("Dark", tube((c.x + 0.19, c.y - 0.03, roof + 0.33), (1, 0, 0), 0.075, 0.095, 0.03, segments=20), SMALL)
     turret.add("Optics", cylinder((c.x + 0.183, c.y - 0.03, roof + 0.33), (1, 0, 0), 0.075, 0.01, segments=20),
@@ -867,15 +1005,34 @@ def build_turret_roof(turret):
     turret.add("Optics", cylinder((c.x + 0.186, c.y + 0.09, roof + 0.36), (1, 0, 0), 0.028, 0.012, segments=12),
                bevel=False)
     turret.add("Olive", box(c.x + 0.05, c.x + 0.26, c.y - 0.17, c.y + 0.17, roof + 0.455, roof + 0.475), SMALL)
+    for sy in (1, -1):
+        turret.add("Olive", side_prism([(c.x + 0.14, roof + 0.455), (c.x + 0.26, roof + 0.455),
+                                        (c.x + 0.15, roof + 0.40)], c.y + sy * 0.150, c.y + sy * 0.165), False)
+    # Window wiper arm parked along the bottom of the window.
+    turret.add("Metal", polyline_tube([(c.x + 0.20, c.y - 0.12, roof + 0.25), (c.x + 0.20, c.y + 0.05, roof + 0.25)],
+                                      0.007), False)
+    turret.add("Dark", cylinder((c.x + 0.195, c.y - 0.12, roof + 0.25), (1, 0, 0), 0.016, 0.03, segments=8), False)
+    # Armoured brow on the roof front edge, over the mantlet's top.
+    turret.add("Paint", plan_prism(rect(1.00, 1.33, -0.40, 0.40), roof - 0.01, roof + 0.045,
+                                   rect(1.00, 1.29, -0.38, 0.38)))
+    brow = Quad((1.02, -0.37, roof + 0.045), (1.02, 0.37, roof + 0.045), (1.27, -0.37, roof + 0.045),
+                (1.27, 0.37, roof + 0.045), (1.1, 0.0, roof))
+    bolt_frame(turret, brow, 0.04, 0.96, 0.15, 0.85, 0.0, spacing=0.16)
     # Commander's vision blocks under armoured hoods round the cupola.
     for i in range(6):
         t = 2.0 * math.pi * i / 6 + 0.3
         radial = Vector((math.cos(t), math.sin(t), 0.0))
         tangent = Vector((-math.sin(t), math.cos(t), 0.0))
         p = CUPOLA + radial * 0.44 + Vector((0.0, 0.0, 0.10))
-        turret.add("Paint", oriented_box(p + radial * 0.02 + Vector((0, 0, 0.045)), tangent, radial,
-                                         Vector((0, 0, 1)), 0.08, 0.05, 0.012), SMALL)
+        # The hood sits on the glass and its cheeks run down to the cupola wall, so nothing floats.
+        turret.add("Paint", tapered_box(p + radial * 0.005 + Vector((0, 0, 0.040)), tangent, radial,
+                                        Vector((0, 0, 1)), (0.085, 0.055), (0.075, 0.04), 0.015), SMALL)
+        for s in (-1, 1):
+            turret.add("Paint", oriented_box(p + tangent * s * 0.073 - radial * 0.005, tangent, radial,
+                                             Vector((0, 0, 1)), 0.012, 0.035, 0.028), False)
         turret.add("Optics", oriented_box(p, tangent, Vector((0, 0, 1)), radial, 0.06, 0.025, 0.012), bevel=False)
+    weld(turret, [CUPOLA + Vector((math.cos(t) * 0.47, math.sin(t) * 0.47, 0.005))
+                  for t in (2.0 * math.pi * i / 32 for i in range(33))])
     # Loader's hatch with hinge and handle, and a periscope.
     hatch = Vector((-0.65, 0.62, roof))
     turret.add("Paint", lathe(hatch, (0, 0, 1), [(0.0, 0.25), (0.0, 0.34), (0.035, 0.34), (0.045, 0.32), (0.045, 0.25)],
@@ -893,23 +1050,35 @@ def build_turret_roof(turret):
     for side in (1, -1):
         # Antenna bases and whips at the rear corners.
         antenna = Vector((-1.95, side * 1.00, roof))
+        turret.add("Paint", plan_prism(rect(antenna.x - 0.10, antenna.x + 0.10, antenna.y - 0.10, antenna.y + 0.10),
+                                       roof - 0.01, roof + 0.025, rect(antenna.x - 0.09, antenna.x + 0.09,
+                                                                       antenna.y - 0.09, antenna.y + 0.09)), False)
+        for dx in (-0.07, 0.07):
+            for dy in (-0.07, 0.07):
+                turret.add("Metal", cylinder(antenna + Vector((dx, dy, 0.035)), (0, 0, 1), 0.012, 0.02, segments=6),
+                           bevel=False, high=True)
+        antenna = antenna + Vector((0.0, 0.0, 0.025))
         turret.add("Metal", lathe(antenna, (0, 0, 1), [(0.0, 0.06), (0.05, 0.06), (0.07, 0.035), (0.14, 0.03)],
                                   segments=10, closed=False), SMALL)
         turret.add("Dark", cylinder(antenna + Vector((0.0, 0.0, 0.20)), (0, 0, 1), 0.02, 0.12, segments=6), False)
         turret.add("Dark", cylinder(antenna + Vector((0.0, 0.0, 0.76)), (0, 0, 1), 0.009, 1.0, segments=6,
                                     radius_end=0.005), False)
-        # Laser warning receivers on the front roof corners.
-        corner = Vector((0.50, side * 1.18, roof))
-        turret.add("Olive", plan_prism(rect(corner.x - 0.08, corner.x + 0.08, corner.y - 0.08, corner.y + 0.08), roof,
-                                       roof + 0.10, rect(corner.x - 0.07, corner.x + 0.05, corner.y - 0.07,
-                                                         corner.y + 0.07)), SMALL)
-        turret.add("Dark", box(corner.x + 0.055, corner.x + 0.075, corner.y - 0.05, corner.y + 0.05, roof + 0.02,
-                               roof + 0.075), bevel=False)
+        # Laser warning receiver on the smoke discharger housing, looking forward and out.
+        top = roof + 0.22 + 0.014
+        corner = Vector((0.30, side * 1.30, top))
+        turret.add("Olive", plan_prism(rect(corner.x - 0.07, corner.x + 0.07, corner.y - 0.06, corner.y + 0.06), top,
+                                       top + 0.09, rect(corner.x - 0.06, corner.x + 0.04, corner.y - 0.05,
+                                                        corner.y + 0.05)), SMALL)
+        turret.add("Dark", box(corner.x + 0.047, corner.x + 0.066, corner.y - 0.04, corner.y + 0.04, top + 0.02,
+                               top + 0.07), bevel=False)
         # Lifting eyes and grab handles.
-        for x in (0.30, -1.80):
-            turret.add("Metal", box(x - 0.05, x + 0.05, side * 1.10 - 0.025, side * 1.10 + 0.025, roof, roof + 0.03),
+        for x in (-0.08, -1.80):
+            turret.add("Paint", plan_prism(rect(x - 0.08, x + 0.08, side * 1.10 - 0.05, side * 1.10 + 0.05),
+                                           roof - 0.01, roof + 0.02, rect(x - 0.07, x + 0.07, side * 1.10 - 0.04,
+                                                                          side * 1.10 + 0.04)), False)
+            turret.add("Metal", box(x - 0.05, x + 0.05, side * 1.10 - 0.025, side * 1.10 + 0.025, roof, roof + 0.045),
                        SMALL)
-            turret.add("Metal", torus((x, side * 1.10, roof + 0.07), (0, 1, 0), 0.042, 0.013), SMALL)
+            turret.add("Metal", torus((x, side * 1.10, roof + 0.085), (0, 1, 0), 0.042, 0.013), SMALL)
         turret.add("Metal", polyline_tube(rounded([(-0.70, side * 1.20, roof), (-0.70, side * 1.20, roof + 0.07),
                                                    (-1.20, side * 1.20, roof + 0.07), (-1.20, side * 1.20, roof)],
                                                   0.04), 0.013), False)
@@ -918,6 +1087,12 @@ def build_turret_roof(turret):
             x = -2.15 + i * 0.42
             turret.add("Metal", cylinder((x, side * 1.10, roof + 0.011), (0, 0, 1), 0.02, 0.022, segments=6),
                        bevel=False, high=True)
+    # Rear roof plate: a bolted access panel behind the hatches, and the weld seam where the front roof plate meets it.
+    rear = Quad((-2.05, -0.80, roof), (-2.05, 0.80, roof), (-1.15, -0.80, roof), (-1.15, 0.80, roof),
+                (-1.6, 0.0, 1.5))
+    turret.add("Paint", rear.panel(0.0, 1.0, 0.0, 1.0, 0.015, gap=0.0, taper=0.01), SMALL)
+    bolt_frame(turret, rear, 0.03, 0.97, 0.04, 0.96, 0.015, spacing=0.20)
+    weld(turret, [(-1.08, -1.20, roof + 0.002), (-1.08, 1.20, roof + 0.002)])
     # Wind sensor mast at the rear centre.
     turret.add("Metal", polyline_tube([(-2.05, 0.0, roof), (-2.05, 0.0, roof + 0.42)], 0.018), False)
     turret.add("Dark", box(-2.10, -2.00, -0.10, 0.10, roof + 0.42, roof + 0.45), SMALL)
@@ -970,15 +1145,42 @@ def build_gun(turret):
                      (MANTLET_FRONT + 0.03, 0.30, z + 0.18), (MANTLET_FRONT + 0.03, -0.30, z + 0.18),
                      (TRUNNION.x, 0.0, z))
         bolt_frame(gun, front, 0.06, 0.94, 0.08, 0.92, 0.0, spacing=0.12)
-        # Coaxial machine gun port and the auxiliary sight window.
-        gun.add("Dark", tube((MANTLET_FRONT + 0.05, -0.24, z - 0.08), (1, 0, 0), 0.022, 0.045, 0.04, segments=12),
+        # Add-on armour over the mantlet: a top plate and a cheek plate on each side, bolted through.
+        top = Quad((1.28, -0.32, z + 0.26), (1.28, 0.32, z + 0.26), (MANTLET_FRONT, -0.26, z + 0.22),
+                   (MANTLET_FRONT, 0.26, z + 0.22), (TRUNNION.x, 0.0, z))
+        gun.add("Paint", top.panel(0.06, 0.94, 0.10, 0.94, 0.025, gap=0.0, taper=0.015), SMALL)
+        bolt_frame(gun, top, 0.10, 0.90, 0.16, 0.88, 0.025, spacing=0.14)
+        for side in (1, -1):
+            cheek = Quad((1.28, side * 0.42, z - 0.16), (MANTLET_FRONT, side * 0.35, z - 0.13),
+                         (1.28, side * 0.42, z + 0.16), (MANTLET_FRONT, side * 0.35, z + 0.13), (TRUNNION.x, 0.0, z))
+            gun.add("Paint", cheek.panel(0.32, 0.97, 0.06, 0.94, 0.03, gap=0.0, taper=0.012), SMALL)
+            bolt_frame(gun, cheek, 0.38, 0.92, 0.14, 0.86, 0.03, spacing=0.12)
+        # Gun shield boot between the cover plate and the barrel collar, held by a clamp ring.
+        gun.add("Rubber", lathe((0.0, 0.0, z), (1, 0, 0), [(MANTLET_FRONT + 0.02, 0.13), (MANTLET_FRONT + 0.02, 0.195),
+                                                          (MANTLET_FRONT + 0.045, 0.205), (MANTLET_FRONT + 0.07, 0.19),
+                                                          (MANTLET_FRONT + 0.09, 0.178), (MANTLET_FRONT + 0.115, 0.16),
+                                                          (MANTLET_FRONT + 0.115, 0.13)], segments=20), False)
+        gun.add("Metal", lathe((0.0, 0.0, z), (1, 0, 0), [(MANTLET_FRONT + 0.105, 0.150), (MANTLET_FRONT + 0.105, 0.166),
+                                                         (MANTLET_FRONT + 0.135, 0.166), (MANTLET_FRONT + 0.135, 0.150)],
+                               segments=24), False)
+        gun.add("Metal", box(MANTLET_FRONT + 0.105, MANTLET_FRONT + 0.135, -0.02, 0.02, z + 0.160, z + 0.19), False)
+        # Coaxial machine gun port in an armoured surround, and the auxiliary sight window under a hood.
+        port = [(x, y - 0.24, zz) for x, y, zz in octagon(MANTLET_FRONT + 0.03, 0.07, 0.06, 0.02, z - 0.08)]
+        port_face = [(x, y - 0.24, zz) for x, y, zz in octagon(MANTLET_FRONT + 0.065, 0.06, 0.05, 0.018, z - 0.08)]
+        gun.add("Paint", loft(port, port_face), SMALL)
+        gun.add("Dark", tube((MANTLET_FRONT + 0.07, -0.24, z - 0.08), (1, 0, 0), 0.022, 0.04, 0.03, segments=12),
                 SMALL)
         gun.add("Dark", tube((MANTLET_FRONT + 0.05, 0.24, z + 0.06), (1, 0, 0), 0.045, 0.062, 0.04, segments=14),
                 SMALL)
         gun.add("Optics", cylinder((MANTLET_FRONT + 0.04, 0.24, z + 0.06), (1, 0, 0), 0.045, 0.01, segments=14),
                 bevel=False)
-        # Lifting eye on the mantlet top.
-        gun.add("Metal", torus((MANTLET_FRONT - 0.20, 0.0, z + 0.24), (1, 0, 0), 0.04, 0.013), SMALL)
+        gun.add("Paint", box(MANTLET_FRONT + 0.03, MANTLET_FRONT + 0.13, 0.165, 0.315, z + 0.125, z + 0.15), SMALL)
+        for y in (0.165, 0.30):
+            gun.add("Paint", box(MANTLET_FRONT + 0.03, MANTLET_FRONT + 0.11, y, y + 0.015, z - 0.01, z + 0.125),
+                    SMALL)
+        # Lifting eye on a lug on the mantlet top plate.
+        gun.add("Metal", box(MANTLET_FRONT - 0.26, MANTLET_FRONT - 0.14, -0.025, 0.025, z + 0.24, z + 0.275), SMALL)
+        gun.add("Metal", torus((MANTLET_FRONT - 0.20, 0.0, z + 0.31), (0, 1, 0), 0.04, 0.013), SMALL)
         gun.zone("Barrel")
         # Muzzle reference sensor on its bracket.
         gun.add("Olive", box(MUZZLE_X - 0.36, MUZZLE_X - 0.30, -0.03, 0.03, z + 0.10, z + 0.14), SMALL)
@@ -999,8 +1201,21 @@ def build_rws(turret):
     rws.zone("RWS")
     rws.add("Olive", lathe(c, (0, 0, 1), [(0.0, 0.25), (0.035, 0.25), (0.06, 0.22), (0.06, 0.10)], segments=24,
                            closed=False), SMALL)
-    rws.add("Olive", plan_prism(rect(c.x - 0.24, c.x + 0.16, c.y - 0.17, c.y + 0.17), c.z + 0.06, c.z + 0.24,
-                                rect(c.x - 0.22, c.x + 0.12, c.y - 0.15, c.y + 0.15)))
+    rws.add("Dark", tube(c + Vector((0.0, 0.0, 0.008)), (0, 0, 1), 0.20, 0.258, 0.016, segments=24), SMALL)
+    for i in range(12):
+        t = 2.0 * math.pi * (i + 0.5) / 12
+        rws.add("Metal", cylinder(c + Vector((math.cos(t) * 0.225, math.sin(t) * 0.225, 0.045)), (0, 0, 1), 0.012,
+                                  0.016, segments=6), bevel=False, high=True)
+    rws.add("Olive", plan_prism([(c.x - 0.24, c.y - 0.12), (c.x - 0.19, c.y - 0.17), (c.x + 0.16, c.y - 0.17),
+                                 (c.x + 0.16, c.y + 0.17), (c.x - 0.19, c.y + 0.17), (c.x - 0.24, c.y + 0.12)],
+                                c.z + 0.06, c.z + 0.24,
+                                [(c.x - 0.22, c.y - 0.10), (c.x - 0.17, c.y - 0.15), (c.x + 0.12, c.y - 0.15),
+                                 (c.x + 0.12, c.y + 0.15), (c.x - 0.17, c.y + 0.15), (c.x - 0.22, c.y + 0.10)]))
+    side_cover = Quad((c.x - 0.24, c.y - 0.11, c.z + 0.08), (c.x - 0.24, c.y + 0.11, c.z + 0.08),
+                      (c.x - 0.2225, c.y - 0.095, c.z + 0.22), (c.x - 0.2225, c.y + 0.095, c.z + 0.22),
+                      c + Vector((0, 0, 0.15)))
+    rws.add("Olive", side_cover.panel(0.05, 0.95, 0.12, 0.88, 0.012, gap=0.0), SMALL)
+    bolt_frame(rws, side_cover, 0.08, 0.92, 0.18, 0.82, 0.012, spacing=0.08)
     # Cradle: two yoke plates holding the gun on its elevation axis.
     for dy in (-0.085, 0.085):
         rws.add("Olive", side_prism([(c.x - 0.12, c.z + 0.22), (c.x + 0.12, c.z + 0.22), (c.x + 0.10, gun_z + 0.07),
@@ -1032,9 +1247,20 @@ def build_rws(turret):
     rws.add("Optics", cylinder((c.x + 0.213, c.y - 0.30, c.z + 0.20), (1, 0, 0), 0.02, 0.01, segments=10),
             bevel=False)
     rws.add("Olive", box(c.x + 0.10, c.x + 0.27, s0 - 0.01, s1 + 0.01, c.z + 0.415, c.z + 0.435), SMALL)
+    # Armoured shutter doors swung open either side of the windows, on hinge pins.
+    for y in (s0 - 0.004, s1 + 0.004):
+        sign = -1.0 if y < c.y - 0.25 else 1.0
+        rws.add("Olive", box(c.x + 0.205, c.x + 0.30, y + sign * 0.0, y + sign * 0.013, c.z + 0.17, c.z + 0.40), False)
+        rws.add("Metal", cylinder((c.x + 0.205, y + sign * 0.006, c.z + 0.285), (0, 0, 1), 0.011, 0.22, segments=8),
+                SMALL)
+    # Cable loom from the sensor head into the cradle.
+    rws.add("Dark", polyline_tube(rounded([(c.x - 0.07, c.y - 0.25, c.z + 0.24), (c.x - 0.14, c.y - 0.25, c.z + 0.24),
+                                           (c.x - 0.18, c.y - 0.15, c.z + 0.20)], 0.04), 0.013), False)
     # Ammunition box on the left with its feed chute.
     rws.add("Olive", box(c.x - 0.20, c.x + 0.08, c.y + 0.15, c.y + 0.31, c.z + 0.10, c.z + 0.34))
     rws.add("Olive", box(c.x - 0.21, c.x + 0.09, c.y + 0.14, c.y + 0.32, c.z + 0.33, c.z + 0.355), SMALL)
+    rws.add("Metal", cylinder((c.x - 0.06, c.y + 0.322, c.z + 0.34), (1, 0, 0), 0.01, 0.24, segments=6), False)
+    rws.add("Dark", box(c.x + 0.08, c.x + 0.10, c.y + 0.20, c.y + 0.25, c.z + 0.28, c.z + 0.345), False)
     rws.add("Dark", polyline_tube(rounded([(c.x - 0.18, c.y + 0.225, c.z + 0.355), (c.x - 0.18, c.y + 0.225, c.z + 0.40),
                                            (c.x - 0.10, c.y + 0.225, c.z + 0.40)], 0.03), 0.01), False)
     rws.add("Dark", polyline_tube(rounded([(c.x - 0.02, c.y + 0.15, c.z + 0.30), (c.x - 0.04, c.y + 0.10, gun_z),
@@ -1060,6 +1286,9 @@ def build_road_wheel(name):
         segments = 24 if sign > 0 else 16
         wheel.add("Rubber", lathe((0, 0, 0), (0, sign, 0), tyre, segments=segments), bevel=False)
         wheel.add("Olive", lathe((0, 0, 0), (0, sign, 0), disc, segments=segments), bevel=False)
+    # Steel rim flange between the outer disc and its tyre.
+    wheel.add("Metal", lathe((0, 0, 0), (0, 1, 0), [(0.188, 0.268), (0.200, 0.268), (0.200, 0.292)],
+                             segments=16), bevel=False)
     wheel.add("Olive", lathe((0, 0, 0), (0, 1, 0), [(0.205, 0.10), (0.235, 0.10), (0.245, 0.09), (0.25, 0.06),
                                                    (0.25, 0.035)], segments=16, closed=False), bevel=False)
     wheel.add("Metal", lathe((0, 0, 0), (0, 1, 0), [(0.25, 0.03), (0.258, 0.022)], segments=8, closed=False),
@@ -1153,7 +1382,7 @@ def track_link(part, centre, u, v, w, pitch):
     for side in (1, -1):
         part.add("Metal", oriented_box(shoe + v * side * TRACK_HALF_WIDTH * 0.95, u, v, w, pitch * 0.5, 0.028, 0.038),
                  bevel=False)
-    part.add("Metal", tapered_box(shoe - w * 0.075, u, v, -w, (0.045, 0.032), (0.025, 0.018), 0.045), bevel=False)
+    part.add("Metal", tapered_box(shoe - w * 0.08, u, v, -w, (0.048, 0.034), (0.024, 0.017), 0.05), bevel=False)
     # Normal-map detail: wedge bolts on the end connectors, pad bolts.
     for side in (1, -1):
         part.add("Metal", cylinder(shoe + v * side * (TRACK_HALF_WIDTH * 0.95 + 0.03), v, 0.016, 0.012, segments=6),
@@ -1482,7 +1711,7 @@ def main():
     export_fbx()
     os.makedirs(os.path.dirname(BLEND), exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
-    presentation.render_all(RENDER_DIR, parts, previous_front34=V1_FRONT34)
+    presentation.render_all(RENDER_DIR, parts, previous_front34=PREVIOUS_FRONT34)
     # The renders added and removed their lights and camera; save again so the .blend has none of them.
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 
