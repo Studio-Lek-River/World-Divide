@@ -140,22 +140,19 @@ bool FRTSUIStyleNeutralColorsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("A colour the faction leaves out comes from Neutral"), URTSUIStyleSubsystem::FindColorIn(Chain, TEXT("Danger")), FLinearColor::Red);
 	TestEqual(TEXT("A colour no theme has is the placeholder"), URTSUIStyleSubsystem::FindColorIn(Chain, TEXT("Missing")), URTSUIStyleSubsystem::GetPlaceholderColor());
 
-	// At setup: USA.theme.json leaves Positive out, and its generated set and text styles carry Neutral's.
+	// At setup: the generated USA set has every colour Neutral has, each with a text style.
 	const URTSUIStyleSet* USA = LoadStyleSet(TEXT("USA"));
 	const URTSUIStyleSet* NeutralSet = LoadStyleSet(TEXT("Neutral"));
 	if (!TestNotNull(TEXT("DA_UIStyle_USA is generated"), USA) || !TestNotNull(TEXT("DA_UIStyle_Neutral is generated"), NeutralSet))
 	{
 		return false;
 	}
-	const TSharedPtr<FJsonObject> USATheme = ReadJson(FPaths::Combine(FPaths::ProjectDir(), TEXT("UI/Themes/USA.theme.json")));
-	TestFalse(TEXT("USA.theme.json leaves Positive out"), USATheme && USATheme->GetObjectField(TEXT("colors"))->HasField(TEXT("Positive")));
-	const FLinearColor* Positive = USA->Colors.Find(TEXT("Positive"));
-	const FLinearColor* NeutralPositive = NeutralSet->Colors.Find(TEXT("Positive"));
-	if (TestNotNull(TEXT("USA has Positive"), Positive) && TestNotNull(TEXT("Neutral has Positive"), NeutralPositive))
+	for (const TPair<FName, FLinearColor>& Color : NeutralSet->Colors)
 	{
-		TestEqual(TEXT("USA's Positive is Neutral's"), *Positive, *NeutralPositive);
+		TestTrue(FString::Printf(TEXT("USA has %s"), *Color.Key.ToString()), USA->Colors.Contains(Color.Key));
+		TestNotNull(FString::Printf(TEXT("USA has a Body text style in %s"), *Color.Key.ToString()),
+			LoadStyleClass(TEXT("USA"), FString::Printf(TEXT("TS_USA_Body_%s"), *Color.Key.ToString())));
 	}
-	TestNotNull(TEXT("USA has a Body text style in Positive"), LoadStyleClass(TEXT("USA"), TEXT("TS_USA_Body_Positive")));
 	return true;
 }
 

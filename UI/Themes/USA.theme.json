@@ -1,13 +1,28 @@
 {
   "colors": {
-    "Primary": "#2E4A6B",
-    "Secondary": "#1B2433",
-    "Accent": "#C9A54A",
-    "Panel": "#14181FEE",
+    "Primary": "#385A73",
+    "Secondary": "#0A1119",
+    "Accent": "#75B9DF",
+    "Panel": "#101820FF",
     "Text": "#E6E9EE",
-    "MutedText": "#9AA3B0",
-    "Disabled": "#5A616B",
-    "Warning": "#E0A030",
-    "Danger": "#D0453A"
+    "MutedText": "#B5C0CE",
+    "Disabled": "#8493A5",
+    "Warning": "#F1BC65",
+    "Danger": "#F28A7E",
+    "Positive": "#95CCA5"
+  },
+  "fonts": {
+    "Title": {
+      "file": "Fonts/Barlow-SemiBold.ttf",
+      "size": 18
+    },
+    "Body": {
+      "file": "Fonts/Barlow-Regular.ttf",
+      "size": 14
+    },
+    "Number": {
+      "file": "Fonts/JetBrainsMono-Medium.ttf",
+      "size": 16
+    }
   }
 }

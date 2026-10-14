@@ -3,7 +3,8 @@
     python Tools/Scripts/ui_brief.py <design issue number> [--quiet]
 
 The panels are the UI/Layouts/<Panel>.layout.json files the issue's "Send to ChatGPT" section lists; the folder is
-Saved/UIBriefs/<first panel>/. The binding keys, lists and actions come from the code through ue.ps1 -Task uibindings
+Saved/UIBriefs/<first panel>/. An issue without panels (themes and sprites only) gets the folder of the spec its prompt
+names (Saved/UIBriefs/Theme/ for docs/ui/specs/Theme.md), else Saved/UIBriefs/Issue<n>/. The binding keys, lists and actions come from the code through ue.ps1 -Task uibindings
 (URTSUICommandlet), never from the issue text. The folder holds:
 - prompt.txt: the issue's "Prompt (ChatGPT)" block;
 - bindings.md: per panel its keys, lists and actions, or its slots and modals when it has none, and every engine panel,
@@ -11,6 +12,7 @@ Saved/UIBriefs/<first panel>/. The binding keys, lists and actions come from the
 - sprites.md: every existing sprite per set;
 - UI/Layouts/: the panels' current layouts; DESIGNER_HANDBOOK.md; docs/ui/specs/: the panels' specs when they exist;
 - screenshots/<Panel>/: the latest Saved/UIShots of each panel, when there are any;
+- the other repository files that section names (themes, mockups; wildcards allowed), at their repository paths;
 - refs/HUD_Target.png: the target mockup of the whole HUD;
 - README.md: the list of files; STEPS.md: the producer's steps for this round.
 It also packs everything but prompt.txt and STEPS.md into Saved/UIBriefs/<Panel>.zip, the one file to attach. Unless
@@ -198,14 +200,17 @@ def main():
     for panel in re.findall(r"UI/Layouts/(\w+)\.layout\.json", section(body, "Send to ChatGPT")):
         if panel not in panels:
             panels.append(panel)
-    if not panels:
-        sys.exit(f"FAILED: #{issue['number']} names no UI/Layouts/<Panel>.layout.json under **Send to ChatGPT**")
     prompt = re.search(r"\*\*Prompt \(ChatGPT\)\*\*\s*\n```\w*\n(.*?)\n```", body, re.S)
     if not prompt:
         sys.exit(f"FAILED: #{issue['number']} has no **Prompt (ChatGPT)** block")
+    if panels:
+        name = panels[0]
+    else:
+        spec = re.search(r"docs/ui/specs/(\w+)\.md", prompt.group(1))
+        name = spec.group(1) if spec else f"Issue{issue['number']}"
 
     bindings = read_bindings()
-    folder = os.path.join(REPO, "Saved", "UIBriefs", panels[0])
+    folder = os.path.join(REPO, "Saved", "UIBriefs", name)
     if os.path.isdir(folder):
         shutil.rmtree(folder)
     os.makedirs(os.path.join(folder, "UI", "Layouts"))
@@ -229,6 +234,15 @@ def main():
         shots = os.path.join(REPO, "Saved", "UIShots", panel)
         if os.path.isdir(shots):
             shutil.copytree(shots, os.path.join(folder, "screenshots", panel))
+    attached = []
+    for pattern in re.findall(r"`((?:UI|docs)/[^`\s]+)`", section(body, "Send to ChatGPT")):
+        for source in sorted(glob.glob(os.path.join(REPO, pattern))):
+            relative = os.path.relpath(source, REPO).replace("\\", "/")
+            if relative == "docs/ui/DESIGNER_HANDBOOK.md" or relative.startswith("UI/Layouts/") or relative in attached:
+                continue
+            os.makedirs(os.path.join(folder, os.path.dirname(relative)), exist_ok=True)
+            shutil.copy(source, os.path.join(folder, relative))
+            attached.append(relative)
     declared = write_bindings(os.path.join(folder, "bindings.md"), panels, bindings, layouts)
     write_sprites(os.path.join(folder, "sprites.md"))
     shutil.copy(os.path.join(REPO, "docs", "ui", "DESIGNER_HANDBOOK.md"), folder)
@@ -240,7 +254,7 @@ def main():
     files = sorted(os.path.relpath(os.path.join(root, name), folder).replace("\\", "/")
                    for root, _, names in os.walk(folder) for name in names)
     with open(os.path.join(folder, "README.md"), "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(f"# Brief for #{issue['number']}: {issue['title']}\n\nPanels: {', '.join(panels)}\n\n"
+        handle.write(f"# Brief for #{issue['number']}: {issue['title']}\n\nPanels: {', '.join(panels) or 'none'}\n\n"
                      "`refs/HUD_Target.png` is the target look of the whole HUD: follow its arrangement and mood "
                      "within the handbook's rules.\n\n"
                      + "".join(f"- `{file}`\n" for file in files + ["README.md"]))
@@ -249,14 +263,16 @@ def main():
         os.remove(archive)
     pack(folder, archive)
     with open(os.path.join(folder, "STEPS.md"), "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(STEPS.format(number=issue["number"], title=issue["title"], panel=panels[0],
+        handle.write(STEPS.format(number=issue["number"], title=issue["title"], panel=panels[0] if panels else "HUD",
                                   zip=os.path.basename(archive)))
     if "--quiet" not in sys.argv:
         hand_over(os.path.join(folder, "prompt.txt"), archive)
 
     print(f"BRIEF: {os.path.relpath(folder, REPO)}")
     print(f"ZIP: {os.path.relpath(archive, REPO)}")
-    print(f"PANELS: {', '.join(panels)}")
+    print(f"PANELS: {', '.join(panels) or 'none'}")
+    for relative in attached:
+        print(f"ATTACHED: {relative}")
     for panel in panels:
         print(f"  {panel}: {len(declared.get(panel, ()))} key(s) and action(s)"
               + (", screenshots" if os.path.isdir(os.path.join(folder, "screenshots", panel)) else ", no screenshots"))

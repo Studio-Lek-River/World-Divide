@@ -39,7 +39,7 @@ PLACES = [
     (re.compile(r"UI/Textures/(?P<f>Common|%s)/Icons/T_Icon_(?P=f)_%s\.png" % (FACTION, NAME)), "an entity icon"),
     (re.compile(r"UI/Textures/(?P<f>%s)/Commands/T_Cmd_(?P=f)_%s\.png" % (FACTION, NAME)), "a command icon"),
     (re.compile(r"UI/Textures/(?P<f>%s)/Art/T_Art_(?P=f)_%s\.png" % (FACTION, NAME)), "an illustration"),
-    (re.compile(r"UI/Fonts/[A-Za-z0-9_-]+\.(ttf|otf|txt)"), "a font or its licence"),
+    (re.compile(r"UI/Fonts/[A-Za-z0-9_-]+(\.LICENSE)?\.(ttf|otf|txt)"), "a font or its licence"),
     (re.compile(r"docs/ui/specs/[A-Za-z0-9]+\.md"), "a UX spec"),
     (re.compile(r"docs/ui/mockups/Mockup_[A-Za-z0-9]+_(%s)\.png" % FACTION), "a mockup"),
     (re.compile(r"README\.txt"), "the README"),
