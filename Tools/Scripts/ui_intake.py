@@ -33,7 +33,6 @@ NAME = r"[A-Za-z0-9_]+"
 FACTION = "|".join(FACTIONS)
 # Where each delivered file may go (handbook sections 5 and 7), as a pattern over its path from the repository root.
 PLACES = [
-    (re.compile(r"UI/Layouts/[A-Za-z0-9]+\.layout\.json"), "a layout"),
     (re.compile(r"UI/Sprites/(Common|%s)\.sprites\.json" % FACTION), "a sprite file"),
     (re.compile(r"UI/Themes/(Neutral|%s)\.theme\.json" % FACTION), "a theme"),
     (re.compile(r"UI/Textures/(?P<f>Common|%s)/T_UI_(?P=f)_%s\.png" % (FACTION, NAME)), "a HUD piece"),

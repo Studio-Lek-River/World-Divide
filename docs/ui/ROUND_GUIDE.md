@@ -36,7 +36,7 @@ Only start a design issue when its code issue is closed: the brief reads the pan
 **If ChatGPT gives only text or loose files, reply:**
 > Deliver everything as the one ZIP of handbook section 7, folders mirroring the repository root.
 
-**Optional, to see it live first:** with the editor open (`ue.ps1 -Task editor`) and PIE running, ChatGPT/Codex can try layout changes through Unreal MCP with `rts.UI.Reload`.
+ChatGPT delivers assets, mockup and spec only. After the intake Claude assembles the panel's layouts from them; ask Claude directly for placement changes after playing, no new ChatGPT round needed.
 
 ## Step 3: the intake (Claude)
 

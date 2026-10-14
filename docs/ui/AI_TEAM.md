@@ -6,7 +6,7 @@ The UI/UX work is done by four members. Everyone works from [`DESIGNER_HANDBOOK.
 |---|---|---|
 | The producer (a person) | Picks the panel, plays, judges, approves every push | Anything |
 | Claude Code | Programmer: the code issue of each panel, intake of deliveries, the UI validation test, commits | `Source/`, `Tools/`, `Content/` through `setup_testmap.py`, everything else on approval |
-| ChatGPT / Codex | Designer: layouts, sprites, themes, the UX spec and mockups; its instructions are [`AGENTS.md`](../../AGENTS.md) | `UI/Layouts`, `UI/Sprites`, `UI/Themes`, `UI/Textures`, `UI/Fonts`, `docs/ui/specs`, `docs/ui/mockups` |
+| ChatGPT / Codex | Designer: sprites, icons, themes, fonts, the UX spec and mockups; Claude assembles the layouts from them. Its instructions are [`AGENTS.md`](../../AGENTS.md) | `UI/Sprites`, `UI/Themes`, `UI/Textures`, `UI/Fonts`, `docs/ui/specs`, `docs/ui/mockups` |
 | Gemini through the Antigravity CLI `agy` | Reviewer: judges a delivery in the running game | Nothing |
 
 No one but Claude touches `Source/`, `Content/` or `Data/`, no one saves assets through the editor, and only the producer pushes.

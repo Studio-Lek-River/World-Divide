@@ -11,7 +11,7 @@ The game engine does not ship a fixed HUD. It is built from text files, much lik
 | `UI/Themes/<Faction>.theme.json` | colours and fonts per faction | — |
 | `UI/Textures/...`, `UI/Fonts/...` | the PNGs and font files themselves | `gfx/interface` |
 
-So what you deliver is not only pictures: your layout file **is** the panel. The programmers write the C++ that supplies the data and carries out the clicks; everything about look and placement is yours.
+You deliver the assets (sprites, icons, themes, fonts), the mockup and the spec; they decide the look. Claude assembles the panel: it writes the layout files from your mockup and spec, checks them in the running game and iterates on placement with the producer, so a change of placement needs no new delivery. Section 2 is here so you know what a layout can do; describe placement and behaviour in your spec in its terms (anchors, sizes in HUD units, states, keys and actions).
 
 ---
 
@@ -331,7 +331,6 @@ Keep it under two pages. It is a working document for the programmers, not a pit
 
 ```
 <Panel>_<date>.zip
-  UI/Layouts/<Panel>.layout.json
   UI/Sprites/Common.sprites.json        only the entries for this delivery
   UI/Sprites/USA.sprites.json           (the programmers merge them)
   UI/Sprites/China.sprites.json
@@ -345,7 +344,8 @@ Keep it under two pages. It is a working document for the programmers, not a pit
 ```
 
 - Valid JSON only: no comments, no trailing commas.
-- Before you hand over, check that every sprite your layout names exists in your sprite entries or in the brief's list of existing sprites, that every `{key}` and `action` is in the brief's lists, and that every PNG has the size its sprite entry declares.
+- Do not deliver `UI/Layouts/`: Claude writes them; the intake refuses them.
+- Before you hand over, check that every sprite your spec names exists in your sprite entries or in the brief's list of existing sprites, that every key and action your spec uses is in the brief's lists, and that every PNG has the size its sprite entry declares.
 
 ---
 
@@ -355,10 +355,10 @@ The producer's own click-by-click version of this round is [`ROUND_GUIDE.md`](RO
 
 The team is four: the producer (a person, who picks the panel, plays, judges and approves), Claude (the programmer), you (the UI/UX designer) and Gemini through the Antigravity CLI (the reviewer, who only looks). Each panel has a **code issue** and a **design issue** on GitHub. Who does what and how each of you reaches the running editor through Unreal MCP is in [`AI_TEAM.md`](AI_TEAM.md).
 
-1. **Claude** completes the code issue: the C++ that supplies the binding keys and carries out the actions, plus a plain placeholder layout and placeholder sprites, so the panel already works. The tests pass.
+1. **Claude** completes the code issue: the C++ that supplies the binding keys and carries out the actions, plus the panel's layout with placeholder sprites, so the panel already works. The tests pass.
 2. **The producer** runs `/ui-brief <design issue>` and sends you its folder: the prompt, the binding keys and actions read from the code, the existing sprite names, the current layout files, this handbook, the style references and the latest screenshots.
-3. **You** deliver the ZIP (section 7). With the editor open and Unreal MCP connected you can first try layout changes live in PIE with `rts.UI.Reload`.
-4. **The producer** runs `/ui-intake <zip>`: Claude checks the delivery before anything is copied (places and names, JSON, PNG sizes, binding keys, actions, sprites) and sends every problem back with its file and key; a clean delivery is copied in, its art imported when it changed, and the tests run. A round that only changes layout files needs no setup: `rts.UI.Reload` in the running game shows it at once. No code rebuild is needed between rounds.
+3. **You** deliver the ZIP (section 7): assets, mockup and spec.
+4. **The producer** runs `/ui-intake <zip>`: Claude checks the delivery before anything is copied (places and names, JSON, PNG sizes, binding keys, actions, sprites) and sends every problem back with its file and key; a clean delivery is copied in and its art imported. Claude then assembles the panel in its layout files after your mockup and spec, checks it with screenshots and runs the tests. Placement changes the producer asks for afterwards are Claude's, without a new delivery.
 5. **The producer** plays, and runs `/ui-review <Panel>`: the game takes screenshots of the HUD in every faction look at 1920x1080, 2560x1440 and 3440x1440 in a fixed match state (`AI_TEAM.md`, "Screenshots of the HUD"), and the reviewer's review is posted on the design issue. The producer sends you the feedback, the review and the screenshots, and the next round starts at step 3.
 6. **When it is right**, the producer approves the commit `/ui-intake` proposes; it closes the design issue. Any "Requests for code" in your spec become new issues.
 

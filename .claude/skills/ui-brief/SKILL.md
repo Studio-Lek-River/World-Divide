@@ -24,7 +24,7 @@ It reads the issue with `gh`, takes as panels the `UI/Layouts/<Panel>.layout.jso
 | `prompt.txt` | the issue's **Prompt (ChatGPT)** block, verbatim |
 | `bindings.md` | per panel its keys, lists with `item.*` keys and actions; a panel without a source: "No keys and no actions." plus its slots and modals; then every engine panel, theme colour and font a layout may name |
 | `sprites.md` | every existing sprite per set, with size, margin, tint and button states |
-| `UI/Layouts/`, `docs/ui/specs/` | the panels' current layouts and specs |
+| `UI/Layouts/`, `docs/ui/specs/` | the panels' current layouts (for reference: the designer does not deliver layouts, Claude assembles them) and specs |
 | `DESIGNER_HANDBOOK.md` | the handbook |
 | `screenshots/<Panel>/` | the latest `Saved/UIShots/<Panel>/` when there are any; it takes no new ones (`/ui-review` does) |
 | `refs/HUD_Target.png` | the target mockup of the whole HUD |

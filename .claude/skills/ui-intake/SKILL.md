@@ -27,6 +27,10 @@ It unpacks into `Saved/UIIntake/<zip name>/`, checks the places and names of han
 - **`INTAKE FAILED`**: nothing was copied. Report every `PROBLEM:` line grouped by file, each with its key, in words the designer can act on. Write the same list to `Saved/UIIntake/<zip name>/fixes.md`, opening with `Your delivery did not pass the intake check. Fix these points and send the whole ZIP again, same names and format (handbook section 7):`, and put it on the clipboard (`Get-Content -Raw -Encoding UTF8 <file> | Set-Clipboard`). Tell the producer: "The fix list is on your clipboard: paste it into the same ChatGPT chat." Then stop.
 - **`INTAKE APPLIED`**: the `COPIED:` lines are what changed. `SETUP NEEDED` means sprites, themes, textures or fonts changed. `README:` is the designer's README; read it.
 
+## 2b. Assemble the panel
+
+The designer delivers assets, mockup and spec only; `UI/Layouts/` is Claude's (a delivered layout fails the place check). After a clean intake, bring the panel's layouts in line with the delivered mockup and spec: new sprites, sizes, states, what shows when. Check with `ue.ps1 -Task uicheck -Path UI` and look at `ue.ps1 -Task uishots -Panel <Panel>` (and without `-Panel` for the whole HUD) before testing. Placement changes the producer asks for after playing are made the same way, without a new design round.
+
 ## 3. Import and test
 
 - Only on `SETUP NEEDED`: `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup`. Exit 3 → report the LFS lock instructions it prints and stop.

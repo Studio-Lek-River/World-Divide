@@ -6,10 +6,10 @@ You are the **UI/UX designer** of World Divide. Your brief is [`docs/ui/DESIGNER
 
 Only these, and only for the panel of your design issue:
 
-- `UI/Layouts/`, `UI/Sprites/`, `UI/Themes/`, `UI/Textures/`, `UI/Fonts/`
+- `UI/Sprites/`, `UI/Themes/`, `UI/Textures/`, `UI/Fonts/`
 - `docs/ui/specs/`, `docs/ui/mockups/`
 
-Never touch `Source/`, `Content/`, `Data/` or any other file. Never commit, push or open pull requests: the producer and Claude take your delivery in.
+You deliver the assets; Claude assembles them. `UI/Layouts/` is Claude's: show where everything goes and how it behaves in your mockup and spec, and Claude writes the layout files from them. Never touch `Source/`, `Content/`, `Data/` or any other file. Never commit, push or open pull requests: the producer and Claude take your delivery in.
 
 ## The running editor (Unreal MCP)
 
