@@ -57,6 +57,13 @@ public:
 	/** The given faction's set (URTSFactionData::UIStyle), Common and Neutral; for what belongs to that faction, such as icons. */
 	TArray<const URTSUIStyleSet*> GetStyleChain(const URTSFactionData* Faction) const;
 
+	/**
+	 * Tried in place of the local player's faction set until cleared with null, so the HUD can be shown in each faction's
+	 * look while the player keeps their faction (rts.UI.Screenshot). The HUD takes it on its next rebuild.
+	 */
+	void SetStyleOverride(const URTSUIStyleSet* StyleSet) { StyleOverride = StyleSet; }
+	const URTSUIStyleSet* GetStyleOverride() const { return StyleOverride; }
+
 	UFUNCTION(BlueprintPure, Category = "UI Style")
 	FSlateBrush FindBrush(FName Sprite) const;
 
@@ -87,9 +94,15 @@ public:
 	static FLinearColor GetPlaceholderColor();
 
 private:
+	/** First, the set, then Common and Neutral, those that exist. */
+	TArray<const URTSUIStyleSet*> MakeStyleChain(const URTSUIStyleSet* First) const;
+
 	const URTSUIStyleSet* LoadStyleSet(const TSoftObjectPtr<URTSUIStyleSet>& StyleSet) const;
 
 	/** The sets loaded so far, kept from garbage collection. */
 	UPROPERTY(Transient)
 	mutable TMap<FSoftObjectPath, TObjectPtr<URTSUIStyleSet>> LoadedSets;
+
+	UPROPERTY(Transient)
+	TObjectPtr<const URTSUIStyleSet> StyleOverride;
 };

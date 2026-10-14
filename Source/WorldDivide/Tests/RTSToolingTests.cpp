@@ -114,7 +114,7 @@ bool FRTSMCPWriteToolsHiddenTest::RunTest(const FString& Parameters)
 	{
 		TestTrue(FString::Printf(TEXT("'%s' is refused over MCP"), Command), IsCommandBlocked(Command));
 	}
-	for (const TCHAR* Command : { TEXT("stat fps"), TEXT("rts.UI.Reload"), TEXT("showdebug") })
+	for (const TCHAR* Command : { TEXT("stat fps"), TEXT("rts.UI.Reload"), TEXT("rts.UI.Screenshot ResourceBar USA"), TEXT("showdebug") })
 	{
 		TestFalse(FString::Printf(TEXT("'%s' still runs over MCP"), Command), IsCommandBlocked(Command));
 	}

@@ -86,6 +86,8 @@ An AI seat gets an `ARTSAIPlayer` when play starts, a player without a connectio
 
 `Tools/Scripts/ue.ps1 -Task build|test|setup` wraps the commands below and exits nonzero on failure. It uses `UE_ROOT` as the engine folder, falling back to `D:\Program Files\Epic Games\UE_5.8`.
 
+`ue.ps1 -Task uishots [-Panel <Name>]` plays `L_TestMap` with a renderer and saves the HUD in a fixed UI test state for each faction look at three resolutions to `Saved/UIShots` (`rts.UI.Screenshot`, see `docs/ui/AI_TEAM.md`). `WorldDivide.UI.Screenshot.*` check the faction looks, the style override, the test state and the panel crop.
+
 ```
 "<UE_5.8>\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -ExecCmds="Automation RunTests WorldDivide;Quit" -RTSTestTimeDilation=4 -unattended -nullrhi
 ```

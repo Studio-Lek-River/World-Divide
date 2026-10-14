@@ -337,7 +337,7 @@ The team is the producer (a person), Claude (the programmer) and you (the UI/UX 
 1. **Claude** completes the code issue: the C++ that supplies the binding keys and carries out the actions, plus a plain placeholder layout and placeholder sprites, so the panel already works. The tests pass.
 2. **The producer** sends you the design brief, with this handbook, the placeholder `<Panel>.layout.json` and the style references attached.
 3. **You** deliver the ZIP (section 7).
-4. **The producer** unpacks it over the repository, runs the setup script (it imports the PNGs and fonts and generates the styles), opens the game and sends you feedback. A round that only changes layout files needs no setup: `rts.UI.Reload` in the running game shows it at once. No code rebuild is needed between rounds.
+4. **The producer** unpacks it over the repository, runs the setup script (it imports the PNGs and fonts and generates the styles), opens the game and sends you feedback, with screenshots of the HUD in every faction look at 1920x1080, 2560x1440 and 3440x1440 in a fixed match state (`AI_TEAM.md`, "Screenshots of the HUD"). A round that only changes layout files needs no setup: `rts.UI.Reload` in the running game shows it at once. No code rebuild is needed between rounds.
 5. **Claude** runs the UI validation test, fixes anything technical (merges the sprite entries, corrects a path), adds any "Requests for code" as new issues, and commits the delivery with the design issue closed.
 
 Modders follow the same formats: a mod puts its own files under `Mods/<ModName>/UI/`. A layout file there replaces the base layout with the same name, also in a shipped game. Sprite and theme entries there override the base entries with the same name when the setup script runs.

@@ -57,3 +57,13 @@ The reviewer has no instructions file of its own, so it cannot pick up the desig
 ## The round
 
 Each panel follows handbook section 8: Claude completes the code issue, the producer briefs the designer, the designer delivers, Claude takes the delivery in, the reviewer and the producer judge it in the running game, and the next round starts from that feedback. The skills `/ui-brief`, `/ui-intake` and `/ui-review` (#108) run these steps.
+
+## Screenshots of the HUD
+
+The designer and the reviewer judge the HUD from pictures the game draws itself, in a fixed match state: 12,500 credits, low power, six units selected with a builder first (its build menu fills the command grid), a barracks with three units queued and one attack warning.
+
+- `ue.ps1 -Task uishots` plays `L_TestMap` without the editor and saves the HUD in each faction's look (each theme in `UI/Themes` but Neutral) at 1920x1080, 2560x1440 and 3440x1440 to `Saved/UIShots/HUD/<Faction>_<Width>x<Height>.png`.
+- `ue.ps1 -Task uishots -Panel ResourceBar` saves them to `Saved/UIShots/ResourceBar/`, each with a `_crop.png` of the layout element of that name.
+- In a running game or PIE, also over MCP, the console command `rts.UI.Screenshot [Panel] [Faction]` does the same. PIE cannot change the resolution, so there it saves the viewport's size only.
+
+Panels whose code issue is still open show as empty slots, and so do their crops.

@@ -44,6 +44,10 @@ URTSPlaceholderBorderStyle::URTSPlaceholderBorderStyle()
 
 TArray<const URTSUIStyleSet*> URTSUIStyleSubsystem::GetStyleChain() const
 {
+	if (StyleOverride)
+	{
+		return MakeStyleChain(StyleOverride);
+	}
 	const APlayerController* Controller = GetGameInstance() ? GetGameInstance()->GetFirstLocalPlayerController() : nullptr;
 	const ARTSPlayerState* PlayerState = Controller ? Controller->GetPlayerState<ARTSPlayerState>() : nullptr;
 	return GetStyleChain(PlayerState ? PlayerState->GetFaction() : nullptr);
@@ -51,10 +55,15 @@ TArray<const URTSUIStyleSet*> URTSUIStyleSubsystem::GetStyleChain() const
 
 TArray<const URTSUIStyleSet*> URTSUIStyleSubsystem::GetStyleChain(const URTSFactionData* Faction) const
 {
+	return MakeStyleChain(Faction ? LoadStyleSet(Faction->UIStyle) : nullptr);
+}
+
+TArray<const URTSUIStyleSet*> URTSUIStyleSubsystem::MakeStyleChain(const URTSUIStyleSet* First) const
+{
 	TArray<const URTSUIStyleSet*> Chain;
-	if (const URTSUIStyleSet* StyleSet = Faction ? LoadStyleSet(Faction->UIStyle) : nullptr)
+	if (First)
 	{
-		Chain.Add(StyleSet);
+		Chain.Add(First);
 	}
 	const URTSSettings* Settings = GetDefault<URTSSettings>();
 	for (const TSoftObjectPtr<URTSUIStyleSet>& Fallback : { Settings->CommonUIStyle, Settings->NeutralUIStyle })
