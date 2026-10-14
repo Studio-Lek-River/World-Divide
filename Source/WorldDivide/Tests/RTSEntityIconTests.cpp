@@ -19,7 +19,7 @@ namespace
 {
 	using RTSTests::TestFlags;
 
-	const TCHAR* TestFactionPath = TEXT("/Game/Data/Factions/DA_TestFaction.DA_TestFaction");
+	const TCHAR* USAFactionPath = TEXT("/Game/Data/Factions/DA_FactionUSA.DA_FactionUSA");
 	const TCHAR* USAStylePath = TEXT("/Game/UI/Styles/DA_UIStyle_USA.DA_UIStyle_USA");
 
 	FRTSUISprite MakeSprite(const FLinearColor& Tint)
@@ -74,13 +74,13 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSEntityIconFactionChainTest, "WorldDivide.UI
 
 bool FRTSEntityIconFactionChainTest::RunTest(const FString& Parameters)
 {
-	const FGameplayTag TestTag = UGameplayTagsManager::Get().RequestGameplayTag(TEXT("Faction.Test"), false);
-	if (!TestTrue(TEXT("Faction.Test is registered"), TestTag.IsValid()))
+	const FGameplayTag USATag = UGameplayTagsManager::Get().RequestGameplayTag(TEXT("Faction.USA"), false);
+	if (!TestTrue(TEXT("Faction.USA is registered"), USATag.IsValid()))
 	{
 		return false;
 	}
-	const URTSFactionData* TestFaction = LoadObject<URTSFactionData>(nullptr, TestFactionPath);
-	TestTrue(TEXT("Faction.Test finds DA_TestFaction"), TestFaction && URTSFactionData::FindByTag(TestTag) == TestFaction);
+	const URTSFactionData* USAFaction = LoadObject<URTSFactionData>(nullptr, USAFactionPath);
+	TestTrue(TEXT("Faction.USA finds DA_FactionUSA"), USAFaction && URTSFactionData::FindByTag(USATag) == USAFaction);
 	TestNull(TEXT("No tag finds no faction"), URTSFactionData::FindByTag(FGameplayTag()));
 
 	const URTSSettings* Settings = GetDefault<URTSSettings>();
@@ -91,6 +91,7 @@ bool FRTSEntityIconFactionChainTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
+	TestTrue(TEXT("DA_FactionUSA uses the USA style"), USAFaction && USAFaction->UIStyle.LoadSynchronous() == USA);
 
 	URTSUIStyleSubsystem* Styles = NewObject<URTSUIStyleSubsystem>(NewObject<UGameInstance>());
 	URTSFactionData* Styled = NewObject<URTSFactionData>();

@@ -382,9 +382,12 @@ def make_upgrade(name, display_name, cost, build_time, stat, multiplier, targets
     })
 
 
-def make_faction(name, display_name, buildings, headquarters=None, uses_power=True, ai_build_order=None):
+def make_faction(name, display_name, buildings, headquarters=None, uses_power=True, ai_build_order=None, ui_style=None):
+    """ui_style: the set name of the faction's DA_UIStyle_<Set>, committed and kept up to date by make_ui_styles."""
+    style = assets.load_asset(f"{UI_STYLE_DIR}/DA_UIStyle_{ui_style}") if ui_style else None
     return plan_data_asset(name, FACTION_DIR, unreal.RTSFactionData, {
         "display_name": unreal.Text(display_name),
+        "ui_style": style,
         "buildings": buildings,
         "headquarters": headquarters,
         "uses_power": uses_power,
@@ -1341,10 +1344,10 @@ build_order = make_build_order("DA_TestBuildOrder", [
     unreal.RTSAIDifficulty.EASY: (1.5, 0.5),
     unreal.RTSAIDifficulty.HARD: (0.67, 1.5),
 })
-test_faction = make_faction("DA_TestFaction", "Test Faction", buildings, headquarters, ai_build_order=build_order)
+usa = make_faction("DA_FactionUSA", "USA", buildings, headquarters, ai_build_order=build_order, ui_style="USA")
 # Hotkeys are unique per producer: the builder, the headquarters, the barracks, the factory, the depot and the airfield.
-TEST_FACTION_TAG = gameplay_tag("Faction.Test")
-add_properties(test_faction, {"faction_tag": TEST_FACTION_TAG})
+USA_TAG = gameplay_tag("Faction.USA")
+add_properties(usa, {"faction_tag": USA_TAG})
 for entity, icon, hotkey, description in (
     (tank, "Icon.Tank", "T", "Main battle tank. Strong against vehicles and buildings."),
     (infantry, "Icon.Infantry", "I", "Rifle squad. Cheap, and quick to train."),
@@ -1363,7 +1366,7 @@ for entity, icon, hotkey, description in (
     (headquarters, "Icon.Headquarters", "H", "The command centre every team starts with. Produces builders."),
     (superweapon, "Icon.Superweapon", "W", "Charges a strike that lands anywhere on the map. One per team."),
 ):
-    present(entity, TEST_FACTION_TAG, icon, hotkey, description)
+    present(entity, USA_TAG, icon, hotkey, description)
 make_ghost_material("M_PlacementGhost")
 make_shot_material("M_ShotFx")
 ground = make_surface_material("M_Ground", (0.06, 0.075, 0.04), 0.9)
