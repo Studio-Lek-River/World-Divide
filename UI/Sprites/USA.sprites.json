@@ -4,7 +4,7 @@
     "USA.ResourceSlot": { "texture": "Textures/USA/T_UI_USA_ResourceSlot.png", "size": [320, 72], "margin": [16, 12, 16, 12] },
     "USA.BottomPanel": { "texture": "Textures/USA/T_UI_USA_BottomPanel.png", "size": [512, 512], "margin": [24, 24, 24, 24] },
     "USA.CommanderBar": { "texture": "Textures/USA/T_UI_USA_CommanderBar.png", "size": [1024, 192], "margin": [24, 24, 24, 24] },
-    "USA.PortraitFrame": { "texture": "Textures/USA/T_UI_USA_PortraitFrame.png", "size": [192, 192], "margin": [24, 24, 24, 24] },
+    "USA.PortraitFrame": { "texture": "Textures/USA/T_UI_USA_PortraitFrame.png", "size": [320, 320], "margin": [24, 24, 24, 24] },
     "USA.Portrait.General": { "texture": "Textures/USA/Portraits/T_Portrait_USA_StandardGeneral_Square_256.png", "size": [256, 256] },
     "USA.PowerSlot": { "states": {
                          "Normal": "Textures/USA/T_UI_USA_PowerSlot_Normal.png",
@@ -36,6 +36,18 @@
                     "size": [128, 128], "margin": [20, 20, 20, 20] },
     "USA.ProgressBar": { "texture": "Textures/USA/T_UI_USA_ProgressBar_Background.png", "size": [256, 24], "margin": [6, 6, 6, 6] },
     "USA.ProgressFill": { "texture": "Textures/USA/T_UI_USA_ProgressBar_Fill.png", "size": [256, 24], "margin": [6, 6, 6, 6], "tint": true },
-    "USA.Divider": { "texture": "Textures/USA/T_UI_USA_Divider.png", "size": [256, 8], "margin": [8, 2, 8, 2], "tint": true }
+    "USA.Divider": { "texture": "Textures/USA/T_UI_USA_Divider.png", "size": [256, 8], "margin": [8, 2, 8, 2], "tint": true },
+    "USA.UnitTile": { "states": {
+                        "Normal": "Textures/USA/T_UI_USA_UnitTile_Normal.png",
+                        "Hover": "Textures/USA/T_UI_USA_UnitTile_Hover.png",
+                        "Selected": "Textures/USA/T_UI_USA_UnitTile_Selected.png" },
+                      "size": [128, 128], "margin": [16, 16, 16, 16] },
+    "USA.QueueSlot": { "states": {
+                         "Normal": "Textures/USA/T_UI_USA_QueueSlot_Normal.png",
+                         "Hover": "Textures/USA/T_UI_USA_QueueSlot_Hover.png",
+                         "Disabled": "Textures/USA/T_UI_USA_QueueSlot_Disabled.png",
+                         "Selected": "Textures/USA/T_UI_USA_QueueSlot_Selected.png" },
+                       "size": [128, 128], "margin": [32, 32, 32, 24] },
+    "USA.SelectionEmpty": { "texture": "Textures/USA/T_UI_USA_SelectionPanel_Empty.png", "size": [920, 560] }
   }
 }

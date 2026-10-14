@@ -5,6 +5,17 @@
   "hitTest": false,
   "children": [
     {
+      "type": "Image",
+      "name": "SelectionEmpty",
+      "sprite": "SelectionEmpty",
+      "anchor": "Center",
+      "size": [
+        296,
+        180
+      ],
+      "visibleWhen": "selection.mode=None"
+    },
+    {
       "type": "Panel",
       "name": "Single",
       "anchor": "Fill",
@@ -14,20 +25,14 @@
         {
           "type": "Panel",
           "name": "SelectionPortraitFrame",
-          "sprite": "Panel",
+          "sprite": "PanelInset",
           "position": [
-            0,
+            4,
             0
           ],
           "size": [
-            72,
-            72
-          ],
-          "padding": [
-            4,
-            4,
-            4,
-            4
+            96,
+            96
           ],
           "hitTest": false,
           "children": [
@@ -38,25 +43,45 @@
               "sprite": "Icon.Placeholder",
               "bind": {
                 "sprite": "selection.icon"
+              },
+              "padding": [
+                8,
+                8,
+                8,
+                14
+              ]
+            },
+            {
+              "type": "Image",
+              "name": "ConstructionOverlay",
+              "anchor": "Fill",
+              "sprite": "ConstructionOverlay",
+              "visibleWhen": "selection.isConstructing"
+            },
+            {
+              "type": "Image",
+              "name": "PortraitFrame",
+              "anchor": "Fill",
+              "sprite": "PortraitFrame"
+            },
+            {
+              "type": "Image",
+              "name": "TeamStripe",
+              "sprite": "HealthFill",
+              "anchor": "BottomStretch",
+              "position": [
+                0,
+                0
+              ],
+              "size": [
+                0,
+                12
+              ],
+              "bind": {
+                "color": "selection.teamColor"
               }
             }
           ]
-        },
-        {
-          "type": "Image",
-          "name": "TeamStripe",
-          "sprite": "ProgressBar.Fill",
-          "position": [
-            0,
-            76
-          ],
-          "size": [
-            72,
-            4
-          ],
-          "bind": {
-            "color": "selection.teamColor"
-          }
         },
         {
           "type": "Text",
@@ -65,44 +90,87 @@
           "font": "Title",
           "fontSize": 18,
           "position": [
-            84,
+            108,
             0
           ],
           "size": [
-            220,
+            252,
             24
           ],
+          "wrap": true,
           "maxLines": 1
+        },
+        {
+          "type": "HBox",
+          "name": "FutureStatus",
+          "position": [
+            372,
+            2
+          ],
+          "size": [
+            68,
+            20
+          ],
+          "spacing": 4,
+          "children": [
+            {
+              "type": "Image",
+              "name": "StatusSlot1",
+              "sprite": "StatusSlot",
+              "size": [
+                20,
+                20
+              ]
+            },
+            {
+              "type": "Image",
+              "name": "StatusSlot2",
+              "sprite": "StatusSlot",
+              "size": [
+                20,
+                20
+              ]
+            },
+            {
+              "type": "Image",
+              "name": "StatusSlot3",
+              "sprite": "StatusSlot",
+              "size": [
+                20,
+                20
+              ]
+            }
+          ]
         },
         {
           "type": "Text",
           "name": "SelectionDescription",
           "text": "{selection.description}",
           "font": "Body",
-          "fontSize": 13,
+          "fontSize": 14,
           "color": "MutedText",
           "position": [
-            84,
-            26
+            108,
+            28
           ],
           "size": [
-            220,
-            36
+            332,
+            20
           ],
           "wrap": true,
-          "maxLines": 2
+          "maxLines": 1
         },
         {
           "type": "ProgressBar",
           "name": "HealthBar",
-          "sprite": "ProgressBar.Background",
-          "fillSprite": "ProgressBar.Fill",
+          "sprite": "HealthBar",
+          "fillSprite": "HealthFill",
           "position": [
-            84,
-            68
+            108,
+            56
           ],
           "size": [
-            220,
+            332,
             10
           ],
           "bind": {
@@ -111,31 +179,88 @@
           }
         },
         {
+          "type": "Panel",
+          "name": "HealthTick30",
+          "color": "#FFFFFF80",
+          "position": [
+            208,
+            56
+          ],
+          "size": [
+            1,
+            10
+          ],
+          "hitTest": false
+        },
+        {
+          "type": "Panel",
+          "name": "HealthTick60",
+          "color": "#FFFFFF80",
+          "position": [
+            307,
+            56
+          ],
+          "size": [
+            1,
+            10
+          ],
+          "hitTest": false
+        },
+        {
           "type": "Text",
           "name": "HealthText",
           "text": "{selection.healthText}",
           "font": "Number",
-          "fontSize": 14,
+          "fontSize": 16,
           "position": [
-            84,
-            80
+            108,
+            68
           ],
           "size": [
-            220,
-            20
+            124,
+            22
           ],
           "maxLines": 1
+        },
+        {
+          "type": "HBox",
+          "name": "UpgradeIcons",
+          "position": [
+            236,
+            67
+          ],
+          "size": [
+            204,
+            24
+          ],
+          "spacing": 4,
+          "align": "Center",
+          "repeat": "selection.upgrades",
+          "count": 7,
+          "template": {
+            "type": "Image",
+            "name": "UpgradeIcon",
+            "sprite": "Icon.Placeholder",
+            "size": [
+              24,
+              24
+            ],
+            "visibleWhen": "!item.empty",
+            "bind": {
+              "sprite": "item.icon"
+            }
+          }
         },
         {
           "type": "Panel",
           "name": "ConstructionStatus",
           "position": [
-            84,
-            104
+            108,
+            96
           ],
           "size": [
-            220,
-            34
+            332,
+            76
           ],
           "hitTest": false,
           "visibleWhen": "selection.isConstructing",
@@ -145,34 +270,63 @@
               "name": "ConstructionLabel",
               "text": "Under construction",
               "font": "Body",
-              "fontSize": 13,
+              "fontSize": 14,
               "position": [
                 0,
                 0
               ],
               "size": [
-                220,
-                18
+                332,
+                20
               ],
               "maxLines": 1
             },
             {
               "type": "ProgressBar",
               "name": "ConstructionBar",
-              "sprite": "ProgressBar.Background",
-              "fillSprite": "ProgressBar.Fill",
+              "sprite": "ProgressBar",
+              "fillSprite": "ProgressFill",
               "fillColor": "Warning",
               "position": [
                 0,
                 22
               ],
               "size": [
-                220,
+                332,
                 10
               ],
               "bind": {
                 "progress": "selection.constructionProgress"
               }
+            },
+            {
+              "type": "Button",
+              "name": "CancelButton",
+              "sprite": "Button",
+              "action": "CancelConstruction",
+              "position": [
+                0,
+                40
+              ],
+              "size": [
+                160,
+                32
+              ],
+              "bind": {
+                "enabled": "selection.canCancelConstruction"
+              },
+              "children": [
+                {
+                  "type": "Text",
+                  "name": "CancelText",
+                  "text": "Cancel construction",
+                  "font": "Body",
+                  "fontSize": 14,
+                  "anchor": "Fill",
+                  "align": "Center",
+                  "maxLines": 1
+                }
+              ]
             }
           ]
         },
@@ -180,12 +334,12 @@
           "type": "Panel",
           "name": "AircraftStatus",
           "position": [
-            84,
-            104
+            108,
+            96
           ],
           "size": [
-            220,
-            20
+            332,
+            22
           ],
           "hitTest": false,
           "visibleWhen": "selection.isAircraft",
@@ -195,31 +349,31 @@
               "name": "AmmoText",
               "text": "Ammo {selection.ammo} / {selection.ammoMax}",
               "font": "Number",
-              "fontSize": 14,
+              "fontSize": 16,
               "position": [
                 0,
                 0
               ],
               "size": [
-                120,
-                20
+                160,
+                22
               ],
               "maxLines": 1
             },
             {
               "type": "Text",
               "name": "RearmingText",
-              "text": "Rearming",
+              "text": "REARMING",
               "font": "Body",
-              "fontSize": 13,
+              "fontSize": 14,
               "color": "Warning",
               "position": [
-                124,
+                168,
                 0
               ],
               "size": [
-                96,
-                20
+                164,
+                22
               ],
               "maxLines": 1,
               "visibleWhen": "selection.isRearming"
@@ -227,154 +381,175 @@
           ]
         },
         {
-          "type": "HBox",
-          "name": "UpgradeIcons",
-          "position": [
-            84,
-            146
-          ],
-          "size": [
-            220,
-            28
-          ],
-          "spacing": 4,
-          "align": "Center",
-          "repeat": "selection.upgrades",
-          "count": 6,
-          "template": {
-            "type": "Image",
-            "name": "UpgradeIcon",
-            "sprite": "Icon.Placeholder",
-            "size": [
-              28,
-              28
-            ],
-            "visibleWhen": "!item.empty",
-            "bind": {
-              "sprite": "item.icon"
-            }
-          }
-        },
-        {
-          "type": "Button",
-          "name": "CancelButton",
-          "sprite": "Button",
-          "action": "CancelConstruction",
-          "position": [
-            0,
-            146
-          ],
-          "size": [
-            72,
-            28
-          ],
-          "visibleWhen": "selection.canCancelConstruction",
-          "children": [
-            {
-              "type": "Text",
-              "name": "CancelText",
-              "text": "Cancel",
-              "font": "Body",
-              "fontSize": 13,
-              "anchor": "Fill",
-              "align": "Center",
-              "maxLines": 1
-            }
-          ]
-        },
-        {
           "type": "Slot",
           "name": "QueueSlot",
           "layout": "ProductionQueue",
-          "anchor": "TopRight",
           "position": [
-            0,
-            0
+            4,
+            100
           ],
           "size": [
-            132,
-            180
+            436,
+            80
           ],
           "hitTest": false
         }
       ]
     },
     {
-      "type": "Grid",
-      "name": "Groups",
-      "columns": 6,
-      "rows": 2,
-      "cellSize": [
-        68,
-        84
-      ],
-      "spacing": 4,
+      "type": "Panel",
+      "name": "Multi",
+      "anchor": "Fill",
+      "hitTest": false,
       "visibleWhen": "selection.mode=Multi",
-      "repeat": "selection.groups",
-      "count": 12,
-      "template": {
-        "type": "Button",
-        "name": "Group",
-        "sprite": "Button",
-        "action": "SelectGroup",
-        "visibleWhen": "!item.empty",
-        "children": [
-          {
-            "type": "Image",
-            "name": "GroupIcon",
-            "sprite": "Icon.Placeholder",
-            "anchor": "Top",
-            "position": [
-              0,
-              6
-            ],
-            "size": [
-              48,
-              48
-            ],
-            "bind": {
-              "sprite": "item.icon"
-            }
-          },
-          {
-            "type": "Text",
-            "name": "GroupCount",
-            "text": "{item.count}",
-            "font": "Number",
-            "fontSize": 14,
-            "anchor": "TopRight",
-            "position": [
-              4,
-              2
-            ],
-            "size": [
-              28,
-              18
-            ],
-            "align": "Right",
-            "maxLines": 1
-          },
-          {
-            "type": "ProgressBar",
-            "name": "GroupHealth",
-            "sprite": "ProgressBar.Background",
-            "fillSprite": "ProgressBar.Fill",
-            "anchor": "Bottom",
-            "position": [
-              0,
-              8
-            ],
-            "size": [
-              56,
-              6
-            ],
-            "bind": {
-              "progress": "item.health",
-              "color": "item.healthColor"
-            }
+      "children": [
+        {
+          "type": "Text",
+          "name": "GroupsTitle",
+          "text": "Selected groups",
+          "font": "Body",
+          "fontSize": 14,
+          "color": "MutedText",
+          "position": [
+            4,
+            0
+          ],
+          "size": [
+            240,
+            20
+          ],
+          "wrap": true,
+          "maxLines": 1
+        },
+        {
+          "type": "Grid",
+          "name": "Groups",
+          "position": [
+            4,
+            20
+          ],
+          "columns": 6,
+          "rows": 2,
+          "cellSize": [
+            68,
+            76
+          ],
+          "spacing": 4,
+          "repeat": "selection.groups",
+          "count": 12,
+          "template": {
+            "type": "Panel",
+            "name": "GroupCell",
+            "hitTest": false,
+            "visibleWhen": "!item.empty",
+            "children": [
+              {
+                "type": "Button",
+                "name": "Group",
+                "sprite": "UnitTile",
+                "action": "SelectGroup",
+                "anchor": "Top",
+                "position": [
+                  0,
+                  0
+                ],
+                "size": [
+                  56,
+                  56
+                ],
+                "children": [
+                  {
+                    "type": "Image",
+                    "name": "GroupIcon",
+                    "sprite": "Icon.Placeholder",
+                    "position": [
+                      6,
+                      8
+                    ],
+                    "size": [
+                      36,
+                      36
+                    ],
+                    "bind": {
+                      "sprite": "item.icon"
+                    }
+                  },
+                  {
+                    "type": "ProgressBar",
+                    "name": "GroupHealth",
+                    "sprite": "HealthBar",
+                    "fillSprite": "HealthFill",
+                    "anchor": "Bottom",
+                    "position": [
+                      0,
+                      5
+                    ],
+                    "size": [
+                      44,
+                      4
+                    ],
+                    "bind": {
+                      "progress": "item.health",
+                      "color": "item.healthColor"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "Image",
+                "name": "GroupCountBadge",
+                "sprite": "CountBadge",
+                "anchor": "TopRight",
+                "position": [
+                  0,
+                  0
+                ],
+                "size": [
+                  28,
+                  28
+                ]
+              },
+              {
+                "type": "Text",
+                "name": "GroupCount",
+                "text": "{item.count}",
+                "font": "Number",
+                "fontSize": 14,
+                "anchor": "TopRight",
+                "position": [
+                  2,
+                  2
+                ],
+                "size": [
+                  24,
+                  24
+                ],
+                "align": "Center",
+                "maxLines": 1
+              },
+              {
+                "type": "Text",
+                "name": "GroupName",
+                "text": "{item.name}",
+                "font": "Body",
+                "fontSize": 14,
+                "anchor": "Bottom",
+                "position": [
+                  0,
+                  0
+                ],
+                "size": [
+                  68,
+                  19
+                ],
+                "align": "Center",
+                "wrap": true,
+                "maxLines": 1
+              }
+            ]
           }
-        ]
-      }
+        }
+      ]
     }
   ]
 }

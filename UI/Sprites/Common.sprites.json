@@ -39,6 +39,13 @@
     "Common.Icon.GeneralPowers": { "texture": "Textures/Common/T_UI_Common_Icon_GeneralPowers.png", "size": [64, 64], "tint": true },
     "Common.Icon.Objectives": { "texture": "Textures/Common/T_UI_Common_Icon_Objectives.png", "size": [64, 64], "tint": true },
     "Common.PowerBar": { "texture": "Textures/Common/T_UI_Common_PowerBar_Background.png", "size": [256, 16], "margin": [4, 4, 4, 4] },
-    "Common.PowerFill": { "texture": "Textures/Common/T_UI_Common_PowerBar_Fill.png", "size": [256, 16], "margin": [4, 4, 4, 4], "tint": true }
+    "Common.PowerFill": { "texture": "Textures/Common/T_UI_Common_PowerBar_Fill.png", "size": [256, 16], "margin": [4, 4, 4, 4], "tint": true },
+    "Common.CountBadge": { "texture": "Textures/Common/T_UI_Common_CountBadge.png", "size": [64, 64] },
+    "Common.HealthBar": { "texture": "Textures/Common/T_UI_Common_HealthBar_Background.png", "size": [128, 16], "margin": [4, 4, 4, 4] },
+    "Common.HealthFill": { "texture": "Textures/Common/T_UI_Common_HealthBar_Fill.png", "size": [128, 16], "margin": [4, 4, 4, 4], "tint": true },
+    "Common.ConstructionOverlay": { "texture": "Textures/Common/T_UI_Common_ConstructionOverlay.png", "size": [256, 256] },
+    "Common.StatusSlot": { "texture": "Textures/Common/T_UI_Common_StatusSlot.png", "size": [48, 48] },
+    "Common.AmmoPip": { "texture": "Textures/Common/T_UI_Common_AmmoPip.png", "size": [16, 16], "tint": true },
+    "Common.Icon.LowPowerSlow": { "texture": "Textures/Common/T_UI_Common_Icon_LowPowerSlow.png", "size": [48, 48], "tint": true }
   }
 }

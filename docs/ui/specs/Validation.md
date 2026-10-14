@@ -1,88 +1,57 @@
-# Theme delivery validation — 2026-10-14
+# Selection delivery validation — 2026-10-14
 
-- PASS: USA theme has exactly all ten required colour roles, including Positive absent from the placeholder.
-- PASS: All three required font roles are present.
-- PASS: Body font is 14 em pixels at 1080p; Title 18 and Number 16.
-- PASS: Title: valid static TTF, adjacent full SIL OFL 1.1 licence; Barlow SemiBold.
-- PASS: Body: valid static TTF, adjacent full SIL OFL 1.1 licence; Barlow Regular.
-- PASS: Number: valid static TTF, adjacent full SIL OFL 1.1 licence; JetBrains Mono Medium.
-- PASS: Number digits 0–9 have identical 600-unit advances at 1000 em pixels; default tabular spacing, no OpenType feature dependency.
-- PASS: Manifest contains exactly the six requested USA kit sprite names.
-- PASS: USA.Panel: declared size matches brief, valid source-pixel 9-slice margins [24, 24, 24, 24].
-- PASS: USA.PanelInset: declared size matches brief, valid source-pixel 9-slice margins [24, 24, 24, 24].
-- PASS: USA.Button: declared size matches brief, valid source-pixel 9-slice margins [20, 20, 20, 20].
-- PASS: USA.ProgressBar: declared size matches brief, valid source-pixel 9-slice margins [6, 6, 6, 6].
-- PASS: USA.ProgressFill: declared size matches brief, valid source-pixel 9-slice margins [6, 6, 6, 6].
-- PASS: USA.Divider: declared size matches brief, valid source-pixel 9-slice margins [8, 2, 8, 2].
-- PASS: All ten PNGs match manifest sizes, RGBA/sRGB and filenames; no orphan or missing texture. Tint fill/divider RGB is pure white wherever alpha >0.
-- PASS: All five button states are explicitly supplied.
-- PASS: Text: AA contrast 14.70:1 on theme Panel and at least 14.45:1 across actual kit centres.
-- PASS: MutedText: AA contrast 9.71:1 on theme Panel and at least 9.54:1 across actual kit centres.
-- PASS: Disabled: AA contrast 5.71:1 on theme Panel and at least 5.61:1 across actual kit centres.
-- PASS: Accent: AA contrast 8.32:1 on theme Panel and at least 8.17:1 across actual kit centres.
-- PASS: Warning: AA contrast 10.33:1 on theme Panel and at least 10.15:1 across actual kit centres.
-- PASS: Danger: AA contrast 7.42:1 on theme Panel and at least 7.29:1 across actual kit centres.
-- PASS: Positive: AA contrast 9.76:1 on theme Panel and at least 9.59:1 across actual kit centres.
-- PASS: Normal/hover/pressed/selected centres are identical and calm; state cues live in the slice borders.
-- PASS: Five button states remain pixel-distinct in greyscale; native/64px review inspected.
-- PASS: No UI/Layouts included, as explicitly required by the updated handbook.
-- PASS: Only USA theme is replaced; other faction and neutral themes remain dependencies.
-- PASS: Mockup is opaque 1920×1080, rendered with the supplied fonts in the new bottom kit.
-- PASS: Previous resource/top strip is preserved pixel-for-pixel.
-- PASS: Commander/topmost battlefield/minimap pixels remain unchanged from supplied prior HUD mockup.
-- PASS: Minimap and map-button look preserved exactly.
-- PASS: All nine mockup-only unit/building/upgrade/utility silhouettes are flat white with alpha; no illustration source is used.
+- PASS: Exactly the 11 requested USA/Common sprite entries, no existing kit entries duplicated.
+- PASS: Common.CountBadge: exact requested size [64, 64], RGBA/sRGB, valid slice margins where declared.
+- PASS: Common.HealthBar: exact requested size [128, 16], RGBA/sRGB, valid slice margins where declared.
+- PASS: Common.HealthFill: exact requested size [128, 16], RGBA/sRGB, valid slice margins where declared.
+- PASS: Common.ConstructionOverlay: exact requested size [256, 256], RGBA/sRGB, valid slice margins where declared.
+- PASS: Common.StatusSlot: exact requested size [48, 48], RGBA/sRGB, valid slice margins where declared.
+- PASS: Common.AmmoPip: exact requested size [16, 16], RGBA/sRGB, valid slice margins where declared.
+- PASS: Common.Icon.LowPowerSlow: exact requested size [48, 48], RGBA/sRGB, valid slice margins where declared.
+- PASS: USA.PortraitFrame: exact requested size [320, 320], RGBA/sRGB, valid slice margins where declared.
+- PASS: USA.UnitTile: exact requested size [128, 128], RGBA/sRGB, valid slice margins where declared.
+- PASS: USA.QueueSlot: exact requested size [128, 128], RGBA/sRGB, valid slice margins where declared.
+- PASS: USA.SelectionEmpty: exact requested size [920, 560], RGBA/sRGB, valid slice margins where declared.
+- PASS: All 16 runtime PNGs are present and manifested; no extra/missing texture.
+- PASS: UnitTile supplies all and only three requested states.
+- PASS: QueueSlot supplies all and only four requested states, with no unauthorized extra state filename.
+- PASS: PortraitFrame has exactly 12 full-width source-pixel rows of opaque pure-white team band; centre remains transparent.
+- PASS: Whole PortraitFrame is not marked tint=true: tint is confined to the white band by the presenter overlay.
+- PASS: HealthFill, AmmoPip and LowPowerSlow are pure-white/alpha tintable assets.
+- PASS: ConstructionOverlay has uniform 102/255 = 40% alpha baked in; no additional global 40% opacity should be applied.
+- PASS: Hazard pattern is toroidally periodic in X/Y; 256-pixel repeats tile without a phase break.
+- PASS: SelectionEmpty roundel centre measures about 8% white over the base; not 8% total panel opacity.
+- PASS: SelectionEmpty is a direct 920×560 image, not 9-sliced.
+- PASS: No layouts, themes or fonts are delivered; existing HUD kit/font roles are reused.
+- PASS: ProductionQueue: every named data/list/item binding is in bindings.md; no invented item.empty/selected/progressText key.
+- PASS: ProductionQueue: all seven required handbook sections present.
+- PASS: Selection: every named data/list/item binding is in bindings.md; no invented item.empty/selected/progressText key.
+- PASS: Selection: all seven required handbook sections present.
+- PASS: Selection spec covers all three source-confirmed modes and required aircraft/construction/upgrades/group/200-unit states.
+- PASS: Queue spec covers five-slot repeat, visibility/reflow, slowdown and actual last-of-kind cancellation semantics.
+- PASS: 12-type regular grid fits 436-wide content and the 280-high panel.
+- PASS: Compact 12-type grid fits the existing 196-high HUD without increasing the bottom band.
+- PASS: Five regular queue slots fit the parent content area; first active plus three waiting leaves one empty.
+- PASS: Compact five-slot queue fits the 196-high profile.
+- PASS: Count 200 fits the 28-wide badge text area at Number 14; 189+11 one-unit types totals 200 in stress review.
+- PASS: Number 14 mm:ss readout fits even compact active cell.
+- PASS: Opaque 920×560 mockup contains factory, active 42%, three waiting, one empty and smaller three-type/count comparison.
+- PASS: Mockup and native state/contact sheet visually inspected; flat silhouettes follow the producer-approved console style.
+- PASS: Existing theme text colours used here pass AA against the brightest reused frame/content background pixel; count plate and time plate remain dark.
 
-## Font verification
+## Text contrast
 
-```json
-{
-  "fonts": {
-    "Title": {
-      "file": "Fonts/Barlow-SemiBold.ttf",
-      "size": 18,
-      "family": [
-        "Barlow",
-        "SemiBold"
-      ],
-      "sha256": "86577cb32f8abe3673db53ca0f4221e6856751a4f6730c867e00f720f8bb1fc5"
-    },
-    "Body": {
-      "file": "Fonts/Barlow-Regular.ttf",
-      "size": 14,
-      "family": [
-        "Barlow",
-        "Regular"
-      ],
-      "sha256": "95aa02c7c43096e0dd44d787ba6216864a67157e402adab59b35572e0c1577ea"
-    },
-    "Number": {
-      "file": "Fonts/JetBrainsMono-Medium.ttf",
-      "size": 16,
-      "family": [
-        "JetBrains Mono",
-        "Medium"
-      ],
-      "sha256": "d16e6dc99672734698d629705f617c79f6eb6040f5113efe3a145204dc988109"
-    }
-  },
-  "number_digit_advances_at_1000px": {
-    "0": 600.0,
-    "1": 600.0,
-    "2": 600.0,
-    "3": 600.0,
-    "4": 600.0,
-    "5": 600.0,
-    "6": 600.0,
-    "7": 600.0,
-    "8": 600.0,
-    "9": 600.0
-  }
-}
-```
+Worst measured contrast against actual reused BottomPanel centre / CountBadge centre. Labels use full-opacity theme text; team and health fills are not text colours.
 
-## Limits
+| Text | Worst contrast |
+|---|---|
+| Text #E6E9EE | 13.17:1 |
+| MutedText #B5C0CE | 8.70:1 |
+| Warning #F1BC65 | 9.25:1 |
+| Disabled #8493A5 | 5.11:1 |
 
-This is offline asset/format/font/contrast validation and visual inspection, not a fresh Unreal runtime run. Layout assembly is the programmer's responsibility under the updated handbook. Runtime icon assignments, game data, localization/fallbacks, input and tooltip behaviour are not modified. The producer clarified there are no style-reference icons; mockup icons are original flat silhouettes. No generated illustrations are used. Existing top imagery/text remain rasterized from the supplied HUD mockup; all new bottom/tooltip/notification text uses the packaged fonts. Neutral/China/Insurgents themes are intentionally not replaced. No Common sprite entries are added because no new shared runtime pieces were requested.
+## Integration limits
 
-**Result: PASS — checklist completed.**
+Offline validation and visual review, not a new Unreal test. Existing kit, theme/fonts, entity icons and tooltip host remain dependencies. No layout, new key or new action ships. Engine presentation helpers are documented for numeric ammo→pips, band-only tint, full-text/empty-cell tooltips and hidden queue height propagation. Source confirms None/Single/Multi, health thresholds and last-queued-of-kind cancellation; UX does not falsely promise clicked-index cancellation. Exact-index behaviour is a request against the existing action. Percent42% is a design annotation derived from sample progress; existing timeLeft is the implementable live readout. PortraitFrame overrides the existing same-name sprite at320×320; inspect all consumers after merging. The regular280-high and compact196-high profiles are alternatives; do not grow the entire HUD without producer review.
+
+**Result: PASS — checklist complete.**

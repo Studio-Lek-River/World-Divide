@@ -8,142 +8,146 @@
     {
       "type": "Text",
       "name": "QueueTitle",
-      "text": "Queue",
+      "text": "Production queue",
       "font": "Body",
-      "fontSize": 13,
+      "fontSize": 14,
       "color": "MutedText",
       "position": [
         0,
         0
       ],
       "size": [
-        64,
-        18
+        192,
+        20
       ],
+      "wrap": true,
       "maxLines": 1
     },
     {
-      "type": "Text",
+      "type": "HBox",
       "name": "LowPowerMarker",
-      "text": "Low power",
-      "font": "Body",
-      "fontSize": 13,
-      "color": "Danger",
       "anchor": "TopRight",
       "position": [
         0,
         0
       ],
-      "size": [
-        68,
-        18
-      ],
-      "align": "Right",
-      "maxLines": 1,
-      "visibleWhen": "queue.lowPower"
+      "spacing": 4,
+      "visibleWhen": "queue.lowPower",
+      "children": [
+        {
+          "type": "Image",
+          "name": "LowPowerIcon",
+          "sprite": "Icon.LowPowerSlow",
+          "color": "Warning",
+          "size": [
+            18,
+            18
+          ]
+        },
+        {
+          "type": "Text",
+          "name": "LowPowerText",
+          "text": "LOW POWER - SLOW",
+          "font": "Body",
+          "fontSize": 14,
+          "color": "Warning",
+          "position": [
+            0,
+            0
+          ],
+          "size": [
+            140,
+            20
+          ],
+          "align": "Right",
+          "maxLines": 1
+        }
+      ]
     },
     {
-      "type": "VBox",
+      "type": "HBox",
       "name": "QueueItems",
       "position": [
         0,
-        22
+        24
       ],
       "size": [
-        132,
-        156
+        400,
+        48
       ],
-      "spacing": 4,
+      "spacing": 40,
       "repeat": "queue",
       "count": 5,
       "template": {
-        "type": "Panel",
-        "name": "QueueEntry",
-        "sprite": "Panel",
+        "type": "Button",
+        "name": "QueueItem",
+        "sprite": "QueueSlot",
+        "action": "CancelQueueItem",
         "size": [
-          132,
-          28
+          48,
+          48
         ],
-        "hitTest": false,
+        "bind": {
+          "enabled": "item.name",
+          "selected": "item.isActive"
+        },
         "children": [
           {
-            "type": "Button",
-            "name": "QueueItem",
-            "sprite": "Button",
-            "action": "CancelQueueItem",
-            "anchor": "Fill",
+            "type": "Image",
+            "name": "QueueItemIcon",
+            "sprite": "Icon.Placeholder",
+            "anchor": "Top",
+            "position": [
+              0,
+              4
+            ],
+            "size": [
+              30,
+              30
+            ],
             "visibleWhen": "!item.empty",
-            "children": [
-              {
-                "type": "Image",
-                "name": "QueueItemIcon",
-                "sprite": "Icon.Placeholder",
-                "position": [
-                  2,
-                  2
-                ],
-                "size": [
-                  24,
-                  24
-                ],
-                "bind": {
-                  "sprite": "item.icon"
-                }
-              },
-              {
-                "type": "Text",
-                "name": "QueueItemName",
-                "text": "{item.name}",
-                "font": "Body",
-                "fontSize": 12,
-                "position": [
-                  30,
-                  1
-                ],
-                "size": [
-                  64,
-                  16
-                ],
-                "maxLines": 1
-              },
-              {
-                "type": "Text",
-                "name": "QueueItemTime",
-                "text": "{item.timeLeft}",
-                "font": "Number",
-                "fontSize": 12,
-                "anchor": "TopRight",
-                "position": [
-                  4,
-                  1
-                ],
-                "size": [
-                  34,
-                  16
-                ],
-                "align": "Right",
-                "maxLines": 1
-              },
-              {
-                "type": "ProgressBar",
-                "name": "QueueItemProgress",
-                "sprite": "ProgressBar.Background",
-                "fillSprite": "ProgressBar.Fill",
-                "fillColor": "Warning",
-                "position": [
-                  30,
-                  19
-                ],
-                "size": [
-                  98,
-                  6
-                ],
-                "visibleWhen": "item.isActive",
-                "bind": {
-                  "progress": "item.progress"
-                }
-              }
-            ]
+            "bind": {
+              "sprite": "item.icon"
+            }
+          },
+          {
+            "type": "Text",
+            "name": "QueueItemTime",
+            "text": "{item.timeLeft}",
+            "font": "Number",
+            "fontSize": 14,
+            "anchor": "Top",
+            "position": [
+              0,
+              25
+            ],
+            "size": [
+              44,
+              18
+            ],
+            "align": "Center",
+            "maxLines": 1,
+            "visibleWhen": "item.isActive"
+          },
+          {
+            "type": "ProgressBar",
+            "name": "QueueItemProgress",
+            "sprite": "ProgressBar",
+            "fillSprite": "ProgressFill",
+            "fillColor": "Accent",
+            "anchor": "Top",
+            "position": [
+              0,
+              42
+            ],
+            "size": [
+              40,
+              3
+            ],
+            "visibleWhen": "item.isActive",
+            "bind": {
+              "progress": "item.progress"
+            }
           }
         ]
       }
