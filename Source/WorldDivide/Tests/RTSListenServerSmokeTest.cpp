@@ -953,7 +953,7 @@ namespace RTSListenServerTest
 		Test->TestTrue(TEXT("The client sees its rally point"), Production->GetRallyPoint().Equals(ClientRallySpot));
 
 		// What clicking the second queue entry sends.
-		Test->TestTrue(TEXT("The client cancels one"), ClientController->RequestCancelProduction(Barracks, Infantry));
+		Test->TestTrue(TEXT("The client cancels one"), ClientController->RequestCancelProduction(Barracks, Infantry, 1));
 		State->ExpectedClientCredits = Charged + Infantry->Cost;
 		State->PhaseStart = FPlatformTime::Seconds();
 		return true;

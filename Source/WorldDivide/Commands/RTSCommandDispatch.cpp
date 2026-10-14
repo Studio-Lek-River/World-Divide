@@ -227,7 +227,13 @@ namespace RTSCommands
 	bool CancelProduction(ARTSPlayerState& Player, const FRTSCommand& Command)
 	{
 		const ARTSBuilding* Building = Cast<ARTSBuilding>(Command.TargetActor);
-		return IsValid(Building) && Building->GetProductionComponent()->CancelLast(Player, Command.EntityData);
+		if (!IsValid(Building))
+		{
+			return false;
+		}
+		URTSProductionComponent* Production = Building->GetProductionComponent();
+		return Command.QueueIndex == INDEX_NONE ? Production->CancelLast(Player, Command.EntityData)
+			: Production->CancelAt(Player, Command.QueueIndex, Command.EntityData);
 	}
 
 	bool SetRallyPoint(ARTSPlayerState& Player, const FRTSCommand& Command)

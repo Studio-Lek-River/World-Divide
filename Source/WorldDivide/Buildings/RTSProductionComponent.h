@@ -76,6 +76,12 @@ public:
 	 */
 	bool CancelLast(ARTSPlayerState& Player, const URTSEntityData* Data);
 
+	/**
+	 * Server only. Removes the queue entry at Index and refunds its cost to Player, restarting progress when it was the front
+	 * one. False when Player does not own the building or the entry at Index is not Data (the queue moved on since).
+	 */
+	bool CancelAt(ARTSPlayerState& Player, int32 Index, const URTSEntityData* Data);
+
 	/** Server only. Where finished units walk to. */
 	void SetRallyPoint(const FVector& Location);
 

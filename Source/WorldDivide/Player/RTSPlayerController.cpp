@@ -964,10 +964,14 @@ bool ARTSPlayerController::RequestProduce(ARTSBuilding* Building, URTSEntityData
 	return true;
 }
 
-bool ARTSPlayerController::RequestCancelProduction(ARTSBuilding* Building, URTSEntityData* Data)
+bool ARTSPlayerController::RequestCancelProduction(ARTSBuilding* Building, URTSEntityData* Data, int32 QueueIndex)
 {
-	if (!IsValid(Building) || Building->GetTeamId() != GetTeamId() || !Data
-		|| !Building->GetProductionComponent()->GetQueue().Contains(Data))
+	if (!IsValid(Building) || Building->GetTeamId() != GetTeamId() || !Data)
+	{
+		return false;
+	}
+	const TArray<TObjectPtr<URTSEntityData>>& Queue = Building->GetProductionComponent()->GetQueue();
+	if (QueueIndex == INDEX_NONE ? !Queue.Contains(Data) : !Queue.IsValidIndex(QueueIndex) || Queue[QueueIndex] != Data)
 	{
 		return false;
 	}
@@ -975,6 +979,7 @@ bool ARTSPlayerController::RequestCancelProduction(ARTSBuilding* Building, URTSE
 	Command.Type = ERTSCommandType::CancelProduction;
 	Command.TargetActor = Building;
 	Command.EntityData = Data;
+	Command.QueueIndex = QueueIndex;
 	Server_IssueCommand(TArray<ARTSUnit*>(), Command);
 	return true;
 }

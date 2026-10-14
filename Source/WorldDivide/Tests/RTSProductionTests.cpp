@@ -287,6 +287,60 @@ namespace RTSProductionTests
 		return true;
 	}
 
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSProductionCancelAtTest, "WorldDivide.Production.CancelAt", TestFlags)
+
+	bool FRTSProductionCancelAtTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		ARTSPlayerState* Player = TestWorld.SpawnPlayer(0, 1000);
+		ARTSPlayerState* Enemy = TestWorld.SpawnPlayer(1, 1000);
+		URTSUnitData* Tank = MakeUnit(200, 4.f);
+		URTSUnitData* Rifle = MakeUnit(100, 4.f);
+		ARTSBuilding* Barracks = SpawnCompleted(TestWorld, MakeBuilding(0, 0, { Tank, Rifle }), 0, FVector::ZeroVector);
+		URTSProductionComponent* Production = Barracks->GetProductionComponent();
+
+		// Tank, rifleman, tank: the clicked entry goes, not the last of its kind.
+		Production->Enqueue(*Player, Tank);
+		Production->Enqueue(*Player, Rifle);
+		Production->Enqueue(*Player, Tank);
+		TestEqual(TEXT("Three entries charged"), Player->GetCredits(), 500);
+		RunProduction(*TestWorld.World, *Barracks, 1.f);
+
+		TestFalse(TEXT("Another team cannot cancel the front tank"), Production->CancelAt(*Enemy, 0, Tank));
+		TestFalse(TEXT("An entry of another kind is not cancelled"), Production->CancelAt(*Player, 1, Tank));
+		TestFalse(TEXT("Nor one past the queue"), Production->CancelAt(*Player, 3, Tank));
+		TestEqual(TEXT("Refused cancels leave the queue"), Production->GetQueue().Num(), 3);
+		TestEqual(TEXT("and refund nothing"), Player->GetCredits(), 500);
+
+		TestTrue(TEXT("Cancel the front tank"), Production->CancelAt(*Player, 0, Tank));
+		TestEqual(TEXT("Its cost is refunded"), Player->GetCredits(), 700);
+		TestEqual(TEXT("Cancelling the front entry resets progress"), Production->GetProgress(), 0.f);
+		TestTrue(TEXT("The rifleman and the last tank stay, in order"),
+			Production->GetQueue().Num() == 2 && Production->GetQueue()[0] == Rifle && Production->GetQueue()[1] == Tank);
+
+		// A click on slot 1 that arrives after the queue moved on (it now holds the tank at 1, but the click meant the rifleman).
+		TestFalse(TEXT("A stale index cancels nothing"), Production->CancelAt(*Player, 1, Rifle));
+		TestEqual(TEXT("The queue is unchanged"), Production->GetQueue().Num(), 2);
+
+		// Through the command: with an index exactly that entry, without one the last of its kind.
+		RunProduction(*TestWorld.World, *Barracks, 1.f);
+		FRTSCommand Command;
+		Command.Type = ERTSCommandType::CancelProduction;
+		Command.TargetActor = Barracks;
+		Command.EntityData = Rifle;
+		Command.QueueIndex = 1;
+		TestFalse(TEXT("The command refuses a stale index"), RTSCommands::CancelProduction(*Player, Command));
+		Command.EntityData = Tank;
+		TestTrue(TEXT("The command cancels the waiting tank"), RTSCommands::CancelProduction(*Player, Command));
+		TestTrue(TEXT("The rifleman keeps its progress"), Production->GetProgress() > 0.f);
+		Command.EntityData = Rifle;
+		Command.QueueIndex = INDEX_NONE;
+		TestTrue(TEXT("Without an index the last rifleman goes"), RTSCommands::CancelProduction(*Player, Command));
+		TestEqual(TEXT("Everything is refunded"), Player->GetCredits(), 1000);
+		TestEqual(TEXT("The queue is empty"), Production->GetQueue().Num(), 0);
+		return true;
+	}
+
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSProductionLowPowerTest, "WorldDivide.Production.LowPower", TestFlags)
 
 	bool FRTSProductionLowPowerTest::RunTest(const FString& Parameters)

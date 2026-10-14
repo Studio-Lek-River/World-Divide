@@ -49,7 +49,7 @@ namespace RTSCommands
 
 	/**
 	 * Server only. Production orders for the command's TargetActor, one of Player's buildings: Produce queues EntityData,
-	 * CancelProduction takes its last entry off the queue, SetRallyPoint moves the rally point to TargetLocation. Returns
+	 * CancelProduction takes it off the queue (at QueueIndex, or its last entry), SetRallyPoint moves the rally point to TargetLocation. Returns
 	 * false when the command is rejected.
 	 */
 	WORLDDIVIDE_API bool Produce(ARTSPlayerState& Player, const FRTSCommand& Command);

@@ -32,7 +32,7 @@ Repeat **queue**, count=10, including framework-padded empty cells. Never use a 
 Low power means **slower**, not paused: keep authoritative progress/timeLeft, which already reflects production rate. No extra timer/multiplier/reason key. Zero items with queue.visible true still shows ten empty frames; only false visibility releases space.
 
 ## 4. Interaction
-Occupied left click sends **CancelQueueItem**; server validates/refunds. Current source cancels the **last queued occurrence of that entity type**. Tooltip: Click to cancel one [item.name] (last queued of this type). Clicking active with later duplicates preserves the active occurrence; without duplicates it can cancel active. Duplicate orders remain separate cells. Refresh from authoritative data; empty/right clicks send nothing. Revalidate expired selections. Proposed tooltip 350 ms/hover 100 ms/press immediate. No new hotkeys, modal or reorder action.
+Occupied left click sends **CancelQueueItem**; server validates/refunds. It cancels **exactly the clicked entry** (its queue index); when the queue has moved on before the server sees the click, nothing is cancelled. Tooltip: Click to cancel this [item.name]. Cancelling the active entry restarts production with the next one. Duplicate orders remain separate cells. Refresh from authoritative data; empty/right clicks send nothing. Revalidate expired selections. Proposed tooltip 350 ms/hover 100 ms/press immediate. No new hotkeys, modal or reorder action.
 
 ## 5. Edge cases / reflow
 Ten cells cover the whole queue: first active, others waiting, then empty. More than 10 needs agreed paging/scroll with stable identities, not silent truncation. Localized names/full durations live in tooltips; Number 14 mm:ss fits the readout. At 16:10–21:9 parent stays 460/content 436. Count 10 is capacity, not a binding key.
@@ -43,4 +43,4 @@ Compact 196-high parent: QueueSlot 436×80 at x 12,y 116. Header height 20; row 
 Active progress length/time, hover X, recessed empty frame and slowed-production bolt/clock plus words remain meaningful without colour. Red is an additional cancel cue, not the only one. Avoid hatch behind icons/text. Text/MutedText/Warning retain the approved USA theme contrast; actual dynamic colours must retain AA. No pulsing warning is necessary.
 
 ## 7. Requests for code
-Confirm framework structural empty cells in intake/presenter; no guessed binding. Provide occupied/empty tooltips and hidden QueueSlot zero-height propagation. For exact clicked-order cancellation, change **existing CancelQueueItem** handling to stable order/index; do not misrepresent current last-of-kind behaviour. Duration fitting/paging if needed. No new key/action proposed.
+Confirm framework structural empty cells in intake/presenter; no guessed binding. Provide occupied/empty tooltips and hidden QueueSlot zero-height propagation. Duration fitting/paging if needed. No new key/action proposed.

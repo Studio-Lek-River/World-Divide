@@ -172,8 +172,11 @@ public:
 	/** Asks the server to queue Data, a unit or an upgrade, at Building; false when CanRequestProduce refuses it locally. */
 	bool RequestProduce(ARTSBuilding* Building, URTSEntityData* Data);
 
-	/** Asks the server to take the last queued Data off Building's queue for a refund; false when none is queued there. */
-	bool RequestCancelProduction(ARTSBuilding* Building, URTSEntityData* Data);
+	/**
+	 * Asks the server to take Data off Building's queue for a refund: the entry at QueueIndex, or the last queued one when it is
+	 * INDEX_NONE. False when that entry is not Data, or none is queued there.
+	 */
+	bool RequestCancelProduction(ARTSBuilding* Building, URTSEntityData* Data, int32 QueueIndex = INDEX_NONE);
 
 	/** Asks the server to move Building's rally point to Location; false when it is not an own production building. */
 	bool RequestRallyPoint(ARTSBuilding* Building, const FVector& Location);

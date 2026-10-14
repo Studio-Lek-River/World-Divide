@@ -29,7 +29,10 @@ enum class ERTSCommandType : uint8
 	CancelConstruction,
 	/** Queue EntityData, a unit, at TargetActor, an own production building, paying its cost. */
 	Produce,
-	/** Take the last queued EntityData off TargetActor's production queue, refunding its cost. */
+	/**
+	 * Take EntityData off TargetActor's production queue, refunding its cost: the entry at QueueIndex when it still holds
+	 * EntityData, otherwise nothing; the last queued one when QueueIndex is INDEX_NONE.
+	 */
 	CancelProduction,
 	/** Send units TargetActor produces to TargetLocation; harvesters then start harvesting from there. */
 	SetRallyPoint,
@@ -68,6 +71,10 @@ struct WORLDDIVIDE_API FRTSCommand
 	/** Build: 90-degree turns of the new building, 0 to 3 (RTSBuildPlacement::GetRotatedFootprint). */
 	UPROPERTY(BlueprintReadWrite, Category = "Command")
 	uint8 QuarterTurns = 0;
+
+	/** CancelProduction: the queue entry to cancel; INDEX_NONE takes the last queued EntityData. */
+	UPROPERTY(BlueprintReadWrite, Category = "Command")
+	int32 QueueIndex = INDEX_NONE;
 
 	/** Server only, never sent by clients: credits already taken for this order, refunded if it ends before its building is placed. */
 	UPROPERTY(NotReplicated)

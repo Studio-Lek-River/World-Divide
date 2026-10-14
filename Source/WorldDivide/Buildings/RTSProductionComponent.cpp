@@ -171,10 +171,14 @@ bool URTSProductionComponent::Enqueue(ARTSPlayerState& Player, URTSEntityData* D
 
 bool URTSProductionComponent::CancelLast(ARTSPlayerState& Player, const URTSEntityData* Data)
 {
+	return CancelAt(Player, Queue.FindLastByPredicate([Data](const TObjectPtr<URTSEntityData>& Entry) { return Entry.Get() == Data; }), Data);
+}
+
+bool URTSProductionComponent::CancelAt(ARTSPlayerState& Player, int32 Index, const URTSEntityData* Data)
+{
 	check(GetOwner()->HasAuthority());
 	const ARTSBuilding* Building = GetBuilding();
-	const int32 Index = Queue.FindLastByPredicate([Data](const TObjectPtr<URTSEntityData>& Entry) { return Entry.Get() == Data; });
-	if (!Building || Building->GetTeamId() != Player.GetTeamId() || !Data || Index == INDEX_NONE)
+	if (!Building || Building->GetTeamId() != Player.GetTeamId() || !Data || !Queue.IsValidIndex(Index) || Queue[Index] != Data)
 	{
 		UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot cancel %s at %s"), Player.GetTeamId(), *GetNameSafe(Data), *GetNameSafe(Building));
 		return false;

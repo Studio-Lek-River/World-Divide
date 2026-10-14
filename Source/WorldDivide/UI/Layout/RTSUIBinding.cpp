@@ -836,8 +836,8 @@ namespace
 			const TArray<TObjectPtr<URTSEntityData>>* Queue = Building ? &Building->GetProductionComponent()->GetQueue() : nullptr;
 			if (Queue && Queue->IsValidIndex(Context.Index))
 			{
-				// The existing request takes the last queued entry of that kind, keeping progress on the front one.
-				Controller->RequestCancelProduction(Building, (*Queue)[Context.Index]);
+				// Exactly the clicked entry; the server refuses it when the queue has moved on by then.
+				Controller->RequestCancelProduction(Building, (*Queue)[Context.Index], Context.Index);
 			}
 			return true;
 		}
