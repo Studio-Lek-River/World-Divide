@@ -81,6 +81,7 @@ def write_bindings(path, panels, bindings, layouts):
              "and `action`; ask for anything else under \"Requests for code\" in your spec.", ""]
     declared = {}
     for panel in panels:
+        declared[panel] = {"keys": set(), "names": set(), "optional": set()}
         lines += [f"## {panel}", ""]
         sources = [source for source in bindings["sources"] if panel in source["panels"]]
         if not sources:
@@ -90,7 +91,13 @@ def write_bindings(path, panels, bindings, layouts):
             lists = "; ".join(f"`{name}` with {codes(items, 'item.')}" for name, items in source["lists"].items())
             lines.append(f"- Lists: {lists or 'none'}")
             lines.append(f"- Actions: {codes(source['actions'])}")
-            declared.setdefault(panel, set()).update(source["keys"], source["actions"])
+            declared[panel]["keys"].update(source["keys"])
+            declared[panel]["names"].update(source["keys"], source["actions"], source["lists"])
+            for items in source["lists"].values():
+                declared[panel]["names"].update(f"item.{item}" for item in items)
+            if source["lists"]:
+                # URTSLayoutWidget supplies item.empty to every padded list cell (RTSLayout::ItemEmptyKey).
+                declared[panel]["optional"].add("item.empty")
         layout = layouts.get(panel)
         if layout is not None:
             found = slots(layout, [])
@@ -130,17 +137,24 @@ def write_sprites(path):
 
 
 def check_issue_list(body, declared):
-    """The issue's hand-written "Bindings and actions" list against the code: every name in backticks under a panel."""
+    """The issue's hand-written "Bindings and actions" list against the code: every name in backticks under a panel,
+    except the values written after a key (`selection.mode`: `None`, `Single` or `Multi`)."""
     listed = section(body, "Bindings and actions")
     problems = []
-    for panel, names in declared.items():
+    for panel, found in declared.items():
         block = re.search(r"`%s`:\n(.*?)(?=^- `|\Z)" % re.escape(panel), listed, re.S | re.M)
         if not block:
             continue
-        mentioned = set(re.findall(r"`([A-Za-z][\w.]*)`", block.group(1)))
+        mentioned = set()
+        for line in block.group(1).splitlines():
+            value = re.search(r"`([\w.]+)`:", line)
+            if value and value.group(1) in found["keys"]:
+                line = line[:value.end()]
+            mentioned.update(re.findall(r"`([A-Za-z][\w.]*)`", line))
+        names = found["names"]
         for name in sorted(names - mentioned):
             problems.append(f"{panel}: the code has `{name}`, the issue does not list it")
-        for name in sorted(mentioned - names):
+        for name in sorted(mentioned - names - found["optional"]):
             if "." in name or name[0].isupper():
                 problems.append(f"{panel}: the issue lists `{name}`, the code does not have it")
     return problems
@@ -274,7 +288,7 @@ def main():
     for relative in attached:
         print(f"ATTACHED: {relative}")
     for panel in panels:
-        print(f"  {panel}: {len(declared.get(panel, ()))} key(s) and action(s)"
+        print(f"  {panel}: {len(declared[panel]['names'])} key(s), list(s) and action(s)"
               + (", screenshots" if os.path.isdir(os.path.join(folder, "screenshots", panel)) else ", no screenshots"))
     for panel in missing:
         print(f"NO LAYOUT: {panel} has no UI/Layouts/{panel}.layout.json yet")
