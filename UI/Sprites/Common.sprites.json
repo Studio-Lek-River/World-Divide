@@ -13,6 +13,7 @@
     "Common.Icon.Credits": { "texture": "Textures/Common/T_UI_Common_Icon_Credits.png", "size": [64, 64], "tint": true },
     "Common.Icon.Power": { "texture": "Textures/Common/T_UI_Common_Icon_Power.png", "size": [64, 64], "tint": true },
     "Common.Icon.PowerLow": { "texture": "Textures/Common/T_UI_Common_Icon_PowerLow.png", "size": [64, 64], "tint": true },
+    "Common.Icon.Abrams": { "texture": "Textures/Common/Icons/T_Icon_Common_Abrams.png", "size": [256, 256] },
     "Common.Icon.Airfield": { "texture": "Textures/Common/Icons/T_Icon_Common_Airfield.png", "size": [256, 256] },
     "Common.Icon.Barracks": { "texture": "Textures/Common/Icons/T_Icon_Common_Barracks.png", "size": [256, 256] },
     "Common.Icon.Builder": { "texture": "Textures/Common/Icons/T_Icon_Common_Builder.png", "size": [256, 256] },

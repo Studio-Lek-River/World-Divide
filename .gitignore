@@ -23,3 +23,7 @@ Build/
 # Python
 __pycache__/
 *.pyc
+
+# A tryout model ripped from CryEngine content: Crytek's, kept on this machine only, never committed or shipped
+Art/Source/Local/Crytek/
+Content/Art/Local/**/*Abrams*

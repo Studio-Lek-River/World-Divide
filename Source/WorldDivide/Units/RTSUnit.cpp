@@ -64,6 +64,9 @@ namespace
 
 	/** A tilting vehicle eases its mesh toward the slope at this rate, so it rolls over a crest instead of snapping. */
 	constexpr float TiltInterpSpeed = 10.f;
+
+	/** A turret fires once it points this close to its target, in degrees. */
+	constexpr float TurretAimTolerance = 5.f;
 }
 
 /** Engine basic shapes expose this parameter; real unit and building materials should too. */
@@ -93,6 +96,12 @@ ARTSUnit::ARTSUnit()
 	Mesh->SetupAttachment(Collision);
 	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Mesh->SetCanEverAffectNavigation(false);
+
+	Turret = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Turret"));
+	Turret->SetupAttachment(Mesh);
+	Turret->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Turret->SetCanEverAffectNavigation(false);
+	Turret->SetVisibility(false);
 
 	Movement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("Movement"));
 	Movement->UpdatedComponent = Collision;
@@ -214,6 +223,10 @@ void ARTSUnit::ApplyUnitData()
 	MeshRestLocation = FVector(0.f, 0.f, -HalfHeight + MeshHalfHeight - MeshOriginZ);
 	UpdateMeshTransform();
 
+	Turret->SetStaticMesh(UnitData->TurretMesh);
+	Turret->SetVisibility(UnitData->TurretMesh != nullptr);
+	Turret->SetRelativeLocationAndRotation(UnitData->TurretOffset, FRotator(0.f, TurretYaw, 0.f));
+
 	Movement->MaxSpeed = UnitData->MoveSpeed;
 
 	ApplyTeamColor();
@@ -221,18 +234,63 @@ void ARTSUnit::ApplyUnitData()
 
 void ARTSUnit::ApplyTeamColor()
 {
-	if (!Mesh->GetStaticMesh())
+	for (UStaticMeshComponent* Part : { Mesh.Get(), Turret.Get() })
+	{
+		if (!Part->GetStaticMesh())
+		{
+			continue;
+		}
+		// Every slot, since a model can carry several materials.
+		for (int32 Slot = 0; Slot < Part->GetNumMaterials(); ++Slot)
+		{
+			if (UMaterialInstanceDynamic* Material = Part->CreateDynamicMaterialInstance(Slot))
+			{
+				Material->SetVectorParameterValue(TeamColorParameter, GetTeamColor(TeamId));
+			}
+		}
+	}
+}
+
+bool ARTSUnit::HasTurret() const
+{
+	return UnitData && UnitData->TurretMesh;
+}
+
+float ARTSUnit::GetTurretYawToward(const AActor& Target) const
+{
+	const FVector ToTarget = Target.GetActorLocation() - GetActorLocation();
+	return FRotator::NormalizeAxis(ToTarget.Rotation().Yaw - GetActorRotation().Yaw);
+}
+
+void ARTSUnit::UpdateTurret(float DeltaSeconds)
+{
+	if (!HasTurret())
 	{
 		return;
 	}
-	// Every slot, since a model can carry several materials.
-	for (int32 Slot = 0; Slot < Mesh->GetNumMaterials(); ++Slot)
+	const AActor* Target = WeaponComponent->GetTarget();
+	const float Goal = Target ? GetTurretYawToward(*Target) : 0.f;
+	const float Yaw = FMath::FixedTurn(TurretYaw, Goal, UnitData->TurretTurnRate * DeltaSeconds);
+	if (Yaw != TurretYaw)
 	{
-		if (UMaterialInstanceDynamic* Material = Mesh->CreateDynamicMaterialInstance(Slot))
-		{
-			Material->SetVectorParameterValue(TeamColorParameter, GetTeamColor(TeamId));
-		}
+		TurretYaw = FRotator::NormalizeAxis(Yaw);
+		OnRep_TurretYaw();
 	}
+}
+
+void ARTSUnit::OnRep_TurretYaw()
+{
+	Turret->SetRelativeRotation(FRotator(0.f, TurretYaw, 0.f));
+}
+
+bool ARTSUnit::IsAimedAt(const AActor& Target) const
+{
+	return !HasTurret() || FMath::Abs(FMath::FindDeltaAngleDegrees(TurretYaw, GetTurretYawToward(Target))) <= TurretAimTolerance;
+}
+
+FVector ARTSUnit::GetMuzzleLocation() const
+{
+	return Turret->GetComponentTransform().TransformPosition(UnitData ? UnitData->MuzzleOffset : FVector::ZeroVector);
 }
 
 FLinearColor ARTSUnit::GetTeamColor(int32 InTeamId)
@@ -399,12 +457,13 @@ void ARTSUnit::TickOrders(float DeltaSeconds)
 	UpdateBuildOrder(DeltaSeconds);
 	SnapToGround();
 
-	// Turn toward the direction of travel, or toward the target while standing. Rotation replicates with movement.
+	// Turn toward the direction of travel, or toward the target while standing, unless a turret does the aiming. Rotation
+	// replicates with movement.
 	if (Movement->Velocity.SizeSquared2D() > FMath::Square(10.f))
 	{
 		FaceTowardYaw(Movement->Velocity.Rotation().Yaw, DeltaSeconds);
 	}
-	else if (const AActor* Target = WeaponComponent->GetTarget())
+	else if (const AActor* Target = WeaponComponent->GetTarget(); Target && !HasTurret())
 	{
 		const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
 		if (!ToTarget.IsNearlyZero())
@@ -412,6 +471,7 @@ void ARTSUnit::TickOrders(float DeltaSeconds)
 			FaceTowardYaw(ToTarget.Rotation().Yaw, DeltaSeconds);
 		}
 	}
+	UpdateTurret(DeltaSeconds);
 }
 
 void ARTSUnit::FaceTowardYaw(float Yaw, float DeltaSeconds)
@@ -899,4 +959,5 @@ void ARTSUnit::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 
 	DOREPLIFETIME_CONDITION(ARTSUnit, UnitData, COND_InitialOnly);
 	DOREPLIFETIME_CONDITION(ARTSUnit, TeamId, COND_InitialOnly);
+	DOREPLIFETIME(ARTSUnit, TurretYaw);
 }

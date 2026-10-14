@@ -9,6 +9,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Units/RTSUnit.h"
 
 namespace
 {
@@ -155,6 +156,10 @@ FVector ARTSShotEffect::GetAimPoint(const AActor& InTarget, const FVector& From)
 
 FVector ARTSShotEffect::GetMuzzlePoint(const AActor& Shooter, const FVector& Toward)
 {
+	if (const ARTSUnit* Unit = Cast<ARTSUnit>(&Shooter); Unit && Unit->HasTurret())
+	{
+		return Unit->GetMuzzleLocation();
+	}
 	FVector BoundsOrigin;
 	FVector BoundsExtent;
 	Shooter.GetActorBounds(false, BoundsOrigin, BoundsExtent);

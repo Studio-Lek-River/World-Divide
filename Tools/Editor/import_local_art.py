@@ -5,9 +5,10 @@ commit or ship. Nothing outside /Game/Art/Local is written, so the committed pla
 For each model it builds SM_<name> with a team-tint material instance per glTF material (placeholder_art.py, pointed
 at the local folders). Models whose source is missing are skipped.
 
-The model marked as the test tank replaces the mesh of DA_TestTank on this machine only. That asset is committed, so it
-is also marked skip-worktree: git then ignores the local change and it cannot be committed by accident, and
-setup_testmap.py leaves it alone. To undo the swap for good:
+The model marked as the test tank replaces the mesh of DA_TestTank on this machine only, and the Abrams (hull and
+traversing turret, from Tools/Art/abrams_to_glb_blender.py) that of DA_TestAbrams. Those assets are committed, so they
+are also marked skip-worktree: git then ignores the local change and it cannot be committed by accident, and
+setup_testmap.py leaves it alone. To undo a swap for good:
   git update-index --no-skip-worktree Content/Data/Units/DA_TestTank.uasset
   git checkout -- Content/Data/Units/DA_TestTank.uasset
 
@@ -15,6 +16,7 @@ setup_testmap.py leaves it alone. To undo the swap for good:
       -run=pythonscript -script="<repo>/Tools/Editor/import_local_art.py" -unattended -nosplash -nullrhi
 """
 
+import json
 import os
 import stat
 import subprocess
@@ -29,6 +31,11 @@ LOCAL_DIR = "/Game/Art/Local"
 TEAM_MATERIAL = "/Game/Materials/M_PlaceholderTeam"
 TEST_TANK = "/Game/Data/Units/DA_TestTank"
 TEST_TANK_FILE = "Content/Data/Units/DA_TestTank.uasset"
+ABRAMS = "/Game/Data/Units/DA_TestAbrams"
+ABRAMS_FILE = "Content/Data/Units/DA_TestAbrams.uasset"
+ABRAMS_DIR = os.path.join("Crytek", "Abrams")
+# The footprint setup_testmap.py gives DA_TestAbrams.
+ABRAMS_FOOTPRINT = (290.0, 160.0)
 PROJECT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Source", "Local")
 
@@ -40,6 +47,11 @@ art.TEXTURE_DIR = f"{LOCAL_DIR}/Textures"
 # (name, source under Art/Source/Local, yaw turning it to face +X, team tint strength per glTF material)
 MODELS = [
     ("Battlemaster", "EA/Battlemaster/battlemaster.glb", 0.0, {"Body": 0.15, "HouseColor": 0.9}),
+    ("Abrams_Hull", "Crytek/Abrams/abrams_hull.glb", 0.0, {"Body": 0.15, "HouseColor": 0.9}),
+]
+# Parts that turn about their own pivot, so the importer keeps the model's origin instead of centring the footprint.
+TURRETS = [
+    ("Abrams_Turret", "Crytek/Abrams/abrams_turret.glb", 0.0, {"Body": 0.15, "HouseColor": 0.9}),
 ]
 # The model DA_TestTank uses on this machine, or None to leave it alone.
 TEST_TANK_MODEL = None
@@ -52,7 +64,7 @@ def save(asset):
         raise RuntimeError(f"Could not save {asset.get_path_name()}")
 
 
-def import_model(name, source, yaw, strengths):
+def import_model(name, source, yaw, strengths, turret=False):
     parent = unreal.load_asset(TEAM_MATERIAL)
     slot_materials = {}
     for slot, (color, texture_file) in art.read_gltf_materials(source).items():
@@ -65,18 +77,51 @@ def import_model(name, source, yaw, strengths):
         instance = art.build_material_instance(f"MI_{name}_{slot}", parent, texture, color, strengths.get(slot, 0.5))
         save(instance)
         slot_materials[slot] = instance
-    mesh = art.import_mesh(source, f"SM_{name}", yaw, slot_materials)
+    if turret:
+        mesh = art.import_static_mesh(source, f"SM_{name}", yaw, unreal.Vector(0.0, 0.0, 0.0))
+        for index, slot in enumerate(mesh.static_materials):
+            mesh.set_material(index, slot_materials[str(slot.material_slot_name)])
+    else:
+        mesh = art.import_mesh(source, f"SM_{name}", yaw, slot_materials)
     save(mesh)
     return mesh
+
+
+def keep_local(file):
+    """Hides the local change to a committed asset from git. An asset not committed yet is staged first, as setup made
+    it, so the committed version is the one without local art."""
+    tracked = subprocess.run(["git", "ls-files", "--error-unmatch", file], cwd=PROJECT_DIR, capture_output=True).returncode == 0
+    if not tracked:
+        subprocess.run(["git", "add", file], cwd=PROJECT_DIR, check=True)
+        unreal.log_warning(f"import_local_art: staged {file} as setup made it, so the local swap stays out of git")
+    subprocess.run(["git", "update-index", "--skip-worktree", file], cwd=PROJECT_DIR, check=True)
+    # LFS checks lockable assets out read-only; this change stays local, so no lock is taken.
+    path = os.path.join(PROJECT_DIR, file)
+    os.chmod(path, os.stat(path).st_mode | stat.S_IWRITE)
+
+
+def use_for_abrams(hull, turret):
+    """Points DA_TestAbrams at the Abrams hull and turret, with the ring and muzzle the Blender script measured."""
+    keep_local(ABRAMS_FILE)
+    with open(os.path.join(SOURCE_DIR, ABRAMS_DIR, "abrams.json")) as file:
+        layout = json.load(file)
+    box = hull.get_bounding_box()
+    scale = min(ABRAMS_FOOTPRINT[0] / (box.max.x - box.min.x), ABRAMS_FOOTPRINT[1] / (box.max.y - box.min.y))
+    abrams = unreal.load_asset(ABRAMS)
+    abrams.set_editor_property("mesh", hull)
+    abrams.set_editor_property("mesh_scale", unreal.Vector(scale, scale, scale))
+    abrams.set_editor_property("turret_mesh", turret)
+    abrams.set_editor_property("turret_offset", unreal.Vector(*layout["turret_offset"]))
+    abrams.set_editor_property("muzzle_offset", unreal.Vector(*layout["muzzle_offset"]))
+    abrams.set_editor_property("turret_turn_rate", 90.0)
+    save(abrams)
+    unreal.log(f"import_local_art: DA_TestAbrams uses the local Abrams on this machine (scale {scale:.3f})")
 
 
 def use_for_test_tank(mesh):
     """Points DA_TestTank at mesh, scaled to the 260 x 150 footprint setup_testmap.py gives the committed tank, and
     hides the change from git."""
-    subprocess.run(["git", "update-index", "--skip-worktree", TEST_TANK_FILE], cwd=PROJECT_DIR, check=True)
-    # LFS checks lockable assets out read-only; this change stays local, so no lock is taken.
-    file = os.path.join(PROJECT_DIR, TEST_TANK_FILE)
-    os.chmod(file, os.stat(file).st_mode | stat.S_IWRITE)
+    keep_local(TEST_TANK_FILE)
 
     box = mesh.get_bounding_box()
     scale = min(260.0 / (box.max.x - box.min.x), 150.0 / (box.max.y - box.min.y))
@@ -87,12 +132,22 @@ def use_for_test_tank(mesh):
     unreal.log(f"import_local_art: DA_TestTank uses {mesh.get_name()} on this machine (scale {scale:.3f})")
 
 
-for model_name, model_source, model_yaw, model_strengths in MODELS:
-    model_path = os.path.join(SOURCE_DIR, model_source)
-    if not os.path.exists(model_path):
-        unreal.log_warning(f"import_local_art: {model_path} not found, skipping {model_name}")
-        continue
-    model_mesh = import_model(model_name, model_path, model_yaw, model_strengths)
-    if model_name == TEST_TANK_MODEL:
-        use_for_test_tank(model_mesh)
+imported = {}
+for models, is_turret in ((MODELS, False), (TURRETS, True)):
+    for model_name, model_source, model_yaw, model_strengths in models:
+        model_path = os.path.join(SOURCE_DIR, model_source)
+        if not os.path.exists(model_path):
+            unreal.log_warning(f"import_local_art: {model_path} not found, skipping {model_name}")
+            continue
+        mesh_file = os.path.join(PROJECT_DIR, "Content", "Art", "Local", "Meshes", f"SM_{model_name}.uasset")
+        if os.path.exists(mesh_file) and not os.access(mesh_file, os.W_OK):
+            # Committed through LFS and not locked: it stays as committed.
+            unreal.log(f"import_local_art: SM_{model_name} is read-only, keeping it as it is")
+            imported[model_name] = unreal.load_asset(f"{LOCAL_DIR}/Meshes/SM_{model_name}")
+            continue
+        imported[model_name] = import_model(model_name, model_path, model_yaw, model_strengths, is_turret)
+if TEST_TANK_MODEL in imported:
+    use_for_test_tank(imported[TEST_TANK_MODEL])
+if "Abrams_Hull" in imported and "Abrams_Turret" in imported:
+    use_for_abrams(imported["Abrams_Hull"], imported["Abrams_Turret"])
 unreal.log("import_local_art: done")

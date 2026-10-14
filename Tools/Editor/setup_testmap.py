@@ -1313,6 +1313,11 @@ cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 6000.0, 1.6, (1.0, 
 rifle = make_weapon("DA_TestRifle", 700.0, 8.0, 0.5, 9000.0, 0.4, (1.0, 0.85, 0.3))
 tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 260.0, 150.0), 90.0, 200.0, cannon, 600.0,
                  180.0, 700, 10.0)
+# A heavier second tank to try out. It wears the standard tank's model here; on a machine with the local Abrams art,
+# import_local_art.py gives it that model and its traversing turret.
+heavy_cannon = make_weapon("DA_TestHeavyCannon", TANK_RANGE, 60.0, 2.5, 6500.0, 2.0, (1.0, 0.4, 0.08))
+abrams = make_unit("DA_TestAbrams", "Test Abrams", tank_mesh, fit_scale(tank_mesh, 290.0, 160.0), 100.0, 350.0, heavy_cannon,
+                   500.0, 150.0, 1100, 14.0)
 infantry = make_unit("DA_TestInfantry", "Test Infantry", infantry_mesh, fit_scale(infantry_mesh, 100.0, 100.0), 30.0, 100.0,
                      rifle, 350.0, 540.0, 150, 4.0)
 grenade = make_weapon("DA_TestGrenade", 600.0, 25.0, 1.5, 1500.0, 1.0, (1.0, 0.6, 0.2), arc_height=250.0)
@@ -1348,7 +1353,7 @@ barracks = make_building("DA_TestBarracks", "Test Barracks", barracks_mesh, fit_
                          800.0, None, 500, 5.0, 0, 1, units=[infantry, grenadier], upgrades=[rifle_training])
 vehicle_factory = make_building("DA_TestVehicleFactory", "Test Vehicle Factory", vehicle_factory_mesh,
                                 fit_scale(vehicle_factory_mesh, 380.0, 380.0), (4, 4), 1200.0, None, 1200, 8.0, 0, 2,
-                                units=[tank, harvester, flak_truck])
+                                units=[tank, abrams, harvester, flak_truck])
 # Four pads side by side on a low slab; each jet it produces parks on one.
 airfield = make_building("DA_TestAirfield", "Test Airfield", airfield_mesh, fit_scale(airfield_mesh, 380.0, 780.0, 40.0), (4, 8),
                          1500.0, None, 1000, 10.0, 0, 2, units=[jet], airfield_pads=4)
@@ -1365,7 +1370,7 @@ buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory, headqu
 # The headquarters produces the builder, which builds the rest.
 add_properties(builder, {"buildings": buildings})
 # Vehicles lean with the slope; infantry stays upright.
-for vehicle in (tank, harvester, builder, flak_truck):
+for vehicle in (tank, abrams, harvester, builder, flak_truck):
     add_properties(vehicle, {"tilts_to_ground": True})
 # A harvester needs a depot to deliver to, so the factory only offers one once a depot stands.
 add_properties(harvester, {"prerequisites": [supply_depot]})
@@ -1388,6 +1393,7 @@ USA_TAG = gameplay_tag("Faction.USA")
 add_properties(usa, {"faction_tag": USA_TAG})
 for entity, icon, hotkey, description in (
     (tank, "Icon.Tank", "T", "Main battle tank. Strong against vehicles and buildings."),
+    (abrams, "Icon.Abrams", "A", "Heavy tank. Tougher and harder-hitting than the main battle tank, but slower and dearer."),
     (infantry, "Icon.Infantry", "I", "Rifle squad. Cheap, and quick to train."),
     (grenadier, "Icon.Grenadier", "G", "Infantry with a grenade launcher that lobs over cover. Needs rifle training."),
     (flak_truck, "Icon.FlakTruck", "F", "Anti-aircraft truck. Hits only aircraft in flight."),

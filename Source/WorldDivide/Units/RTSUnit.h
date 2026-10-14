@@ -106,6 +106,24 @@ public:
 	/** Every machine. How far the mesh leans with the slope under a vehicle that tilts to the ground; zero for the rest. */
 	FRotator GetMeshTilt() const { return MeshTilt; }
 
+	/** A unit whose data gives it a turret aims with it instead of turning the whole unit. */
+	bool HasTurret() const;
+
+	/** Every machine. The turret's yaw relative to the hull, in degrees; zero without a turret. */
+	float GetTurretYaw() const { return TurretYaw; }
+
+	/**
+	 * Server only. Traverses the turret toward the weapon's target, or back to the front without one. Runs every tick; public
+	 * so tests can step it.
+	 */
+	void UpdateTurret(float DeltaSeconds);
+
+	/** True once the turret points at Target closely enough to fire; always true without a turret, which turns the unit. */
+	bool IsAimedAt(const AActor& Target) const;
+
+	/** Every machine. The barrel tip in world space; only meaningful with a turret. */
+	FVector GetMuzzleLocation() const;
+
 	static FLinearColor GetTeamColor(int32 InTeamId);
 
 	/** Material vector parameter that receives the team colour, on units and buildings alike. */
@@ -137,6 +155,12 @@ protected:
 private:
 	void ApplyUnitData();
 	void ApplyTeamColor();
+
+	/** The turret's yaw toward Target relative to the hull, in degrees. */
+	float GetTurretYawToward(const AActor& Target) const;
+
+	UFUNCTION()
+	void OnRep_TurretYaw();
 	void StartNextCommand();
 
 	/** Empties the order queue, refunding what its orders still hold. */
@@ -205,6 +229,10 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> Mesh;
 
+	/** Attached to Mesh, so it leans and kicks with the hull; hidden without a turret. */
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<UStaticMeshComponent> Turret;
+
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UFloatingPawnMovement> Movement;
 
@@ -228,6 +256,10 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_TeamId)
 	int32 TeamId = 0;
+
+	/** Relative to the hull, in degrees. The server traverses it; clients follow, as they follow the unit's rotation. */
+	UPROPERTY(ReplicatedUsing = OnRep_TurretYaw)
+	float TurretYaw = 0.f;
 
 	/** Server only. Front entry is the order being executed. A UPROPERTY so GC sees and clears attack targets. */
 	UPROPERTY(Transient)

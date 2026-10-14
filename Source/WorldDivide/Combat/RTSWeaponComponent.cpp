@@ -152,6 +152,11 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 		}
 	}
 
+	// A turret comes round first; the reload keeps counting meanwhile.
+	if (const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner()); Unit && !Unit->IsAimedAt(*Current))
+	{
+		return;
+	}
 	// Tolerance so a reload that is a whole number of frames does not slip one frame to float error.
 	if (Cooldown > KINDA_SMALL_NUMBER || Ammo == 0)
 	{
