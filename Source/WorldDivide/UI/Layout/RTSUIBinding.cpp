@@ -177,16 +177,20 @@ namespace
 	const FName SelectionCanCancelKey(TEXT("selection.canCancelConstruction"));
 	const FName SelectionUpgradesList(TEXT("selection.upgrades"));
 	const FName SelectionGroupsList(TEXT("selection.groups"));
+	const FName SelectionAmmoPipsList(TEXT("selection.ammoPips"));
 	const FName ItemIconKey(TEXT("icon"));
 	const FName ItemNameKey(TEXT("name"));
 	const FName ItemCountKey(TEXT("count"));
 	const FName ItemHealthKey(TEXT("health"));
 	const FName ItemHealthColorKey(TEXT("healthColor"));
+	const FName ItemFullKey(TEXT("full"));
 	const FName SelectGroupAction(TEXT("SelectGroup"));
 	const FName CancelConstructionAction(TEXT("CancelConstruction"));
 	const TCHAR* const SelectionModeNone = TEXT("None");
 	const TCHAR* const SelectionModeSingle = TEXT("Single");
 	const TCHAR* const SelectionModeMulti = TEXT("Multi");
+	/** Two rows of twelve; a bigger load shows only its number. */
+	constexpr int32 MaxAmmoPips = 24;
 
 	/** Health at or above this fraction shows Positive, at or above HealthWarningAt Warning, below it Danger. */
 	constexpr float HealthPositiveAt = 0.6f;
@@ -487,6 +491,7 @@ namespace
 				SelectionCanCancelKey });
 			Out.Lists.Add(SelectionUpgradesList, { ItemIconKey, ItemNameKey });
 			Out.Lists.Add(SelectionGroupsList, { ItemIconKey, ItemNameKey, ItemCountKey, ItemHealthKey, ItemHealthColorKey });
+			Out.Lists.Add(SelectionAmmoPipsList, { ItemFullKey });
 			Out.Actions.Append({ SelectGroupAction, CancelConstructionAction });
 		}
 
@@ -592,6 +597,13 @@ namespace
 			{
 				return GetCompletedUpgrades(*Controller).Num();
 			}
+			if (List == SelectionAmmoPipsList)
+			{
+				// One pip per round of a full load.
+				const ARTSUnit* Unit = GetSingleUnit(Controller);
+				const URTSAircraftData* Aircraft = Unit ? Cast<URTSAircraftData>(Unit->GetUnitData()) : nullptr;
+				return Aircraft && Aircraft->AmmoPerSortie <= MaxAmmoPips ? FMath::Max(Aircraft->AmmoPerSortie, 0) : 0;
+			}
 			return 0;
 		}
 
@@ -618,6 +630,18 @@ namespace
 				{
 					return false;
 				}
+				return true;
+			}
+			if (Context.List == SelectionAmmoPipsList)
+			{
+				if (Key != ItemFullKey)
+				{
+					return false;
+				}
+				// The rounds left fill the pips from the first.
+				const ARTSUnit* Unit = GetSingleUnit(Controller);
+				const int32 Ammo = Unit && Cast<URTSAircraftData>(Unit->GetUnitData()) ? Unit->GetWeaponComponent()->GetAmmo() : 0;
+				OutValue = FRTSUIValue::MakeBool(Context.Index < Ammo);
 				return true;
 			}
 			if (Context.List != SelectionGroupsList)

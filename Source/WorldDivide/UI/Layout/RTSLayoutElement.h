@@ -85,6 +85,8 @@ struct WORLDDIVIDE_API FRTSLayoutElement
 	TMap<FName, FName> Bind;
 
 	FName Sprite;
+	/** An Image's sprite repeats at this size instead of stretching; zero stretches. */
+	FVector2D TileSize = FVector2D::ZeroVector;
 	FName FillSprite;
 	FString FillColor;
 	TArray<FRTSLayoutTextPart> Text;

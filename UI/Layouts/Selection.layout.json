@@ -56,6 +56,10 @@
               "name": "ConstructionOverlay",
               "anchor": "Fill",
               "sprite": "ConstructionOverlay",
+              "tile": [
+                128,
+                128
+              ],
               "visibleWhen": "selection.isConstructing"
             },
             {
@@ -339,7 +343,7 @@
           ],
           "size": [
             332,
-            22
+            78
           ],
           "hitTest": false,
           "visibleWhen": "selection.isAircraft",
@@ -377,6 +381,49 @@
               ],
               "maxLines": 1,
               "visibleWhen": "selection.isRearming"
+            },
+            {
+              "type": "Grid",
+              "name": "AmmoPips",
+              "position": [
+                0,
+                26
+              ],
+              "columns": 12,
+              "rows": 2,
+              "cellSize": [
+                24,
+                24
+              ],
+              "spacing": 4,
+              "repeat": "selection.ammoPips",
+              "count": 24,
+              "template": {
+                "type": "Panel",
+                "name": "AmmoPip",
+                "hitTest": false,
+                "visibleWhen": "!item.empty",
+                "children": [
+                  {
+                    "type": "Image",
+                    "name": "AmmoSpent",
+                    "sprite": "StatusSlot",
+                    "anchor": "Fill",
+                    "visibleWhen": "!item.full"
+                  },
+                  {
+                    "type": "Image",
+                    "name": "AmmoFull",
+                    "sprite": "AmmoPip",
+                    "anchor": "Center",
+                    "size": [
+                      16,
+                      16
+                    ],
+                    "visibleWhen": "item.full"
+                  }
+                ]
+              }
             }
           ]
         },

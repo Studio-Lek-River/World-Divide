@@ -230,6 +230,14 @@ namespace
 		"children": [ { "name": "Spinner", "type": "Image", "sprite": "Sheet" } ]
 	})");
 
+	const TCHAR* TileLayout = TEXT(R"({
+		"name": "Root", "type": "Panel", "anchor": "Fill",
+		"children": [
+			{ "name": "Tiled", "type": "Image", "sprite": "Hatch", "size": [96, 96], "tile": [32, 32] },
+			{ "name": "Stretched", "type": "Image", "sprite": "Hatch", "size": [96, 96] }
+		]
+	})");
+
 	const TCHAR* TeamColorLayout = TEXT(R"({
 		"name": "Root", "type": "Panel", "anchor": "Fill",
 		"children": [
@@ -462,6 +470,48 @@ bool FRTSLayoutSpriteSheetTest::RunTest(const FString& Parameters)
 	TestFrame(TEXT("After 0.25 s at 12 fps it shows frame 3"), 0.375f, 0.5f);
 	Layout->Animate(0.5f);
 	TestFrame(TEXT("and after 0.75 s it has looped to frame 1"), 0.125f, 0.25f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLayoutTileTest, "WorldDivide.UI.Layout.Tile", TestFlags)
+
+bool FRTSLayoutTileTest::RunTest(const FString& Parameters)
+{
+	URTSUIStyleSet* Styles = NewObject<URTSUIStyleSet>();
+	Styles->Sprites.Add(TEXT("Hatch")).Brush.ImageSize = FVector2D(256, 256);
+
+	FTestBindings Bindings;
+	URTSLayoutWidget* Layout = BuildLayout(*this, TileLayout, TEXT("Tile.layout.json"), Bindings, Styles);
+	const UImage* Tiled = Layout ? Cast<UImage>(Layout->FindElement(TEXT("Tiled"))) : nullptr;
+	const UImage* Stretched = Layout ? Cast<UImage>(Layout->FindElement(TEXT("Stretched"))) : nullptr;
+	if (!Tiled || !Stretched)
+	{
+		AddError(TEXT("The layout lacks its Images"));
+		return false;
+	}
+	TestTrue(TEXT("A tiled image repeats both ways"), Tiled->GetBrush().GetTiling() == ESlateBrushTileType::Both);
+	TestTrue(TEXT("as an image, not a box"), Tiled->GetBrush().GetDrawType() == ESlateBrushDrawType::Image);
+	TestTrue(FString::Printf(TEXT("at its tile size, not %s"), *Tiled->GetBrush().GetImageSize().ToString()),
+		Tiled->GetBrush().GetImageSize().Equals(FVector2D(32, 32)));
+	TestTrue(TEXT("Without tile the sprite stretches"), Stretched->GetBrush().GetTiling() == ESlateBrushTileType::NoTile);
+	TestTrue(TEXT("at the sprite's own size"), Stretched->GetBrush().GetImageSize().Equals(FVector2D(256, 256)));
+
+	const auto ParseErrors = [](const TCHAR* Json)
+	{
+		FString Error;
+		TArray<FString> Errors;
+		FRTSLayoutElement Root;
+		if (const TSharedPtr<FJsonObject> Object = RTSLayoutFiles::Parse(Json, Error))
+		{
+			RTSLayout::Parse(*Object, TEXT("Tile.layout.json"), Root, Errors);
+		}
+		return FString::Join(Errors, TEXT("\n"));
+	};
+	const FString OnText = ParseErrors(TEXT(R"({ "type": "Text", "text": "x", "tile": [32, 32] })"));
+	TestTrue(FString::Printf(TEXT("tile on a Text is an unknown property: %s"), *OnText), OnText.Contains(TEXT("unknown property \"tile\"")));
+	const FString Flat = ParseErrors(TEXT(R"({ "type": "Image", "sprite": "Hatch", "tile": [0, 8] })"));
+	TestTrue(FString::Printf(TEXT("A tile without width is an error: %s"), *Flat), Flat.Contains(TEXT("tile is no positive size")));
+	TestTrue(TEXT("A good tile parses clean"), ParseErrors(TEXT(R"({ "type": "Image", "sprite": "Hatch", "tile": [32, 16] })")).IsEmpty());
 	return true;
 }
 
@@ -755,6 +805,7 @@ bool FRTSUIBindingStubsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("None without a selection"), Mode.String, FString(TEXT("None")));
 	TestEqual(TEXT("No groups"), Selection->GetListCount(TEXT("selection.groups"), NoPlayer), 0);
 	TestEqual(TEXT("No upgrades"), Selection->GetListCount(TEXT("selection.upgrades"), NoPlayer), 0);
+	TestEqual(TEXT("No ammo pips"), Selection->GetListCount(TEXT("selection.ammoPips"), NoPlayer), 0);
 	for (const TCHAR* Action : { TEXT("SelectGroup"), TEXT("CancelConstruction") })
 	{
 		TestTrue(FString::Printf(TEXT("%s is the selection panel's action"), Action), Selection->HandleAction(Action, NoPlayer));

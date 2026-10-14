@@ -118,6 +118,43 @@ namespace RTSAirSmokeTest
 		return Value;
 	}
 
+	/** The selection panel's ammo pips, true for each round left. */
+	TArray<bool> GetAmmoPips(APlayerController* Controller)
+	{
+		const FName List(TEXT("selection.ammoPips"));
+		FRTSUIContext Context;
+		Context.Player = Controller;
+		Context.List = List;
+		TArray<bool> Pips;
+		for (const IRTSUIBindingSource* Source : RTSUIBindings::GetDefaultSources())
+		{
+			FRTSUIDeclarations Declarations;
+			Source->Declare(Declarations);
+			if (!Declarations.Lists.Contains(List))
+			{
+				continue;
+			}
+			for (Context.Index = 0; Context.Index < Source->GetListCount(List, Context); ++Context.Index)
+			{
+				FRTSUIValue Full;
+				Source->GetListValue(TEXT("full"), Context, Full);
+				Pips.Add(Full.bBool);
+			}
+		}
+		return Pips;
+	}
+
+	/** "##.." for two rounds left of four. */
+	FString DescribePips(const TArray<bool>& Pips)
+	{
+		FString Text;
+		for (const bool bFull : Pips)
+		{
+			Text += bFull ? TEXT("#") : TEXT(".");
+		}
+		return Text;
+	}
+
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSQueueJet, FAutomationTestBase*, Test, TSharedRef<FAirState>, State);
 	bool FRTSQueueJet::Update()
 	{
@@ -258,6 +295,13 @@ namespace RTSAirSmokeTest
 			Test->TestTrue(TEXT("The selection panel shows it rearming"), GetSelectionValue(Controller, TEXT("selection.isRearming")).bBool);
 			Test->TestTrue(TEXT("short of a full load"), GetSelectionValue(Controller, TEXT("selection.ammo")).Number
 				< GetSelectionValue(Controller, TEXT("selection.ammoMax")).Number);
+
+			// Halfway through rearming: as many full pips as rounds left, the rest spent.
+			const int32 Half = JetData->AmmoPerSortie / 2;
+			State->Jet->GetWeaponComponent()->SetAmmo(Half);
+			const FString Expected = FString::ChrN(Half, TEXT('#')) + FString::ChrN(JetData->AmmoPerSortie - Half, TEXT('.'));
+			Test->TestEqual(FString::Printf(TEXT("%d of %d rounds show as pips"), Half, JetData->AmmoPerSortie),
+				DescribePips(GetAmmoPips(Controller)), Expected);
 		}
 		State->LandedAtWorldTime = Jet->GetWorld()->GetTimeSeconds();
 		return true;
@@ -281,6 +325,12 @@ namespace RTSAirSmokeTest
 		Test->TestEqual(TEXT("The jet rearmed to a full load on its pad"), Jet->GetWeaponComponent()->GetAmmo(), JetData->AmmoPerSortie);
 		Test->TestEqual(TEXT("And stays parked"), Jet->GetAircraftComponent()->GetState(), ERTSAircraftState::Parked);
 		Test->TestFalse(TEXT("No longer rearming"), Jet->GetAircraftComponent()->IsRearming());
+		if (ARTSPlayerController* Controller = GetTestController(*Test))
+		{
+			Controller->SelectUnits({ State->Jet.Get() });
+			Test->TestEqual(TEXT("Rearming filled every pip back"), DescribePips(GetAmmoPips(Controller)),
+				FString::ChrN(JetData->AmmoPerSortie, TEXT('#')));
+		}
 		return true;
 	}
 

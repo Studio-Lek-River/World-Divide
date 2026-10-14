@@ -677,6 +677,16 @@ void URTSLayoutWidget::SetImageSprite(UImage& Image, FBoundElement& Entry, FName
 		return;
 	}
 	const FRTSUISprite& Found = URTSUIStyleSubsystem::FindSpriteIn(Chain, Sprite);
+	if (!Entry.Element->TileSize.IsZero())
+	{
+		// Repeats at the tile size, so a pattern keeps its scale whatever the element's size; a sheet's frames are not tiled.
+		FSlateBrush Tiled = Found.Brush;
+		Tiled.DrawAs = ESlateBrushDrawType::Image;
+		Tiled.Tiling = ESlateBrushTileType::Both;
+		Tiled.ImageSize = Entry.Element->TileSize;
+		Image.SetBrush(Tiled);
+		return;
+	}
 	Image.SetBrush(Found.Brush);
 	if (Found.Frames <= 0 || Found.FrameSize.X <= 0 || Found.FrameSize.Y <= 0 || Found.Brush.ImageSize.X <= 0.f || Found.Brush.ImageSize.Y <= 0.f)
 	{

@@ -115,7 +115,7 @@ A layout file holds one root element. Elements nest through `children`.
 | `Panel` | a container with an optional background sprite; without a sprite, `color` fills it flat (such as a dimmed backdrop); children are placed freely by anchor and position | `sprite` |
 | `HBox` / `VBox` | a row / column; children are placed one after another; a child stretched along the row or column (`Fill`, or `TopStretch`/`BottomStretch` in an `HBox`, `LeftStretch`/`RightStretch` in a `VBox`) takes the room the others leave | `spacing`, `align` across the row or column (`Start`, `Center`, `End`, `Fill`; default `Center`) |
 | `Grid` | fixed cells: a hidden cell keeps its place | `columns`, `rows`, `cellSize` [w,h], `spacing` |
-| `Image` | a sprite | `sprite`, `color` (tint, for `tint` sprites) |
+| `Image` | a sprite, stretched to the element, or repeated with `tile` | `sprite`, `color` (tint, for `tint` sprites), `tile` ([w,h] in HUD units: the sprite repeats at that size instead of stretching, so a pattern such as a hazard hatch keeps its scale whatever the element's size; art painted at 2x tiles at half its texture size; not for sprite sheets) |
 | `Text` | a label | `text`, `font` (`Title`, `Body`, `Number`), `fontSize` (pixels of the em in HUD units), `align` (`Left`, `Center`, `Right`), `wrap` (true/false), `maxLines` (cuts the text after that many lines, with an ellipsis). The text sits vertically centred in the height its box gives it; give a one-line box at least 1.3 times the font size. |
 | `Button` | clickable; draws the state of its sprite (Normal, Hover, Pressed, Disabled, Selected) and can hold children (icon, hotkey plate, cost) | `sprite`, `action`, `tooltip` (true: hovering fills the tooltip with this item) |
 | `ProgressBar` | a 0–1 fill | `sprite` (background), `fillSprite`, `fillColor`, `bind.progress` |
@@ -177,6 +177,8 @@ Command buttons, queue slots, selection tiles, notifications and scoreboard rows
 ```
 
 `count` fixes the number of copies; items beyond the data get `item.empty` = true, so you decide what an empty slot looks like.
+
+A list can also stand for a number, so a layout can draw it as pips: `selection.ammoPips` has one item per round of a full load, each with `item.full` while that round is left. A load of more than 24 rounds gives no items, and the number stays in a text.
 
 ### Modal screens
 

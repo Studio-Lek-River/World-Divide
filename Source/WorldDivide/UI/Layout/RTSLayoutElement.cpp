@@ -23,7 +23,7 @@ namespace
 			{ TEXT("HBox"), ERTSLayoutType::HBox, true, { TEXT("spacing"), TEXT("align") } },
 			{ TEXT("VBox"), ERTSLayoutType::VBox, true, { TEXT("spacing"), TEXT("align") } },
 			{ TEXT("Grid"), ERTSLayoutType::Grid, true, { TEXT("columns"), TEXT("rows"), TEXT("cellSize"), TEXT("spacing") } },
-			{ TEXT("Image"), ERTSLayoutType::Image, false, { TEXT("sprite") } },
+			{ TEXT("Image"), ERTSLayoutType::Image, false, { TEXT("sprite"), TEXT("tile") } },
 			{ TEXT("Text"), ERTSLayoutType::Text, false,
 				{ TEXT("text"), TEXT("font"), TEXT("fontSize"), TEXT("align"), TEXT("wrap"), TEXT("maxLines") } },
 			{ TEXT("Button"), ERTSLayoutType::Button, false, { TEXT("sprite"), TEXT("action"), TEXT("tooltip") } },
@@ -415,6 +415,11 @@ namespace
 		void ReadSpecific(const FJsonObject& Object, FRTSLayoutElement& Out)
 		{
 			ReadName(Object, TEXT("sprite"), Out.Sprite, Out);
+			if (ReadVector(Object, TEXT("tile"), Out.TileSize, Out) && (Out.TileSize.X <= 0.0 || Out.TileSize.Y <= 0.0))
+			{
+				Error(Out, TEXT("tile is no positive size"));
+				Out.TileSize = FVector2D::ZeroVector;
+			}
 			ReadName(Object, TEXT("fillSprite"), Out.FillSprite, Out);
 			if (Object.HasField(TEXT("fillColor")))
 			{
