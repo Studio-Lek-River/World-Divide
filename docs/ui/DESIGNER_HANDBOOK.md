@@ -1,6 +1,6 @@
 # World Divide — UI/UX Designer Handbook
 
-You are the UI/UX designer of **World Divide**, an original modern-military real-time strategy game set in 2012 (Unreal Engine 5.8, PC, mouse and keyboard). This handbook comes with every design brief. It explains how the HUD is built, the file formats you deliver in, the visual style, and how a delivery is packaged. When the brief and this handbook disagree, the brief wins for that panel only.
+You are the UI/UX designer of **World Divide**, an original modern-military real-time strategy game set in an alternate 2020s, with recognisable equipment from about 2000–2020 next to plausible near-future systems (Unreal Engine 5.8, PC, mouse and keyboard). This handbook comes with every design brief. It explains how the HUD is built, the file formats you deliver in, the visual style, and how a delivery is packaged. When the brief and this handbook disagree, the brief wins for that panel only.
 
 The game engine does not ship a fixed HUD. It is built from text files, much like the `.gui` and `.gfx` files of Paradox games. Layout files are read while the game runs. Sprite and theme files are turned by the project's setup script into Unreal's Common UI styles (button, text and border styles per faction). You never touch those generated styles: the text files are the source.
 
@@ -18,7 +18,8 @@ So what you deliver is not only pictures: your layout file **is** the panel. The
 ## 1. The game and the screen
 
 - The player looks down at a battlefield from an angled RTS camera, selects units with the mouse, and orders them with right clicks, command buttons and hotkeys.
-- Three factions share one set of panels and differ only by theme and sprites: **USA**, **China**, and **Insurgents** (our own fictional group, no real-world symbols).
+- Three factions share one set of panels and differ only by theme and sprites: **USA**, **China**, and **Insurgents** (our own fictional group, no real-world symbols). Every faction uses power, Insurgents included.
+- The game's design source is [`docs/design/DESIGN_FOUNDATION.md`](../design/DESIGN_FOUNDATION.md); the target look of the whole HUD is the mockup [`docs/ui/mockups/HUD_Target.png`](mockups/HUD_Target.png). Follow its arrangement and mood, not its exact pixels.
 - **Faction theme is not team colour.** Units and minimap markers use the team colour of their player (any colour, two USA players can face each other). The HUD uses the faction theme of the local player. Never bake a team colour into art: deliver white areas the engine tints.
 
 ### HUD budget (reference resolution 1920x1080)
@@ -27,21 +28,39 @@ All layout numbers are in **HUD units at 1920x1080**. The engine scales them by 
 
 ```
 +--------------------------------------------------------------------------------------+
-| TOP BAR 48 high: credits | power                                        | scoreboard  |
-|   notifications stack under the top bar, left                                        |
+| COMMANDER BAR (top left, 96 high):                          |  MINIMAP 280 x 280     |
+|   general portrait | general power slots | locked slots     |  (top right)           |
+| NOTIFICATIONS under it (LOW POWER, attacks)                  |  MAP BUTTONS under it:  |
+|                                                              |  Overlays | General    |
+|                      BATTLEFIELD (keep it free)              |  Powers | Objectives   |
 |                                                                                      |
-|                               BATTLEFIELD (keep it free)                             |
-|                                                                                      |
-|                tooltips appear here, just above the bottom band                      |
-+-------------+------------------------------------------------+-----------------------+
-| MINIMAP     | SELECTION PANEL                                | QUEUE + COMMAND GRID  |
-| 230 x 230   | fills the rest                                 | 460 wide, 3 x 5 grid  |
-+-------------+------------------------------------------------+-----------------------+
-  BOTTOM BAND at most 230 high
+|                tooltips appear here, just above the resource strip                   |
++--------------------------------------------------------------------------------------+
+| RESOURCE STRIP 40 high: POWER bar + produced/consumed | CREDITS | RANK (5 stars)     |
++-------------------------+----------------------------------------+-------------------+
+| SELECTION               | COMMANDS                               | UPGRADES &        |
+| portrait, name,         | what the selected building or builder  | EQUIPMENT         |
+| description, health,    | can make: cards with icon, name, cost  | list: icon, name, |
+| production queue (5)    | (no category tabs)                     | description, cost |
+| about 460 wide          | fills the rest                         | about 300 wide    |
++-------------------------+----------------------------------------+-------------------+
+  BOTTOM PANELS at most 280 high
 ```
 
-- The HUD covers at most about 25% of the screen. The battlefield is the game.
-- Only two modals exist in a match: the **match result** (Victory/Defeat) and the **in-game menu** (Esc). They are screens on a modal layer above the HUD: both dim everything behind them, the top bar included, block the battlefield while open, and Esc closes the in-game menu.
+| Slot | Where | Shows |
+|---|---|---|
+| `CommanderBar` | top left | the general's portrait, the general power slots with charge pips, locked slots |
+| `Notifications` | under the commander bar | the LOW POWER banner, attack alerts |
+| `Minimap` | top right | terrain, markers, camera frame |
+| `MapButtons` | under the minimap | Overlays (production overview), General Powers, Objectives |
+| `ResourceStrip` | full width, above the bottom panels | power bar, credits, rank |
+| `Selection` | bottom left | the selected unit or building, and its production queue |
+| `Commands` | bottom centre | the build and produce cards of the selection |
+| `Upgrades` | bottom right | the upgrades the selection can research |
+| `Tooltip`, `Scoreboard` | floating | |
+
+- The HUD covers at most about 30% of the screen. The battlefield is the game.
+- Only two modals exist in a match: the **match result** (Victory/Defeat) and the **in-game menu** (Esc). They are screens on a modal layer above the HUD: both dim everything behind them, the whole HUD included, block the battlefield while open, and Esc closes the in-game menu.
 - The game is mouse and keyboard only. Design for hover and click, not for gamepad focus.
 - A click on any hit-testable element never reaches the battlefield.
 
@@ -77,7 +96,6 @@ A layout file holds one root element. Elements nest through `children`.
       "anchor": "Left",
       "position": [220, 0],
       "spacing": 8,
-      "visibleWhen": "player.usesPower",
       "children": [
         { "type": "Image", "sprite": "Icon.Power", "size": [28, 28], "color": "Accent", "visibleWhen": "!player.power.low" },
         { "type": "Image", "sprite": "Icon.PowerLow", "size": [28, 28], "color": "Warning", "visibleWhen": "player.power.low" },
@@ -331,6 +349,8 @@ Keep it under two pages. It is a working document for the programmers, not a pit
 ---
 
 ## 8. Team workflow
+
+The producer's own click-by-click version of this round is [`ROUND_GUIDE.md`](ROUND_GUIDE.md).
 
 The team is four: the producer (a person, who picks the panel, plays, judges and approves), Claude (the programmer), you (the UI/UX designer) and Gemini through the Antigravity CLI (the reviewer, who only looks). Each panel has a **code issue** and a **design issue** on GitHub. Who does what and how each of you reaches the running editor through Unreal MCP is in [`AI_TEAM.md`](AI_TEAM.md).
 

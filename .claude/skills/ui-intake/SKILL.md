@@ -24,7 +24,7 @@ python Tools/Scripts/ui_intake.py "<zip>" --apply
 
 It unpacks into `Saved/UIIntake/<zip name>/`, checks the places and names of handbook sections 5 and 7 and every JSON file, builds a staging copy of `UI/` with the delivery over it and the sprite entries merged, and checks that with `Tools/Editor/ui_sources.py` (sprite and theme files, PNG sizes) and `ue.ps1 -Task uicheck` (layouts: binding keys, lists, actions, sprites, fonts, colours, layouts). It copies only when there is no problem.
 
-- **`INTAKE FAILED`**: nothing was copied. Report every `PROBLEM:` line grouped by file, each with its key, in words the designer can act on, and stop. The producer sends that list back to ChatGPT.
+- **`INTAKE FAILED`**: nothing was copied. Report every `PROBLEM:` line grouped by file, each with its key, in words the designer can act on. Write the same list to `Saved/UIIntake/<zip name>/fixes.md`, opening with `Your delivery did not pass the intake check. Fix these points and send the whole ZIP again, same names and format (handbook section 7):`, and put it on the clipboard (`Get-Content -Raw -Encoding UTF8 <file> | Set-Clipboard`). Tell the producer: "The fix list is on your clipboard: paste it into the same ChatGPT chat." Then stop.
 - **`INTAKE APPLIED`**: the `COPIED:` lines are what changed. `SETUP NEEDED` means sprites, themes, textures or fonts changed. `README:` is the designer's README; read it.
 
 ## 3. Import and test
@@ -35,7 +35,7 @@ It unpacks into `Saved/UIIntake/<zip name>/`, checks the places and names of han
 
 ## 4. Requests for code
 
-Read section 7 **Requests for code** of each delivered `docs/ui/specs/<Panel>.md` (and the README). For each request not already covered by an open issue, draft an issue (title `[NNb] ...` placed after the panel's code issue, body with **Context** starting `Follow-up to #<design issue>.`, **What**, **Acceptance**, milestone `Roadmap`). Show the drafts and create them only after the producer approves.
+Read section 7 **Requests for code** of each delivered `docs/ui/specs/<Panel>.md` (and the README). For each request not already covered by an open issue, draft an issue (title `[NNb] ...` placed after the panel's code issue, body with **Context** starting `Follow-up to #<design issue>.`, **What**, **Acceptance**, the milestone of the design issue). Show the drafts and create them only after the producer approves.
 
 ## 5. Stop and propose the commit
 

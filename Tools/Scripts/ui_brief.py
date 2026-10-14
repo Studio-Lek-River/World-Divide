@@ -1,6 +1,6 @@
 """Writes the brief folder of a UI design issue, ready to attach to ChatGPT. Used by the /ui-brief skill.
 
-    python Tools/Scripts/ui_brief.py <design issue number>
+    python Tools/Scripts/ui_brief.py <design issue number> [--quiet]
 
 The panels are the UI/Layouts/<Panel>.layout.json files the issue's "Send to ChatGPT" section lists; the folder is
 Saved/UIBriefs/<first panel>/. The binding keys, lists and actions come from the code through ue.ps1 -Task uibindings
@@ -11,8 +11,11 @@ Saved/UIBriefs/<first panel>/. The binding keys, lists and actions come from the
 - sprites.md: every existing sprite per set;
 - UI/Layouts/: the panels' current layouts; DESIGNER_HANDBOOK.md; docs/ui/specs/: the panels' specs when they exist;
 - screenshots/<Panel>/: the latest Saved/UIShots of each panel, when there are any;
-- README.md: the list of files.
-Prints "BRIEF: <folder>", and "MISMATCH: ..." where the issue's "Bindings and actions" list differs from the code.
+- refs/HUD_Target.png: the target mockup of the whole HUD;
+- README.md: the list of files; STEPS.md: the producer's steps for this round.
+It also packs everything but prompt.txt and STEPS.md into Saved/UIBriefs/<Panel>.zip, the one file to attach. Unless
+--quiet, it puts prompt.txt on the clipboard and opens Explorer on the ZIP.
+Prints "BRIEF: <folder>", "ZIP: <file>", and "MISMATCH: ..." where the issue's "Bindings and actions" list differs from the code.
 """
 
 import glob
@@ -22,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+import zipfile
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 GH_REPO = "Studio-Lek-River/World-Divide"
@@ -140,10 +144,50 @@ def check_issue_list(body, declared):
     return problems
 
 
+STEPS = r"""# Your steps for #{number}: {title}
+
+The full guide is `docs/ui/ROUND_GUIDE.md`.
+
+1. **ChatGPT, new chat.** Attach `Saved\UIBriefs\{zip}` (Explorer has it selected), press **Ctrl+V** (the prompt is
+   on your clipboard; it is `prompt.txt` in this folder if you lost it) and send.
+   ChatGPT asks a question first? Answer it; when unsure, say "Follow the handbook and refs/HUD_Target.png."
+2. **Download** the ZIP ChatGPT gives back to `D:\Downloads`.
+   Only text, no ZIP? Reply: "Deliver it as the one ZIP of handbook section 7."
+3. **Claude:** close the editor, then type `/ui-intake D:\Downloads\<the zip> {number}`.
+   Problems? Claude puts the fix list on your clipboard: paste it into the same ChatGPT chat and go back to 2.
+4. **Look yourself:** open the project and play `L_TestMap`.
+5. **Claude:** type `/ui-review {panel} {number}`. Gemini reviews the screenshots; you paste nothing.
+   Claude puts `revision.md` (the review plus your notes) on your clipboard.
+6. **Happy?** Tell Claude "commit". **Not yet?** Paste into the same ChatGPT chat, add your own remarks, go back to 2.
+"""
+
+
+def pack(folder, archive):
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
+        for root, _, names in os.walk(folder):
+            for name in names:
+                full = os.path.join(root, name)
+                relative = os.path.relpath(full, folder).replace("\\", "/")
+                if relative in ("prompt.txt", "STEPS.md"):
+                    continue
+                # The 1440p and ultrawide shots stay in the folder; the ZIP keeps uploads small with 1080p only.
+                if relative.startswith("screenshots/") and "1920x1080" not in name:
+                    continue
+                package.write(full, relative)
+
+
+def hand_over(prompt_file, archive):
+    """The prompt on the clipboard (PowerShell keeps the Unicode that clip.exe mangles) and Explorer on the ZIP."""
+    subprocess.run(["powershell", "-NoProfile", "-Command",
+                    f"Get-Content -Raw -Encoding UTF8 -LiteralPath '{prompt_file}' | Set-Clipboard"], check=False)
+    subprocess.run(["explorer", f"/select,{archive}"], check=False)
+
+
 def main():
-    if len(sys.argv) != 2 or not sys.argv[1].isdigit():
-        sys.exit("usage: python Tools/Scripts/ui_brief.py <design issue number>")
-    issue = read_issue(int(sys.argv[1]))
+    arguments = [argument for argument in sys.argv[1:] if argument != "--quiet"]
+    if len(arguments) != 1 or not arguments[0].isdigit():
+        sys.exit("usage: python Tools/Scripts/ui_brief.py <design issue number> [--quiet]")
+    issue = read_issue(int(arguments[0]))
     body = issue["body"]
     if "-design]" not in issue["title"]:
         print(f"WARNING: #{issue['number']} is not a design issue: {issue['title']}")
@@ -188,15 +232,30 @@ def main():
     declared = write_bindings(os.path.join(folder, "bindings.md"), panels, bindings, layouts)
     write_sprites(os.path.join(folder, "sprites.md"))
     shutil.copy(os.path.join(REPO, "docs", "ui", "DESIGNER_HANDBOOK.md"), folder)
+    mockup = os.path.join(REPO, "docs", "ui", "mockups", "HUD_Target.png")
+    if os.path.isfile(mockup):
+        os.makedirs(os.path.join(folder, "refs"))
+        shutil.copy(mockup, os.path.join(folder, "refs"))
 
     files = sorted(os.path.relpath(os.path.join(root, name), folder).replace("\\", "/")
                    for root, _, names in os.walk(folder) for name in names)
     with open(os.path.join(folder, "README.md"), "w", encoding="utf-8", newline="\n") as handle:
         handle.write(f"# Brief for #{issue['number']}: {issue['title']}\n\nPanels: {', '.join(panels)}\n\n"
-                     "Paste `prompt.txt` into ChatGPT and attach every file of this folder.\n\n"
+                     "`refs/HUD_Target.png` is the target look of the whole HUD: follow its arrangement and mood "
+                     "within the handbook's rules.\n\n"
                      + "".join(f"- `{file}`\n" for file in files + ["README.md"]))
+    archive = folder + ".zip"
+    if os.path.isfile(archive):
+        os.remove(archive)
+    pack(folder, archive)
+    with open(os.path.join(folder, "STEPS.md"), "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(STEPS.format(number=issue["number"], title=issue["title"], panel=panels[0],
+                                  zip=os.path.basename(archive)))
+    if "--quiet" not in sys.argv:
+        hand_over(os.path.join(folder, "prompt.txt"), archive)
 
     print(f"BRIEF: {os.path.relpath(folder, REPO)}")
+    print(f"ZIP: {os.path.relpath(archive, REPO)}")
     print(f"PANELS: {', '.join(panels)}")
     for panel in panels:
         print(f"  {panel}: {len(declared.get(panel, ()))} key(s) and action(s)"

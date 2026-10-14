@@ -1,6 +1,6 @@
 # World Divide — the AI team
 
-The UI/UX work is done by four members. Everyone works from [`DESIGNER_HANDBOOK.md`](DESIGNER_HANDBOOK.md); section 8 there is the round each panel goes through.
+The UI/UX work is done by four members. Everyone works from [`DESIGNER_HANDBOOK.md`](DESIGNER_HANDBOOK.md); section 8 there is the round each panel goes through, and [`ROUND_GUIDE.md`](ROUND_GUIDE.md) is the producer's step-by-step version of it (what to type, attach and paste).
 
 | Who | Role | Writes |
 |---|---|---|

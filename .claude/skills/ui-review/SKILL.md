@@ -54,6 +54,22 @@ Screenshots: `Saved/UIShots/<Panel>/` (<the file names>).
 <the review, verbatim>
 ```
 
-## 6. Report
+## 6. The revision prompt
 
-The comment URL, the verdict line, and the screenshots folder, so the producer can send the review with the screenshots to ChatGPT.
+Unless the verdict approves the panel as is, write `Saved/UIBriefs/<folder>/revision.md` (the brief folder of the design issue; `Saved/UIBriefs/<Panel>/` when there is none) and put it on the clipboard (`Get-Content -Raw -Encoding UTF8 <file> | Set-Clipboard`):
+
+```
+Review round for <Panel> (#<issue>). Revise your delivery with these points, keep everything else as it is, and send the whole ZIP again in the same format (handbook section 7).
+
+Reviewer's points:
+<the review's numbered points, verbatim>
+
+Producer's notes:
+- (add your own remarks here before sending)
+```
+
+The screenshots go along when they help: say which `Saved/UIShots/<Panel>/<Faction>_1920x1080.png` to attach.
+
+## 7. Report
+
+The comment URL, the verdict line, and the screenshots folder. Then the next step in one line: "The revision prompt is on your clipboard: paste it into the same ChatGPT chat, add your remarks, and attach `<screenshot>`." When the verdict approves, say so instead and offer the commit `/ui-intake` proposed.

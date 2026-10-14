@@ -27,7 +27,11 @@ It reads the issue with `gh`, takes as panels the `UI/Layouts/<Panel>.layout.jso
 | `UI/Layouts/`, `docs/ui/specs/` | the panels' current layouts and specs |
 | `DESIGNER_HANDBOOK.md` | the handbook |
 | `screenshots/<Panel>/` | the latest `Saved/UIShots/<Panel>/` when there are any; it takes no new ones (`/ui-review` does) |
+| `refs/HUD_Target.png` | the target mockup of the whole HUD |
 | `README.md` | the list of files |
+| `STEPS.md` | the producer's steps for this round (not in the ZIP) |
+
+It packs everything but `prompt.txt` and `STEPS.md` into `Saved/UIBriefs/<Panel>.zip`, the one file to attach, puts `prompt.txt` on the clipboard and opens Explorer with the ZIP selected (`--quiet` skips both).
 
 `FAILED:` → report it and stop. `WARNING:` (not a design issue, or closed) → report it and ask whether to go on.
 
@@ -41,4 +45,6 @@ The issue may name other attachments (e.g. the USA upgrade icons). Copy those th
 
 ## 4. Report
 
-The folder path, the panels, the key/action count per panel, whether screenshots were included, any difference between the issue's list and the JSON, and the style references the producer must attach by hand.
+The folder path, the panels, the key/action count per panel, whether screenshots were included, any difference between the issue's list and the JSON, and the style references the producer must attach by hand. Copy any added style reference into the ZIP too (re-pack it), so there is still one file to attach.
+
+End with the producer's next step, from `STEPS.md` step 1: "In ChatGPT, open a new chat, attach `Saved\UIBriefs\<Panel>.zip`, press Ctrl+V and send. When ChatGPT gives you a ZIP, save it to D:\Downloads and type `/ui-intake D:\Downloads\<zip> <n>`."
