@@ -120,6 +120,7 @@ bool FRTSEntityIconTestDataTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Common has Icon.Placeholder"), &Placeholder != &URTSUIStyleSubsystem::GetPlaceholderSprite());
 
 	int32 Entities = 0;
+	TMap<const UObject*, FString> IconOwners;
 	for (const FAssetData& Asset : Assets)
 	{
 		const URTSEntityData* Entity = Cast<URTSEntityData>(Asset.GetAsset());
@@ -134,6 +135,17 @@ bool FRTSEntityIconTestDataTest::RunTest(const FString& Parameters)
 		const FRTSUISprite& Icon = RTSUI::FindEntityIcon(Styles->GetStyleChain(URTSFactionData::FindByTag(Entity->FactionTag)), Entity);
 		TestTrue(*FString::Printf(TEXT("%s's icon %s resolves to a sprite"), *Name, *Entity->IconSprite.ToString()),
 			&Icon != &Placeholder && &Icon != &URTSUIStyleSubsystem::GetPlaceholderSprite());
+		// Painted art or the placeholder setup draws for it (placeholder_icons.py): never another entity's picture.
+		const UObject* Texture = Icon.Brush.GetResourceObject();
+		TestNotNull(*FString::Printf(TEXT("%s's icon has a texture"), *Name), Texture);
+		if (const FString* Owner = Texture ? IconOwners.Find(Texture) : nullptr)
+		{
+			AddError(FString::Printf(TEXT("%s shows the same icon as %s"), *Name, **Owner));
+		}
+		else if (Texture)
+		{
+			IconOwners.Add(Texture, Name);
+		}
 	}
 	TestTrue(TEXT("The test units, buildings and upgrades are generated"), Entities > 0);
 	return true;

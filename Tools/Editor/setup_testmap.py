@@ -4,8 +4,8 @@ with a supply source and two builders by each base, the L_Skirmish and L_Skirmis
 armies and with four and two start spots, the skirmish maps L_RiverFord, L_QuarryCross and L_SixPeaks with two, four and
 six, all where the lobby's seats play, the map data assets that offer them in the lobby with a top-down preview of each
 (rendered when the run has a renderer, drawn otherwise), and the
-empty L_MainMenu and L_Lobby levels for the menu screens, and the Common UI styles of UI/ and Mods/*/UI/ (see
-make_ui_styles). L_TestMap and the skirmish maps are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
+empty L_MainMenu and L_Lobby levels for the menu screens, a placeholder icon for every entity without painted art (see
+placeholder_icons.py) and the Common UI styles of UI/ and Mods/*/UI/ (see make_ui_styles). L_TestMap and the skirmish maps are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
 source files that build them and are rebuilt only when those change. UI assets built in an earlier run whose source entry
 is gone are deleted.
@@ -35,6 +35,7 @@ import unreal
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import placeholder_art as art  # noqa: E402
+import placeholder_icons  # noqa: E402
 import ui_sources  # noqa: E402
 
 UNIT_DIR = "/Game/Data/Units"
@@ -1131,6 +1132,38 @@ def make_ui_style_set(set_name, sprites, theme, text_styles, button_text_styles,
     })
 
 
+def entity_kind(asset, properties):
+    """The placeholder_icons kind of an entity, from its data class and the properties planned for it."""
+    if isinstance(asset, unreal.RTSUpgradeData):
+        return placeholder_icons.UPGRADE
+    if isinstance(asset, unreal.RTSBuildingData):
+        return placeholder_icons.DEFENSE if properties.get("is_defense") else placeholder_icons.BUILDING
+    if isinstance(asset, (unreal.RTSHarvesterData, unreal.RTSBuilderData)):
+        return placeholder_icons.WORKER
+    if isinstance(asset, unreal.RTSAircraftData):
+        return placeholder_icons.AIRCRAFT
+    # Vehicles lean with the slope; infantry stays upright.
+    return placeholder_icons.VEHICLE if properties.get("tilts_to_ground") else placeholder_icons.INFANTRY
+
+
+def make_placeholder_icons():
+    """A placeholder icon in UI/ for every planned entity whose Icon.<Entity> has no painted art (placeholder_icons.py),
+    resolved by the style set of the entity's faction. Runs before make_ui_styles, which imports them."""
+    faction_sets = {}
+    for asset, _, properties in data_assets.values():
+        style = properties.get("ui_style")
+        if isinstance(asset, unreal.RTSFactionData) and style and "faction_tag" in properties:
+            faction_sets[properties["faction_tag"].export_text()] = style.get_name()[len("DA_UIStyle_"):]
+    entities = []
+    for asset, _, properties in data_assets.values():
+        icon = str(properties.get("icon_sprite", ""))
+        if isinstance(asset, unreal.RTSEntityData) and icon.startswith("Icon."):
+            tag = properties.get("faction_tag")
+            entities.append((icon[len("Icon."):], entity_kind(asset, properties),
+                             faction_sets.get(tag.export_text()) if tag else None))
+    placeholder_icons.generate(PROJECT_DIR, entities, unreal.log)
+
+
 def make_ui_styles():
     """The Common UI styles of UI/ and the mods' UI/ folders: a style set per sprite file and theme, plus Common and
     Neutral. A set without its own theme has no colours or text styles, and its buttons use Neutral's text; the
@@ -1388,6 +1421,7 @@ make_map_data("DA_MapSixPeaks", "Six Peaks", SIX_PEAKS_MAP,
               [(unreal.RTSSeatType.OPEN, 0), (unreal.RTSSeatType.AI, 1)] + [(unreal.RTSSeatType.CLOSED, -1)] * 4)
 make_menu_map(MAIN_MENU_MAP_PATH, unreal.RTSMainMenuGameMode)
 make_menu_map(LOBBY_MAP_PATH, unreal.RTSLobbyGameMode)
+make_placeholder_icons()
 make_ui_styles()
 plan_data_assets()
 plan_stale_ui_assets()
