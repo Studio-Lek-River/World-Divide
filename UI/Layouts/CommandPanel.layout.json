@@ -1,0 +1,95 @@
+{
+  "type": "Panel",
+  "name": "CommandPanel",
+  "anchor": "Fill",
+  "hitTest": false,
+  "children": [
+    {
+      "type": "Grid",
+      "name": "CommandGrid",
+      "columns": 8,
+      "rows": 2,
+      "cellSize": [
+        64,
+        64
+      ],
+      "spacing": 6,
+      "repeat": "commands",
+      "count": 16,
+      "template": {
+        "type": "Button",
+        "name": "CommandCard",
+        "sprite": "Button",
+        "action": "IssueCommand",
+        "tooltip": true,
+        "visibleWhen": "!item.empty",
+        "bind": {
+          "enabled": "item.enabled",
+          "selected": "item.active"
+        },
+        "children": [
+          {
+            "type": "Image",
+            "name": "CommandIcon",
+            "sprite": "Icon.Placeholder",
+            "anchor": "Center",
+            "bind": {
+              "sprite": "item.icon"
+            },
+            "size": [
+              52,
+              52
+            ]
+          },
+          {
+            "type": "Panel",
+            "name": "CommandDisabled",
+            "color": "#000000A0",
+            "anchor": "Fill",
+            "hitTest": false,
+            "visibleWhen": "!item.enabled"
+          },
+          {
+            "type": "Text",
+            "name": "CommandHotkey",
+            "text": "{item.hotkey}",
+            "font": "Number",
+            "fontSize": 14,
+            "color": "Accent",
+            "anchor": "TopRight",
+            "position": [
+              4,
+              2
+            ],
+            "size": [
+              20,
+              18
+            ],
+            "align": "Right",
+            "maxLines": 1
+          }
+        ]
+      }
+    },
+    {
+      "type": "Text",
+      "name": "CommandsEmpty",
+      "text": "No commands",
+      "font": "Body",
+      "fontSize": 13,
+      "color": "MutedText",
+      "anchor": "Center",
+      "position": [
+        0,
+        0
+      ],
+      "size": [
+        300,
+        20
+      ],
+      "align": "Center",
+      "maxLines": 1,
+      "visibleWhen": "commands.empty"
+    }
+  ]
+}

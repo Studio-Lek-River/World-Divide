@@ -31,11 +31,11 @@ Command-line build:
 | Left click / left drag | Select own units (Shift adds or toggles); a click on an own building selects that building |
 | Delete, or the HUD's cancel button | Cancel the own construction site under the cursor, or else the selected one, for a refund; with a production building selected, cancel the last entry in its queue |
 | Right click | Move, attack when on an enemy unit or building, harvest when on a supply source, or resume an own construction site with builders (Shift queues); with a production building selected, set its rally point |
-| X | Stop |
+| X, or Stop in the command panel | Stop |
 | Space | Centre the camera on the latest attack warning, for up to 20 seconds after it |
-| J, then left click | Attack-move: walk to the clicked spot, stopping to fight enemies that come into range on the way (Shift queues and keeps attack-move armed); right click or Esc cancels |
-| 1–9 | With a builder selected: place the n-th building on its list; the builder walks there, places it and builds it. With `rts.DebugBuild 1` in the console and no builder selected: place the n-th building of your faction directly |
-| 1–9, or a click on its menu in the HUD | With a production building selected: queue the n-th unit or upgrade; a click on a queued entry in the selection panel cancels it for a refund |
+| J or Attack-move in the command panel, then left click | Attack-move: walk to the clicked spot, stopping to fight enemies that come into range on the way (Shift queues and keeps attack-move armed); right click or Esc cancels |
+| The hotkey shown on the button (1–9 by default), or a click on its card in the command panel | With a builder selected: place that building; the builder walks there, places it and builds it. With `rts.DebugBuild 1` in the console and no builder selected: place that building of your faction directly. A greyed card says why it is not available |
+| The hotkey shown on the button (1–9 by default), or a click on its card in the command or upgrades panel | With a production building selected: queue that unit or research that upgrade; a click on a queued entry in the selection panel cancels it for a refund |
 | Left click / right click or Esc | While placing: build (Shift queues it and keeps placing) / cancel (Esc also stops PIE in the editor) |
 | 1, or a click on its launch entry in the HUD, then left click | With an own superweapon selected that is ready: launch it at the clicked spot; right click or Esc cancels |
 | A click on the HUD's restart button | Once the match is over, on the host: restart the match on the same map, clients included |

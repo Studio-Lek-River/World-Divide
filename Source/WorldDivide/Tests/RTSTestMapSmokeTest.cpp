@@ -12,6 +12,7 @@
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "CommonTextBlock.h"
+#include "Components/PanelWidget.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuilderData.h"
@@ -30,6 +31,7 @@
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
 #include "HAL/IConsoleManager.h"
+#include "InputKeyEventArgs.h"
 #include "NavigationSystem.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "Player/RTSHUD.h"
@@ -3182,6 +3184,9 @@ namespace
 		int32 TotalFrames = 0;
 		bool bWasDebugBuild = false;
 		TWeakObjectPtr<URTSLayoutScreen> Screen;
+
+		/** The hotkey of the first building on the debug build menu. */
+		FKey BuildKey;
 	};
 
 	/** Sends Key to the game viewport as the local player's keyboard would: through Common UI first, then the controller. */
@@ -3199,8 +3204,8 @@ namespace
 }
 
 /**
- * Through the game viewport with Common UI routing input: while a screen is shown on the HUD's Modal layer the build hotkey
- * 1 does not reach the battlefield, once it closes the same key starts a placement again, and Esc on the in-game menu
+ * Through the game viewport with Common UI routing input: while a screen is shown on the HUD's Modal layer the hotkey of
+ * the first building on the debug build menu does not reach the battlefield, once it closes the same key starts a placement again, and Esc on the in-game menu
  * closes it through Common UI's back action.
  */
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckModalInput, FAutomationTestBase*, Test, TSharedRef<FModalState>, State);
@@ -3249,6 +3254,9 @@ bool FRTSCheckModalInput::Update()
 		State->bWasDebugBuild = SetDebugBuild(true);
 		Controller->SelectUnits(TArray<ARTSUnit*>());
 		Player->AddCredits(Faction->Buildings[0]->Cost);
+		const TArray<FRTSCommandButton> Buttons = Controller->GetCommandButtons();
+		State->BuildKey = Buttons.IsEmpty() ? FKey() : Buttons[0].Hotkey;
+		Test->TestTrue(TEXT("The first building of the debug build menu has a hotkey"), State->BuildKey.IsValid());
 		State->Screen = Widget->PushModal(URTSHUDWidget::InGameMenuLayout, false);
 		Test->TestTrue(TEXT("A screen is pushed onto the Modal layer"), State->Screen.IsValid());
 		Test->TestTrue(TEXT("While it is open the whole screen is HUD, so no click reaches the battlefield"),
@@ -3257,10 +3265,10 @@ bool FRTSCheckModalInput::Update()
 	}
 	case 1:
 		Test->TestTrue(TEXT("The modal screen is active"), State->Screen.IsValid() && State->Screen->IsActivated());
-		SendKey(*Controller, EKeys::One, IE_Pressed);
+		SendKey(*Controller, State->BuildKey, IE_Pressed);
 		return false;
 	case 2:
-		SendKey(*Controller, EKeys::One, IE_Released);
+		SendKey(*Controller, State->BuildKey, IE_Released);
 		return false;
 	case 3:
 		Test->TestNull(TEXT("The build hotkey does not reach the battlefield while a modal screen is open"), Controller->GetPlacementData());
@@ -3268,10 +3276,10 @@ bool FRTSCheckModalInput::Update()
 		return false;
 	case 4:
 		Test->TestEqual(TEXT("The Modal layer is empty again"), Widget->GetModals().Num(), 0);
-		SendKey(*Controller, EKeys::One, IE_Pressed);
+		SendKey(*Controller, State->BuildKey, IE_Pressed);
 		return false;
 	case 5:
-		SendKey(*Controller, EKeys::One, IE_Released);
+		SendKey(*Controller, State->BuildKey, IE_Released);
 		return false;
 	case 6:
 		Test->TestNotNull(TEXT("Once it is closed the build hotkey starts a placement"), Controller->GetPlacementData());
@@ -3705,6 +3713,165 @@ bool FRTSProductionQueueSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, MakeShared<FSmokeState>()));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckProductionQueue(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyProductionQueue(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+namespace
+{
+	/** Index of the item named Name in List of the command or upgrades panel, or INDEX_NONE. */
+	int32 FindCommandItem(ARTSPlayerController& Controller, const TCHAR* List, const FText& Name)
+	{
+		const int32 Count = GetSelectionListCount(Controller, List);
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			if (GetSelectionListValue(Controller, List, Index, TEXT("name")).String == Name.ToString())
+			{
+				return Index;
+			}
+		}
+		return INDEX_NONE;
+	}
+
+	/** Clicks the item at Index of List, the way a button of the command or upgrades panel sends it. */
+	void RunCommandAction(ARTSPlayerController& Controller, const TCHAR* List, int32 Index)
+	{
+		FRTSUIContext Context;
+		Context.Player = &Controller;
+		Context.List = List;
+		Context.Index = Index;
+		for (const IRTSUIBindingSource* Source : RTSUIBindings::GetDefaultSources())
+		{
+			if (Source->HandleAction(TEXT("IssueCommand"), Context))
+			{
+				return;
+			}
+		}
+	}
+
+	/** A key press as the viewport sends it to the controller. */
+	bool PressKey(ARTSPlayerController& Controller, const FKey& Key)
+	{
+		APlayerController& Base = Controller;
+		return Base.InputKey(FInputKeyEventArgs::CreateSimulated(Key, IE_Pressed, 1.f));
+	}
+}
+
+/**
+ * The command and upgrades panels: a selected barracks lists its units and rifle training, a click and the infantry's own
+ * hotkey queue infantry, and a click researches the upgrade; a selected builder places a power plant from its card and by
+ * its hotkey.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FRTSCheckCommandPanel, FAutomationTestBase*, Test);
+bool FRTSCheckCommandPanel::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	URTSBuildingData* BarracksData = LoadObject<URTSBuildingData>(nullptr, BarracksPath);
+	URTSBuildingData* PlantData = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+	URTSUnitData* Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
+	URTSUpgradeData* RifleTraining = LoadObject<URTSUpgradeData>(nullptr, RifleTrainingPath);
+	if (!Player || !BarracksData || !PlantData || !Infantry || !RifleTraining || !SpawnPowerPlant(World, Controller->GetTeamId()))
+	{
+		Test->AddError(TEXT("Could not set up the command panel test"));
+		return true;
+	}
+	Player->AddCredits(5000);
+
+	const ARTSHUD* HUD = Controller->GetHUD<ARTSHUD>();
+	const URTSHUDWidget* Widget = HUD ? HUD->GetHUDWidget() : nullptr;
+	const URTSLayoutWidget* Layout = Widget ? Widget->GetLayout() : nullptr;
+	Test->TestNotNull(TEXT("The Commands slot holds CommandPanel.layout.json"), Layout ? Layout->FindElement(TEXT("CommandGrid")) : nullptr);
+	Test->TestNotNull(TEXT("The Upgrades slot holds UpgradePanel.layout.json"), Layout ? Layout->FindElement(TEXT("UpgradeList")) : nullptr);
+
+	Controller->SelectUnits({});
+	Test->TestTrue(TEXT("Nothing selected: no commands"), GetSelectionValue(*Controller, TEXT("commands.empty")).bBool);
+
+	ARTSBuilding* Barracks = SpawnBuilding(World, BarracksData, Controller->GetTeamId(), BuildSpot, true);
+	Controller->SelectBuilding(Barracks);
+	const int32 InfantryIndex = FindCommandItem(*Controller, TEXT("commands"), Infantry->DisplayName);
+	if (!Test->TestNotEqual(TEXT("The barracks lists infantry"), InfantryIndex, static_cast<int32>(INDEX_NONE)))
+	{
+		return true;
+	}
+	Test->TestEqual(TEXT("as a unit to produce"), GetSelectionListValue(*Controller, TEXT("commands"), InfantryIndex, TEXT("category")).String,
+		FString(TEXT("Produce")));
+	Test->TestEqual(TEXT("with its own hotkey"), GetSelectionListValue(*Controller, TEXT("commands"), InfantryIndex, TEXT("hotkey")).String,
+		Infantry->Hotkey.GetDisplayName(false).ToString());
+	Test->TestEqual(TEXT("Rifle training is not among the commands"), FindCommandItem(*Controller, TEXT("commands"), RifleTraining->DisplayName),
+		static_cast<int32>(INDEX_NONE));
+	const int32 TrainingIndex = FindCommandItem(*Controller, TEXT("upgrades"), RifleTraining->DisplayName);
+	Test->TestNotEqual(TEXT("but in the upgrades list"), TrainingIndex, static_cast<int32>(INDEX_NONE));
+	Test->TestFalse(TEXT("which is not empty"), GetSelectionValue(*Controller, TEXT("upgrades.empty")).bBool);
+
+	// Until the rich tooltip (#69) a card's plain tooltip gives its name and description.
+	if (URTSLayoutWidget* Cards = Widget ? Widget->GetLayout() : nullptr)
+	{
+		Cards->UpdateBindings();
+		const TArray<UWidget*> Items = Cards->GetRepeatItems(TEXT("CommandGrid"));
+		// A grid cell is a size box around the card.
+		const UPanelWidget* Cell = Items.IsValidIndex(InfantryIndex) ? Cast<UPanelWidget>(Items[InfantryIndex]) : nullptr;
+		const UWidget* Card = Cell && Cell->GetChildrenCount() > 0 ? Cell->GetChildAt(0) : nullptr;
+		const FString Tooltip = Card ? Card->GetToolTipText().ToString() : FString();
+		Test->TestTrue(TEXT("Hovering the infantry card names it and describes it"),
+			Tooltip.Contains(Infantry->DisplayName.ToString()) && Tooltip.Contains(Infantry->Description.ToString()));
+	}
+
+	const TArray<TObjectPtr<URTSEntityData>>& Queue = Barracks->GetProductionComponent()->GetQueue();
+	RunCommandAction(*Controller, TEXT("commands"), InfantryIndex);
+	Test->TestEqual(TEXT("Clicking the infantry card queues one"), Queue.Num(), 1);
+	Test->TestTrue(TEXT("Its own hotkey goes through the controller's input"), PressKey(*Controller, Infantry->Hotkey));
+	Test->TestEqual(TEXT("and queues another"), Queue.Num(), 2);
+	RunCommandAction(*Controller, TEXT("upgrades"), TrainingIndex);
+	Test->TestTrue(TEXT("Clicking rifle training researches it"), Queue.Contains(RifleTraining));
+
+	URTSBuilderData* BuilderData = LoadObject<URTSBuilderData>(nullptr, BuilderPath);
+	ARTSUnit* Builder = SpawnTestUnit(World, BuilderPath, Controller->GetTeamId(), UnitSpot);
+	if (!BuilderData || !Builder)
+	{
+		Test->AddError(TEXT("Could not spawn the builder"));
+		return true;
+	}
+	Controller->SelectUnits({ Builder });
+	const int32 PlantIndex = FindCommandItem(*Controller, TEXT("commands"), PlantData->DisplayName);
+	Test->TestNotEqual(TEXT("The builder lists the power plant"), PlantIndex, static_cast<int32>(INDEX_NONE));
+	Test->TestEqual(TEXT("The builder's orders end with Stop and Attack-move"),
+		GetSelectionListValue(*Controller, TEXT("commands"), GetSelectionListCount(*Controller, TEXT("commands")) - 1, TEXT("id")).String,
+		FString(TEXT("AttackMove")));
+	RunCommandAction(*Controller, TEXT("commands"), PlantIndex);
+	Test->TestTrue(TEXT("Clicking its card starts placing it"), Controller->GetPlacementData() == PlantData);
+	Controller->CancelPlacement();
+	Test->TestTrue(TEXT("Its own hotkey goes through the controller's input"), PressKey(*Controller, PlantData->Hotkey));
+	Test->TestTrue(TEXT("and starts placing it too"), Controller->GetPlacementData() == PlantData);
+	Controller->UpdatePlacementAt(OtherBuildSpot);
+	Test->TestTrue(TEXT("on an open spot"), Controller->IsPlacementValid());
+	Controller->ConfirmPlacement(false);
+	Test->TestNull(TEXT("Confirming sends the builder and ends placement"), Controller->GetPlacementData());
+	const TSet<FKey> Reserved = Controller->GetReservedKeys();
+	Test->TestTrue(TEXT("The camera, Stop and Attack-move keys are never command hotkeys"),
+		Reserved.Contains(EKeys::W) && Reserved.Contains(EKeys::X) && Reserved.Contains(EKeys::J));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSCommandPanelSmokeTest, "WorldDivide.Smoke.CommandPanel",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSCommandPanelSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, MakeShared<FSmokeState>()));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckCommandPanel(this));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

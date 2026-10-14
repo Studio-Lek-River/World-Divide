@@ -55,8 +55,8 @@ All layout numbers are in **HUD units at 1920x1080**. The engine scales them by 
 | `MapButtons` (layout) | under the minimap, 8 apart | 280 x 48 | Overlays (production overview), General Powers, Objectives |
 | `ResourceBar` (layout) | full width, above the bottom panels | full width x 40 | power bar, credits, rank |
 | `Selection` (layout) | bottom left | 460 x 280 frame | the selected unit or building, and its production queue (the `ProductionQueue` layout, in its `QueueSlot`) |
-| `Commands` | bottom centre | fills x 280 frame | the build and produce cards of the selection |
-| `Upgrades` | bottom right | 300 x 280 frame | the upgrades the selection can research |
+| `Commands` (layout `CommandPanel`) | bottom centre | fills x 280 frame | the build and produce cards of the selection, and Stop and Attack-move for units |
+| `Upgrades` (layout `UpgradePanel`) | bottom right | 300 x 280 frame | the upgrades the selection can research |
 | `Scoreboard` | floating, under the map buttons | 360 x 300 | |
 | `Tooltip` | floating, bottom right, just above the resource bar | 460 x 240 | |
 

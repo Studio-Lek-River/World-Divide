@@ -20,6 +20,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputAction.h"
+#include "InputKeyEventArgs.h"
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
 #include "Kismet/GameplayStatics.h"
@@ -49,10 +50,6 @@ namespace
 		Action->ValueType = ValueType;
 		return Action;
 	}
-
-	const FKey BuildHotkeys[ARTSPlayerController::MaxBuildHotkeys] = {
-		EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::Nine,
-	};
 
 	void MapKey(UInputMappingContext* Context, UInputAction* Action, const FKey& Key, bool bNegate = false, bool bSwizzle = false)
 	{
@@ -130,14 +127,6 @@ void ARTSPlayerController::CreateInputActions()
 	ReloadUIAction = MakeAction(this, TEXT("IA_ReloadUI"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, ReloadUIAction, EKeys::F5);
 #endif
-
-	BuildActions.Reset();
-	for (int32 Index = 0; Index < MaxBuildHotkeys; ++Index)
-	{
-		UInputAction* Action = MakeAction(this, *FString::Printf(TEXT("IA_Build%d"), Index + 1), EInputActionValueType::Boolean);
-		MapKey(MappingContext, Action, BuildHotkeys[Index]);
-		BuildActions.Add(Action);
-	}
 }
 
 void ARTSPlayerController::SetupInputComponent()
@@ -177,10 +166,16 @@ void ARTSPlayerController::SetupInputComponent()
 #if !UE_BUILD_SHIPPING
 	Input->BindAction(ReloadUIAction, ETriggerEvent::Started, this, &ThisClass::OnReloadUI);
 #endif
-	for (int32 Index = 0; Index < BuildActions.Num(); ++Index)
+}
+
+bool ARTSPlayerController::InputKey(const FInputKeyEventArgs& Params)
+{
+	// Command hotkeys change with the selection, so they are looked up per press instead of mapped as input actions.
+	if (Params.Event == IE_Pressed && !GetReservedKeys().Contains(Params.Key) && HandleCommandKey(Params.Key))
 	{
-		Input->BindAction(BuildActions[Index], ETriggerEvent::Started, this, &ThisClass::OnBuildHotkey, Index);
+		return true;
 	}
+	return Super::InputKey(Params);
 }
 
 void ARTSPlayerController::PlayerTick(float DeltaTime)
@@ -581,15 +576,6 @@ void ARTSPlayerController::HandleSelectPressed(const FVector2D& Mouse)
 		if (RTSHUD->IsOnLaunchButton(Mouse))
 		{
 			BeginSuperweaponTargeting();
-			return;
-		}
-		// The production menu of the selected building; the HUD only draws it while there is one.
-		ARTSBuilding* Producer = GetProductionBuilding();
-		const TArray<URTSEntityData*> Menu = GetProductionMenu();
-		const int32 MenuIndex = RTSHUD->GetProduceButtonAt(Mouse);
-		if (Producer && Menu.IsValidIndex(MenuIndex))
-		{
-			RequestProduce(Producer, Menu[MenuIndex]);
 			return;
 		}
 	}
@@ -998,36 +984,190 @@ bool ARTSPlayerController::RequestRallyPoint(ARTSBuilding* Building, const FVect
 	return true;
 }
 
-void ARTSPlayerController::OnBuildHotkey(int32 Index)
+TArray<FRTSCommandButton> ARTSPlayerController::GetCommandButtons() const
 {
-	if (bInGameMenuOpen)
+	TArray<FRTSCommandButton> Buttons;
+	const auto MakeButton = [](URTSEntityData& Data, ERTSCommandCategory Category)
 	{
-		return;
+		FRTSCommandButton Button;
+		Button.Id = Data.GetFName();
+		Button.DisplayName = Data.DisplayName;
+		Button.Description = Data.Description;
+		Button.IconSprite = Data.IconSprite;
+		Button.Hotkey = Data.Hotkey;
+		Button.Category = Category;
+		Button.Cost = Data.Cost;
+		Button.EntityData = &Data;
+		return Button;
+	};
+	const auto Disable = [](FRTSCommandButton& Button, ERTSCommandDisabledReason Reason, const FText& Text)
+	{
+		Button.bEnabled = false;
+		Button.DisabledReason = Reason;
+		Button.DisabledText = Text;
+	};
+	const auto DisableMissing = [&Disable](FRTSCommandButton& Button, const URTSEntityData& Missing)
+	{
+		Disable(Button, ERTSCommandDisabledReason::MissingPrerequisite,
+			FText::Format(NSLOCTEXT("RTSCommands", "Needs", "Needs {0}"), Missing.DisplayName));
+	};
+	const FText CannotAffordText = NSLOCTEXT("RTSCommands", "CannotAfford", "Not enough credits");
+	// Gathered once for the whole list: the panels ask for it every frame.
+	const TSet<const URTSEntityData*> Owned = RTSProduction::GatherOwned(*GetWorld(), GetTeamId());
+
+	if (const ARTSBuilding* Producer = GetProductionBuilding())
+	{
+		const bool bQueueFull = Producer->GetProductionComponent()->GetQueue().Num() >= URTSProductionComponent::MaxQueue;
+		for (URTSEntityData* Data : GetProductionMenu())
+		{
+			if (!Data)
+			{
+				continue;
+			}
+			const URTSUpgradeData* Upgrade = Cast<URTSUpgradeData>(Data);
+			FRTSCommandButton Button = MakeButton(*Data, Upgrade ? ERTSCommandCategory::Upgrade : ERTSCommandCategory::Produce);
+			if (Upgrade && HasUpgrade(*Upgrade))
+			{
+				Button.bDone = true;
+				Disable(Button, ERTSCommandDisabledReason::None, NSLOCTEXT("RTSCommands", "Researched", "Researched"));
+			}
+			else if (Upgrade && RTSProduction::IsUpgradeQueued(*GetWorld(), GetTeamId(), *Upgrade))
+			{
+				Disable(Button, ERTSCommandDisabledReason::None, NSLOCTEXT("RTSCommands", "Researching", "Researching"));
+			}
+			else if (const URTSEntityData* Missing = RTSProduction::FindMissingPrerequisite(Owned, *Data))
+			{
+				DisableMissing(Button, *Missing);
+			}
+			else if (bQueueFull)
+			{
+				Disable(Button, ERTSCommandDisabledReason::QueueFull, NSLOCTEXT("RTSCommands", "QueueFull", "Queue full"));
+			}
+			else if (!CanAfford(*Data))
+			{
+				Disable(Button, ERTSCommandDisabledReason::CannotAfford, CannotAffordText);
+			}
+			Buttons.Add(MoveTemp(Button));
+		}
+	}
+	else
+	{
+		for (URTSBuildingData* Data : GetBuildMenu())
+		{
+			if (!Data)
+			{
+				continue;
+			}
+			FRTSCommandButton Button = MakeButton(*Data, ERTSCommandCategory::Build);
+			Button.bActive = PlacementData == Data;
+			if (const URTSEntityData* Missing = RTSProduction::FindMissingPrerequisite(Owned, *Data))
+			{
+				DisableMissing(Button, *Missing);
+			}
+			else if (IsAtBuildLimit(*Data))
+			{
+				Disable(Button, ERTSCommandDisabledReason::BuildLimit, NSLOCTEXT("RTSCommands", "BuildLimit", "Build limit reached"));
+			}
+			else if (!CanAfford(*Data))
+			{
+				Disable(Button, ERTSCommandDisabledReason::CannotAfford, CannotAffordText);
+			}
+			Buttons.Add(MoveTemp(Button));
+		}
+	}
+
+	if (!SelectedUnits.IsEmpty())
+	{
+		FRTSCommandButton Stop;
+		Stop.Id = RTSCommandPanel::StopId;
+		Stop.DisplayName = NSLOCTEXT("RTSCommands", "Stop", "Stop");
+		Stop.Description = NSLOCTEXT("RTSCommands", "StopDescription", "The selected units drop their orders.");
+		Stop.Hotkey = EKeys::X;
+		Buttons.Add(MoveTemp(Stop));
+
+		FRTSCommandButton AttackMove;
+		AttackMove.Id = RTSCommandPanel::AttackMoveId;
+		AttackMove.DisplayName = NSLOCTEXT("RTSCommands", "AttackMove", "Attack-move");
+		AttackMove.Description = NSLOCTEXT("RTSCommands", "AttackMoveDescription",
+			"The selected units move to the spot clicked next and fight what they meet on the way.");
+		AttackMove.Hotkey = EKeys::J;
+		AttackMove.bActive = bAttackMoveArmed;
+		Buttons.Add(MoveTemp(AttackMove));
+	}
+
+	TArray<FString> Warnings;
+	RTSCommandPanel::ResolveHotkeys(Buttons, GetReservedKeys(), Warnings);
+	for (const FString& Warning : Warnings)
+	{
+		// The panels read the list every frame; each clash is worth one line.
+		bool bAlreadyLogged = false;
+		LoggedHotkeyWarnings.Add(Warning, &bAlreadyLogged);
+		if (!bAlreadyLogged)
+		{
+			UE_LOG(LogWorldDivide, Warning, TEXT("%s"), *Warning);
+		}
+	}
+	return Buttons;
+}
+
+bool ARTSPlayerController::ExecuteCommandButton(const FRTSCommandButton& Button)
+{
+	if (bInGameMenuOpen || !Button.bEnabled)
+	{
+		return false;
+	}
+	switch (Button.Category)
+	{
+	case ERTSCommandCategory::Produce:
+	case ERTSCommandCategory::Upgrade:
+		return RequestProduce(GetProductionBuilding(), Button.EntityData.Get());
+	case ERTSCommandCategory::Build:
+	{
+		URTSBuildingData* Data = Cast<URTSBuildingData>(Button.EntityData.Get());
+		BeginPlacement(Data);
+		return Data && PlacementData == Data;
+	}
+	case ERTSCommandCategory::Unit:
+		if (Button.Id == RTSCommandPanel::StopId && !SelectedUnits.IsEmpty())
+		{
+			OnStopOrder();
+			return true;
+		}
+		return Button.Id == RTSCommandPanel::AttackMoveId && BeginAttackMove();
+	}
+	return false;
+}
+
+bool ARTSPlayerController::HandleCommandKey(const FKey& Key)
+{
+	if (bInGameMenuOpen || !Key.IsValid())
+	{
+		return false;
 	}
 	// A selected superweapon has one entry: launch.
 	if (GetSelectedSuperweapon())
 	{
-		if (Index == 0)
-		{
-			BeginSuperweaponTargeting();
-		}
-		return;
+		return Key == EKeys::One && BeginSuperweaponTargeting();
 	}
-	if (ARTSBuilding* Producer = GetProductionBuilding())
+	for (const FRTSCommandButton& Button : GetCommandButtons())
 	{
-		const TArray<URTSEntityData*> Menu = GetProductionMenu();
-		if (Menu.IsValidIndex(Index))
+		if (Button.Category != ERTSCommandCategory::Unit && Button.Hotkey == Key)
 		{
-			RequestProduce(Producer, Menu[Index]);
+			ExecuteCommandButton(Button);
+			return true;
 		}
-		return;
 	}
+	return false;
+}
 
-	const TArray<URTSBuildingData*> Menu = GetBuildMenu();
-	if (Menu.IsValidIndex(Index))
+TSet<FKey> ARTSPlayerController::GetReservedKeys() const
+{
+	TSet<FKey> Keys;
+	if (MappingContext)
 	{
-		BeginPlacement(Menu[Index]);
+		MappingContext->ForEachKeyMapping([&Keys](const FEnhancedActionKeyMapping& Mapping) { Keys.Add(Mapping.Key); });
 	}
+	return Keys;
 }
 
 void ARTSPlayerController::OnCancel()

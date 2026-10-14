@@ -141,6 +141,8 @@ private:
 		bool bKeepSpace = false;
 		FString LastColor;
 		FString LastSprite;
+		/** The plain tooltip text last set, for elements with "tooltip". */
+		FString LastTooltip;
 		/** The colour Team last resolved to, for color and fillColor. */
 		FLinearColor LastTeamColor = FLinearColor::Transparent;
 		/** The Image's sprite sheet, 0 frames for a still image, how long it has played and the frame it shows. */

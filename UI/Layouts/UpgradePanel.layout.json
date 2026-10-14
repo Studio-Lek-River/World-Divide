@@ -1,0 +1,174 @@
+{
+  "type": "Panel",
+  "name": "UpgradePanel",
+  "anchor": "Fill",
+  "hitTest": false,
+  "children": [
+    {
+      "type": "Text",
+      "name": "UpgradesTitle",
+      "text": "Upgrades & Equipment",
+      "font": "Body",
+      "fontSize": 14,
+      "color": "MutedText",
+      "position": [
+        0,
+        0
+      ],
+      "size": [
+        284,
+        20
+      ],
+      "maxLines": 1
+    },
+    {
+      "type": "VBox",
+      "name": "UpgradeList",
+      "position": [
+        0,
+        22
+      ],
+      "size": [
+        284,
+        160
+      ],
+      "spacing": 2,
+      "align": "Start",
+      "repeat": "upgrades",
+      "count": 6,
+      "template": {
+        "type": "Button",
+        "name": "UpgradeRow",
+        "sprite": "Button",
+        "action": "IssueCommand",
+        "tooltip": true,
+        "size": [
+          284,
+          25
+        ],
+        "visibleWhen": "!item.empty",
+        "bind": {
+          "enabled": "item.enabled"
+        },
+        "children": [
+          {
+            "type": "Image",
+            "name": "UpgradeIcon",
+            "sprite": "Icon.Placeholder",
+            "position": [
+              3,
+              2
+            ],
+            "size": [
+              21,
+              21
+            ],
+            "bind": {
+              "sprite": "item.icon"
+            }
+          },
+          {
+            "type": "Text",
+            "name": "UpgradeHotkey",
+            "text": "{item.hotkey}",
+            "font": "Number",
+            "fontSize": 13,
+            "color": "Accent",
+            "position": [
+              30,
+              0
+            ],
+            "size": [
+              18,
+              25
+            ],
+            "maxLines": 1
+          },
+          {
+            "type": "Text",
+            "name": "UpgradeName",
+            "text": "{item.name}",
+            "font": "Body",
+            "fontSize": 13,
+            "position": [
+              50,
+              0
+            ],
+            "size": [
+              160,
+              25
+            ],
+            "maxLines": 1
+          },
+          {
+            "type": "Text",
+            "name": "UpgradeCost",
+            "text": "{item.cost}",
+            "font": "Number",
+            "fontSize": 13,
+            "anchor": "TopRight",
+            "position": [
+              6,
+              0
+            ],
+            "size": [
+              64,
+              25
+            ],
+            "align": "Right",
+            "maxLines": 1,
+            "visibleWhen": "!item.done"
+          },
+          {
+            "type": "Text",
+            "name": "UpgradeDone",
+            "text": "Done",
+            "font": "Body",
+            "fontSize": 13,
+            "color": "Positive",
+            "anchor": "TopRight",
+            "position": [
+              6,
+              0
+            ],
+            "size": [
+              64,
+              25
+            ],
+            "align": "Right",
+            "maxLines": 1,
+            "visibleWhen": "item.done"
+          },
+          {
+            "type": "Panel",
+            "name": "UpgradeDisabled",
+            "color": "#000000A0",
+            "anchor": "Fill",
+            "hitTest": false,
+            "visibleWhen": "!item.enabled"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Text",
+      "name": "UpgradesEmpty",
+      "text": "No upgrades",
+      "font": "Body",
+      "fontSize": 13,
+      "color": "MutedText",
+      "anchor": "Center",
+      "position": [
+        0,
+        10
+      ],
+      "size": [
+        284,
+        20
+      ],
+      "align": "Center",
+      "maxLines": 1,
+      "visibleWhen": "upgrades.empty"
+    }
+  ]
+}

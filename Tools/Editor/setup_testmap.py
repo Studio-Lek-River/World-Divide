@@ -1389,26 +1389,27 @@ build_order = make_build_order("DA_TestBuildOrder", [
 })
 usa = make_faction("DA_FactionUSA", "USA", buildings, headquarters, ai_build_order=build_order, ui_style="USA")
 # Hotkeys are unique per producer: the builder, the headquarters, the barracks, the factory, the depot and the airfield.
+# None is a key the controller binds itself (WASD, Q/E, R, X, J, Space, ...): such a key would fall back to 1-9.
 USA_TAG = gameplay_tag("Faction.USA")
 add_properties(usa, {"faction_tag": USA_TAG})
 for entity, icon, hotkey, description in (
     (tank, "Icon.Tank", "T", "Main battle tank. Strong against vehicles and buildings."),
-    (abrams, "Icon.Abrams", "A", "Heavy tank. Tougher and harder-hitting than the main battle tank, but slower and dearer."),
+    (abrams, "Icon.Abrams", "M", "Heavy tank. Tougher and harder-hitting than the main battle tank, but slower and dearer."),
     (infantry, "Icon.Infantry", "I", "Rifle squad. Cheap, and quick to train."),
     (grenadier, "Icon.Grenadier", "G", "Infantry with a grenade launcher that lobs over cover. Needs rifle training."),
     (flak_truck, "Icon.FlakTruck", "F", "Anti-aircraft truck. Hits only aircraft in flight."),
-    (jet, "Icon.Jet", "J", "Strike jet. Fires its missiles at ground targets and rearms on its airfield pad."),
+    (jet, "Icon.Jet", "L", "Strike jet. Fires its missiles at ground targets and rearms on its airfield pad."),
     (harvester, "Icon.Harvester", "H", "Gathers supplies and delivers them to a supply depot."),
     (builder, "Icon.Builder", "B", "Builds and places every building."),
-    (rifle_training, "Icon.RifleTraining", "R", "Infantry rifles deal half again as much damage."),
+    (rifle_training, "Icon.RifleTraining", "T", "Infantry rifles deal half again as much damage."),
     (power_plant, "Icon.PowerPlant", "P", "Generates the power other buildings draw."),
     (tower, "Icon.Tower", "T", "Defensive gun tower against ground and air. Needs power."),
-    (supply_depot, "Icon.SupplyDepot", "S", "Receives supplies from harvesters and comes with one."),
+    (supply_depot, "Icon.SupplyDepot", "U", "Receives supplies from harvesters and comes with one."),
     (barracks, "Icon.Barracks", "B", "Trains infantry and researches rifle training."),
     (vehicle_factory, "Icon.VehicleFactory", "V", "Builds tanks, harvesters and flak trucks."),
-    (airfield, "Icon.Airfield", "A", "Builds jets and gives each one a pad to rearm on."),
+    (airfield, "Icon.Airfield", "F", "Builds jets and gives each one a pad to rearm on."),
     (headquarters, "Icon.Headquarters", "H", "The command centre every team starts with. Produces builders."),
-    (superweapon, "Icon.Superweapon", "W", "Charges a strike that lands anywhere on the map. One per team."),
+    (superweapon, "Icon.Superweapon", "K", "Charges a strike that lands anywhere on the map. One per team."),
 ):
     present(entity, USA_TAG, icon, hotkey, description)
 make_ghost_material("M_PlacementGhost")

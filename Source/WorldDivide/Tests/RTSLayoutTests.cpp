@@ -696,7 +696,9 @@ bool FRTSUIBindingPanelsTest::RunTest(const FString& Parameters)
 	const FString Json = URTSUICommandlet::DescribeBindings(FRTSLayoutValidationContext::MakeDefault());
 	TestTrue(TEXT("The bindings file lists the resource bar's keys"), Json.Contains(TEXT("\"player.credits\"")) && Json.Contains(TEXT("\"ResourceBar\"")));
 	TestTrue(TEXT("the commander bar and the map buttons"), Json.Contains(TEXT("\"CommanderBar\"")) && Json.Contains(TEXT("\"MapButtons\"")));
-	TestTrue(TEXT("and the engine panels"), Json.Contains(TEXT("\"Minimap\"")) && Json.Contains(TEXT("\"Upgrades\"")));
+	TestTrue(TEXT("the command and upgrades panels"), Json.Contains(TEXT("\"CommandPanel\"")) && Json.Contains(TEXT("\"UpgradePanel\""))
+		&& Json.Contains(TEXT("\"IssueCommand\"")));
+	TestTrue(TEXT("and the engine panels"), Json.Contains(TEXT("\"Minimap\"")) && Json.Contains(TEXT("\"Tooltip\"")));
 	return true;
 }
 
@@ -826,6 +828,29 @@ bool FRTSUIBindingStubsTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("No entries"), Queue->GetListCount(TEXT("queue"), NoPlayer), 0);
 	TestTrue(TEXT("An empty slot has no time left"), ListValue(*Queue, TEXT("queue"), 0, TEXT("timeLeft")).String.IsEmpty());
 	TestTrue(TEXT("CancelQueueItem is the queue's action"), Queue->HandleAction(TEXT("CancelQueueItem"), NoPlayer));
+
+	// Without a player nothing is selected, so there are no commands or upgrades.
+	for (const TCHAR* Panel : { TEXT("CommandPanel"), TEXT("UpgradePanel") })
+	{
+		const IRTSUIBindingSource* Source = FindSource(Panel);
+		if (!TestNotNull(FString::Printf(TEXT("A source serves the %s"), Panel), Source))
+		{
+			return false;
+		}
+		const bool bUpgrades = FCString::Strcmp(Panel, TEXT("UpgradePanel")) == 0;
+		const TCHAR* List = bUpgrades ? TEXT("upgrades") : TEXT("commands");
+		FRTSUIValue Empty;
+		TestTrue(FString::Printf(TEXT("The %s answers %s.empty"), Panel, List), Source->GetValue(*FString::Printf(TEXT("%s.empty"), List), NoPlayer, Empty));
+		TestTrue(TEXT("empty without a player"), Empty.bBool);
+		TestEqual(FString::Printf(TEXT("No %s"), List), Source->GetListCount(List, NoPlayer), 0);
+		TestFalse(TEXT("An empty slot is not enabled"), ListValue(*Source, List, 0, TEXT("enabled")).bBool);
+		FRTSUIContext InList;
+		InList.List = List;
+		InList.Index = 0;
+		TestTrue(FString::Printf(TEXT("IssueCommand is the %s's action"), Panel), Source->HandleAction(TEXT("IssueCommand"), InList));
+		InList.List = bUpgrades ? TEXT("commands") : TEXT("upgrades");
+		TestFalse(TEXT("but not for the other panel's list"), Source->HandleAction(TEXT("IssueCommand"), InList));
+	}
 	return true;
 }
 

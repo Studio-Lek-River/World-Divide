@@ -99,7 +99,7 @@ namespace
 const TArray<FName>& RTSLayout::GetPanelNames()
 {
 	static const TArray<FName> Names = {
-		TEXT("Minimap"), TEXT("Commands"), TEXT("Upgrades"), TEXT("Notifications"), TEXT("Scoreboard"),
+		TEXT("Minimap"), TEXT("Notifications"), TEXT("Scoreboard"),
 		TEXT("Tooltip"),
 	};
 	return Names;
@@ -950,6 +950,28 @@ void URTSLayoutWidget::UpdateElement(FBoundElement& Entry)
 		}
 	}
 
+	// Until the rich tooltip (#69): a template's element with "tooltip" shows its item's name, description and why it is
+	// disabled, as far as its list has them.
+	if (Element.bTooltip && !Entry.Context.List.IsNone())
+	{
+		FString Tooltip;
+		const IRTSUIBindingSource* Source = ListSources.FindRef(Entry.Context.List);
+		const bool bItem = Source && Entry.Context.Index < GetListCount(Entry.Context.List, Entry.Context);
+		for (const TCHAR* Key : { TEXT("name"), TEXT("description"), TEXT("disabledText") })
+		{
+			FRTSUIValue Value;
+			if (bItem && Source->GetListValue(Key, Entry.Context, Value) && !Value.ToString().IsEmpty())
+			{
+				Tooltip += (Tooltip.IsEmpty() ? TEXT("") : TEXT("\n")) + Value.ToString();
+			}
+		}
+		if (!Tooltip.Equals(Entry.LastTooltip, ESearchCase::CaseSensitive))
+		{
+			Entry.LastTooltip = Tooltip;
+			Widget->SetToolTipText(FText::FromString(Tooltip));
+		}
+	}
+
 	// Team follows the item or the player, neither of which says when it changes.
 	if (Entry.LastColor == RTSLayout::TeamColor)
 	{
@@ -986,6 +1008,12 @@ void URTSLayoutWidget::RunAction(FName Action, const FRTSUIContext& Context)
 {
 	FRTSUIContext WithPlayer = Context;
 	WithPlayer.Player = GetOwningPlayer();
+	// Inside a template the list's own source goes first, so lists of different sources can share an action.
+	const IRTSUIBindingSource* ListSource = Context.List.IsNone() ? nullptr : ListSources.FindRef(Context.List);
+	if (ListSource && ListSource->HandleAction(Action, WithPlayer))
+	{
+		return;
+	}
 	const IRTSUIBindingSource* Source = ActionSources.FindRef(Action);
 	if (!Source || !Source->HandleAction(Action, WithPlayer))
 	{

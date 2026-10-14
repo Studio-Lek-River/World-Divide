@@ -33,7 +33,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FName IconSprite;
 
-	/** The key that orders this from its command panel; none leaves it to the mouse. */
+	/** The key that orders this from its command panel; none gives it its position key 1-9 there. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FKey Hotkey;
 

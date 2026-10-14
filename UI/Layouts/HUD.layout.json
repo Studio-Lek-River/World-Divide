@@ -179,7 +179,7 @@
                   "name": "Commands",
                   "type": "Slot",
                   "anchor": "Fill",
-                  "widget": "Commands",
+                  "layout": "CommandPanel",
                   "hitTest": false,
                   "padding": [
                     8,
@@ -203,7 +203,7 @@
                   "name": "Upgrades",
                   "type": "Slot",
                   "anchor": "Fill",
-                  "widget": "Upgrades",
+                  "layout": "UpgradePanel",
                   "hitTest": false,
                   "padding": [
                     8,

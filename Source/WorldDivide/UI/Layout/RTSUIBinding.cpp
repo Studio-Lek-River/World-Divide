@@ -11,6 +11,7 @@
 #include "Data/RTSFactionData.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSUpgradeData.h"
+#include "Player/RTSCommandButton.h"
 #include "Player/RTSHUD.h"
 #include "Player/RTSPlayerController.h"
 #include "UI/Layout/RTSLayoutElement.h"
@@ -159,6 +160,22 @@ namespace
 	const FName QueueProgressKey(TEXT("progress"));
 	const FName QueueTimeLeftKey(TEXT("timeLeft"));
 	const FName CancelQueueItemAction(TEXT("CancelQueueItem"));
+
+	const FName CommandsList(TEXT("commands"));
+	const FName CommandsEmptyKey(TEXT("commands.empty"));
+	const FName UpgradesList(TEXT("upgrades"));
+	const FName UpgradesEmptyKey(TEXT("upgrades.empty"));
+	const FName CommandIdKey(TEXT("id"));
+	const FName CommandHotkeyKey(TEXT("hotkey"));
+	const FName CommandDescriptionKey(TEXT("description"));
+	const FName CommandCategoryKey(TEXT("category"));
+	const FName CommandCostKey(TEXT("cost"));
+	const FName CommandEnabledKey(TEXT("enabled"));
+	const FName CommandDisabledReasonKey(TEXT("disabledReason"));
+	const FName CommandDisabledTextKey(TEXT("disabledText"));
+	const FName CommandDoneKey(TEXT("done"));
+	const FName CommandActiveKey(TEXT("active"));
+	const FName IssueCommandAction(TEXT("IssueCommand"));
 
 	const FName SelectionModeKey(TEXT("selection.mode"));
 	const FName SelectionIconKey(TEXT("selection.icon"));
@@ -765,6 +782,187 @@ namespace
 	};
 
 	/**
+	 * The command and upgrades panels: what the selection can do, as ARTSPlayerController::GetCommandButtons decides it.
+	 * Upgrades go to the upgrades list, everything else to the commands list; a click runs the button as its hotkey does.
+	 */
+	class FRTSCommandBindings : public IRTSUIBindingSource
+	{
+	public:
+		/** List is CommandsList or UpgradesList. */
+		FRTSCommandBindings(FName InList, FName InEmptyKey, FName InPanel, int32 InMaxItems)
+			: List(InList), EmptyKey(InEmptyKey), Panel(InPanel), MaxItems(InMaxItems)
+		{
+		}
+
+		virtual void Declare(FRTSUIDeclarations& Out) const override
+		{
+			Out.Keys.Add(EmptyKey);
+			Out.Lists.Add(List, { CommandIdKey, ItemNameKey, ItemIconKey, CommandHotkeyKey, CommandDescriptionKey, CommandCategoryKey,
+				CommandCostKey, CommandEnabledKey, CommandDisabledReasonKey, CommandDisabledTextKey, CommandDoneKey, CommandActiveKey });
+			Out.Actions.Add(IssueCommandAction);
+		}
+
+		virtual TArray<FName> GetPanels() const override
+		{
+			return { Panel };
+		}
+
+		virtual bool GetValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
+		{
+			if (Key != EmptyKey)
+			{
+				return false;
+			}
+			OutValue = FRTSUIValue::MakeBool(GetButtons(Context).IsEmpty());
+			return true;
+		}
+
+		virtual int32 GetListCount(FName InList, const FRTSUIContext& Context) const override
+		{
+			return InList == List ? GetButtons(Context).Num() : 0;
+		}
+
+		virtual bool GetListValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
+		{
+			if (Context.List != List)
+			{
+				return false;
+			}
+			const TArray<FRTSCommandButton> Buttons = GetButtons(Context);
+			const FRTSCommandButton Button = Buttons.IsValidIndex(Context.Index) ? Buttons[Context.Index] : FRTSCommandButton();
+			const bool bValid = Buttons.IsValidIndex(Context.Index);
+			if (Key == CommandIdKey)
+			{
+				OutValue = FRTSUIValue::MakeText(bValid ? Button.Id.ToString() : FString());
+			}
+			else if (Key == ItemNameKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Button.DisplayName.ToString());
+			}
+			else if (Key == ItemIconKey)
+			{
+				OutValue = FRTSUIValue::MakeSprite(!bValid ? NAME_None : Button.IconSprite.IsNone() ? RTSUI::PlaceholderIcon : Button.IconSprite);
+			}
+			else if (Key == CommandHotkeyKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Button.Hotkey.IsValid() ? Button.Hotkey.GetDisplayName(false).ToString() : FString());
+			}
+			else if (Key == CommandDescriptionKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Button.Description.ToString());
+			}
+			else if (Key == CommandCategoryKey)
+			{
+				OutValue = FRTSUIValue::MakeText(bValid ? StaticEnum<ERTSCommandCategory>()->GetNameStringByValue(static_cast<int64>(Button.Category)) : FString());
+			}
+			else if (Key == CommandCostKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Button.Cost > 0 ? FormatNumber(Button.Cost) : FString());
+			}
+			else if (Key == CommandEnabledKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(bValid && Button.bEnabled);
+			}
+			else if (Key == CommandDisabledReasonKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Button.DisabledReason == ERTSCommandDisabledReason::None ? FString()
+					: StaticEnum<ERTSCommandDisabledReason>()->GetNameStringByValue(static_cast<int64>(Button.DisabledReason)));
+			}
+			else if (Key == CommandDisabledTextKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Button.DisabledText.ToString());
+			}
+			else if (Key == CommandDoneKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(Button.bDone);
+			}
+			else if (Key == CommandActiveKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(Button.bActive);
+			}
+			else
+			{
+				return false;
+			}
+			return true;
+		}
+
+		virtual bool HandleAction(FName Action, const FRTSUIContext& Context) const override
+		{
+			if (Action != IssueCommandAction)
+			{
+				return false;
+			}
+			// Both panels declare the action; the layout hands a click inside a template to its list's source first.
+			if (Context.List != List)
+			{
+				return Context.List.IsNone();
+			}
+			ARTSPlayerController* Controller = Cast<ARTSPlayerController>(Context.Player);
+			const TArray<FRTSCommandButton> Buttons = GetButtons(Context);
+			if (Controller && Buttons.IsValidIndex(Context.Index))
+			{
+				Controller->ExecuteCommandButton(Buttons[Context.Index]);
+			}
+			return true;
+		}
+
+	private:
+		/** This panel's buttons, at most MaxItems; none once the match is over, when every order is refused. */
+		TArray<FRTSCommandButton> GetButtons(const FRTSUIContext& Context) const
+		{
+			const ARTSPlayerController* Controller = Cast<ARTSPlayerController>(Context.Player);
+			if (!Controller || Controller->GetMatchResult() != ERTSMatchResult::InProgress)
+			{
+				return {};
+			}
+			TArray<FRTSCommandButton> Buttons = GetFrameButtons(*Controller);
+			const bool bUpgrades = List == UpgradesList;
+			Buttons.RemoveAll([bUpgrades](const FRTSCommandButton& Button) { return (Button.Category == ERTSCommandCategory::Upgrade) != bUpgrades; });
+			if (Buttons.Num() > MaxItems)
+			{
+				Buttons.SetNum(MaxItems);
+			}
+			return Buttons;
+		}
+
+		/**
+		 * The controller's buttons, built once per frame: each panel reads a dozen keys of up to 16 items every frame, and
+		 * building the list walks the world for prerequisites. Only a cache, rebuilt as well when the selection, the credits,
+		 * the queue or what is armed changed within the frame; the controller stays the one that decides.
+		 */
+		static const TArray<FRTSCommandButton>& GetFrameButtons(const ARTSPlayerController& Controller)
+		{
+			static uint32 CachedKey = 0;
+			static uint64 CachedFrame = MAX_uint64;
+			static TArray<FRTSCommandButton> CachedButtons;
+			const ARTSBuilding* Producer = Controller.GetProductionBuilding();
+			uint32 Key = GetTypeHash(&Controller);
+			Key = HashCombine(Key, GetTypeHash(Controller.GetSelectedBuilding()));
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Controller.GetSelectedUnits())
+			{
+				Key = HashCombine(Key, GetTypeHash(Unit.Get()));
+			}
+			Key = HashCombine(Key, GetTypeHash(Controller.GetCredits()));
+			Key = HashCombine(Key, GetTypeHash(Producer ? Producer->GetProductionComponent()->GetQueue().Num() : INDEX_NONE));
+			Key = HashCombine(Key, GetTypeHash(Controller.GetPlacementData()));
+			Key = HashCombine(Key, GetTypeHash(Controller.IsAttackMoveArmed()));
+			if (CachedKey != Key || CachedFrame != GFrameCounter)
+			{
+				CachedKey = Key;
+				CachedFrame = GFrameCounter;
+				CachedButtons = Controller.GetCommandButtons();
+			}
+			return CachedButtons;
+		}
+
+		FName List;
+		FName EmptyKey;
+		FName Panel;
+		int32 MaxItems;
+	};
+
+	/**
 	 * The production queue inside the selection panel: the selected production building's replicated queue, the front entry's
 	 * progress and the time each entry takes at the owner's production rate. Clicking an entry asks the server to cancel it.
 	 */
@@ -890,7 +1088,10 @@ TArray<const IRTSUIBindingSource*> RTSUIBindings::GetDefaultSources()
 	static const FRTSMapButtonsBindings MapButtonsBindings;
 	static const FRTSSelectionBindings SelectionBindings;
 	static const FRTSProductionQueueBindings ProductionQueueBindings;
-	return { &PlayerBindings, &MatchBindings, &CommanderBindings, &MapButtonsBindings, &SelectionBindings, &ProductionQueueBindings };
+	static const FRTSCommandBindings CommandBindings(CommandsList, CommandsEmptyKey, TEXT("CommandPanel"), RTSCommandPanel::MaxCommands);
+	static const FRTSCommandBindings UpgradeBindings(UpgradesList, UpgradesEmptyKey, TEXT("UpgradePanel"), RTSCommandPanel::MaxUpgrades);
+	return { &PlayerBindings, &MatchBindings, &CommanderBindings, &MapButtonsBindings, &SelectionBindings, &ProductionQueueBindings,
+		&CommandBindings, &UpgradeBindings };
 }
 
 FRTSUIDeclarations RTSUIBindings::Declare(TConstArrayView<const IRTSUIBindingSource*> Sources)

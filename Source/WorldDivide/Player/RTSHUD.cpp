@@ -11,7 +11,6 @@
 #include "Core/RTSSettings.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
-#include "Data/RTSUpgradeData.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
@@ -140,12 +139,14 @@ void ARTSHUD::DrawHUD()
 		DrawBuildingHealth(*Controller, *Hovered);
 	}
 
-	ProduceButtons.Reset();
 	LaunchButton = FBox2D(ForceInit);
 	if (!bMatchOver)
 	{
-		DrawBuildMenu(*Controller);
-		DrawProduction(*Controller);
+		DrawPlacementHint(*Controller);
+		if (const ARTSBuilding* Producer = Controller->GetProductionBuilding())
+		{
+			DrawRallyPoint(*Controller, *Producer);
+		}
 		DrawSuperweaponMenu(*Controller);
 		DrawAttackMoveHint(*Controller);
 	}
@@ -289,93 +290,12 @@ void ARTSHUD::DrawBuildingHealth(const ARTSPlayerController& Controller, const A
 		Building.GetHealthComponent()->GetHealthFraction());
 }
 
-void ARTSHUD::DrawBuildMenu(const ARTSPlayerController& Controller)
+void ARTSHUD::DrawPlacementHint(const ARTSPlayerController& Controller)
 {
-	const TArray<URTSBuildingData*> Menu = Controller.GetBuildMenu();
-	if (Menu.IsEmpty())
-	{
-		return;
-	}
-
-	float Y = LeftInset;
-	DrawText(Controller.GetSelectedBuilder() ? TEXT("Build") : TEXT("Build (debug)"), MenuColor, MenuMargin, Y);
-	const int32 Count = FMath::Min(Menu.Num(), ARTSPlayerController::MaxBuildHotkeys);
-	for (int32 Index = 0; Index < Count; ++Index)
-	{
-		const URTSBuildingData* Data = Menu[Index];
-		if (!Data)
-		{
-			continue;
-		}
-		Y += MenuLineHeight;
-		const bool bPlacing = Controller.GetPlacementData() == Data;
-		FString Text = FString::Printf(TEXT("%d  %s  (%d)"), Index + 1, *Data->DisplayName.ToString(), Data->Cost);
-		const URTSEntityData* Missing = Controller.GetMissingPrerequisite(*Data);
-		const bool bAtLimit = Controller.IsAtBuildLimit(*Data);
-		if (Missing)
-		{
-			Text += FString::Printf(TEXT("  needs %s"), *Missing->DisplayName.ToString());
-		}
-		else if (bAtLimit)
-		{
-			Text += TEXT("  limit reached");
-		}
-		const bool bAvailable = Controller.CanAfford(*Data) && !Missing && !bAtLimit;
-		const FLinearColor Color = bPlacing ? SelectionColor : bAvailable ? MenuColor : UnaffordableColor;
-		DrawText(Text, Color, MenuMargin, Y);
-	}
 	if (Controller.GetPlacementData())
 	{
-		Y += MenuLineHeight;
-		DrawText(TEXT("Left click: build (Shift: keep placing)    R: rotate    Right click / Esc: cancel"), MenuColor, MenuMargin, Y);
+		DrawText(TEXT("Left click: build (Shift: keep placing)    R: rotate    Right click / Esc: cancel"), MenuColor, MenuMargin, LeftInset);
 	}
-}
-
-void ARTSHUD::DrawProduction(const ARTSPlayerController& Controller)
-{
-	const ARTSBuilding* Building = Controller.GetProductionBuilding();
-	if (!Building)
-	{
-		return;
-	}
-	DrawRallyPoint(Controller, *Building);
-
-	float Y = LeftInset;
-	DrawText(TEXT("Produce"), MenuColor, MenuMargin, Y);
-	const TArray<URTSEntityData*> Menu = Controller.GetProductionMenu();
-	const int32 Count = FMath::Min(Menu.Num(), ARTSPlayerController::MaxBuildHotkeys);
-	for (int32 Index = 0; Index < Count; ++Index)
-	{
-		Y += MenuLineHeight;
-		const URTSEntityData* Data = Menu[Index];
-		if (!Data)
-		{
-			ProduceButtons.Add(FBox2D(ForceInit));
-			continue;
-		}
-		FString Text = FString::Printf(TEXT("%d  %s  (%d)"), Index + 1, *Data->DisplayName.ToString(), Data->Cost);
-		const URTSUpgradeData* Upgrade = Cast<URTSUpgradeData>(Data);
-		if (Upgrade && Controller.HasUpgrade(*Upgrade))
-		{
-			Text = FString::Printf(TEXT("%d  %s  done"), Index + 1, *Data->DisplayName.ToString());
-		}
-		else if (Upgrade && RTSProduction::IsUpgradeQueued(*GetWorld(), Controller.GetTeamId(), *Upgrade))
-		{
-			Text += TEXT("  researching");
-		}
-		else if (const URTSEntityData* Missing = Controller.GetMissingPrerequisite(*Data))
-		{
-			Text += FString::Printf(TEXT("  needs %s"), *Missing->DisplayName.ToString());
-		}
-		float Width = 0.f;
-		float Height = 0.f;
-		GetTextSize(Text, Width, Height);
-		ProduceButtons.Add(FBox2D(FVector2D(MenuMargin, Y), FVector2D(MenuMargin + Width, Y + MenuLineHeight)));
-		DrawText(Text, Controller.CanRequestProduce(Building, Data) ? MenuColor : UnaffordableColor, MenuMargin, Y);
-	}
-
-	Y += MenuLineHeight * 1.5f;
-	DrawText(TEXT("1-9 / click: produce    Right click: rally point    Del: cancel the last queued"), MenuColor, MenuMargin, Y);
 }
 
 void ARTSHUD::DrawRallyPoint(const ARTSPlayerController& Controller, const ARTSBuilding& Building)
@@ -389,11 +309,6 @@ void ARTSHUD::DrawRallyPoint(const ARTSPlayerController& Controller, const ARTSB
 	}
 	DrawLine(From.X, From.Y, To.X, To.Y, SelectionColor, 1.f);
 	DrawRect(SelectionColor, To.X - 4.f, To.Y - 4.f, 8.f, 8.f);
-}
-
-int32 ARTSHUD::GetProduceButtonAt(const FVector2D& Point) const
-{
-	return ProduceButtons.IndexOfByPredicate([&Point](const FBox2D& Box) { return Box.bIsValid && Box.IsInside(Point); });
 }
 
 float ARTSHUD::DrawScoreboard()

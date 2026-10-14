@@ -20,8 +20,8 @@ All numbers are HUD units at 1920×1080. `HUD` is a transparent, non-blocking co
 | ResourceBar | top of BottomFrame | full width×40 |
 | BottomPanels | remaining BottomFrame | full width×196 |
 | SelectionFrame / Selection | left | 460×196, 8 inset, Selection layout |
-| CommandsFrame / Commands | flexible centre | 1160×196 at reference, 8 inset, engine Commands |
-| UpgradesFrame / Upgrades | right | 300×196, 8 inset, engine Upgrades |
+| CommandsFrame / Commands | flexible centre | 1160×196 at reference, 8 inset, CommandPanel layout |
+| UpgradesFrame / Upgrades | right | 300×196, 8 inset, UpgradePanel layout |
 
 `MatchResult` and `InGameMenu` remain the only modals, supplied by the existing game. Queue stays inside Selection; no clock is added. Bottom panels still use 196 of the permitted 280 units. Resource strip plus panels occupy 21.85%; maximum commander plate, map and buttons add about 7.12%: **28.98% at 16:9**, **29.77% at 16:10**. Unused commander reservation paints nothing. Transient warning, notification, scoreboard and tooltip rectangles can temporarily raise coverage.
 

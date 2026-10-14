@@ -14,8 +14,8 @@ enum class ERTSMatchResult : uint8;
  * Draws the drag box, the brackets plus health bar of selected units, the health bar of the unit of any team under the
  * cursor, construction progress of own buildings,
  * the health of the building under the cursor or selected, a cancel button for a selected own construction site,
- * a scoreboard of every player's team colour and name, the build menu of the selected builder (or the debug build menu), and the production menu
- * and rally point of a selected production building (its queue is in the selection panel), a hint while attack-move is armed, a warning when an own
+ * a scoreboard of every player's team colour and name, a hint while placing a building, the rally point of a selected
+ * production building (its commands are in the command panel, its queue in the selection panel), a hint while attack-move is armed, a warning when an own
  * building or unit is attacked, every superweapon's countdown, the launch entry of a selected own superweapon and a hint
  * while targeting it, the target of a strike on its way and a warning when a superweapon is built or ready, without any
  * UI assets; once the match is over it hides the menus. It also shows the local player the URTSHUDWidget (the class set
@@ -41,9 +41,6 @@ public:
 	/** A superweapon's countdown as the HUD shows it: "Ready", else minutes and seconds left, rounded up, such as "2:05". */
 	static FString FormatCountdown(float Seconds);
 
-	/** Index into the production menu of the entry drawn at Point last frame, or INDEX_NONE. */
-	int32 GetProduceButtonAt(const FVector2D& Point) const;
-
 	/** The result screen's title for a finished match, "Victory!" or "Defeated!"; empty while it runs. */
 	static FString GetMatchResultTitle(ERTSMatchResult Result);
 
@@ -66,10 +63,9 @@ private:
 	void DrawBuildingMarker(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawConstructionBar(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawBuildingHealth(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
-	void DrawBuildMenu(const ARTSPlayerController& Controller);
 
-	/** The selected production building's menu, greyed while not available. */
-	void DrawProduction(const ARTSPlayerController& Controller);
+	/** While placing a building: how to build, turn and cancel it. */
+	void DrawPlacementHint(const ARTSPlayerController& Controller);
 
 	/** A line from the building to its rally point, and a marker there. */
 	void DrawRallyPoint(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
@@ -120,7 +116,4 @@ private:
 
 	/** Invalid while no superweapon is selected. */
 	FBox2D LaunchButton = FBox2D(ForceInit);
-
-	/** Drawn last frame, by index into the production menu; invalid boxes for entries not drawn. */
-	TArray<FBox2D> ProduceButtons;
 };

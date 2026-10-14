@@ -5,6 +5,7 @@
 #include "UObject/ObjectKey.h"
 #include "Commands/RTSCommand.h"
 #include "Core/RTSGameState.h"
+#include "Player/RTSCommandButton.h"
 #include "RTSPlayerController.generated.h"
 
 class ARTSBuilding;
@@ -59,12 +60,14 @@ DECLARE_MULTICAST_DELEGATE(FRTSSelectionChangedSignature);
  * the clicked spot (Shift queues and keeps attack-move armed); right click, Esc or an emptied selection cancels it, and the
  * HUD shows a hint while it is armed. Delete cancels the own
  * construction site under the cursor, or else the selected one, as does the selection panel's cancel button.
- * With a builder selected, 1-9 pick a building from its list to place: R turns it a quarter turn, left click sends the
+ * The command and upgrades panels show what the selection can do (GetCommandButtons); a click on a button, or its hotkey (the
+ * entity's own key, else its position 1-9), runs it through ExecuteCommandButton.
+ * With a builder selected, its buildings are the commands: one starts placing it, R turns it a quarter turn, left click sends the
  * builder (Shift queues it and keeps placing), right click or Esc cancels. The ghost turns red over sites own builders
  * were ordered to place and have not placed yet. A right click on an own construction site sends builders to resume it.
- * With rts.DebugBuild on and no builder selected, 1-9 pick from the faction's buildings and place them without a builder,
+ * With rts.DebugBuild on and no builder selected, the faction's buildings are the commands and are placed without a builder,
  * turned and kept placing with Shift the same way.
- * With an own production building selected, 1-9 or a click on the HUD's menu queue a unit, right click sets the rally point,
+ * With an own production building selected, its units and upgrades are the commands, right click sets the rally point,
  * and a click on a queued unit, or Delete for the last one, cancels it for a refund.
  * With an own superweapon selected that is ready, 1 or a click on the HUD's launch entry arms targeting: left click launches it
  * at the clicked spot, right click, Esc or a change of selection cancels it.
@@ -136,14 +139,11 @@ public:
 	/** The local player has the credits for Data's cost. The server checks again before it charges. */
 	bool CanAfford(const URTSEntityData& Data) const;
 
-	/** Number of build menu entries the 1-9 keys reach. */
-	static constexpr int32 MaxBuildHotkeys = 9;
-
 	/** The first selected unit that can build, or null. Its list is the build menu. */
 	ARTSUnit* GetSelectedBuilder() const;
 
 	/**
-	 * What 1-9 place: the selected builder's buildings, else the faction's buildings while debug build is on
+	 * What the commands place: the selected builder's buildings, else the faction's buildings while debug build is on
 	 * (RTSCommands::IsDebugBuildEnabled) and no production building is selected, else nothing.
 	 */
 	TArray<URTSBuildingData*> GetBuildMenu() const;
@@ -151,7 +151,7 @@ public:
 	/** The selected building while it is the player's own and can produce, or null. Its units and upgrades are the production menu. */
 	ARTSBuilding* GetProductionBuilding() const;
 
-	/** What 1-9 queue at the selected production building: its units, then its upgrades; empty without one. */
+	/** What the commands queue at the selected production building: its units, then its upgrades; empty without one. */
 	TArray<URTSEntityData*> GetProductionMenu() const;
 
 	/** The local player has researched Upgrade. */
@@ -206,6 +206,27 @@ public:
 	 * queues a builder's order behind its others; otherwise placement ends.
 	 */
 	void ConfirmPlacement(bool bKeepPlacing);
+
+	/**
+	 * What the selection can do, in order: the production building's units and upgrades, else the build menu, then Stop and
+	 * Attack-move while units are selected. Availability, its reason and the hotkeys are filled in; the panels only show them.
+	 */
+	TArray<FRTSCommandButton> GetCommandButtons() const;
+
+	/**
+	 * Local. Runs Button as a click on it does: queues its unit or upgrade, starts placing its building, stops the selection
+	 * or arms attack-move. False, changing nothing, when the button is disabled or the in-game menu is open.
+	 */
+	bool ExecuteCommandButton(const FRTSCommandButton& Button);
+
+	/**
+	 * Local. A key press: 1 arms a selected superweapon, else the command button with Key as its hotkey runs. False when
+	 * nothing took the key. Unit orders are not looked up here, their keys have their own input actions.
+	 */
+	bool HandleCommandKey(const FKey& Key);
+
+	/** The keys the controller's own input actions use, which command buttons never get. */
+	TSet<FKey> GetReservedKeys() const;
 
 	/** The selected building while it is the player's own constructed, standing superweapon, or null. */
 	ARTSBuilding* GetSelectedSuperweapon() const;
@@ -326,6 +347,7 @@ public:
 
 protected:
 	virtual void SetupInputComponent() override;
+	virtual bool InputKey(const FInputKeyEventArgs& Params) override;
 	virtual void PlayerTick(float DeltaTime) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -357,7 +379,6 @@ private:
 	void OnMoveOrder();
 	void OnStopOrder();
 	void OnAttackMoveKey();
-	void OnBuildHotkey(int32 Index);
 	void OnCancel();
 	void OnCancelConstruction();
 	void OnJumpToAttack();
@@ -421,9 +442,6 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> ReloadUIAction;
 
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<UInputAction>> BuildActions;
-
 	TArray<TWeakObjectPtr<ARTSUnit>> SelectedUnits;
 	TWeakObjectPtr<ARTSBuilding> SelectedBuilding;
 
@@ -466,6 +484,9 @@ private:
 
 	/** Set by 1 or the HUD's launch entry with a ready superweapon selected, until the next left click launches it or it is cancelled. */
 	bool bSuperweaponTargeting = false;
+
+	/** Hotkey clashes already logged by GetCommandButtons. */
+	mutable TSet<FString> LoggedHotkeyWarnings;
 
 	/** Set by Esc with nothing to cancel, until Esc again or the menu's Resume. */
 	bool bInGameMenuOpen = false;
