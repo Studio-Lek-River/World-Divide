@@ -131,7 +131,7 @@ def import_static_mesh(source, name, yaw, offset):
     common = pipeline.get_editor_property("common_meshes_properties")
     common.set_editor_property("force_all_mesh_as_type", unreal.InterchangeForceMeshType.IFMT_STATIC_MESH)
     meshes = pipeline.get_editor_property("mesh_pipeline")
-    meshes.set_editor_property("combine_static_meshes", True)
+    meshes.set_editor_property("combine_static_meshes_behavior", unreal.InterchangeCombineStaticMeshesBehavior.ALL)
     meshes.set_editor_property("import_skeletal_meshes", False)
     # The game gives units and buildings their own collision; the mesh components never collide.
     meshes.set_editor_property("collision", False)

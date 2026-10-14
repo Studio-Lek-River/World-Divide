@@ -1,11 +1,12 @@
 # Placeholder art
 
 Stand-in models for testing. All of them are CC0 (public domain): free to use, change and ship, no attribution
-required. They are credited here anyway. `Tools/Editor/setup_testmap.py` imports them through `placeholder_art.py`.
+required. They are credited here anyway. The models under `Original/` are our own work. `Tools/Editor/setup_testmap.py` imports them through `placeholder_art.py`.
 
 | File | Used for | Source | Author |
 |---|---|---|---|
-| `Quaternius/tank.glb` | Tank | [Tank](https://poly.pizza/m/jWS1CLA0RO) | Quaternius |
+| `Original/usa_mbt.glb` | Tank (USA main battle tank) | Built by `Tools/Art/build_usa_tank_blender.py`; `usa_mbt.blend` next to it | Lek River Studio |
+| `Quaternius/tank.glb` | Unused, the former tank | [Tank](https://poly.pizza/m/jWS1CLA0RO) | Quaternius |
 | `Kenney/MiniCharacters/character-male-a.glb` | Infantry | [Mini Characters](https://kenney.nl/assets/mini-characters) | Kenney |
 | `Kenney/CarKit/delivery.glb` | Harvester | [Car Kit](https://kenney.nl/assets/car-kit) | Kenney |
 | `Kenney/CarKit/tractor-shovel.glb` | Builder | [Car Kit](https://kenney.nl/assets/car-kit) | Kenney |
@@ -25,6 +26,10 @@ The tank comes skinned and animated. Unreal places skinned parts wrongly when it
 was flattened into its rest pose with `Tools/Art/bake_gltf_static.py`. The jet came with its texture inside the `.glb`;
 that texture was moved out to `Quaternius/Spaceship/Textures/atlas.png`, since the importer only reads textures next to
 the model. The other models are unchanged.
+
+The tank is generated: change `Tools/Art/build_usa_tank_blender.py` and run it with Blender
+(`blender -b --python Tools/Art/build_usa_tank_blender.py`), which rewrites the `.glb` and `.blend` and renders previews
+to `Saved/ArtPreviews`.
 
 To swap a model, put the new `.glb` (with its textures next to it) in this folder, point the `make_art` call in
 `setup_testmap.py` at it, and run `ue.ps1 -Task setup`.

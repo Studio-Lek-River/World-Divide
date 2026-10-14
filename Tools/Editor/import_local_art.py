@@ -42,7 +42,7 @@ MODELS = [
     ("Battlemaster", "EA/Battlemaster/battlemaster.glb", 0.0, {"Body": 0.15, "HouseColor": 0.9}),
 ]
 # The model DA_TestTank uses on this machine, or None to leave it alone.
-TEST_TANK_MODEL = "Battlemaster"
+TEST_TANK_MODEL = None
 
 assets = unreal.EditorAssetLibrary
 

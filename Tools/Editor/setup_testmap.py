@@ -225,17 +225,19 @@ def make_texture(source):
 
 def make_art(name, source, yaw=0.0, tint=TEAM_TINT):
     """Imports Art/Source/Placeholder/<source> as SM_<name>, turned by yaw so it faces +X, with a material instance
-    MI_<name>_<slot> per glTF material."""
+    MI_<name>_<slot> per glTF material. tint is the team tint strength, or {slot: strength} with TEAM_TINT for the
+    slots it leaves out."""
     source = os.path.join(ART_SOURCE_DIR, source)
     parent = make_team_material()
     slot_materials = {}
     for slot, (color, texture_file) in art.read_gltf_materials(source).items():
         texture = make_texture(texture_file) if texture_file else None
+        strength = tint.get(slot, TEAM_TINT) if isinstance(tint, dict) else tint
         instance_name = f"MI_{name}_{slot}".replace("-", "_").replace(".", "_")
         slot_materials[slot] = plan_now(
             f"{art.MATERIAL_DIR}/{instance_name}",
-            lambda n=instance_name, t=texture, c=color: art.build_material_instance(n, parent, t, c, tint),
-            spec_hash([art.build_material_instance], instance_name, parent, texture, color, tint))
+            lambda n=instance_name, t=texture, c=color, s=strength: art.build_material_instance(n, parent, t, c, s),
+            spec_hash([art.build_material_instance], instance_name, parent, texture, color, strength))
     mesh_name = f"SM_{name}"
     return plan_now(f"{art.MESH_DIR}/{mesh_name}", lambda: art.import_mesh(source, mesh_name, yaw, slot_materials),
                     spec_hash([art.import_mesh, art.import_static_mesh], mesh_name, file_hash(source), yaw,
@@ -1283,9 +1285,10 @@ def write_pending():
 if os.path.exists(READ_ONLY_REPORT):
     os.remove(READ_ONLY_REPORT)
 
-# Placeholder models (CC0, see Art/Source/Placeholder/CREDITS.md). The Kenney vehicles and characters face +Y and the
-# Quaternius tank -X once imported; yaw turns them all to face +X.
-tank_mesh = make_art("Tank", "Quaternius/tank.glb", yaw=180.0)
+# Placeholder models (CC0, see Art/Source/Placeholder/CREDITS.md). The Kenney vehicles and characters face +Y once
+# imported; yaw turns them all to face +X. The tank is our own (Tools/Art/build_usa_tank_blender.py) and already faces
+# +X: only its house-colour panels take the full team colour.
+tank_mesh = make_art("Tank", "Original/usa_mbt.glb", tint={"Body": 0.15, "Dark": 0.0, "Detail": 0.0, "HouseColor": 0.9})
 infantry_mesh = make_art("Infantry", "Kenney/MiniCharacters/character-male-a.glb", yaw=-90.0)
 truck_mesh = make_art("Truck", "Kenney/CarKit/delivery.glb", yaw=-90.0)
 builder_mesh = make_art("Builder", "Kenney/CarKit/tractor-shovel.glb", yaw=-90.0)
