@@ -14,6 +14,7 @@
 #include "Components/Image.h"
 #include "Components/ProgressBar.h"
 #include "Components/SizeBox.h"
+#include "Components/SizeBoxSlot.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "Core/RTSSettings.h"
@@ -112,13 +113,13 @@ void URTSLayoutText::SetOverrides(int32 InFontSize, TOptional<FLinearColor> InCo
 
 void URTSLayoutText::SynchronizeProperties()
 {
-	// The style sets the font and colour; the layout's own fontSize and #RRGGBB go on top.
+	// The style sets the font and colour; the layout's own fontSize (in pixels) and #RRGGBB go on top.
 	Super::SynchronizeProperties();
 
 	if (FontSizeOverride > 0)
 	{
 		FSlateFontInfo SizedFont = GetFont();
-		SizedFont.Size = FontSizeOverride;
+		SizedFont.Size = FontSizeOverride * RTSLayout::FontPointsPerPixel;
 		SetFont(SizedFont);
 	}
 	if (ColorOverride.IsSet())
@@ -410,6 +411,18 @@ void URTSLayoutWidget::BuildInto(UPanelWidget& Panel, const FRTSLayoutElement* P
 		LinesBox->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 		LinesBox->SetContent(Widget);
 		Outer = LinesBox;
+	}
+
+	// A text given a height (its size, a stretch or a grid cell) sits in the middle of it, level with the icons beside it.
+	const bool bGridCell = Parent && Parent->Type == ERTSLayoutType::Grid && !Parent->CellSize.IsZero();
+	if (Element.Type == ERTSLayoutType::Text && (Element.Size.Y > 0.f || Element.IsStretchedY() || bGridCell))
+	{
+		USizeBox* CentreBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+		CentreBox->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		USizeBoxSlot* CentreSlot = CastChecked<USizeBoxSlot>(CentreBox->AddChild(Outer));
+		CentreSlot->SetHorizontalAlignment(HAlign_Fill);
+		CentreSlot->SetVerticalAlignment(VAlign_Center);
+		Outer = CentreBox;
 	}
 
 	// Padding inside an element without its own: a border with nothing to draw.

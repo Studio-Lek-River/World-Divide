@@ -116,7 +116,7 @@ A layout file holds one root element. Elements nest through `children`.
 | `HBox` / `VBox` | a row / column; children are placed one after another; a child stretched along the row or column (`Fill`, or `TopStretch`/`BottomStretch` in an `HBox`, `LeftStretch`/`RightStretch` in a `VBox`) takes the room the others leave | `spacing`, `align` across the row or column (`Start`, `Center`, `End`, `Fill`; default `Center`) |
 | `Grid` | fixed cells: a hidden cell keeps its place | `columns`, `rows`, `cellSize` [w,h], `spacing` |
 | `Image` | a sprite | `sprite`, `color` (tint, for `tint` sprites) |
-| `Text` | a label | `text`, `font` (`Title`, `Body`, `Number`), `fontSize`, `align` (`Left`, `Center`, `Right`), `wrap` (true/false), `maxLines` (cuts the text after that many lines, with an ellipsis) |
+| `Text` | a label | `text`, `font` (`Title`, `Body`, `Number`), `fontSize` (pixels of the em in HUD units), `align` (`Left`, `Center`, `Right`), `wrap` (true/false), `maxLines` (cuts the text after that many lines, with an ellipsis). The text sits vertically centred in the height its box gives it; give a one-line box at least 1.3 times the font size. |
 | `Button` | clickable; draws the state of its sprite (Normal, Hover, Pressed, Disabled, Selected) and can hold children (icon, hotkey plate, cost) | `sprite`, `action`, `tooltip` (true: hovering fills the tooltip with this item) |
 | `ProgressBar` | a 0–1 fill | `sprite` (background), `fillSprite`, `fillColor`, `bind.progress` |
 | `Slot` | a hook: places another layout file, or a panel the engine draws itself (the minimap terrain and markers) | `layout` (layout file name without extension) or `widget` (engine panel name given in the brief) |
@@ -256,7 +256,7 @@ Unit, building and upgrade icons are `Icon.<Entity>` (for example `USA.Icon.Tank
 
 - All ten colour names and all three fonts are required. `Neutral.theme.json` fills anything a faction leaves out.
 - Fonts: **SIL Open Font License only** (for example Google Fonts). Put the `.ttf` in `UI/Fonts/`, and the font's licence and download link in your spec. `Number` must have tabular (equal-width) figures, so counters do not jitter.
-- Body text is at least 14 at 1080p. Text on panels meets WCAG AA contrast (4.5:1, 3:1 for text of 18 and up).
+- Font sizes, here and in a layout's `fontSize`, are pixels of the em in HUD units (1080p), as in your mockups; the engine converts them. Body text is at least 14 at 1080p. Text on panels meets WCAG AA contrast (4.5:1, 3:1 for text of 18 and up).
 
 ---
 

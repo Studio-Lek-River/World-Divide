@@ -283,6 +283,47 @@ bool FRTSLayoutGeometryTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLayoutTextTest, "WorldDivide.UI.Layout.Text", TestFlags)
+
+bool FRTSLayoutTextTest::RunTest(const FString& Parameters)
+{
+	const TCHAR* TextLayout = TEXT(R"({
+		"name": "Root", "type": "Panel", "anchor": "Fill",
+		"children": [
+			{ "name": "Row", "type": "HBox", "anchor": "TopLeft", "position": [100, 100], "children": [
+				{ "name": "RowLabel", "type": "Text", "text": "POWER", "fontSize": 16, "size": [120, 40] }
+			] },
+			{ "name": "Placed", "type": "Text", "anchor": "TopLeft", "position": [300, 100], "size": [120, 40], "text": "CREDITS", "fontSize": 16 }
+		]
+	})");
+	FTestBindings Bindings;
+	URTSLayoutWidget* Layout = BuildLayout(*this, TextLayout, TEXT("Text.layout.json"), Bindings);
+	if (!Layout)
+	{
+		return false;
+	}
+	const TSharedRef<SWidget> Slate = Layout->TakeWidget();
+	RTSTests::LayOutHeadless(*Layout, LayoutViewport);
+
+	const URTSLayoutText* RowLabel = Cast<URTSLayoutText>(Layout->FindElement(TEXT("RowLabel")));
+	const URTSLayoutText* Placed = Cast<URTSLayoutText>(Layout->FindElement(TEXT("Placed")));
+	if (!RowLabel || !Placed)
+	{
+		AddError(TEXT("The layout lacks its texts"));
+		return false;
+	}
+	TestEqual(TEXT("fontSize is pixels: 16 is a 12 point font"), RowLabel->GetFont().Size, 16.f * RTSLayout::FontPointsPerPixel);
+	for (const URTSLayoutText* Text : { RowLabel, Placed })
+	{
+		// Both boxes are 40 high from y 100: the text line sits around y 120, not at the top.
+		const FBox2D Rect = GetRect(*Layout, Text);
+		TestTrue(FString::Printf(TEXT("%s is one line, lower than its box (%.1f)"), *Text->GetName(), Rect.GetSize().Y), Rect.GetSize().Y < 40.f);
+		TestTrue(FString::Printf(TEXT("%s is centred vertically in its box (centre %.1f)"), *Text->GetName(), Rect.GetCenter().Y),
+			FMath::IsNearlyEqual(Rect.GetCenter().Y, 120.f, 1.f));
+	}
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLayoutBindingsTest, "WorldDivide.UI.Layout.Bindings", TestFlags)
 
 bool FRTSLayoutBindingsTest::RunTest(const FString& Parameters)

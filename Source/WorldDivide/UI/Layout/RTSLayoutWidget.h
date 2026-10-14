@@ -204,4 +204,10 @@ namespace RTSLayout
 {
 	/** The engine panels a Slot may place by widget: Minimap, Selection, Queue, Commands, Upgrades, Notifications, Scoreboard, Tooltip. */
 	WORLDDIVIDE_API const TArray<FName>& GetPanelNames();
+
+	/**
+	 * A layout fontSize and a theme font size are pixels of the em at the 1080p reference (DESIGNER_HANDBOOK.md); Slate
+	 * reads font sizes as points at 96 DPI. setup_testmap.py's FONT_POINTS_PER_PIXEL is the same factor.
+	 */
+	constexpr float FontPointsPerPixel = 0.75f;
 }

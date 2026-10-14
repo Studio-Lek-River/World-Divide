@@ -45,6 +45,8 @@ FACTION_DIR = "/Game/Data/Factions"
 AI_DIR = "/Game/Data/AI"
 MAP_DATA_DIR = "/Game/Data/Maps"
 UI_STYLE_DIR = "/Game/UI/Styles"
+# A theme font size is pixels of the em at the 1080p reference; Slate reads points at 96 DPI (RTSLayout::FontPointsPerPixel).
+FONT_POINTS_PER_PIXEL = 0.75
 MATERIAL_DIR = "/Game/Materials"
 MAP_PATH = "/Game/Maps/L_TestMap"
 MAIN_MENU_MAP_PATH = "/Game/Maps/L_MainMenu"
@@ -1072,7 +1074,7 @@ def make_text_styles(set_name, theme, fonts):
             info = unreal.SlateFontInfo()
             info.set_editor_property("font_object", fonts[font["file"].path])
             info.set_editor_property("typeface_font_name", "Regular")
-            info.set_editor_property("size", float(font["size"]))
+            info.set_editor_property("size", float(font["size"]) * FONT_POINTS_PER_PIXEL)
             styles[f"{role}.{color_name}"] = make_style_class(directory, f"TS_{set_name}_{role}_{color_name}",
                                                               unreal.CommonTextStyle, {
                 "font": info,
