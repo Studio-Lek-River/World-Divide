@@ -714,11 +714,11 @@ bool FRTSUIBindingStubsTest::RunTest(const FString& Parameters)
 		TestFalse(FString::Printf(TEXT("Star %d is not earned"), Index), Earned.bBool);
 	}
 
-	// Generals come in #73, their powers in M5: the faction's name, the placeholder portrait and nine locked slots.
+	// Generals come in #73, their powers in M5: the faction's name, the faction's general portrait and nine locked slots.
 	FRTSUIValue Portrait;
 	TestTrue(TEXT("The commander bar answers its portrait"), Commander->GetValue(TEXT("commander.portrait"), NoPlayer, Portrait));
 	TestTrue(TEXT("as a sprite"), Portrait.Type == FRTSUIValue::EType::Sprite);
-	TestEqual(TEXT("the placeholder portrait"), Portrait.String, FString(TEXT("Portrait.Placeholder")));
+	TestEqual(TEXT("the general portrait"), Portrait.String, FString(TEXT("Portrait.General")));
 	FRTSUIValue Name;
 	TestTrue(TEXT("The commander bar answers its name"), Commander->GetValue(TEXT("commander.name"), NoPlayer, Name));
 	TestTrue(TEXT("empty without a player"), Name.String.IsEmpty());

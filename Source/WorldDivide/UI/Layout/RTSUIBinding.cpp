@@ -120,7 +120,7 @@ namespace
 	const FName PowerLevelKey(TEXT("level"));
 	const FName PowerLevelMaxKey(TEXT("levelMax"));
 	const FName UsePowerAction(TEXT("UsePower"));
-	const FName PortraitPlaceholder(TEXT("Portrait.Placeholder"));
+	const FName PortraitGeneral(TEXT("Portrait.General"));
 	const FName PowerIconPlaceholder(TEXT("Icon.Placeholder"));
 	constexpr int32 PowerSlots = 9;
 
@@ -244,7 +244,8 @@ namespace
 			}
 			else if (Key == CommanderPortraitKey)
 			{
-				OutValue = FRTSUIValue::MakeSprite(PortraitPlaceholder);
+				// Each faction's sprite set shows its Standard general until #73 gives every general a portrait.
+				OutValue = FRTSUIValue::MakeSprite(PortraitGeneral);
 			}
 			else
 			{

@@ -31,7 +31,7 @@
     "Common.Icon.SuperweaponLaunch": { "texture": "Textures/Common/T_UI_Common_Icon_SuperweaponLaunch.png", "size": [64, 64], "tint": true },
     "Common.Icon.RifleTraining": { "texture": "Textures/Common/Icons/T_Icon_Common_RifleTraining.png", "size": [64, 64] },
     "Common.Icon.Placeholder": { "texture": "Textures/Common/T_Icon_Common_Placeholder.png", "size": [64, 64] },
-    "Common.Portrait.Placeholder": { "texture": "Textures/Common/T_Icon_Common_Placeholder.png", "size": [64, 64] },
+    "Common.Portrait.General": { "texture": "Textures/Common/T_Icon_Common_Placeholder.png", "size": [64, 64] },
     "Common.Icon.RankStar": { "texture": "Textures/Common/T_UI_Common_Icon_RankStar.png", "size": [64, 64], "tint": true },
     "Common.Icon.Rank": { "texture": "Textures/Common/T_UI_Common_Icon_Rank.png", "size": [64, 64], "tint": true },
     "Common.Icon.Lock": { "texture": "Textures/Common/T_UI_Common_Icon_Lock.png", "size": [48, 48], "tint": true },

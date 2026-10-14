@@ -36,6 +36,7 @@
 
 ### Character concepts and story roles
 
+- **CONFIRMED:** USA Standard General is **Gen. Nathaniel "Atlas" Ward**, the calm, pragmatic combined-arms commander and face of the USA faction; profile in [`generals/USA_Standard_Ward.md`](generals/USA_Standard_Ward.md).
 - **CONFIRMED:** USA and China Standard generals are long-time acquaintances who previously operated together. Their histories remain personal and independently developed; subtle references to old RTS history are okay, not direct character copies.
 - **CONFIRMED:** USA Air Force General is a **female, hotheaded, very capable** aviation commander; aggressive belief in bombing and air superiority, notably counters Chinese ground masses. Distinctive confidence, not incompetence.
 - **CONFIRMED:** China Mass Mobilization General is impulsive, patriotic and aggressive; initiates an unauthorized retaliatory operation in the campaign.
