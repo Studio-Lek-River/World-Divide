@@ -285,7 +285,7 @@
         {
           "type": "Slot",
           "name": "QueueSlot",
-          "widget": "Queue",
+          "layout": "ProductionQueue",
           "anchor": "TopRight",
           "position": [
             0,

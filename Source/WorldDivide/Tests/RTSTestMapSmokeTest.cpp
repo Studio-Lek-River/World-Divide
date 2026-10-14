@@ -3581,6 +3581,134 @@ bool FRTSSelectionPanelSmokeTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+namespace
+{
+	struct FProductionQueueState
+	{
+		TWeakObjectPtr<ARTSBuilding> Barracks;
+		TSet<TWeakObjectPtr<ARTSUnit>> UnitsBefore;
+		int32 CreditsAfterCancel = 0;
+		double PhaseStart = 0.0;
+	};
+}
+
+/**
+ * The queue in the selection panel follows the selected barracks: two infantry queued, the front one building with its time
+ * left, three empty slots behind them; clicking the second cancels and refunds it.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckProductionQueue, FAutomationTestBase*, Test, TSharedRef<FProductionQueueState>, State);
+bool FRTSCheckProductionQueue::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	URTSBuildingData* BarracksData = LoadObject<URTSBuildingData>(nullptr, BarracksPath);
+	URTSUnitData* Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
+	if (!Player || !BarracksData || !Infantry || !SpawnPowerPlant(World, Controller->GetTeamId()))
+	{
+		Test->AddError(TEXT("Could not set up the production queue test"));
+		return true;
+	}
+
+	const ARTSHUD* HUD = Controller->GetHUD<ARTSHUD>();
+	const URTSHUDWidget* Widget = HUD ? HUD->GetHUDWidget() : nullptr;
+	const URTSLayoutWidget* Layout = Widget ? Widget->GetLayout() : nullptr;
+	Test->TestNotNull(TEXT("The selection panel builds the queue from ProductionQueue.layout.json"),
+		Layout ? Layout->FindElement(TEXT("QueueItems")) : nullptr);
+
+	ARTSBuilding* Barracks = SpawnBuilding(World, BarracksData, Controller->GetTeamId(), BuildSpot, false);
+	Controller->SelectBuilding(Barracks);
+	Test->TestFalse(TEXT("A site has no queue"), GetSelectionValue(*Controller, TEXT("queue.visible")).bBool);
+	Barracks->UpdateConstruction(BarracksData->BuildTime);
+	Test->TestTrue(TEXT("The finished barracks shows its queue"), GetSelectionValue(*Controller, TEXT("queue.visible")).bBool);
+	Test->TestFalse(TEXT("at full power"), GetSelectionValue(*Controller, TEXT("queue.lowPower")).bBool);
+	Test->TestEqual(TEXT("empty"), GetSelectionListCount(*Controller, TEXT("queue")), 0);
+
+	Test->TestTrue(TEXT("The first infantry is queued"), Controller->RequestProduce(Barracks, Infantry));
+	Test->TestTrue(TEXT("and the second"), Controller->RequestProduce(Barracks, Infantry));
+	if (!Test->TestEqual(TEXT("Two entries"), GetSelectionListCount(*Controller, TEXT("queue")), 2))
+	{
+		return true;
+	}
+	Test->TestEqual(TEXT("by name"), GetSelectionListValue(*Controller, TEXT("queue"), 0, TEXT("name")).String, Infantry->DisplayName.ToString());
+	Test->TestTrue(TEXT("The front one builds"), GetSelectionListValue(*Controller, TEXT("queue"), 0, TEXT("isActive")).bBool);
+	Test->TestFalse(TEXT("the second waits"), GetSelectionListValue(*Controller, TEXT("queue"), 1, TEXT("isActive")).bBool);
+	Test->TestEqual(TEXT("with no progress"), GetSelectionListValue(*Controller, TEXT("queue"), 1, TEXT("progress")).Number, 0.0);
+	Test->TestEqual(TEXT("and its whole build time left"), GetSelectionListValue(*Controller, TEXT("queue"), 1, TEXT("timeLeft")).String,
+		RTSUIBindings::FormatTimeLeft(Infantry->BuildTime));
+
+	const int32 CreditsBefore = Player->GetCredits();
+	RunSelectionAction(*Controller, TEXT("CancelQueueItem"), 1);
+	Test->TestEqual(TEXT("Clicking the second cancels it"), Barracks->GetProductionComponent()->GetQueue().Num(), 1);
+	Test->TestEqual(TEXT("and refunds it"), Player->GetCredits(), CreditsBefore + Infantry->Cost);
+	RunSelectionAction(*Controller, TEXT("CancelQueueItem"), 3);
+	Test->TestEqual(TEXT("An empty slot cancels nothing"), Barracks->GetProductionComponent()->GetQueue().Num(), 1);
+
+	for (TActorIterator<ARTSUnit> It(World); It; ++It)
+	{
+		State->UnitsBefore.Add(*It);
+	}
+	State->Barracks = Barracks;
+	State->CreditsAfterCancel = Player->GetCredits();
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+/** The first infantry still comes out; the queue then empties, and hides once the barracks is no longer selected. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyProductionQueue, FAutomationTestBase*, Test, TSharedRef<FProductionQueueState>, State);
+bool FRTSVerifyProductionQueue::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	const ARTSBuilding* Barracks = State->Barracks.Get();
+	if (!Controller || !Barracks)
+	{
+		Test->AddError(TEXT("The controller or the barracks disappeared"));
+		return true;
+	}
+	int32 Produced = 0;
+	for (TActorIterator<ARTSUnit> It(Controller->GetWorld()); It; ++It)
+	{
+		Produced += State->UnitsBefore.Contains(*It) ? 0 : 1;
+	}
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (Produced == 0 && Elapsed < ProductionTimeout)
+	{
+		return false;
+	}
+	Test->TestEqual(TEXT("The first infantry came out"), Produced, 1);
+	Test->TestEqual(TEXT("The queue is empty"), GetSelectionListCount(*Controller, TEXT("queue")), 0);
+	const ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	Test->TestEqual(TEXT("The refund stayed"), Player ? Player->GetCredits() : 0, State->CreditsAfterCancel);
+
+	Controller->SelectUnits({});
+	Test->TestFalse(TEXT("Nothing selected: no queue"), GetSelectionValue(*Controller, TEXT("queue.visible")).bBool);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSProductionQueueSmokeTest, "WorldDivide.Smoke.ProductionQueue",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSProductionQueueSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FProductionQueueState> State = MakeShared<FProductionQueueState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, MakeShared<FSmokeState>()));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckProductionQueue(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyProductionQueue(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSInGameMenuSmokeTest, "WorldDivide.Smoke.InGameMenu",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 

@@ -1,6 +1,7 @@
 #include "UI/Layout/RTSUIBinding.h"
 
 #include "Buildings/RTSBuilding.h"
+#include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Core/RTSGameState.h"
@@ -150,6 +151,14 @@ namespace
 	const FName RestartAction(TEXT("Restart"));
 	const FName ResumeAction(TEXT("Resume"));
 	const FName LeaveAction(TEXT("Leave"));
+
+	const FName QueueVisibleKey(TEXT("queue.visible"));
+	const FName QueueLowPowerKey(TEXT("queue.lowPower"));
+	const FName QueueList(TEXT("queue"));
+	const FName QueueActiveKey(TEXT("isActive"));
+	const FName QueueProgressKey(TEXT("progress"));
+	const FName QueueTimeLeftKey(TEXT("timeLeft"));
+	const FName CancelQueueItemAction(TEXT("CancelQueueItem"));
 
 	const FName SelectionModeKey(TEXT("selection.mode"));
 	const FName SelectionIconKey(TEXT("selection.icon"));
@@ -730,6 +739,123 @@ namespace
 			return MaxHealth > 0.f ? Health / MaxHealth : 0.f;
 		}
 	};
+
+	/**
+	 * The production queue inside the selection panel: the selected production building's replicated queue, the front entry's
+	 * progress and the time each entry takes at the owner's production rate. Clicking an entry asks the server to cancel it.
+	 */
+	class FRTSProductionQueueBindings : public IRTSUIBindingSource
+	{
+	public:
+		virtual void Declare(FRTSUIDeclarations& Out) const override
+		{
+			Out.Keys.Append({ QueueVisibleKey, QueueLowPowerKey });
+			Out.Lists.Add(QueueList, { ItemIconKey, ItemNameKey, QueueActiveKey, QueueProgressKey, QueueTimeLeftKey });
+			Out.Actions.Add(CancelQueueItemAction);
+		}
+
+		virtual TArray<FName> GetPanels() const override
+		{
+			return { TEXT("ProductionQueue") };
+		}
+
+		virtual bool GetValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
+		{
+			const ARTSPlayerController* Controller = Cast<ARTSPlayerController>(Context.Player);
+			if (Key == QueueVisibleKey)
+			{
+				// Once the match is over every order is refused, as the produce menu hides.
+				OutValue = FRTSUIValue::MakeBool(Controller && Controller->GetMatchResult() == ERTSMatchResult::InProgress
+					&& Controller->GetProductionBuilding());
+			}
+			else if (Key == QueueLowPowerKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(GetRate(Controller) < 1.f);
+			}
+			else
+			{
+				return false;
+			}
+			return true;
+		}
+
+		virtual int32 GetListCount(FName List, const FRTSUIContext& Context) const override
+		{
+			const URTSProductionComponent* Production = List == QueueList ? GetProduction(Cast<ARTSPlayerController>(Context.Player)) : nullptr;
+			return Production ? Production->GetQueue().Num() : 0;
+		}
+
+		virtual bool GetListValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
+		{
+			if (Context.List != QueueList)
+			{
+				return false;
+			}
+			const ARTSPlayerController* Controller = Cast<ARTSPlayerController>(Context.Player);
+			const URTSProductionComponent* Production = GetProduction(Controller);
+			const URTSEntityData* Data = Production && Production->GetQueue().IsValidIndex(Context.Index) ? Production->GetQueue()[Context.Index].Get() : nullptr;
+			const bool bActive = Data && Context.Index == 0;
+			const float Progress = bActive ? Production->GetProgress() : 0.f;
+			if (Key == ItemIconKey)
+			{
+				OutValue = FRTSUIValue::MakeSprite(Data ? GetIconSprite(Data) : NAME_None);
+			}
+			else if (Key == ItemNameKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Data ? Data->DisplayName.ToString() : FString());
+			}
+			else if (Key == QueueActiveKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(bActive);
+			}
+			else if (Key == QueueProgressKey)
+			{
+				OutValue = FRTSUIValue::MakeProgress(Progress);
+			}
+			else if (Key == QueueTimeLeftKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Data
+					? RTSUIBindings::FormatTimeLeft(RTSUIBindings::GetQueueTimeLeft(Data->BuildTime, Progress, GetRate(Controller)))
+					: FString());
+			}
+			else
+			{
+				return false;
+			}
+			return true;
+		}
+
+		virtual bool HandleAction(FName Action, const FRTSUIContext& Context) const override
+		{
+			if (Action != CancelQueueItemAction)
+			{
+				return false;
+			}
+			ARTSPlayerController* Controller = Cast<ARTSPlayerController>(Context.Player);
+			ARTSBuilding* Building = Controller ? Controller->GetProductionBuilding() : nullptr;
+			const TArray<TObjectPtr<URTSEntityData>>* Queue = Building ? &Building->GetProductionComponent()->GetQueue() : nullptr;
+			if (Queue && Queue->IsValidIndex(Context.Index))
+			{
+				// The existing request takes the last queued entry of that kind, keeping progress on the front one.
+				Controller->RequestCancelProduction(Building, (*Queue)[Context.Index]);
+			}
+			return true;
+		}
+
+	private:
+		static const URTSProductionComponent* GetProduction(const ARTSPlayerController* Controller)
+		{
+			const ARTSBuilding* Building = Controller ? Controller->GetProductionBuilding() : nullptr;
+			return Building ? Building->GetProductionComponent() : nullptr;
+		}
+
+		/** The rate the server builds the selected building's queue at: its team's, 1 with nothing selected. */
+		static float GetRate(const ARTSPlayerController* Controller)
+		{
+			const ARTSBuilding* Building = Controller ? Controller->GetProductionBuilding() : nullptr;
+			return Building ? ARTSPlayerState::GetProductionRateForTeam(*Building->GetWorld(), Building->GetTeamId()) : 1.f;
+		}
+	};
 }
 
 TArray<const IRTSUIBindingSource*> RTSUIBindings::GetDefaultSources()
@@ -739,7 +865,8 @@ TArray<const IRTSUIBindingSource*> RTSUIBindings::GetDefaultSources()
 	static const FRTSCommanderBindings CommanderBindings;
 	static const FRTSMapButtonsBindings MapButtonsBindings;
 	static const FRTSSelectionBindings SelectionBindings;
-	return { &PlayerBindings, &MatchBindings, &CommanderBindings, &MapButtonsBindings, &SelectionBindings };
+	static const FRTSProductionQueueBindings ProductionQueueBindings;
+	return { &PlayerBindings, &MatchBindings, &CommanderBindings, &MapButtonsBindings, &SelectionBindings, &ProductionQueueBindings };
 }
 
 FRTSUIDeclarations RTSUIBindings::Declare(TConstArrayView<const IRTSUIBindingSource*> Sources)
@@ -759,4 +886,21 @@ float RTSUIBindings::GetPowerRatio(int32 Produced, int32 Consumed)
 		return Consumed > 0 ? 1.f : 0.f;
 	}
 	return FMath::Clamp(static_cast<float>(Consumed) / Produced, 0.f, 1.f);
+}
+
+float RTSUIBindings::GetQueueTimeLeft(float BuildTime, float Progress, float Rate)
+{
+	// The production component finishes an entry with no BuildTime at once.
+	if (BuildTime <= 0.f)
+	{
+		return 0.f;
+	}
+	const float Left = (1.f - FMath::Clamp(Progress, 0.f, 1.f)) * BuildTime;
+	return Rate > 0.f ? Left / Rate : Left;
+}
+
+FString RTSUIBindings::FormatTimeLeft(float Seconds)
+{
+	const int32 Whole = FMath::Max(FMath::CeilToInt(Seconds), 0);
+	return FString::Printf(TEXT("%d:%02d"), Whole / 60, Whole % 60);
 }

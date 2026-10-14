@@ -28,14 +28,11 @@ namespace
 	const FLinearColor ConstructionColor(1.f, 0.8f, 0.1f, 1.f);
 	const FLinearColor MenuColor(0.9f, 0.9f, 0.9f, 1.f);
 	const FLinearColor UnaffordableColor(0.45f, 0.45f, 0.45f, 1.f);
-	const FLinearColor ButtonHoverFill(0.6f, 0.12f, 0.08f, 0.9f);
-	const FLinearColor ProgressFill(1.f, 0.8f, 0.1f, 0.45f);
 	const FLinearColor VictoryColor(0.3f, 1.f, 0.4f, 1.f);
 	const FLinearColor DefeatColor(1.f, 0.3f, 0.25f, 1.f);
 	const FLinearColor UnitAlertColor(1.f, 0.65f, 0.2f, 1.f);
 
 	constexpr float ConstructionBarWidth = 60.f;
-	constexpr float QueueEntryWidth = 180.f;
 	constexpr float ButtonPadding = 8.f;
 	constexpr float BarSpacing = 8.f;
 	constexpr float MenuMargin = 16.f;
@@ -144,7 +141,6 @@ void ARTSHUD::DrawHUD()
 	}
 
 	ProduceButtons.Reset();
-	QueueButtons.Reset();
 	LaunchButton = FBox2D(ForceInit);
 	if (!bMatchOver)
 	{
@@ -378,28 +374,8 @@ void ARTSHUD::DrawProduction(const ARTSPlayerController& Controller)
 		DrawText(Text, Controller.CanRequestProduce(Building, Data) ? MenuColor : UnaffordableColor, MenuMargin, Y);
 	}
 
-	const URTSProductionComponent* Production = Building->GetProductionComponent();
-	const TArray<TObjectPtr<URTSEntityData>>& Queue = Production->GetQueue();
 	Y += MenuLineHeight * 1.5f;
-	DrawText(FString::Printf(TEXT("Queue  %d / %d"), Queue.Num(), URTSProductionComponent::MaxQueue), MenuColor, MenuMargin, Y);
-
-	FVector2D Mouse;
-	const bool bHasMouse = Controller.GetMousePosition(Mouse.X, Mouse.Y);
-	for (int32 Index = 0; Index < Queue.Num(); ++Index)
-	{
-		Y += MenuLineHeight + 2.f;
-		const FBox2D Box(FVector2D(MenuMargin, Y), FVector2D(MenuMargin + QueueEntryWidth, Y + MenuLineHeight));
-		QueueButtons.Add(Box);
-		DrawRect(bHasMouse && Box.IsInside(Mouse) ? ButtonHoverFill : HealthBackground, Box.Min.X, Box.Min.Y, QueueEntryWidth, MenuLineHeight);
-		if (Index == 0)
-		{
-			DrawRect(ProgressFill, Box.Min.X, Box.Min.Y, QueueEntryWidth * Production->GetProgress(), MenuLineHeight);
-		}
-		DrawText(Queue[Index] ? Queue[Index]->DisplayName.ToString() : FString(), MenuColor, Box.Min.X + 4.f, Box.Min.Y + 1.f);
-	}
-
-	Y += MenuLineHeight * 1.5f;
-	DrawText(TEXT("1-9 / click: produce    Right click: rally point    Click a queued entry / Del: cancel"), MenuColor, MenuMargin, Y);
+	DrawText(TEXT("1-9 / click: produce    Right click: rally point    Del: cancel the last queued"), MenuColor, MenuMargin, Y);
 }
 
 void ARTSHUD::DrawRallyPoint(const ARTSPlayerController& Controller, const ARTSBuilding& Building)
@@ -418,11 +394,6 @@ void ARTSHUD::DrawRallyPoint(const ARTSPlayerController& Controller, const ARTSB
 int32 ARTSHUD::GetProduceButtonAt(const FVector2D& Point) const
 {
 	return ProduceButtons.IndexOfByPredicate([&Point](const FBox2D& Box) { return Box.bIsValid && Box.IsInside(Point); });
-}
-
-int32 ARTSHUD::GetQueueButtonAt(const FVector2D& Point) const
-{
-	return QueueButtons.IndexOfByPredicate([&Point](const FBox2D& Box) { return Box.bIsValid && Box.IsInside(Point); });
 }
 
 float ARTSHUD::DrawScoreboard()

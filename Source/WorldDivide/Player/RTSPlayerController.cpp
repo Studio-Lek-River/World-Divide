@@ -583,19 +583,13 @@ void ARTSPlayerController::HandleSelectPressed(const FVector2D& Mouse)
 			BeginSuperweaponTargeting();
 			return;
 		}
-		// The production menu and queue of the selected building; the HUD only draws them while there is one.
+		// The production menu of the selected building; the HUD only draws it while there is one.
 		ARTSBuilding* Producer = GetProductionBuilding();
 		const TArray<URTSEntityData*> Menu = GetProductionMenu();
 		const int32 MenuIndex = RTSHUD->GetProduceButtonAt(Mouse);
 		if (Producer && Menu.IsValidIndex(MenuIndex))
 		{
 			RequestProduce(Producer, Menu[MenuIndex]);
-			return;
-		}
-		const int32 QueueIndex = RTSHUD->GetQueueButtonAt(Mouse);
-		if (Producer && Producer->GetProductionComponent()->GetQueue().IsValidIndex(QueueIndex))
-		{
-			RequestCancelProduction(Producer, Producer->GetProductionComponent()->GetQueue()[QueueIndex]);
 			return;
 		}
 	}

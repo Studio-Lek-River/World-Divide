@@ -4,6 +4,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "CommonTextBlock.h"
+#include "Core/RTSPlayerState.h"
 #include "Components/Image.h"
 #include "Components/PanelWidget.h"
 #include "Components/ProgressBar.h"
@@ -758,6 +759,41 @@ bool FRTSUIBindingStubsTest::RunTest(const FString& Parameters)
 	{
 		TestTrue(FString::Printf(TEXT("%s is the selection panel's action"), Action), Selection->HandleAction(Action, NoPlayer));
 	}
+
+	// Without a player there is no production building, so no queue.
+	const IRTSUIBindingSource* Queue = FindSource(TEXT("ProductionQueue"));
+	if (!TestNotNull(TEXT("A source serves the production queue"), Queue))
+	{
+		return false;
+	}
+	FRTSUIValue Visible;
+	TestTrue(TEXT("The queue answers queue.visible"), Queue->GetValue(TEXT("queue.visible"), NoPlayer, Visible));
+	TestFalse(TEXT("hidden without a production building"), Visible.bBool);
+	FRTSUIValue LowPower;
+	TestTrue(TEXT("The queue answers queue.lowPower"), Queue->GetValue(TEXT("queue.lowPower"), NoPlayer, LowPower));
+	TestFalse(TEXT("not low without a production building"), LowPower.bBool);
+	TestEqual(TEXT("No entries"), Queue->GetListCount(TEXT("queue"), NoPlayer), 0);
+	TestTrue(TEXT("An empty slot has no time left"), ListValue(*Queue, TEXT("queue"), 0, TEXT("timeLeft")).String.IsEmpty());
+	TestTrue(TEXT("CancelQueueItem is the queue's action"), Queue->HandleAction(TEXT("CancelQueueItem"), NoPlayer));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSUIQueueTimeLeftTest, "WorldDivide.UI.ProductionQueue.TimeLeft", TestFlags)
+
+bool FRTSUIQueueTimeLeftTest::RunTest(const FString& Parameters)
+{
+	const float LowRate = ARTSPlayerState::LowPowerProductionRate;
+	TestEqual(TEXT("A waiting entry takes its build time at full power"), RTSUIBindings::GetQueueTimeLeft(12.f, 0.f, 1.f), 12.f);
+	TestEqual(TEXT("The front entry, a quarter done, has three quarters left"), RTSUIBindings::GetQueueTimeLeft(12.f, 0.25f, 1.f), 9.f);
+	TestEqual(TEXT("Low power stretches a waiting entry"), RTSUIBindings::GetQueueTimeLeft(12.f, 0.f, LowRate), 12.f / LowRate);
+	TestEqual(TEXT("and the front entry"), RTSUIBindings::GetQueueTimeLeft(12.f, 0.25f, LowRate), 9.f / LowRate);
+	TestEqual(TEXT("An entry without build time is done at once"), RTSUIBindings::GetQueueTimeLeft(0.f, 0.f, 1.f), 0.f);
+	TestEqual(TEXT("A finished entry has nothing left"), RTSUIBindings::GetQueueTimeLeft(12.f, 1.f, LowRate), 0.f);
+
+	TestEqual(TEXT("12 seconds"), RTSUIBindings::FormatTimeLeft(12.f), FString(TEXT("0:12")));
+	TestEqual(TEXT("rounded up"), RTSUIBindings::FormatTimeLeft(12.f / LowRate), FString(TEXT("0:18")));
+	TestEqual(TEXT("over a minute"), RTSUIBindings::FormatTimeLeft(65.f), FString(TEXT("1:05")));
+	TestEqual(TEXT("nothing left"), RTSUIBindings::FormatTimeLeft(0.f), FString(TEXT("0:00")));
 	return true;
 }
 

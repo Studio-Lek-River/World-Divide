@@ -1,0 +1,152 @@
+{
+  "type": "Panel",
+  "name": "ProductionQueue",
+  "anchor": "Fill",
+  "hitTest": false,
+  "visibleWhen": "queue.visible",
+  "children": [
+    {
+      "type": "Text",
+      "name": "QueueTitle",
+      "text": "Queue",
+      "font": "Body",
+      "fontSize": 13,
+      "color": "MutedText",
+      "position": [
+        0,
+        0
+      ],
+      "size": [
+        64,
+        18
+      ],
+      "maxLines": 1
+    },
+    {
+      "type": "Text",
+      "name": "LowPowerMarker",
+      "text": "Low power",
+      "font": "Body",
+      "fontSize": 13,
+      "color": "Danger",
+      "anchor": "TopRight",
+      "position": [
+        0,
+        0
+      ],
+      "size": [
+        68,
+        18
+      ],
+      "align": "Right",
+      "maxLines": 1,
+      "visibleWhen": "queue.lowPower"
+    },
+    {
+      "type": "VBox",
+      "name": "QueueItems",
+      "position": [
+        0,
+        22
+      ],
+      "size": [
+        132,
+        156
+      ],
+      "spacing": 4,
+      "repeat": "queue",
+      "count": 5,
+      "template": {
+        "type": "Panel",
+        "name": "QueueEntry",
+        "sprite": "Panel",
+        "size": [
+          132,
+          28
+        ],
+        "hitTest": false,
+        "children": [
+          {
+            "type": "Button",
+            "name": "QueueItem",
+            "sprite": "Button",
+            "action": "CancelQueueItem",
+            "anchor": "Fill",
+            "visibleWhen": "!item.empty",
+            "children": [
+              {
+                "type": "Image",
+                "name": "QueueItemIcon",
+                "sprite": "Icon.Placeholder",
+                "position": [
+                  2,
+                  2
+                ],
+                "size": [
+                  24,
+                  24
+                ],
+                "bind": {
+                  "sprite": "item.icon"
+                }
+              },
+              {
+                "type": "Text",
+                "name": "QueueItemName",
+                "text": "{item.name}",
+                "font": "Body",
+                "fontSize": 12,
+                "position": [
+                  30,
+                  1
+                ],
+                "size": [
+                  64,
+                  16
+                ],
+                "maxLines": 1
+              },
+              {
+                "type": "Text",
+                "name": "QueueItemTime",
+                "text": "{item.timeLeft}",
+                "font": "Number",
+                "fontSize": 12,
+                "anchor": "TopRight",
+                "position": [
+                  4,
+                  1
+                ],
+                "size": [
+                  34,
+                  16
+                ],
+                "align": "Right",
+                "maxLines": 1
+              },
+              {
+                "type": "ProgressBar",
+                "name": "QueueItemProgress",
+                "sprite": "ProgressBar.Background",
+                "fillSprite": "ProgressBar.Fill",
+                "fillColor": "Warning",
+                "position": [
+                  30,
+                  19
+                ],
+                "size": [
+                  98,
+                  6
+                ],
+                "visibleWhen": "item.isActive",
+                "bind": {
+                  "progress": "item.progress"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

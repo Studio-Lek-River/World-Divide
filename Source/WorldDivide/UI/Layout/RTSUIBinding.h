@@ -92,4 +92,13 @@ namespace RTSUIBindings
 
 	/** The power bar's fill, consumed over produced, 0-1: full when something consumes and nothing produces, empty when neither. */
 	WORLDDIVIDE_API float GetPowerRatio(int32 Produced, int32 Consumed);
+
+	/**
+	 * Seconds until a production queue entry of BuildTime seconds finishes once it builds, Progress (0-1) already done, at
+	 * Rate, the owner's production rate; an entry still waiting has Progress 0.
+	 */
+	WORLDDIVIDE_API float GetQueueTimeLeft(float BuildTime, float Progress, float Rate);
+
+	/** Minutes and seconds, rounded up, such as "0:12" or "1:05"; "0:00" once nothing is left. */
+	WORLDDIVIDE_API FString FormatTimeLeft(float Seconds);
 }
