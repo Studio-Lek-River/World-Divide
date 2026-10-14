@@ -67,6 +67,9 @@ public:
 
 	virtual void Declare(FRTSUIDeclarations& Out) const = 0;
 
+	/** The layouts (file names without .layout.json) this source serves, so a design brief lists only their keys. */
+	virtual TArray<FName> GetPanels() const = 0;
+
 	/** False when Key is not this source's. */
 	virtual bool GetValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const = 0;
 

@@ -15,6 +15,7 @@
 #include "UI/Layout/RTSLayoutFiles.h"
 #include "UI/Layout/RTSLayoutValidator.h"
 #include "UI/Layout/RTSLayoutWidget.h"
+#include "UI/Layout/RTSUICommandlet.h"
 
 namespace
 {
@@ -39,6 +40,11 @@ namespace
 			Out.Keys.Append({ TEXT("test.credits"), TEXT("test.progress"), TEXT("test.color"), TEXT("test.on"), TEXT("test.mode") });
 			Out.Lists.Add(TEXT("test.items"), { TEXT("name"), TEXT("enabled") });
 			Out.Actions.Add(TEXT("Click"));
+		}
+
+		virtual TArray<FName> GetPanels() const override
+		{
+			return { TEXT("Test") };
 		}
 
 		virtual bool GetValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
@@ -413,6 +419,72 @@ bool FRTSLayoutValidateTest::RunTest(const FString& Parameters)
 	Errors.Reset();
 	TestFalse(TEXT("A file that does not parse fails"), RTSLayout::Validate(TEXT("{ \"type\": \"Panel\", }x"), TEXT("Bad.layout.json"), Context, Errors));
 	TestTrue(TEXT("naming the file"), Errors.Num() == 1 && Errors[0].StartsWith(TEXT("Bad.layout.json: ")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSUIBindingPanelsTest, "WorldDivide.UI.Bindings.Panels", TestFlags)
+
+bool FRTSUIBindingPanelsTest::RunTest(const FString& Parameters)
+{
+	const TMap<FString, FString> Files = RTSLayoutFiles::FindFiles(RTSLayoutFiles::GetRoots());
+	const IRTSUIBindingSource* ResourceBar = nullptr;
+	for (const IRTSUIBindingSource* Source : RTSUIBindings::GetDefaultSources())
+	{
+		const TArray<FName> Panels = Source->GetPanels();
+		TestFalse(TEXT("Every binding source serves a panel"), Panels.IsEmpty());
+		for (const FName Panel : Panels)
+		{
+			TestTrue(FString::Printf(TEXT("The panel %s is a layout file"), *Panel.ToString()), Files.Contains(Panel.ToString()));
+			if (Panel == TEXT("ResourceBar"))
+			{
+				ResourceBar = Source;
+			}
+		}
+	}
+	if (!TestNotNull(TEXT("A source serves the resource bar"), ResourceBar))
+	{
+		return false;
+	}
+	FRTSUIDeclarations Declarations;
+	ResourceBar->Declare(Declarations);
+	for (const TCHAR* Key : { TEXT("player.credits"), TEXT("player.power.produced"), TEXT("player.power.consumed"), TEXT("player.power.low"),
+		TEXT("player.power.color"), TEXT("player.usesPower"), TEXT("player.faction") })
+	{
+		TestTrue(FString::Printf(TEXT("The resource bar's source declares %s"), Key), Declarations.Keys.Contains(FName(Key)));
+	}
+
+	const FString Json = URTSUICommandlet::DescribeBindings(FRTSLayoutValidationContext::MakeDefault());
+	TestTrue(TEXT("The bindings file lists the resource bar's keys"), Json.Contains(TEXT("\"player.credits\"")) && Json.Contains(TEXT("\"ResourceBar\"")));
+	TestTrue(TEXT("and the engine panels"), Json.Contains(TEXT("\"Minimap\"")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSUICheckFolderTest, "WorldDivide.UI.Commandlet.Validate", TestFlags)
+
+bool FRTSUICheckFolderTest::RunTest(const FString& Parameters)
+{
+	// An unpacked delivery: a layout naming a sprite and a layout that exist only in the delivery, and a key that exists nowhere.
+	const FString Dir = FPaths::Combine(FPaths::AutomationTransientDir(), TEXT("UICheck"), TEXT("UI"));
+	IFileManager::Get().DeleteDirectory(*Dir, false, true);
+	WriteFile(FPaths::Combine(Dir, TEXT("Sprites"), TEXT("USA.sprites.json")),
+		TEXT(R"({ "sprites": { "USA.DeliveryOnly": { "texture": "Textures/USA/T_UI_USA_DeliveryOnly.png", "size": [64, 64] } } })"));
+	WriteFile(FPaths::Combine(Dir, TEXT("Layouts"), TEXT("Extra.layout.json")), TEXT(R"({ "name": "Extra", "type": "Panel" })"));
+	WriteFile(FPaths::Combine(Dir, TEXT("Layouts"), TEXT("Delivered.layout.json")), TEXT(R"({ "name": "Delivered", "type": "Panel", "children": [
+		{ "name": "Icon", "type": "Image", "sprite": "DeliveryOnly" },
+		{ "name": "Label", "type": "Text", "text": "{no.such.key}" },
+		{ "name": "Hole", "type": "Slot", "layout": "Extra" } ] })"));
+
+	FRTSLayoutValidationContext Context = FRTSLayoutValidationContext::MakeDefault();
+	Context.AddFolder(Dir);
+	TArray<FString> Errors;
+	TestFalse(TEXT("The delivery has a problem"), RTSLayout::ValidateFolder(Dir, Context, Errors));
+	const FString All = FString::Join(Errors, TEXT("\n"));
+	TestTrue(TEXT("The unknown key is reported with its file and element"), All.Contains(TEXT("Delivered.layout.json: Label: unknown binding key \"no.such.key\"")));
+	TestFalse(TEXT("A sprite of the delivery's sprite file is known"), All.Contains(TEXT("DeliveryOnly")));
+	TestFalse(TEXT("A layout of the delivery is known"), All.Contains(TEXT("Extra")));
+	TestEqual(TEXT("Nothing else is reported"), Errors.Num(), 1);
+
+	IFileManager::Get().DeleteDirectory(*FPaths::Combine(FPaths::AutomationTransientDir(), TEXT("UICheck")), false, true);
 	return true;
 }
 

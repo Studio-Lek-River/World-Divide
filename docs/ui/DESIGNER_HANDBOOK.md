@@ -332,12 +332,13 @@ Keep it under two pages. It is a working document for the programmers, not a pit
 
 ## 8. Team workflow
 
-The team is the producer (a person), Claude (the programmer) and you (the UI/UX designer). Each panel has a **code issue** and a **design issue** on GitHub. Who does what, the reviewer, and how each of you reaches the running editor through Unreal MCP is in [`AI_TEAM.md`](AI_TEAM.md).
+The team is four: the producer (a person, who picks the panel, plays, judges and approves), Claude (the programmer), you (the UI/UX designer) and Gemini through the Antigravity CLI (the reviewer, who only looks). Each panel has a **code issue** and a **design issue** on GitHub. Who does what and how each of you reaches the running editor through Unreal MCP is in [`AI_TEAM.md`](AI_TEAM.md).
 
 1. **Claude** completes the code issue: the C++ that supplies the binding keys and carries out the actions, plus a plain placeholder layout and placeholder sprites, so the panel already works. The tests pass.
-2. **The producer** sends you the design brief, with this handbook, the placeholder `<Panel>.layout.json` and the style references attached.
-3. **You** deliver the ZIP (section 7).
-4. **The producer** unpacks it over the repository, runs the setup script (it imports the PNGs and fonts and generates the styles), opens the game and sends you feedback, with screenshots of the HUD in every faction look at 1920x1080, 2560x1440 and 3440x1440 in a fixed match state (`AI_TEAM.md`, "Screenshots of the HUD"). A round that only changes layout files needs no setup: `rts.UI.Reload` in the running game shows it at once. No code rebuild is needed between rounds.
-5. **Claude** runs the UI validation test, fixes anything technical (merges the sprite entries, corrects a path), adds any "Requests for code" as new issues, and commits the delivery with the design issue closed.
+2. **The producer** runs `/ui-brief <design issue>` and sends you its folder: the prompt, the binding keys and actions read from the code, the existing sprite names, the current layout files, this handbook, the style references and the latest screenshots.
+3. **You** deliver the ZIP (section 7). With the editor open and Unreal MCP connected you can first try layout changes live in PIE with `rts.UI.Reload`.
+4. **The producer** runs `/ui-intake <zip>`: Claude checks the delivery before anything is copied (places and names, JSON, PNG sizes, binding keys, actions, sprites) and sends every problem back with its file and key; a clean delivery is copied in, its art imported when it changed, and the tests run. A round that only changes layout files needs no setup: `rts.UI.Reload` in the running game shows it at once. No code rebuild is needed between rounds.
+5. **The producer** plays, and runs `/ui-review <Panel>`: the game takes screenshots of the HUD in every faction look at 1920x1080, 2560x1440 and 3440x1440 in a fixed match state (`AI_TEAM.md`, "Screenshots of the HUD"), and the reviewer's review is posted on the design issue. The producer sends you the feedback, the review and the screenshots, and the next round starts at step 3.
+6. **When it is right**, the producer approves the commit `/ui-intake` proposes; it closes the design issue. Any "Requests for code" in your spec become new issues.
 
 Modders follow the same formats: a mod puts its own files under `Mods/<ModName>/UI/`. A layout file there replaces the base layout with the same name, also in a shipped game. Sprite and theme entries there override the base entries with the same name when the setup script runs.

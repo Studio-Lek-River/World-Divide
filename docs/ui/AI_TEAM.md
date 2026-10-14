@@ -52,11 +52,17 @@ Each client connects once; the editor must be running for the server to answer.
 
 ## The reviewer
 
-The reviewer has no instructions file of its own, so it cannot pick up the designer's `AGENTS.md` role by mistake. `/ui-review` (#108) passes the reviewer role and its rules in the prompt and runs `agy -p --mode plan` without `--dangerously-skip-permissions`, so the reviewer can look at the editor but cannot change a file or call a tool that writes.
+The reviewer has no instructions file of its own, so it cannot pick up the designer's `AGENTS.md` role by mistake. `/ui-review` passes the reviewer role and its rules in the prompt (`.claude/skills/ui-review/reviewer-prompt.md`) and runs `agy -p --mode plan` without `--dangerously-skip-permissions`, in a folder outside the repository that holds only the screenshots, the handbook, the spec and the brief, so the reviewer can look but cannot change a file or call a tool that writes.
 
 ## The round
 
-Each panel follows handbook section 8: Claude completes the code issue, the producer briefs the designer, the designer delivers, Claude takes the delivery in, the reviewer and the producer judge it in the running game, and the next round starts from that feedback. The skills `/ui-brief`, `/ui-intake` and `/ui-review` (#108) run these steps.
+Each panel follows handbook section 8: Claude completes the code issue, the producer briefs the designer, the designer delivers, Claude takes the delivery in, the reviewer and the producer judge it in the running game, and the next round starts from that feedback. Three Claude Code skills (`.claude/skills`) run the steps, so the producer only picks the panel, plays and judges:
+
+| Skill | Does | Writes |
+|---|---|---|
+| `/ui-brief <design issue>` | `Tools/Scripts/ui_brief.py` reads the issue's prompt and panels, and the binding keys, lists and actions of those panels from the code (`ue.ps1 -Task uibindings`) | `Saved/UIBriefs/<Panel>/`: the prompt, `bindings.md`, `sprites.md`, the panels' layouts, the handbook, the style references and the latest screenshots, ready to attach to ChatGPT |
+| `/ui-intake <zip>` | `Tools/Scripts/ui_intake.py` unpacks the ZIP into `Saved/UIIntake/`, checks places, names, JSON, PNG sizes, binding keys, actions and sprites (`ue.ps1 -Task uicheck`) and copies nothing when a problem is found; then it copies the files in, merges the sprite entries, runs setup when art changed and the full test run, drafts issues for "Requests for code", and stops with the commit proposed | The delivery's files, `Content/UI` after setup, a commit with `Closes #<design issue>` once the producer approves |
+| `/ui-review <Panel>` | Takes the screenshots (`ue.ps1 -Task uishots -Panel`), gives them with the handbook, the spec and the brief to the reviewer in a folder outside the repository, and runs `agy -p --mode plan` with a fixed review format: broken handbook rules, readability, the HUD budget, states without colour, per resolution, at most 10 points | A comment with the review on the design issue |
 
 ## Screenshots of the HUD
 

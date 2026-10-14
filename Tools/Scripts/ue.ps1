@@ -11,6 +11,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task s
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task editor
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots -Panel ResourceBar
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uibindings
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uicheck -Path Saved/UIIntake/HUD_2026-10-14/staging/UI
 
 The engine is taken from $env:UE_ROOT, falling back to D:\Program Files\Epic Games\UE_5.8.
 Exits nonzero on any failure: 2 when the editor is running (build, editor), 3 when setup must rewrite read-only LFS assets.
@@ -19,10 +21,13 @@ Setup runs without a renderer and draws the lobby's map previews; -Render gives 
 Editor opens the editor with the Unreal MCP server at http://127.0.0.1:8000/mcp (docs/ui/AI_TEAM.md); test and setup run without it.
 Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in the UI test state for each faction look at
 1920x1080, 2560x1440 and 3440x1440 to Saved/UIShots/HUD, or with -Panel to Saved/UIShots/<Panel> with a crop of that panel.
+Uibindings writes every binding key, list and action with its panels, and the widgets, colours, fonts and sprites a layout
+may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck validates the layouts of the UI folder -Path
+(an unpacked delivery, for /ui-intake) and prints each problem. -Out and -Path are relative to the repository root.
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'uibindings', 'uicheck')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -31,7 +36,11 @@ param(
 
 	[switch]$Render,
 
-	[string]$Panel = ''
+	[string]$Panel = '',
+
+	[string]$Out = 'Saved/UIBriefs/bindings.json',
+
+	[string]$Path = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -197,10 +206,51 @@ function Invoke-UIShots {
 	Write-Host "UISHOTS SUCCEEDED: $ShotDir"
 }
 
+# The headless UI commandlet (URTSUICommandlet) with Argument; returns its exit code, its log in LogFile.
+function Invoke-UICommandlet([string]$Argument, [string]$LogFile) {
+	& $EditorCmd $Project -run=RTSUI $Argument "-abslog=$LogFile" $NoMCPPlugins -unattended -nullrhi -nosplash -nosound | Out-Null
+	return $LASTEXITCODE
+}
+
+function Invoke-UIBindings {
+	$LogFile = Join-Path $RepoRoot 'Saved\Logs\UIBindings.log'
+	$File = Join-Path $RepoRoot $Out
+	New-Item -ItemType Directory -Force (Split-Path $File) | Out-Null
+	if (Test-Path $File) { Remove-Item -Force $File }
+	$Exit = Invoke-UICommandlet "-Bindings=$Out" $LogFile
+	if ($Exit -ne 0 -or -not (Test-Path $File)) {
+		Select-String -Path $LogFile -Pattern 'RTSUI|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line }
+		Write-Host "UIBINDINGS FAILED (exit $Exit). Log: $LogFile"
+		exit 1
+	}
+	Write-Host "UIBINDINGS SUCCEEDED: $File"
+}
+
+function Invoke-UICheck {
+	if (-not $Path -or -not (Test-Path (Join-Path $RepoRoot $Path) -PathType Container)) {
+		Write-Host "UICHECK FAILED: -Path must name a UI folder under the repository, got '$Path'."
+		exit 1
+	}
+	$LogFile = Join-Path $RepoRoot 'Saved\Logs\UICheck.log'
+	$Exit = Invoke-UICommandlet "-Validate=$Path" $LogFile
+	$Problems = @(Select-String -Path $LogFile -Pattern 'UICHECK: (.*)$' | ForEach-Object { $_.Matches[0].Groups[1].Value })
+	$Problems | ForEach-Object { Write-Host "UI/Layouts/$_" }
+	if ($Exit -ne 0) {
+		if ($Problems.Count -eq 0) {
+			Select-String -Path $LogFile -Pattern 'RTSUI|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line }
+		}
+		Write-Host "UICHECK FAILED (exit $Exit, $($Problems.Count) problem(s)). Log: $LogFile"
+		exit 1
+	}
+	Write-Host 'UICHECK SUCCEEDED'
+}
+
 switch ($Task) {
 	'build' { Invoke-Build }
 	'test' { Invoke-Test }
 	'setup' { Invoke-Setup }
 	'editor' { Invoke-Editor }
 	'uishots' { Invoke-UIShots }
+	'uibindings' { Invoke-UIBindings }
+	'uicheck' { Invoke-UICheck }
 }

@@ -129,6 +129,11 @@ namespace
 			Out.Keys.Append({ CreditsKey, PowerProducedKey, PowerConsumedKey, PowerLowKey, PowerColorKey, UsesPowerKey, FactionKey });
 		}
 
+		virtual TArray<FName> GetPanels() const override
+		{
+			return { TEXT("ResourceBar") };
+		}
+
 		virtual bool GetValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
 		{
 			const ARTSPlayerState* State = Context.Player ? Context.Player->GetPlayerState<ARTSPlayerState>() : nullptr;
@@ -179,6 +184,11 @@ namespace
 		{
 			Out.Keys.Append({ ResultKey, ResultTitleKey, ResultMessageKey, ResultColorKey, CanRestartKey });
 			Out.Actions.Append({ RestartAction, ResumeAction, LeaveAction });
+		}
+
+		virtual TArray<FName> GetPanels() const override
+		{
+			return { TEXT("MatchResult"), TEXT("InGameMenu") };
 		}
 
 		virtual bool GetValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override

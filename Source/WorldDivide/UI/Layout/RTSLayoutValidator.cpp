@@ -3,6 +3,11 @@
 #include "Core/RTSSettings.h"
 #include "Data/RTSFactionData.h"
 #include "Dom/JsonObject.h"
+#include "HAL/FileManager.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 #include "UI/Layout/RTSLayoutElement.h"
 #include "UI/Layout/RTSLayoutFiles.h"
 #include "UI/Layout/RTSLayoutWidget.h"
@@ -56,6 +61,39 @@ FRTSLayoutValidationContext FRTSLayoutValidationContext::MakeDefault()
 	Context.Widgets.Append(RTSLayout::GetPanelNames());
 	Context.Declarations = RTSUIBindings::Declare(RTSUIBindings::GetDefaultSources());
 	return Context;
+}
+
+void FRTSLayoutValidationContext::AddFolder(const FString& UIDir)
+{
+	for (const TPair<FString, FString>& Layout : RTSLayoutFiles::FindFiles({ FPaths::Combine(UIDir, TEXT("Layouts")) }))
+	{
+		Layouts.Add(Layout.Key);
+	}
+
+	const FString SpritesDir = FPaths::Combine(UIDir, TEXT("Sprites"));
+	TArray<FString> Files;
+	IFileManager::Get().FindFiles(Files, *FPaths::Combine(SpritesDir, TEXT("*.sprites.json")), true, false);
+	for (const FString& File : Files)
+	{
+		FString Text;
+		TSharedPtr<FJsonObject> Object;
+		const TSharedPtr<FJsonObject>* Entries = nullptr;
+		if (!FFileHelper::LoadFileToString(Text, *FPaths::Combine(SpritesDir, File))
+			|| !FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Object) || !Object.IsValid()
+			|| !Object->TryGetObjectField(TEXT("sprites"), Entries))
+		{
+			continue;
+		}
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Sprite : (*Entries)->Values)
+		{
+			FString Set;
+			FString Name;
+			if (Sprite.Key.Split(TEXT("."), &Set, &Name) && !Name.IsEmpty())
+			{
+				Sprites.Add(FName(*Name));
+			}
+		}
+	}
 }
 
 namespace
@@ -204,5 +242,22 @@ bool RTSLayout::Validate(const FString& Text, const FString& File, const FRTSLay
 	FRTSLayoutElement Root;
 	Parse(*Object, File, Root, OutErrors);
 	FValidator(File, Context, OutErrors).Check(Root, NAME_None);
+	return OutErrors.Num() == ErrorsBefore;
+}
+
+bool RTSLayout::ValidateFolder(const FString& UIDir, const FRTSLayoutValidationContext& Context, TArray<FString>& OutErrors)
+{
+	const int32 ErrorsBefore = OutErrors.Num();
+	for (const TPair<FString, FString>& File : RTSLayoutFiles::FindFiles({ FPaths::Combine(UIDir, TEXT("Layouts")) }))
+	{
+		FString Text;
+		const FString Name = FPaths::GetCleanFilename(File.Value);
+		if (!FFileHelper::LoadFileToString(Text, *File.Value))
+		{
+			OutErrors.Add(FormatError(Name, TEXT("file"), TEXT("cannot be read")));
+			continue;
+		}
+		Validate(Text, Name, Context, OutErrors);
+	}
 	return OutErrors.Num() == ErrorsBefore;
 }

@@ -23,6 +23,13 @@ struct WORLDDIVIDE_API FRTSLayoutValidationContext
 	 * RTSLayoutFiles::GetRoots, RTSLayout::GetPanelNames and RTSUIBindings::GetDefaultSources.
 	 */
 	static FRTSLayoutValidationContext MakeDefault();
+
+	/**
+	 * Adds the layout files in UIDir/Layouts and the sprite names (without the set prefix) in UIDir/Sprites/*.sprites.json,
+	 * so a delivery whose sprites are not imported yet validates against them. A sprites file that does not parse adds
+	 * nothing; the setup script reports it.
+	 */
+	void AddFolder(const FString& UIDir);
 };
 
 namespace RTSLayout
@@ -33,4 +40,7 @@ namespace RTSLayout
 	 * twice. Each problem is one "<File>: <Element>: <Message>" in OutErrors. True when there are none.
 	 */
 	WORLDDIVIDE_API bool Validate(const FString& Text, const FString& File, const FRTSLayoutValidationContext& Context, TArray<FString>& OutErrors);
+
+	/** Validates every layout file in UIDir/Layouts against Context, each problem in OutErrors. True when there are none. */
+	WORLDDIVIDE_API bool ValidateFolder(const FString& UIDir, const FRTSLayoutValidationContext& Context, TArray<FString>& OutErrors);
 }
