@@ -28,8 +28,17 @@
     "Common.Icon.Airfield": { "texture": "Textures/Common/Icons/T_Icon_Common_Airfield.png", "size": [64, 64] },
     "Common.Icon.Headquarters": { "texture": "Textures/Common/Icons/T_Icon_Common_Headquarters.png", "size": [64, 64] },
     "Common.Icon.Superweapon": { "texture": "Textures/Common/Icons/T_Icon_Common_Superweapon.png", "size": [64, 64] },
+    "Common.Icon.SuperweaponLaunch": { "texture": "Textures/Common/T_UI_Common_Icon_SuperweaponLaunch.png", "size": [64, 64], "tint": true },
     "Common.Icon.RifleTraining": { "texture": "Textures/Common/Icons/T_Icon_Common_RifleTraining.png", "size": [64, 64] },
     "Common.Icon.Placeholder": { "texture": "Textures/Common/T_Icon_Common_Placeholder.png", "size": [64, 64] },
-    "Common.Portrait.Placeholder": { "texture": "Textures/Common/T_Icon_Common_Placeholder.png", "size": [64, 64] }
+    "Common.Portrait.Placeholder": { "texture": "Textures/Common/T_Icon_Common_Placeholder.png", "size": [64, 64] },
+    "Common.Icon.RankStar": { "texture": "Textures/Common/T_UI_Common_Icon_RankStar.png", "size": [64, 64], "tint": true },
+    "Common.Icon.Rank": { "texture": "Textures/Common/T_UI_Common_Icon_Rank.png", "size": [64, 64], "tint": true },
+    "Common.Icon.Lock": { "texture": "Textures/Common/T_UI_Common_Icon_Lock.png", "size": [48, 48], "tint": true },
+    "Common.Icon.Overlays": { "texture": "Textures/Common/T_UI_Common_Icon_Overlays.png", "size": [64, 64], "tint": true },
+    "Common.Icon.GeneralPowers": { "texture": "Textures/Common/T_UI_Common_Icon_GeneralPowers.png", "size": [64, 64], "tint": true },
+    "Common.Icon.Objectives": { "texture": "Textures/Common/T_UI_Common_Icon_Objectives.png", "size": [64, 64], "tint": true },
+    "Common.PowerBar": { "texture": "Textures/Common/T_UI_Common_PowerBar_Background.png", "size": [256, 16], "margin": [4, 4, 4, 4] },
+    "Common.PowerFill": { "texture": "Textures/Common/T_UI_Common_PowerBar_Fill.png", "size": [256, 16], "margin": [4, 4, 4, 4], "tint": true }
   }
 }

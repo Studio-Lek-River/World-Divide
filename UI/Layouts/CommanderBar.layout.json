@@ -1,45 +1,1480 @@
 {
-  "name": "CommanderBar",
   "type": "Panel",
+  "name": "CommanderBar",
   "anchor": "Fill",
-  "sprite": "Panel",
+  "hitTest": false,
   "children": [
     {
-      "name": "PortraitFrame",
       "type": "Panel",
-      "anchor": "Left",
-      "position": [8, 0],
-      "size": [80, 80],
-      "children": [{ "name": "Portrait", "type": "Image", "anchor": "Fill", "bind": { "sprite": "commander.portrait" } }]
-    },
-    {
-      "name": "Details",
-      "type": "VBox",
+      "name": "CommanderPlate",
       "anchor": "TopLeft",
-      "position": [100, 8],
-      "spacing": 4,
-      "align": "Start",
+      "sprite": "CommanderBar",
+      "padding": [
+        8,
+        8,
+        8,
+        8
+      ],
       "children": [
-        { "name": "CommanderName", "type": "Text", "text": "{commander.name}", "font": "Body", "color": "Text", "maxLines": 1 },
         {
-          "name": "Powers",
           "type": "HBox",
-          "spacing": 4,
-          "repeat": "commander.powers",
-          "template": {
-            "type": "Button",
-            "sprite": "Button",
-            "action": "UsePower",
-            "tooltip": true,
-            "size": [48, 48],
-            "bind": { "enabled": "item.ready" },
-            "children": [
-              { "type": "Image", "anchor": "Fill", "position": [8, 8], "bind": { "sprite": "item.icon" }, "visibleWhen": "!item.locked" },
-              { "type": "Image", "sprite": "Icon.Placeholder", "anchor": "Fill", "position": [12, 12], "opacity": 0.35, "visibleWhen": "item.locked" },
-              { "type": "ProgressBar", "sprite": "ProgressBar.Background", "fillSprite": "ProgressBar.Fill", "fillColor": "Accent",
-                "anchor": "BottomStretch", "position": [4, 4], "size": [0, 4], "bind": { "progress": "item.charge" }, "visibleWhen": "!item.locked" }
-            ]
-          }
+          "name": "CommanderContents",
+          "spacing": 6,
+          "align": "Center",
+          "children": [
+            {
+              "type": "Button",
+              "name": "General",
+              "sprite": "PowerSlot",
+              "size": [
+                80,
+                92
+              ],
+              "action": "OpenGeneralPowers",
+              "tooltip": true,
+              "children": [
+                {
+                  "type": "Image",
+                  "name": "Portrait",
+                  "anchor": "Top",
+                  "position": [
+                    0,
+                    7
+                  ],
+                  "size": [
+                    64,
+                    64
+                  ],
+                  "bind": {
+                    "sprite": "commander.portrait"
+                  }
+                },
+                {
+                  "type": "HBox",
+                  "name": "Rank",
+                  "anchor": "Bottom",
+                  "position": [
+                    0,
+                    8
+                  ],
+                  "size": [
+                    63,
+                    11
+                  ],
+                  "spacing": 2,
+                  "align": "Center",
+                  "repeat": "player.rank",
+                  "count": 5,
+                  "template": {
+                    "type": "Panel",
+                    "size": [
+                      11,
+                      11
+                    ],
+                    "hitTest": false,
+                    "children": [
+                      {
+                        "type": "Image",
+                        "name": "EarnedStar",
+                        "sprite": "Icon.RankStar",
+                        "position": [
+                          0,
+                          0
+                        ],
+                        "size": [
+                          11,
+                          11
+                        ],
+                        "color": "#E6E9EE",
+                        "visibleWhen": "item.earned"
+                      },
+                      {
+                        "type": "Image",
+                        "name": "UnearnedStar",
+                        "sprite": "Icon.RankStar",
+                        "position": [
+                          0,
+                          0
+                        ],
+                        "size": [
+                          11,
+                          11
+                        ],
+                        "color": "#B5C0CE",
+                        "visibleWhen": "!item.earned",
+                        "opacity": 0.4
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "HBox",
+              "name": "Powers",
+              "spacing": 4,
+              "align": "Center",
+              "repeat": "commander.powers",
+              "template": {
+                "type": "Button",
+                "sprite": "PowerSlot",
+                "size": [
+                  48,
+                  48
+                ],
+                "action": "UsePower",
+                "tooltip": true,
+                "visibleWhen": "!item.locked",
+                "bind": {
+                  "enabled": "item.ready",
+                  "selected": "item.ready"
+                },
+                "children": [
+                  {
+                    "type": "Image",
+                    "name": "PowerArt",
+                    "sprite": "Icon.Placeholder",
+                    "anchor": "Center",
+                    "position": [
+                      0,
+                      0
+                    ],
+                    "size": [
+                      28,
+                      28
+                    ],
+                    "bind": {
+                      "sprite": "item.icon"
+                    }
+                  },
+                  {
+                    "type": "ProgressBar",
+                    "name": "Charge",
+                    "anchor": "BottomStretch",
+                    "position": [
+                      6,
+                      5
+                    ],
+                    "size": [
+                      0,
+                      3
+                    ],
+                    "sprite": "PowerBar",
+                    "fillSprite": "PowerFill",
+                    "fillColor": "#75B9DF",
+                    "bind": {
+                      "progress": "item.charge"
+                    },
+                    "visibleWhen": "!item.ready"
+                  },
+                  {
+                    "type": "Panel",
+                    "name": "LevelPips",
+                    "anchor": "Fill",
+                    "hitTest": false,
+                    "visibleWhen": "!item.locked",
+                    "children": [
+                      {
+                        "type": "Panel",
+                        "name": "MaxLevel1",
+                        "anchor": "Fill",
+                        "hitTest": false,
+                        "visibleWhen": "item.levelMax=1",
+                        "children": [
+                          {
+                            "type": "Panel",
+                            "name": "Pips_1_0",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              3,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=0",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_1_1",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              3,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=1",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Panel",
+                        "name": "MaxLevel2",
+                        "anchor": "Fill",
+                        "hitTest": false,
+                        "visibleWhen": "item.levelMax=2",
+                        "children": [
+                          {
+                            "type": "Panel",
+                            "name": "Pips_2_0",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              7,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=0",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_2_1",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              7,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=1",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_2_2",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              7,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=2",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Panel",
+                        "name": "MaxLevel3",
+                        "anchor": "Fill",
+                        "hitTest": false,
+                        "visibleWhen": "item.levelMax=3",
+                        "children": [
+                          {
+                            "type": "Panel",
+                            "name": "Pips_3_0",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              11,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=0",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_3_1",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              11,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=1",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_3_2",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              11,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=2",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_3_3",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              11,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=3",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Panel",
+                        "name": "MaxLevel4",
+                        "anchor": "Fill",
+                        "hitTest": false,
+                        "visibleWhen": "item.levelMax=4",
+                        "children": [
+                          {
+                            "type": "Panel",
+                            "name": "Pips_4_0",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              15,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=0",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  12,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_4_1",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              15,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=1",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  12,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_4_2",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              15,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=2",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  12,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_4_3",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              15,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=3",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  12,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_4_4",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              15,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=4",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  12,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Panel",
+                        "name": "MaxLevel5",
+                        "anchor": "Fill",
+                        "hitTest": false,
+                        "visibleWhen": "item.levelMax=5",
+                        "children": [
+                          {
+                            "type": "Panel",
+                            "name": "Pips_5_0",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              19,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=0",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  12,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  16,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_5_1",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              19,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=1",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  12,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  16,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_5_2",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              19,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=2",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  12,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  16,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_5_3",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              19,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=3",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  12,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  16,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_5_4",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              19,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=4",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  12,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  16,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#586674",
+                                "hitTest": false
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Panel",
+                            "name": "Pips_5_5",
+                            "anchor": "Top",
+                            "position": [
+                              0,
+                              5
+                            ],
+                            "size": [
+                              19,
+                              3
+                            ],
+                            "hitTest": false,
+                            "visibleWhen": "item.level=5",
+                            "children": [
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  0,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  4,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  8,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  12,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              },
+                              {
+                                "type": "Panel",
+                                "position": [
+                                  16,
+                                  0
+                                ],
+                                "size": [
+                                  3,
+                                  3
+                                ],
+                                "color": "#E6E9EE",
+                                "hitTest": false
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
         }
       ]
     }

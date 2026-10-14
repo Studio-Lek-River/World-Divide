@@ -1,0 +1,28 @@
+{
+  "sprites": {
+    "USA.ResourceStrip": { "texture": "Textures/USA/T_UI_USA_ResourceStrip.png", "size": [1024, 80], "margin": [24, 12, 24, 12] },
+    "USA.ResourceSlot": { "texture": "Textures/USA/T_UI_USA_ResourceSlot.png", "size": [320, 72], "margin": [16, 12, 16, 12] },
+    "USA.BottomPanel": { "texture": "Textures/USA/T_UI_USA_BottomPanel.png", "size": [512, 512], "margin": [24, 24, 24, 24] },
+    "USA.CommanderBar": { "texture": "Textures/USA/T_UI_USA_CommanderBar.png", "size": [1024, 192], "margin": [24, 24, 24, 24] },
+    "USA.PortraitFrame": { "texture": "Textures/USA/T_UI_USA_PortraitFrame.png", "size": [192, 192], "margin": [24, 24, 24, 24] },
+    "USA.PowerSlot": { "states": {
+                         "Normal": "Textures/USA/T_UI_USA_PowerSlot_Normal.png",
+                         "Hover": "Textures/USA/T_UI_USA_PowerSlot_Hover.png",
+                         "Pressed": "Textures/USA/T_UI_USA_PowerSlot_Pressed.png",
+                         "Disabled": "Textures/USA/T_UI_USA_PowerSlot_Disabled.png",
+                         "Selected": "Textures/USA/T_UI_USA_PowerSlot_Selected.png" },
+                       "size": [128, 128], "margin": [16, 16, 16, 16] },
+    "USA.MapButton": { "states": {
+                         "Normal": "Textures/USA/T_UI_USA_MapButton_Normal.png",
+                         "Hover": "Textures/USA/T_UI_USA_MapButton_Hover.png",
+                         "Pressed": "Textures/USA/T_UI_USA_MapButton_Pressed.png",
+                         "Disabled": "Textures/USA/T_UI_USA_MapButton_Disabled.png" },
+                       "size": [384, 96], "margin": [24, 16, 24, 16] },
+    "USA.SuperweaponButton": { "states": {
+                                 "Normal": "Textures/USA/T_UI_USA_SuperweaponButton_Normal.png",
+                                 "Hover": "Textures/USA/T_UI_USA_SuperweaponButton_Hover.png",
+                                 "Pressed": "Textures/USA/T_UI_USA_SuperweaponButton_Pressed.png",
+                                 "Disabled": "Textures/USA/T_UI_USA_SuperweaponButton_Disabled.png" },
+                               "size": [128, 96], "margin": [16, 16, 16, 16] }
+  }
+}

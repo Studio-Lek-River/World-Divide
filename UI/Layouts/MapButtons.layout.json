@@ -1,47 +1,142 @@
 {
-  "name": "MapButtons",
   "type": "HBox",
+  "name": "MapButtons",
   "anchor": "Fill",
   "spacing": 4,
   "align": "Fill",
   "children": [
     {
+      "type": "Button",
       "name": "Overlays",
-      "type": "Button",
-      "sprite": "Button",
+      "anchor": "Fill",
+      "sprite": "MapButton",
       "action": "OpenOverlays",
-      "anchor": "Fill",
-      "bind": { "enabled": "map.overlays.enabled" },
+      "tooltip": true,
+      "bind": {
+        "enabled": "map.overlays.enabled"
+      },
       "children": [
-        { "type": "Text", "anchor": "Top", "position": [0, 6], "text": "Overlays", "font": "Body", "fontSize": 12, "color": "Text" },
-        { "type": "Text", "anchor": "Bottom", "position": [0, 4], "text": "Coming later", "font": "Body", "fontSize": 9, "color": "MutedText",
-          "visibleWhen": "!map.overlays.enabled" }
+        {
+          "type": "Image",
+          "anchor": "Top",
+          "position": [
+            0,
+            0
+          ],
+          "size": [
+            16,
+            16
+          ],
+          "sprite": "Icon.Overlays",
+          "color": "#75B9DF"
+        },
+        {
+          "type": "Text",
+          "text": "Overlays",
+          "font": "Body",
+          "fontSize": 14,
+          "color": "#E6E9EE",
+          "anchor": "BottomStretch",
+          "position": [
+            0,
+            0
+          ],
+          "size": [
+            0,
+            18
+          ],
+          "align": "Center",
+          "wrap": false,
+          "maxLines": 1
+        },
+        {
+          "type": "Image",
+          "anchor": "TopRight",
+          "position": [
+            0,
+            0
+          ],
+          "size": [
+            10,
+            10
+          ],
+          "sprite": "Icon.Lock",
+          "color": "#E6E9EE",
+          "visibleWhen": "!map.overlays.enabled"
+        }
+      ],
+      "padding": [
+        8,
+        4,
+        8,
+        4
       ]
     },
     {
-      "name": "GeneralPowers",
       "type": "Button",
-      "sprite": "Button",
-      "action": "OpenGeneralPowers",
-      "anchor": "Fill",
-      "bind": { "enabled": "map.powers.enabled" },
-      "children": [
-        { "type": "Text", "anchor": "Top", "position": [0, 6], "text": "Powers", "font": "Body", "fontSize": 12, "color": "Text" },
-        { "type": "Text", "anchor": "Bottom", "position": [0, 4], "text": "Coming later", "font": "Body", "fontSize": 9, "color": "MutedText",
-          "visibleWhen": "!map.powers.enabled" }
-      ]
-    },
-    {
       "name": "Objectives",
-      "type": "Button",
-      "sprite": "Button",
-      "action": "OpenObjectives",
       "anchor": "Fill",
-      "bind": { "enabled": "map.objectives.enabled" },
+      "sprite": "MapButton",
+      "action": "OpenObjectives",
+      "tooltip": true,
+      "bind": {
+        "enabled": "map.objectives.enabled"
+      },
       "children": [
-        { "type": "Text", "anchor": "Top", "position": [0, 6], "text": "Objectives", "font": "Body", "fontSize": 12, "color": "Text" },
-        { "type": "Text", "anchor": "Bottom", "position": [0, 4], "text": "Coming later", "font": "Body", "fontSize": 9, "color": "MutedText",
-          "visibleWhen": "!map.objectives.enabled" }
+        {
+          "type": "Image",
+          "anchor": "Top",
+          "position": [
+            0,
+            0
+          ],
+          "size": [
+            16,
+            16
+          ],
+          "sprite": "Icon.Objectives",
+          "color": "#75B9DF"
+        },
+        {
+          "type": "Text",
+          "text": "Objectives",
+          "font": "Body",
+          "fontSize": 14,
+          "color": "#E6E9EE",
+          "anchor": "BottomStretch",
+          "position": [
+            0,
+            0
+          ],
+          "size": [
+            0,
+            18
+          ],
+          "align": "Center",
+          "wrap": false,
+          "maxLines": 1
+        },
+        {
+          "type": "Image",
+          "anchor": "TopRight",
+          "position": [
+            0,
+            0
+          ],
+          "size": [
+            10,
+            10
+          ],
+          "sprite": "Icon.Lock",
+          "color": "#E6E9EE",
+          "visibleWhen": "!map.objectives.enabled"
+        }
+      ],
+      "padding": [
+        8,
+        4,
+        8,
+        4
       ]
     }
   ]

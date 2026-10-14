@@ -1,50 +1,232 @@
 {
-  "name": "ResourceBar",
   "type": "Panel",
+  "name": "ResourceBar",
   "anchor": "Fill",
-  "sprite": "Panel",
+  "sprite": "ResourceStrip",
+  "padding": [
+    12,
+    4,
+    12,
+    4
+  ],
   "children": [
     {
-      "name": "Power",
       "type": "HBox",
-      "anchor": "Left",
-      "position": [16, 0],
+      "name": "ResourcePlates",
+      "anchor": "LeftStretch",
       "spacing": 8,
+      "align": "Center",
       "children": [
-        { "name": "PowerIcon", "type": "Image", "sprite": "Icon.Power", "size": [24, 24], "color": "Accent", "visibleWhen": "!player.power.low" },
-        { "name": "PowerLowIcon", "type": "Image", "sprite": "Icon.PowerLow", "size": [24, 24], "color": "Warning", "visibleWhen": "player.power.low" },
-        { "name": "PowerBar", "type": "ProgressBar", "sprite": "ProgressBar.Background", "fillSprite": "ProgressBar.Fill", "fillColor": "Accent",
-          "size": [160, 12], "bind": { "progress": "player.power.ratio" } },
-        { "name": "PowerText", "type": "Text", "text": "{player.power.produced} / {player.power.consumed}", "font": "Number", "color": "Text",
-          "bind": { "color": "player.power.color" } }
+        {
+          "type": "Panel",
+          "name": "Power",
+          "size": [
+            306,
+            32
+          ],
+          "sprite": "ResourceSlot",
+          "padding": [
+            12,
+            0,
+            12,
+            0
+          ],
+          "children": [
+            {
+              "type": "HBox",
+              "name": "PowerContents",
+              "anchor": "LeftStretch",
+              "spacing": 8,
+              "align": "Center",
+              "children": [
+                {
+                  "type": "Panel",
+                  "name": "PowerIconCell",
+                  "size": [
+                    20,
+                    20
+                  ],
+                  "hitTest": false,
+                  "children": [
+                    {
+                      "type": "Image",
+                      "name": "PowerIcon",
+                      "sprite": "Icon.Power",
+                      "size": [
+                        20,
+                        20
+                      ],
+                      "color": "#75B9DF",
+                      "visibleWhen": "!player.power.low",
+                      "bind": {
+                        "color": "player.power.color"
+                      }
+                    },
+                    {
+                      "type": "Image",
+                      "name": "PowerLowIcon",
+                      "sprite": "Icon.PowerLow",
+                      "size": [
+                        20,
+                        20
+                      ],
+                      "color": "#F1BC65",
+                      "visibleWhen": "player.power.low",
+                      "bind": {
+                        "color": "player.power.color"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "Text",
+                  "name": "PowerLabel",
+                  "text": "POWER",
+                  "font": "Body",
+                  "fontSize": 16,
+                  "color": "#B5C0CE",
+                  "size": [
+                    64,
+                    22
+                  ],
+                  "wrap": false,
+                  "maxLines": 1
+                },
+                {
+                  "type": "Panel",
+                  "name": "PowerBarCell",
+                  "size": [
+                    90,
+                    10
+                  ],
+                  "hitTest": false,
+                  "children": [
+                    {
+                      "type": "ProgressBar",
+                      "name": "PowerBar",
+                      "anchor": "Fill",
+                      "sprite": "PowerBar",
+                      "fillSprite": "PowerFill",
+                      "fillColor": "#75B9DF",
+                      "bind": {
+                        "progress": "player.power.ratio"
+                      },
+                      "visibleWhen": "!player.power.low"
+                    },
+                    {
+                      "type": "ProgressBar",
+                      "name": "PowerBarLow",
+                      "anchor": "Fill",
+                      "sprite": "PowerBar",
+                      "fillSprite": "PowerFill",
+                      "fillColor": "#F1BC65",
+                      "bind": {
+                        "progress": "player.power.ratio"
+                      },
+                      "visibleWhen": "player.power.low"
+                    }
+                  ]
+                },
+                {
+                  "type": "Text",
+                  "name": "PowerText",
+                  "text": "{player.power.produced} / {player.power.consumed}",
+                  "font": "Number",
+                  "fontSize": 16,
+                  "color": "#E6E9EE",
+                  "size": [
+                    84,
+                    22
+                  ],
+                  "wrap": false,
+                  "maxLines": 1,
+                  "bind": {
+                    "color": "player.power.color"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Panel",
+          "name": "Credits",
+          "size": [
+            222,
+            32
+          ],
+          "sprite": "ResourceSlot",
+          "padding": [
+            12,
+            0,
+            12,
+            0
+          ],
+          "children": [
+            {
+              "type": "HBox",
+              "name": "CreditsContents",
+              "anchor": "LeftStretch",
+              "spacing": 8,
+              "align": "Center",
+              "children": [
+                {
+                  "type": "Image",
+                  "name": "CreditsIcon",
+                  "sprite": "Icon.Credits",
+                  "size": [
+                    20,
+                    20
+                  ],
+                  "color": "#75B9DF"
+                },
+                {
+                  "type": "Text",
+                  "name": "CreditsLabel",
+                  "text": "CREDITS",
+                  "font": "Body",
+                  "fontSize": 16,
+                  "color": "#B5C0CE",
+                  "size": [
+                    70,
+                    22
+                  ],
+                  "wrap": false,
+                  "maxLines": 1
+                },
+                {
+                  "type": "Text",
+                  "name": "CreditsText",
+                  "text": "{player.credits}",
+                  "font": "Number",
+                  "fontSize": 16,
+                  "color": "#E6E9EE",
+                  "size": [
+                    76,
+                    22
+                  ],
+                  "wrap": false,
+                  "maxLines": 1
+                }
+              ]
+            }
+          ]
+        }
       ]
     },
     {
-      "name": "Credits",
-      "type": "HBox",
-      "anchor": "Center",
-      "spacing": 8,
-      "children": [
-        { "name": "CreditsIcon", "type": "Image", "sprite": "Icon.Credits", "size": [24, 24], "color": "Accent" },
-        { "name": "CreditsText", "type": "Text", "text": "{player.credits}", "font": "Number", "color": "Text" }
-      ]
-    },
-    {
-      "name": "Rank",
-      "type": "HBox",
+      "type": "Panel",
+      "name": "SuperweaponReserve",
       "anchor": "Right",
-      "position": [16, 0],
-      "spacing": 4,
-      "repeat": "player.rank",
-      "count": 5,
-      "template": {
-        "type": "Panel",
-        "size": [20, 20],
-        "children": [
-          { "type": "Image", "sprite": "Icon.Placeholder", "anchor": "Fill", "color": "Accent", "visibleWhen": "item.earned" },
-          { "type": "Image", "sprite": "Icon.Placeholder", "anchor": "Fill", "color": "MutedText", "opacity": 0.5, "visibleWhen": "!item.earned" }
-        ]
-      }
+      "position": [
+        0,
+        0
+      ],
+      "size": [
+        64,
+        32
+      ],
+      "hitTest": false
     }
   ]
 }

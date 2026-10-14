@@ -3154,7 +3154,8 @@ bool FRTSCheckHUDWidget::Update()
 	Test->TestEqual(TEXT("A click on the bar keeps the selection"), Controller->GetSelectedUnits().Num(), Selected);
 
 	// Every piece of the frame keeps clicks, including the panels that are still empty.
-	for (const TCHAR* Name : { TEXT("CommanderBar"), TEXT("MinimapFrame"), TEXT("Overlays"), TEXT("SelectionFrame"), TEXT("CommandsFrame"),
+	// The commander plate, not its slot: the plate grows with the abilities and leaves the rest of the slot to the battlefield.
+	for (const TCHAR* Name : { TEXT("CommanderPlate"), TEXT("MinimapFrame"), TEXT("Overlays"), TEXT("SelectionFrame"), TEXT("CommandsFrame"),
 		TEXT("UpgradesFrame") })
 	{
 		FBox2D Rect;

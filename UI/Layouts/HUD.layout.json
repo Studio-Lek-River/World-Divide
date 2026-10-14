@@ -2,48 +2,143 @@
   "name": "HUD",
   "type": "Panel",
   "anchor": "Fill",
-  "modals": ["MatchResult", "InGameMenu"],
+  "modals": [
+    "MatchResult",
+    "InGameMenu"
+  ],
   "children": [
     {
       "name": "LeftColumn",
       "type": "VBox",
       "anchor": "TopLeft",
-      "position": [16, 16],
+      "position": [
+        16,
+        16
+      ],
       "spacing": 8,
       "align": "Start",
       "children": [
-        { "name": "CommanderBar", "type": "Slot", "size": [580, 96], "layout": "CommanderBar" },
-        { "name": "Notifications", "type": "Slot", "size": [480, 200], "widget": "Notifications" }
-      ]
+        {
+          "name": "CommanderBar",
+          "type": "Slot",
+          "size": [
+            580,
+            108
+          ],
+          "layout": "CommanderBar",
+          "hitTest": false
+        },
+        {
+          "name": "Notifications",
+          "type": "Slot",
+          "size": [
+            480,
+            200
+          ],
+          "widget": "Notifications",
+          "hitTest": false
+        }
+      ],
+      "hitTest": false
     },
     {
       "name": "RightColumn",
       "type": "VBox",
       "anchor": "TopRight",
-      "position": [16, 16],
+      "position": [
+        16,
+        16
+      ],
       "spacing": 8,
       "align": "Fill",
       "children": [
         {
           "name": "MinimapFrame",
           "type": "Panel",
-          "sprite": "Panel",
-          "size": [280, 280],
-          "children": [{ "name": "Minimap", "type": "Slot", "anchor": "Fill", "widget": "Minimap" }]
+          "sprite": "BottomPanel",
+          "size": [
+            280,
+            280
+          ],
+          "children": [
+            {
+              "name": "Minimap",
+              "type": "Slot",
+              "anchor": "Fill",
+              "widget": "Minimap",
+              "hitTest": false
+            }
+          ],
+          "padding": [
+            6,
+            6,
+            6,
+            6
+          ]
         },
-        { "name": "MapButtons", "type": "Slot", "size": [280, 48], "layout": "MapButtons" }
-      ]
+        {
+          "name": "MapButtons",
+          "type": "Slot",
+          "size": [
+            280,
+            48
+          ],
+          "layout": "MapButtons",
+          "hitTest": false
+        }
+      ],
+      "hitTest": false
     },
-    { "name": "Scoreboard", "type": "Slot", "anchor": "TopRight", "position": [16, 376], "size": [360, 300], "widget": "Scoreboard" },
-    { "name": "Tooltip", "type": "Slot", "anchor": "BottomRight", "position": [16, 336], "size": [460, 240], "widget": "Tooltip" },
+    {
+      "name": "Scoreboard",
+      "type": "Slot",
+      "anchor": "TopRight",
+      "position": [
+        16,
+        376
+      ],
+      "size": [
+        360,
+        300
+      ],
+      "widget": "Scoreboard",
+      "hitTest": false
+    },
+    {
+      "name": "Tooltip",
+      "type": "Slot",
+      "anchor": "BottomRight",
+      "position": [
+        16,
+        252
+      ],
+      "size": [
+        460,
+        240
+      ],
+      "widget": "Tooltip",
+      "hitTest": false
+    },
     {
       "name": "BottomFrame",
       "type": "VBox",
       "anchor": "BottomStretch",
-      "size": [0, 320],
+      "size": [
+        0,
+        236
+      ],
       "align": "Fill",
       "children": [
-        { "name": "ResourceBar", "type": "Slot", "size": [0, 40], "layout": "ResourceBar" },
+        {
+          "name": "ResourceBar",
+          "type": "Slot",
+          "size": [
+            0,
+            40
+          ],
+          "layout": "ResourceBar",
+          "hitTest": false
+        },
         {
           "name": "BottomPanels",
           "type": "HBox",
@@ -53,27 +148,78 @@
             {
               "name": "SelectionFrame",
               "type": "Panel",
-              "sprite": "Panel",
-              "size": [460, 0],
-              "children": [{ "name": "Selection", "type": "Slot", "anchor": "Fill", "position": [8, 8], "widget": "Selection" }]
+              "sprite": "BottomPanel",
+              "size": [
+                460,
+                0
+              ],
+              "children": [
+                {
+                  "name": "Selection",
+                  "type": "Slot",
+                  "anchor": "Fill",
+                  "widget": "Selection",
+                  "hitTest": false,
+                  "padding": [
+                    8,
+                    8,
+                    8,
+                    8
+                  ]
+                }
+              ]
             },
             {
               "name": "CommandsFrame",
               "type": "Panel",
-              "sprite": "Panel",
+              "sprite": "BottomPanel",
               "anchor": "Fill",
-              "children": [{ "name": "Commands", "type": "Slot", "anchor": "Fill", "position": [8, 8], "widget": "Commands" }]
+              "children": [
+                {
+                  "name": "Commands",
+                  "type": "Slot",
+                  "anchor": "Fill",
+                  "widget": "Commands",
+                  "hitTest": false,
+                  "padding": [
+                    8,
+                    8,
+                    8,
+                    8
+                  ]
+                }
+              ]
             },
             {
               "name": "UpgradesFrame",
               "type": "Panel",
-              "sprite": "Panel",
-              "size": [300, 0],
-              "children": [{ "name": "Upgrades", "type": "Slot", "anchor": "Fill", "position": [8, 8], "widget": "Upgrades" }]
+              "sprite": "BottomPanel",
+              "size": [
+                300,
+                0
+              ],
+              "children": [
+                {
+                  "name": "Upgrades",
+                  "type": "Slot",
+                  "anchor": "Fill",
+                  "widget": "Upgrades",
+                  "hitTest": false,
+                  "padding": [
+                    8,
+                    8,
+                    8,
+                    8
+                  ]
+                }
+              ]
             }
-          ]
+          ],
+          "hitTest": false
         }
-      ]
+      ],
+      "hitTest": false
     }
-  ]
+  ],
+  "hitTest": false
 }
