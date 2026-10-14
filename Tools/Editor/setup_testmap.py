@@ -7,7 +7,8 @@ six, all where the lobby's seats play, the map data assets that offer them in th
 empty L_MainMenu and L_Lobby levels for the menu screens, and the Common UI styles of UI/ and Mods/*/UI/ (see
 make_ui_styles). L_TestMap and the skirmish maps are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
 writes nothing. Data assets are compared property by property; materials, models and the map carry a hash of the code and
-source files that build them and are rebuilt only when those change.
+source files that build them and are rebuilt only when those change. UI assets built in an earlier run whose source entry
+is gone are deleted.
 
 The assets are LFS lockable and therefore read-only unless locked. If an asset that must change is read-only, nothing
 is written: the files are listed in Saved/Setup/ReadOnlyAssets.txt and the run stops. Lock them (git lfs lock) and rerun.
@@ -74,6 +75,12 @@ levels = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 # Assets that need saving: (package path, file extension, already on disk, function that writes it).
 pending = []
 
+# Package paths of the assets planned by plan_now and plan_data_asset this run, changed or not.
+planned = set()
+
+# Package paths of the generated UI assets queued for deletion by plan_stale_ui_assets.
+stale = set()
+
 # Hashes of the surface materials by package path.
 material_hashes = {}
 
@@ -122,6 +129,7 @@ def spec_hash(functions, *values):
 def plan_data_asset(name, directory, data_class, properties):
     """Loads or creates a data asset and records the properties it should have; plan_data_assets queues the save."""
     path = f"{directory}/{name}"
+    planned.add(path)
     exists = assets.does_asset_exist(path)
     if exists:
         asset = assets.load_asset(path)
@@ -160,6 +168,7 @@ def plan_rebuild(path, extension, build, digest, stale=None):
 def plan_now(path, build, digest):
     """Builds an asset in memory right away, so assets planned after it can use it, and queues its save. Returns the
     asset on disk instead when it was built from the same hash."""
+    planned.add(path)
     exists = assets.does_asset_exist(path)
     if exists:
         asset = assets.load_asset(path)
@@ -1120,7 +1129,8 @@ def make_ui_style_set(set_name, sprites, theme, text_styles, button_text_styles,
 def make_ui_styles():
     """The Common UI styles of UI/ and the mods' UI/ folders: a style set per sprite file and theme, plus Common and
     Neutral. A set without its own theme has no colours or text styles, and its buttons use Neutral's text; the
-    subsystem falls back to Neutral for those. Problems are logged, and only their entries are skipped."""
+    subsystem falls back to Neutral for those. Problems are logged, and only their entries are skipped. Assets built
+    for entries that are gone are deleted by plan_stale_ui_assets."""
     report = ui_sources.Report(PROJECT_DIR)
     sprite_sets = ui_sources.read_sprites(PROJECT_DIR, report)
     themes = ui_sources.read_themes(PROJECT_DIR, report)
@@ -1147,6 +1157,44 @@ def make_ui_styles():
         unreal.log_warning(f"setup_testmap: {problem}")
     if report.problems:
         unreal.log_warning(f"setup_testmap: {len(report.problems)} UI problems, those entries were skipped")
+
+
+def is_generated_ui_asset(path):
+    """True for an asset under /Game/UI that setup built: it carries the hash tag, or it is a style set, which is
+    compared property by property and so has no tag."""
+    asset = assets.load_asset(path)
+    if assets.get_metadata_tag(asset, HASH_TAG):
+        return True
+    directory, name = path.rsplit("/", 1)
+    return directory == UI_STYLE_DIR and name.startswith("DA_UIStyle_") and isinstance(asset, unreal.RTSUIStyleSet)
+
+
+def delete_ui_asset(path):
+    """Deletes the asset and its file, then the folders under Content/UI that it leaves empty."""
+    file = asset_file(path, ".uasset")
+    if not assets.delete_asset(path):
+        raise RuntimeError(f"Could not delete {path}")
+    if os.path.exists(file):
+        os.remove(file)
+        unreal.AssetRegistryHelpers.get_asset_registry().scan_files_synchronous([file], force_rescan=True)
+    root = os.path.normpath(os.path.join(CONTENT_DIR, "UI"))
+    folder = os.path.normpath(os.path.dirname(file))
+    while folder != root and folder.startswith(root) and os.path.isdir(folder) and not os.listdir(folder):
+        os.rmdir(folder)
+        folder = os.path.dirname(folder)
+    unreal.log(f"setup_testmap: deleted {repo_file(path, '.uasset')}, its UI source entry is gone")
+
+
+def plan_stale_ui_assets():
+    """Queues the deletion of the assets under /Game/UI that setup built in an earlier run but did not plan in this
+    one, because their sprite, theme, font or mod is gone. Queued after every save, so the style sets no longer refer
+    to them when they go. Assets under /Game/UI that setup did not build are left alone."""
+    for object_path_name in assets.list_assets("/Game/UI", recursive=True, include_folder=False):
+        directory, name = object_path_name.rsplit("/", 1)
+        path = f"{directory}/{name.split('.', 1)[0]}"
+        if path not in planned and is_generated_ui_asset(path):
+            stale.add(path)
+            pending.append((path, ".uasset", True, lambda path=path: delete_ui_asset(path)))
 
 
 def asset_file(path, extension):
@@ -1184,13 +1232,14 @@ def write_pending():
         with open(READ_ONLY_REPORT, "w", encoding="utf-8") as report:
             report.write("\n".join(files) + "\n")
         for file in files:
-            unreal.log_error(f"setup_testmap: {file} must be rewritten but is read-only (git lfs lock it)")
+            unreal.log_error(f"setup_testmap: {file} must be rewritten or deleted but is read-only (git lfs lock it)")
         unreal.log_error("setup_testmap: nothing written")
         return
 
     for _, _, _, write in pending:
         write()
-    unreal.log(f"setup_testmap: done ({len(pending)} assets written)")
+    deleted = sum(1 for path, _, _, _ in pending if path in stale)
+    unreal.log(f"setup_testmap: done ({len(pending) - deleted} assets written, {deleted} deleted)")
 
 
 if os.path.exists(READ_ONLY_REPORT):
@@ -1336,4 +1385,5 @@ make_menu_map(MAIN_MENU_MAP_PATH, unreal.RTSMainMenuGameMode)
 make_menu_map(LOBBY_MAP_PATH, unreal.RTSLobbyGameMode)
 make_ui_styles()
 plan_data_assets()
+plan_stale_ui_assets()
 write_pending()
