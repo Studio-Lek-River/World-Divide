@@ -158,7 +158,7 @@
                   "name": "Selection",
                   "type": "Slot",
                   "anchor": "Fill",
-                  "widget": "Selection",
+                  "layout": "Selection",
                   "hitTest": false,
                   "padding": [
                     8,

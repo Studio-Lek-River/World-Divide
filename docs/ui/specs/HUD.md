@@ -19,7 +19,7 @@ All numbers are HUD units at 1920×1080. `HUD` is a transparent, non-blocking co
 | BottomFrame | bottom stretch | full width×236 |
 | ResourceBar | top of BottomFrame | full width×40 |
 | BottomPanels | remaining BottomFrame | full width×196 |
-| SelectionFrame / Selection | left | 460×196, 8 inset, engine Selection |
+| SelectionFrame / Selection | left | 460×196, 8 inset, Selection layout |
 | CommandsFrame / Commands | flexible centre | 1160×196 at reference, 8 inset, engine Commands |
 | UpgradesFrame / Upgrades | right | 300×196, 8 inset, engine Upgrades |
 

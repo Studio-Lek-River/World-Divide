@@ -1,0 +1,380 @@
+{
+  "type": "Panel",
+  "name": "SelectionPanel",
+  "anchor": "Fill",
+  "hitTest": false,
+  "children": [
+    {
+      "type": "Panel",
+      "name": "Single",
+      "anchor": "Fill",
+      "hitTest": false,
+      "visibleWhen": "selection.mode=Single",
+      "children": [
+        {
+          "type": "Panel",
+          "name": "SelectionPortraitFrame",
+          "sprite": "Panel",
+          "position": [
+            0,
+            0
+          ],
+          "size": [
+            72,
+            72
+          ],
+          "padding": [
+            4,
+            4,
+            4,
+            4
+          ],
+          "hitTest": false,
+          "children": [
+            {
+              "type": "Image",
+              "name": "SelectionPortrait",
+              "anchor": "Fill",
+              "sprite": "Icon.Placeholder",
+              "bind": {
+                "sprite": "selection.icon"
+              }
+            }
+          ]
+        },
+        {
+          "type": "Image",
+          "name": "TeamStripe",
+          "sprite": "ProgressBar.Fill",
+          "position": [
+            0,
+            76
+          ],
+          "size": [
+            72,
+            4
+          ],
+          "bind": {
+            "color": "selection.teamColor"
+          }
+        },
+        {
+          "type": "Text",
+          "name": "SelectionName",
+          "text": "{selection.name}",
+          "font": "Title",
+          "fontSize": 18,
+          "position": [
+            84,
+            0
+          ],
+          "size": [
+            220,
+            24
+          ],
+          "maxLines": 1
+        },
+        {
+          "type": "Text",
+          "name": "SelectionDescription",
+          "text": "{selection.description}",
+          "font": "Body",
+          "fontSize": 13,
+          "color": "MutedText",
+          "position": [
+            84,
+            26
+          ],
+          "size": [
+            220,
+            36
+          ],
+          "wrap": true,
+          "maxLines": 2
+        },
+        {
+          "type": "ProgressBar",
+          "name": "HealthBar",
+          "sprite": "ProgressBar.Background",
+          "fillSprite": "ProgressBar.Fill",
+          "position": [
+            84,
+            68
+          ],
+          "size": [
+            220,
+            10
+          ],
+          "bind": {
+            "progress": "selection.health",
+            "color": "selection.healthColor"
+          }
+        },
+        {
+          "type": "Text",
+          "name": "HealthText",
+          "text": "{selection.healthText}",
+          "font": "Number",
+          "fontSize": 14,
+          "position": [
+            84,
+            80
+          ],
+          "size": [
+            220,
+            20
+          ],
+          "maxLines": 1
+        },
+        {
+          "type": "Panel",
+          "name": "ConstructionStatus",
+          "position": [
+            84,
+            104
+          ],
+          "size": [
+            220,
+            34
+          ],
+          "hitTest": false,
+          "visibleWhen": "selection.isConstructing",
+          "children": [
+            {
+              "type": "Text",
+              "name": "ConstructionLabel",
+              "text": "Under construction",
+              "font": "Body",
+              "fontSize": 13,
+              "position": [
+                0,
+                0
+              ],
+              "size": [
+                220,
+                18
+              ],
+              "maxLines": 1
+            },
+            {
+              "type": "ProgressBar",
+              "name": "ConstructionBar",
+              "sprite": "ProgressBar.Background",
+              "fillSprite": "ProgressBar.Fill",
+              "fillColor": "Warning",
+              "position": [
+                0,
+                22
+              ],
+              "size": [
+                220,
+                10
+              ],
+              "bind": {
+                "progress": "selection.constructionProgress"
+              }
+            }
+          ]
+        },
+        {
+          "type": "Panel",
+          "name": "AircraftStatus",
+          "position": [
+            84,
+            104
+          ],
+          "size": [
+            220,
+            20
+          ],
+          "hitTest": false,
+          "visibleWhen": "selection.isAircraft",
+          "children": [
+            {
+              "type": "Text",
+              "name": "AmmoText",
+              "text": "Ammo {selection.ammo} / {selection.ammoMax}",
+              "font": "Number",
+              "fontSize": 14,
+              "position": [
+                0,
+                0
+              ],
+              "size": [
+                120,
+                20
+              ],
+              "maxLines": 1
+            },
+            {
+              "type": "Text",
+              "name": "RearmingText",
+              "text": "Rearming",
+              "font": "Body",
+              "fontSize": 13,
+              "color": "Warning",
+              "position": [
+                124,
+                0
+              ],
+              "size": [
+                96,
+                20
+              ],
+              "maxLines": 1,
+              "visibleWhen": "selection.isRearming"
+            }
+          ]
+        },
+        {
+          "type": "HBox",
+          "name": "UpgradeIcons",
+          "position": [
+            84,
+            146
+          ],
+          "size": [
+            220,
+            28
+          ],
+          "spacing": 4,
+          "align": "Center",
+          "repeat": "selection.upgrades",
+          "count": 6,
+          "template": {
+            "type": "Image",
+            "name": "UpgradeIcon",
+            "sprite": "Icon.Placeholder",
+            "size": [
+              28,
+              28
+            ],
+            "visibleWhen": "!item.empty",
+            "bind": {
+              "sprite": "item.icon"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "name": "CancelButton",
+          "sprite": "Button",
+          "action": "CancelConstruction",
+          "position": [
+            0,
+            146
+          ],
+          "size": [
+            72,
+            28
+          ],
+          "visibleWhen": "selection.canCancelConstruction",
+          "children": [
+            {
+              "type": "Text",
+              "name": "CancelText",
+              "text": "Cancel",
+              "font": "Body",
+              "fontSize": 13,
+              "anchor": "Fill",
+              "align": "Center",
+              "maxLines": 1
+            }
+          ]
+        },
+        {
+          "type": "Slot",
+          "name": "QueueSlot",
+          "widget": "Queue",
+          "anchor": "TopRight",
+          "position": [
+            0,
+            0
+          ],
+          "size": [
+            132,
+            180
+          ],
+          "hitTest": false
+        }
+      ]
+    },
+    {
+      "type": "Grid",
+      "name": "Groups",
+      "columns": 6,
+      "rows": 2,
+      "cellSize": [
+        68,
+        84
+      ],
+      "spacing": 4,
+      "visibleWhen": "selection.mode=Multi",
+      "repeat": "selection.groups",
+      "count": 12,
+      "template": {
+        "type": "Button",
+        "name": "Group",
+        "sprite": "Button",
+        "action": "SelectGroup",
+        "visibleWhen": "!item.empty",
+        "children": [
+          {
+            "type": "Image",
+            "name": "GroupIcon",
+            "sprite": "Icon.Placeholder",
+            "anchor": "Top",
+            "position": [
+              0,
+              6
+            ],
+            "size": [
+              48,
+              48
+            ],
+            "bind": {
+              "sprite": "item.icon"
+            }
+          },
+          {
+            "type": "Text",
+            "name": "GroupCount",
+            "text": "{item.count}",
+            "font": "Number",
+            "fontSize": 14,
+            "anchor": "TopRight",
+            "position": [
+              4,
+              2
+            ],
+            "size": [
+              28,
+              18
+            ],
+            "align": "Right",
+            "maxLines": 1
+          },
+          {
+            "type": "ProgressBar",
+            "name": "GroupHealth",
+            "sprite": "ProgressBar.Background",
+            "fillSprite": "ProgressBar.Fill",
+            "anchor": "Bottom",
+            "position": [
+              0,
+              8
+            ],
+            "size": [
+              56,
+              6
+            ],
+            "bind": {
+              "progress": "item.health",
+              "color": "item.healthColor"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

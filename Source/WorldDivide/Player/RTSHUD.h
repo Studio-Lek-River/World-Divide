@@ -35,9 +35,6 @@ public:
 	/** The UMG HUD of the local player, or null until its controller is attached to it. */
 	URTSHUDWidget* GetHUDWidget() const { return HUDWidget; }
 
-	/** Point, in viewport pixels, lies on the cancel button drawn last frame. */
-	bool IsOnCancelButton(const FVector2D& Point) const;
-
 	/** Point, in viewport pixels, lies on the selected superweapon's launch entry drawn last frame. */
 	bool IsOnLaunchButton(const FVector2D& Point) const;
 
@@ -70,7 +67,6 @@ private:
 	/** That circle, at least 8 pixels across; false while the unit cannot be projected. */
 	static bool GetUnitScreenCircle(const ARTSPlayerController& Controller, const ARTSUnit& Unit, FVector2D& OutCenter, float& OutRadius);
 	void DrawBuildingMarker(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
-	void DrawCancelButton(const ARTSBuilding& Building);
 	void DrawConstructionBar(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawBuildingHealth(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawBuildMenu(const ARTSPlayerController& Controller);
@@ -124,9 +120,6 @@ private:
 	float LeftInset = 0.f;
 	float RightInset = 0.f;
 	float BottomInset = 0.f;
-
-	/** Invalid while no cancel button is shown. */
-	FBox2D CancelButton = FBox2D(ForceInit);
 
 	/** Invalid while no superweapon is selected. */
 	FBox2D LaunchButton = FBox2D(ForceInit);

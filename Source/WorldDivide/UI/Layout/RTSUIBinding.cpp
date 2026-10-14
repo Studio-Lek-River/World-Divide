@@ -1,10 +1,21 @@
 #include "UI/Layout/RTSUIBinding.h"
 
+#include "Buildings/RTSBuilding.h"
+#include "Combat/RTSHealthComponent.h"
+#include "Combat/RTSWeaponComponent.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
+#include "Data/RTSAircraftData.h"
+#include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
+#include "Data/RTSUnitData.h"
+#include "Data/RTSUpgradeData.h"
 #include "Player/RTSHUD.h"
 #include "Player/RTSPlayerController.h"
+#include "UI/Layout/RTSLayoutElement.h"
+#include "UI/RTSUI.h"
+#include "Units/RTSAircraftComponent.h"
+#include "Units/RTSUnit.h"
 
 FRTSUIValue FRTSUIValue::MakeText(const FString& InText)
 {
@@ -140,9 +151,51 @@ namespace
 	const FName ResumeAction(TEXT("Resume"));
 	const FName LeaveAction(TEXT("Leave"));
 
+	const FName SelectionModeKey(TEXT("selection.mode"));
+	const FName SelectionIconKey(TEXT("selection.icon"));
+	const FName SelectionNameKey(TEXT("selection.name"));
+	const FName SelectionDescriptionKey(TEXT("selection.description"));
+	const FName SelectionHealthKey(TEXT("selection.health"));
+	const FName SelectionHealthTextKey(TEXT("selection.healthText"));
+	const FName SelectionHealthColorKey(TEXT("selection.healthColor"));
+	const FName SelectionTeamColorKey(TEXT("selection.teamColor"));
+	const FName SelectionConstructingKey(TEXT("selection.isConstructing"));
+	const FName SelectionConstructionProgressKey(TEXT("selection.constructionProgress"));
+	const FName SelectionAircraftKey(TEXT("selection.isAircraft"));
+	const FName SelectionAmmoKey(TEXT("selection.ammo"));
+	const FName SelectionAmmoMaxKey(TEXT("selection.ammoMax"));
+	const FName SelectionRearmingKey(TEXT("selection.isRearming"));
+	const FName SelectionCanCancelKey(TEXT("selection.canCancelConstruction"));
+	const FName SelectionUpgradesList(TEXT("selection.upgrades"));
+	const FName SelectionGroupsList(TEXT("selection.groups"));
+	const FName ItemIconKey(TEXT("icon"));
+	const FName ItemNameKey(TEXT("name"));
+	const FName ItemCountKey(TEXT("count"));
+	const FName ItemHealthKey(TEXT("health"));
+	const FName ItemHealthColorKey(TEXT("healthColor"));
+	const FName SelectGroupAction(TEXT("SelectGroup"));
+	const FName CancelConstructionAction(TEXT("CancelConstruction"));
+	const TCHAR* const SelectionModeNone = TEXT("None");
+	const TCHAR* const SelectionModeSingle = TEXT("Single");
+	const TCHAR* const SelectionModeMulti = TEXT("Multi");
+
+	/** Health at or above this fraction shows Positive, at or above HealthWarningAt Warning, below it Danger. */
+	constexpr float HealthPositiveAt = 0.6f;
+	constexpr float HealthWarningAt = 0.3f;
+
 	FString FormatNumber(int32 Number)
 	{
 		return FText::AsNumber(Number).ToString();
+	}
+
+	FName GetHealthColor(float Fraction)
+	{
+		return Fraction >= HealthPositiveAt ? FName(TEXT("Positive")) : Fraction >= HealthWarningAt ? FName(TEXT("Warning")) : FName(TEXT("Danger"));
+	}
+
+	FName GetIconSprite(const URTSEntityData* Data)
+	{
+		return Data && !Data->IconSprite.IsNone() ? Data->IconSprite : RTSUI::PlaceholderIcon;
 	}
 
 	/** The local player's resources, for the resource bar. */
@@ -409,6 +462,274 @@ namespace
 			return true;
 		}
 	};
+
+	/**
+	 * The selection panel: the one selected unit or building in full, or the selected units grouped by type. Reads the
+	 * controller's selection and the replicated state of what is selected; selecting a group stays local.
+	 */
+	class FRTSSelectionBindings : public IRTSUIBindingSource
+	{
+	public:
+		virtual void Declare(FRTSUIDeclarations& Out) const override
+		{
+			Out.Keys.Append({ SelectionModeKey, SelectionIconKey, SelectionNameKey, SelectionDescriptionKey, SelectionHealthKey,
+				SelectionHealthTextKey, SelectionHealthColorKey, SelectionTeamColorKey, SelectionConstructingKey,
+				SelectionConstructionProgressKey, SelectionAircraftKey, SelectionAmmoKey, SelectionAmmoMaxKey, SelectionRearmingKey,
+				SelectionCanCancelKey });
+			Out.Lists.Add(SelectionUpgradesList, { ItemIconKey, ItemNameKey });
+			Out.Lists.Add(SelectionGroupsList, { ItemIconKey, ItemNameKey, ItemCountKey, ItemHealthKey, ItemHealthColorKey });
+			Out.Actions.Append({ SelectGroupAction, CancelConstructionAction });
+		}
+
+		virtual TArray<FName> GetPanels() const override
+		{
+			return { TEXT("Selection") };
+		}
+
+		virtual bool GetValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
+		{
+			const ARTSPlayerController* Controller = Cast<ARTSPlayerController>(Context.Player);
+			ARTSBuilding* Building = Controller ? Controller->GetSelectedBuilding() : nullptr;
+			const ARTSUnit* Unit = GetSingleUnit(Controller);
+			const URTSEntityData* Data = Building ? static_cast<const URTSEntityData*>(Building->GetBuildingData())
+				: Unit ? static_cast<const URTSEntityData*>(Unit->GetUnitData()) : nullptr;
+			const URTSHealthComponent* Health = Building ? Building->GetHealthComponent() : Unit ? Unit->GetHealthComponent() : nullptr;
+			const URTSAircraftData* Aircraft = Unit ? Cast<URTSAircraftData>(Unit->GetUnitData()) : nullptr;
+			const float HealthFraction = Health ? Health->GetHealthFraction() : 0.f;
+
+			if (Key == SelectionModeKey)
+			{
+				const bool bMulti = !Building && Controller && Controller->GetSelectedUnits().Num() > 1;
+				OutValue = FRTSUIValue::MakeText(bMulti ? SelectionModeMulti : Building || Unit ? SelectionModeSingle : SelectionModeNone);
+			}
+			else if (Key == SelectionIconKey)
+			{
+				OutValue = FRTSUIValue::MakeSprite(Data ? GetIconSprite(Data) : NAME_None);
+			}
+			else if (Key == SelectionNameKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Data ? Data->DisplayName.ToString() : FString());
+			}
+			else if (Key == SelectionDescriptionKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Data ? Data->Description.ToString() : FString());
+			}
+			else if (Key == SelectionHealthKey)
+			{
+				OutValue = FRTSUIValue::MakeProgress(HealthFraction);
+			}
+			else if (Key == SelectionHealthTextKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Health ? FormatHealth(*Health) : FString());
+			}
+			else if (Key == SelectionHealthColorKey)
+			{
+				OutValue = FRTSUIValue::MakeColor(GetHealthColor(HealthFraction));
+			}
+			else if (Key == SelectionTeamColorKey)
+			{
+				OutValue = FRTSUIValue::MakeColor(RTSLayout::TeamColor);
+			}
+			else if (Key == SelectionConstructingKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(Building && !Building->IsConstructed());
+			}
+			else if (Key == SelectionConstructionProgressKey)
+			{
+				OutValue = FRTSUIValue::MakeProgress(Building ? Building->GetConstructionProgress() : 0.f);
+			}
+			else if (Key == SelectionAircraftKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(Aircraft != nullptr);
+			}
+			else if (Key == SelectionAmmoKey)
+			{
+				OutValue = FRTSUIValue::MakeNumber(Aircraft ? FMath::Max(Unit->GetWeaponComponent()->GetAmmo(), 0) : 0);
+			}
+			else if (Key == SelectionAmmoMaxKey)
+			{
+				OutValue = FRTSUIValue::MakeNumber(Aircraft ? Aircraft->AmmoPerSortie : 0);
+			}
+			else if (Key == SelectionRearmingKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(Aircraft && Unit->GetAircraftComponent()->IsRearming());
+			}
+			else if (Key == SelectionCanCancelKey)
+			{
+				// Once the match is over every order is refused.
+				OutValue = FRTSUIValue::MakeBool(Controller && Controller->GetMatchResult() == ERTSMatchResult::InProgress
+					&& Controller->CanCancelConstruction(Building));
+			}
+			else
+			{
+				return false;
+			}
+			return true;
+		}
+
+		virtual int32 GetListCount(FName List, const FRTSUIContext& Context) const override
+		{
+			const ARTSPlayerController* Controller = Cast<ARTSPlayerController>(Context.Player);
+			if (!Controller)
+			{
+				return 0;
+			}
+			if (List == SelectionGroupsList)
+			{
+				// A single unit is shown in full, not as a group.
+				return Controller->GetSelectedUnits().Num() > 1 ? Controller->GetSelectionGroups().Num() : 0;
+			}
+			if (List == SelectionUpgradesList)
+			{
+				return GetCompletedUpgrades(*Controller).Num();
+			}
+			return 0;
+		}
+
+		virtual bool GetListValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
+		{
+			const ARTSPlayerController* Controller = Cast<ARTSPlayerController>(Context.Player);
+			if (!Controller)
+			{
+				return false;
+			}
+			if (Context.List == SelectionUpgradesList)
+			{
+				const TArray<const URTSUpgradeData*> Upgrades = GetCompletedUpgrades(*Controller);
+				const URTSUpgradeData* Upgrade = Upgrades.IsValidIndex(Context.Index) ? Upgrades[Context.Index] : nullptr;
+				if (Key == ItemIconKey)
+				{
+					OutValue = FRTSUIValue::MakeSprite(Upgrade ? GetIconSprite(Upgrade) : NAME_None);
+				}
+				else if (Key == ItemNameKey)
+				{
+					OutValue = FRTSUIValue::MakeText(Upgrade ? Upgrade->DisplayName.ToString() : FString());
+				}
+				else
+				{
+					return false;
+				}
+				return true;
+			}
+			if (Context.List != SelectionGroupsList)
+			{
+				return false;
+			}
+			const TArray<FRTSSelectionGroup>& Groups = Controller->GetSelectionGroups();
+			const FRTSSelectionGroup* Group = Groups.IsValidIndex(Context.Index) ? &Groups[Context.Index] : nullptr;
+			const float GroupHealth = Group ? GetGroupHealth(*Group) : 0.f;
+			if (Key == ItemIconKey)
+			{
+				OutValue = FRTSUIValue::MakeSprite(Group ? GetIconSprite(Group->Data) : NAME_None);
+			}
+			else if (Key == ItemNameKey)
+			{
+				OutValue = FRTSUIValue::MakeText(Group && Group->Data ? Group->Data->DisplayName.ToString() : FString());
+			}
+			else if (Key == ItemCountKey)
+			{
+				OutValue = FRTSUIValue::MakeNumber(Group ? CountLiving(*Group) : 0);
+			}
+			else if (Key == ItemHealthKey)
+			{
+				OutValue = FRTSUIValue::MakeProgress(GroupHealth);
+			}
+			else if (Key == ItemHealthColorKey)
+			{
+				OutValue = FRTSUIValue::MakeColor(GetHealthColor(GroupHealth));
+			}
+			else
+			{
+				return false;
+			}
+			return true;
+		}
+
+		virtual bool HandleAction(FName Action, const FRTSUIContext& Context) const override
+		{
+			ARTSPlayerController* Controller = Cast<ARTSPlayerController>(Context.Player);
+			if (Action == SelectGroupAction)
+			{
+				if (Controller)
+				{
+					Controller->SelectGroup(Context.Index);
+				}
+			}
+			else if (Action == CancelConstructionAction)
+			{
+				if (Controller)
+				{
+					Controller->RequestCancelConstruction(Controller->GetSelectedBuilding());
+				}
+			}
+			else
+			{
+				return false;
+			}
+			return true;
+		}
+
+	private:
+		/** The selected unit while it is the only one, or null. */
+		static const ARTSUnit* GetSingleUnit(const ARTSPlayerController* Controller)
+		{
+			if (!Controller || Controller->GetSelectedUnits().Num() != 1)
+			{
+				return nullptr;
+			}
+			return Controller->GetSelectedUnits()[0].Get();
+		}
+
+		/** "350 / 500". */
+		static FString FormatHealth(const URTSHealthComponent& Health)
+		{
+			return FString::Printf(TEXT("%s / %s"), *FormatNumber(FMath::CeilToInt(Health.GetHealth())),
+				*FormatNumber(FMath::CeilToInt(Health.GetMaxHealth())));
+		}
+
+		/**
+		 * What the selected building researches that the player has completed. Upgrades belong to the player, so this is
+		 * the building type's list, not what this very building researched.
+		 */
+		static TArray<const URTSUpgradeData*> GetCompletedUpgrades(const ARTSPlayerController& Controller)
+		{
+			TArray<const URTSUpgradeData*> Completed;
+			const ARTSBuilding* Building = Controller.GetSelectedBuilding();
+			const URTSBuildingData* Data = Building ? Building->GetBuildingData() : nullptr;
+			if (Data)
+			{
+				for (const URTSUpgradeData* Upgrade : Data->Upgrades)
+				{
+					if (Upgrade && Controller.HasUpgrade(*Upgrade))
+					{
+						Completed.Add(Upgrade);
+					}
+				}
+			}
+			return Completed;
+		}
+
+		static int32 CountLiving(const FRTSSelectionGroup& Group)
+		{
+			return Group.Units.FilterByPredicate([](const TWeakObjectPtr<ARTSUnit>& Unit) { return Unit.IsValid(); }).Num();
+		}
+
+		/** The group's health over its maximum health, summed over its units. */
+		static float GetGroupHealth(const FRTSSelectionGroup& Group)
+		{
+			float Health = 0.f;
+			float MaxHealth = 0.f;
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Group.Units)
+			{
+				if (Unit.IsValid())
+				{
+					Health += Unit->GetHealthComponent()->GetHealth();
+					MaxHealth += Unit->GetHealthComponent()->GetMaxHealth();
+				}
+			}
+			return MaxHealth > 0.f ? Health / MaxHealth : 0.f;
+		}
+	};
 }
 
 TArray<const IRTSUIBindingSource*> RTSUIBindings::GetDefaultSources()
@@ -417,7 +738,8 @@ TArray<const IRTSUIBindingSource*> RTSUIBindings::GetDefaultSources()
 	static const FRTSMatchBindings MatchBindings;
 	static const FRTSCommanderBindings CommanderBindings;
 	static const FRTSMapButtonsBindings MapButtonsBindings;
-	return { &PlayerBindings, &MatchBindings, &CommanderBindings, &MapButtonsBindings };
+	static const FRTSSelectionBindings SelectionBindings;
+	return { &PlayerBindings, &MatchBindings, &CommanderBindings, &MapButtonsBindings, &SelectionBindings };
 }
 
 FRTSUIDeclarations RTSUIBindings::Declare(TConstArrayView<const IRTSUIBindingSource*> Sources)

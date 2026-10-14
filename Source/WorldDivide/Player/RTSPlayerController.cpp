@@ -188,6 +188,7 @@ void ARTSPlayerController::PlayerTick(float DeltaTime)
 	Super::PlayerTick(DeltaTime);
 
 	SelectedUnits.RemoveAll([](const TWeakObjectPtr<ARTSUnit>& Unit) { return !Unit.IsValid(); });
+	UpdateSelection();
 	if (bAttackMoveArmed && SelectedUnits.IsEmpty())
 	{
 		SetAttackMoveArmed(false);
@@ -273,6 +274,7 @@ bool ARTSPlayerController::SelectBuilding(ARTSBuilding* Building)
 	}
 	SelectedUnits.Reset();
 	SelectedBuilding = Building;
+	UpdateSelection();
 	return true;
 }
 
@@ -287,6 +289,65 @@ void ARTSPlayerController::SelectUnits(const TArray<ARTSUnit*>& Units)
 			SelectedUnits.AddUnique(Unit);
 		}
 	}
+	UpdateSelection();
+}
+
+TArray<FRTSSelectionGroup> ARTSPlayerController::GroupByType(const TArray<TWeakObjectPtr<ARTSUnit>>& Units)
+{
+	TArray<FRTSSelectionGroup> Groups;
+	for (const TWeakObjectPtr<ARTSUnit>& Unit : Units)
+	{
+		const URTSUnitData* Data = Unit.IsValid() ? Unit->GetUnitData() : nullptr;
+		if (!Data)
+		{
+			continue;
+		}
+		FRTSSelectionGroup* Group = Groups.FindByPredicate([Data](const FRTSSelectionGroup& Each) { return Each.Data == Data; });
+		if (!Group)
+		{
+			Group = &Groups.AddDefaulted_GetRef();
+			Group->Data = Data;
+		}
+		Group->Units.Add(Unit);
+	}
+	return Groups;
+}
+
+bool ARTSPlayerController::SelectGroup(int32 Index)
+{
+	if (!SelectionGroups.IsValidIndex(Index))
+	{
+		return false;
+	}
+	TArray<ARTSUnit*> Units;
+	for (const TWeakObjectPtr<ARTSUnit>& Unit : SelectionGroups[Index].Units)
+	{
+		if (Unit.IsValid())
+		{
+			Units.Add(Unit.Get());
+		}
+	}
+	SelectUnits(Units);
+	return true;
+}
+
+void ARTSPlayerController::UpdateSelection()
+{
+	TArray<FObjectKey> Units;
+	Units.Reserve(SelectedUnits.Num());
+	for (const TWeakObjectPtr<ARTSUnit>& Unit : SelectedUnits)
+	{
+		Units.Add(FObjectKey(Unit.Get()));
+	}
+	const FObjectKey Building(SelectedBuilding.Get());
+	if (Units == AnnouncedUnits && Building == AnnouncedBuilding)
+	{
+		return;
+	}
+	AnnouncedUnits = MoveTemp(Units);
+	AnnouncedBuilding = Building;
+	SelectionGroups = GroupByType(SelectedUnits);
+	OnSelectionChanged.Broadcast();
 }
 
 bool ARTSPlayerController::CanCancelConstruction(const ARTSBuilding* Building) const
@@ -522,11 +583,6 @@ void ARTSPlayerController::HandleSelectPressed(const FVector2D& Mouse)
 			BeginSuperweaponTargeting();
 			return;
 		}
-		if (RTSHUD->IsOnCancelButton(Mouse))
-		{
-			RequestCancelConstruction(GetSelectedBuilding());
-			return;
-		}
 		// The production menu and queue of the selected building; the HUD only draws them while there is one.
 		ARTSBuilding* Producer = GetProductionBuilding();
 		const TArray<URTSEntityData*> Menu = GetProductionMenu();
@@ -600,21 +656,21 @@ void ARTSPlayerController::SelectUnderCursor(bool bAdditive)
 		SelectedUnits.Reset();
 		SelectedBuilding = nullptr;
 	}
-	if (!IsOwnUnit(Unit))
+	if (IsOwnUnit(Unit))
 	{
-		return;
-	}
-	SelectedBuilding = nullptr;
+		SelectedBuilding = nullptr;
 
-	// Shift-click toggles a unit in or out of the selection.
-	if (bAdditive && SelectedUnits.Contains(Unit))
-	{
-		SelectedUnits.Remove(Unit);
+		// Shift-click toggles a unit in or out of the selection.
+		if (bAdditive && SelectedUnits.Contains(Unit))
+		{
+			SelectedUnits.Remove(Unit);
+		}
+		else
+		{
+			SelectedUnits.AddUnique(Unit);
+		}
 	}
-	else
-	{
-		SelectedUnits.AddUnique(Unit);
-	}
+	UpdateSelection();
 }
 
 void ARTSPlayerController::SelectInBox(const FVector2D& Start, const FVector2D& End, bool bAdditive)
@@ -641,6 +697,7 @@ void ARTSPlayerController::SelectInBox(const FVector2D& Start, const FVector2D& 
 	{
 		SelectedBuilding = nullptr;
 	}
+	UpdateSelection();
 }
 
 void ARTSPlayerController::OnMoveOrder()

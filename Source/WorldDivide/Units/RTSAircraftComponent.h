@@ -39,7 +39,7 @@ enum class ERTSAircraftMission : uint8
  * the pad, where it rearms. Move and AttackMove send it to circle a point; Stop sends it home. A pad lost with its airfield
  * is replaced by a free pad of another own airfield; until there is one, it circles where it is.
  * Every unit has one; it stays inert unless the unit's data is URTSAircraftData. Clients see it fly through movement
- * replication and its ammo through the weapon.
+ * replication, its ammo through the weapon and whether it is rearming through IsRearming.
  */
 UCLASS(ClassGroup = (RTS))
 class WORLDDIVIDE_API URTSAircraftComponent : public UActorComponent
@@ -71,6 +71,11 @@ public:
 
 	/** Server only. Frees the pad, for an aircraft that is going. */
 	void ReleasePad();
+
+	/** Parked on a pad and refilling its load. Replicated, so clients see it too. */
+	bool IsRearming() const { return bRearming; }
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	ERTSAircraftState GetState() const { return State; }
 	ERTSAircraftMission GetMission() const { return Mission; }
@@ -146,6 +151,9 @@ private:
 
 	/** Seconds of rearming toward the next shot. */
 	float RearmProgress = 0.f;
+
+	UPROPERTY(Replicated)
+	bool bRearming = false;
 
 	/** Seconds before a pad-less aircraft looks for a free pad again. */
 	float PadSearchCooldown = 0.f;

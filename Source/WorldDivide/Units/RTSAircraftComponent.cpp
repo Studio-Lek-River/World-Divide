@@ -5,6 +5,7 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Data/RTSAircraftData.h"
 #include "EngineUtils.h"
+#include "Net/UnrealNetwork.h"
 #include "Units/RTSGround.h"
 #include "Units/RTSUnit.h"
 
@@ -36,6 +37,13 @@ URTSAircraftComponent::URTSAircraftComponent()
 {
 	// The unit's tick drives it.
 	PrimaryComponentTick.bCanEverTick = false;
+	SetIsReplicatedByDefault(true);
+}
+
+void URTSAircraftComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(URTSAircraftComponent, bRearming);
 }
 
 ARTSUnit* URTSAircraftComponent::GetUnit() const
@@ -222,6 +230,7 @@ void URTSAircraftComponent::UpdateAircraft(float DeltaSeconds)
 		UpdateLanding(DeltaSeconds);
 		break;
 	}
+	bRearming = State == ERTSAircraftState::Parked && Airfield.IsValid() && GetAmmo() < AircraftData->AmmoPerSortie;
 	ApplyWeaponMode();
 }
 

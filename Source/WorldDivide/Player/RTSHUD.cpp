@@ -28,7 +28,6 @@ namespace
 	const FLinearColor ConstructionColor(1.f, 0.8f, 0.1f, 1.f);
 	const FLinearColor MenuColor(0.9f, 0.9f, 0.9f, 1.f);
 	const FLinearColor UnaffordableColor(0.45f, 0.45f, 0.45f, 1.f);
-	const FLinearColor ButtonFill(0.35f, 0.08f, 0.05f, 0.85f);
 	const FLinearColor ButtonHoverFill(0.6f, 0.12f, 0.08f, 0.9f);
 	const FLinearColor ProgressFill(1.f, 0.8f, 0.1f, 0.45f);
 	const FLinearColor VictoryColor(0.3f, 1.f, 0.4f, 1.f);
@@ -132,15 +131,10 @@ void ARTSHUD::DrawHUD()
 
 	// Once the match is over every order is refused, so the result screen replaces the menus.
 	const bool bMatchOver = Controller->GetMatchResult() != ERTSMatchResult::InProgress;
-	CancelButton = FBox2D(ForceInit);
 	const ARTSBuilding* Selected = Controller->GetSelectedBuilding();
 	if (Selected)
 	{
 		DrawBuildingMarker(*Controller, *Selected);
-		if (!bMatchOver && Controller->CanCancelConstruction(Selected))
-		{
-			DrawCancelButton(*Selected);
-		}
 	}
 
 	const ARTSBuilding* Hovered = Controller->GetBuildingUnderCursor();
@@ -267,28 +261,6 @@ void ARTSHUD::DrawBuildingMarker(const ARTSPlayerController& Controller, const A
 	}
 	DrawBrackets(Bounds.Min.X, Bounds.Min.Y, Bounds.Max.X, Bounds.Max.Y);
 	DrawBuildingHealth(Controller, Building);
-}
-
-void ARTSHUD::DrawCancelButton(const ARTSBuilding& Building)
-{
-	const FString Text = FString::Printf(TEXT("Cancel construction (+%d)   [Del]"), Building.GetCancelRefund());
-	float Width = 0.f;
-	float Height = 0.f;
-	GetTextSize(Text, Width, Height);
-	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
-	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - BottomInset - Size.Y);
-	CancelButton = FBox2D(Min, Min + Size);
-
-	FVector2D Mouse;
-	const APlayerController* Controller = GetOwningPlayerController();
-	const bool bHovered = Controller && Controller->GetMousePosition(Mouse.X, Mouse.Y) && IsOnCancelButton(Mouse);
-	DrawRect(bHovered ? ButtonHoverFill : ButtonFill, Min.X, Min.Y, Size.X, Size.Y);
-	DrawText(Text, MenuColor, Min.X + ButtonPadding, Min.Y + ButtonPadding);
-}
-
-bool ARTSHUD::IsOnCancelButton(const FVector2D& Point) const
-{
-	return CancelButton.bIsValid && CancelButton.IsInside(Point);
 }
 
 void ARTSHUD::DrawHealthBar(float Left, float Top, float Width, float HealthFraction)

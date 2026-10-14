@@ -742,6 +742,22 @@ bool FRTSUIBindingStubsTest::RunTest(const FString& Parameters)
 	{
 		TestTrue(FString::Printf(TEXT("%s is the map buttons' action"), Action), MapButtons->HandleAction(Action, NoPlayer));
 	}
+
+	// Without a player nothing is selected.
+	const IRTSUIBindingSource* Selection = FindSource(TEXT("Selection"));
+	if (!TestNotNull(TEXT("A source serves the selection panel"), Selection))
+	{
+		return false;
+	}
+	FRTSUIValue Mode;
+	TestTrue(TEXT("The selection panel answers its mode"), Selection->GetValue(TEXT("selection.mode"), NoPlayer, Mode));
+	TestEqual(TEXT("None without a selection"), Mode.String, FString(TEXT("None")));
+	TestEqual(TEXT("No groups"), Selection->GetListCount(TEXT("selection.groups"), NoPlayer), 0);
+	TestEqual(TEXT("No upgrades"), Selection->GetListCount(TEXT("selection.upgrades"), NoPlayer), 0);
+	for (const TCHAR* Action : { TEXT("SelectGroup"), TEXT("CancelConstruction") })
+	{
+		TestTrue(FString::Printf(TEXT("%s is the selection panel's action"), Action), Selection->HandleAction(Action, NoPlayer));
+	}
 	return true;
 }
 

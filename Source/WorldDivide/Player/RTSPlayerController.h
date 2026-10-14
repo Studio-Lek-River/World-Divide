@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "UObject/ObjectKey.h"
 #include "Commands/RTSCommand.h"
 #include "Core/RTSGameState.h"
 #include "RTSPlayerController.generated.h"
@@ -13,6 +14,7 @@ class ARTSUnit;
 class URTSBuildingData;
 class URTSEntityData;
 class URTSFactionData;
+class URTSUnitData;
 class URTSUpgradeData;
 class UInputAction;
 class UInputMappingContext;
@@ -34,6 +36,20 @@ enum class ERTSSuperweaponAlert : uint8
 	Ready,
 };
 
+/** The selected units of one type, as the selection panel shows them together. */
+USTRUCT()
+struct FRTSSelectionGroup
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TObjectPtr<const URTSUnitData> Data;
+
+	TArray<TWeakObjectPtr<ARTSUnit>> Units;
+};
+
+DECLARE_MULTICAST_DELEGATE(FRTSSelectionChangedSignature);
+
 /**
  * Turns mouse and keyboard into camera movement, a local selection and FRTSCommands for the server.
  *
@@ -42,7 +58,7 @@ enum class ERTSSuperweaponAlert : uint8
  * enemy unit or building, or harvest a supply source (Shift queues), X stop. J then left click attack-moves the selection to
  * the clicked spot (Shift queues and keeps attack-move armed); right click, Esc or an emptied selection cancels it, and the
  * HUD shows a hint while it is armed. Delete cancels the own
- * construction site under the cursor, or else the selected one, as does the HUD's cancel button.
+ * construction site under the cursor, or else the selected one, as does the selection panel's cancel button.
  * With a builder selected, 1-9 pick a building from its list to place: R turns it a quarter turn, left click sends the
  * builder (Shift queues it and keeps placing), right click or Esc cancels. The ghost turns red over sites own builders
  * were ordered to place and have not placed yet. A right click on an own construction site sends builders to resume it.
@@ -75,6 +91,21 @@ public:
 
 	/** Selects the player's own units among Units in place of the current selection, the selected building included. */
 	void SelectUnits(const TArray<ARTSUnit*>& Units);
+
+	/**
+	 * Broadcast on this client whenever the selection changes: a click, a box, a deselect, a group picked in the selection
+	 * panel, or a selected unit or building that died or was cancelled (noticed on the next tick).
+	 */
+	FRTSSelectionChangedSignature OnSelectionChanged;
+
+	/** The selected units grouped by type, in the order each type was first selected. */
+	const TArray<FRTSSelectionGroup>& GetSelectionGroups() const { return SelectionGroups; }
+
+	/** Units grouped by their unit data, in the order each type first appears; units that are gone or have no data are left out. */
+	static TArray<FRTSSelectionGroup> GroupByType(const TArray<TWeakObjectPtr<ARTSUnit>>& Units);
+
+	/** Narrows the selection to the units of GetSelectionGroups()[Index]; false, changing nothing, when there is no such group. */
+	bool SelectGroup(int32 Index);
 
 	/** Building is one of the player's own construction sites. The server checks again before it cancels. */
 	bool CanCancelConstruction(const ARTSBuilding* Building) const;
@@ -392,6 +423,16 @@ private:
 
 	TArray<TWeakObjectPtr<ARTSUnit>> SelectedUnits;
 	TWeakObjectPtr<ARTSBuilding> SelectedBuilding;
+
+	/** Rebuilds SelectionGroups and broadcasts OnSelectionChanged when the selection differs from the one last broadcast. */
+	void UpdateSelection();
+
+	UPROPERTY(Transient)
+	TArray<FRTSSelectionGroup> SelectionGroups;
+
+	/** The selection as OnSelectionChanged last announced it. Keys, since two stale weak pointers compare equal. */
+	TArray<FObjectKey> AnnouncedUnits;
+	FObjectKey AnnouncedBuilding;
 
 	bool bSelecting = false;
 	FVector2D SelectStart = FVector2D::ZeroVector;

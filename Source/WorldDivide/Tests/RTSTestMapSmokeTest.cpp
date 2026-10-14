@@ -41,6 +41,7 @@
 #include "Tests/RTSTestUI.h"
 #include "UI/Layout/RTSLayoutScreen.h"
 #include "UI/Layout/RTSLayoutWidget.h"
+#include "UI/Layout/RTSUIBinding.h"
 #include "UI/RTSHUDWidget.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSUnit.h"
@@ -3332,6 +3333,250 @@ bool FRTSHUDWidgetSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckHUDWidget(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+namespace
+{
+	struct FSelectionPanelState
+	{
+		int32 Changes = 0;
+		FDelegateHandle Handle;
+		TWeakObjectPtr<ARTSUnit> Tank;
+		TWeakObjectPtr<ARTSBuilding> Site;
+		double PhaseStart = 0.0;
+	};
+
+	constexpr double SelectionPanelTimeout = 5.0;
+	const FVector SelectionTankSpot(3000.f, 7000.f, 0.f);
+	const FVector SelectionOtherTankSpot(3300.f, 7000.f, 0.f);
+	const FVector SelectionInfantrySpot(3000.f, 7300.f, 0.f);
+
+	/** What the selection panel's binding source gives Key for the controller's player. */
+	FRTSUIValue GetSelectionValue(ARTSPlayerController& Controller, const TCHAR* Key)
+	{
+		FRTSUIContext Context;
+		Context.Player = &Controller;
+		FRTSUIValue Value;
+		for (const IRTSUIBindingSource* Source : RTSUIBindings::GetDefaultSources())
+		{
+			if (Source->GetValue(Key, Context, Value))
+			{
+				break;
+			}
+		}
+		return Value;
+	}
+
+	FRTSUIValue GetSelectionListValue(ARTSPlayerController& Controller, const TCHAR* List, int32 Index, const TCHAR* Key)
+	{
+		FRTSUIContext Context;
+		Context.Player = &Controller;
+		Context.List = List;
+		Context.Index = Index;
+		FRTSUIValue Value;
+		for (const IRTSUIBindingSource* Source : RTSUIBindings::GetDefaultSources())
+		{
+			if (Source->GetListValue(Key, Context, Value))
+			{
+				break;
+			}
+		}
+		return Value;
+	}
+
+	int32 GetSelectionListCount(ARTSPlayerController& Controller, const TCHAR* List)
+	{
+		FRTSUIContext Context;
+		Context.Player = &Controller;
+		int32 Count = 0;
+		for (const IRTSUIBindingSource* Source : RTSUIBindings::GetDefaultSources())
+		{
+			Count = FMath::Max(Count, Source->GetListCount(List, Context));
+		}
+		return Count;
+	}
+
+	/** Runs Action the way a button of the selection panel sends it. */
+	void RunSelectionAction(ARTSPlayerController& Controller, const TCHAR* Action, int32 Index = INDEX_NONE)
+	{
+		FRTSUIContext Context;
+		Context.Player = &Controller;
+		Context.Index = Index;
+		for (const IRTSUIBindingSource* Source : RTSUIBindings::GetDefaultSources())
+		{
+			if (Source->HandleAction(Action, Context))
+			{
+				return;
+			}
+		}
+	}
+}
+
+/**
+ * The selection panel follows the selection: nothing, one unit, a construction site, a finished building with its
+ * upgrades, and a box of mixed units grouped by type, from which one group is picked. Each change is announced.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSCheckSelectionPanel, FAutomationTestBase*, Test, TSharedRef<FSelectionPanelState>, State);
+bool FRTSCheckSelectionPanel::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	const int32 Team = Controller->GetTeamId();
+	ARTSPlayerState* Player = Controller->GetPlayerState<ARTSPlayerState>();
+	URTSBuildingData* BarracksData = LoadObject<URTSBuildingData>(nullptr, BarracksPath);
+	ARTSUnit* Tank = SpawnTestUnit(World, TankPath, Team, SelectionTankSpot);
+	ARTSUnit* OtherTank = SpawnTestUnit(World, TankPath, Team, SelectionOtherTankSpot);
+	ARTSUnit* Infantry = SpawnTestUnit(World, InfantryPath, Team, SelectionInfantrySpot);
+	if (!Player || !BarracksData || !Tank || !OtherTank || !Infantry || !SpawnPowerPlant(World, Team))
+	{
+		Test->AddError(TEXT("Could not set up the selection panel test"));
+		return true;
+	}
+	TSharedRef<FSelectionPanelState> Shared = State;
+	State->Handle = Controller->OnSelectionChanged.AddLambda([Shared]() { ++Shared->Changes; });
+
+	// The panel is part of the HUD.
+	const ARTSHUD* HUD = Controller->GetHUD<ARTSHUD>();
+	const URTSHUDWidget* Widget = HUD ? HUD->GetHUDWidget() : nullptr;
+	const URTSLayoutWidget* Layout = Widget ? Widget->GetLayout() : nullptr;
+	Test->TestNotNull(TEXT("The HUD builds the selection panel from Selection.layout.json"),
+		Layout ? Layout->FindElement(TEXT("SelectionPortrait")) : nullptr);
+
+	Controller->SelectUnits({});
+	State->Changes = 0;
+	Test->TestEqual(TEXT("Nothing selected: mode None"), GetSelectionValue(*Controller, TEXT("selection.mode")).String, FString(TEXT("None")));
+
+	Controller->SelectUnits({ Tank });
+	Test->TestEqual(TEXT("Selecting a unit is announced"), State->Changes, 1);
+	Test->TestEqual(TEXT("One unit: mode Single"), GetSelectionValue(*Controller, TEXT("selection.mode")).String, FString(TEXT("Single")));
+	Test->TestEqual(TEXT("with its name"), GetSelectionValue(*Controller, TEXT("selection.name")).String, Tank->GetUnitData()->DisplayName.ToString());
+	Test->TestEqual(TEXT("its icon"), GetSelectionValue(*Controller, TEXT("selection.icon")).String, Tank->GetUnitData()->IconSprite.ToString());
+	Test->TestEqual(TEXT("and full health"), GetSelectionValue(*Controller, TEXT("selection.health")).Number, 1.0);
+	Test->TestEqual(TEXT("shown as Positive"), GetSelectionValue(*Controller, TEXT("selection.healthColor")).String, FString(TEXT("Positive")));
+	Test->TestFalse(TEXT("A tank is no aircraft"), GetSelectionValue(*Controller, TEXT("selection.isAircraft")).bBool);
+	Controller->SelectUnits({ Tank });
+	Test->TestEqual(TEXT("Selecting the same again announces nothing"), State->Changes, 1);
+
+	ARTSBuilding* Site = SpawnBuilding(World, BarracksData, Team, BuildSpot, false);
+	Test->TestTrue(TEXT("An own site is selectable"), Controller->SelectBuilding(Site));
+	Test->TestEqual(TEXT("Selecting a building is announced"), State->Changes, 2);
+	Test->TestEqual(TEXT("A building: mode Single"), GetSelectionValue(*Controller, TEXT("selection.mode")).String, FString(TEXT("Single")));
+	Test->TestEqual(TEXT("with its name"), GetSelectionValue(*Controller, TEXT("selection.name")).String, BarracksData->DisplayName.ToString());
+	Test->TestTrue(TEXT("A site is under construction"), GetSelectionValue(*Controller, TEXT("selection.isConstructing")).bBool);
+	Test->TestTrue(TEXT("and can be cancelled"), GetSelectionValue(*Controller, TEXT("selection.canCancelConstruction")).bBool);
+
+	// A finished building lists the completed upgrades it researches.
+	Site->UpdateConstruction(BarracksData->BuildTime);
+	Test->TestFalse(TEXT("A finished building is not under construction"), GetSelectionValue(*Controller, TEXT("selection.isConstructing")).bBool);
+	Test->TestFalse(TEXT("and cannot be cancelled"), GetSelectionValue(*Controller, TEXT("selection.canCancelConstruction")).bBool);
+	Test->TestEqual(TEXT("No upgrade researched yet"), GetSelectionListCount(*Controller, TEXT("selection.upgrades")), 0);
+	if (Test->TestFalse(TEXT("The test barracks researches an upgrade"), BarracksData->Upgrades.IsEmpty()) && BarracksData->Upgrades[0])
+	{
+		Player->CompleteUpgrade(*BarracksData->Upgrades[0]);
+		Test->TestEqual(TEXT("A researched upgrade is listed"), GetSelectionListCount(*Controller, TEXT("selection.upgrades")), 1);
+		Test->TestEqual(TEXT("by name"), GetSelectionListValue(*Controller, TEXT("selection.upgrades"), 0, TEXT("name")).String,
+			BarracksData->Upgrades[0]->DisplayName.ToString());
+	}
+
+	// A box of mixed units: tank, infantry, tank.
+	Controller->SelectUnits({ Tank, Infantry, OtherTank });
+	Test->TestEqual(TEXT("Selecting units is announced"), State->Changes, 3);
+	Test->TestEqual(TEXT("Several units: mode Multi"), GetSelectionValue(*Controller, TEXT("selection.mode")).String, FString(TEXT("Multi")));
+	if (Test->TestEqual(TEXT("Two types, two groups"), GetSelectionListCount(*Controller, TEXT("selection.groups")), 2))
+	{
+		Test->TestEqual(TEXT("The tanks come first"), GetSelectionListValue(*Controller, TEXT("selection.groups"), 0, TEXT("name")).String,
+			Tank->GetUnitData()->DisplayName.ToString());
+		Test->TestEqual(TEXT("two of them"), GetSelectionListValue(*Controller, TEXT("selection.groups"), 0, TEXT("count")).Number, 2.0);
+		Test->TestEqual(TEXT("then one infantry"), GetSelectionListValue(*Controller, TEXT("selection.groups"), 1, TEXT("count")).Number, 1.0);
+	}
+	RunSelectionAction(*Controller, TEXT("SelectGroup"), 1);
+	Test->TestEqual(TEXT("Picking a group is announced"), State->Changes, 4);
+	Test->TestEqual(TEXT("Picking the infantry group selects only it"), Controller->GetSelectedUnits().Num(), 1);
+	Test->TestTrue(TEXT("the infantry"), Controller->GetSelectedUnits()[0] == Infantry);
+
+	// The box again; a selected tank then dies.
+	Controller->SelectUnits({ Tank, Infantry, OtherTank });
+	OtherTank->Destroy();
+	State->Tank = Tank;
+	State->Site = SpawnBuilding(World, BarracksData, Team, OtherBuildSpot, false);
+	State->PhaseStart = FPlatformTime::Seconds();
+	State->Changes = 0;
+	return true;
+}
+
+/** A selected unit that dies leaves the panel on the next tick, and a cancelled site empties it. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifySelectionPanelUpdates, FAutomationTestBase*, Test, TSharedRef<FSelectionPanelState>, State);
+bool FRTSVerifySelectionPanelUpdates::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (Controller->GetSelectedUnits().Num() > 2 && Elapsed < SelectionPanelTimeout)
+	{
+		return false;
+	}
+	Test->TestEqual(TEXT("The dead tank left the selection"), Controller->GetSelectedUnits().Num(), 2);
+	Test->TestEqual(TEXT("which was announced"), State->Changes, 1);
+	Test->TestEqual(TEXT("One tank left in its group"), GetSelectionListValue(*Controller, TEXT("selection.groups"), 0, TEXT("count")).Number, 1.0);
+
+	ARTSBuilding* Site = State->Site.Get();
+	if (!Test->TestTrue(TEXT("The second site is selectable"), Controller->SelectBuilding(Site)))
+	{
+		return true;
+	}
+	RunSelectionAction(*Controller, TEXT("CancelConstruction"));
+	State->PhaseStart = FPlatformTime::Seconds();
+	State->Changes = 0;
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifySelectionPanelCancelled, FAutomationTestBase*, Test, TSharedRef<FSelectionPanelState>, State);
+bool FRTSVerifySelectionPanelCancelled::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (State->Changes == 0 && Elapsed < SelectionPanelTimeout)
+	{
+		return false;
+	}
+	Test->TestFalse(TEXT("The cancel button cancelled the site"), State->Site.IsValid());
+	Test->TestNull(TEXT("The cancelled site is no longer selected"), Controller->GetSelectedBuilding());
+	Test->TestEqual(TEXT("which was announced"), State->Changes, 1);
+	Test->TestEqual(TEXT("The panel shows nothing"), GetSelectionValue(*Controller, TEXT("selection.mode")).String, FString(TEXT("None")));
+	Controller->OnSelectionChanged.Remove(State->Handle);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSSelectionPanelSmokeTest, "WorldDivide.Smoke.SelectionPanel",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSSelectionPanelSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSelectionPanelState> State = MakeShared<FSelectionPanelState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, MakeShared<FSmokeState>()));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckSelectionPanel(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifySelectionPanelUpdates(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifySelectionPanelCancelled(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

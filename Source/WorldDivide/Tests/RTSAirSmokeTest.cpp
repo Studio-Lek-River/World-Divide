@@ -17,6 +17,7 @@
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestPIE.h"
+#include "UI/Layout/RTSUIBinding.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
 
@@ -101,6 +102,22 @@ namespace RTSAirSmokeTest
 		return false;
 	}
 
+	/** What the selection panel shows for Key, with the local player's selection. */
+	FRTSUIValue GetSelectionValue(APlayerController* Controller, const TCHAR* Key)
+	{
+		FRTSUIContext Context;
+		Context.Player = Controller;
+		FRTSUIValue Value;
+		for (const IRTSUIBindingSource* Source : RTSUIBindings::GetDefaultSources())
+		{
+			if (Source->GetValue(Key, Context, Value))
+			{
+				break;
+			}
+		}
+		return Value;
+	}
+
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSQueueJet, FAutomationTestBase*, Test, TSharedRef<FAirState>, State);
 	bool FRTSQueueJet::Update()
 	{
@@ -160,6 +177,18 @@ namespace RTSAirSmokeTest
 		Test->TestEqual(TEXT("With no order to the rally point"), Aircraft->GetMission(), ERTSAircraftMission::None);
 		Test->TestEqual(TEXT("And a full load"), Jet->GetWeaponComponent()->GetAmmo(),
 			CastChecked<URTSAircraftData>(Jet->GetUnitData())->AmmoPerSortie);
+		Test->TestFalse(TEXT("A full load needs no rearming"), Aircraft->IsRearming());
+
+		ARTSPlayerController* Controller = GetTestController(*Test);
+		if (Controller)
+		{
+			Controller->SelectUnits({ Jet });
+			Test->TestTrue(TEXT("The selection panel shows an aircraft"), GetSelectionValue(Controller, TEXT("selection.isAircraft")).bBool);
+			Test->TestEqual(TEXT("with its full load"), GetSelectionValue(Controller, TEXT("selection.ammo")).Number,
+				GetSelectionValue(Controller, TEXT("selection.ammoMax")).Number);
+			Test->TestTrue(TEXT("of more than nothing"), GetSelectionValue(Controller, TEXT("selection.ammoMax")).Number > 0.0);
+			Test->TestFalse(TEXT("not rearming"), GetSelectionValue(Controller, TEXT("selection.isRearming")).bBool);
+		}
 		return true;
 	}
 
@@ -222,6 +251,14 @@ namespace RTSAirSmokeTest
 		Test->TestTrue(FString::Printf(TEXT("It landed back on its pad (stands at %s)"), *Jet->GetActorLocation().ToCompactString()),
 			bLanded && FVector::Dist(Jet->GetActorLocation(), State->Pad) < 1.f);
 		Test->TestTrue(TEXT("Bound to the same airfield"), Aircraft->GetAirfield() == State->Airfield.Get());
+		Test->TestTrue(TEXT("It is rearming on its pad"), Aircraft->IsRearming());
+		if (ARTSPlayerController* Controller = GetTestController(*Test))
+		{
+			Controller->SelectUnits({ State->Jet.Get() });
+			Test->TestTrue(TEXT("The selection panel shows it rearming"), GetSelectionValue(Controller, TEXT("selection.isRearming")).bBool);
+			Test->TestTrue(TEXT("short of a full load"), GetSelectionValue(Controller, TEXT("selection.ammo")).Number
+				< GetSelectionValue(Controller, TEXT("selection.ammoMax")).Number);
+		}
 		State->LandedAtWorldTime = Jet->GetWorld()->GetTimeSeconds();
 		return true;
 	}
@@ -243,6 +280,7 @@ namespace RTSAirSmokeTest
 		}
 		Test->TestEqual(TEXT("The jet rearmed to a full load on its pad"), Jet->GetWeaponComponent()->GetAmmo(), JetData->AmmoPerSortie);
 		Test->TestEqual(TEXT("And stays parked"), Jet->GetAircraftComponent()->GetState(), ERTSAircraftState::Parked);
+		Test->TestFalse(TEXT("No longer rearming"), Jet->GetAircraftComponent()->IsRearming());
 		return true;
 	}
 
