@@ -3119,8 +3119,13 @@ bool FRTSCheckHUDWidget::Update()
 	const UCommonTextBlock* Credits = Cast<UCommonTextBlock>(Layout->FindElement(TEXT("CreditsText")));
 	Test->TestEqual(TEXT("The resource bar shows the starting credits"), Credits ? Credits->GetText().ToString() : FString(),
 		FText::AsNumber(State->StartingCredits).ToString());
-	Test->TestEqual(TEXT("The bar is 48 high at 1080p"), BarGeometry.GetLocalSize().Y, URTSHUDWidget::TopBarHeight, 0.5f);
-	Test->TestTrue(TEXT("The canvas keeps the top bar clear"), Widget->GetTopBandHeight() > 0.f);
+	Test->TestEqual(TEXT("The bar is 40 high at 1080p"), BarGeometry.GetLocalSize().Y, 40.f, 0.5f);
+	FBox2D BarRect;
+	Test->TestTrue(TEXT("The bar is laid out"), Widget->GetElementRect(TEXT("ResourceBar"), BarRect));
+	Test->TestTrue(TEXT("The bar sits in the lower part of the screen"), BarRect.Min.Y > Widget->GetCachedGeometry().GetAbsoluteSize().Y * 0.5f);
+	Test->TestTrue(TEXT("The canvas keeps the left column clear"), Widget->GetLeftColumnBottom() > 0.f);
+	Test->TestTrue(TEXT("the right column"), Widget->GetRightColumnBottom() > 0.f);
+	Test->TestTrue(TEXT("and the bottom frame"), Widget->GetBottomFrameHeight() > BarRect.GetSize().Y);
 
 	TArray<ARTSUnit*> Own;
 	for (TActorIterator<ARTSUnit> It(Controller->GetWorld()); It; ++It)
@@ -3147,6 +3152,19 @@ bool FRTSCheckHUDWidget::Update()
 	Test->TestFalse(TEXT("A press on the bar starts no selection"), Controller->GetSelectionBox(BarPixel, BoxEnd));
 	Controller->HandleSelectReleased(BarPixel);
 	Test->TestEqual(TEXT("A click on the bar keeps the selection"), Controller->GetSelectedUnits().Num(), Selected);
+
+	// Every piece of the frame keeps clicks, including the panels that are still empty.
+	for (const TCHAR* Name : { TEXT("CommanderBar"), TEXT("MinimapFrame"), TEXT("Overlays"), TEXT("SelectionFrame"), TEXT("CommandsFrame"),
+		TEXT("UpgradesFrame") })
+	{
+		FBox2D Rect;
+		if (!Widget->GetElementRect(Name, Rect))
+		{
+			Test->AddError(FString::Printf(TEXT("The HUD has no %s laid out"), Name));
+			continue;
+		}
+		Test->TestTrue(FString::Printf(TEXT("The middle of %s is on a HUD panel"), Name), Controller->IsOnHUDPanel(Rect.GetCenter()));
+	}
 
 	Test->TestFalse(TEXT("The middle of the battlefield is no HUD panel"), Controller->IsOnHUDPanel(HUDGeometry.GetAbsoluteSize() * 0.5f));
 	return true;

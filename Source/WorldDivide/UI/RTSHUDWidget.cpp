@@ -304,11 +304,53 @@ bool URTSHUDWidget::IsOnPanel(const FVector2D& Point) const
 	return false;
 }
 
-float URTSHUDWidget::GetTopBandHeight() const
+bool URTSHUDWidget::GetElementRect(FName Name, FBox2D& OutRect) const
 {
-	if (!GetLayout() && (!ResourceBar || !ResourceBar->IsVisible()))
+	const URTSLayoutWidget* Layout = GetLayout();
+	const UWidget* Element = Layout ? Layout->FindElement(Name) : nullptr;
+	if (!Element || !Element->IsVisible())
 	{
-		return 0.f;
+		return false;
 	}
-	return TopBarHeight * UWidgetLayoutLibrary::GetViewportScale(const_cast<URTSHUDWidget*>(this));
+	const FGeometry& Geometry = Element->GetCachedGeometry();
+	if (Geometry.GetAbsoluteSize().IsNearlyZero())
+	{
+		return false;
+	}
+	const FVector2D Min = Geometry.GetAbsolutePosition() - GetCachedGeometry().GetAbsolutePosition();
+	OutRect = FBox2D(Min, Min + Geometry.GetAbsoluteSize());
+	return true;
+}
+
+float URTSHUDWidget::GetLeftColumnBottom() const
+{
+	FBox2D Rect;
+	if (GetElementRect(TEXT("Notifications"), Rect) || GetElementRect(TEXT("CommanderBar"), Rect))
+	{
+		return Rect.Max.Y;
+	}
+	// The C++ fallback has only its resource bar along the top.
+	return !GetLayout() && ResourceBar && ResourceBar->IsVisible()
+		? TopBarHeight * UWidgetLayoutLibrary::GetViewportScale(const_cast<URTSHUDWidget*>(this)) : 0.f;
+}
+
+float URTSHUDWidget::GetRightColumnBottom() const
+{
+	FBox2D Rect;
+	if (GetElementRect(TEXT("MapButtons"), Rect) || GetElementRect(TEXT("Minimap"), Rect))
+	{
+		return Rect.Max.Y;
+	}
+	return !GetLayout() && ResourceBar && ResourceBar->IsVisible()
+		? TopBarHeight * UWidgetLayoutLibrary::GetViewportScale(const_cast<URTSHUDWidget*>(this)) : 0.f;
+}
+
+float URTSHUDWidget::GetBottomFrameHeight() const
+{
+	FBox2D Rect;
+	if (GetElementRect(TEXT("ResourceBar"), Rect))
+	{
+		return FMath::Max(0.f, GetCachedGeometry().GetAbsoluteSize().Y - Rect.Min.Y);
+	}
+	return !GetLayout() ? BottomBandHeight * UWidgetLayoutLibrary::GetViewportScale(const_cast<URTSHUDWidget*>(this)) : 0.f;
 }

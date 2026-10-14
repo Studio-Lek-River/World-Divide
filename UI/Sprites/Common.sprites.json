@@ -29,6 +29,7 @@
     "Common.Icon.Headquarters": { "texture": "Textures/Common/Icons/T_Icon_Common_Headquarters.png", "size": [64, 64] },
     "Common.Icon.Superweapon": { "texture": "Textures/Common/Icons/T_Icon_Common_Superweapon.png", "size": [64, 64] },
     "Common.Icon.RifleTraining": { "texture": "Textures/Common/Icons/T_Icon_Common_RifleTraining.png", "size": [64, 64] },
-    "Common.Icon.Placeholder": { "texture": "Textures/Common/T_Icon_Common_Placeholder.png", "size": [64, 64] }
+    "Common.Icon.Placeholder": { "texture": "Textures/Common/T_Icon_Common_Placeholder.png", "size": [64, 64] },
+    "Common.Portrait.Placeholder": { "texture": "Textures/Common/T_Icon_Common_Placeholder.png", "size": [64, 64] }
   }
 }

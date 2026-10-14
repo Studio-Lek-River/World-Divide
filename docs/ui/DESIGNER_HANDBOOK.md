@@ -28,36 +28,37 @@ All layout numbers are in **HUD units at 1920x1080**. The engine scales them by 
 
 ```
 +--------------------------------------------------------------------------------------+
-| COMMANDER BAR (top left, 96 high):                          |  MINIMAP 280 x 280     |
-|   general portrait | general power slots | locked slots     |  (top right)           |
-| NOTIFICATIONS under it (LOW POWER, attacks)                  |  MAP BUTTONS under it:  |
-|                                                              |  Overlays | General    |
+| COMMANDER BAR 580 x 96 (top left, 16 in):                   |  MINIMAP 280 x 280     |
+|   general portrait | 9 general power slots (locked for now) |  (top right, 16 in)    |
+| NOTIFICATIONS 480 x 200 under it (LOW POWER, attacks)        |  MAP BUTTONS 280 x 48  |
+|                                                              |  under it: Overlays |  |
 |                      BATTLEFIELD (keep it free)              |  Powers | Objectives   |
-|                                                                                      |
-|                tooltips appear here, just above the resource strip                   |
+|                                                              |  SCOREBOARD under it   |
+|                tooltips appear here, just above the resource bar (460 x 240)         |
 +--------------------------------------------------------------------------------------+
-| RESOURCE STRIP 40 high: POWER bar + produced/consumed | CREDITS | RANK (5 stars)     |
+| RESOURCE BAR 40 high: POWER bar + produced/consumed | CREDITS | RANK (5 stars)       |
 +-------------------------+----------------------------------------+-------------------+
 | SELECTION               | COMMANDS                               | UPGRADES &        |
 | portrait, name,         | what the selected building or builder  | EQUIPMENT         |
 | description, health,    | can make: cards with icon, name, cost  | list: icon, name, |
 | production queue (5)    | (no category tabs)                     | description, cost |
-| about 460 wide          | fills the rest                         | about 300 wide    |
+| 460 wide                | fills the rest                         | 300 wide          |
 +-------------------------+----------------------------------------+-------------------+
-  BOTTOM PANELS at most 280 high
+  BOTTOM PANELS 280 high; with the resource bar the bottom frame is 320 high
 ```
 
-| Slot | Where | Shows |
-|---|---|---|
-| `CommanderBar` | top left | the general's portrait, the general power slots with charge pips, locked slots |
-| `Notifications` | under the commander bar | the LOW POWER banner, attack alerts |
-| `Minimap` | top right | terrain, markers, camera frame |
-| `MapButtons` | under the minimap | Overlays (production overview), General Powers, Objectives |
-| `ResourceStrip` | full width, above the bottom panels | power bar, credits, rank |
-| `Selection` | bottom left | the selected unit or building, and its production queue |
-| `Commands` | bottom centre | the build and produce cards of the selection |
-| `Upgrades` | bottom right | the upgrades the selection can research |
-| `Tooltip`, `Scoreboard` | floating | |
+| Slot | Where | Size | Shows |
+|---|---|---|---|
+| `CommanderBar` (layout) | top left, 16 in from the corner | 580 x 96 | the general's portrait and name, the 9 general power slots with charge, locked slots |
+| `Notifications` | under the commander bar, 8 apart | 480 x 200 | the LOW POWER banner, attack alerts |
+| `Minimap` | top right, 16 in from the corner | 280 x 280 | terrain, markers, camera frame |
+| `MapButtons` (layout) | under the minimap, 8 apart | 280 x 48 | Overlays (production overview), General Powers, Objectives |
+| `ResourceBar` (layout) | full width, above the bottom panels | full width x 40 | power bar, credits, rank |
+| `Selection` | bottom left | 460 x 280 frame | the selected unit or building, and its production queue (`Queue` goes inside it) |
+| `Commands` | bottom centre | fills x 280 frame | the build and produce cards of the selection |
+| `Upgrades` | bottom right | 300 x 280 frame | the upgrades the selection can research |
+| `Scoreboard` | floating, under the map buttons | 360 x 300 | |
+| `Tooltip` | floating, bottom right, just above the resource bar | 460 x 240 | |
 
 - The HUD covers at most about 30% of the screen. The battlefield is the game.
 - Only two modals exist in a match: the **match result** (Victory/Defeat) and the **in-game menu** (Esc). They are screens on a modal layer above the HUD: both dim everything behind them, the whole HUD included, block the battlefield while open, and Esc closes the in-game menu.

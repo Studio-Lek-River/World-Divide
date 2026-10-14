@@ -202,6 +202,6 @@ private:
 
 namespace RTSLayout
 {
-	/** The engine panels a Slot may place by widget: Minimap, Selection, Queue, Commands, Notifications, Scoreboard, Tooltip. */
+	/** The engine panels a Slot may place by widget: Minimap, Selection, Queue, Commands, Upgrades, Notifications, Scoreboard, Tooltip. */
 	WORLDDIVIDE_API const TArray<FName>& GetPanelNames();
 }

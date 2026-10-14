@@ -103,8 +103,33 @@ namespace
 	const FName PowerConsumedKey(TEXT("player.power.consumed"));
 	const FName PowerLowKey(TEXT("player.power.low"));
 	const FName PowerColorKey(TEXT("player.power.color"));
-	const FName UsesPowerKey(TEXT("player.usesPower"));
+	const FName PowerRatioKey(TEXT("player.power.ratio"));
 	const FName FactionKey(TEXT("player.faction"));
+	const FName RankList(TEXT("player.rank"));
+	const FName RankEarnedKey(TEXT("earned"));
+	constexpr int32 RankStars = 5;
+
+	const FName CommanderNameKey(TEXT("commander.name"));
+	const FName CommanderPortraitKey(TEXT("commander.portrait"));
+	const FName PowersList(TEXT("commander.powers"));
+	const FName PowerIconKey(TEXT("icon"));
+	const FName PowerNameKey(TEXT("name"));
+	const FName PowerLockedKey(TEXT("locked"));
+	const FName PowerReadyKey(TEXT("ready"));
+	const FName PowerChargeKey(TEXT("charge"));
+	const FName PowerLevelKey(TEXT("level"));
+	const FName PowerLevelMaxKey(TEXT("levelMax"));
+	const FName UsePowerAction(TEXT("UsePower"));
+	const FName PortraitPlaceholder(TEXT("Portrait.Placeholder"));
+	const FName PowerIconPlaceholder(TEXT("Icon.Placeholder"));
+	constexpr int32 PowerSlots = 9;
+
+	const FName OverlaysEnabledKey(TEXT("map.overlays.enabled"));
+	const FName PowersEnabledKey(TEXT("map.powers.enabled"));
+	const FName ObjectivesEnabledKey(TEXT("map.objectives.enabled"));
+	const FName OpenOverlaysAction(TEXT("OpenOverlays"));
+	const FName OpenGeneralPowersAction(TEXT("OpenGeneralPowers"));
+	const FName OpenObjectivesAction(TEXT("OpenObjectives"));
 
 	const FName ResultKey(TEXT("match.result"));
 	const FName ResultTitleKey(TEXT("match.result.title"));
@@ -126,7 +151,8 @@ namespace
 	public:
 		virtual void Declare(FRTSUIDeclarations& Out) const override
 		{
-			Out.Keys.Append({ CreditsKey, PowerProducedKey, PowerConsumedKey, PowerLowKey, PowerColorKey, UsesPowerKey, FactionKey });
+			Out.Keys.Append({ CreditsKey, PowerProducedKey, PowerConsumedKey, PowerLowKey, PowerColorKey, PowerRatioKey, FactionKey });
+			Out.Lists.Add(RankList, { RankEarnedKey });
 		}
 
 		virtual TArray<FName> GetPanels() const override
@@ -159,10 +185,9 @@ namespace
 			{
 				OutValue = FRTSUIValue::MakeColor(bLow ? TEXT("Danger") : TEXT("Text"));
 			}
-			else if (Key == UsesPowerKey)
+			else if (Key == PowerRatioKey)
 			{
-				// Shown until the player state arrives would flash; a faction without data uses power, as the economy assumes.
-				OutValue = FRTSUIValue::MakeBool(State && (!Faction || Faction->bUsesPower));
+				OutValue = FRTSUIValue::MakeProgress(State ? RTSUIBindings::GetPowerRatio(State->GetPowerProduced(), State->GetPowerConsumed()) : 0.f);
 			}
 			else if (Key == FactionKey)
 			{
@@ -173,6 +198,135 @@ namespace
 				return false;
 			}
 			return true;
+		}
+
+		virtual int32 GetListCount(FName List, const FRTSUIContext& Context) const override
+		{
+			return List == RankList ? RankStars : 0;
+		}
+
+		virtual bool GetListValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
+		{
+			// Rank comes in M5; until then no star is earned.
+			if (Context.List == RankList && Key == RankEarnedKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(false);
+				return true;
+			}
+			return false;
+		}
+	};
+
+	/** The commander bar: the player's general and the general power slots. Generals (#73) and their powers (M5) come later. */
+	class FRTSCommanderBindings : public IRTSUIBindingSource
+	{
+	public:
+		virtual void Declare(FRTSUIDeclarations& Out) const override
+		{
+			Out.Keys.Append({ CommanderNameKey, CommanderPortraitKey });
+			Out.Lists.Add(PowersList, { PowerIconKey, PowerNameKey, PowerLockedKey, PowerReadyKey, PowerChargeKey, PowerLevelKey, PowerLevelMaxKey });
+			Out.Actions.Add(UsePowerAction);
+		}
+
+		virtual TArray<FName> GetPanels() const override
+		{
+			return { TEXT("CommanderBar") };
+		}
+
+		virtual bool GetValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
+		{
+			if (Key == CommanderNameKey)
+			{
+				// The faction stands in for the general until generals exist.
+				const ARTSPlayerState* State = Context.Player ? Context.Player->GetPlayerState<ARTSPlayerState>() : nullptr;
+				const URTSFactionData* Faction = State ? State->GetFaction() : nullptr;
+				OutValue = FRTSUIValue::MakeText(Faction ? Faction->DisplayName.ToString() : FString());
+			}
+			else if (Key == CommanderPortraitKey)
+			{
+				OutValue = FRTSUIValue::MakeSprite(PortraitPlaceholder);
+			}
+			else
+			{
+				return false;
+			}
+			return true;
+		}
+
+		virtual int32 GetListCount(FName List, const FRTSUIContext& Context) const override
+		{
+			return List == PowersList ? PowerSlots : 0;
+		}
+
+		virtual bool GetListValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
+		{
+			if (Context.List != PowersList)
+			{
+				return false;
+			}
+			// Every slot stays locked until general powers exist.
+			if (Key == PowerIconKey)
+			{
+				OutValue = FRTSUIValue::MakeSprite(PowerIconPlaceholder);
+			}
+			else if (Key == PowerNameKey)
+			{
+				OutValue = FRTSUIValue::MakeText(FString());
+			}
+			else if (Key == PowerLockedKey || Key == PowerReadyKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(Key == PowerLockedKey);
+			}
+			else if (Key == PowerChargeKey)
+			{
+				OutValue = FRTSUIValue::MakeProgress(0.f);
+			}
+			else if (Key == PowerLevelKey || Key == PowerLevelMaxKey)
+			{
+				OutValue = FRTSUIValue::MakeNumber(0.0);
+			}
+			else
+			{
+				return false;
+			}
+			return true;
+		}
+
+		virtual bool HandleAction(FName Action, const FRTSUIContext& Context) const override
+		{
+			// Nothing to use until general powers exist.
+			return Action == UsePowerAction;
+		}
+	};
+
+	/** The buttons under the minimap. Each screen they open comes in its own issue; until then they stay disabled. */
+	class FRTSMapButtonsBindings : public IRTSUIBindingSource
+	{
+	public:
+		virtual void Declare(FRTSUIDeclarations& Out) const override
+		{
+			Out.Keys.Append({ OverlaysEnabledKey, PowersEnabledKey, ObjectivesEnabledKey });
+			Out.Actions.Append({ OpenOverlaysAction, OpenGeneralPowersAction, OpenObjectivesAction });
+		}
+
+		virtual TArray<FName> GetPanels() const override
+		{
+			return { TEXT("MapButtons") };
+		}
+
+		virtual bool GetValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue) const override
+		{
+			if (Key == OverlaysEnabledKey || Key == PowersEnabledKey || Key == ObjectivesEnabledKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(false);
+				return true;
+			}
+			return false;
+		}
+
+		virtual bool HandleAction(FName Action, const FRTSUIContext& Context) const override
+		{
+			return Action == OpenOverlaysAction || Action == OpenGeneralPowersAction || Action == OpenObjectivesAction;
 		}
 	};
 
@@ -260,7 +414,9 @@ TArray<const IRTSUIBindingSource*> RTSUIBindings::GetDefaultSources()
 {
 	static const FRTSPlayerBindings PlayerBindings;
 	static const FRTSMatchBindings MatchBindings;
-	return { &PlayerBindings, &MatchBindings };
+	static const FRTSCommanderBindings CommanderBindings;
+	static const FRTSMapButtonsBindings MapButtonsBindings;
+	return { &PlayerBindings, &MatchBindings, &CommanderBindings, &MapButtonsBindings };
 }
 
 FRTSUIDeclarations RTSUIBindings::Declare(TConstArrayView<const IRTSUIBindingSource*> Sources)
@@ -271,4 +427,13 @@ FRTSUIDeclarations RTSUIBindings::Declare(TConstArrayView<const IRTSUIBindingSou
 		Source->Declare(Declarations);
 	}
 	return Declarations;
+}
+
+float RTSUIBindings::GetPowerRatio(int32 Produced, int32 Consumed)
+{
+	if (Produced <= 0)
+	{
+		return Consumed > 0 ? 1.f : 0.f;
+	}
+	return FMath::Clamp(static_cast<float>(Consumed) / Produced, 0.f, 1.f);
 }

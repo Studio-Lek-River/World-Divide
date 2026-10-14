@@ -60,8 +60,16 @@ public:
 	 */
 	bool IsOnPanel(const FVector2D& Point) const;
 
-	/** Viewport pixels the top bar covers, which the canvas HUD keeps clear. */
-	float GetTopBandHeight() const;
+	/** Viewport pixels of the HUD layout's element Name, as laid out last frame; false without it or before the first layout. */
+	bool GetElementRect(FName Name, FBox2D& OutRect) const;
+
+	/**
+	 * Viewport pixels the canvas HUD keeps clear: down from the top on the left (the commander bar and notifications) and
+	 * on the right (the minimap and map buttons), and up from the bottom (the resource bar and the bottom panels).
+	 */
+	float GetLeftColumnBottom() const;
+	float GetRightColumnBottom() const;
+	float GetBottomFrameHeight() const;
 
 	/** Builds the Game layer from the layout files again, and the modal screens with it. */
 	void Rebuild();

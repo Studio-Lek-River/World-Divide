@@ -1,0 +1,47 @@
+{
+  "name": "CommanderBar",
+  "type": "Panel",
+  "anchor": "Fill",
+  "sprite": "Panel",
+  "children": [
+    {
+      "name": "PortraitFrame",
+      "type": "Panel",
+      "anchor": "Left",
+      "position": [8, 0],
+      "size": [80, 80],
+      "children": [{ "name": "Portrait", "type": "Image", "anchor": "Fill", "bind": { "sprite": "commander.portrait" } }]
+    },
+    {
+      "name": "Details",
+      "type": "VBox",
+      "anchor": "TopLeft",
+      "position": [100, 8],
+      "spacing": 4,
+      "align": "Start",
+      "children": [
+        { "name": "CommanderName", "type": "Text", "text": "{commander.name}", "font": "Body", "color": "Text", "maxLines": 1 },
+        {
+          "name": "Powers",
+          "type": "HBox",
+          "spacing": 4,
+          "repeat": "commander.powers",
+          "template": {
+            "type": "Button",
+            "sprite": "Button",
+            "action": "UsePower",
+            "tooltip": true,
+            "size": [48, 48],
+            "bind": { "enabled": "item.ready" },
+            "children": [
+              { "type": "Image", "anchor": "Fill", "position": [8, 8], "bind": { "sprite": "item.icon" }, "visibleWhen": "!item.locked" },
+              { "type": "Image", "sprite": "Icon.Placeholder", "anchor": "Fill", "position": [12, 12], "opacity": 0.35, "visibleWhen": "item.locked" },
+              { "type": "ProgressBar", "sprite": "ProgressBar.Background", "fillSprite": "ProgressBar.Fill", "fillColor": "Accent",
+                "anchor": "BottomStretch", "position": [4, 4], "size": [0, 4], "bind": { "progress": "item.charge" }, "visibleWhen": "!item.locked" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

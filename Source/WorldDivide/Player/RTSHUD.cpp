@@ -97,7 +97,9 @@ void ARTSHUD::DrawHUD()
 {
 	Super::DrawHUD();
 
-	TopInset = MenuMargin + (HUDWidget ? HUDWidget->GetTopBandHeight() : 0.f);
+	LeftInset = MenuMargin + (HUDWidget ? HUDWidget->GetLeftColumnBottom() : 0.f);
+	RightInset = MenuMargin + (HUDWidget ? HUDWidget->GetRightColumnBottom() : 0.f);
+	BottomInset = MenuMargin + (HUDWidget ? HUDWidget->GetBottomFrameHeight() : 0.f);
 
 	const ARTSPlayerController* Controller = Cast<ARTSPlayerController>(GetOwningPlayerController());
 	if (!Controller)
@@ -274,7 +276,7 @@ void ARTSHUD::DrawCancelButton(const ARTSBuilding& Building)
 	float Height = 0.f;
 	GetTextSize(Text, Width, Height);
 	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
-	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - MenuMargin - Size.Y);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - BottomInset - Size.Y);
 	CancelButton = FBox2D(Min, Min + Size);
 
 	FVector2D Mouse;
@@ -327,7 +329,7 @@ void ARTSHUD::DrawBuildMenu(const ARTSPlayerController& Controller)
 		return;
 	}
 
-	float Y = TopInset;
+	float Y = LeftInset;
 	DrawText(Controller.GetSelectedBuilder() ? TEXT("Build") : TEXT("Build (debug)"), MenuColor, MenuMargin, Y);
 	const int32 Count = FMath::Min(Menu.Num(), ARTSPlayerController::MaxBuildHotkeys);
 	for (int32 Index = 0; Index < Count; ++Index)
@@ -370,7 +372,7 @@ void ARTSHUD::DrawProduction(const ARTSPlayerController& Controller)
 	}
 	DrawRallyPoint(Controller, *Building);
 
-	float Y = TopInset;
+	float Y = LeftInset;
 	DrawText(TEXT("Produce"), MenuColor, MenuMargin, Y);
 	const TArray<URTSEntityData*> Menu = Controller.GetProductionMenu();
 	const int32 Count = FMath::Min(Menu.Num(), ARTSPlayerController::MaxBuildHotkeys);
@@ -453,8 +455,8 @@ int32 ARTSHUD::GetQueueButtonAt(const FVector2D& Point) const
 
 float ARTSHUD::DrawScoreboard()
 {
-	// Under the top bar, one row per player: its team colour, then its name or AI label.
-	float Y = TopInset;
+	// Under the minimap and map buttons, one row per player: its team colour, then its name or AI label.
+	float Y = RightInset;
 	const ARTSGameState* GameState = GetWorld()->GetGameState<ARTSGameState>();
 	if (!GameState)
 	{
@@ -546,7 +548,7 @@ void ARTSHUD::DrawSuperweaponMenu(const ARTSPlayerController& Controller)
 		return;
 	}
 	const URTSSuperweaponComponent* Superweapon = Building->GetSuperweaponComponent();
-	float Y = TopInset;
+	float Y = LeftInset;
 	DrawText(TEXT("Superweapon"), MenuColor, MenuMargin, Y);
 	Y += MenuLineHeight;
 	FString Text = TEXT("1  Launch");
@@ -571,7 +573,7 @@ void ARTSHUD::DrawSuperweaponMenu(const ARTSPlayerController& Controller)
 	const FString Hint = TEXT("Launch: left click a target    Right click / Esc: cancel");
 	GetTextSize(Hint, Width, Height);
 	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
-	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - MenuMargin - Size.Y);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - BottomInset - Size.Y);
 	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
 	DrawText(Hint, DefeatColor, Min.X + ButtonPadding, Min.Y + ButtonPadding);
 }
@@ -599,7 +601,7 @@ void ARTSHUD::DrawSuperweaponAlert(const ARTSPlayerController& Controller)
 	float Height = 0.f;
 	GetTextSize(Text, Width, Height, Font, AttackAlertTextScale);
 	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
-	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, TopInset + SuperweaponAlertTop);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, MenuMargin + SuperweaponAlertTop);
 	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
 	DrawText(Text, bOwn ? VictoryColor : DefeatColor, Min.X + ButtonPadding, Min.Y + ButtonPadding, Font, AttackAlertTextScale);
 }
@@ -643,7 +645,7 @@ void ARTSHUD::DrawAttackAlert(const ARTSPlayerController& Controller)
 	float Height = 0.f;
 	GetTextSize(Text, Width, Height, Font, AttackAlertTextScale);
 	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
-	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, TopInset);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, MenuMargin);
 	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
 	DrawText(Text, *TextColor, Min.X + ButtonPadding, Min.Y + ButtonPadding, Font, AttackAlertTextScale);
 }
@@ -659,7 +661,7 @@ void ARTSHUD::DrawAttackMoveHint(const ARTSPlayerController& Controller)
 	float Height = 0.f;
 	GetTextSize(Text, Width, Height);
 	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
-	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - MenuMargin - Size.Y);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - BottomInset - Size.Y);
 	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
 	DrawText(Text, SelectionColor, Min.X + ButtonPadding, Min.Y + ButtonPadding);
 }

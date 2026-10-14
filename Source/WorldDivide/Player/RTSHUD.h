@@ -19,7 +19,7 @@ enum class ERTSMatchResult : uint8;
  * building or unit is attacked, every superweapon's countdown, the launch entry of a selected own superweapon and a hint
  * while targeting it, the target of a strike on its way and a warning when a superweapon is built or ready, without any
  * UI assets; once the match is over it hides the menus. It also shows the local player the URTSHUDWidget (the class set
- * in URTSSettings), which holds the resource bar, the match result and the in-game menu, and keeps its top bar clear.
+ * in URTSSettings), which holds the HUD frame, the match result and the in-game menu, and keeps clear of its panels.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSHUD : public AHUD
@@ -85,8 +85,8 @@ private:
 	void EnsureHUDWidget();
 
 	/**
-	 * Under the top bar, every player in the match by team: its colour and GetScoreboardLabel, greyed once eliminated. Returns
-	 * the line below it.
+	 * Under the minimap and map buttons, every player in the match by team: its colour and GetScoreboardLabel, greyed once
+	 * eliminated. Returns the line below it.
 	 */
 	float DrawScoreboard();
 
@@ -108,7 +108,10 @@ private:
 	 */
 	void DrawAttackAlert(const ARTSPlayerController& Controller);
 
-	/** Bottom center, where the cancel button would be: that needs a selected building, attack-move selected units. */
+	/**
+	 * Bottom center above the bottom panels, where the cancel button would be: that needs a selected building, attack-move
+	 * selected units.
+	 */
 	void DrawAttackMoveHint(const ARTSPlayerController& Controller);
 
 	/** Green to red over a dark backdrop; Top is the bar's upper edge. */
@@ -117,8 +120,10 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<URTSHUDWidget> HUDWidget;
 
-	/** Viewport pixels from the top where the canvas starts drawing, under the widget's top bar. */
-	float TopInset = 0.f;
+	/** Viewport pixels the canvas keeps clear of the widget's panels: the top of the left and right menus, and the bottom hints. */
+	float LeftInset = 0.f;
+	float RightInset = 0.f;
+	float BottomInset = 0.f;
 
 	/** Invalid while no cancel button is shown. */
 	FBox2D CancelButton = FBox2D(ForceInit);

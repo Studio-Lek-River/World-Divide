@@ -1,0 +1,48 @@
+{
+  "name": "MapButtons",
+  "type": "HBox",
+  "anchor": "Fill",
+  "spacing": 4,
+  "align": "Fill",
+  "children": [
+    {
+      "name": "Overlays",
+      "type": "Button",
+      "sprite": "Button",
+      "action": "OpenOverlays",
+      "anchor": "Fill",
+      "bind": { "enabled": "map.overlays.enabled" },
+      "children": [
+        { "type": "Text", "anchor": "Top", "position": [0, 6], "text": "Overlays", "font": "Body", "fontSize": 12, "color": "Text" },
+        { "type": "Text", "anchor": "Bottom", "position": [0, 4], "text": "Coming later", "font": "Body", "fontSize": 9, "color": "MutedText",
+          "visibleWhen": "!map.overlays.enabled" }
+      ]
+    },
+    {
+      "name": "GeneralPowers",
+      "type": "Button",
+      "sprite": "Button",
+      "action": "OpenGeneralPowers",
+      "anchor": "Fill",
+      "bind": { "enabled": "map.powers.enabled" },
+      "children": [
+        { "type": "Text", "anchor": "Top", "position": [0, 6], "text": "Powers", "font": "Body", "fontSize": 12, "color": "Text" },
+        { "type": "Text", "anchor": "Bottom", "position": [0, 4], "text": "Coming later", "font": "Body", "fontSize": 9, "color": "MutedText",
+          "visibleWhen": "!map.powers.enabled" }
+      ]
+    },
+    {
+      "name": "Objectives",
+      "type": "Button",
+      "sprite": "Button",
+      "action": "OpenObjectives",
+      "anchor": "Fill",
+      "bind": { "enabled": "map.objectives.enabled" },
+      "children": [
+        { "type": "Text", "anchor": "Top", "position": [0, 6], "text": "Objectives", "font": "Body", "fontSize": 12, "color": "Text" },
+        { "type": "Text", "anchor": "Bottom", "position": [0, 4], "text": "Coming later", "font": "Body", "fontSize": 9, "color": "MutedText",
+          "visibleWhen": "!map.objectives.enabled" }
+      ]
+    }
+  ]
+}

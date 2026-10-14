@@ -98,7 +98,8 @@ namespace
 const TArray<FName>& RTSLayout::GetPanelNames()
 {
 	static const TArray<FName> Names = {
-		TEXT("Minimap"), TEXT("Selection"), TEXT("Queue"), TEXT("Commands"), TEXT("Notifications"), TEXT("Scoreboard"), TEXT("Tooltip"),
+		TEXT("Minimap"), TEXT("Selection"), TEXT("Queue"), TEXT("Commands"), TEXT("Upgrades"), TEXT("Notifications"), TEXT("Scoreboard"),
+		TEXT("Tooltip"),
 	};
 	return Names;
 }

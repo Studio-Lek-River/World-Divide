@@ -4,27 +4,73 @@
   "anchor": "Fill",
   "modals": ["MatchResult", "InGameMenu"],
   "children": [
-    { "name": "TopBar", "type": "Slot", "anchor": "TopStretch", "size": [0, 48], "layout": "ResourceBar" },
-    { "name": "Notifications", "type": "Slot", "anchor": "TopLeft", "position": [16, 64], "size": [480, 200], "widget": "Notifications" },
-    { "name": "Scoreboard", "type": "Slot", "anchor": "TopRight", "position": [16, 64], "size": [360, 300], "widget": "Scoreboard" },
-    { "name": "Tooltip", "type": "Slot", "anchor": "BottomRight", "position": [16, 246], "size": [460, 240], "widget": "Tooltip" },
     {
-      "name": "BottomBand",
-      "type": "HBox",
-      "anchor": "BottomStretch",
-      "size": [0, 230],
+      "name": "LeftColumn",
+      "type": "VBox",
+      "anchor": "TopLeft",
+      "position": [16, 16],
+      "spacing": 8,
+      "align": "Start",
+      "children": [
+        { "name": "CommanderBar", "type": "Slot", "size": [580, 96], "layout": "CommanderBar" },
+        { "name": "Notifications", "type": "Slot", "size": [480, 200], "widget": "Notifications" }
+      ]
+    },
+    {
+      "name": "RightColumn",
+      "type": "VBox",
+      "anchor": "TopRight",
+      "position": [16, 16],
+      "spacing": 8,
       "align": "Fill",
       "children": [
-        { "name": "Minimap", "type": "Slot", "size": [230, 230], "widget": "Minimap" },
-        { "name": "Selection", "type": "Slot", "anchor": "Fill", "widget": "Selection" },
         {
-          "name": "QueueAndCommands",
-          "type": "VBox",
-          "size": [460, 230],
+          "name": "MinimapFrame",
+          "type": "Panel",
+          "sprite": "Panel",
+          "size": [280, 280],
+          "children": [{ "name": "Minimap", "type": "Slot", "anchor": "Fill", "widget": "Minimap" }]
+        },
+        { "name": "MapButtons", "type": "Slot", "size": [280, 48], "layout": "MapButtons" }
+      ]
+    },
+    { "name": "Scoreboard", "type": "Slot", "anchor": "TopRight", "position": [16, 376], "size": [360, 300], "widget": "Scoreboard" },
+    { "name": "Tooltip", "type": "Slot", "anchor": "BottomRight", "position": [16, 336], "size": [460, 240], "widget": "Tooltip" },
+    {
+      "name": "BottomFrame",
+      "type": "VBox",
+      "anchor": "BottomStretch",
+      "size": [0, 320],
+      "align": "Fill",
+      "children": [
+        { "name": "ResourceBar", "type": "Slot", "size": [0, 40], "layout": "ResourceBar" },
+        {
+          "name": "BottomPanels",
+          "type": "HBox",
+          "anchor": "Fill",
           "align": "Fill",
           "children": [
-            { "name": "Queue", "type": "Slot", "size": [460, 64], "widget": "Queue" },
-            { "name": "Commands", "type": "Slot", "anchor": "Fill", "widget": "Commands" }
+            {
+              "name": "SelectionFrame",
+              "type": "Panel",
+              "sprite": "Panel",
+              "size": [460, 0],
+              "children": [{ "name": "Selection", "type": "Slot", "anchor": "Fill", "position": [8, 8], "widget": "Selection" }]
+            },
+            {
+              "name": "CommandsFrame",
+              "type": "Panel",
+              "sprite": "Panel",
+              "anchor": "Fill",
+              "children": [{ "name": "Commands", "type": "Slot", "anchor": "Fill", "position": [8, 8], "widget": "Commands" }]
+            },
+            {
+              "name": "UpgradesFrame",
+              "type": "Panel",
+              "sprite": "Panel",
+              "size": [300, 0],
+              "children": [{ "name": "Upgrades", "type": "Slot", "anchor": "Fill", "position": [8, 8], "widget": "Upgrades" }]
+            }
           ]
         }
       ]

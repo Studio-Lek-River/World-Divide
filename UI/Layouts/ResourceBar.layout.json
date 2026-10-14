@@ -5,30 +5,46 @@
   "sprite": "Panel",
   "children": [
     {
-      "name": "Credits",
+      "name": "Power",
       "type": "HBox",
       "anchor": "Left",
       "position": [16, 0],
       "spacing": 8,
       "children": [
-        { "name": "CreditsIcon", "type": "Image", "sprite": "Icon.Credits", "size": [28, 28], "color": "Accent" },
-        { "name": "CreditsText", "type": "Text", "text": "{player.credits}", "font": "Number", "color": "Text" }
-      ]
-    },
-    {
-      "name": "Power",
-      "type": "HBox",
-      "anchor": "Left",
-      "position": [220, 0],
-      "spacing": 8,
-      "visibleWhen": "player.usesPower",
-      "children": [
-        { "name": "PowerIcon", "type": "Image", "sprite": "Icon.Power", "size": [28, 28], "color": "Accent", "visibleWhen": "!player.power.low" },
-        { "name": "PowerLowIcon", "type": "Image", "sprite": "Icon.PowerLow", "size": [28, 28], "color": "Warning", "visibleWhen": "player.power.low" },
+        { "name": "PowerIcon", "type": "Image", "sprite": "Icon.Power", "size": [24, 24], "color": "Accent", "visibleWhen": "!player.power.low" },
+        { "name": "PowerLowIcon", "type": "Image", "sprite": "Icon.PowerLow", "size": [24, 24], "color": "Warning", "visibleWhen": "player.power.low" },
+        { "name": "PowerBar", "type": "ProgressBar", "sprite": "ProgressBar.Background", "fillSprite": "ProgressBar.Fill", "fillColor": "Accent",
+          "size": [160, 12], "bind": { "progress": "player.power.ratio" } },
         { "name": "PowerText", "type": "Text", "text": "{player.power.produced} / {player.power.consumed}", "font": "Number", "color": "Text",
           "bind": { "color": "player.power.color" } }
       ]
     },
-    { "name": "Faction", "type": "Text", "anchor": "Right", "position": [16, 0], "text": "{player.faction}", "font": "Body", "color": "MutedText" }
+    {
+      "name": "Credits",
+      "type": "HBox",
+      "anchor": "Center",
+      "spacing": 8,
+      "children": [
+        { "name": "CreditsIcon", "type": "Image", "sprite": "Icon.Credits", "size": [24, 24], "color": "Accent" },
+        { "name": "CreditsText", "type": "Text", "text": "{player.credits}", "font": "Number", "color": "Text" }
+      ]
+    },
+    {
+      "name": "Rank",
+      "type": "HBox",
+      "anchor": "Right",
+      "position": [16, 0],
+      "spacing": 4,
+      "repeat": "player.rank",
+      "count": 5,
+      "template": {
+        "type": "Panel",
+        "size": [20, 20],
+        "children": [
+          { "type": "Image", "sprite": "Icon.Placeholder", "anchor": "Fill", "color": "Accent", "visibleWhen": "item.earned" },
+          { "type": "Image", "sprite": "Icon.Placeholder", "anchor": "Fill", "color": "MutedText", "opacity": 0.5, "visibleWhen": "!item.earned" }
+        ]
+      }
+    }
   ]
 }

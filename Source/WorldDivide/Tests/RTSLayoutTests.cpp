@@ -594,14 +594,113 @@ bool FRTSUIBindingPanelsTest::RunTest(const FString& Parameters)
 	FRTSUIDeclarations Declarations;
 	ResourceBar->Declare(Declarations);
 	for (const TCHAR* Key : { TEXT("player.credits"), TEXT("player.power.produced"), TEXT("player.power.consumed"), TEXT("player.power.low"),
-		TEXT("player.power.color"), TEXT("player.usesPower"), TEXT("player.faction") })
+		TEXT("player.power.color"), TEXT("player.power.ratio"), TEXT("player.faction") })
 	{
 		TestTrue(FString::Printf(TEXT("The resource bar's source declares %s"), Key), Declarations.Keys.Contains(FName(Key)));
 	}
+	TestFalse(TEXT("Every faction uses power, so the resource bar has no usesPower"), Declarations.Keys.Contains(FName(TEXT("player.usesPower"))));
+	TestTrue(TEXT("The resource bar's source declares the rank list"), Declarations.Lists.Contains(FName(TEXT("player.rank"))));
 
 	const FString Json = URTSUICommandlet::DescribeBindings(FRTSLayoutValidationContext::MakeDefault());
 	TestTrue(TEXT("The bindings file lists the resource bar's keys"), Json.Contains(TEXT("\"player.credits\"")) && Json.Contains(TEXT("\"ResourceBar\"")));
-	TestTrue(TEXT("and the engine panels"), Json.Contains(TEXT("\"Minimap\"")));
+	TestTrue(TEXT("the commander bar and the map buttons"), Json.Contains(TEXT("\"CommanderBar\"")) && Json.Contains(TEXT("\"MapButtons\"")));
+	TestTrue(TEXT("and the engine panels"), Json.Contains(TEXT("\"Minimap\"")) && Json.Contains(TEXT("\"Upgrades\"")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSUIPowerRatioTest, "WorldDivide.UI.Bindings.PowerRatio", TestFlags)
+
+bool FRTSUIPowerRatioTest::RunTest(const FString& Parameters)
+{
+	TestEqual(TEXT("Normal: consumed over produced"), RTSUIBindings::GetPowerRatio(100, 40), 0.4f, KINDA_SMALL_NUMBER);
+	TestEqual(TEXT("At the limit the bar is full"), RTSUIBindings::GetPowerRatio(100, 100), 1.f, KINDA_SMALL_NUMBER);
+	TestEqual(TEXT("Low power stays full, not over"), RTSUIBindings::GetPowerRatio(50, 120), 1.f, KINDA_SMALL_NUMBER);
+	TestEqual(TEXT("No production but a load is full"), RTSUIBindings::GetPowerRatio(0, 30), 1.f, KINDA_SMALL_NUMBER);
+	TestEqual(TEXT("No production and no load is empty"), RTSUIBindings::GetPowerRatio(0, 0), 0.f, KINDA_SMALL_NUMBER);
+	TestEqual(TEXT("Production without load is empty"), RTSUIBindings::GetPowerRatio(80, 0), 0.f, KINDA_SMALL_NUMBER);
+
+	// Without a player the key still answers, as an empty bar.
+	FRTSUIValue Value;
+	bool bAnswered = false;
+	for (const IRTSUIBindingSource* Source : RTSUIBindings::GetDefaultSources())
+	{
+		bAnswered |= Source->GetValue(TEXT("player.power.ratio"), FRTSUIContext(), Value);
+	}
+	TestTrue(TEXT("A source answers player.power.ratio"), bAnswered);
+	TestTrue(TEXT("as a fill"), Value.Type == FRTSUIValue::EType::Progress);
+	TestEqual(TEXT("empty without a player"), Value.Number, 0.0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSUIBindingStubsTest, "WorldDivide.UI.Bindings.Stubs", TestFlags)
+
+bool FRTSUIBindingStubsTest::RunTest(const FString& Parameters)
+{
+	auto FindSource = [](const TCHAR* Panel) -> const IRTSUIBindingSource* {
+		for (const IRTSUIBindingSource* Source : RTSUIBindings::GetDefaultSources())
+		{
+			if (Source->GetPanels().Contains(FName(Panel)))
+			{
+				return Source;
+			}
+		}
+		return nullptr;
+	};
+	auto ListValue = [](const IRTSUIBindingSource& Source, const TCHAR* List, int32 Index, const TCHAR* Key) {
+		FRTSUIContext Context;
+		Context.List = List;
+		Context.Index = Index;
+		FRTSUIValue Value;
+		Source.GetListValue(Key, Context, Value);
+		return Value;
+	};
+	const IRTSUIBindingSource* ResourceBar = FindSource(TEXT("ResourceBar"));
+	const IRTSUIBindingSource* Commander = FindSource(TEXT("CommanderBar"));
+	const IRTSUIBindingSource* MapButtons = FindSource(TEXT("MapButtons"));
+	if (!TestNotNull(TEXT("A source serves the resource bar"), ResourceBar) || !TestNotNull(TEXT("the commander bar"), Commander)
+		|| !TestNotNull(TEXT("and the map buttons"), MapButtons))
+	{
+		return false;
+	}
+	const FRTSUIContext NoPlayer;
+
+	// Rank comes in M5: five stars, none earned.
+	TestEqual(TEXT("The rank has five stars"), ResourceBar->GetListCount(TEXT("player.rank"), NoPlayer), 5);
+	for (int32 Index = 0; Index < 5; ++Index)
+	{
+		const FRTSUIValue Earned = ListValue(*ResourceBar, TEXT("player.rank"), Index, TEXT("earned"));
+		TestTrue(FString::Printf(TEXT("Star %d answers earned as a flag"), Index), Earned.Type == FRTSUIValue::EType::Bool);
+		TestFalse(FString::Printf(TEXT("Star %d is not earned"), Index), Earned.bBool);
+	}
+
+	// Generals come in #73, their powers in M5: the faction's name, the placeholder portrait and nine locked slots.
+	FRTSUIValue Portrait;
+	TestTrue(TEXT("The commander bar answers its portrait"), Commander->GetValue(TEXT("commander.portrait"), NoPlayer, Portrait));
+	TestTrue(TEXT("as a sprite"), Portrait.Type == FRTSUIValue::EType::Sprite);
+	TestEqual(TEXT("the placeholder portrait"), Portrait.String, FString(TEXT("Portrait.Placeholder")));
+	FRTSUIValue Name;
+	TestTrue(TEXT("The commander bar answers its name"), Commander->GetValue(TEXT("commander.name"), NoPlayer, Name));
+	TestTrue(TEXT("empty without a player"), Name.String.IsEmpty());
+	TestEqual(TEXT("There are nine power slots"), Commander->GetListCount(TEXT("commander.powers"), NoPlayer), 9);
+	for (int32 Index = 0; Index < 9; ++Index)
+	{
+		TestTrue(FString::Printf(TEXT("Slot %d is locked"), Index), ListValue(*Commander, TEXT("commander.powers"), Index, TEXT("locked")).bBool);
+		TestFalse(FString::Printf(TEXT("Slot %d is not ready"), Index), ListValue(*Commander, TEXT("commander.powers"), Index, TEXT("ready")).bBool);
+		TestEqual(FString::Printf(TEXT("Slot %d has no charge"), Index), ListValue(*Commander, TEXT("commander.powers"), Index, TEXT("charge")).Number, 0.0);
+		TestFalse(FString::Printf(TEXT("Slot %d has an icon"), Index), ListValue(*Commander, TEXT("commander.powers"), Index, TEXT("icon")).String.IsEmpty());
+	}
+	TestTrue(TEXT("UsePower is the commander bar's action"), Commander->HandleAction(TEXT("UsePower"), NoPlayer));
+
+	for (const TCHAR* Key : { TEXT("map.overlays.enabled"), TEXT("map.powers.enabled"), TEXT("map.objectives.enabled") })
+	{
+		FRTSUIValue Enabled;
+		TestTrue(FString::Printf(TEXT("The map buttons answer %s"), Key), MapButtons->GetValue(Key, NoPlayer, Enabled));
+		TestFalse(FString::Printf(TEXT("%s is false until its issue"), Key), Enabled.IsTruthy());
+	}
+	for (const TCHAR* Action : { TEXT("OpenOverlays"), TEXT("OpenGeneralPowers"), TEXT("OpenObjectives") })
+	{
+		TestTrue(FString::Printf(TEXT("%s is the map buttons' action"), Action), MapButtons->HandleAction(Action, NoPlayer));
+	}
 	return true;
 }
 

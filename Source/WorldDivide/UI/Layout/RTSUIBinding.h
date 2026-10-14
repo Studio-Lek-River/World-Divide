@@ -89,4 +89,7 @@ namespace RTSUIBindings
 
 	/** Everything Sources declare. */
 	WORLDDIVIDE_API FRTSUIDeclarations Declare(TConstArrayView<const IRTSUIBindingSource*> Sources);
+
+	/** The power bar's fill, consumed over produced, 0-1: full when something consumes and nothing produces, empty when neither. */
+	WORLDDIVIDE_API float GetPowerRatio(int32 Produced, int32 Consumed);
 }
