@@ -1,13 +1,13 @@
 ---
 name: fix-issue
-description: Take a World-Divide GitHub issue number, investigate it against the UE 5.8 codebase, propose a fix and wait for approval, then implement it on main, build, run the automation tests and commit with Closes #n. Wraps the birds-ai issue flow (D:\birds-ai\commands\issue\body.md) with the Unreal and repo rules of this project. Use with /fix-issue <number>.
+description: Take a World-Divide GitHub issue number, investigate it against the UE 5.8 codebase, propose a fix and wait for approval, then implement it on main, build, run the automation tests and commit with Closes #n. Wraps the birds-ai issue flow (D:\birds-ai\commands\issue\body.md) with the Unreal and repo rules of this project. Use with /fix-issue <number>; a bare /fix-issue says what to pick up next.
 user-invocable: true
-argument-hint: "<issue number>"
+argument-hint: "[issue number]"
 ---
 
 # /fix-issue — GitHub issue to verified commit on main
 
-Argument: `$ARGUMENTS` (the issue number, e.g. `1`). No number → ask for one and stop until you have it.
+Argument: `$ARGUMENTS` (the issue number, e.g. `1`). No number → run **What's next** (section 9) and stop there: it names the issue to pick up and the command, and the producer starts it.
 
 ## 0. Load the base flow
 
@@ -84,11 +84,32 @@ Report:
 
 Then `AskUserQuestion`: push to `origin/main` / adjust / leave unpushed. Push only on explicit approval; the push closes the issue through `Closes #<n>`. Never close the issue by hand.
 
-## 8. Follow-ups and roadmap order
+If the setup is blocked by an LFS-locked asset, check `git lfs locks`: nobody holds it → ask the producer once, `git lfs lock` it, rerun setup, and `git lfs unlock` it after the push. Someone else holds it → stop and report who.
+
+## 8. Follow-ups and work order
+
+The work order lives in the descriptions of the open milestones, worked in order: `M1 Design alignment` → `M2 HUD vertical slice` → `M3 Living roster` → `M4 Gameplay foundations` → `M5 Generals & powers` (list them with `gh api "repos/Studio-Lek-River/World-Divide/milestones?state=all"`). The old `Roadmap` milestone is closed; never add to it.
 
 After the push, always, without asking again:
 
-- Create every follow-up from the report as an issue in the `Roadmap` milestone: body with **Context** (start with `Follow-up to #<n>.`, name the classes involved), **What** and **Acceptance**, no labels. If an open issue already covers it, add a bullet to that issue's **What** instead of creating a duplicate.
-- Title prefix: the roadmap slot it belongs in, `[NNb]` (`[NNc]`, ...) right after the issue it must precede or follow, e.g. `[06b]` for work that a later issue builds on. Never renumber existing issues.
-- Update the `Roadmap` milestone description (`gh api -X PATCH repos/Studio-Lek-River/World-Divide/milestones/<id> -f description=...`): drop the line of the issue just closed and insert the new ones in order, keeping the `NN. #<n>` format under `Work top to bottom:`.
+- Create every follow-up from the report as an issue in the milestone it belongs to (usually the one of the issue just closed): body with **Context** (start with `Follow-up to #<n>.`, name the classes involved), **What** and **Acceptance**, no labels, title at most 70 characters. If an open issue already covers it, add a bullet to that issue's **What** instead of creating a duplicate.
+- Title prefix: the slot it belongs in, the next free letter or suffix in its series (`[19j]`, `[06b]`, ...), checked against all existing titles. Never renumber existing issues.
+- Update that milestone's description (`gh api -X PATCH repos/Studio-Lek-River/World-Divide/milestones/<id> -f description=...`): drop the line of the issue just closed, insert the new ones in order, and renumber the `N. #<n> <short title>` lines under `Work top to bottom:`.
 - Report the new issue URLs and the new order.
+
+## 9. What's next
+
+End every run (and answer a bare `/fix-issue`) with a short **What's next** block, so the producer never has to remember the flow. Read it live: the milestone work orders, `gh issue view` for state, and for design issues `docs/ui/ROUND_GUIDE.md`.
+
+1. **Next step.** The first open issue in the lowest open milestone's work order. Say its number and title, what it delivers in one line, and the exact command:
+   - code issue → `/fix-issue <n>`;
+   - design issue (`[..-design]`) → the step of its round (`docs/ui/ROUND_GUIDE.md`) it is at, worked out from what exists:
+     - no `Saved/UIBriefs/<Panel>/` yet → `/ui-brief <n>`, then hand the ZIP to ChatGPT;
+     - brief made, no delivery taken in → wait for ChatGPT's ZIP, then `/ui-intake <zip> <n>` (editor closed);
+     - delivery taken in, no review comment on the issue → look in PIE yourself, then `/ui-review <Panel> <n>`;
+     - reviewed → commit the intake (it closes the issue) or another ChatGPT round with the review.
+   - A design issue whose code issue is still open is not ready: say so and take the code issue.
+2. **In parallel.** While a design round waits on ChatGPT, name the next code issue in the order that does not depend on that design (code works with placeholder looks), with its `/fix-issue <n>`.
+3. **Blocked.** If the next issue builds on an open issue, say which and skip to the next one that is not blocked.
+
+Keep it to a few lines: what to do now, the command, and what can run alongside.
