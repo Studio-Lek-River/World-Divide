@@ -54,7 +54,7 @@ class WORLDDIVIDE_API URTSProductionComponent : public UActorComponent
 public:
 	URTSProductionComponent();
 
-	static constexpr int32 MaxQueue = 5;
+	static constexpr int32 MaxQueue = 10;
 
 	/** The owner is a constructed, standing building whose data lists units or upgrades. */
 	bool CanProduce() const;

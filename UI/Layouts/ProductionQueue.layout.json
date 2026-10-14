@@ -72,20 +72,20 @@
         24
       ],
       "size": [
-        400,
-        48
+        436,
+        40
       ],
-      "spacing": 40,
+      "spacing": 4,
       "repeat": "queue",
-      "count": 5,
+      "count": 10,
       "template": {
         "type": "Button",
         "name": "QueueItem",
         "sprite": "QueueSlot",
         "action": "CancelQueueItem",
         "size": [
-          48,
-          48
+          40,
+          40
         ],
         "bind": {
           "enabled": "item.name",
@@ -99,11 +99,11 @@
             "anchor": "Top",
             "position": [
               0,
-              4
+              3
             ],
             "size": [
-              30,
-              30
+              22,
+              22
             ],
             "visibleWhen": "!item.empty",
             "bind": {
@@ -119,11 +119,11 @@
             "anchor": "Top",
             "position": [
               0,
-              25
+              21
             ],
             "size": [
-              44,
-              18
+              40,
+              16
             ],
             "align": "Center",
             "maxLines": 1,
@@ -138,10 +138,10 @@
             "anchor": "Top",
             "position": [
               0,
-              42
+              36
             ],
             "size": [
-              40,
+              32,
               3
             ],
             "visibleWhen": "item.isActive",

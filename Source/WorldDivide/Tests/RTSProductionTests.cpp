@@ -130,13 +130,19 @@ namespace RTSProductionTests
 		TestTrue(TEXT("Queue a second rifleman"), Production->Enqueue(*Player, Rifle));
 		TestEqual(TEXT("Three entries charged"), Player->GetCredits(), 500);
 
-		// Filling up: five fit, the sixth is refused. The two extra riflemen are cancelled again.
-		TestTrue(TEXT("Queue a fourth"), Production->Enqueue(*Player, Rifle));
-		TestTrue(TEXT("Queue a fifth"), Production->Enqueue(*Player, Rifle));
-		TestFalse(TEXT("A sixth does not fit"), Production->Enqueue(*Player, Rifle));
-		TestEqual(TEXT("The full queue charged nothing more"), Player->GetCredits(), 300);
-		Production->CancelLast(*Player, Rifle);
-		Production->CancelLast(*Player, Rifle);
+		// Filling up: MaxQueue fit, one more is refused. The extra riflemen are cancelled again.
+		Player->AddCredits(1000);
+		for (int32 Index = Production->GetQueue().Num(); Index < URTSProductionComponent::MaxQueue; ++Index)
+		{
+			TestTrue(FString::Printf(TEXT("Queue entry %d"), Index + 1), Production->Enqueue(*Player, Rifle));
+		}
+		const int32 CreditsWhenFull = Player->GetCredits();
+		TestFalse(TEXT("One more does not fit"), Production->Enqueue(*Player, Rifle));
+		TestEqual(TEXT("The full queue charged nothing more"), Player->GetCredits(), CreditsWhenFull);
+		while (Production->GetQueue().Num() > 3)
+		{
+			Production->CancelLast(*Player, Rifle);
+		}
 
 		Player->AddCredits(50 - Player->GetCredits());
 		TestFalse(TEXT("A unit the player cannot afford is refused"), Production->Enqueue(*Player, Truck));
