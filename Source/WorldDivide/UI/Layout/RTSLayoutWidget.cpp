@@ -20,8 +20,13 @@
 #include "Dom/JsonObject.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "Fonts/FontMeasure.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Player/RTSPlayerController.h"
+#include "Rendering/SlateRenderer.h"
 #include "UI/Layout/RTSLayoutFiles.h"
 #include "UI/RTSUIStyleSubsystem.h"
+#include "Units/RTSUnit.h"
 #include "WorldDivide.h"
 
 namespace
@@ -40,6 +45,9 @@ namespace
 	const FName BindEnabled(TEXT("enabled"));
 	const FName BindSelected(TEXT("selected"));
 	const FName BindColor(TEXT("color"));
+
+	/** The list key Team reads inside a template. */
+	const FName TeamColorKey(TEXT("item.teamColor"));
 
 	struct FAnchorInfo
 	{
@@ -116,6 +124,28 @@ void URTSLayoutText::SynchronizeProperties()
 	{
 		SetColorAndOpacity(FSlateColor(ColorOverride.GetValue()));
 	}
+}
+
+void URTSLayoutText::SetMaxLines(int32 InMaxLines)
+{
+	MaxLines = InMaxLines;
+	if (MaxLines > 0)
+	{
+		SetTextOverflowPolicy(ETextOverflowPolicy::MultilineEllipsis);
+		SetClipping(EWidgetClipping::ClipToBounds);
+	}
+}
+
+float URTSLayoutText::GetMaxHeight() const
+{
+	const FSlateRenderer* Renderer = FSlateApplication::IsInitialized() ? FSlateApplication::Get().GetRenderer() : nullptr;
+	if (!Renderer)
+	{
+		return 0.f;
+	}
+	const float LineHeight = Renderer->GetFontMeasureService()->GetMaxCharacterHeight(GetFont()) * LineHeightPercentage;
+	// Half a pixel of room, so rounding never pushes the last line out.
+	return MaxLines * LineHeight + Margin.GetTotalSpaceAlong<Orient_Vertical>() + 0.5f;
 }
 
 UCommonButtonInternalBase* URTSLayoutButton::ConstructInternalButton()
@@ -280,7 +310,7 @@ void URTSLayoutWidget::BuildInto(UPanelWidget& Panel, const FRTSLayoutElement* P
 		}
 		if (!Element.Color.IsEmpty())
 		{
-			Border->SetBrushColor(ResolveColor(Element.Color));
+			Border->SetBrushColor(ResolveColor(Element.Color, Context));
 		}
 		Border->SetPadding(Element.Padding);
 		Border->SetHorizontalAlignment(HAlign_Fill);
@@ -313,10 +343,11 @@ void URTSLayoutWidget::BuildInto(UPanelWidget& Panel, const FRTSLayoutElement* P
 	case ERTSLayoutType::Image:
 	{
 		UImage* Image = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass());
-		Image->SetBrush(Element.Sprite.IsNone() ? FSlateBrush(FSlateNoResource()) : URTSUIStyleSubsystem::FindSpriteIn(Chain, Element.Sprite).Brush);
+		// The sprite goes on once the element is bound, which keeps a sprite sheet's frames.
+		Image->SetBrush(FSlateNoResource());
 		if (!Element.Color.IsEmpty())
 		{
-			Image->SetColorAndOpacity(ResolveColor(Element.Color));
+			Image->SetColorAndOpacity(ResolveColor(Element.Color, Context));
 		}
 		if (Element.CatchesMouse())
 		{
@@ -328,9 +359,10 @@ void URTSLayoutWidget::BuildInto(UPanelWidget& Panel, const FRTSLayoutElement* P
 	case ERTSLayoutType::Text:
 	{
 		URTSLayoutText* Text = WidgetTree->ConstructWidget<URTSLayoutText>(URTSLayoutText::StaticClass());
-		ApplyTextStyle(*Text, Element, Element.Color);
+		ApplyTextStyle(*Text, Element, Element.Color, Context);
 		Text->SetJustification(Element.Align == TEXT("Center") ? ETextJustify::Center : Element.Align == TEXT("Right") ? ETextJustify::Right : ETextJustify::Left);
 		Text->SetAutoWrapText(Element.bWrap);
+		Text->SetMaxLines(Element.MaxLines);
 		Text->SetText(FText::FromString(FormatText(Element, Context)));
 		Widget = Text;
 		break;
@@ -353,7 +385,7 @@ void URTSLayoutWidget::BuildInto(UPanelWidget& Panel, const FRTSLayoutElement* P
 		Style.FillImage = URTSUIStyleSubsystem::FindSpriteIn(Chain, Element.FillSprite.IsNone() ? DefaultFillSprite : Element.FillSprite).Brush;
 		Style.MarqueeImage = Style.FillImage;
 		Bar->SetWidgetStyle(Style);
-		Bar->SetFillColorAndOpacity(ResolveColor(Element.FillColor));
+		Bar->SetFillColorAndOpacity(ResolveColor(Element.FillColor, Context));
 		Bar->SetPercent(0.f);
 		Widget = Bar;
 		break;
@@ -367,14 +399,25 @@ void URTSLayoutWidget::BuildInto(UPanelWidget& Panel, const FRTSLayoutElement* P
 		: IsContainer(Element.Type) ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::HitTestInvisible;
 	Widget->SetVisibility(ShownVisibility);
 
-	// Padding inside an element without its own: a border with nothing to draw.
 	UWidget* Outer = Widget;
+	const URTSLayoutText* MaxLinesText = Element.MaxLines > 0 ? Cast<URTSLayoutText>(Widget) : nullptr;
+	if (const float MaxHeight = MaxLinesText ? MaxLinesText->GetMaxHeight() : 0.f; MaxHeight > 0.f)
+	{
+		// No taller than maxLines lines; the text ends the last one in an ellipsis.
+		USizeBox* LinesBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+		LinesBox->SetMaxDesiredHeight(MaxHeight);
+		LinesBox->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		LinesBox->SetContent(Widget);
+		Outer = LinesBox;
+	}
+
+	// Padding inside an element without its own: a border with nothing to draw.
 	if (Element.Padding != FMargin() && Element.Type != ERTSLayoutType::Panel && Element.Type != ERTSLayoutType::Button)
 	{
 		UBorder* PaddingBox = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass());
 		PaddingBox->SetBrush(FSlateNoResource());
 		PaddingBox->SetPadding(Element.Padding);
-		PaddingBox->SetContent(Widget);
+		PaddingBox->SetContent(Outer);
 		Outer = PaddingBox;
 	}
 
@@ -486,8 +529,13 @@ void URTSLayoutWidget::BuildInto(UPanelWidget& Panel, const FRTSLayoutElement* P
 	Entry.RepeatOf = RepeatOf;
 	Entry.ShownVisibility = Outer == Widget ? ShownVisibility : ESlateVisibility::SelfHitTestInvisible;
 	Entry.bKeepSpace = ParentType == ERTSLayoutType::Grid;
-	Entry.LastColor = Element.Color;
+	// A progress bar's colour is its fill.
+	Entry.LastColor = Element.Type == ERTSLayoutType::ProgressBar ? Element.FillColor : Element.Color;
 	Entry.LastSprite = Element.Sprite.IsNone() ? FString() : Element.Sprite.ToString();
+	if (UImage* Image = Cast<UImage>(Widget); Image && !Element.Sprite.IsNone())
+	{
+		SetImageSprite(*Image, Entry, Element.Sprite);
+	}
 
 	if (ChildPanel)
 	{
@@ -555,7 +603,7 @@ UWidget* URTSLayoutWidget::BuildSlot(const FRTSLayoutElement& Element, const FRT
 	return Canvas;
 }
 
-void URTSLayoutWidget::ApplyTextStyle(URTSLayoutText& Text, const FRTSLayoutElement& Element, const FString& Color) const
+void URTSLayoutWidget::ApplyTextStyle(URTSLayoutText& Text, const FRTSLayoutElement& Element, const FString& Color, const FRTSUIContext& Context)
 {
 	FLinearColor Hex;
 	TOptional<FLinearColor> Override;
@@ -566,7 +614,7 @@ void URTSLayoutWidget::ApplyTextStyle(URTSLayoutText& Text, const FRTSLayoutElem
 	}
 	else if (Color == RTSLayout::TeamColor)
 	{
-		Override = FLinearColor::White;
+		Override = GetTeamColor(Context);
 	}
 	else if (!Color.IsEmpty())
 	{
@@ -576,18 +624,86 @@ void URTSLayoutWidget::ApplyTextStyle(URTSLayoutText& Text, const FRTSLayoutElem
 	Text.SetStyle(URTSUIStyleSubsystem::FindTextStyleIn(Chain, Element.Font.IsNone() ? DefaultFont : Element.Font, StyleColor));
 }
 
-FLinearColor URTSLayoutWidget::ResolveColor(const FString& Color) const
+FLinearColor URTSLayoutWidget::ResolveColor(const FString& Color, const FRTSUIContext& Context)
 {
 	FLinearColor Hex;
-	if (Color.IsEmpty() || Color == RTSLayout::TeamColor)
+	if (Color.IsEmpty())
 	{
 		return FLinearColor::White;
+	}
+	if (Color == RTSLayout::TeamColor)
+	{
+		return GetTeamColor(Context);
 	}
 	if (RTSLayout::ParseHexColor(Color, Hex))
 	{
 		return Hex;
 	}
 	return URTSUIStyleSubsystem::FindColorIn(Chain, FName(*Color));
+}
+
+FLinearColor URTSLayoutWidget::GetTeamColor(const FRTSUIContext& Context)
+{
+	FRTSUIValue Value;
+	if (!Context.List.IsNone() && GetValue(TeamColorKey, Context, Value))
+	{
+		// An empty copy has no team; a source answering Team itself would loop.
+		return Value.String.IsEmpty() || Value.String == RTSLayout::TeamColor ? FLinearColor::White : ResolveColor(Value.String, Context);
+	}
+	const ARTSPlayerController* Controller = Cast<ARTSPlayerController>(Context.Player);
+	return Controller ? ARTSUnit::GetTeamColor(Controller->GetTeamId()) : FLinearColor::White;
+}
+
+void URTSLayoutWidget::SetImageSprite(UImage& Image, FBoundElement& Entry, FName Sprite) const
+{
+	Entry.Frames = 0;
+	if (Sprite.IsNone())
+	{
+		Image.SetBrush(FSlateNoResource());
+		return;
+	}
+	const FRTSUISprite& Found = URTSUIStyleSubsystem::FindSpriteIn(Chain, Sprite);
+	Image.SetBrush(Found.Brush);
+	if (Found.Frames <= 0 || Found.FrameSize.X <= 0 || Found.FrameSize.Y <= 0 || Found.Brush.ImageSize.X <= 0.f || Found.Brush.ImageSize.Y <= 0.f)
+	{
+		return;
+	}
+	Entry.Frames = Found.Frames;
+	Entry.FrameSize = FVector2f(Found.FrameSize.X, Found.FrameSize.Y);
+	Entry.SheetSize = FVector2f(Found.Brush.ImageSize);
+	Entry.Fps = Found.Fps;
+	Entry.SheetTime = 0.0;
+	Entry.ShownFrame = 0;
+	ShowFrame(Image, Entry, 0);
+}
+
+void URTSLayoutWidget::ShowFrame(UImage& Image, const FBoundElement& Entry, int32 Frame)
+{
+	// The frames sit in one row from the top left of the sheet.
+	FSlateBrush Brush = Image.GetBrush();
+	Brush.ImageSize = FVector2D(Entry.FrameSize);
+	const FVector2f Min(Frame * Entry.FrameSize.X / Entry.SheetSize.X, 0.f);
+	Brush.SetUVRegion(FBox2f(Min, Min + Entry.FrameSize / Entry.SheetSize));
+	Image.SetBrush(Brush);
+}
+
+void URTSLayoutWidget::Animate(float DeltaSeconds)
+{
+	for (FBoundElement& Entry : Bound)
+	{
+		UImage* Image = Entry.Frames > 0 && Entry.Fps > 0.f ? Cast<UImage>(Entry.Widget.Get()) : nullptr;
+		if (!Image)
+		{
+			continue;
+		}
+		Entry.SheetTime += DeltaSeconds;
+		const int32 Frame = FMath::FloorToInt32(Entry.SheetTime * Entry.Fps) % Entry.Frames;
+		if (Frame != Entry.ShownFrame)
+		{
+			Entry.ShownFrame = Frame;
+			ShowFrame(*Image, Entry, Frame);
+		}
+	}
 }
 
 int32 URTSLayoutWidget::GetListCount(FName List, const FRTSUIContext& Context)
@@ -702,6 +818,7 @@ void URTSLayoutWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 	Super::NativeTick(MyGeometry, InDeltaTime);
 
 	UpdateBindings();
+	Animate(InDeltaTime);
 }
 
 void URTSLayoutWidget::UpdateBindings()
@@ -779,8 +896,7 @@ void URTSLayoutWidget::UpdateElement(FBoundElement& Entry)
 			if (Image && Value.String != Entry.LastSprite)
 			{
 				Entry.LastSprite = Value.String;
-				Image->SetBrush(Value.String.IsEmpty() ? FSlateBrush(FSlateNoResource())
-					: URTSUIStyleSubsystem::FindSpriteIn(Chain, FName(*Value.String)).Brush);
+				SetImageSprite(*Image, Entry, Value.String.IsEmpty() ? NAME_None : FName(*Value.String));
 			}
 		}
 		else if (Binding.Key == BindEnabled)
@@ -802,23 +918,43 @@ void URTSLayoutWidget::UpdateElement(FBoundElement& Entry)
 		else if (Binding.Key == BindColor && Value.String != Entry.LastColor)
 		{
 			Entry.LastColor = Value.String;
-			if (URTSLayoutText* Text = Cast<URTSLayoutText>(Widget))
+			Entry.LastTeamColor = FLinearColor::Transparent;
+			if (Value.String != RTSLayout::TeamColor)
 			{
-				ApplyTextStyle(*Text, Element, Value.String);
-			}
-			else if (UImage* Image = Cast<UImage>(Widget))
-			{
-				Image->SetColorAndOpacity(ResolveColor(Value.String));
-			}
-			else if (UBorder* Border = Cast<UBorder>(Widget))
-			{
-				Border->SetBrushColor(ResolveColor(Value.String));
-			}
-			else if (UProgressBar* Bar = Cast<UProgressBar>(Widget))
-			{
-				Bar->SetFillColorAndOpacity(ResolveColor(Value.String));
+				ApplyColor(*Widget, Element, Value.String, Entry.Context);
 			}
 		}
+	}
+
+	// Team follows the item or the player, neither of which says when it changes.
+	if (Entry.LastColor == RTSLayout::TeamColor)
+	{
+		const FLinearColor TeamColor = GetTeamColor(Entry.Context);
+		if (TeamColor != Entry.LastTeamColor)
+		{
+			Entry.LastTeamColor = TeamColor;
+			ApplyColor(*Widget, Element, Entry.LastColor, Entry.Context);
+		}
+	}
+}
+
+void URTSLayoutWidget::ApplyColor(UWidget& Widget, const FRTSLayoutElement& Element, const FString& Color, const FRTSUIContext& Context)
+{
+	if (URTSLayoutText* Text = Cast<URTSLayoutText>(&Widget))
+	{
+		ApplyTextStyle(*Text, Element, Color, Context);
+	}
+	else if (UImage* Image = Cast<UImage>(&Widget))
+	{
+		Image->SetColorAndOpacity(ResolveColor(Color, Context));
+	}
+	else if (UBorder* Border = Cast<UBorder>(&Widget))
+	{
+		Border->SetBrushColor(ResolveColor(Color, Context));
+	}
+	else if (UProgressBar* Bar = Cast<UProgressBar>(&Widget))
+	{
+		Bar->SetFillColorAndOpacity(ResolveColor(Color, Context));
 	}
 }
 

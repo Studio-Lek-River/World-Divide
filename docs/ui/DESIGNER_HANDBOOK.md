@@ -115,7 +115,7 @@ A layout file holds one root element. Elements nest through `children`.
 | `HBox` / `VBox` | a row / column; children are placed one after another; a child stretched along the row or column (`Fill`, or `TopStretch`/`BottomStretch` in an `HBox`, `LeftStretch`/`RightStretch` in a `VBox`) takes the room the others leave | `spacing`, `align` across the row or column (`Start`, `Center`, `End`, `Fill`; default `Center`) |
 | `Grid` | fixed cells: a hidden cell keeps its place | `columns`, `rows`, `cellSize` [w,h], `spacing` |
 | `Image` | a sprite | `sprite`, `color` (tint, for `tint` sprites) |
-| `Text` | a label | `text`, `font` (`Title`, `Body`, `Number`), `fontSize`, `align` (`Left`, `Center`, `Right`), `wrap` (true/false), `maxLines` |
+| `Text` | a label | `text`, `font` (`Title`, `Body`, `Number`), `fontSize`, `align` (`Left`, `Center`, `Right`), `wrap` (true/false), `maxLines` (cuts the text after that many lines, with an ellipsis) |
 | `Button` | clickable; draws the state of its sprite (Normal, Hover, Pressed, Disabled, Selected) and can hold children (icon, hotkey plate, cost) | `sprite`, `action`, `tooltip` (true: hovering fills the tooltip with this item) |
 | `ProgressBar` | a 0–1 fill | `sprite` (background), `fillSprite`, `fillColor`, `bind.progress` |
 | `Slot` | a hook: places another layout file, or a panel the engine draws itself (the minimap terrain and markers) | `layout` (layout file name without extension) or `widget` (engine panel name given in the brief) |
@@ -130,7 +130,7 @@ A layout file holds one root element. Elements nest through `children`.
 | `position` | [x, y] offset from the anchor point, in HUD units; positive x goes right, positive y down; for right/bottom anchors the offset goes inward | [0, 0] |
 | `size` | [w, h] in HUD units; 0 on a stretched axis means "fill the parent" | the content size |
 | `padding` | [left, top, right, bottom] inside the element | [0, 0, 0, 0] |
-| `color` | a theme colour name (section 4), `Team` (the team colour of the item), or `#RRGGBB` / `#RRGGBBAA` | white |
+| `color` | a theme colour name (section 4), `Team` (inside a template the team colour of the item, from its list's `item.teamColor`; elsewhere the local player's), or `#RRGGBB` / `#RRGGBBAA` | white |
 | `opacity` | 0–1 | 1 |
 | `hitTest` | true: the element catches the mouse and blocks the battlefield | true for `Panel` with a sprite and `Button`, false otherwise |
 | `visibleWhen` | a condition: `key` (true or non-empty), `!key` (false or empty), `key=value`, `key!=value` | always visible |

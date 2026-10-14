@@ -11,11 +11,15 @@
 
 class FJsonObject;
 class UCanvasPanel;
+class UImage;
 class UPanelWidget;
 class URTSLayoutWidget;
 class URTSUIStyleSet;
 
-/** A layout Text: a Common UI text with the style of its font and colour, plus the fontSize or #RRGGBB colour on top. */
+/**
+ * A layout Text: a Common UI text with the style of its font and colour, plus the fontSize or #RRGGBB colour on top. With
+ * maxLines, what does not fit the lines its size box allows ends in an ellipsis.
+ */
 UCLASS()
 class WORLDDIVIDE_API URTSLayoutText : public UCommonTextBlock
 {
@@ -23,11 +27,16 @@ class WORLDDIVIDE_API URTSLayoutText : public UCommonTextBlock
 
 public:
 	void SetOverrides(int32 InFontSize, TOptional<FLinearColor> InColor);
+	void SetMaxLines(int32 InMaxLines);
+
+	/** The height of maxLines lines in the text's font, with its margin. */
+	float GetMaxHeight() const;
 
 	virtual void SynchronizeProperties() override;
 
 private:
 	int32 FontSizeOverride = 0;
+	int32 MaxLines = 0;
 	TOptional<FLinearColor> ColorOverride;
 };
 
@@ -92,6 +101,9 @@ public:
 	/** Pulls every binding once; NativeTick does this every frame. */
 	void UpdateBindings();
 
+	/** Plays the sprite sheets DeltaSeconds on; NativeTick does this every frame. */
+	void Animate(float DeltaSeconds);
+
 	/** Point, in absolute (desktop) pixels, lies on a shown element with hitTest, as laid out last frame. */
 	bool IsOnPanel(const FVector2D& AbsolutePoint) const;
 
@@ -129,6 +141,15 @@ private:
 		bool bKeepSpace = false;
 		FString LastColor;
 		FString LastSprite;
+		/** The colour Team last resolved to, for color and fillColor. */
+		FLinearColor LastTeamColor = FLinearColor::Transparent;
+		/** The Image's sprite sheet, 0 frames for a still image, how long it has played and the frame it shows. */
+		int32 Frames = 0;
+		FVector2f FrameSize = FVector2f::ZeroVector;
+		FVector2f SheetSize = FVector2f::ZeroVector;
+		float Fps = 0.f;
+		double SheetTime = 0.0;
+		int32 ShownFrame = 0;
 	};
 
 	/**
@@ -140,9 +161,16 @@ private:
 	void BuildChildren(const FRTSLayoutElement& Element, UPanelWidget& Panel, const FRTSUIContext& Context, int32 Depth);
 	UWidget* BuildSlot(const FRTSLayoutElement& Element, const FRTSUIContext& Context, int32 Depth);
 
-	/** The text style of the element's font in Color: a theme colour, or the Text colour with a #RRGGBB on top. */
-	void ApplyTextStyle(URTSLayoutText& Text, const FRTSLayoutElement& Element, const FString& Color) const;
-	FLinearColor ResolveColor(const FString& Color) const;
+	/** The text style of the element's font in Color: a theme colour, or the Text colour with a #RRGGBB or Team on top. */
+	void ApplyTextStyle(URTSLayoutText& Text, const FRTSLayoutElement& Element, const FString& Color, const FRTSUIContext& Context);
+	/** A theme colour, #RRGGBB or Team: the item's item.teamColor inside a template, else the local player's team colour. */
+	FLinearColor ResolveColor(const FString& Color, const FRTSUIContext& Context);
+	FLinearColor GetTeamColor(const FRTSUIContext& Context);
+	/** Colours a Text, an Image, a Panel or a ProgressBar's fill. */
+	void ApplyColor(UWidget& Widget, const FRTSLayoutElement& Element, const FString& Color, const FRTSUIContext& Context);
+	/** Shows Sprite on Image, its first frame for a sprite sheet. */
+	void SetImageSprite(UImage& Image, FBoundElement& Entry, FName Sprite) const;
+	static void ShowFrame(UImage& Image, const FBoundElement& Entry, int32 Frame);
 	FString FormatText(const FRTSLayoutElement& Element, const FRTSUIContext& Context);
 	int32 GetListCount(FName List, const FRTSUIContext& Context);
 	bool GetValue(FName Key, const FRTSUIContext& Context, FRTSUIValue& OutValue);

@@ -5,6 +5,7 @@
 
 #include "CommonTextBlock.h"
 #include "Components/Image.h"
+#include "Components/PanelWidget.h"
 #include "Components/ProgressBar.h"
 #include "Dom/JsonObject.h"
 #include "Editor.h"
@@ -16,6 +17,7 @@
 #include "UI/Layout/RTSLayoutValidator.h"
 #include "UI/Layout/RTSLayoutWidget.h"
 #include "UI/Layout/RTSUICommandlet.h"
+#include "UI/RTSUIStyleSet.h"
 
 namespace
 {
@@ -33,12 +35,14 @@ namespace
 		bool bOn = true;
 		FString Mode;
 		TArray<FString> Items;
+		/** Each item's item.teamColor, white past the end. */
+		TArray<FString> TeamColors;
 		int32 Clicks = 0;
 
 		virtual void Declare(FRTSUIDeclarations& Out) const override
 		{
 			Out.Keys.Append({ TEXT("test.credits"), TEXT("test.progress"), TEXT("test.color"), TEXT("test.on"), TEXT("test.mode") });
-			Out.Lists.Add(TEXT("test.items"), { TEXT("name"), TEXT("enabled") });
+			Out.Lists.Add(TEXT("test.items"), { TEXT("name"), TEXT("enabled"), TEXT("teamColor") });
 			Out.Actions.Add(TEXT("Click"));
 		}
 
@@ -93,6 +97,11 @@ namespace
 				OutValue = FRTSUIValue::MakeBool(true);
 				return true;
 			}
+			if (Key == TEXT("teamColor"))
+			{
+				OutValue = FRTSUIValue::MakeColor(TeamColors.IsValidIndex(Context.Index) ? FName(*TeamColors[Context.Index]) : FName(TEXT("#FFFFFF")));
+				return true;
+			}
 			return false;
 		}
 
@@ -107,8 +116,9 @@ namespace
 		}
 	};
 
-	/** Builds Json as File in a new layout widget of the editor world, with the test bindings and the generated styles. */
-	URTSLayoutWidget* BuildLayout(FAutomationTestBase& Test, const TCHAR* Json, const FString& File, const FTestBindings& Bindings)
+	/** Builds Json as File in a new layout widget of the editor world, with the test bindings and the generated styles after Extra. */
+	URTSLayoutWidget* BuildLayout(FAutomationTestBase& Test, const TCHAR* Json, const FString& File, const FTestBindings& Bindings,
+		const URTSUIStyleSet* Extra = nullptr)
 	{
 		UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
 		URTSLayoutWidget* Widget = World ? CreateWidget<URTSLayoutWidget>(World, URTSLayoutWidget::StaticClass()) : nullptr;
@@ -119,7 +129,12 @@ namespace
 			Test.AddError(FString::Printf(TEXT("Could not build %s: %s"), *File, *Error));
 			return nullptr;
 		}
-		Widget->BuildFromJson(*Object, File, URTSLayoutWidget::GetDefaultChain(World), { &Bindings });
+		TArray<const URTSUIStyleSet*> Chain = URTSLayoutWidget::GetDefaultChain(World);
+		if (Extra)
+		{
+			Chain.Insert(Extra, 0);
+		}
+		Widget->BuildFromJson(*Object, File, MoveTemp(Chain), { &Bindings });
 		return Widget;
 	}
 
@@ -196,6 +211,30 @@ namespace
 			{ "name": "Label", "type": "Text", "font": "Huge", "color": "Purple" },
 			{ "name": "Press", "type": "Button", "action": "NoSuchAction" },
 			{ "name": "Hole", "type": "Slot", "layout": "NoSuchLayout" }
+		]
+	})");
+
+	const TCHAR* MaxLinesLayout = TEXT(R"({
+		"name": "Root", "type": "Panel", "anchor": "Fill",
+		"children": [
+			{ "name": "Column", "type": "VBox", "anchor": "TopLeft", "align": "Start", "children": [
+				{ "name": "Limited", "type": "Text", "text": "{test.mode}", "wrap": true, "maxLines": 2, "size": [200, 0] },
+				{ "name": "Unlimited", "type": "Text", "text": "{test.mode}", "wrap": true, "size": [200, 0] }
+			] }
+		]
+	})");
+
+	const TCHAR* SpriteSheetLayout = TEXT(R"({
+		"name": "Root", "type": "Panel", "anchor": "Fill",
+		"children": [ { "name": "Spinner", "type": "Image", "sprite": "Sheet" } ]
+	})");
+
+	const TCHAR* TeamColorLayout = TEXT(R"({
+		"name": "Root", "type": "Panel", "anchor": "Fill",
+		"children": [
+			{ "name": "Players", "type": "VBox", "repeat": "test.items", "count": 2,
+				"template": { "type": "Image", "color": "Team", "size": [16, 16] } },
+			{ "name": "Mine", "type": "Image", "color": "Team" }
 		]
 	})");
 
@@ -311,7 +350,114 @@ bool FRTSLayoutBindingsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLayoutUnknownKeyTest, "WorldDivide.UI.Layout.UnknownKey", TestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLayoutMaxLinesTest, "WorldDivide.UI.Layout.MaxLines", TestFlags)
+
+bool FRTSLayoutMaxLinesTest::RunTest(const FString& Parameters)
+{
+	FTestBindings Bindings;
+	Bindings.Mode = FString::Join(TArray<FString>({ TEXT("A long text that wraps over many lines in a narrow column,"),
+		TEXT("far more than the two lines its maxLines allows, so the rest is cut off with an ellipsis"),
+		TEXT("while the same text without maxLines keeps every line it needs.") }), TEXT(" "));
+	URTSLayoutWidget* Layout = BuildLayout(*this, MaxLinesLayout, TEXT("MaxLines.layout.json"), Bindings);
+	if (!Layout)
+	{
+		return false;
+	}
+	const TSharedRef<SWidget> Slate = Layout->TakeWidget();
+	// The first pass gives the texts their width, the second wraps them to it.
+	RTSTests::LayOutHeadless(*Layout, LayoutViewport);
+	RTSTests::LayOutHeadless(*Layout, LayoutViewport);
+
+	const URTSLayoutText* Limited = Cast<URTSLayoutText>(Layout->FindElement(TEXT("Limited")));
+	const UWidget* Unlimited = Layout->FindElement(TEXT("Unlimited"));
+	if (!Limited || !Unlimited)
+	{
+		AddError(TEXT("The layout lacks its texts"));
+		return false;
+	}
+	const float TwoLines = Limited->GetMaxHeight();
+	const float LimitedHeight = GetRect(*Layout, Limited).GetSize().Y;
+	const float UnlimitedHeight = GetRect(*Layout, Unlimited).GetSize().Y;
+	TestTrue(FString::Printf(TEXT("Two lines are some height (%.1f)"), TwoLines), TwoLines > 1.f);
+	TestTrue(FString::Printf(TEXT("maxLines 2 is at most two lines high: %.1f of %.1f"), LimitedHeight, TwoLines), LimitedHeight <= TwoLines);
+	TestTrue(FString::Printf(TEXT("and more than one: %.1f"), LimitedHeight), LimitedHeight > TwoLines / 2.f);
+	TestTrue(FString::Printf(TEXT("Without maxLines the text takes more lines: %.1f"), UnlimitedHeight), UnlimitedHeight > TwoLines);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLayoutSpriteSheetTest, "WorldDivide.UI.Layout.SpriteSheet", TestFlags)
+
+bool FRTSLayoutSpriteSheetTest::RunTest(const FString& Parameters)
+{
+	// 8 frames of 64x64 in one row, played at 12 fps.
+	URTSUIStyleSet* Styles = NewObject<URTSUIStyleSet>();
+	FRTSUISprite& Sheet = Styles->Sprites.Add(TEXT("Sheet"));
+	Sheet.Brush.ImageSize = FVector2D(512, 64);
+	Sheet.Frames = 8;
+	Sheet.FrameSize = FIntPoint(64, 64);
+	Sheet.Fps = 12.f;
+
+	FTestBindings Bindings;
+	URTSLayoutWidget* Layout = BuildLayout(*this, SpriteSheetLayout, TEXT("SpriteSheet.layout.json"), Bindings, Styles);
+	const UImage* Spinner = Layout ? Cast<UImage>(Layout->FindElement(TEXT("Spinner"))) : nullptr;
+	if (!Spinner)
+	{
+		AddError(TEXT("The layout lacks its Image"));
+		return false;
+	}
+	// The part of the sheet the image shows, from left to right edge.
+	const auto TestFrame = [this, Spinner](const TCHAR* What, float Left, float Right)
+	{
+		const FBox2f Region = Spinner->GetBrush().GetUVRegion();
+		TestTrue(FString::Printf(TEXT("%s: shows %s, expected [%.3f, %.3f] x [0, 1]"), What, *Region.ToString(), Left, Right),
+			Region.Min.Equals(FVector2f(Left, 0.f)) && Region.Max.Equals(FVector2f(Right, 1.f)));
+	};
+	const FVector2D ImageSize = Spinner->GetBrush().GetImageSize();
+	TestTrue(FString::Printf(TEXT("The image is one frame big, not %s"), *ImageSize.ToString()), ImageSize.Equals(FVector2D(64, 64)));
+	TestFrame(TEXT("It starts on the first frame"), 0.f, 0.125f);
+
+	Layout->Animate(0.25f);
+	TestFrame(TEXT("After 0.25 s at 12 fps it shows frame 3"), 0.375f, 0.5f);
+	Layout->Animate(0.5f);
+	TestFrame(TEXT("and after 0.75 s it has looped to frame 1"), 0.125f, 0.25f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLayoutTeamColorTest, "WorldDivide.UI.Layout.TeamColor", TestFlags)
+
+bool FRTSLayoutTeamColorTest::RunTest(const FString& Parameters)
+{
+	FTestBindings Bindings;
+	Bindings.Items = { TEXT("Alpha"), TEXT("Bravo") };
+	Bindings.TeamColors = { TEXT("#FF0000"), TEXT("#0000FF") };
+	URTSLayoutWidget* Layout = BuildLayout(*this, TeamColorLayout, TEXT("TeamColor.layout.json"), Bindings);
+	if (!Layout)
+	{
+		return false;
+	}
+	const TArray<UWidget*> Players = Layout->GetRepeatItems(TEXT("Players"));
+	const UImage* Mine = Cast<UImage>(Layout->FindElement(TEXT("Mine")));
+	if (Players.Num() != 2 || !Mine)
+	{
+		AddError(TEXT("The layout lacks its copies or its Image"));
+		return false;
+	}
+	// The copies sit in size boxes; their images are inside.
+	const auto GetColor = [&Players](int32 Item)
+	{
+		return CastChecked<UImage>(CastChecked<UPanelWidget>(Players[Item])->GetChildAt(0))->GetColorAndOpacity();
+	};
+	TestEqual(TEXT("Team in a template takes the first item's team colour"), GetColor(0), FLinearColor(FColor::Red));
+	TestEqual(TEXT("and the second item's"), GetColor(1), FLinearColor(FColor::Blue));
+	TestEqual(TEXT("Team outside a template without a player is white"), Mine->GetColorAndOpacity(), FLinearColor::White);
+
+	Bindings.TeamColors = { TEXT("#00FF00"), TEXT("#0000FF") };
+	Layout->UpdateBindings();
+	TestEqual(TEXT("An item's new team colour follows"), GetColor(0), FLinearColor(FColor::Green));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLayoutUnknownKeyTest,"WorldDivide.UI.Layout.UnknownKey", TestFlags)
 
 bool FRTSLayoutUnknownKeyTest::RunTest(const FString& Parameters)
 {
