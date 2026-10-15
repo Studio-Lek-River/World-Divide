@@ -134,7 +134,8 @@ public:
 
 	/**
 	 * Server only. Stands a ground unit on the ground under it, which the movement does not follow by itself; aircraft keep
-	 * their own height. Leaves the unit where it is over no ground. Runs every tick; public so tests can step it.
+	 * their own height. Leaves the unit where it is over no ground. Runs every tick but traces only once the unit has moved
+	 * more than a centimetre since it last stood on the ground; public so tests can step it.
 	 */
 	void SnapToGround();
 
@@ -396,4 +397,13 @@ private:
 
 	/** Server only. The ground's normal where SnapToGround last stood the unit; clients trace their own. */
 	TOptional<FVector> GroundNormal;
+
+	/**
+	 * Where the unit stood after the last ground trace: SnapToGround's on the server, UpdateTilt's on clients. Within
+	 * GroundTraceSkipDistance of it the ground is the same, so a unit standing still does not trace again.
+	 */
+	TOptional<FVector> GroundTraceLocation;
+
+	/** Clients only. The ground's normal UpdateTilt last traced. */
+	FVector ClientGroundNormal = FVector::UpVector;
 };

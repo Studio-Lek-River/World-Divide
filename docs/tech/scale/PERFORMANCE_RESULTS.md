@@ -25,7 +25,7 @@ A **provisional target** is a budget from plan §6 item 7; it is not a result un
 |---|---|---|---|
 | 1080p / 60 FPS (16.7 ms frame) with 200 active units on RTX 3060 class | Provisional target, **not measured** | — | #152, #160 |
 | Eight-player battle | **Not measured** | — | #152 |
-| No server frame > 33 ms on a 240-unit move order | Provisional target | 20.42 ms (M20), 19.76 ms (tank) slowest frame | #139, #136 |
+| No server frame > 33 ms on a 240-unit move order | **Met** on this PC at step 7: 20.27 ms (M20), 6.93 ms (tank) slowest frame; the order itself 1.8–2.1 ms | 20.42 ms (M20), 19.76 ms (tank) slowest frame | #139, #136 |
 | Avoidance mean < 1.0 ms, max < 2.0 ms (200 mixed units) | **Met** on this PC at step 2: 0.29–0.44 ms mean, 0.54–1.16 ms max in `WorldDivide.Avoidance.Mixed` (three runs) | 240 moving M20s: 0.535 ms mean, 0.872 ms max | #134 |
 | Target acquisition < 0.5 ms with 240 idle armed units | **Met** on this PC at step 2: 0.013 ms (M20), 0.012 ms (tank) | 5.67 ms (M20), 5.50 ms (tank) | #134 |
 | 240 `DA_TestTank`: game thread no worse than this baseline | Comparison | idle 8.16 ms, move 4.16 ms | #136 |
@@ -216,3 +216,54 @@ The full tables are in `Saved/Bench/<DataAsset>/` of the run.
 | `DA_TestTank` frame | 12.43 ms | 11.42 ms | 3.87 ms | 4.29 ms |
 
 The obstacle shots log `the hull overlaps Block_North by 0 x 0 cm` and `the hull overlaps DA_TestVehicleFactory by 0 x 0 cm` for both units. The navmesh build figures and the Insights split are in [plan §7](SCALE_IMPLEMENTATION_PLAN.md#7-measurements-per-step).
+
+## Step 7 (#139, footprint formations, O(n log n) slots, idle-tick savings)
+
+Same machine, build configuration and method as step 0, on 2026-10-15. "Before" is `main` at `f399471` (step 3) re-benched just before the change, in the same session.
+
+What changed:
+- **Formation spacing from the footprint.** Each unit takes its own width plus a side gap, each row is as deep as its longest unit plus a depth gap. The gaps grow with the unit: `clamp(width, 75, 250)` beside it and `clamp(length, 75, 300)` behind it, so real-size vehicles keep the approved 2.5 m and 3 m and infantry stands 75 cm apart. Units of about the same length form a size class with rows of their own (a new class below 75 % of the longest row pitch), so an M20 in the group no longer spreads every soldier to its spacing. The unit spawners use the same layout.
+- **Assignment** sorts instead of the O(n³) closest-pair search: by size class, then front to back, then each row left to right.
+- **Idle units** skip the ground trace (`SnapToGround` on the server, the tilt trace on clients) while they have moved no more than 1 cm since the last one, and the unit AI controllers no longer tick.
+
+### Before and after, 240 units
+
+| Unit | Scenario | Game ms before | Game ms after | Render ms before → after | Avoidance ms before → after |
+|---|---|---:|---:|---:|---:|
+| `DA_TestTank` | idle | 2.83 (3.51) | 2.13 (3.97) | 1.72 → 2.28 | 0.209 → 0.213 |
+| `DA_TestTank` | move | 4.38 (15.48) | 3.99 (6.93) | 1.92 → 1.91 | 0.190 → 0.166 |
+| M20 Guardian | idle | 2.74 (4.10) | 2.03 (2.67) | 4.48 → 3.97 | 0.250 → 0.258 |
+| M20 Guardian | move | 21.07 (27.64) | 15.21 (20.27) | 8.33 → 7.48 | 1.119 → 0.272 |
+
+At 120 units: tank idle 2.32 → 1.85 ms, move 3.04 (7.83) → 2.66 (4.54) ms; M20 idle 2.02 → 1.57 ms, move 9.37 (14.41) → 7.75 (11.01) ms.
+
+- **The move-order hitch is gone.** The slowest frame of the 240-unit move fell from 15.5 to 6.9 ms (tank) and from 27.6 to 20.3 ms (M20), both under the 33 ms budget. A traced 240-unit bench move (`-Counts 240 -Trace`) puts the whole order, `Server_IssueCommand` with every unit's path request, at **2.07 ms** (tank) and **1.82 ms** (M20), of which `RTSCommands::PlanFormation` is 0.21 ms and 0.07 ms. `WorldDivide.Commands.Formation.Performance240` times the layout alone at 0.03 ms for 240 mixed units. The M20's remaining 20 ms is its render-state cost while it drives (the M20 render lane, #151 → #150 → #149).
+- **Idle game thread** is 0.5–0.7 ms lower at 240 units: `ARTSUnit::TickOrders` no longer traces for units that stand still.
+- **Moving M20s** cost less avoidance (1.12 → 0.27 ms): the old square pitch of 10 m left the 7.1 m hulls 2.9 m apart front to back and pushed them while they drove; the depth gap is now 3 m behind each hull and the rows do not overlap.
+
+The full tables are in `Saved/Bench/<DataAsset>/` of the run.
+
+### Formation sizes (`WorldDivide.Commands.Formation.Scenarios`)
+
+Hulls as the current data gives them: infantry 31 × 70 cm, `DA_TestTank` 260 × 93 cm, M20 710 × 354 cm. Units start scattered; width is across the facing.
+
+| Group | Width × depth |
+|---|---|
+| 30 infantry | 6 × 6 m |
+| 30 tanks | 18 × 13 m |
+| 30 M20s | 46 × 37 m |
+| 30 mixed (12 infantry, 12 tanks, 6 M20s) | 22 × 26 m |
+| 120 tanks | 34 × 34 m |
+| 120 mixed | 46 × 42 m |
+| 240 tanks | 47 × 49 m |
+| 240 mixed | 64 × 69 m |
+| 240 M20s | 124 × 118 m |
+
+### `unitshots -Stress 240 -Trace` (L_TestMap)
+
+| Stress 240, with trace | Step 0 | Step 1 | Step 2 | Step 3 | Step 7 |
+|---|---:|---:|---:|---:|---:|
+| M20 Guardian frame | 12.37 ms | 11.43 ms | 4.31 ms | 4.68 ms | 4.28 ms |
+| `DA_TestTank` frame | 12.43 ms | 11.42 ms | 3.87 ms | 4.29 ms | 3.41 ms |
+
+The Insights split is in [plan §7](SCALE_IMPLEMENTATION_PLAN.md#7-measurements-per-step).

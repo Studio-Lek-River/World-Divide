@@ -16,6 +16,9 @@ namespace RTSCommands
 	/** Server only. A move or attack-move is spread over a formation around the target; other orders go to every unit unchanged. */
 	WORLDDIVIDE_API void Dispatch(TConstArrayView<ARTSUnit*> Units, const FRTSCommand& Command);
 
+	/** The slot Dispatch sends each of Units to on a move to Target, in the units' order: RTSFormation::Plan facing the way they travel. */
+	WORLDDIVIDE_API TArray<FVector> PlanFormation(TConstArrayView<ARTSUnit*> Units, const FVector& Target);
+
 	/**
 	 * Server only. Executes Player's order for Units, the one path every order takes, from a player's controller or an AI
 	 * opponent: refused once the match is over; a Build without units only in debug build; building orders checked against

@@ -15,6 +15,7 @@
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
+#include "Tests/RTSTestFormation.h"
 #include "Tests/RTSTestPIE.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
@@ -61,7 +62,6 @@ namespace RTSAvoidanceTests
 	const FVector GapSquadOrigin(-2000.f, 6600.f, 0.f);
 	constexpr float GapSquadSpacing = 200.f;
 	const FVector GapTarget(1500.f, 7000.f, 0.f);
-	constexpr float GapArrivalRadius = 600.f;
 	constexpr double GapTimeout = 60.0;
 
 	/** The frame-time test: 200 units, half tanks and half infantry, walk across the strip and back. */
@@ -71,6 +71,11 @@ namespace RTSAvoidanceTests
 	constexpr float FrameTimeSpacing = 220.f;
 	const FVector FrameTimeEast(3000.f, 7000.f, 0.f);
 	const FVector FrameTimeWest(-3000.f, 7000.f, 0.f);
+	/**
+	 * The empty strip the walks stay in: north of Block_North and the bases' supply crates, inside the map's edge. A formation
+	 * that would reach past it is moved in, so its slots never land in a wall or off the navmesh.
+	 */
+	const FBox2D Strip(FVector2D(-9500.f, 3300.f), FVector2D(9500.f, 9500.f));
 	/** Real seconds sampled in each half. */
 	constexpr double FrameTimeSampleSeconds = 4.0;
 	/** Mean time of the avoidance pass over 200 units that would start to show in a 60 fps frame. */
@@ -100,6 +105,8 @@ namespace RTSAvoidanceTests
 	{
 		TArray<TWeakObjectPtr<ARTSUnit>> Units;
 		double PhaseStart = 0.0;
+		/** How close to its target the last formation move ends (RTSTests::GetFormationArrivalRadius). */
+		float ArrivalRadius = 0.f;
 		double SettleStart = -1.0;
 
 		// Gap test only: where each unit crossed x = 0, or unset.
@@ -197,6 +204,35 @@ namespace RTSAvoidanceTests
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * Target, moved so that the formation Units take there stays inside Strip. Fails the test when the formation is larger
+	 * than the strip, rather than sending units into the walls around it.
+	 */
+	FVector FitInStrip(FAutomationTestBase& Test, TConstArrayView<ARTSUnit*> Units, FVector Target)
+	{
+		// Moving the target turns the formation a little, so check again after each move.
+		for (int32 Attempt = 0; Attempt < 3; ++Attempt)
+		{
+			const FBox2D Bounds = RTSTests::GetFormationBounds(Units, Target);
+			if (Bounds.GetSize().X > Strip.GetSize().X || Bounds.GetSize().Y > Strip.GetSize().Y)
+			{
+				Test.AddError(FString::Printf(TEXT("The formation (%.0f x %.0f cm) does not fit the strip (%.0f x %.0f cm)"),
+					Bounds.GetSize().X, Bounds.GetSize().Y, Strip.GetSize().X, Strip.GetSize().Y));
+				return Target;
+			}
+			const FVector2D Shift(FMath::Max(Strip.Min.X - Bounds.Min.X, 0.0) + FMath::Min(Strip.Max.X - Bounds.Max.X, 0.0),
+				FMath::Max(Strip.Min.Y - Bounds.Min.Y, 0.0) + FMath::Min(Strip.Max.Y - Bounds.Max.Y, 0.0));
+			if (Shift.IsNearlyZero(1.0))
+			{
+				return Target;
+			}
+			Target += FVector(Shift, 0.f);
+		}
+		const FBox2D Bounds = RTSTests::GetFormationBounds(Units, Target);
+		Test.TestTrue(TEXT("The formation fits the strip"), Strip.ExpandBy(1.0).IsInside(Bounds));
+		return Target;
 	}
 
 	IConsoleVariable* GetAvoidanceVariable()
@@ -398,6 +434,7 @@ bool FRTSAvoidanceIssueGapMove::Update()
 		State->CrossingYs.AddDefaulted();
 	}
 	// One order for the squad, as the player gives it: the formation spreads them over the far side.
+	State->ArrivalRadius = RTSTests::GetFormationArrivalRadius(GetLiveUnits(*State), GapTarget);
 	GetController(*Test)->Server_IssueCommand(GetLiveUnits(*State), MakeMove(GapTarget));
 	State->PhaseStart = FPlatformTime::Seconds();
 	return true;
@@ -444,7 +481,7 @@ bool FRTSAvoidanceVerifyGap::Update()
 			Test->AddInfo(FString::Printf(TEXT("Unit %d crossed x = 0 at %s"), Index,
 				CrossingY ? *FString::Printf(TEXT("y = %.0f"), *CrossingY) : TEXT("no point")));
 		}
-		Arrived += Unit && FVector::Dist2D(Unit->GetActorLocation(), GapTarget) <= GapArrivalRadius ? 1 : 0;
+		Arrived += Unit && FVector::Dist2D(Unit->GetActorLocation(), GapTarget) <= State->ArrivalRadius ? 1 : 0;
 	}
 	Test->TestEqual(TEXT("Every unit went through the gap"), ThroughGap, GapSquadCount);
 	Test->TestEqual(TEXT("Every unit reached the far side"), Arrived, GapSquadCount);
@@ -461,7 +498,11 @@ bool FRTSAvoidanceIssueFrameTimeMove::Update()
 		return true;
 	}
 	GetAvoidanceVariable()->Set(bAvoidance, ECVF_SetByConsole);
-	GetController(*Test)->Server_IssueCommand(GetLiveUnits(*State), MakeMove(bAvoidance ? FrameTimeEast : FrameTimeWest));
+	const TArray<ARTSUnit*> Units = GetLiveUnits(*State);
+	const FVector Target = FitInStrip(*Test, Units, bAvoidance ? FrameTimeEast : FrameTimeWest);
+	const FBox2D Bounds = RTSTests::GetFormationBounds(Units, Target);
+	Test->AddInfo(FString::Printf(TEXT("Walking to %s, the formation %.0f x %.0f cm"), *Target.ToCompactString(), Bounds.GetSize().X, Bounds.GetSize().Y));
+	GetController(*Test)->Server_IssueCommand(Units, MakeMove(Target));
 
 	State->PhaseStart = FPlatformTime::Seconds();
 	State->LastFrame = State->PhaseStart;

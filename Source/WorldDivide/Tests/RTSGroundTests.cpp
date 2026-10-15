@@ -5,6 +5,7 @@
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitAIController.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -85,6 +86,44 @@ namespace RTSGroundTests
 		TestNearlyEqual(TEXT("Across the slope the vehicle does not pitch"), static_cast<float>(Tank->GetMeshTilt().Pitch), 0.f, 0.5f);
 		TestNearlyEqual(TEXT("It rolls with the slope"), static_cast<float>(FMath::Abs(Tank->GetMeshTilt().Roll)), RampDegrees, 0.5f);
 		TestTrue(TEXT("Its right side up, as negative roll lifts it"), Tank->GetMeshTilt().Roll < 0.f);
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSIdleGroundingTest, "WorldDivide.Units.IdleGrounding", TestFlags)
+
+	bool FRTSIdleGroundingTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		SpawnRamp(TestWorld);
+		ARTSUnit* Tank = TestWorld.SpawnUnit(MakeUnit(true), 0, FVector(300.f, 0.f, RampZ(300.f) + 50.f));
+		StepUnits({ Tank }, 2.f);
+		const float StandZ = Tank->GetActorLocation().Z;
+
+		// Standing still, it keeps its ground and its lean without tracing again.
+		StepUnits({ Tank }, 2.f);
+		TestNearlyEqual(TEXT("An idle vehicle stays on the ramp"), static_cast<float>(Tank->GetNavAgentLocation().Z), RampZ(300.f), 1.f);
+		TestNearlyEqual(TEXT("And leaning with it"), static_cast<float>(Tank->GetMeshTilt().Pitch), RampDegrees, 0.5f);
+
+		// Within a centimetre it counts as unmoved: the ground is not looked for again.
+		Tank->SetActorLocation(Tank->GetActorLocation() - FVector(0.f, 0.f, 0.5f));
+		StepUnits({ Tank }, 0.2f);
+		TestNearlyEqual(TEXT("Half a centimetre lower, it is not snapped back: the trace was skipped"),
+			static_cast<float>(Tank->GetActorLocation().Z), StandZ - 0.5f, 0.01f);
+
+		// Further, it is grounded again on the very next tick.
+		Tank->SetActorLocation(Tank->GetActorLocation() - FVector(0.f, 0.f, 5.f));
+		StepUnits({ Tank }, Step);
+		TestNearlyEqual(TEXT("Moved 5 cm, it stands on the ramp again at once"), static_cast<float>(Tank->GetActorLocation().Z), StandZ, 0.1f);
+
+		// Driving up the ramp, it follows the ground every frame.
+		for (int32 Frame = 0; Frame < 20; ++Frame)
+		{
+			Tank->SetActorLocation(Tank->GetActorLocation() + FVector(10.f, 0.f, 0.f));
+			StepUnits({ Tank }, Step);
+		}
+		TestNearlyEqual(TEXT("A moving vehicle follows the ramp"), static_cast<float>(Tank->GetNavAgentLocation().Z), RampZ(500.f), 1.f);
+
+		TestFalse(TEXT("Unit AI controllers never tick"), GetDefault<ARTSUnitAIController>()->PrimaryActorTick.bCanEverTick);
 		return true;
 	}
 }

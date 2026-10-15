@@ -61,30 +61,33 @@ namespace RTSCommands
 			return;
 		}
 
-		FVector Centroid = FVector::ZeroVector;
-		float Spacing = 0.f;
-		TArray<FVector> Locations;
-		Locations.Reserve(Units.Num());
-		for (const ARTSUnit* Unit : Units)
-		{
-			Locations.Add(Unit->GetActorLocation());
-			Centroid += Unit->GetActorLocation();
-			Spacing = FMath::Max(Spacing, Unit->GetSelectionRadius() * 2.5f);
-		}
-		Centroid /= Units.Num();
-
-		const FVector Heading = (Command.TargetLocation - Centroid).GetSafeNormal2D();
-		const float FacingYaw = Heading.IsNearlyZero() ? 0.f : Heading.Rotation().Yaw;
-
-		const TArray<FVector> Slots = RTSFormation::ComputeSlots(Command.TargetLocation, FacingYaw, Units.Num(), Spacing);
-		const TArray<int32> Assignment = RTSFormation::AssignSlots(Locations, Slots);
-
+		const TArray<FVector> Slots = PlanFormation(Units, Command.TargetLocation);
 		for (int32 Index = 0; Index < Units.Num(); ++Index)
 		{
 			FRTSCommand UnitCommand = Command;
-			UnitCommand.TargetLocation = Slots[Assignment[Index]];
+			UnitCommand.TargetLocation = Slots[Index];
 			Units[Index]->ExecuteCommand(UnitCommand);
 		}
+	}
+
+	TArray<FVector> PlanFormation(TConstArrayView<ARTSUnit*> Units, const FVector& Target)
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(RTSCommands::PlanFormation);
+
+		FVector Centroid = FVector::ZeroVector;
+		TArray<FRTSFormationMember> Members;
+		Members.Reserve(Units.Num());
+		for (const ARTSUnit* Unit : Units)
+		{
+			Members.Emplace(Unit->GetActorLocation(), Unit->GetShape());
+			Centroid += Unit->GetActorLocation();
+		}
+		Centroid /= FMath::Max(Units.Num(), 1);
+
+		// The formation faces the way the group travels.
+		const FVector Heading = (Target - Centroid).GetSafeNormal2D();
+		const float FacingYaw = Heading.IsNearlyZero() ? 0.f : Heading.Rotation().Yaw;
+		return RTSFormation::Plan(Members, Target, FacingYaw);
 	}
 
 	void Issue(ARTSPlayerState& Player, TConstArrayView<ARTSUnit*> Units, const FRTSCommand& Command)

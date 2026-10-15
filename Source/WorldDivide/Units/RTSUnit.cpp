@@ -66,6 +66,9 @@ namespace
 	constexpr float GroundTraceUp = 100.f;
 	constexpr float GroundTraceDown = 2000.f;
 
+	/** A unit that moved no further than this (cm) since its last ground trace stands on the same ground and skips it. */
+	constexpr float GroundTraceSkipDistance = 1.f;
+
 	/** A tilting vehicle eases its mesh toward the slope at this rate, so it rolls over a crest instead of snapping. */
 	constexpr float TiltInterpSpeed = 10.f;
 
@@ -233,6 +236,8 @@ void ARTSUnit::ApplyUnitData()
 	// The box is the hull, and the mesh, or the running gear below it, stands on its bottom.
 	Shape = RTSUnitShape::FromData(*UnitData);
 	Collision->SetBoxExtent(Shape.Hull.GetExtent());
+	// A new ground offset: stand the unit on the ground again.
+	GroundTraceLocation.Reset();
 	MeshRestLocation = Shape.MeshOffset;
 	UpdateMeshTransform();
 
@@ -551,14 +556,22 @@ bool ARTSUnit::UpdateTilt(float DeltaSeconds)
 	if (UnitData && UnitData->bTiltsToGround && !AircraftComponent->CanFly())
 	{
 		FVector Normal = FVector::UpVector;
-		float GroundZ = 0.f;
 		if (HasAuthority())
 		{
 			Normal = GroundNormal.Get(FVector::UpVector);
 		}
 		else
 		{
-			RTSGround::Trace(*GetWorld(), GetNavAgentLocation(), GroundTraceUp, GroundTraceDown, GroundZ, &Normal);
+			// Clients trace their own ground, but only once the unit has moved; turning in place keeps the same normal.
+			const FVector Location = GetActorLocation();
+			if (!GroundTraceLocation || FVector::DistSquared(*GroundTraceLocation, Location) > FMath::Square(GroundTraceSkipDistance))
+			{
+				float GroundZ = 0.f;
+				ClientGroundNormal = FVector::UpVector;
+				RTSGround::Trace(*GetWorld(), GetNavAgentLocation(), GroundTraceUp, GroundTraceDown, GroundZ, &ClientGroundNormal);
+				GroundTraceLocation = Location;
+			}
+			Normal = ClientGroundNormal;
 		}
 		// The slope in the unit's own frame: the mesh's up follows the normal, its nose stays on the unit's heading.
 		Target = FRotationMatrix::MakeFromZX(GetActorRotation().UnrotateVector(Normal), FVector::XAxisVector).Rotator();
@@ -593,6 +606,13 @@ void ARTSUnit::SnapToGround()
 	check(HasAuthority());
 	if (AircraftComponent->CanFly())
 	{
+		GroundTraceLocation.Reset();
+		return;
+	}
+	// Standing still, the unit is already on the ground it was last stood on.
+	FVector Location = GetActorLocation();
+	if (GroundTraceLocation && FVector::DistSquared(*GroundTraceLocation, Location) <= FMath::Square(GroundTraceSkipDistance))
+	{
 		return;
 	}
 	float GroundZ = 0.f;
@@ -602,13 +622,16 @@ void ARTSUnit::SnapToGround()
 		return;
 	}
 	GroundNormal = Normal;
-	FVector Location = GetActorLocation();
 	const float StandZ = GroundZ + GetGroundOffset();
 	if (!FMath::IsNearlyEqual(Location.Z, StandZ, 0.1f))
 	{
+		// Look again next tick: a unit sunk deeper than GroundTraceUp climbs that much per trace.
 		Location.Z = StandZ;
 		SetActorLocation(Location);
+		GroundTraceLocation.Reset();
+		return;
 	}
+	GroundTraceLocation = Location;
 }
 
 void ARTSUnit::Tick(float DeltaSeconds)

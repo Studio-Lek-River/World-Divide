@@ -38,6 +38,7 @@
 #include "Player/RTSPlayerController.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
+#include "Tests/RTSTestFormation.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestGeometry.h"
 #include "Tests/RTSTestMaps.h"
@@ -98,7 +99,6 @@ namespace
 	const TCHAR* TestMap = TEXT("/Game/Maps/L_TestMap");
 	const FVector MoveTarget(0.f, 0.f, 0.f);
 	constexpr int32 UnitsPerTeam = 18;
-	constexpr float ArrivalRadius = 800.f;
 	constexpr double NavTimeout = 30.0;
 	constexpr double HUDLayoutTimeout = 10.0;
 	const FVector2D HUDViewportSize(1920.f, 1080.f);
@@ -331,6 +331,8 @@ namespace
 		TArray<TWeakObjectPtr<ARTSUnit>> EnemyUnits;
 		TArray<FVector> EnemyStartLocations;
 		double PhaseStart = 0.0;
+		/** How close to its target a formation move ends (RTSTests::GetFormationArrivalRadius), from the order's units. */
+		float ArrivalRadius = 0.f;
 
 		// HUD widget test only.
 		double HUDWaitStart = 0.0;
@@ -712,6 +714,13 @@ bool FRTSIssueMoveToAll::Update()
 	FRTSCommand Command;
 	Command.Type = ERTSCommandType::Move;
 	Command.TargetLocation = MoveTarget;
+	TArray<ARTSUnit*> Own;
+	for (const TWeakObjectPtr<ARTSUnit>& Unit : State->OwnUnits)
+	{
+		Own.Add(Unit.Get());
+	}
+	State->ArrivalRadius = RTSTests::GetFormationArrivalRadius(Own, MoveTarget);
+	Test->AddInfo(FString::Printf(TEXT("Formation arrival radius %.0f cm"), State->ArrivalRadius));
 	Controller->Server_IssueCommand(Everyone, Command);
 
 	State->PhaseStart = FPlatformTime::Seconds();
@@ -724,7 +733,7 @@ bool FRTSVerifyArrival::Update()
 	int32 Arrived = 0;
 	for (const TWeakObjectPtr<ARTSUnit>& Unit : State->OwnUnits)
 	{
-		if (Unit.IsValid() && FVector::Dist2D(Unit->GetActorLocation(), MoveTarget) <= ArrivalRadius)
+		if (Unit.IsValid() && FVector::Dist2D(Unit->GetActorLocation(), MoveTarget) <= State->ArrivalRadius)
 		{
 			++Arrived;
 		}
@@ -741,7 +750,7 @@ bool FRTSVerifyArrival::Update()
 	Test->AddInfo(FString::Printf(TEXT("%d units arrived after %.1f s"), Arrived, Elapsed));
 	for (const TWeakObjectPtr<ARTSUnit>& Unit : State->OwnUnits)
 	{
-		if (Unit.IsValid() && FVector::Dist2D(Unit->GetActorLocation(), MoveTarget) > ArrivalRadius)
+		if (Unit.IsValid() && FVector::Dist2D(Unit->GetActorLocation(), MoveTarget) > State->ArrivalRadius)
 		{
 			Test->AddInfo(FString::Printf(TEXT("%s stuck at %s, velocity %s"), *Unit->GetName(),
 				*Unit->GetActorLocation().ToCompactString(), *Unit->GetVelocity().ToCompactString()));
@@ -4464,6 +4473,7 @@ bool FRTSIssueAttackMovePastBuilding::Update()
 	FRTSCommand Command;
 	Command.Type = ERTSCommandType::AttackMove;
 	Command.TargetLocation = AttackMoveBuildingTarget;
+	State->ArrivalRadius = RTSTests::GetFormationArrivalRadius(Tanks, AttackMoveBuildingTarget);
 	Controller->Server_IssueCommand(Tanks, Command);
 	State->PhaseStart = FPlatformTime::Seconds();
 	return true;
@@ -4506,7 +4516,7 @@ bool FRTSVerifyAttackMovePastBuilding::Update()
 			continue;
 		}
 		const float Distance = FVector::Dist2D(Tank->GetActorLocation(), AttackMoveBuildingTarget);
-		Test->TestTrue(FString::Printf(TEXT("A tank then reached the target (%.0f cm away)"), Distance), Distance <= ArrivalRadius);
+		Test->TestTrue(FString::Printf(TEXT("A tank then reached the target (%.0f cm away)"), Distance), Distance <= State->ArrivalRadius);
 		Test->TestEqual(TEXT("Its attack-move completed"), Tank->GetQueuedCommandCount(), 0);
 	}
 	return true;
@@ -5281,7 +5291,10 @@ bool FRTSEndMatchWhileBusy::Update()
 
 	// Everything must be under way, or the check after the end proves nothing.
 	Test->TestTrue(TEXT("The walker is on its way"), FVector::Dist2D(Walker->GetActorLocation(), MatchEndWalkerStart) > 500.f);
-	Test->TestTrue(TEXT("The walker has not arrived"), FVector::Dist2D(Walker->GetActorLocation(), MatchEndWalkerTarget) > ArrivalRadius);
+	// Alone, the walker's slot is the target itself: arrived means within its own length of it.
+	const FRTSFootprint WalkerFootprint = Walker->GetFootprint();
+	const float WalkerArrivalRadius = 2.f * (WalkerFootprint.HalfSegment + WalkerFootprint.Radius);
+	Test->TestTrue(TEXT("The walker has not arrived"), FVector::Dist2D(Walker->GetActorLocation(), MatchEndWalkerTarget) > WalkerArrivalRadius);
 	Test->TestTrue(TEXT("The tower fires at the fighter"),
 		Fighter->GetHealthComponent()->GetHealth() < Fighter->GetHealthComponent()->GetMaxHealth());
 	Test->TestTrue(TEXT("The fighter fires at the tower"),

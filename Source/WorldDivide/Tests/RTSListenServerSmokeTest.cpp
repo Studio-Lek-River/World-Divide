@@ -28,6 +28,7 @@
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
+#include "Tests/RTSTestFormation.h"
 #include "Tests/RTSTestMaps.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
@@ -65,7 +66,6 @@ namespace RTSListenServerTest
 	const TCHAR* TestMap = TEXT("/Game/Maps/L_TestMap");
 	const FVector MoveTarget(0.f, 0.f, 0.f);
 	constexpr int32 UnitsPerTeam = 18;
-	constexpr float ArrivalRadius = 800.f;
 	constexpr float UnmovedTolerance = 50.f;
 	constexpr double SessionTimeout = 60.0;
 	constexpr double MoveTimeout = 60.0;
@@ -146,6 +146,8 @@ namespace RTSListenServerTest
 		TWeakObjectPtr<UWorld> ServerWorld;
 		TWeakObjectPtr<UWorld> ClientWorld;
 		double PhaseStart = 0.0;
+		/** How close to MoveTarget the client's formation move ends (RTSTests::GetFormationArrivalRadius). */
+		float ArrivalRadius = 0.f;
 
 		/** Indexed by team. Each world's own copies, so the client checks what replication gave it. */
 		TArray<TWeakObjectPtr<ARTSUnit>> ServerUnits[2];
@@ -306,7 +308,7 @@ namespace RTSListenServerTest
 		}
 	}
 
-	int32 CountArrived(const TArray<TWeakObjectPtr<ARTSUnit>>& Units)
+	int32 CountArrived(const TArray<TWeakObjectPtr<ARTSUnit>>& Units, float ArrivalRadius)
 	{
 		int32 Arrived = 0;
 		for (const TWeakObjectPtr<ARTSUnit>& Unit : Units)
@@ -564,6 +566,13 @@ namespace RTSListenServerTest
 		FRTSCommand Command;
 		Command.Type = ERTSCommandType::Move;
 		Command.TargetLocation = MoveTarget;
+		TArray<ARTSUnit*> ServerOwn;
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : State->ServerUnits[ClientTeam])
+		{
+			ServerOwn.Add(Unit.Get());
+		}
+		State->ArrivalRadius = RTSTests::GetFormationArrivalRadius(ServerOwn, MoveTarget);
+		Test->AddInfo(FString::Printf(TEXT("Formation arrival radius %.0f cm"), State->ArrivalRadius));
 		ClientController->Server_IssueCommand(Everyone, Command);
 
 		State->PhaseStart = FPlatformTime::Seconds();
@@ -573,8 +582,8 @@ namespace RTSListenServerTest
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyClientMove, FAutomationTestBase*, Test, TSharedRef<FSessionState>, State);
 	bool FRTSVerifyClientMove::Update()
 	{
-		const int32 ServerArrived = CountArrived(State->ServerUnits[ClientTeam]);
-		const int32 ClientArrived = CountArrived(State->ClientUnits[ClientTeam]);
+		const int32 ServerArrived = CountArrived(State->ServerUnits[ClientTeam], State->ArrivalRadius);
+		const int32 ClientArrived = CountArrived(State->ClientUnits[ClientTeam], State->ArrivalRadius);
 		const bool bAllArrived = ServerArrived == UnitsPerTeam && ClientArrived == UnitsPerTeam;
 		const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
 		if (!bAllArrived && Elapsed < MoveTimeout)
@@ -585,7 +594,7 @@ namespace RTSListenServerTest
 		Test->AddInfo(FString::Printf(TEXT("Client's units arrived after %.1f s"), Elapsed));
 		for (const TWeakObjectPtr<ARTSUnit>& Unit : State->ServerUnits[ClientTeam])
 		{
-			if (Unit.IsValid() && FVector::Dist2D(Unit->GetActorLocation(), MoveTarget) > ArrivalRadius)
+			if (Unit.IsValid() && FVector::Dist2D(Unit->GetActorLocation(), MoveTarget) > State->ArrivalRadius)
 			{
 				Test->AddInfo(FString::Printf(TEXT("%s stopped at %s with %d orders"), *Unit->GetName(),
 					*Unit->GetActorLocation().ToCompactString(), Unit->GetQueuedCommandCount()));

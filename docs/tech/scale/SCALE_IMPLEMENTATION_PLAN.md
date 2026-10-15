@@ -332,3 +332,39 @@ Game thread per frame in the `stress_240` region (Insights, inclusive):
 - `Separate` rose from 0.10–0.16 ms to 0.21–0.31 ms. The hull check itself is small (0.05 ms for the M20, whose 1103 cm hull reaches the navmesh edges of its stress grid more often); the rest of the rise is spread over the pass and not attributed to one scope.
 - `UWorld_Tick` rose by 0.3–0.4 ms against step 2, about half of it `Separate`; `TickOrders` is unchanged. Path fitting runs once per new path and does not show up on the stress grid, where nobody repaths.
 - The bench comparison is in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md#step-3-135-infantry-and-vehicle-nav-agents-hull-clearance).
+
+### Step 7: footprint formations, sorted slot assignment, idle-tick savings (2026-10-15)
+
+Same method as step 0, `-Trace` on.
+
+| Stress 240 | M20 Guardian | `DA_TestTank` |
+|---|---:|---:|
+| Frame, with trace | 4.28 ms | 3.41 ms |
+| Avoidance pass (log) | 0.35 ms, max 0.78 ms | 0.20 ms, max 0.45 ms |
+| GPU | 4.0 ms | 1.8 ms |
+| Draw calls / triangles | 2560 / 51.2 M | 957 / 2.9 M |
+
+Game thread per frame in the `stress_240` region (Insights, inclusive):
+
+| Scope | Calls per frame | M20 Guardian | `DA_TestTank` |
+|---|---:|---:|---:|
+| `UWorld_Tick` | 1 | 1.50 ms | 1.29 ms |
+| `URTSWeaponComponent::UpdateWeapon` | 281 | 0.031 ms | 0.021 ms |
+| of which `FindNearestEnemyInRange` (grid query) | 6.2 (M20), 4.8 (tank) | 0.022 ms | 0.012 ms |
+| `ARTSUnit::TickOrders` | 278 | **0.048 ms** | **0.029 ms** |
+| `URTSAvoidanceSubsystem::Separate` | 1 | 0.35 ms | 0.20 ms |
+| of which `RTSHullClearance::GetClearance` | 27 (M20), 2 (tank) | 0.060 ms | 0.001 ms |
+| Slate (`DrawWindows`) | 1 | 0.82 ms | 0.89 ms |
+
+A 240-unit move order on L_Bench (`ue.ps1 -Task bench -Counts 240 -Trace`), the frame of the order:
+
+| Scope | M20 Guardian | `DA_TestTank` |
+|---|---:|---:|
+| `Server_IssueCommand` (formation and every unit's path request) | 1.82 ms | 2.07 ms |
+| of which `RTSCommands::PlanFormation` | 0.07 ms | 0.21 ms |
+
+**Findings.**
+- `TickOrders` fell from 0.67 / 0.54 ms (step 3) to 0.05 / 0.03 ms: the stress grid stands still, and a unit that has not moved more than 1 cm no longer traces the ground. `UWorld_Tick` fell by 0.8–0.9 ms accordingly.
+- The unit AI controllers no longer tick. The capture has no per-actor tick scopes (no named events), so that saving is not split out; `WorldDivide.Units.IdleGrounding` checks the tick is off, and the smoke tests check that move orders still complete.
+- The whole 240-unit order costs about 2 ms on the frame it is given, under the 5 ms of #139's acceptance; the formation itself is a tenth of that. The bench's slowest move frame is 6.9 ms (tank) and 20.3 ms (M20), under the 33 ms budget. The bench comparison is in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md#step-7-139-footprint-formations-on-log-n-slots-idle-tick-savings).
+- `Separate` is within the run-to-run spread of step 3 (0.31 → 0.35 ms M20, 0.21 → 0.20 ms tank).

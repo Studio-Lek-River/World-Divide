@@ -5,6 +5,7 @@
 #include "Data/RTSUnitData.h"
 #include "Engine/World.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitShape.h"
 #include "WorldDivide.h"
 
 ARTSUnitSpawner::ARTSUnitSpawner()
@@ -33,8 +34,10 @@ void ARTSUnitSpawner::BeginPlay()
 		return;
 	}
 
-	const TArray<FVector> Slots = RTSFormation::ComputeSlots(
-		GetActorLocation(), GetActorRotation().Yaw, Count, UnitData->SelectionRadius * 2.5f);
+	// Everyone starts at the spawner, so the slots fill front to back, left to right.
+	TArray<FRTSFormationMember> Members;
+	Members.Init(FRTSFormationMember(GetActorLocation(), RTSUnitShape::FromData(*UnitData)), FMath::Max(Count, 0));
+	const TArray<FVector> Slots = RTSFormation::Plan(Members, GetActorLocation(), GetActorRotation().Yaw);
 	const FRotator Facing(0.f, GetActorRotation().Yaw, 0.f);
 
 	for (const FVector& Slot : Slots)
