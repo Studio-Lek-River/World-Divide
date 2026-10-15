@@ -9,6 +9,7 @@
 #include "HAL/IConsoleManager.h"
 #include "NavigationData.h"
 #include "NavigationSystem.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
 
@@ -38,6 +39,8 @@ namespace
 
 void URTSAvoidanceSubsystem::Separate()
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(URTSAvoidanceSubsystem::Separate);
+
 	const double StartSeconds = FPlatformTime::Seconds();
 	UWorld* World = GetWorld();
 

@@ -18,6 +18,7 @@
 #include "Misc/Paths.h"
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSPlayerController.h"
+#include "ProfilingDebugging/MiscTrace.h"
 #include "RHI.h"
 #include "RenderTimer.h"
 #include "UnrealClient.h"
@@ -35,11 +36,13 @@
  * player's RTS camera sees it at its default zoom, zoomed fully in and fully out, and from a close inspection camera, then
  * with its turret turned and gun raised, then picked with the cursor's trace, selected and driving off on a move order
  * issued as the player issues it (the pick, the distance driven and the wheels' roll are logged). With StressCount, that many more of the unit stand in a grid and a last picture
- * shows them with stat unit and stat rhi; the frame time, draw calls and triangles are logged. The pictures go to
+ * shows them with stat unit and stat rhi; the frame time, game thread time, avoidance pass, draw calls and triangles are
+ * logged. The pictures go to
  * Saved/UnitShots/<UnitData>/<shot>.png. With -RTSUnitShotsQuit on the command line (ue.ps1 -Task unitshots) the game
  * quits when done, with exit code 1 on failure.
  */
-namespace
+// Named, not anonymous: in a unity build it shares a translation unit with rts.UI.Screenshot, which uses the same names.
+namespace RTSUnitDebugCommands
 {
 	const TCHAR* QuitParam = TEXT("RTSUnitShotsQuit");
 
@@ -160,6 +163,11 @@ namespace
 					if (Step == EStep::Capture)
 					{
 						RequestShot();
+					}
+					else
+					{
+						// The measured frames as a region of an Insights capture (ue.ps1 -Task unitshots -Trace).
+						TRACE_BEGIN_REGION(*Shots[ShotIndex].Name);
 					}
 				}
 				return true;
@@ -446,6 +454,7 @@ namespace
 			{
 				return true;
 			}
+			TRACE_END_REGION(*Shots[ShotIndex].Name);
 			UE_LOG(LogWorldDivide, Display,
 				TEXT("rts.Debug.UnitShots: %s over %d frames: frame %.2f ms, game thread %.2f ms, avoidance %.2f ms (max %.2f), GPU %.2f ms, %.0f draw calls, %.0f triangles drawn, %d units"),
 				*Shots[ShotIndex].Name, MeasureFrames, Stats.GameMs / MeasureFrames, Stats.GameThreadMs / MeasureFrames,

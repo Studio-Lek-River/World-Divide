@@ -9,6 +9,7 @@
 #include "Data/RTSWeaponData.h"
 #include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Units/RTSUnit.h"
 
 URTSWeaponComponent::URTSWeaponComponent()
@@ -102,6 +103,8 @@ T* URTSWeaponComponent::FindNearestInRange() const
 
 AActor* URTSWeaponComponent::FindNearestEnemyInRange() const
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(URTSWeaponComponent::FindNearestEnemyInRange);
+
 	// Units shoot back and buildings don't run away, so units come first.
 	if (ARTSUnit* Unit = FindNearestInRange<ARTSUnit>())
 	{
@@ -112,6 +115,8 @@ AActor* URTSWeaponComponent::FindNearestEnemyInRange() const
 
 void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(URTSWeaponComponent::UpdateWeapon);
+
 	Cooldown = FMath::Max(Cooldown - DeltaSeconds, 0.f);
 	if (!WeaponData)
 	{

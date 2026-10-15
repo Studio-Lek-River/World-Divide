@@ -12,6 +12,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task e
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots -Panel ResourceBar
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestM20Guardian -Stress 240
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestTank -Stress 240 -Trace
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uibindings
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uicheck -Path Saved/UIIntake/HUD_2026-10-14/staging/UI
 
@@ -25,7 +26,9 @@ Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in t
 Unitshots plays L_TestMap with a renderer (a GPU is needed) at 1920x1080 and saves views of the first unit with the data
 asset -Unit (rts.Debug.UnitShots): the RTS camera at its default, closest and farthest zoom, a close-up, the turret turned,
 the unit picked, selected and driving on a move order, and the default view with stat unit and stat rhi, to Saved/UnitShots/<Unit>; with -Stress N also N more of the unit in a
-grid with the stats on. The frame time, draw calls and triangles of the stat views are printed.
+grid with the stats on. The frame time, game thread time, avoidance pass, draw calls and triangles of the stat views are
+printed. -Trace also records an Unreal Insights capture (cpu, frame and region channels; each stat view is a region) to
+Saved/Traces/UnitShots_<Unit>_<Stress>.utrace.
 Uibindings writes every binding key, list and action with its panels, and the widgets, colours, fonts and sprites a layout
 may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck validates the layouts of the UI folder -Path
 (an unpacked delivery, for /ui-intake) and prints each problem. -Out and -Path are relative to the repository root.
@@ -46,6 +49,8 @@ param(
 	[string]$Unit = 'DA_TestM20Guardian',
 
 	[int]$Stress = 0,
+
+	[switch]$Trace,
 
 	[string]$Out = 'Saved/UIBriefs/bindings.json',
 
@@ -220,11 +225,18 @@ function Invoke-UnitShots {
 	$ShotDir = Join-Path $RepoRoot "Saved\UnitShots\$Unit"
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\UnitShots.log'
 	if (Test-Path $ShotDir) { Remove-Item -Recurse -Force $ShotDir }
+	$TraceArgs = @()
+	if ($Trace) {
+		$TraceFile = Join-Path $RepoRoot "Saved\Traces\UnitShots_$($Unit)_$Stress.utrace"
+		New-Item -ItemType Directory -Force (Split-Path $TraceFile) | Out-Null
+		if (Test-Path $TraceFile) { Remove-Item -Force $TraceFile }
+		$TraceArgs = @('-trace=cpu,frame,region', "`"-tracefile=$TraceFile`"")
+	}
 
-	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList @(
+	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
 		"`"$Project`"", '/Game/Maps/L_TestMap', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
 		"`"-ExecCmds=rts.Debug.UnitShots $Unit $Stress`"", '-RTSUnitShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
-		'-unattended', '-nosplash', '-nosound')
+		'-unattended', '-nosplash', '-nosound') + $TraceArgs)
 	$GameExit = $Process.ExitCode
 
 	$Shots = @('rts_default', 'zoom_in_max', 'zoom_out_max', 'closeup', 'turret_rotated', 'driving', 'stats_one')
@@ -241,6 +253,7 @@ function Invoke-UnitShots {
 		Write-Host "UNITSHOTS FAILED (game exit $GameExit). Log: $LogFile"
 		exit 1
 	}
+	if ($Trace) { Write-Host "Trace: $TraceFile" }
 	Write-Host "UNITSHOTS SUCCEEDED: $ShotDir"
 }
 

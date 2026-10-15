@@ -1,6 +1,6 @@
 # Scale implementation plan
 
-Status: **proposal**. Nothing is implemented until the producer approves. The plan is based on the [standard](WORLD_SCALE_STANDARD.md), the [placeholder audit](PLACEHOLDER_SCALE_AUDIT.md), [collision and selection](VEHICLE_COLLISION_AND_SELECTION.md) and [movement performance](RTS_MOVEMENT_PERFORMANCE.md).
+Status: **approved** (2026-10-15), in progress; results per step in [§7](#7-measurements-per-step). LODs and rendering optimisation are a separate follow-up phase that starts only after every step's regression tests and performance measurements are done. The plan is based on the [standard](WORLD_SCALE_STANDARD.md), the [placeholder audit](PLACEHOLDER_SCALE_AUDIT.md), [collision and selection](VEHICLE_COLLISION_AND_SELECTION.md) and [movement performance](RTS_MOVEMENT_PERFORMANCE.md).
 
 ## 1. Recommended sequence
 
@@ -17,6 +17,7 @@ The work is split into seven issues, each built, tested and committed on its own
 | 6 | **Vehicle movement:** `URTSUnitMovement` (pivot, turn radius, acceleration) | 1, 4 | M |
 | 7 | **Formation:** spacing from the footprint, O(n log n) assignment; idle-tick savings | 1, 2 | S |
 
+- Issues (M4): step 0 #132, 1 #133, 2 #134, 3 #135, 4 #136, 5 #137, 6 #138, 7 #139; the UI designer's requirements brief after step 7 is #140.
 - Steps 2 and 3 can run in parallel.
 - **WD_RiverCrossing_01** can start greyboxing after step 4. Its map numbers in `02_MAP_DESIGN` stay provisional until then (`03_TECHNICAL_PLAN.md` §14).
 - LOD generation and the shared team-colour material are **not** part of this plan. They follow as art and graphics issues.
@@ -200,3 +201,34 @@ The work is split into seven issues, each built, tested and committed on its own
 9. The default camera shows about 170 m across, and an MBT reads at about 5–6 % of the screen width.
 10. A listen-server smoke test passes: client units move, select and show brackets identically to the server.
 11. The full automation suite is green and setup is idempotent.
+
+## 7. Measurements per step
+
+Method: `ue.ps1 -Task unitshots -Unit <Unit> -Stress 240 [-Trace]` on L_TestMap, Development editor `-game`, 1920×1080 offscreen, RTX 4090 machine of `report_ue5.md`. Every number is the mean over the 120 measured frames of the `stress_240` view (278 units: the map's 38 plus 240). The scoped timers come from the Insights capture, exported for the `stress_240` region with `UnrealInsights.exe -OpenTraceFile=<trace> -NoUI -AutoQuit -ExecOnAnalysisCompleteCmd="TimingInsights.ExportTimerStatistics <csv> -threads=GameThread -timers=* -region=stress_240"`.
+
+### Step 0: baseline (2026-10-15)
+
+| Stress 240 | M20 Guardian | `DA_TestTank` |
+|---|---:|---:|
+| Frame, no trace (two runs) | 13.36 / 13.83 ms | 12.70 / 12.91 ms |
+| Frame, with trace | 12.37 ms | 12.43 ms |
+| Avoidance pass (log) | 0.10–0.13 ms, max 0.25 ms | 0.10–0.12 ms, max 0.33 ms |
+| GPU | 4.4 ms | 1.9–3.0 ms |
+| Draw calls / triangles | 2556 / 51.2 M | 952 / 2.9 M |
+
+Game thread per frame in the `stress_240` region (Insights, inclusive):
+
+| Scope | Calls per frame | M20 Guardian | `DA_TestTank` |
+|---|---:|---:|---:|
+| `UWorld_Tick` | 1 | 10.00 ms | 9.98 ms |
+| `URTSWeaponComponent::UpdateWeapon` | 280 | 7.94 ms | 7.96 ms |
+| of which `FindNearestEnemyInRange` (full scan) | 274 | **7.92 ms** | **7.94 ms** |
+| `ARTSUnit::TickOrders` | 278 | 0.65 ms | 0.59 ms |
+| `URTSAvoidanceSubsystem::Separate` | 1 | 0.10 ms | 0.12 ms |
+| Slate (HUD) | 1 | 0.98 ms | 1.05 ms |
+
+**Findings.**
+- Target acquisition is about **64 % of the frame** with 240 idle armed units: 274 full scans per frame at about 29 µs each. That confirms [movement performance §3.2](RTS_MOVEMENT_PERFORMANCE.md#32-target-acquisition-is-a-full-scan-every-frame-confirmed-in-code); the 5 Hz staggered rescan and the spatial query of step 2 are the biggest single gain on the table.
+- `TickOrders` (orders and the ground snap) is about 2.2 µs per unit; path following and the AI controllers do not show up.
+- The avoidance pass is cheap on the stress grid because the grid spacing keeps units apart; the packed-crowd case is measured by `RTSAvoidanceTests` in step 2.
+- The M20 and the placeholder tank cost the same on the game thread. The M20 costs more on the GPU (51 M triangles, 2556 draw calls: Nanite off and one material instance per slot per unit), which belongs to the LOD and rendering phase, not this plan.
