@@ -8,6 +8,8 @@
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
 #include "GameFramework/WorldSettings.h"
+#include "NavMesh/RecastNavMesh.h"
+#include "Navigation/RTSNavAgents.h"
 #include "NavigationSystem.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/CommandLine.h"
@@ -49,14 +51,26 @@ namespace RTSTests
 	}
 
 	/**
-	 * True once World's navmesh is not rebuilding and covers its PlayerStarts. The maps are saved with their navmesh built,
-	 * so a play world has it from the start, whichever map the editor opened first.
+	 * True once World has a navmesh for every nav agent class, none is rebuilding and the narrowest covers its PlayerStarts.
+	 * The maps are saved with their navmeshes built, so a play world has them from the start, whichever map the editor
+	 * opened first.
 	 */
 	inline bool IsNavigationReady(UWorld& World)
 	{
 		UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
-		return NavSystem && NavSystem->GetDefaultNavDataInstance() && !NavSystem->IsNavigationBuildInProgress()
-			&& HasNavigationAtStarts(World);
+		if (!NavSystem || NavSystem->IsNavigationBuildInProgress())
+		{
+			return false;
+		}
+		for (const FNavDataConfig& Agent : RTSNavAgents::GetAgents())
+		{
+			const ANavigationData* NavData = RTSNavAgents::GetNavMesh(World, Agent);
+			if (!NavData || NavData->GetConfig().Name != Agent.Name)
+			{
+				return false;
+			}
+		}
+		return HasNavigationAtStarts(World);
 	}
 
 	/** Runs World at the test time dilation. A listen server replicates it to its clients. */

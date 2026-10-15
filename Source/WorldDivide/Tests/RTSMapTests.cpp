@@ -7,6 +7,7 @@
 #include "GameFramework/PlayerStart.h"
 #include "Misc/AutomationTest.h"
 #include "NavMesh/RecastNavMesh.h"
+#include "Navigation/RTSNavAgents.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestMaps.h"
 #include "UObject/Package.h"
@@ -35,8 +36,8 @@ namespace
 }
 
 /**
- * L_TestMap, L_Bench, every map the lobby offers and the test maps are saved with their navmesh built, so a map the editor did not start with,
- * or one loaded in a packaged build, has a full navmesh from its first frame.
+ * L_TestMap, L_Bench, every map the lobby offers and the test maps are saved with a built navmesh for every nav agent class, so a map the
+ * editor did not start with, or one loaded in a packaged build, has full navmeshes from its first frame.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSSavedNavMeshTest, "WorldDivide.Maps.SavedNavMesh", TestFlags)
 
@@ -60,15 +61,20 @@ bool FRTSSavedNavMeshTest::RunTest(const FString& Parameters)
 			continue;
 		}
 
-		int32 Tiles = 0;
-		for (const AActor* Actor : World->PersistentLevel->Actors)
+		// One navmesh per nav agent class, each with its tiles.
+		for (const FNavDataConfig& Agent : RTSNavAgents::GetAgents())
 		{
-			if (const ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(Actor))
+			int32 Tiles = 0;
+			for (const AActor* Actor : World->PersistentLevel->Actors)
 			{
-				Tiles += NavMesh->GetNavMeshTilesCount();
+				const ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(Actor);
+				if (NavMesh && NavMesh->GetConfig().Name == Agent.Name)
+				{
+					Tiles += NavMesh->GetNavMeshTilesCount();
+				}
 			}
+			TestTrue(FString::Printf(TEXT("%s is saved with a built %s navmesh"), *MapPath, *Agent.Name.ToString()), Tiles > 0);
 		}
-		TestTrue(FString::Printf(TEXT("%s is saved with a built navmesh"), *MapPath), Tiles > 0);
 	}
 	return true;
 }

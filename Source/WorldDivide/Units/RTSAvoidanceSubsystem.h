@@ -14,6 +14,9 @@ class ARTSUnit;
  * A walking unit shoves idle ones aside but gives way to units at work in place, such as a harvester at its source or a
  * unit firing from where it stands. A unit walking into units that stand on its own goal stops where it touches them, so a
  * crowd sent to one point settles around it instead of jostling for it. Aircraft are left out. rts.Avoidance 0 turns it off.
+ * The same pass is the one place a ground unit's position is corrected: once moved and pushed, a hull that reaches into an
+ * obstacle is moved back out of it (RTSHullClearance), avoidance on or off, so paths, pushes and turns never leave a hull
+ * inside a wall or a building.
  * The same pass indexes every living unit, aircraft too, in a grid of fixed cells for QueryRadius.
  */
 UCLASS()
@@ -77,6 +80,9 @@ private:
 
 	/** Gathers the living units into Agents and Entries; true when a pass has anything to push. */
 	bool BuildIndex(float DeltaSeconds);
+
+	/** Moves every ground unit by its push, kept on its navmesh, and its hull back out of any obstacle it reaches into. */
+	void ApplyPushes(float DeltaSeconds);
 
 	TArray<FAgent> Agents;
 	TArray<FEntry> Entries;

@@ -7,7 +7,10 @@
 #include "Core/RTSGameState.h"
 #include "Data/RTSUnitData.h"
 #include "EngineUtils.h"
+#include "GameFramework/PawnMovementComponent.h"
 #include "HAL/IConsoleManager.h"
+#include "NavMesh/RecastNavMesh.h"
+#include "Navigation/RTSHullClearance.h"
 #include "NavigationData.h"
 #include "NavigationSystem.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
@@ -41,6 +44,20 @@ namespace
 
 	/** A push that starts off the navmesh is kept when its end lies this close above or below it. */
 	const FVector OffMeshExtent(25.f, 25.f, 200.f);
+
+	/**
+	 * A hull check looks this much further for walls than the hull reaches, so a unit found clear is not checked again
+	 * until it has driven or turned about this far, or this many seconds passed, in which a building may have gone up.
+	 */
+	constexpr float HullCheckExtraReach = 200.f;
+	constexpr double HullCheckSeconds = 1.0;
+
+	/** A hull found inside an obstacle backs out by up to this many frames of its top speed at once, in up to this many passes. */
+	constexpr float HullBackOutFrames = 4.f;
+	constexpr int32 HullBackOutPasses = 3;
+
+	/** How far a hull inside an obstacle is nudged each way to find which way out is quickest. */
+	constexpr float HullGradientStep = 5.f;
 
 	FIntPoint CellOf(const FVector2D& Location)
 	{
@@ -112,15 +129,11 @@ void URTSAvoidanceSubsystem::Separate(float DeltaSeconds)
 	TRACE_CPUPROFILER_EVENT_SCOPE(URTSAvoidanceSubsystem::Separate);
 
 	const double StartSeconds = FPlatformTime::Seconds();
-	UWorld* World = GetWorld();
-	if (!BuildIndex(DeltaSeconds))
-	{
-		LastSeparateSeconds = FPlatformTime::Seconds() - StartSeconds;
-		return;
-	}
+	// With fewer than two units to push apart, or rts.Avoidance 0, only the hulls are kept out of obstacles.
+	const int32 RunCount = BuildIndex(DeltaSeconds) && CVarAvoidance.GetValueOnGameThread() ? Entries.Num() : 0;
 
 	Arrived.Reset();
-	for (int32 RunStart = 0; RunStart < Entries.Num();)
+	for (int32 RunStart = 0; RunStart < RunCount;)
 	{
 		const int64 CellKey = Entries[RunStart].CellKey;
 		int32 RunEnd = RunStart + 1;
@@ -206,37 +219,7 @@ void URTSAvoidanceSubsystem::Separate(float DeltaSeconds)
 		RunStart = RunEnd;
 	}
 
-	UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
-	for (const FAgent& Agent : Agents)
-	{
-		if (Agent.Push.IsNearlyZero())
-		{
-			continue;
-		}
-		// Many neighbours pushing the same way, or a deep overlap, part over several frames instead of in one jump.
-		ARTSUnit* Unit = Agent.Unit.Get();
-		const FVector2D Push = Agent.Push.GetClampedToMaxSize(Agent.MaxStep);
-		const FVector From = Unit->GetNavAgentLocation();
-		FVector To = From + FVector(Push, 0.f);
-		// The unit's own navmesh, so a push never takes it where it could not drive.
-		const ANavigationData* NavData = NavSystem ? NavSystem->GetNavDataForProps(Unit->GetNavAgentPropertiesRef(), From) : nullptr;
-		if (NavData)
-		{
-			FVector Hit;
-			if (NavData->Raycast(From, To, Hit, nullptr))
-			{
-				// A unit just off the navmesh hits at its own feet; it may still be pushed back onto it.
-				FNavLocation Projected;
-				const bool bOffMesh = Hit.Equals(From, 1.f);
-				To = bOffMesh && NavSystem->ProjectPointToNavigation(To, Projected, OffMeshExtent, NavData) ? To : Hit;
-			}
-		}
-		const FVector Step(To.X - From.X, To.Y - From.Y, 0.f);
-		if (!Step.IsNearlyZero())
-		{
-			Unit->SetActorLocation(Unit->GetActorLocation() + Step);
-		}
-	}
+	ApplyPushes(DeltaSeconds);
 
 	// After the pushes: ending a move starts the next order, which may set off new moves.
 	for (ARTSUnit* Unit : Arrived)
@@ -245,6 +228,104 @@ void URTSAvoidanceSubsystem::Separate(float DeltaSeconds)
 	}
 
 	LastSeparateSeconds = FPlatformTime::Seconds() - StartSeconds;
+}
+
+void URTSAvoidanceSubsystem::ApplyPushes(float DeltaSeconds)
+{
+	UWorld* World = GetWorld();
+	UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
+	if (!NavSystem)
+	{
+		return;
+	}
+	const double Now = World->GetTimeSeconds();
+	for (const FAgent& Agent : Agents)
+	{
+		ARTSUnit* Unit = Agent.Unit.Get();
+		if (!Agent.bAvoids || !Unit)
+		{
+			continue;
+		}
+		const FVector From = Unit->GetNavAgentLocation();
+		// The unit's own navmesh, so a push never takes it where it could not drive.
+		const ANavigationData* NavData = NavSystem->GetNavDataForProps(Unit->GetNavAgentPropertiesRef(), From);
+		FVector2D Step = FVector2D::ZeroVector;
+		if (!Agent.Push.IsNearlyZero())
+		{
+			// Many neighbours pushing the same way, or a deep overlap, part over several frames instead of in one jump.
+			FVector To = From + FVector(Agent.Push.GetClampedToMaxSize(Agent.MaxStep), 0.f);
+			FVector Hit;
+			if (NavData && NavData->Raycast(From, To, Hit, nullptr))
+			{
+				// A unit just off the navmesh hits at its own feet; it may still be pushed back onto it.
+				FNavLocation Projected;
+				const bool bOffMesh = Hit.Equals(From, 1.f);
+				To = bOffMesh && NavSystem->ProjectPointToNavigation(To, Projected, OffMeshExtent, NavData) ? To : Hit;
+			}
+			Step = FVector2D(To - From);
+		}
+
+		// The hull where it ends up, path following's move and the push together, kept out of obstacles: the centre alone
+		// stays on the navmesh, the rest of the hull is checked here (RTSHullClearance), only once it may have closed the gap.
+		FRTSFootprint Footprint = Unit->GetFootprint();
+		Footprint.Center += FVector(Step, 0.f);
+		FRTSHullClearanceCache& Cache = Unit->GetHullClearanceCache();
+		const ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(NavData);
+		// A hull backs out by up to a few frames' driving at once: more only a building dropped on it would ask for.
+		float BackOut = HullBackOutFrames * Unit->GetUnitData()->MoveSpeed * DeltaSeconds;
+		for (int32 Pass = 0; NavMesh && Pass < HullBackOutPasses && !Cache.IsClear(Footprint, Now); ++Pass)
+		{
+			FVector2D Away = FVector2D::ZeroVector;
+			const float Clearance = RTSHullClearance::GetClearance(*NavMesh, Footprint, &Away, HullCheckExtraReach);
+			if (Clearance >= 0.f)
+			{
+				Cache.Center = FVector2D(Footprint.Center);
+				Cache.Axis = FVector2D(Footprint.Axis);
+				Cache.Slack = Clearance;
+				Cache.ExpireTime = Now + HullCheckSeconds;
+				break;
+			}
+			Cache.Slack = -1.f;
+			// Out along the way the clearance grows fastest: beside a wall's end the deepest point alone may point straight
+			// back along the way the unit drives, and hold it there.
+			auto ClearanceAt = [&](const FVector2D& Offset)
+			{
+				FRTSFootprint Moved = Footprint;
+				Moved.Center += FVector(Offset, 0.f);
+				return RTSHullClearance::GetClearance(*NavMesh, Moved);
+			};
+			const FVector2D Gradient(ClearanceAt(FVector2D(HullGradientStep, 0.f)) - ClearanceAt(FVector2D(-HullGradientStep, 0.f)),
+				ClearanceAt(FVector2D(0.f, HullGradientStep)) - ClearanceAt(FVector2D(0.f, -HullGradientStep)));
+			if (!Gradient.IsNearlyZero())
+			{
+				Away = Gradient.GetSafeNormal();
+			}			// The part of the push that drives the hull further in goes, and the hull backs out along the way out of its
+			// deepest point; a hull wedged at a corner may take another pass.
+			const float Into = FVector2D::DotProduct(Step, Away);
+			if (Into < 0.f)
+			{
+				Step -= Away * Into;
+			}
+			const float Out = FMath::Min(-Clearance, BackOut);
+			Step += Away * Out;
+			// Nor does it keep driving in: the next frame's move starts without the speed toward the obstacle.
+			if (UPawnMovementComponent* Movement = Unit->GetMovementComponent())
+			{
+				const float Toward = FVector2D::DotProduct(FVector2D(Movement->Velocity), Away);
+				if (Toward < 0.f)
+				{
+					Movement->Velocity -= FVector(Away * Toward, 0.f);
+				}
+			}
+			BackOut -= Out;
+			Footprint.Center = Unit->GetFootprint().Center + FVector(Step, 0.f);
+		}
+
+		if (!Step.IsNearlyZero())
+		{
+			Unit->SetActorLocation(Unit->GetActorLocation() + FVector(Step, 0.f));
+		}
+	}
 }
 
 void URTSAvoidanceSubsystem::QueryRadius(const FVector& Center, float Radius, TArray<ARTSUnit*>& OutUnits) const
@@ -294,15 +375,8 @@ void URTSAvoidanceSubsystem::Tick(float DeltaTime)
 	{
 		return;
 	}
-	if (CVarAvoidance.GetValueOnGameThread())
-	{
-		Separate(DeltaTime);
-	}
-	else
-	{
-		// Weapons still find their targets through the grid.
-		BuildIndex(DeltaTime);
-	}
+	// With rts.Avoidance 0 the pass still keeps hulls out of obstacles, and weapons still find their targets through its grid.
+	Separate(DeltaTime);
 }
 
 TStatId URTSAvoidanceSubsystem::GetStatId() const

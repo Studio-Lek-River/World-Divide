@@ -4,6 +4,7 @@
 #include "GameFramework/Pawn.h"
 #include "Combat/RTSTargetable.h"
 #include "Commands/RTSCommand.h"
+#include "Navigation/RTSHullClearance.h"
 #include "Units/RTSUnitShape.h"
 #include "RTSUnit.generated.h"
 
@@ -71,6 +72,9 @@ public:
 	/** Server only. Where the last move order sent the unit, unset once an order of another kind starts. */
 	TOptional<FVector> GetMoveGoal() const { return MoveGoal; }
 
+	/** Server only. The spot that move order named, which MoveGoal moves out of a wall or a building onto the navmesh. */
+	TOptional<FVector> GetMoveTarget() const { return MoveTarget; }
+
 	/**
 	 * Server only. Ends a move or attack-move under way as done, for a unit that reached the crowd already standing on its
 	 * goal. See URTSAvoidanceSubsystem.
@@ -89,6 +93,13 @@ public:
 	 * building. Not its size; that is GetShape.
 	 */
 	float GetSelectionRadius() const;
+
+	/**
+	 * How far from a building's edge the unit stands to dock at it or build it: its interaction radius, or, when wider, the
+	 * erosion of the navmesh it walks, closer than which its centre cannot come.
+	 */
+	float GetStandOffRadius() const;
+
 	int32 GetQueuedCommandCount() const { return CommandQueue.Num(); }
 
 	/** The unit's hull, selection bounds and mesh placement, from its data; every machine has them. */
@@ -105,6 +116,9 @@ public:
 
 	/** The hull's outline on the ground, turning with the unit. */
 	FRTSFootprint GetFootprint() const;
+
+	/** Server only. Where the hull was last found clear of obstacles; see URTSAvoidanceSubsystem. */
+	FRTSHullClearanceCache& GetHullClearanceCache() { return HullClearanceCache; }
 
 	/** The edge of the footprint facing From. */
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
@@ -365,9 +379,13 @@ private:
 	bool bStoppingToFight = false;
 
 	TOptional<FVector> MoveGoal;
+	TOptional<FVector> MoveTarget;
 
 	/** From UnitData in ApplyUnitData; the box is fitted to its hull. */
 	FRTSUnitShape Shape;
+
+	/** Server only. URTSAvoidanceSubsystem's last hull clearance check. */
+	FRTSHullClearanceCache HullClearanceCache;
 
 	/** Where ApplyUnitData stood the mesh; a fire kick moves it back from here and returns it. */
 	FVector MeshRestLocation = FVector::ZeroVector;

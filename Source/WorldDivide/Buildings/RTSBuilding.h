@@ -14,6 +14,7 @@ class URTSProductionComponent;
 class URTSSuperweaponComponent;
 class URTSUnitData;
 class URTSWeaponComponent;
+struct FNavAgentProperties;
 
 /**
  * A structure on the build grid. Stats come from URTSBuildingData. It blocks the navmesh from the moment it is placed,
@@ -55,9 +56,9 @@ public:
 
 	/**
 	 * Where units leave the building: outside its front edge (the data's +X edge, turned with the building), Clearance beyond
-	 * it, nudged onto the navmesh when one exists.
+	 * it, nudged onto Agent's navmesh, or the narrowest agent's without one, when it exists.
 	 */
-	FVector GetExitLocation(float Clearance) const;
+	FVector GetExitLocation(float Clearance, const FNavAgentProperties* Agent = nullptr) const;
 
 	/** Server only. Spawns a unit of Data for the building's team at the exit. */
 	ARTSUnit* SpawnUnitAtExit(URTSUnitData* Data);

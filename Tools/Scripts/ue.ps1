@@ -32,7 +32,8 @@ grid with the stats on. The frame time, game thread time, avoidance pass, draw c
 printed. -Trace also records an Unreal Insights capture (cpu, frame and region channels; each stat view is a region) to
 Saved/Traces/UnitShots_<Unit>_<Stress>.utrace.
 Bench plays L_Bench with a renderer (a GPU is needed) and measures -Unit (rts.Debug.Bench) at 1, 30, 120 and 240 units, or
-the comma-separated -Counts, standing in a grid and then driving on a move order, from one fixed camera at 1920x1080 with
+the comma-separated -Counts, a mix of sizes when -Unit joins several with '+' (DA_TestM20Guardian+DA_TestTank+DA_TestInfantry),
+standing in a grid and then driving on a move order, from one fixed camera at 1920x1080 with
 dynamic resolution off and no frame rate cap. The table is printed and written with a CSV to Saved/Bench/<Unit>. -Trace
 records an Unreal Insights capture to Saved/Traces/Bench_<Unit>.utrace, each scenario a region.
 Uibindings writes every binding key, list and action with its panels, and the widgets, colours, fonts and sprites a layout

@@ -1,19 +1,27 @@
 #include "Buildings/RTSBuildPlacement.h"
 
 #include "Buildings/RTSBuilderComponent.h"
+#include "Data/RTSAircraftData.h"
 #include "Data/RTSBuildingData.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "NavMesh/RecastNavMesh.h"
+#include "Navigation/RTSHullClearance.h"
+#include "Navigation/RTSNavAgents.h"
 #include "NavigationSystem.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitShape.h"
 
 namespace
 {
 	/** How far a footprint point may lie from the navmesh. Covers the agent-radius margin around existing buildings. */
 	constexpr float NavTolerance = 75.f;
 	constexpr float NavHeightTolerance = 250.f;
+
+	/** How far a unit's spawn spot at the exit may lie from its navmesh. */
+	constexpr float ExitTolerance = 25.f;
 
 	/** The overlap box starts this far above the ground so the ground itself never counts. */
 	constexpr float GroundClearance = 20.f;
@@ -53,6 +61,70 @@ namespace RTSBuildPlacement
 		return ((FMath::RoundToInt(Yaw / 90.f) % 4) + 4) % 4;
 	}
 
+	const URTSUnitData* GetWidestExitUnit(const URTSBuildingData& Data)
+	{
+		const URTSUnitData* Widest = nullptr;
+		float WidestAgent = 0.f;
+		float WidestHull = 0.f;
+		auto Consider = [&](const URTSUnitData* Unit)
+		{
+			// Aircraft take off from their pads.
+			if (!Unit || Unit->IsA<URTSAircraftData>())
+			{
+				return;
+			}
+			const FRTSUnitShape Shape = RTSUnitShape::FromData(*Unit);
+			const float Agent = RTSNavAgents::SelectAgent(Shape).AgentRadius;
+			const float Hull = Shape.GetHalfWidth();
+			if (!Widest || Agent > WidestAgent || (Agent == WidestAgent && Hull > WidestHull))
+			{
+				Widest = Unit;
+				WidestAgent = Agent;
+				WidestHull = Hull;
+			}
+		};
+		Consider(Data.SpawnOnComplete);
+		for (const URTSUnitData* Unit : Data.Units)
+		{
+			Consider(Unit);
+		}
+		return Widest;
+	}
+
+	float GetExitDistance(const URTSBuildingData& Data, const URTSUnitData& Unit)
+	{
+		const FRTSUnitShape Shape = RTSUnitShape::FromData(Unit);
+		return GetFootprintExtent(Data.Footprint).X + FMath::Max(Shape.GetHalfLength(), Shape.GetHalfWidth()) + ExitClearance;
+	}
+
+	bool CanUnitsLeave(const UWorld& World, const URTSBuildingData& Data, const FVector& Location, int32 QuarterTurns)
+	{
+		const URTSUnitData* Unit = GetWidestExitUnit(Data);
+		if (!Unit)
+		{
+			return true;
+		}
+		const FRTSUnitShape Shape = RTSUnitShape::FromData(*Unit);
+		const FNavDataConfig& Agent = RTSNavAgents::SelectAgent(Shape);
+		const ARecastNavMesh* NavMesh = RTSNavAgents::GetNavMesh(World, Agent);
+		if (Agent.AgentRadius <= RTSNavAgents::GetNarrowestAgent().AgentRadius || !NavMesh)
+		{
+			return true;
+		}
+
+		// Where SpawnUnitAtExit puts it, facing out: it must stand on its navmesh, clear of everything around it...
+		const FVector Forward = FRotator(0.f, GetYaw(QuarterTurns), 0.f).Vector();
+		FNavLocation Exit;
+		if (!NavMesh->ProjectPoint(Location + Forward * GetExitDistance(Data, *Unit), Exit, FVector(ExitTolerance, ExitTolerance, NavHeightTolerance))
+			|| RTSHullClearance::GetClearance(*NavMesh, RTSHullClearance::MakeFootprint(Shape, Exit.Location, FVector2D(Forward))) < 0.f)
+		{
+			return false;
+		}
+		// ...and drive its own length straight out.
+		FVector Hit;
+		return !NavMesh->Raycast(Exit.Location, Exit.Location + Forward * (2.f * Shape.GetHalfLength()), Hit, nullptr);
+	}
+
 	bool CanPlace(const UWorld& World, const URTSBuildingData& Data, const FVector& RequestedLocation, FVector& OutLocation,
 		TArray<AActor*>* OutBlockers, int32 QuarterTurns)
 	{
@@ -63,8 +135,10 @@ namespace RTSBuildPlacement
 		const FIntPoint Footprint = GetRotatedFootprint(Data.Footprint, QuarterTurns);
 		OutLocation = SnapToGrid(RequestedLocation, Footprint);
 
+		// Buildings stand on the narrowest agent's navmesh, which reaches closest to obstacles and other buildings.
 		const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
-		if (!NavSystem)
+		const ANavigationData* NavData = RTSNavAgents::GetNavMesh(World, RTSNavAgents::GetNarrowestAgent());
+		if (!NavSystem || !NavData)
 		{
 			return false;
 		}
@@ -72,7 +146,7 @@ namespace RTSBuildPlacement
 		// The requested height is not trusted: take it from the navmesh, then from the ground just below it.
 		const FVector QueryExtent(NavTolerance, NavTolerance, NavHeightTolerance);
 		FNavLocation NavPoint;
-		if (!NavSystem->ProjectPointToNavigation(OutLocation, NavPoint, QueryExtent))
+		if (!NavSystem->ProjectPointToNavigation(OutLocation, NavPoint, QueryExtent, NavData))
 		{
 			return false;
 		}
@@ -89,10 +163,14 @@ namespace RTSBuildPlacement
 		for (const FVector2D Corner : { FVector2D(-1.f, -1.f), FVector2D(-1.f, 1.f), FVector2D(1.f, -1.f), FVector2D(1.f, 1.f) })
 		{
 			const FVector Point = OutLocation + FVector(Corner.X * Extent.X, Corner.Y * Extent.Y, 0.f);
-			if (!NavSystem->ProjectPointToNavigation(Point, NavPoint, QueryExtent))
+			if (!NavSystem->ProjectPointToNavigation(Point, NavPoint, QueryExtent, NavData))
 			{
 				return false;
 			}
+		}
+		if (!CanUnitsLeave(World, Data, OutLocation, QuarterTurns))
+		{
+			return false;
 		}
 
 		FCollisionObjectQueryParams Objects;

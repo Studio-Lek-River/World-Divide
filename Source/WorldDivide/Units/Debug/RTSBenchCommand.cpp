@@ -33,7 +33,8 @@
 
 /**
  * rts.Debug.Bench <UnitData> [Count,Count,...]: the performance benchmark of one unit type (ue.ps1 -Task bench), on
- * L_Bench. For each count (by default 1, 30, 120 and 240) that many of the unit stand in a grid spaced like a formation,
+ * L_Bench, or of a mix of sizes named UnitA+UnitB+..., which the grid takes in turn and spaces for the largest.
+ * For each count (by default 1, 30, 120 and 240) that many of the unit stand in a grid spaced like a formation,
  * and are measured standing still, then driving on one move order issued as the player issues it. Every scenario is seen
  * from the same fixed camera, at a fixed 1920x1080 with dynamic resolution off and the screen percentage at 100, without a
  * frame rate cap. Logged and written to Saved/Bench/<UnitData>/bench.csv and bench.md per scenario: the frame, game thread,
@@ -272,11 +273,22 @@ namespace RTSBenchCommand
 			{
 				return Finish(TEXT("the game is a client; the benchmark runs on the server"));
 			}
-			const FString Path = FString::Printf(TEXT("%s/%s.%s"), UnitDataPath, *UnitName, *UnitName);
-			UnitData.Reset(LoadObject<URTSUnitData>(nullptr, *Path));
-			if (!UnitData)
+			// A mix of sizes is several names joined by '+'; the grid takes them in turn.
+			TArray<FString> Names;
+			UnitName.ParseIntoArray(Names, TEXT("+"));
+			for (const FString& Name : Names)
 			{
-				return Finish(FString::Printf(TEXT("no unit data at %s"), *Path));
+				const FString Path = FString::Printf(TEXT("%s/%s.%s"), UnitDataPath, *Name, *Name);
+				URTSUnitData* Data = LoadObject<URTSUnitData>(nullptr, *Path);
+				if (!Data)
+				{
+					return Finish(FString::Printf(TEXT("no unit data at %s"), *Path));
+				}
+				UnitData.Emplace(Data);
+			}
+			if (UnitData.IsEmpty())
+			{
+				return Finish(TEXT("no unit named"));
 			}
 			TeamId = Controller->GetTeamId();
 			ApplySettings();
@@ -355,14 +367,15 @@ namespace RTSBenchCommand
 			return true;
 		}
 
-		ARTSUnit* SpawnUnit(const FVector& Location)
+		/** A unit of the Index-th kind in the mix, taking them in turn. */
+		ARTSUnit* SpawnUnit(const FVector& Location, int32 Index)
 		{
 			const FTransform Transform(FRotator::ZeroRotator, Location);
 			ARTSUnit* Spawned = World->SpawnActorDeferred<ARTSUnit>(ARTSUnit::StaticClass(), Transform, nullptr, nullptr,
 				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 			if (Spawned)
 			{
-				Spawned->InitFromData(UnitData.Get(), TeamId);
+				Spawned->InitFromData(UnitData[Index % UnitData.Num()].Get(), TeamId);
 				Spawned->FinishSpawning(Transform);
 				Units.Add(Spawned);
 			}
@@ -371,26 +384,38 @@ namespace RTSBenchCommand
 
 		bool SpawnGrid(int32 Count)
 		{
-			// The first unit gives the size of the grid's cells, from its parts at rest, before it moves to its place.
-			ARTSUnit* First = SpawnUnit(GridCentre);
-			if (!First)
+			// The first unit of each kind gives the size of the grid's cells, the largest of them, from its parts at rest,
+			// before it moves to its place.
+			FVector2D Largest = FVector2D::ZeroVector;
+			const int32 Kinds = FMath::Min(Count, UnitData.Num());
+			for (int32 Index = 0; Index < Kinds; ++Index)
 			{
-				return false;
+				ARTSUnit* First = SpawnUnit(GridCentre + FVector(0.f, 0.f, 10000.f * (Index + 1)), Index);
+				if (!First)
+				{
+					return false;
+				}
+				const FBox Local = First->CalculateComponentsBoundingBoxInLocalSpace(/*bNonColliding*/ true);
+				Largest = FVector2D::Max(Largest, FVector2D(Local.GetSize().X, Local.GetSize().Y));
 			}
-			const FBox Local = First->CalculateComponentsBoundingBoxInLocalSpace(/*bNonColliding*/ true);
-			const FVector2D Spacing(Local.GetSize().X + RowGap, Local.GetSize().Y + ColumnGap);
+			const FVector2D Spacing(Largest.X + RowGap, Largest.Y + ColumnGap);
 			const int32 Columns = FMath::Max(1, FMath::CeilToInt(FMath::Sqrt(Count * Spacing.X / Spacing.Y)));
 			const int32 Rows = FMath::DivideAndRoundUp(Count, Columns);
 			const FVector2D Size((Rows - 1) * Spacing.X, (Columns - 1) * Spacing.Y);
 			for (int32 Index = 0; Index < Count; ++Index)
 			{
 				const FVector Location = GridCentre + FVector(Index / Columns * Spacing.X - Size.X / 2.f,
-					Index % Columns * Spacing.Y - Size.Y / 2.f, First->GetGroundOffset());
-				if (Index == 0)
+					Index % Columns * Spacing.Y - Size.Y / 2.f, 0.f);
+				if (Index < Kinds)
 				{
-					First->SetActorLocation(Location);
+					ARTSUnit* First = Units[Units.Num() - Kinds + Index].Get();
+					First->SetActorLocation(Location + FVector(0.f, 0.f, First->GetGroundOffset()));
 				}
-				else if (!SpawnUnit(Location))
+				else if (ARTSUnit* Spawned = SpawnUnit(Location, Index))
+				{
+					Spawned->SetActorLocation(Location + FVector(0.f, 0.f, Spawned->GetGroundOffset()));
+				}
+				else
 				{
 					return false;
 				}
@@ -564,8 +589,8 @@ namespace RTSBenchCommand
 		TWeakObjectPtr<UWorld> World;
 		FString UnitName;
 		TArray<int32> Counts;
-		/** Held through the garbage collection between counts, when no unit refers to it. */
-		TStrongObjectPtr<URTSUnitData> UnitData;
+		/** The mix, held through the garbage collection between counts, when no unit refers to it. */
+		TArray<TStrongObjectPtr<URTSUnitData>> UnitData;
 		int32 TeamId = 0;
 		TWeakObjectPtr<ACameraActor> Camera;
 		TArray<TWeakObjectPtr<ARTSUnit>> Units;
@@ -621,7 +646,7 @@ namespace RTSBenchCommand
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice BenchCommand(
 		TEXT("rts.Debug.Bench"),
-		TEXT("rts.Debug.Bench <UnitData> [Count,Count,...]: measures that many of the unit (by default 1, 30, 120 and 240) ")
+		TEXT("rts.Debug.Bench <UnitData>[+UnitData...] [Count,Count,...]: measures that many of the unit, or of the mix in turn (by default 1, 30, 120 and 240) ")
 		TEXT("standing in a grid and driving on a move order, from a fixed camera, to Saved/Bench/<UnitData>."),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunBenchCommand));
 }

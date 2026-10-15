@@ -7,12 +7,32 @@ class ARTSUnit;
 class UWorld;
 class URTSBuildingData;
 class URTSEntityData;
+class URTSUnitData;
 
 /** Grid and validity rules for placing a building. The client's ghost and the server's re-check share them. */
 namespace RTSBuildPlacement
 {
 	/** Edge length of one build grid cell in cm. */
 	constexpr float GridSize = 100.f;
+
+	/** Gap between the footprint's exit edge and a unit spawned at the exit, beyond the unit's longer half. */
+	constexpr float ExitClearance = 80.f;
+
+	/**
+	 * The widest ground unit a building of Data sends out of its exit, produced or brought along, by the nav agent class it
+	 * walks and then by its hull; null when it sends out none.
+	 */
+	WORLDDIVIDE_API const URTSUnitData* GetWidestExitUnit(const URTSBuildingData& Data);
+
+	/** How far in front of the building's centre a unit of Unit spawns: half the footprint, the unit's longer half and ExitClearance. */
+	WORLDDIVIDE_API float GetExitDistance(const URTSBuildingData& Data, const URTSUnitData& Unit);
+
+	/**
+	 * Whether the widest unit a building of Data sends out (GetWidestExitUnit) fits at its exit at Location, turned
+	 * QuarterTurns, and can drive a hull's length straight on, on that unit's own navmesh. True for a building whose units
+	 * all walk the narrowest class: anything placeable leaves them room.
+	 */
+	WORLDDIVIDE_API bool CanUnitsLeave(const UWorld& World, const URTSBuildingData& Data, const FVector& Location, int32 QuarterTurns);
 
 	/**
 	 * Moves Location so the footprint's edges lie on grid lines: even sizes centre on a grid line, odd sizes on a cell
@@ -37,7 +57,8 @@ namespace RTSBuildPlacement
 
 	/**
 	 * Snaps RequestedLocation, puts it on the ground and checks the spot: the footprint must not overlap a unit, building or
-	 * obstacle, and its centre and corners must lie on the navmesh. OutLocation is the snapped spot even when it is invalid.
+	 * obstacle, its centre and corners must lie on the narrowest agent's navmesh, and the units it sends out must fit out of
+	 * its exit (CanUnitsLeave). OutLocation is the snapped spot even when it is invalid.
 	 * OutBlockers, when given, receives every actor overlapping the footprint; it stays empty when the navmesh rules the spot out.
 	 * QuarterTurns turns the footprint (GetRotatedFootprint).
 	 */

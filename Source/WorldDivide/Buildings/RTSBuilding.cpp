@@ -18,6 +18,8 @@
 #include "EngineUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "NavAreas/NavArea_Null.h"
+#include "NavMesh/RecastNavMesh.h"
+#include "Navigation/RTSNavAgents.h"
 #include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/RTSPlayerController.h"
@@ -33,9 +35,6 @@ namespace
 
 	/** Collision height when the data has no mesh. */
 	constexpr float DefaultHeight = 200.f;
-
-	/** Gap between the footprint edge and a unit spawned at the exit, beyond the unit's radius. */
-	constexpr float SpawnClearance = 80.f;
 
 	/** A producer's rally point starts this far outside the exit edge, so finished units clear the spawn spot. */
 	constexpr float DefaultRallyDistance = 400.f;
@@ -237,12 +236,15 @@ void ARTSBuilding::UpdateNavCut(float DeltaSeconds)
 	check(HasAuthority());
 	NavCutWaited += DeltaSeconds;
 
-	// The rebuild runs asynchronously; the hole is there once the centre is off the navmesh and no build is left.
+	// The rebuild runs asynchronously; the hole is there once the centre is off every agent's navmesh and no build is left.
 	UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
-	FNavLocation NavPoint;
-	const bool bCut = !NavSystem
-		|| (!NavSystem->IsNavigationBuildInProgress()
-			&& !NavSystem->ProjectPointToNavigation(GetActorLocation(), NavPoint, NavCutQueryExtent));
+	bool bCut = !NavSystem || !NavSystem->IsNavigationBuildInProgress();
+	for (const FNavDataConfig& Agent : RTSNavAgents::GetAgents())
+	{
+		const ARecastNavMesh* NavMesh = NavSystem ? RTSNavAgents::GetNavMesh(*GetWorld(), Agent) : nullptr;
+		FNavLocation NavPoint;
+		bCut = bCut && !(NavMesh && NavMesh->ProjectPoint(GetActorLocation(), NavPoint, NavCutQueryExtent));
+	}
 	if (bCut || NavCutWaited >= NavCutTimeout || !BuildingData)
 	{
 		if (!bCut)
@@ -339,14 +341,14 @@ void ARTSBuilding::SpawnCompletionUnit()
 	}
 }
 
-FVector ARTSBuilding::GetExitLocation(float Clearance) const
+FVector ARTSBuilding::GetExitLocation(float Clearance, const FNavAgentProperties* Agent) const
 {
 	const FVector Extent = BuildingData ? RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint) : FVector::ZeroVector;
 	FVector Location = GetActorLocation() + GetActorForwardVector() * (Extent.X + Clearance);
-	if (const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
+	if (const ARecastNavMesh* NavMesh = RTSNavAgents::GetNavMesh(*GetWorld(), Agent ? *Agent : RTSNavAgents::GetNarrowestAgent()))
 	{
 		FNavLocation NavPoint;
-		if (NavSystem->ProjectPointToNavigation(Location, NavPoint, FVector(200.f, 200.f, 250.f)))
+		if (NavMesh->ProjectPoint(Location, NavPoint, FVector(200.f, 200.f, 250.f)))
 		{
 			Location.X = NavPoint.Location.X;
 			Location.Y = NavPoint.Location.Y;
@@ -363,9 +365,11 @@ ARTSUnit* ARTSBuilding::SpawnUnitAtExit(URTSUnitData* Data)
 		return nullptr;
 	}
 
-	// Clear of the building by the unit's longer half, whichever way it faces.
+	// Clear of the building by the unit's longer half, whichever way it faces, on the navmesh it walks: placement made sure
+	// it fits there (RTSBuildPlacement::CanUnitsLeave).
 	const FRTSUnitShape Shape = RTSUnitShape::FromData(*Data);
-	FTransform Transform(GetExitLocation(FMath::Max(Shape.GetHalfLength(), Shape.GetHalfWidth()) + SpawnClearance));
+	FTransform Transform(GetExitLocation(FMath::Max(Shape.GetHalfLength(), Shape.GetHalfWidth()) + RTSBuildPlacement::ExitClearance,
+		&RTSNavAgents::SelectAgent(Shape)));
 	ARTSUnit* Unit = GetWorld()->SpawnActorDeferred<ARTSUnit>(
 		ARTSUnit::StaticClass(), Transform, this, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (!Unit)

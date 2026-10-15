@@ -209,7 +209,7 @@ bool URTSHarvesterComponent::ApproachDock(const FVector& Center, const FIntPoint
 	}
 
 	// The dock's centre lies in its own navmesh hole; stand just outside the footprint, facing side first.
-	const float Radius = Unit->GetSelectionRadius();
+	const float Radius = Unit->GetStandOffRadius();
 	FVector Goal;
 	if (!RTSApproach::FindReachableSpot(*Unit, Center, Footprint, Radius + DockOffset,
 		Radius + DockReach - ApproachAcceptanceRadius, Goal))
@@ -251,7 +251,7 @@ bool URTSHarvesterComponent::SkipUnreachableDepot()
 bool URTSHarvesterComponent::IsDocked(const FVector& EdgePoint) const
 {
 	const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner());
-	return Unit && FVector::Dist2D(Unit->GetActorLocation(), EdgePoint) <= Unit->GetSelectionRadius() + DockReach;
+	return Unit && FVector::Dist2D(Unit->GetActorLocation(), EdgePoint) <= Unit->GetStandOffRadius() + DockReach;
 }
 
 ARTSBuilding* URTSHarvesterComponent::FindNearestDepot(const UWorld& World, int32 TeamId, const FVector& From,

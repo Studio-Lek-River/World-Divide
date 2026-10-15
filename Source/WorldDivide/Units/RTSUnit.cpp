@@ -22,6 +22,8 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "NavigationSystem.h"
+#include "NavMesh/RecastNavMesh.h"
+#include "Navigation/RTSNavAgents.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/RTSPlayerController.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
@@ -128,6 +130,8 @@ ARTSUnit::ARTSUnit()
 	// No plane constraint: the path climbs and descends with the navmesh, and SnapToGround stands the unit on the ground.
 	// Path following feeds acceleration input, so MaxSpeed and braking behave like player input would.
 	Movement->GetNavMovementProperties()->bUseAccelerationForPaths = true;
+	// ApplyUnitData picks the nav agent from the hull; the engine would size it to the box's diagonal instead.
+	Movement->GetNavMovementProperties()->bUpdateNavAgentWithOwnersCollision = false;
 
 	HealthComponent = CreateDefaultSubobject<URTSHealthComponent>(TEXT("Health"));
 	WeaponComponent = CreateDefaultSubobject<URTSWeaponComponent>(TEXT("Weapon"));
@@ -238,6 +242,9 @@ void ARTSUnit::ApplyUnitData()
 	CreateParts();
 
 	Movement->MaxSpeed = UnitData->MoveSpeed;
+	// The narrowest agent class wide enough for the hull: its navmesh keeps every path wide enough for the unit.
+	Movement->NavAgentProps = RTSNavAgents::SelectAgent(Shape);
+	HullClearanceCache = FRTSHullClearanceCache();
 
 	ApplyTeamColor();
 }
@@ -485,6 +492,12 @@ float ARTSUnit::GetSelectionRadius() const
 	return UnitData ? UnitData->SelectionRadius : Collision->GetUnscaledBoxExtent().X;
 }
 
+float ARTSUnit::GetStandOffRadius() const
+{
+	const ARecastNavMesh* NavMesh = RTSNavAgents::GetNavMesh(*GetWorld(), GetNavAgentPropertiesRef());
+	return FMath::Max(GetSelectionRadius(), NavMesh ? RTSHullClearance::GetErosion(*NavMesh) : 0.f);
+}
+
 FVector ARTSUnit::GetSelectionCenter() const
 {
 	return GetActorTransform().TransformPosition(Shape.Selection.GetCenter());
@@ -690,7 +703,7 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 		const FVector Edge = Source->GetClosestFootprintPoint(GetActorLocation());
 		Command.Type = ERTSCommandType::Move;
 		Command.TargetActor = nullptr;
-		Command.TargetLocation = Edge + (GetActorLocation() - Edge).GetSafeNormal2D() * (GetSelectionRadius() + DockStandOff);
+		Command.TargetLocation = Edge + (GetActorLocation() - Edge).GetSafeNormal2D() * (GetStandOffRadius() + DockStandOff);
 	}
 	else if (Command.Type == ERTSCommandType::Build && !BuilderComponent->CanBuild())
 	{
@@ -703,7 +716,7 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 		const FVector Edge = Site->GetClosestFootprintPoint(GetActorLocation());
 		Command.Type = ERTSCommandType::Move;
 		Command.TargetActor = nullptr;
-		Command.TargetLocation = Edge + (GetActorLocation() - Edge).GetSafeNormal2D() * (GetSelectionRadius() + DockStandOff);
+		Command.TargetLocation = Edge + (GetActorLocation() - Edge).GetSafeNormal2D() * (GetStandOffRadius() + DockStandOff);
 	}
 
 	if (Command.Type == ERTSCommandType::Stop || !Command.bQueue)
@@ -898,6 +911,7 @@ bool ARTSUnit::RequestMove(AAIController& AI, const FVector& Location)
 	}
 
 	MoveGoal = Destination;
+	MoveTarget = Location;
 
 	// The AI controller may report AlreadyAtGoal or a failure back through NotifyMoveFinished
 	// before MoveToLocation returns; that is handled here instead of re-entering the queue.
@@ -923,6 +937,7 @@ bool ARTSUnit::StartCommand(AAIController& AI, FRTSCommand& Command)
 		return RequestMove(AI, Command.TargetLocation);
 	}
 	MoveGoal.Reset();
+	MoveTarget.Reset();
 
 	if (Command.Type == ERTSCommandType::Attack)
 	{

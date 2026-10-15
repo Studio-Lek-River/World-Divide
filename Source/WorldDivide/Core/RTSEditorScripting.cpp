@@ -16,7 +16,9 @@
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
 #include "NavMesh/RecastNavMesh.h"
+#include "Navigation/RTSNavAgents.h"
 #include "NavigationSystem.h"
+#include "WorldDivide.h"
 #include "RenderingThread.h"
 #include "ShaderCompiler.h"
 
@@ -42,10 +44,26 @@ int32 URTSEditorScripting::BuildNavigation(UObject* WorldContextObject)
 	FAssetCompilingManager::Get().FinishAllCompilation();
 	NavSystem->RemoveNavigationBuildLock(ENavigationBuildLock::AsyncLoadLock, UNavigationSystemV1::ELockRemovalRebuildAction::NoRebuild);
 	NavSystem->Tick(0.f);
-	// Spawns the navmesh if the world has none yet, rebuilds every tile and blocks until done.
+	// Spawns a navmesh for every agent class the world has none for yet, rebuilds every tile and blocks until done.
+	const double StartSeconds = FPlatformTime::Seconds();
 	NavSystem->Build();
-	const ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(NavSystem->GetDefaultNavDataInstance());
-	return NavMesh ? NavMesh->GetNavMeshTilesCount() : 0;
+	const double BuildSeconds = FPlatformTime::Seconds() - StartSeconds;
+
+	// Every agent class needs its own navmesh; the fewest tiles of any of them is the result.
+	int32 FewestTiles = MAX_int32;
+	for (const FNavDataConfig& Agent : RTSNavAgents::GetAgents())
+	{
+		ARecastNavMesh* NavMesh = const_cast<ARecastNavMesh*>(RTSNavAgents::GetNavMesh(*World, Agent));
+		const bool bOwn = NavMesh && NavMesh->GetConfig().Name == Agent.Name;
+		const int32 Tiles = bOwn ? NavMesh->GetNavMeshTilesCount() : 0;
+		FewestTiles = FMath::Min(FewestTiles, Tiles);
+		// The tiles' polygons, and the compressed layers a dynamic navmesh keeps to rebuild them around new buildings.
+		constexpr double Megabyte = 1024.0 * 1024.0;
+		UE_LOG(LogWorldDivide, Display, TEXT("BuildNavigation %s: %s navmesh %d tiles, %.2f MB, tile cache %.2f MB"), *World->GetMapName(),
+			*Agent.Name.ToString(), Tiles, bOwn ? NavMesh->LogMemUsed() / Megabyte : 0.0, bOwn ? NavMesh->GetCompressedTileCacheSize() / Megabyte : 0.0);
+	}
+	UE_LOG(LogWorldDivide, Display, TEXT("BuildNavigation %s: every agent built in %.2f s"), *World->GetMapName(), BuildSeconds);
+	return FewestTiles;
 }
 
 bool URTSEditorScripting::CanRender()

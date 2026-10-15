@@ -39,6 +39,7 @@
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
+#include "Tests/RTSTestGeometry.h"
 #include "Tests/RTSTestMaps.h"
 #include "Tests/RTSTestPIE.h"
 #include "Tests/RTSTestUI.h"
@@ -191,8 +192,8 @@ namespace
 	const FVector OpenSourceSpot(1500.f, 5000.f, 0.f);
 	const FVector OpenDepotSpot(1500.f, 9000.f, 0.f);
 	const FVector DockHarvesterStart(1500.f, 7000.f, 0.f);
-	/** How far from a depot's footprint edge a harvester stands when it delivers there, with some slack. */
-	constexpr float DeliveryReach = 300.f;
+	/** How far beyond its stand-off radius from a depot's footprint edge a harvester stands when it delivers there, with some slack. */
+	constexpr float DeliveryReach = 230.f;
 	constexpr double UnreachableDocksTimeout = 60.0;
 
 	/** The obstacle move test sends three tanks from north of Block_North onto its roof, where a click on it lands. */
@@ -202,8 +203,9 @@ namespace
 		FVector(1000.f, 4500.f, 0.f),
 		FVector(1200.f, 4500.f, 0.f),
 	};
-	/** How far from the block's face a tank may stop: the navmesh ends an agent radius out, plus some slack. */
-	constexpr float ObstacleEdgeTolerance = 200.f;
+	/** How far from the block's face a tank's hull may stop, and how far it may reach into it (RTSHullClearance). */
+	constexpr float ObstacleEdgeTolerance = 50.f;
+	constexpr float ObstacleOverlapTolerance = 2.f;
 	constexpr double ObstacleMoveTimeout = 30.0;
 
 	/**
@@ -535,7 +537,7 @@ namespace
 	bool IsAtSite(const ARTSUnit& Unit, const ARTSBuilding& Site)
 	{
 		const FVector Location = Unit.GetActorLocation();
-		return FVector::Dist2D(Location, Site.GetClosestFootprintPoint(Location)) <= Unit.GetSelectionRadius() + BuilderReach;
+		return FVector::Dist2D(Location, Site.GetClosestFootprintPoint(Location)) <= Unit.GetStandOffRadius() + BuilderReach;
 	}
 
 	/** Unit's selection circle stays clear of Site's footprint. */
@@ -1688,7 +1690,7 @@ bool FRTSIssueUnreachableDocksHarvest::Update()
 	}
 
 	// The ring must really cut the walled ones off, with the stand-off and reach the harvester uses.
-	const float Radius = Harvester->GetSelectionRadius();
+	const float Radius = Harvester->GetStandOffRadius();
 	const auto IsReachable = [Harvester, Radius](const AActor& Dock, const FIntPoint& Footprint)
 	{
 		FVector Spot;
@@ -1747,7 +1749,7 @@ bool FRTSVerifyUnreachableDocks::Update()
 	}
 	Test->TestEqual(TEXT("The delivery is a full load"), State->Deposits[0], State->CarryAmount);
 	Test->TestTrue(FString::Printf(TEXT("Delivered at the open depot (%.0f cm from its edge)"), State->FirstDeliveryDistance),
-		State->FirstDeliveryDistance >= 0.f && State->FirstDeliveryDistance <= DeliveryReach);
+		State->FirstDeliveryDistance >= 0.f && State->FirstDeliveryDistance <= Harvester->GetStandOffRadius() + DeliveryReach);
 
 	const URTSHarvesterComponent* Component = Harvester->GetHarvesterComponent();
 	Test->TestEqual(TEXT("With only the walled depot left the Harvest order ended"), Harvester->GetQueuedCommandCount(), 0);
@@ -1841,17 +1843,16 @@ DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyObstacleMove, FAutomati
 bool FRTSVerifyObstacleMove::Update()
 {
 	const FBox& Box = State->ObstacleBox;
-	const auto DistanceToFace = [&Box](const FVector& Location)
+	// The hull's gap to the block, not its centre's: the centre stays on the navmesh, the hull's front reaches the face.
+	const auto DistanceToFace = [&Box](const ARTSUnit& Mover)
 	{
-		return FVector::Dist2D(Location, FVector(
-			FMath::Clamp(Location.X, Box.Min.X, Box.Max.X), FMath::Clamp(Location.Y, Box.Min.Y, Box.Max.Y), Location.Z));
+		return RTSTests::GetHullGap(Mover.GetFootprint(), FBox2D(FVector2D(Box.Min), FVector2D(Box.Max)));
 	};
 
 	bool bAllAtEdge = true;
 	for (const TWeakObjectPtr<ARTSUnit>& Mover : State->Movers)
 	{
-		bAllAtEdge &= Mover.IsValid() && Mover->GetQueuedCommandCount() == 0
-			&& DistanceToFace(Mover->GetActorLocation()) <= ObstacleEdgeTolerance;
+		bAllAtEdge &= Mover.IsValid() && Mover->GetQueuedCommandCount() == 0 && DistanceToFace(*Mover) <= ObstacleEdgeTolerance;
 	}
 	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
 	if (!bAllAtEdge && Elapsed < ObstacleMoveTimeout)
@@ -1867,10 +1868,11 @@ bool FRTSVerifyObstacleMove::Update()
 			continue;
 		}
 		const FVector Location = Mover->GetActorLocation();
-		const float Distance = DistanceToFace(Location);
-		Test->AddInfo(FString::Printf(TEXT("%s stopped at %s, %.0f cm from the block"), *Mover->GetName(), *Location.ToCompactString(), Distance));
-		Test->TestTrue(FString::Printf(TEXT("%s stopped at the block's edge (%.0f cm out, at %s after %.1f s)"),
-			*Mover->GetName(), Distance, *Location.ToCompactString(), Elapsed), Distance > 0.f && Distance <= ObstacleEdgeTolerance);
+		const float Distance = DistanceToFace(*Mover);
+		Test->AddInfo(FString::Printf(TEXT("%s stopped at %s, its hull %.0f cm from the block"), *Mover->GetName(), *Location.ToCompactString(), Distance));
+		Test->TestTrue(FString::Printf(TEXT("%s stopped with its hull at the block's edge (%.0f cm out, at %s after %.1f s)"),
+			*Mover->GetName(), Distance, *Location.ToCompactString(), Elapsed),
+			Distance >= -ObstacleOverlapTolerance && Distance <= ObstacleEdgeTolerance);
 		Test->TestTrue(FString::Printf(TEXT("%s stayed on its own side of the block"), *Mover->GetName()), Location.Y > Box.Max.Y);
 		Test->TestEqual(FString::Printf(TEXT("%s finished its order"), *Mover->GetName()), Mover->GetQueuedCommandCount(), 0);
 	}
@@ -2428,8 +2430,13 @@ bool FRTSVerifyEnemyBlocksSite::Update()
 	}
 
 	Test->TestEqual(TEXT("The builder dropped the order"), Builder->GetQueuedCommandCount(), 0);
-	Test->TestTrue(FString::Printf(TEXT("The builder walked up to the site first (stands at %s)"), *Builder->GetActorLocation().ToCompactString()),
-		FVector::Dist2D(Builder->GetActorLocation(), BuilderStart) > 100.f);
+	// Within reach of the site, where it found the enemy in the way: its stand-off from the footprint plus its reach.
+	const FVector SiteExtent = RTSBuildPlacement::GetFootprintExtent(Tower->Footprint);
+	const FVector Location = Builder->GetActorLocation();
+	const FVector Edge(FMath::Clamp(Location.X, OtherBuildSpot.X - SiteExtent.X, OtherBuildSpot.X + SiteExtent.X),
+		FMath::Clamp(Location.Y, OtherBuildSpot.Y - SiteExtent.Y, OtherBuildSpot.Y + SiteExtent.Y), Location.Z);
+	Test->TestTrue(FString::Printf(TEXT("The builder walked up to the site first (stands at %s)"), *Location.ToCompactString()),
+		FVector::Dist2D(Location, Edge) <= Builder->GetStandOffRadius() + BuilderReach);
 	Test->TestNull(TEXT("Nothing was placed on the enemy"), FindBuildingAt(Builder->GetWorld(), Tower, OtherBuildSpot));
 	Test->TestEqual(TEXT("The blocked tower was refunded"), State->Player->GetCredits(), State->BuilderCredits);
 	Test->TestTrue(FString::Printf(TEXT("The enemy was not moved (stands at %s)"), *Enemy->GetActorLocation().ToCompactString()),

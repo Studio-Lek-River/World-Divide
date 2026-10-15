@@ -71,6 +71,25 @@ PREVIEW_SOURCE_TAG = "PreviewSource"
 # moves to another major or minor version.
 ENGINE_VERSION = ".".join(unreal.SystemLibrary.get_engine_version().split(".")[:2])
 
+
+def read_nav_config():
+    """The navigation settings of Config/DefaultEngine.ini, its agent classes among them, without comments: the maps carry
+    navmeshes built with them, so they are rebuilt when these change."""
+    settings = []
+    keep = False
+    with open(os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_config_dir()), "DefaultEngine.ini"),
+              encoding="utf-8") as ini:
+        for line in ini:
+            line = line.strip()
+            if line.startswith("["):
+                keep = line.startswith("[/Script/NavigationSystem.")
+            elif keep and line and not line.startswith(";"):
+                settings.append(line)
+    return tuple(settings)
+
+
+NAV_CONFIG = read_nav_config()
+
 PROJECT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 CONTENT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir())
 READ_ONLY_REPORT = os.path.join(PROJECT_DIR, "Saved", "Setup", "ReadOnlyAssets.txt")
@@ -777,7 +796,7 @@ def make_map(tank, infantry, builder, m20, wall, crate, ground):
     plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, builder, m20, wall, crate, ground, digest),
                  spec_hash([build_map, build_navigation, spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source,
                             spawn_ground, spawn_lighting], MAP_PATH, CUBE, tank, infantry, builder, m20, wall, crate, ground,
-                           material_hashes[ground], ENGINE_VERSION))
+                           material_hashes[ground], ENGINE_VERSION, NAV_CONFIG))
 
 
 def build_bench_map(ground, digest):
@@ -804,7 +823,7 @@ def build_bench_map(ground, digest):
 def make_bench_map(ground):
     plan_rebuild(BENCH_MAP_PATH, ".umap", lambda digest: build_bench_map(ground, digest),
                  spec_hash([build_bench_map, build_navigation, spawn, spawn_block, spawn_ground, spawn_lighting],
-                           BENCH_MAP_PATH, BENCH_HALF_SIZE, BENCH_CORNER, CUBE, ground, material_hashes[ground], ENGINE_VERSION))
+                           BENCH_MAP_PATH, BENCH_HALF_SIZE, BENCH_CORNER, CUBE, ground, material_hashes[ground], ENGINE_VERSION, NAV_CONFIG))
 
 
 def ring(radius, angle):
@@ -919,7 +938,7 @@ def make_skirmish_map(spec, builder, wall, crate, ground, water):
     """Queues the level and then its preview."""
     digest = spec_hash([build_skirmish_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units,
                         spawn_supply_source, spawn_ground, spawn_water, spawn_lighting], spec, CUBE, builder, wall, crate, ground,
-                       water, material_hashes[ground], material_hashes[water], ENGINE_VERSION)
+                       water, material_hashes[ground], material_hashes[water], ENGINE_VERSION, NAV_CONFIG)
     plan_rebuild(spec.path, ".umap", lambda digest: build_skirmish_map(spec, builder, wall, crate, ground, water, digest), digest)
     make_map_preview(spec, digest)
 
@@ -1436,10 +1455,11 @@ m20_mesh, m20_parts = make_m20_guardian()
 m20 = make_unit("DA_TestM20Guardian", "Test M20 Guardian", m20_mesh, (1.0, 1.0, 1.0), 400.0, 350.0, heavy_cannon, 500.0, 150.0,
                 1100, 14.0)
 add_properties(m20, dict(m20_parts, turret_turn_rate=45.0))
-infantry = make_unit("DA_TestInfantry", "Test Infantry", infantry_mesh, fit_scale(infantry_mesh, 100.0, 100.0), 30.0, 100.0,
+# Infantry stays narrower than the infantry nav agent (radius 40 cm, WORLD_SCALE_STANDARD.md), arms and all, so it walks that navmesh.
+infantry = make_unit("DA_TestInfantry", "Test Infantry", infantry_mesh, fit_scale(infantry_mesh, 100.0, 70.0), 30.0, 100.0,
                      rifle, 350.0, 540.0, 150, 4.0)
 grenade = make_weapon("DA_TestGrenade", 600.0, 25.0, 1.5, 1500.0, 1.0, (1.0, 0.6, 0.2), arc_height=250.0)
-grenadier = make_unit("DA_TestGrenadier", "Test Grenadier", infantry_mesh, fit_scale(infantry_mesh, 130.0, 130.0), 35.0, 120.0,
+grenadier = make_unit("DA_TestGrenadier", "Test Grenadier", infantry_mesh, fit_scale(infantry_mesh, 130.0, 78.0), 35.0, 120.0,
                       grenade, 320.0, 540.0, 300, 6.0)
 rifle_training = make_upgrade("DA_TestRifleTraining", "Test Rifle Training", 400, 8.0, unreal.RTSUpgradeStat.WEAPON_DAMAGE, 1.5,
                               [infantry])

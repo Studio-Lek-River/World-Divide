@@ -232,7 +232,7 @@ namespace RTSListenServerTest
 	{
 		UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
 		const ARecastNavMesh* NavMesh = NavSystem ? Cast<ARecastNavMesh>(NavSystem->GetDefaultNavDataInstance()) : nullptr;
-		return NavMesh && NavMesh->GetNavMeshTilesCount() > 0 && !NavSystem->IsNavigationBuildInProgress();
+		return NavMesh && NavMesh->GetNavMeshTilesCount() > 0 && RTSTests::IsNavigationReady(World);
 	}
 
 	int32 CountUnits(UWorld& World)
@@ -583,6 +583,14 @@ namespace RTSListenServerTest
 		}
 
 		Test->AddInfo(FString::Printf(TEXT("Client's units arrived after %.1f s"), Elapsed));
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : State->ServerUnits[ClientTeam])
+		{
+			if (Unit.IsValid() && FVector::Dist2D(Unit->GetActorLocation(), MoveTarget) > ArrivalRadius)
+			{
+				Test->AddInfo(FString::Printf(TEXT("%s stopped at %s with %d orders"), *Unit->GetName(),
+					*Unit->GetActorLocation().ToCompactString(), Unit->GetQueuedCommandCount()));
+			}
+		}
 		Test->TestEqual(TEXT("Server moved the client's units to the target"), ServerArrived, UnitsPerTeam);
 		Test->TestEqual(TEXT("Client sees its units at the target"), ClientArrived, UnitsPerTeam);
 		Test->TestEqual(TEXT("Server ignored the client's order for the host's units"),

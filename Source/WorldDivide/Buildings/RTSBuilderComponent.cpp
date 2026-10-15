@@ -372,7 +372,7 @@ bool URTSBuilderComponent::ApproachSite(const FVector& Center, const FIntPoint& 
 	}
 
 	// Next to the footprint, facing side first: inside it the builder would block its own building.
-	const float Radius = Unit->GetSelectionRadius();
+	const float Radius = Unit->GetStandOffRadius();
 	FVector Goal;
 	if (!RTSApproach::FindReachableSpot(*Unit, Center, Footprint, Radius + SiteOffset,
 		Radius + SiteReach - SiteAcceptanceRadius, Goal))
@@ -403,7 +403,7 @@ bool URTSBuilderComponent::IsDocked(const FVector& EdgePoint) const
 		return false;
 	}
 	const float Distance = FVector::Dist2D(Unit->GetActorLocation(), EdgePoint);
-	return Distance > Unit->GetSelectionRadius() && Distance <= Unit->GetSelectionRadius() + SiteReach;
+	return Distance > Unit->GetSelectionRadius() && Distance <= Unit->GetStandOffRadius() + SiteReach;
 }
 
 void URTSBuilderComponent::StopOwnerMovement() const
