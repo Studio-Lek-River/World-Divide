@@ -5,12 +5,16 @@
 #include "Engine/NetSerialization.h"
 #include "RTSWeaponComponent.generated.h"
 
+class ARTSBuilding;
+class ARTSUnit;
 class URTSWeaponData;
 
 /**
  * Server-side gunner of a unit or building: picks an enemy target, waits out the reload and fires a shell, whose damage
  * URTSShotSubsystem deals when it lands (at once for a weapon without shell speed).
- * Enemy units come before enemy buildings when it picks a target on its own.
+ * Enemy units come before enemy buildings when it picks a target on its own. It keeps checking its target every frame but
+ * looks for a new one five times a second, weapons spread over the frames, and at once when the target is lost; units
+ * come from URTSAvoidanceSubsystem::QueryRadius and buildings from ARTSGameState's lists per team.
  * The owner decides what it may shoot (an ordered target, anything in range, or nothing while moving);
  * turning and closing in are the unit's job. Clients never run it; they see each shot through Multicast_PlayShot and
  * the damage through health replication.
@@ -79,9 +83,18 @@ private:
 	/** The nearest enemy unit in range, or failing that the nearest enemy building in range. */
 	AActor* FindNearestEnemyInRange() const;
 
-	/** The nearest T the weapon may shoot right now, measured centre to centre. */
+	/** The next search is at this weapon's next slot, at most SearchInterval from now. */
+	void ScheduleSearch();
+
+	/** The nearest enemy unit the weapon may shoot right now, measured centre to centre. */
+	ARTSUnit* FindNearestUnitInRange() const;
+
+	/** The nearest enemy building the weapon may shoot right now, measured centre to centre. */
+	ARTSBuilding* FindNearestBuildingInRange() const;
+
+	/** Whether Candidate may be shot and lies nearer Origin than the nearest so far, which it then becomes. */
 	template <typename T>
-	T* FindNearestInRange() const;
+	void ConsiderCandidate(T* Candidate, const FVector& Origin, T*& Nearest, float& NearestDistSq) const;
 
 	UPROPERTY(Transient)
 	TObjectPtr<URTSWeaponData> WeaponData;
@@ -97,4 +110,10 @@ private:
 
 	/** Seconds until the next shot; zero means ready, so the first shot on a new target is immediate. */
 	float Cooldown = 0.f;
+
+	/** Seconds until the next search for a target; zero means search now, so a new weapon looks at once. */
+	float SearchCooldown = 0.f;
+
+	/** Seconds this weapon has been updated, which places its searches on its own share of the frames. */
+	double SearchClock = 0.0;
 };

@@ -61,6 +61,52 @@ bool ARTSGameState::IsMatchOver(const UWorld& World)
 	return GameState && GameState->IsMatchOver();
 }
 
+void ARTSGameState::RegisterBuilding(ARTSBuilding& Building)
+{
+	UnregisterBuilding(Building);
+	BuildingsByTeam.FindOrAdd(Building.GetTeamId()).Add(&Building);
+}
+
+void ARTSGameState::UnregisterBuilding(const ARTSBuilding& Building)
+{
+	for (TPair<int32, TArray<TWeakObjectPtr<ARTSBuilding>>>& Team : BuildingsByTeam)
+	{
+		Team.Value.RemoveAllSwap([&Building](const TWeakObjectPtr<ARTSBuilding>& Listed) { return Listed.Get() == &Building || !Listed.IsValid(); });
+	}
+}
+
+void ARTSGameState::ForEachEnemyBuilding(int32 TeamId, TFunctionRef<void(ARTSBuilding&)> Visit) const
+{
+	for (const TPair<int32, TArray<TWeakObjectPtr<ARTSBuilding>>>& Team : BuildingsByTeam)
+	{
+		if (Team.Key == TeamId)
+		{
+			continue;
+		}
+		for (const TWeakObjectPtr<ARTSBuilding>& Listed : Team.Value)
+		{
+			if (ARTSBuilding* Building = Listed.Get())
+			{
+				Visit(*Building);
+			}
+		}
+	}
+}
+
+void ARTSGameState::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	// Buildings placed in the level, or spawned before the game state, are listed now; later ones list themselves.
+	if (HasAuthority() && GetWorld())
+	{
+		for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
+		{
+			RegisterBuilding(**It);
+		}
+	}
+}
+
 void ARTSGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

@@ -48,6 +48,16 @@ public:
 	/** Whether the match in World is over; false for a world without an ARTSGameState. */
 	static bool IsMatchOver(const UWorld& World);
 
+	/** Server only. Lists Building under its team, moving it there from any other team's list. */
+	void RegisterBuilding(ARTSBuilding& Building);
+
+	/** Server only. Takes Building off its team's list. */
+	void UnregisterBuilding(const ARTSBuilding& Building);
+
+	/** Server only. Calls Visit for every standing building of a team other than TeamId. */
+	void ForEachEnemyBuilding(int32 TeamId, TFunctionRef<void(ARTSBuilding&)> Visit) const;
+
+	virtual void PostInitializeComponents() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
@@ -59,4 +69,7 @@ private:
 
 	UPROPERTY(Replicated)
 	int32 WinningTeam = INDEX_NONE;
+
+	/** Server only, not replicated: each team's buildings, so weapons need not scan every actor for them. */
+	TMap<int32, TArray<TWeakObjectPtr<ARTSBuilding>>> BuildingsByTeam;
 };

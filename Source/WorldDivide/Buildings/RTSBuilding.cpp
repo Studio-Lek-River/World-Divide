@@ -91,8 +91,12 @@ void ARTSBuilding::InitFromData(URTSBuildingData* InBuildingData, int32 InTeamId
 	ApplyBuildingData();
 	Pads.SetNum(GetPadCount());
 
-	// From now on the building keeps its team in the match.
+	// From now on the building keeps its team in the match, and its team's enemies find it.
 	ARTSGameState* GameState = GetWorld()->GetGameState<ARTSGameState>();
+	if (GameState)
+	{
+		GameState->RegisterBuilding(*this);
+	}
 	if (GameState && ARTSGameState::CountsForSurvival(*this))
 	{
 		GameState->RefreshTeams();
@@ -117,6 +121,15 @@ void ARTSBuilding::PostInitializeComponents()
 
 	HealthComponent->OnDamaged.AddDynamic(this, &ThisClass::HandleDamaged);
 	HealthComponent->OnDeath.AddDynamic(this, &ThisClass::HandleDeath);
+
+	// A building placed in the level never passes through InitFromData.
+	if (GetNetMode() != NM_Client)
+	{
+		if (ARTSGameState* GameState = GetWorld()->GetGameState<ARTSGameState>())
+		{
+			GameState->RegisterBuilding(*this);
+		}
+	}
 }
 
 void ARTSBuilding::BeginPlay()
@@ -298,8 +311,13 @@ void ARTSBuilding::Destroyed()
 		}
 	}
 
-	// Destroyed or cancelled, the team's last building that is not a defence takes the team out of the match.
 	UWorld* World = GetWorld();
+	if (ARTSGameState* GameState = HasAuthority() && World ? World->GetGameState<ARTSGameState>() : nullptr)
+	{
+		GameState->UnregisterBuilding(*this);
+	}
+
+	// Destroyed or cancelled, the team's last building that is not a defence takes the team out of the match.
 	if (HasAuthority() && World && !World->bIsTearingDown && ARTSGameState::CountsForSurvival(*this))
 	{
 		if (ARTSGameState* GameState = World->GetGameState<ARTSGameState>())

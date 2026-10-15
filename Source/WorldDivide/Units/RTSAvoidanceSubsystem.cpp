@@ -5,6 +5,7 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Core/RTSGameState.h"
+#include "Data/RTSUnitData.h"
 #include "EngineUtils.h"
 #include "HAL/IConsoleManager.h"
 #include "NavigationData.h"
@@ -12,6 +13,7 @@
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitShape.h"
 
 namespace
 {
@@ -28,8 +30,27 @@ namespace
 	/** Golden angle in radians: coincident units part in directions that differ for every pair. */
 	constexpr float CoincidentAngleStep = 2.39996f;
 
+	/**
+	 * Grid cells are this wide whatever the units' sizes; a footprint wider than a cell sits in every cell its circle
+	 * covers, so one large unit no longer makes the cells, and every unit's neighbour count, large for everyone.
+	 */
+	constexpr float CellSize = 600.f;
+
+	/** A unit is pushed apart at most at this share of its own top speed, so even a deep overlap parts smoothly. */
+	constexpr float SeparationSpeedFraction = 0.5f;
+
 	/** A push that starts off the navmesh is kept when its end lies this close above or below it. */
 	const FVector OffMeshExtent(25.f, 25.f, 200.f);
+
+	FIntPoint CellOf(const FVector2D& Location)
+	{
+		return FIntPoint(FMath::FloorToInt32(Location.X / CellSize), FMath::FloorToInt32(Location.Y / CellSize));
+	}
+
+	int64 KeyOf(const FIntPoint& Cell)
+	{
+		return (static_cast<int64>(Cell.Y) << 32) + (static_cast<int64>(Cell.X) + MAX_int32);
+	}
 
 	FVector2D RightOf(const FVector2D& Direction)
 	{
@@ -37,70 +58,108 @@ namespace
 	}
 }
 
-void URTSAvoidanceSubsystem::Separate()
+bool URTSAvoidanceSubsystem::BuildIndex(float DeltaSeconds)
+{
+	Agents.Reset();
+	Entries.Reset();
+	MaxBoundRadius = 0.f;
+	IndexFrame = GFrameCounter;
+	int32 Avoiding = 0;
+	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
+	{
+		ARTSUnit* Unit = *It;
+		if (Unit->GetHealthComponent()->IsDead() || Unit->IsActorBeingDestroyed())
+		{
+			continue;
+		}
+		const FRTSFootprint Footprint = Unit->GetFootprint();
+		const AAIController* AI = Unit->GetController<AAIController>();
+		FAgent& Agent = Agents.AddDefaulted_GetRef();
+		Agent.Unit = Unit;
+		Agent.Location = FVector2D(Footprint.Center);
+		Agent.Axis = FVector2D(Footprint.Axis);
+		Agent.Velocity = FVector2D(Unit->GetVelocity());
+		Agent.HalfSegment = Footprint.HalfSegment;
+		Agent.Radius = Footprint.Radius;
+		Agent.BoundRadius = Footprint.HalfSegment + Footprint.Radius;
+		Agent.bAvoids = Unit->GetUnitData() && !Unit->GetAircraftComponent()->CanFly();
+		Agent.MaxStep = Agent.bAvoids ? Unit->GetUnitData()->MoveSpeed * SeparationSpeedFraction * DeltaSeconds : 0.f;
+		Agent.bWalking = AI && AI->GetMoveStatus() != EPathFollowingStatus::Idle;
+		Agent.bIdle = !Agent.bWalking && Unit->GetQueuedCommandCount() == 0;
+		Agent.Yield = Agent.bWalking || Agent.bIdle ? 1.f : BusyYield;
+		Agent.MinCell = CellOf(Agent.Location - FVector2D(Agent.BoundRadius));
+		Agent.MaxCell = CellOf(Agent.Location + FVector2D(Agent.BoundRadius));
+		MaxBoundRadius = FMath::Max(MaxBoundRadius, Agent.BoundRadius);
+		Avoiding += Agent.bAvoids ? 1 : 0;
+
+		const int32 AgentIndex = Agents.Num() - 1;
+		for (int32 Y = Agent.MinCell.Y; Y <= Agent.MaxCell.Y; ++Y)
+		{
+			for (int32 X = Agent.MinCell.X; X <= Agent.MaxCell.X; ++X)
+			{
+				Entries.Add({ KeyOf(FIntPoint(X, Y)), AgentIndex });
+			}
+		}
+	}
+	// Sorted by row, then column, then agent: each cell is one run, and a row of cells one run too. No per-frame allocations
+	// once the arrays have grown.
+	Entries.Sort([](const FEntry& A, const FEntry& B) { return A.CellKey != B.CellKey ? A.CellKey < B.CellKey : A.Agent < B.Agent; });
+	return Avoiding >= 2;
+}
+
+void URTSAvoidanceSubsystem::Separate(float DeltaSeconds)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(URTSAvoidanceSubsystem::Separate);
 
 	const double StartSeconds = FPlatformTime::Seconds();
 	UWorld* World = GetWorld();
-
-	Agents.Reset();
-	float MaxRadius = 0.f;
-	for (TActorIterator<ARTSUnit> It(World); It; ++It)
-	{
-		ARTSUnit* Unit = *It;
-		if (!Unit->GetUnitData() || Unit->GetAircraftComponent()->CanFly() || Unit->GetHealthComponent()->IsDead())
-		{
-			continue;
-		}
-		const AAIController* AI = Unit->GetController<AAIController>();
-		FAgent& Agent = Agents.AddDefaulted_GetRef();
-		Agent.Unit = Unit;
-		Agent.Location = FVector2D(Unit->GetActorLocation());
-		Agent.Velocity = FVector2D(Unit->GetVelocity());
-		Agent.Radius = Unit->GetSelectionRadius();
-		Agent.bWalking = AI && AI->GetMoveStatus() != EPathFollowingStatus::Idle;
-		Agent.bIdle = !Agent.bWalking && Unit->GetQueuedCommandCount() == 0;
-		Agent.Yield = Agent.bWalking || Agent.bIdle ? 1.f : BusyYield;
-		MaxRadius = FMath::Max(MaxRadius, Agent.Radius);
-	}
-	if (Agents.Num() < 2)
+	if (!BuildIndex(DeltaSeconds))
 	{
 		LastSeparateSeconds = FPlatformTime::Seconds() - StartSeconds;
 		return;
 	}
 
-	// Cells as wide as the largest pair can reach, so every overlap lies in a unit's own cell or the eight around it. Sorted
-	// by row, then column, the three cells of a neighbouring row form one run of the array: no per-frame allocations.
-	const float CellSize = 2.f * MaxRadius;
-	auto CellOf = [CellSize](const FVector2D& Location)
-	{
-		return FIntPoint(FMath::FloorToInt32(Location.X / CellSize), FMath::FloorToInt32(Location.Y / CellSize));
-	};
-	auto KeyOf = [](const FIntPoint& Cell)
-	{
-		return (static_cast<int64>(Cell.Y) << 32) + (static_cast<int64>(Cell.X) + MAX_int32);
-	};
-	for (FAgent& Agent : Agents)
-	{
-		Agent.CellKey = KeyOf(CellOf(Agent.Location));
-	}
-	Agents.StableSort([](const FAgent& A, const FAgent& B) { return A.CellKey < B.CellKey; });
-
 	Arrived.Reset();
-	for (int32 Index = 0; Index < Agents.Num(); ++Index)
+	for (int32 RunStart = 0; RunStart < Entries.Num();)
 	{
-		FAgent& A = Agents[Index];
-		const FIntPoint Cell = CellOf(A.Location);
-		for (int32 DY = -1; DY <= 1; ++DY)
+		const int64 CellKey = Entries[RunStart].CellKey;
+		int32 RunEnd = RunStart + 1;
+		while (RunEnd < Entries.Num() && Entries[RunEnd].CellKey == CellKey)
 		{
-			const int64 LastKey = KeyOf(Cell + FIntPoint(1, DY));
-			// Each pair once: only partners after this unit, which also skips rows above it.
-			const int32 First = FMath::Max(Index + 1, Algo::LowerBoundBy(Agents, KeyOf(Cell + FIntPoint(-1, DY)), &FAgent::CellKey));
-			for (int32 OtherIndex = First; OtherIndex < Agents.Num() && Agents[OtherIndex].CellKey <= LastKey; ++OtherIndex)
+			++RunEnd;
+		}
+		for (int32 First = RunStart; First < RunEnd; ++First)
+		{
+			FAgent& A = Agents[Entries[First].Agent];
+			if (!A.bAvoids)
 			{
-				FAgent& B = Agents[OtherIndex];
-				const FVector2D Delta = B.Location - A.Location;
+				continue;
+			}
+			for (int32 Second = First + 1; Second < RunEnd; ++Second)
+			{
+				FAgent& B = Agents[Entries[Second].Agent];
+				if (!B.bAvoids)
+				{
+					continue;
+				}
+				// A pair sharing several cells meets only in the first of them: the corner where their cell ranges start.
+				const FIntPoint SharedCell(FMath::Max(A.MinCell.X, B.MinCell.X), FMath::Max(A.MinCell.Y, B.MinCell.Y));
+				if (KeyOf(SharedCell) != CellKey)
+				{
+					continue;
+				}
+				const float Bound = A.BoundRadius + B.BoundRadius;
+				if (FVector2D::DistSquared(A.Location, B.Location) >= FMath::Square(Bound))
+				{
+					continue;
+				}
+
+				// The stadiums overlap where their segments come closer than their radii.
+				FVector2D OnA;
+				FVector2D OnB;
+				RTSUnitShape::GetClosestSegmentPoints(A.Location - A.Axis * A.HalfSegment, A.Location + A.Axis * A.HalfSegment,
+					B.Location - B.Axis * B.HalfSegment, B.Location + B.Axis * B.HalfSegment, OnA, OnB);
+				const FVector2D Delta = OnB - OnA;
 				const float MinDistance = A.Radius + B.Radius;
 				const float DistanceSquared = Delta.SizeSquared();
 				if (DistanceSquared >= FMath::Square(MinDistance))
@@ -109,9 +168,10 @@ void URTSAvoidanceSubsystem::Separate()
 				}
 
 				const float Distance = FMath::Sqrt(DistanceSquared);
+				const int32 PairIndex = Entries[First].Agent;
 				const FVector2D Normal = Distance > UE_KINDA_SMALL_NUMBER
 					? Delta / Distance
-					: FVector2D(FMath::Cos(Index * CoincidentAngleStep), FMath::Sin(Index * CoincidentAngleStep));
+					: FVector2D(FMath::Cos(PairIndex * CoincidentAngleStep), FMath::Sin(PairIndex * CoincidentAngleStep));
 				const float Overlap = MinDistance - Distance;
 				const float ShareA = A.Yield / (A.Yield + B.Yield);
 				const float ShareB = 1.f - ShareA;
@@ -127,36 +187,39 @@ void URTSAvoidanceSubsystem::Separate()
 				}
 
 				// Touching a unit that already stands on the same goal: this one has arrived as well.
-				auto SharesGoal = [MinDistance](const FAgent& Walker, const FAgent& Standing)
+				auto SharesGoal = [Bound](const FAgent& Walker, const FAgent& Standing)
 				{
 					const TOptional<FVector> WalkerGoal = Walker.Unit->GetMoveGoal();
 					const TOptional<FVector> StandingGoal = Standing.Unit->GetMoveGoal();
-					return WalkerGoal && StandingGoal && FVector::Dist2D(*WalkerGoal, *StandingGoal) < MinDistance;
+					return WalkerGoal && StandingGoal && FVector::Dist2D(*WalkerGoal, *StandingGoal) < Bound;
 				};
 				if (A.bWalking && B.bIdle && SharesGoal(A, B))
 				{
-					Arrived.AddUnique(A.Unit);
+					Arrived.AddUnique(A.Unit.Get());
 				}
 				else if (B.bWalking && A.bIdle && SharesGoal(B, A))
 				{
-					Arrived.AddUnique(B.Unit);
+					Arrived.AddUnique(B.Unit.Get());
 				}
 			}
 		}
+		RunStart = RunEnd;
 	}
 
 	UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
-	const ANavigationData* NavData = NavSystem ? NavSystem->GetDefaultNavDataInstance(FNavigationSystem::DontCreate) : nullptr;
 	for (const FAgent& Agent : Agents)
 	{
 		if (Agent.Push.IsNearlyZero())
 		{
 			continue;
 		}
-		// Many neighbours pushing the same way would throw a unit clear across; the crowd settles over a few frames instead.
-		const FVector2D Push = Agent.Push.GetClampedToMaxSize(Agent.Radius);
-		const FVector From = Agent.Unit->GetNavAgentLocation();
+		// Many neighbours pushing the same way, or a deep overlap, part over several frames instead of in one jump.
+		ARTSUnit* Unit = Agent.Unit.Get();
+		const FVector2D Push = Agent.Push.GetClampedToMaxSize(Agent.MaxStep);
+		const FVector From = Unit->GetNavAgentLocation();
 		FVector To = From + FVector(Push, 0.f);
+		// The unit's own navmesh, so a push never takes it where it could not drive.
+		const ANavigationData* NavData = NavSystem ? NavSystem->GetNavDataForProps(Unit->GetNavAgentPropertiesRef(), From) : nullptr;
 		if (NavData)
 		{
 			FVector Hit;
@@ -171,7 +234,7 @@ void URTSAvoidanceSubsystem::Separate()
 		const FVector Step(To.X - From.X, To.Y - From.Y, 0.f);
 		if (!Step.IsNearlyZero())
 		{
-			Agent.Unit->SetActorLocation(Agent.Unit->GetActorLocation() + Step);
+			Unit->SetActorLocation(Unit->GetActorLocation() + Step);
 		}
 	}
 
@@ -184,14 +247,61 @@ void URTSAvoidanceSubsystem::Separate()
 	LastSeparateSeconds = FPlatformTime::Seconds() - StartSeconds;
 }
 
+void URTSAvoidanceSubsystem::QueryRadius(const FVector& Center, float Radius, TArray<ARTSUnit*>& OutUnits) const
+{
+	OutUnits.Reset();
+	// The grid is built once a frame, after the actors tick; without one from this or the last frame, every unit is a candidate.
+	if (IndexFrame == MAX_uint64 || GFrameCounter > IndexFrame + 1)
+	{
+		for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
+		{
+			OutUnits.Add(*It);
+		}
+		return;
+	}
+
+	const FVector2D Location(Center);
+	const FIntPoint MinCell = CellOf(Location - FVector2D(Radius + MaxBoundRadius));
+	const FIntPoint MaxCell = CellOf(Location + FVector2D(Radius + MaxBoundRadius));
+	for (int32 Y = MinCell.Y; Y <= MaxCell.Y; ++Y)
+	{
+		const int64 LastKey = KeyOf(FIntPoint(MaxCell.X, Y));
+		for (int32 Index = Algo::LowerBoundBy(Entries, KeyOf(FIntPoint(MinCell.X, Y)), &FEntry::CellKey);
+			Index < Entries.Num() && Entries[Index].CellKey <= LastKey; ++Index)
+		{
+			const FAgent& Agent = Agents[Entries[Index].Agent];
+			// A unit in several of the cells counts once: in the first cell both ranges share.
+			const FIntPoint SharedCell(FMath::Max(MinCell.X, Agent.MinCell.X), FMath::Max(MinCell.Y, Agent.MinCell.Y));
+			if (KeyOf(SharedCell) != Entries[Index].CellKey
+				|| FVector2D::DistSquared(Location, Agent.Location) > FMath::Square(Radius + Agent.BoundRadius))
+			{
+				continue;
+			}
+			if (ARTSUnit* Unit = Agent.Unit.Get())
+			{
+				OutUnits.Add(Unit);
+			}
+		}
+	}
+}
+
 void URTSAvoidanceSubsystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
 	UWorld* World = GetWorld();
-	if (World->GetNetMode() != NM_Client && CVarAvoidance.GetValueOnGameThread() && !ARTSGameState::IsMatchOver(*World))
+	if (World->GetNetMode() == NM_Client || ARTSGameState::IsMatchOver(*World))
 	{
-		Separate();
+		return;
+	}
+	if (CVarAvoidance.GetValueOnGameThread())
+	{
+		Separate(DeltaTime);
+	}
+	else
+	{
+		// Weapons still find their targets through the grid.
+		BuildIndex(DeltaTime);
 	}
 }
 

@@ -57,4 +57,11 @@ namespace RTSUnitShape
 
 	/** The footprint of a unit of Shape standing at Transform. */
 	WORLDDIVIDE_API FRTSFootprint MakeFootprint(const FRTSUnitShape& Shape, const FTransform& Transform);
+
+	/** The closest points of segments A0-A1 and B0-B1, in the ground plane. */
+	WORLDDIVIDE_API void GetClosestSegmentPoints(const FVector2D& A0, const FVector2D& A1, const FVector2D& B0, const FVector2D& B1,
+		FVector2D& OutA, FVector2D& OutB);
+
+	/** Ground distance between the edges of two footprints; negative where they overlap. */
+	WORLDDIVIDE_API float GetGap(const FRTSFootprint& A, const FRTSFootprint& B);
 }

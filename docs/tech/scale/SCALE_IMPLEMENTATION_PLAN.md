@@ -262,3 +262,30 @@ Game thread per frame in the `stress_240` region (Insights, inclusive):
 | Slate (`DrawWindows`) | 1 | 0.93 ms | 0.95 ms |
 
 **Finding.** No scope got slower. The box root, the stadium edge and the projected brackets cost nothing measurable; every figure is at or under step 0. The bench comparison and its M20 grid change are in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md#step-1-133-box-collision-and-selection-bounds).
+
+### Step 2: fixed-cell avoidance and throttled acquisition (2026-10-15)
+
+Same method as step 0, `-Trace` on.
+
+| Stress 240 | M20 Guardian | `DA_TestTank` |
+|---|---:|---:|
+| Frame, with trace | 4.31 ms | 3.87 ms |
+| Avoidance pass (log) | 0.16 ms, max 0.24 ms | 0.10 ms, max 0.17 ms |
+| GPU | 4.1 ms | 1.7 ms |
+| Draw calls / triangles | 2561 / 51.2 M | 957 / 2.9 M |
+
+Game thread per frame in the `stress_240` region (Insights, inclusive):
+
+| Scope | Calls per frame | M20 Guardian | `DA_TestTank` |
+|---|---:|---:|---:|
+| `UWorld_Tick` | 1 | 2.00 ms | 1.78 ms |
+| `URTSWeaponComponent::UpdateWeapon` | 281 | 0.025 ms | 0.021 ms |
+| of which `FindNearestEnemyInRange` (grid query) | 6.0 (M20), 5.5 (tank) | 0.016 ms | 0.013 ms |
+| `ARTSUnit::TickOrders` | 278 | 0.66 ms | 0.57 ms |
+| `URTSAvoidanceSubsystem::Separate` | 1 | 0.16 ms | 0.10 ms |
+| Slate (`DrawWindows`) | 1 | 0.85 ms | 0.88 ms |
+
+**Findings.**
+- Acquisition went from 7.2–7.3 ms (step 1) to about 0.02 ms per frame. Searches per frame fell from 274 to about 6: each weapon without a target searches once per 0.2 s, and at about 230 frames per second that is one frame in 46. At 60 fps it would be about 23 searches, roughly 0.06 ms at the measured 2–3 µs each.
+- `UWorld_Tick` fell from about 9.1 ms to 1.8–2.0 ms; `TickOrders` is now the largest gameplay scope.
+- `Separate` rose from 0.09–0.10 ms to 0.10–0.16 ms: the pass now indexes every unit, aircraft included, for `QueryRadius`, and the M20's footprint covers several 600 cm cells. The bench comparison is in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md#step-2-134-fixed-cell-avoidance-and-throttled-acquisition).

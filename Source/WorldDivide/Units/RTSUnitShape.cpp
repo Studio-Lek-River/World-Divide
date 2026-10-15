@@ -103,3 +103,61 @@ FRTSFootprint RTSUnitShape::MakeFootprint(const FRTSUnitShape& Shape, const FTra
 	Footprint.Radius = FMath::Min(HalfLength, HalfWidth);
 	return Footprint;
 }
+
+void RTSUnitShape::GetClosestSegmentPoints(const FVector2D& A0, const FVector2D& A1, const FVector2D& B0, const FVector2D& B1,
+	FVector2D& OutA, FVector2D& OutB)
+{
+	// Ericson, Real-Time Collision Detection, 5.1.9: S along A and T along B, each clamped to its segment.
+	const FVector2D DA = A1 - A0;
+	const FVector2D DB = B1 - B0;
+	const FVector2D R = A0 - B0;
+	const float LengthA = DA.SizeSquared();
+	const float LengthB = DB.SizeSquared();
+	const float F = FVector2D::DotProduct(DB, R);
+	float S = 0.f;
+	float T = 0.f;
+	if (LengthA <= UE_SMALL_NUMBER)
+	{
+		T = LengthB <= UE_SMALL_NUMBER ? 0.f : FMath::Clamp(F / LengthB, 0.f, 1.f);
+	}
+	else
+	{
+		const float C = FVector2D::DotProduct(DA, R);
+		if (LengthB <= UE_SMALL_NUMBER)
+		{
+			S = FMath::Clamp(-C / LengthA, 0.f, 1.f);
+		}
+		else
+		{
+			const float B = FVector2D::DotProduct(DA, DB);
+			const float Denominator = LengthA * LengthB - B * B;
+			// Parallel segments: any S does; T then finds the matching point.
+			S = Denominator > UE_SMALL_NUMBER ? FMath::Clamp((B * F - C * LengthB) / Denominator, 0.f, 1.f) : 0.f;
+			T = (B * S + F) / LengthB;
+			if (T < 0.f)
+			{
+				T = 0.f;
+				S = FMath::Clamp(-C / LengthA, 0.f, 1.f);
+			}
+			else if (T > 1.f)
+			{
+				T = 1.f;
+				S = FMath::Clamp((B - C) / LengthA, 0.f, 1.f);
+			}
+		}
+	}
+	OutA = A0 + DA * S;
+	OutB = B0 + DB * T;
+}
+
+float RTSUnitShape::GetGap(const FRTSFootprint& A, const FRTSFootprint& B)
+{
+	const FVector2D CenterA(A.Center);
+	const FVector2D AxisA = FVector2D(A.Axis) * A.HalfSegment;
+	const FVector2D CenterB(B.Center);
+	const FVector2D AxisB = FVector2D(B.Axis) * B.HalfSegment;
+	FVector2D OnA;
+	FVector2D OnB;
+	GetClosestSegmentPoints(CenterA - AxisA, CenterA + AxisA, CenterB - AxisB, CenterB + AxisB, OnA, OnB);
+	return FVector2D::Distance(OnA, OnB) - A.Radius - B.Radius;
+}

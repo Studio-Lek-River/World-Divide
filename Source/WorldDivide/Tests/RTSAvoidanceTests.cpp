@@ -3,6 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Buildings/RTSBuilding.h"
+#include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
@@ -17,18 +18,22 @@
 #include "Tests/RTSTestPIE.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitShape.h"
 
 /**
  * Local avoidance on L_TestMap, in the empty strip north of the bases. The crowd test sends 50 tanks and infantry, each on
  * its own, to one point and checks that they end apart. The gap test walls the strip off with power plants but for a gap
  * one cell wide and checks that a squad of infantry goes through it. The frame-time test walks 200 units across the strip
- * with avoidance on and off and reports what it costs.
+ * with avoidance on and off and reports what it costs; the mixed test does the same with 20 M20s among them. The tank-pair
+ * tests stand two M20s side by side, which must stay put, and end to end overlapping, which must part no faster than half
+ * their speed.
  */
 namespace RTSAvoidanceTests
 {
 	const TCHAR* TestMap = TEXT("/Game/Maps/L_TestMap");
 	const TCHAR* TankPath = TEXT("/Game/Data/Units/DA_TestTank.DA_TestTank");
 	const TCHAR* InfantryPath = TEXT("/Game/Data/Units/DA_TestInfantry.DA_TestInfantry");
+	const TCHAR* M20Path = TEXT("/Game/Data/Units/DA_TestM20Guardian.DA_TestM20Guardian");
 	const TCHAR* PowerPlantPath = TEXT("/Game/Data/Buildings/DA_TestPowerPlant.DA_TestPowerPlant");
 	constexpr double NavTimeout = 30.0;
 
@@ -38,8 +43,8 @@ namespace RTSAvoidanceTests
 	const FVector CrowdOrigin(-4500.f, 6500.f, 0.f);
 	constexpr float CrowdSpacing = 250.f;
 	const FVector CrowdTarget(1500.f, 7000.f, 0.f);
-	/** Pairs may end no closer than this share of the sum of their radii. */
-	constexpr float CrowdMinSeparation = 0.9f;
+	/** Pairs may end overlapping by no more than this share of the sum of their footprints' radii. */
+	constexpr float CrowdMaxOverlap = 0.1f;
 	/** Game seconds the crowd stands once every order is done, before it is measured. */
 	constexpr double CrowdSettleSeconds = 1.0;
 	constexpr double CrowdTimeout = 60.0;
@@ -71,6 +76,26 @@ namespace RTSAvoidanceTests
 	/** Mean time of the avoidance pass over 200 units that would start to show in a 60 fps frame. */
 	constexpr double FrameTimeBudgetMs = 1.0;
 
+	/** The mixed test: 180 tanks and infantry as in the frame-time test, and 20 M20s in a block of their own to the south. */
+	constexpr int32 MixedM20Count = 20;
+	constexpr int32 MixedM20Columns = 5;
+	const FVector MixedM20Origin(-5000.f, 3800.f, 0.f);
+	/** Clearance between the M20s' footprints in the block. */
+	constexpr float MixedM20Clearance = 300.f;
+	/** Provisional: the slowest pass in the mixed test (plan section 6, item 7). */
+	constexpr double MixedMaxPassBudgetMs = 2.0;
+
+	/** The tank-pair tests: two M20s facing east in the strip, watched for this many game seconds. */
+	const FVector PairOrigin(-3000.f, 7000.f, 0.f);
+	constexpr float PairSideBySide = 450.f;
+	constexpr float PairEndToEndOverlap = 200.f;
+	constexpr double PairWatchSeconds = 2.0;
+	/** Standing clear, neither may drift more than this. */
+	constexpr float PairStillTolerance = 1.f;
+	/** The grid must return every unit within QueryReach of these points. */
+	const FVector QueryPoints[] = { FVector(-3000.f, 7000.f, 0.f), FVector(-6000.f, 0.f, 0.f), FVector(6000.f, 0.f, 0.f), FVector::ZeroVector };
+	constexpr float QueryReach = 2500.f;
+
 	struct FAvoidanceState
 	{
 		TArray<TWeakObjectPtr<ARTSUnit>> Units;
@@ -89,6 +114,13 @@ namespace RTSAvoidanceTests
 		double PassSeconds = 0.0;
 		double MaxPassSeconds = 0.0;
 		double MeanFrameMsOn = 0.0;
+		int64 WalkingSum = 0;
+		bool bMixed = false;
+
+		// Tank-pair tests only.
+		double WatchStart = -1.0;
+		TArray<FVector> StartLocations;
+		float WorstStepRatio = 0.f;
 	};
 
 	ARTSPlayerController* GetController(FAutomationTestBase& Test)
@@ -262,28 +294,29 @@ bool FRTSAvoidanceVerifyCrowd::Update()
 	}
 
 	Test->TestEqual(TEXT("Every unit of the crowd is alive"), Units.Num(), CrowdCount);
-	float WorstRatio = TNumericLimits<float>::Max();
+	float WorstOverlap = 0.f;
 	float FarthestFromTarget = 0.f;
 	int32 TooClose = 0;
 	for (int32 A = 0; A < Units.Num(); ++A)
 	{
 		FarthestFromTarget = FMath::Max(FarthestFromTarget, FVector::Dist2D(Units[A]->GetActorLocation(), CrowdTarget));
+		const FRTSFootprint FootprintA = Units[A]->GetFootprint();
 		for (int32 B = A + 1; B < Units.Num(); ++B)
 		{
-			const float Ratio = FVector::Dist2D(Units[A]->GetActorLocation(), Units[B]->GetActorLocation())
-				/ (Units[A]->GetSelectionRadius() + Units[B]->GetSelectionRadius());
-			WorstRatio = FMath::Min(WorstRatio, Ratio);
-			if (Ratio < CrowdMinSeparation)
+			const FRTSFootprint FootprintB = Units[B]->GetFootprint();
+			const float Overlap = -RTSUnitShape::GetGap(FootprintA, FootprintB) / (FootprintA.Radius + FootprintB.Radius);
+			WorstOverlap = FMath::Max(WorstOverlap, Overlap);
+			if (Overlap > CrowdMaxOverlap)
 			{
 				++TooClose;
-				Test->AddInfo(FString::Printf(TEXT("%s and %s at %.2f of their radii"), *Units[A]->GetName(),
-					*Units[B]->GetName(), Ratio));
+				Test->AddInfo(FString::Printf(TEXT("%s and %s overlap by %.2f of their radii"), *Units[A]->GetName(),
+					*Units[B]->GetName(), Overlap));
 			}
 		}
 	}
-	Test->TestEqual(TEXT("Pairs closer than 0.9 x the sum of their radii"), TooClose, 0);
-	Test->AddInfo(FString::Printf(TEXT("Crowd settled after %.1f s: closest pair at %.2f of their radii, farthest unit %.0f cm from the target"),
-		Elapsed, WorstRatio, FarthestFromTarget));
+	Test->TestEqual(TEXT("Pairs overlapping by more than 0.1 x the sum of their footprints' radii"), TooClose, 0);
+	Test->AddInfo(FString::Printf(TEXT("Crowd settled after %.1f s: deepest overlap %.2f of the radii, farthest unit %.0f cm from the target"),
+		Elapsed, WorstOverlap, FarthestFromTarget));
 	return true;
 }
 
@@ -437,6 +470,7 @@ bool FRTSAvoidanceIssueFrameTimeMove::Update()
 	State->Passes = 0;
 	State->PassSeconds = 0.0;
 	State->MaxPassSeconds = 0.0;
+	State->WalkingSum = 0;
 	return true;
 }
 
@@ -461,31 +495,173 @@ bool FRTSAvoidanceSampleFrameTime::Update()
 		State->PassSeconds += Avoidance->GetLastSeparateSeconds();
 		State->MaxPassSeconds = FMath::Max(State->MaxPassSeconds, Avoidance->GetLastSeparateSeconds());
 	}
+	// Units walking, on average over the sample: the first ones may arrive before it ends.
+	for (const ARTSUnit* Unit : GetLiveUnits(*State))
+	{
+		State->WalkingSum += Unit->GetVelocity().SizeSquared2D() > 1.f ? 1 : 0;
+	}
 	if (Now - State->PhaseStart < FrameTimeSampleSeconds)
 	{
 		return false;
 	}
 
-	int32 Walking = 0;
-	for (const ARTSUnit* Unit : GetLiveUnits(*State))
-	{
-		Walking += Unit->GetVelocity().SizeSquared2D() > 1.f ? 1 : 0;
-	}
+	const int32 Walking = static_cast<int32>(State->WalkingSum / State->Frames);
 	const double MeanFrameMs = State->FrameSeconds / State->Frames * 1000.0;
 	if (bAvoidance)
 	{
 		const double MeanPassMs = State->PassSeconds / FMath::Max(State->Passes, 1) * 1000.0;
+		const double MaxPassMs = State->MaxPassSeconds * 1000.0;
 		State->MeanFrameMsOn = MeanFrameMs;
-		Test->AddInfo(FString::Printf(TEXT("Avoidance on, %d of %d units walking: frame %.2f ms mean over %d frames, avoidance pass %.3f ms mean, %.3f ms max"),
-			Walking, FrameTimeCount, MeanFrameMs, State->Frames, MeanPassMs, State->MaxPassSeconds * 1000.0));
+		Test->AddInfo(FString::Printf(TEXT("Avoidance on%s, %d of %d units walking on average: frame %.2f ms mean over %d frames, avoidance pass %.3f ms mean, %.3f ms max"),
+			State->bMixed ? TEXT(" (mixed, 20 M20s)") : TEXT(""), Walking, FrameTimeCount, MeanFrameMs, State->Frames, MeanPassMs, MaxPassMs));
 		Test->TestTrue(TEXT("Units walk while the frame time is sampled"), Walking > FrameTimeCount / 2);
 		Test->TestTrue(FString::Printf(TEXT("Avoidance pass under %.1f ms on average"), FrameTimeBudgetMs), MeanPassMs < FrameTimeBudgetMs);
+		if (State->bMixed)
+		{
+			Test->TestTrue(FString::Printf(TEXT("Slowest avoidance pass under %.1f ms"), MixedMaxPassBudgetMs), MaxPassMs < MixedMaxPassBudgetMs);
+		}
 	}
 	else
 	{
-		Test->AddInfo(FString::Printf(TEXT("Avoidance off, %d of %d units walking: frame %.2f ms mean over %d frames (%+.2f ms with avoidance)"),
+		Test->AddInfo(FString::Printf(TEXT("Avoidance off, %d of %d units walking on average: frame %.2f ms mean over %d frames (%+.2f ms with avoidance)"),
 			Walking, FrameTimeCount, MeanFrameMs, State->Frames, State->MeanFrameMsOn - MeanFrameMs));
 	}
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSAvoidanceSpawnMixed, FAutomationTestBase*, Test, TSharedRef<FAvoidanceState>, State);
+bool FRTSAvoidanceSpawnMixed::Update()
+{
+	ARTSPlayerController* Controller = GetController(*Test);
+	URTSUnitData* M20 = LoadObject<URTSUnitData>(nullptr, M20Path);
+	if (!Controller || !M20)
+	{
+		Test->AddError(TEXT("No controller or M20 data"));
+		return true;
+	}
+	State->bMixed = true;
+	if (!SpawnBlock(*Test, *State, FrameTimeCount - MixedM20Count, FrameTimeColumns, FrameTimeOrigin, FrameTimeSpacing, /*bTanks*/ true))
+	{
+		return true;
+	}
+	// Spaced by the M20's own footprint, so the block stands clear before it moves.
+	FVector2D Pitch = FVector2D::ZeroVector;
+	for (int32 Index = 0; Index < MixedM20Count; ++Index)
+	{
+		const FVector Location = MixedM20Origin + FVector((Index % MixedM20Columns) * Pitch.X, (Index / MixedM20Columns) * Pitch.Y, 0.f);
+		ARTSUnit* Unit = SpawnUnit(Controller->GetWorld(), M20, Controller->GetTeamId(), Location);
+		State->Units.Add(Unit);
+		if (Index == 0)
+		{
+			const FRTSFootprint Footprint = Unit->GetFootprint();
+			Pitch = FVector2D(2.f * (Footprint.HalfSegment + Footprint.Radius), 2.f * Footprint.Radius) + FVector2D(MixedM20Clearance);
+		}
+	}
+	return true;
+}
+
+/** Two M20s facing east in the strip: side by side at PairSideBySide, or end to end overlapping by PairEndToEndOverlap. */
+DEFINE_LATENT_AUTOMATION_COMMAND_THREE_PARAMETER(FRTSAvoidanceSpawnPair, FAutomationTestBase*, Test, TSharedRef<FAvoidanceState>, State, bool, bEndToEnd);
+bool FRTSAvoidanceSpawnPair::Update()
+{
+	ARTSPlayerController* Controller = GetController(*Test);
+	URTSUnitData* M20 = LoadObject<URTSUnitData>(nullptr, M20Path);
+	if (!Controller || !M20)
+	{
+		Test->AddError(TEXT("No controller or M20 data"));
+		return true;
+	}
+	ARTSUnit* First = SpawnUnit(Controller->GetWorld(), M20, Controller->GetTeamId(), PairOrigin);
+	const FRTSFootprint Footprint = First->GetFootprint();
+	const FVector Offset = bEndToEnd
+		? FVector(2.f * (Footprint.HalfSegment + Footprint.Radius) - PairEndToEndOverlap, 0.f, 0.f)
+		: FVector(0.f, PairSideBySide, 0.f);
+	ARTSUnit* Second = SpawnUnit(Controller->GetWorld(), M20, Controller->GetTeamId(), PairOrigin + Offset);
+	State->Units = { First, Second };
+	for (const ARTSUnit* Unit : { First, Second })
+	{
+		State->StartLocations.Add(Unit->GetActorLocation());
+		State->LastLocations.Add(Unit->GetActorLocation());
+	}
+	const float Gap = RTSUnitShape::GetGap(First->GetFootprint(), Second->GetFootprint());
+	Test->AddInfo(FString::Printf(TEXT("M20 footprint: %.0f cm long, %.0f cm wide; the pair starts %.0f cm apart at the edges"),
+		2.f * (Footprint.HalfSegment + Footprint.Radius), 2.f * Footprint.Radius, Gap));
+	if (!bEndToEnd)
+	{
+		Test->TestTrue(TEXT("Side by side at 4.5 m, the hulls do not touch"), Gap > 0.f);
+	}
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_THREE_PARAMETER(FRTSAvoidanceWatchPair, FAutomationTestBase*, Test, TSharedRef<FAvoidanceState>, State, bool, bEndToEnd);
+bool FRTSAvoidanceWatchPair::Update()
+{
+	const TArray<ARTSUnit*> Units = GetLiveUnits(*State);
+	if (Units.Num() != 2)
+	{
+		Test->AddError(TEXT("The pair is gone"));
+		return true;
+	}
+	UWorld* World = Units[0]->GetWorld();
+	if (State->WatchStart < 0.0)
+	{
+		State->WatchStart = World->GetTimeSeconds();
+	}
+
+	// The push of the frame just ended, against the most it may be: half the unit's speed over that frame.
+	const float DeltaSeconds = World->GetDeltaSeconds();
+	for (int32 Index = 0; Index < 2; ++Index)
+	{
+		const FVector Location = Units[Index]->GetActorLocation();
+		const float Step = FVector::Dist2D(Location, State->LastLocations[Index]);
+		const float Allowed = Units[Index]->GetUnitData()->MoveSpeed * 0.5f * DeltaSeconds;
+		if (Step > 0.01f && Allowed > 0.f)
+		{
+			State->WorstStepRatio = FMath::Max(State->WorstStepRatio, Step / Allowed);
+		}
+		State->LastLocations[Index] = Location;
+	}
+	if (World->GetTimeSeconds() - State->WatchStart < PairWatchSeconds)
+	{
+		return false;
+	}
+
+	const float Gap = RTSUnitShape::GetGap(Units[0]->GetFootprint(), Units[1]->GetFootprint());
+	const float Drift = FMath::Max(FVector::Dist2D(Units[0]->GetActorLocation(), State->StartLocations[0]),
+		FVector::Dist2D(Units[1]->GetActorLocation(), State->StartLocations[1]));
+	Test->AddInfo(FString::Printf(TEXT("After %.1f s: %.1f cm apart at the edges, moved up to %.1f cm, fastest push %.2f of half speed"),
+		PairWatchSeconds, Gap, Drift, State->WorstStepRatio));
+	if (bEndToEnd)
+	{
+		// The margin is float error on a full step.
+		Test->TestTrue(TEXT("No push is faster than half the tank's speed"), State->WorstStepRatio <= 1.01f);
+		Test->TestTrue(TEXT("The overlapping tanks end clear of each other"), Gap >= -1.f);
+		return true;
+	}
+	Test->TestTrue(TEXT("Tanks side by side at 4.5 m do not push each other"), Drift < PairStillTolerance);
+
+	// The grid returns every unit whose footprint reaches within the radius.
+	const URTSAvoidanceSubsystem* Avoidance = World->GetSubsystem<URTSAvoidanceSubsystem>();
+	int32 Missing = 0;
+	int32 Returned = 0;
+	for (const FVector& Point : QueryPoints)
+	{
+		TArray<ARTSUnit*> Found;
+		Avoidance->QueryRadius(Point, QueryReach, Found);
+		Returned += Found.Num();
+		for (TActorIterator<ARTSUnit> It(World); It; ++It)
+		{
+			const FRTSFootprint Footprint = It->GetFootprint();
+			const float Reach = FVector::Dist2D(Point, Footprint.GetClosestSegmentPoint(Point)) - Footprint.Radius;
+			if (Reach <= QueryReach && !It->GetHealthComponent()->IsDead() && !Found.Contains(*It))
+			{
+				++Missing;
+				Test->AddInfo(FString::Printf(TEXT("QueryRadius at %s missed %s"), *Point.ToCompactString(), *It->GetName()));
+			}
+		}
+	}
+	Test->TestEqual(TEXT("QueryRadius misses no unit in reach"), Missing, 0);
+	Test->AddInfo(FString::Printf(TEXT("QueryRadius returned %d units over %d points"), Returned, static_cast<int32>(UE_ARRAY_COUNT(QueryPoints))));
 	return true;
 }
 
@@ -550,6 +726,65 @@ bool FRTSAvoidanceFrameTimeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceSampleFrameTime(this, State, false));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceRestore());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAvoidanceMixedTest, "WorldDivide.Avoidance.Mixed", RTSTests::TestFlags)
+
+bool FRTSAvoidanceMixedTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(RTSAvoidanceTests::TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), RTSAvoidanceTests::TestMap));
+		return false;
+	}
+
+	const TSharedRef<RTSAvoidanceTests::FAvoidanceState> State = MakeShared<RTSAvoidanceTests::FAvoidanceState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceSpawnMixed(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceIssueFrameTimeMove(this, State, true));
+	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceSampleFrameTime(this, State, true));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceRestore());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAvoidanceParallelTanksTest, "WorldDivide.Avoidance.ParallelTanks", RTSTests::TestFlags)
+
+bool FRTSAvoidanceParallelTanksTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(RTSAvoidanceTests::TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), RTSAvoidanceTests::TestMap));
+		return false;
+	}
+
+	const TSharedRef<RTSAvoidanceTests::FAvoidanceState> State = MakeShared<RTSAvoidanceTests::FAvoidanceState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceSpawnPair(this, State, false));
+	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceWatchPair(this, State, false));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAvoidanceEndToEndTest, "WorldDivide.Avoidance.EndToEnd", RTSTests::TestFlags)
+
+bool FRTSAvoidanceEndToEndTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(RTSAvoidanceTests::TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), RTSAvoidanceTests::TestMap));
+		return false;
+	}
+
+	const TSharedRef<RTSAvoidanceTests::FAvoidanceState> State = MakeShared<RTSAvoidanceTests::FAvoidanceState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceSpawnPair(this, State, true));
+	ADD_LATENT_AUTOMATION_COMMAND(RTSAvoidanceTests::FRTSAvoidanceWatchPair(this, State, true));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }
 

@@ -253,9 +253,13 @@ bool FRTSPreferUnitsTest::RunTest(const FString& Parameters)
 	Weapon->UpdateWeapon(Step);
 	TestTrue(TEXT("Fire moves to the building once no unit is in range"), Weapon->GetTarget() == Building);
 
+	// The weapon looks for units again within its search interval of 0.2 s.
 	ARTSUnit* Newcomer = TestWorld.SpawnUnit(Infantry, 1, FVector(700.f, 0.f, 0.f));
-	Weapon->UpdateWeapon(Step);
-	TestTrue(TEXT("An enemy unit coming into range pulls fire off the building"), Weapon->GetTarget() == Newcomer);
+	for (float Waited = 0.f; Weapon->GetTarget() != Newcomer && Waited < 0.2f - KINDA_SMALL_NUMBER; Waited += Step)
+	{
+		Weapon->UpdateWeapon(Step);
+	}
+	TestTrue(TEXT("An enemy unit coming into range pulls fire off the building within 0.2 s"), Weapon->GetTarget() == Newcomer);
 
 	// Towers pick the same way.
 	ARTSBuilding* Tower = TestWorld.SpawnBuilding(MakeBuildingData(0.f, Gun), 0, FVector(0.f, 5000.f, 0.f));

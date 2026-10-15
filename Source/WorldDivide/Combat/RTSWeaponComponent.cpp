@@ -10,6 +10,7 @@
 #include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
+#include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
 
 URTSWeaponComponent::URTSWeaponComponent()
@@ -79,7 +80,16 @@ bool URTSWeaponComponent::IsInRange(const AActor* Candidate) const
 
 namespace
 {
-	/** Cycles spent in FindNearestInRange since the last TakeSearchSeconds, game thread only. */
+	/** A weapon without a target searches this often; it keeps checking the one it has every frame. */
+	constexpr float SearchInterval = 0.2f;
+
+	/**
+	 * Units are indexed by where they stood when the grid was built, up to a frame ago: candidates come from this much
+	 * further out, and the exact range check decides.
+	 */
+	constexpr float SearchSlack = 500.f;
+
+	/** Cycles spent searching for a target since the last TakeSearchSeconds, game thread only. */
 	uint64 WeaponSearchCycles = 0;
 
 	struct FWeaponSearchTimer
@@ -97,26 +107,63 @@ double URTSWeaponComponent::TakeSearchSeconds()
 }
 
 template <typename T>
-T* URTSWeaponComponent::FindNearestInRange() const
+void URTSWeaponComponent::ConsiderCandidate(T* Candidate, const FVector& Origin, T*& Nearest, float& NearestDistSq) const
+{
+	if (!CanTarget(Candidate) || !IsInRange(Candidate))
+	{
+		return;
+	}
+	const float DistSq = FVector::DistSquared2D(Origin, Candidate->GetActorLocation());
+	if (DistSq < NearestDistSq)
+	{
+		Nearest = Candidate;
+		NearestDistSq = DistSq;
+	}
+}
+
+ARTSUnit* URTSWeaponComponent::FindNearestUnitInRange() const
 {
 	const FWeaponSearchTimer Timer;
-	// A full scan is fine at prototype unit counts; a spatial query replaces it once armies grow.
-	T* Nearest = nullptr;
+	ARTSUnit* Nearest = nullptr;
 	float NearestDistSq = TNumericLimits<float>::Max();
 	const FVector Origin = GetOwner()->GetActorLocation();
-	for (TActorIterator<T> It(GetWorld()); It; ++It)
+	if (const URTSAvoidanceSubsystem* Avoidance = GetWorld()->GetSubsystem<URTSAvoidanceSubsystem>())
 	{
-		T* Candidate = *It;
-		if (!CanTarget(Candidate) || !IsInRange(Candidate))
+		// Game thread only, and reused so a search allocates nothing once it has grown.
+		static TArray<ARTSUnit*> Candidates;
+		Avoidance->QueryRadius(Origin, WeaponData->Range + SearchSlack, Candidates);
+		for (ARTSUnit* Candidate : Candidates)
 		{
-			continue;
+			ConsiderCandidate(Candidate, Origin, Nearest, NearestDistSq);
 		}
-		const float DistSq = FVector::DistSquared2D(Origin, Candidate->GetActorLocation());
-		if (DistSq < NearestDistSq)
+		return Nearest;
+	}
+	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
+	{
+		ConsiderCandidate(*It, Origin, Nearest, NearestDistSq);
+	}
+	return Nearest;
+}
+
+ARTSBuilding* URTSWeaponComponent::FindNearestBuildingInRange() const
+{
+	const FWeaponSearchTimer Timer;
+	ARTSBuilding* Nearest = nullptr;
+	float NearestDistSq = TNumericLimits<float>::Max();
+	const FVector Origin = GetOwner()->GetActorLocation();
+	if (const ARTSGameState* GameState = GetWorld()->GetGameState<ARTSGameState>())
+	{
+		GameState->ForEachEnemyBuilding(TeamId, [&](ARTSBuilding& Candidate)
 		{
-			Nearest = Candidate;
-			NearestDistSq = DistSq;
-		}
+			ARTSBuilding* Building = &Candidate;
+			ConsiderCandidate(Building, Origin, Nearest, NearestDistSq);
+		});
+		return Nearest;
+	}
+	// A world without the game state, as in tests: every building.
+	for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
+	{
+		ConsiderCandidate(*It, Origin, Nearest, NearestDistSq);
 	}
 	return Nearest;
 }
@@ -126,11 +173,11 @@ AActor* URTSWeaponComponent::FindNearestEnemyInRange() const
 	TRACE_CPUPROFILER_EVENT_SCOPE(URTSWeaponComponent::FindNearestEnemyInRange);
 
 	// Units shoot back and buildings don't run away, so units come first.
-	if (ARTSUnit* Unit = FindNearestInRange<ARTSUnit>())
+	if (ARTSUnit* Unit = FindNearestUnitInRange())
 	{
 		return Unit;
 	}
-	return FindNearestInRange<ARTSBuilding>();
+	return FindNearestBuildingInRange();
 }
 
 void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
@@ -138,6 +185,8 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 	TRACE_CPUPROFILER_EVENT_SCOPE(URTSWeaponComponent::UpdateWeapon);
 
 	Cooldown = FMath::Max(Cooldown - DeltaSeconds, 0.f);
+	SearchCooldown = FMath::Max(SearchCooldown - DeltaSeconds, 0.f);
+	SearchClock += DeltaSeconds;
 	if (!WeaponData)
 	{
 		return;
@@ -160,15 +209,26 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 		}
 		if (!CanTarget(Current) || !IsInRange(Current))
 		{
-			Current = FindNearestEnemyInRange();
+			// A target just lost is replaced at once; with none, the weapon looks again on its next search.
+			if (Current || Target.IsStale(true) || SearchCooldown <= KINDA_SMALL_NUMBER)
+			{
+				Current = FindNearestEnemyInRange();
+				ScheduleSearch();
+			}
+			else
+			{
+				Current = nullptr;
+			}
 		}
-		else if (!Current->IsA<ARTSUnit>())
+		else if (!Current->IsA<ARTSUnit>() && SearchCooldown <= KINDA_SMALL_NUMBER)
 		{
-			// A building is only a fallback: switch as soon as an enemy unit comes into range.
-			if (ARTSUnit* Unit = FindNearestInRange<ARTSUnit>())
+			// A building is only a fallback: switch once an enemy unit comes into range.
+			TRACE_CPUPROFILER_EVENT_SCOPE(URTSWeaponComponent::FindNearestUnitInRange);
+			if (ARTSUnit* Unit = FindNearestUnitInRange())
 			{
 				Current = Unit;
 			}
+			ScheduleSearch();
 		}
 		Target = Current;
 		if (!Current)
@@ -205,6 +265,14 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 	{
 		Targetable->GetHealthComponent()->ApplyDamage(GetDamage(), GetOwner());
 	}
+}
+
+void URTSWeaponComponent::ScheduleSearch()
+{
+	// Each weapon searches in its own slot of the interval, so weapons that appear together, or lose a target together,
+	// still search on different frames.
+	const double Phase = FMath::Frac(GetUniqueID() * UE_GOLDEN_RATIO);
+	SearchCooldown = SearchInterval * (1.f - static_cast<float>(FMath::Frac(SearchClock / SearchInterval + Phase)));
 }
 
 void URTSWeaponComponent::Multicast_PlayShot_Implementation(URTSWeaponData* Weapon, AActor* ShotTarget, FVector_NetQuantize TargetLocation,

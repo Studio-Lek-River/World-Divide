@@ -14,6 +14,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitShape.h"
 #include "WorldDivide.h"
 
 namespace
@@ -349,7 +350,9 @@ bool URTSBuilderComponent::ClearSite(float DeltaSeconds)
 			continue;
 		}
 		ClearedUnits.Add(Other);
-		const float Radius = Other->GetSelectionRadius();
+		// Clear of the site with the whole hull, whichever way the unit faces once it stands there.
+		const FRTSFootprint Ground = Other->GetFootprint();
+		const float Radius = Ground.HalfSegment + Ground.Radius;
 		FVector Spot;
 		if (RTSApproach::FindReachableSpot(*Other, Center, Footprint, Radius + ClearOffset, Radius + SiteReach, Spot))
 		{

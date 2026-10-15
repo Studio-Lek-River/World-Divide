@@ -1,14 +1,18 @@
+#include "Algo/AllOf.h"
+#include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSShotEffect.h"
 #include "Combat/RTSShotSound.h"
 #include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSWeaponComponent.h"
+#include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
 #include "EngineUtils.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
+#include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -130,6 +134,111 @@ bool FRTSDuelTest::RunTest(const FString& Parameters)
 		TestTrue(FString::Printf(TEXT("Strong unit took return fire (%.0f HP left)"), Remaining),
 			Remaining < StrongHealth && Remaining >= StrongHealth - ShotsToKill * Weapon->Damage);
 	}
+	return true;
+}
+
+/**
+ * Target acquisition as the game runs it: units from the avoidance grid, rebuilt every step as the subsystem does every
+ * frame, and buildings from the game state's lists. The nearest enemy unit wins, units before a nearer building, a lost
+ * target is replaced at once and a newcomer is found within one search interval (0.2 s) whenever it arrives.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAcquireTest, "WorldDivide.Combat.Acquire", TestFlags)
+
+bool FRTSAcquireTest::RunTest(const FString& Parameters)
+{
+	constexpr float Step = 1.f / 60.f;
+	constexpr float SearchInterval = 0.2f;
+	constexpr int32 GunnerCount = 12;
+
+	URTSWeaponData* Weapon = NewObject<URTSWeaponData>();
+	Weapon->Range = 1000.f;
+	Weapon->Damage = 1.f;
+	Weapon->ReloadSeconds = 100.f;
+	URTSBuildingData* Depot = NewObject<URTSBuildingData>();
+	Depot->Footprint = FIntPoint(2, 2);
+	Depot->MaxHealth = 500.f;
+
+	const FRTSTestWorld TestWorld;
+	TestWorld.SpawnGameState();
+	URTSAvoidanceSubsystem* Avoidance = TestWorld.World->GetSubsystem<URTSAvoidanceSubsystem>();
+	if (!TestNotNull(TEXT("The avoidance subsystem exists"), Avoidance))
+	{
+		return false;
+	}
+
+	ARTSUnit* Gunner = TestWorld.SpawnUnit(MakeUnitData(100.f, Weapon), 0, FVector::ZeroVector);
+	ARTSBuilding* Building = TestWorld.SpawnBuilding(Depot, 1, FVector(300.f, 0.f, 0.f));
+	ARTSUnit* Far = TestWorld.SpawnUnit(MakeUnitData(100.f, nullptr), 1, FVector(0.f, 900.f, 0.f));
+	ARTSUnit* Near = TestWorld.SpawnUnit(MakeUnitData(100.f, nullptr), 1, FVector(-600.f, 0.f, 0.f));
+	ARTSUnit* Friend = TestWorld.SpawnUnit(MakeUnitData(100.f, nullptr), 0, FVector(-200.f, 0.f, 0.f));
+	ARTSUnit* OutOfRange = TestWorld.SpawnUnit(MakeUnitData(100.f, nullptr), 1, FVector(3000.f, 0.f, 0.f));
+	URTSWeaponComponent* Gun = Gunner->GetWeaponComponent();
+	auto StepGun = [&](float DeltaSeconds)
+	{
+		Avoidance->Separate(DeltaSeconds);
+		Gun->UpdateWeapon(DeltaSeconds);
+	};
+
+	StepGun(Step);
+	TestTrue(TEXT("The nearest enemy unit is picked, before a nearer building, a friend or one out of range"), Gun->GetTarget() == Near);
+
+	Near->Destroy();
+	StepGun(Step);
+	TestTrue(TEXT("A lost target is replaced in the same frame"), Gun->GetTarget() == Far);
+
+	Far->Destroy();
+	StepGun(Step);
+	TestTrue(TEXT("With no enemy unit in range, the building from the game state's list"), Gun->GetTarget() == Building);
+
+	// A newcomer pulls fire off the building within one search interval.
+	ARTSUnit* Newcomer = TestWorld.SpawnUnit(MakeUnitData(100.f, nullptr), 1, FVector(0.f, -700.f, 0.f));
+	float Waited = 0.f;
+	while (Gun->GetTarget() != Newcomer && Waited < 2.f * SearchInterval)
+	{
+		StepGun(Step);
+		Waited += Step;
+	}
+	TestTrue(FString::Printf(TEXT("A unit coming into range pulls fire off the building after %.3f s"), Waited),
+		Gun->GetTarget() == Newcomer && Waited <= SearchInterval + KINDA_SMALL_NUMBER);
+	TestTrue(TEXT("The unit out of range is never picked"), IsValid(OutOfRange) && IsValid(Friend));
+
+	// Idle gunners, each searching in its own phase; an enemy appears at any frame and every gunner has it within 0.2 s.
+	TArray<URTSWeaponComponent*> Gunners;
+	for (int32 Index = 0; Index < GunnerCount; ++Index)
+	{
+		Gunners.Add(TestWorld.SpawnUnit(MakeUnitData(100.f, Weapon), 0, FVector(Index * 50.f, 10000.f, 0.f))->GetWeaponComponent());
+	}
+	float WorstWait = 0.f;
+	for (int32 Arrival = 0; Arrival < 12; ++Arrival)
+	{
+		// Some idle frames first, a different number each round, so the arrival meets every phase.
+		for (int32 Frame = 0; Frame < 3 + Arrival; ++Frame)
+		{
+			Avoidance->Separate(Step);
+			for (URTSWeaponComponent* Each : Gunners)
+			{
+				Each->UpdateWeapon(Step);
+			}
+		}
+		ARTSUnit* Enemy = TestWorld.SpawnUnit(MakeUnitData(100.f, nullptr), 1, FVector(300.f, 10500.f, 0.f));
+		float Elapsed = 0.f;
+		bool bAllOnIt = false;
+		while (!bAllOnIt && Elapsed < 1.f)
+		{
+			// The grid picks the newcomer up at the end of its frame, as the subsystem ticks after the weapons.
+			for (URTSWeaponComponent* Each : Gunners)
+			{
+				Each->UpdateWeapon(Step);
+			}
+			Avoidance->Separate(Step);
+			Elapsed += Step;
+			bAllOnIt = Algo::AllOf(Gunners, [Enemy](const URTSWeaponComponent* Each) { return Each->GetTarget() == Enemy; });
+		}
+		WorstWait = FMath::Max(WorstWait, Elapsed);
+		Enemy->Destroy();
+	}
+	TestTrue(FString::Printf(TEXT("Every gunner acquires a newcomer within %.1f s (worst %.3f s)"), SearchInterval, WorstWait),
+		WorstWait <= SearchInterval + Step + KINDA_SMALL_NUMBER);
 	return true;
 }
 

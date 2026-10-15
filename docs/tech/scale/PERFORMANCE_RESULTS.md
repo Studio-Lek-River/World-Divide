@@ -26,8 +26,8 @@ A **provisional target** is a budget from plan §6 item 7; it is not a result un
 | 1080p / 60 FPS (16.7 ms frame) with 200 active units on RTX 3060 class | Provisional target, **not measured** | — | #152, #160 |
 | Eight-player battle | **Not measured** | — | #152 |
 | No server frame > 33 ms on a 240-unit move order | Provisional target | 20.42 ms (M20), 19.76 ms (tank) slowest frame | #139, #136 |
-| Avoidance mean < 1.0 ms, max < 2.0 ms (200 mixed units) | Provisional target; the mixed scene is not in the bench yet | 240 moving M20s: 0.535 ms mean, 0.872 ms max | #134 |
-| Target acquisition < 0.5 ms with 240 idle armed units | Provisional target, **not met** | 5.67 ms (M20), 5.50 ms (tank) | #134 |
+| Avoidance mean < 1.0 ms, max < 2.0 ms (200 mixed units) | **Met** on this PC at step 2: 0.29–0.44 ms mean, 0.54–1.16 ms max in `WorldDivide.Avoidance.Mixed` (three runs) | 240 moving M20s: 0.535 ms mean, 0.872 ms max | #134 |
+| Target acquisition < 0.5 ms with 240 idle armed units | **Met** on this PC at step 2: 0.013 ms (M20), 0.012 ms (tank) | 5.67 ms (M20), 5.50 ms (tank) | #134 |
 | 240 `DA_TestTank`: game thread no worse than this baseline | Comparison | idle 8.16 ms, move 4.16 ms | #136 |
 | 240 moving M20s ≤ 240 moving tanks | **Deferred** until after #150 and #151 | 17.41 ms against 4.16 ms | after #151 |
 | GPU memory | **Not measured**: the bench records process physical memory only | — | — |
@@ -39,7 +39,7 @@ A **provisional target** is a budget from plan §6 item 7; it is not a result un
 - **Move:** one move order goes to all of them through `Server_IssueCommand`, the player's own path, toward a point 60 m ahead. After 1 s, 120 frames are measured while they drive.
 - **Game ms (max):** the slowest game-thread frame. For the move scenario it includes the frame of the order itself, so it shows the dispatch hitch.
 - **Avoidance:** `URTSAvoidanceSubsystem::Separate`, timed per frame.
-- **Target search:** the time all weapons spend in `FindNearestInRange`, summed per frame.
+- **Target search:** the time all weapons spend searching for a target (`FindNearestInRange` up to step 1; the unit query and the building list from step 2), summed per frame.
 - **Memory:** the process's used physical memory at the end of the scenario, and its peak so far in the run. GPU memory is not recorded.
 - **Teams:** L_Bench gives each of two teams a headquarters in opposite corners, about 170 m from the grid. The benchmark units therefore have an enemy, but none in range.
 - **Reproduce:** `ue.ps1 -Task bench -Unit <DataAsset> [-Counts 1,30,120,240] [-Trace]`. The table and a CSV go to `Saved/Bench/<DataAsset>/`, headed by the CPU, GPU, driver, RHI and build. `-Trace` writes an Unreal Insights capture with one region per scenario.
@@ -139,5 +139,50 @@ The full tables are in `Saved/Bench/<DataAsset>/` of the run.
 |---|---:|---:|
 | M20 Guardian frame | 12.37 ms | 11.43 ms |
 | `DA_TestTank` frame | 12.43 ms | 11.42 ms |
+
+The Insights split is in [plan §7](SCALE_IMPLEMENTATION_PLAN.md#7-measurements-per-step).
+
+## Step 2 (#134, fixed-cell avoidance and throttled acquisition)
+
+Same machine, build configuration and method as step 0, on 2026-10-15. "Before" is `main` at `233c900` (step 1) re-benched just before the change, in the same session. The grid is the step 1 grid (M20 1103 × 604 cm).
+
+What changed: avoidance sizes each unit by its stadium footprint (`ARTSUnit::GetFootprint`) instead of `SelectionRadius`, in fixed 600 cm cells, and pushes no faster than half the unit's speed. Weapons without a target search five times a second, each on its own frames, through `URTSAvoidanceSubsystem::QueryRadius` and the per-team building list of `ARTSGameState`; a target they hold is still checked every frame.
+
+### Before and after, 240 units
+
+| Unit | Scenario | Game ms before | Game ms after | Render ms before → after | Avoidance ms before → after | Target search ms before → after |
+|---|---|---:|---:|---:|---:|---:|
+| `DA_TestTank` | idle | 8.41 (9.82) | 2.45 (3.17) | 1.85 → 1.77 | 0.087 → 0.104 | 5.639 → 0.012 |
+| `DA_TestTank` | move | 4.31 (17.78) | 4.19 (16.30) | 1.90 → 1.88 | 0.123 → 0.118 | 0.000 → 0.000 |
+| M20 Guardian | idle | 13.40 (16.67) | 2.46 (3.60) | 4.60 → 3.96 | 1.679 → 0.137 | 6.185 → 0.013 |
+| M20 Guardian | move | 19.47 (25.55) | 16.63 (20.06) | 7.16 → 6.95 | 1.262 → 0.651 | 0.453 → 0.008 |
+
+At 120 units: M20 idle 5.12 → 1.75 ms, tank idle 3.67 → 1.89 ms; target search 1.89 → 0.006 ms and 1.76 → 0.005 ms.
+
+- **The M20 idle regression of step 1 is gone.** Side by side at 604 cm, the M20s' 354 cm wide footprints stand 250 cm clear, so nothing pushes them: avoidance 1.679 → 0.137 ms, and render time drops back because the M20s stand still. `WorldDivide.Avoidance.ParallelTanks` checks it: two M20s 450 cm apart moved 0.0 cm in 2 s.
+- **Acquisition** fell from about 5.6–6.2 ms to about 0.01 ms per frame for 240 idle armed units, under the 0.5 ms target by a wide margin. The bench units have an enemy, but none in range, so every weapon keeps searching; that is the worst idle case.
+- **Avoidance with nothing to push** costs a little more than step 0 (0.10–0.14 ms against 0.08–0.09 ms): every pass now indexes all units, aircraft included, for `QueryRadius`.
+- **M20 move** is still 16.6 ms against 4.2 ms for the tank. Its game thread waits on rendering (render 6.95 ms, 41.7 M triangles); that is the M20 render lane (#151 → #150 → #149), not this step.
+
+The full tables are in `Saved/Bench/<DataAsset>/` of the run.
+
+### Mixed crowd (`RTSAvoidanceTests`, L_TestMap in PIE)
+
+Not a bench scene: `WorldDivide.Avoidance.Mixed` walks 180 tanks and infantry plus 20 M20s across L_TestMap, sampled for 4 s with the editor's test time dilation. Three runs on 2026-10-15:
+
+| Run | Avoidance pass mean | Max | Units walking (mean) |
+|---|---:|---:|---:|
+| 1 | 0.294 ms | 0.543 ms | 75 of 200 (end of sample) |
+| 2 | 0.442 ms | 1.158 ms | 111 of 200 |
+| 3 | 0.348 ms | 0.654 ms | 113 of 200 |
+
+`WorldDivide.Avoidance.FrameTime` (200 tanks and infantry from a packed block) gives 0.53–0.80 ms mean and 0.91–1.95 ms max over the same runs: units that start overlapping now part at half speed over several frames instead of jumping apart, so the first second of that test has more pushes, each with a navmesh raycast. It stays under its 1.0 ms mean budget; its max is not a gate.
+
+### `unitshots -Stress 240 -Trace` (L_TestMap)
+
+| Stress 240, with trace | Step 0 | Step 1 | Step 2 |
+|---|---:|---:|---:|
+| M20 Guardian frame | 12.37 ms | 11.43 ms | 4.31 ms |
+| `DA_TestTank` frame | 12.43 ms | 11.42 ms | 3.87 ms |
 
 The Insights split is in [plan §7](SCALE_IMPLEMENTATION_PLAN.md#7-measurements-per-step).
