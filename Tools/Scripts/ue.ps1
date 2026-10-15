@@ -278,9 +278,11 @@ function Invoke-Bench {
 		$TraceArgs = @('-trace=cpu,frame,region,gpu', "`"-tracefile=$TraceFile`"")
 	}
 
+	# -ExecCmds splits its commands at commas, so the counts go to rts.Debug.Bench joined by '+'.
+	$BenchCounts = ($Counts -split '[,\s+]+' | Where-Object { $_ }) -join '+'
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
 		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
-		"`"-ExecCmds=rts.Debug.Bench $Unit $Counts`"", '-RTSBenchQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		"`"-ExecCmds=rts.Debug.Bench $Unit $BenchCounts`"", '-RTSBenchQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
 		'-unattended', '-nosplash', '-nosound') + $TraceArgs)
 	$GameExit = $Process.ExitCode
 

@@ -601,7 +601,8 @@ namespace RTSBenchCommand
 		if (Args.Num() > 1)
 		{
 			TArray<FString> Parts;
-			Args[1].ParseIntoArray(Parts, TEXT(","));
+			// Counts are separated by ',' or by '+', which ue.ps1 uses because -ExecCmds splits commands at commas.
+			Args[1].Replace(TEXT("+"), TEXT(",")).ParseIntoArray(Parts, TEXT(","));
 			for (const FString& Part : Parts)
 			{
 				if (const int32 Count = FCString::Atoi(*Part); Count > 0)
