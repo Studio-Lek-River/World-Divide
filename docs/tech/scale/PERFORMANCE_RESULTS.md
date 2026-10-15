@@ -102,3 +102,42 @@ This was repeated for continuity with `report_ue5.md`. It uses the engine's defa
 ### Run-to-run variation
 
 The same build was benched twice on 2026-10-15 (an earlier run during the bench's development and the baseline above). The 240-unit rows differ by up to about 0.6 ms game thread and 0.4 ms target search; the slowest-frame column varies by up to about 1 ms. A later step's change should be read against that spread, not against a single row.
+
+## Step 1 (#133, box collision and selection bounds)
+
+Same machine, same build configuration and method as step 0, on 2026-10-15. "Before" is `main` at `8544bd3` re-benched just before the change, so before and after share the session.
+
+### The bench grid follows the hull now
+
+The bench sizes its grid from the unit's component bounds at rest. Up to step 0 those included the collision capsule, which was 8 m wide for the M20, so the step 0 M20 grid was wider than the method above says. With the box, the grid is what the method says. The tank's grid shrinks a little as well:
+
+| Unit | Before (cm, X × Y) | After |
+|---|---:|---:|
+| M20 Guardian | 1150 × 1050 | 1103 × 604 |
+| `DA_TestTank` | 560 × 430 | 560 × 343 |
+
+At 604 cm apart, the M20's avoidance circles (`SelectionRadius` 400 cm, unchanged until #134) overlap their neighbours'. The idle M20s are then pushed apart for the whole measurement, so they move. That costs avoidance time and the render-state updates of moving M20s (see the step 0 finding 2). The tanks' 90 cm circles stay clear at 343 cm, so the tank rows compare like for like.
+
+### Before and after, 240 units
+
+| Unit | Scenario | Game ms before | Game ms after | Avoidance ms before → after | Target search ms before → after | Draw calls before → after |
+|---|---|---:|---:|---:|---:|---:|
+| `DA_TestTank` | idle | 9.47 (12.72) | 8.18 (10.40) | 0.104 → 0.080 | 6.42 → 5.46 | 1,103 → 1,183 |
+| `DA_TestTank` | move | 4.29 (20.55) | 4.18 (16.08) | 0.091 → 0.117 | 0.00 → 0.00 | 1,193 → 1,283 |
+| M20 Guardian | idle | 10.52 (13.31) | 12.84 (15.63) | 0.165 → 1.610 | 6.76 → 6.00 | 2,514 → 2,791 |
+| M20 Guardian | move | 18.93 (26.71) | 18.37 (24.22) | 0.593 → 1.093 | 0.40 → 0.39 | 2,791 → 3,076 |
+
+- **Tank:** no regression; every row is within the run-to-run spread or better. The extra draw calls come from more units in the camera's view on the narrower grid.
+- **M20 idle:** +2.3 ms game thread. The cause is the scene, not the code: avoidance (+1.4 ms) and render time (2.53 → 5.06 ms) rise because the idle M20s now overlap and move. #134 sizes avoidance from the footprint (a 1.85 m half width), which stands this grid clear again.
+- **Code cost of the change:** the fixed-spacing `unitshots` run below, whose grid follows `SelectionRadius` and did not change, shows none.
+
+The full tables are in `Saved/Bench/<DataAsset>/` of the run.
+
+### `unitshots -Stress 240 -Trace` (L_TestMap)
+
+| Stress 240, with trace | Step 0 | Step 1 |
+|---|---:|---:|
+| M20 Guardian frame | 12.37 ms | 11.43 ms |
+| `DA_TestTank` frame | 12.43 ms | 11.42 ms |
+
+The Insights split is in [plan §7](SCALE_IMPLEMENTATION_PLAN.md#7-measurements-per-step).

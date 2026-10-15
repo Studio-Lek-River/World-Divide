@@ -23,6 +23,7 @@
 #include "Player/RTSPlayerController.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitShape.h"
 #include "WorldDivide.h"
 
 namespace
@@ -344,7 +345,9 @@ ARTSUnit* ARTSBuilding::SpawnUnitAtExit(URTSUnitData* Data)
 		return nullptr;
 	}
 
-	FTransform Transform(GetExitLocation(Data->SelectionRadius + SpawnClearance));
+	// Clear of the building by the unit's longer half, whichever way it faces.
+	const FRTSUnitShape Shape = RTSUnitShape::FromData(*Data);
+	FTransform Transform(GetExitLocation(FMath::Max(Shape.GetHalfLength(), Shape.GetHalfWidth()) + SpawnClearance));
 	ARTSUnit* Unit = GetWorld()->SpawnActorDeferred<ARTSUnit>(
 		ARTSUnit::StaticClass(), Transform, this, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (!Unit)

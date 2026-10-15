@@ -5,7 +5,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
-#include "Components/CapsuleComponent.h"
+#include "Components/BoxComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Core/RTSGameState.h"
@@ -74,25 +74,7 @@ namespace
 	constexpr float GearMinDistance = 0.01f;
 	constexpr float GearMinTurn = 0.001f;
 
-	/** Mesh's box, in Mesh's own space, grown by the parts on the hull: running gear reaches the ground below the hull. */
-	FBox GetHullBox(const URTSUnitData& Data)
-	{
-		FBox Box(ForceInit);
-		if (Data.Mesh)
-		{
-			Box += Data.Mesh->GetBoundingBox();
-		}
-		for (const FRTSVehiclePart& Part : Data.Parts)
-		{
-			if (Part.Mesh && Part.MountedOn == ERTSVehiclePartMount::Hull)
-			{
-				Box += Part.Mesh->GetBoundingBox().TransformBy(FTransform(Part.Rotation, Part.Offset));
-			}
-		}
-		return Box;
-	}
-
-	/** A cosmetic part on Parent, like Mesh and Turret: the capsule alone collides and is picked. */
+	/** A cosmetic part on Parent, like Mesh and Turret: the hull box alone collides and is picked. */
 	template <typename T>
 	T* MakePartComponent(AActor& Owner, USceneComponent& Parent, UStaticMesh* PartMesh)
 	{
@@ -114,10 +96,10 @@ ARTSUnit::ARTSUnit()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	Collision = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Collision"));
-	Collision->InitCapsuleSize(60.f, 60.f);
+	Collision = CreateDefaultSubobject<UBoxComponent>(TEXT("Collision"));
+	Collision->InitBoxExtent(FVector(60.f));
 	// Units steer by the navmesh, which already routes around obstacles, so they don't sweep against the world:
-	// a capsule resting on the ground counts as penetrating it and would block every move.
+	// a box resting on the ground counts as penetrating it and would block every move.
 	// They overlap each other, URTSAvoidanceSubsystem pushes them apart, and they block mouse traces for picking.
 	Collision->SetCollisionProfileName(UCollisionProfile::Pawn_ProfileName);
 	Collision->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Ignore);
@@ -242,22 +224,12 @@ void ARTSUnit::ApplyUnitData()
 		return;
 	}
 
-	const float Radius = UnitData->SelectionRadius;
-	float MeshHalfHeight = Radius;
-	float MeshBottomZ = -Radius;
-
 	Mesh->SetStaticMesh(UnitData->Mesh);
 	Mesh->SetRelativeScale3D(UnitData->MeshScale);
-	if (const FBox HullBox = GetHullBox(*UnitData); HullBox.IsValid)
-	{
-		MeshHalfHeight = HullBox.GetExtent().Z * UnitData->MeshScale.Z;
-		MeshBottomZ = HullBox.Min.Z * UnitData->MeshScale.Z;
-	}
-
-	const float HalfHeight = FMath::Max(MeshHalfHeight, Radius);
-	Collision->SetCapsuleSize(Radius, HalfHeight);
-	// Stand the mesh, or the running gear below it, on the bottom of the capsule.
-	MeshRestLocation = FVector(0.f, 0.f, -HalfHeight - MeshBottomZ);
+	// The box is the hull, and the mesh, or the running gear below it, stands on its bottom.
+	Shape = RTSUnitShape::FromData(*UnitData);
+	Collision->SetBoxExtent(Shape.Hull.GetExtent());
+	MeshRestLocation = Shape.MeshOffset;
 	UpdateMeshTransform();
 
 	Turret->SetStaticMesh(UnitData->TurretMesh);
@@ -510,7 +482,17 @@ FLinearColor ARTSUnit::GetTeamColor(int32 InTeamId)
 
 float ARTSUnit::GetSelectionRadius() const
 {
-	return UnitData ? UnitData->SelectionRadius : Collision->GetUnscaledCapsuleRadius();
+	return UnitData ? UnitData->SelectionRadius : Collision->GetUnscaledBoxExtent().X;
+}
+
+FVector ARTSUnit::GetSelectionCenter() const
+{
+	return GetActorTransform().TransformPosition(Shape.Selection.GetCenter());
+}
+
+FRTSFootprint ARTSUnit::GetFootprint() const
+{
+	return RTSUnitShape::MakeFootprint(Shape, GetActorTransform());
 }
 
 bool ARTSUnit::IsAirborne() const
@@ -520,13 +502,12 @@ bool ARTSUnit::IsAirborne() const
 
 FVector ARTSUnit::GetClosestFootprintPoint(const FVector& From) const
 {
-	const FVector Center = GetActorLocation();
-	return Center + (From - Center).GetSafeNormal2D() * GetSelectionRadius();
+	return GetFootprint().GetClosestEdgePoint(From);
 }
 
 float ARTSUnit::GetGroundOffset() const
 {
-	return Collision->GetScaledCapsuleHalfHeight();
+	return Collision->GetScaledBoxExtent().Z;
 }
 
 FVector ARTSUnit::GetNavAgentLocation() const
@@ -588,8 +569,8 @@ void ARTSUnit::UpdateMeshTransform()
 	// The unit faces its target while it fires, so back is -X.
 	const float KickAlpha = FMath::Square(FireKickTimeLeft / FireKickSeconds);
 	const FVector Kick(-FireKickDistance * KickAlpha, 0.f, 0.f);
-	// Leaning around the bottom of the capsule keeps the tracks on the slope.
-	const FVector Pivot(0.f, 0.f, -Collision->GetUnscaledCapsuleHalfHeight());
+	// Leaning around the bottom of the hull box keeps the tracks on the slope.
+	const FVector Pivot(0.f, 0.f, -Collision->GetUnscaledBoxExtent().Z);
 	const FQuat Tilt = MeshTilt.Quaternion();
 	Mesh->SetRelativeLocationAndRotation(Pivot + Tilt.RotateVector(MeshRestLocation + Kick - Pivot), Tilt);
 }

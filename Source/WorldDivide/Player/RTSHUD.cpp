@@ -178,48 +178,59 @@ void ARTSHUD::DrawSelectionBox(const FVector2D& Start, const FVector2D& End)
 	DrawLine(Min.X, Max.Y, Min.X, Min.Y, SelectionColor);
 }
 
-bool ARTSHUD::GetUnitScreenCircle(const ARTSPlayerController& Controller, const ARTSUnit& Unit, FVector2D& OutCenter, float& OutRadius)
+bool ARTSHUD::GetUnitScreenRect(const ARTSUnit& Unit, TFunctionRef<bool(const FVector&, FVector2D&)> Project, FBox2D& OutRect)
 {
-	const FVector Center = Unit.GetActorLocation();
-	const FVector CameraRight = Controller.PlayerCameraManager
-		? Controller.PlayerCameraManager->GetCameraRotation().RotateVector(FVector::RightVector)
-		: FVector::RightVector;
-
-	FVector2D ScreenEdge;
-	if (!Controller.ProjectWorldLocationToScreen(Center, OutCenter)
-		|| !Controller.ProjectWorldLocationToScreen(Center + CameraRight * Unit.GetSelectionRadius(), ScreenEdge))
+	const FBox Bounds = Unit.GetSelectionBounds();
+	const FTransform Transform = Unit.GetActorTransform();
+	FBox2D Rect(ForceInit);
+	for (int32 Corner = 0; Corner < 8; ++Corner)
 	{
-		return false;
+		const FVector Local((Corner & 1) ? Bounds.Max.X : Bounds.Min.X, (Corner & 2) ? Bounds.Max.Y : Bounds.Min.Y,
+			(Corner & 4) ? Bounds.Max.Z : Bounds.Min.Z);
+		FVector2D Screen;
+		if (!Project(Transform.TransformPosition(Local), Screen))
+		{
+			return false;
+		}
+		Rect += Screen;
 	}
-	OutRadius = FMath::Max(8.f, FVector2D::Distance(OutCenter, ScreenEdge));
+	// Grown around its centre up to the minimum size on each axis.
+	const FVector2D Grow = FVector2D::Max(FVector2D(MinUnitRectSize) - Rect.GetSize(), FVector2D::ZeroVector) * 0.5f;
+	OutRect = FBox2D(Rect.Min - Grow, Rect.Max + Grow);
 	return true;
+}
+
+bool ARTSHUD::GetUnitScreenRect(const ARTSPlayerController& Controller, const ARTSUnit& Unit, FBox2D& OutRect)
+{
+	return GetUnitScreenRect(Unit, [&Controller](const FVector& World, FVector2D& Screen)
+	{
+		return Controller.ProjectWorldLocationToScreen(World, Screen);
+	}, OutRect);
 }
 
 void ARTSHUD::DrawUnitMarker(const ARTSPlayerController& Controller, const ARTSUnit& Unit)
 {
-	FVector2D Center;
-	float Radius = 0.f;
-	if (!GetUnitScreenCircle(Controller, Unit, Center, Radius))
+	FBox2D Rect;
+	if (!GetUnitScreenRect(Controller, Unit, Rect))
 	{
 		return;
 	}
-	DrawBrackets(Center.X - Radius, Center.Y - Radius, Center.X + Radius, Center.Y + Radius);
-	DrawUnitHealthBar(Center, Radius, Unit);
+	DrawBrackets(Rect.Min.X, Rect.Min.Y, Rect.Max.X, Rect.Max.Y);
+	DrawUnitHealthBar(Rect, Unit);
 }
 
 void ARTSHUD::DrawUnitHealth(const ARTSPlayerController& Controller, const ARTSUnit& Unit)
 {
-	FVector2D Center;
-	float Radius = 0.f;
-	if (GetUnitScreenCircle(Controller, Unit, Center, Radius))
+	FBox2D Rect;
+	if (GetUnitScreenRect(Controller, Unit, Rect))
 	{
-		DrawUnitHealthBar(Center, Radius, Unit);
+		DrawUnitHealthBar(Rect, Unit);
 	}
 }
 
-void ARTSHUD::DrawUnitHealthBar(const FVector2D& Center, float Radius, const ARTSUnit& Unit)
+void ARTSHUD::DrawUnitHealthBar(const FBox2D& Rect, const ARTSUnit& Unit)
 {
-	DrawHealthBar(Center.X - Radius, Center.Y - Radius - BarSpacing, Radius * 2.f, Unit.GetHealthComponent()->GetHealthFraction());
+	DrawHealthBar(Rect.Min.X, Rect.Min.Y - BarSpacing, Rect.GetSize().X, Unit.GetHealthComponent()->GetHealthFraction());
 }
 
 void ARTSHUD::DrawBrackets(float Left, float Top, float Right, float Bottom)

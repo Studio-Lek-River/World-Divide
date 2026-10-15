@@ -4,10 +4,11 @@
 #include "GameFramework/Pawn.h"
 #include "Combat/RTSTargetable.h"
 #include "Commands/RTSCommand.h"
+#include "Units/RTSUnitShape.h"
 #include "RTSUnit.generated.h"
 
 class AAIController;
-class UCapsuleComponent;
+class UBoxComponent;
 class UInstancedStaticMeshComponent;
 class UStaticMeshComponent;
 class UFloatingPawnMovement;
@@ -83,10 +84,29 @@ public:
 	URTSHarvesterComponent* GetHarvesterComponent() const { return HarvesterComponent; }
 	URTSBuilderComponent* GetBuilderComponent() const { return BuilderComponent; }
 	URTSAircraftComponent* GetAircraftComponent() const { return AircraftComponent; }
+	/**
+	 * The interaction radius from the data: how far the unit stands off a dock or a building site and holds short of a new
+	 * building. Not its size; that is GetShape.
+	 */
 	float GetSelectionRadius() const;
 	int32 GetQueuedCommandCount() const { return CommandQueue.Num(); }
 
-	/** The edge of the selection circle facing From. */
+	/** The unit's hull, selection bounds and mesh placement, from its data; every machine has them. */
+	const FRTSUnitShape& GetShape() const { return Shape; }
+
+	/**
+	 * The box the brackets and the health bar frame, in the actor's frame (transform it by GetActorTransform): the hull and the
+	 * turret, from the ground to the roof.
+	 */
+	FBox GetSelectionBounds() const { return Shape.Selection; }
+
+	/** The selection bounds' centre in world space, the point a drag box has to cover to select the unit. */
+	FVector GetSelectionCenter() const;
+
+	/** The hull's outline on the ground, turning with the unit. */
+	FRTSFootprint GetFootprint() const;
+
+	/** The edge of the footprint facing From. */
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
 
 	/** Server only: an aircraft in flight. Clients see aircraft as on the ground. */
@@ -95,7 +115,7 @@ public:
 	/** Every machine. Jolts the mesh back for a moment, as a shot recoils; cosmetic only. */
 	void PlayFireKick(float EffectScale);
 
-	/** Distance from the actor origin down to the ground contact point. */
+	/** Distance from the actor origin down to the ground contact point: half the hull's height. */
 	float GetGroundOffset() const;
 
 	/**
@@ -252,11 +272,12 @@ private:
 	 */
 	bool UpdateTilt(float DeltaSeconds);
 
-	/** Places the mesh from its rest location, tilt and fire kick; it leans around the bottom of the capsule. */
+	/** Places the mesh from its rest location, tilt and fire kick; it leans around the bottom of the hull box. */
 	void UpdateMeshTransform();
 
+	/** The hull box: picking, the movement component's updated component and the Pawn overlaps of building placement. */
 	UPROPERTY(VisibleAnywhere, Category = "Components")
-	TObjectPtr<UCapsuleComponent> Collision;
+	TObjectPtr<UBoxComponent> Collision;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> Mesh;
@@ -344,6 +365,9 @@ private:
 	bool bStoppingToFight = false;
 
 	TOptional<FVector> MoveGoal;
+
+	/** From UnitData in ApplyUnitData; the box is fitted to its hull. */
+	FRTSUnitShape Shape;
 
 	/** Where ApplyUnitData stood the mesh; a fire kick moves it back from here and returns it. */
 	FVector MeshRestLocation = FVector::ZeroVector;

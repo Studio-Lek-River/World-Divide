@@ -1,6 +1,6 @@
 # Vehicle collision, selection and footprint
 
-Status: **audit and proposal**, Phase 2A (2026-10-15).
+Status: **audit and proposal**, Phase 2A (2026-10-15). Sections 3.1, 3.2 and the stadium edge of 3.4 are implemented in #133 (`Units/RTSUnitShape.h`); avoidance (#134), the nav agents (#135) and formation spacing (#139) follow. §1 describes the code before #133.
 
 ## 1. How it works today
 

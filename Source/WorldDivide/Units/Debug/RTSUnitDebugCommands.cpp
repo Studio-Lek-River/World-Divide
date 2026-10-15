@@ -4,10 +4,15 @@
 
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
+#include "Buildings/RTSBuilding.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Components/BoxComponent.h"
 #include "Containers/Ticker.h"
+#include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
+#include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
+#include "Engine/StaticMeshActor.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -16,6 +21,8 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
+#include "NavigationSystem.h"
+#include "NavMesh/RecastNavMesh.h"
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSPlayerController.h"
 #include "ProfilingDebugging/MiscTrace.h"
@@ -32,10 +39,17 @@
  * rts.Debug.AimTurret <Yaw> <Pitch> | off: the selected units hold their turret at Yaw and their gun at Pitch (degrees,
  * relative to the hull) instead of aiming, or aim again with off.
  *
+ * rts.Debug.UnitShapes [1|0]: draws every unit's shapes in every game world: the collision box (red), the selection
+ * bounds (yellow), the footprint on the ground (green), the navmesh clearance its centre keeps from obstacles (cyan) and
+ * the actor origin (white).
+ *
  * rts.Debug.UnitShots <UnitData> [StressCount]: pictures of the first unit whose data asset is named UnitData, as the
  * player's RTS camera sees it at its default zoom, zoomed fully in and fully out, and from a close inspection camera, then
  * with its turret turned and gun raised, then picked with the cursor's trace, selected and driving off on a move order
- * issued as the player issues it (the pick, the distance driven and the wheels' roll are logged). With StressCount, that many more of the unit stand in a grid and a last picture
+ * issued as the player issues it (the pick, the distance driven and the wheels' roll are logged), then with its shapes
+ * drawn after driving head-on into Block_North and into a vehicle factory placed for it (the hull's overlap with each
+ * is logged). With
+ * StressCount, that many more of the unit stand in a grid and a last picture
  * shows them with stat unit and stat rhi; the frame time, game thread time, avoidance pass, draw calls and triangles are
  * logged. The pictures go to
  * Saved/UnitShots/<UnitData>/<shot>.png. With -RTSUnitShotsQuit on the command line (ue.ps1 -Task unitshots) the game
@@ -82,6 +96,106 @@ namespace RTSUnitDebugCommands
 	const FVector2D StressSpacing(800.f, 500.f);
 	constexpr float StressClearance = 2.05f;
 	const FVector StressCentre(0.f, 6200.f, 0.f);
+
+	/** The obstacle shots: the unit starts this far out from the obstacle's edge and is ordered into its middle. */
+	const TCHAR* ObstacleBlockLabel = TEXT("Block_North");
+	constexpr float ObstacleRunUp = 1500.f;
+	constexpr double ObstacleSeconds = 6.0;
+	/** The building shot's vehicle factory, placed on the empty south strip when the shots are planned. */
+	const TCHAR* ObstacleBuildingPath = TEXT("/Game/Data/Buildings/DA_TestVehicleFactory.DA_TestVehicleFactory");
+	const FVector ObstacleBuildingSpot(-2000.f, -6500.f, 0.f);
+
+	/** Lines a little above the ground, so the footprint and the clearance do not sink into it. */
+	constexpr float ShapeLift = 5.f;
+	constexpr float ShapeThickness = 3.f;
+	constexpr int32 CircleSegments = 32;
+
+	void DrawGroundCircle(const UWorld& World, const FVector& Center, float Radius, const FColor& Color)
+	{
+		DrawDebugCircle(&World, Center, Radius, CircleSegments, Color, false, -1.f, SDPG_Foreground, ShapeThickness,
+			FVector::ForwardVector, FVector::RightVector, false);
+	}
+
+	void DrawUnitShapes(const ARTSUnit& Unit)
+	{
+		const UWorld& World = *Unit.GetWorld();
+		const FTransform Transform = Unit.GetActorTransform();
+		if (const UBoxComponent* Box = Cast<UBoxComponent>(Unit.GetRootComponent()))
+		{
+			DrawDebugBox(&World, Box->GetComponentLocation(), Box->GetScaledBoxExtent(), Box->GetComponentQuat(), FColor::Red,
+				false, -1.f, SDPG_Foreground, ShapeThickness);
+		}
+		const FBox Selection = Unit.GetSelectionBounds();
+		DrawDebugBox(&World, Transform.TransformPosition(Selection.GetCenter()), Selection.GetExtent(), Transform.GetRotation(),
+			FColor::Yellow, false, -1.f, SDPG_Foreground, 1.f);
+
+		const FVector Ground = Unit.GetNavAgentLocation() + FVector(0.f, 0.f, ShapeLift);
+		const FRTSFootprint Footprint = Unit.GetFootprint();
+		const FVector Lift(0.f, 0.f, Ground.Z - Footprint.Center.Z);
+		const FVector Front = Footprint.Center + Lift + Footprint.Axis * Footprint.HalfSegment;
+		const FVector Back = Footprint.Center + Lift - Footprint.Axis * Footprint.HalfSegment;
+		const FVector Side = FVector::CrossProduct(FVector::UpVector, Footprint.Axis) * Footprint.Radius;
+		DrawGroundCircle(World, Front, Footprint.Radius, FColor::Green);
+		DrawGroundCircle(World, Back, Footprint.Radius, FColor::Green);
+		DrawDebugLine(&World, Front + Side, Back + Side, FColor::Green, false, -1.f, SDPG_Foreground, ShapeThickness);
+		DrawDebugLine(&World, Front - Side, Back - Side, FColor::Green, false, -1.f, SDPG_Foreground, ShapeThickness);
+
+		const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
+		const ARecastNavMesh* NavMesh = NavSystem
+			? Cast<ARecastNavMesh>(NavSystem->GetNavDataForProps(Unit.GetNavAgentPropertiesRef(), Unit.GetNavAgentLocation())) : nullptr;
+		if (NavMesh)
+		{
+			DrawGroundCircle(World, Ground, NavMesh->AgentRadius, FColor::Cyan);
+		}
+		DrawDebugPoint(&World, Unit.GetActorLocation(), 10.f, FColor::White, false, -1.f, SDPG_Foreground);
+	}
+
+	FTSTicker::FDelegateHandle UnitShapesTicker;
+
+	bool TickUnitShapes(float)
+	{
+		for (const FWorldContext& Context : GEngine->GetWorldContexts())
+		{
+			const UWorld* World = Context.World();
+			if (World && World->IsGameWorld())
+			{
+				for (TActorIterator<ARTSUnit> It(World); It; ++It)
+				{
+					DrawUnitShapes(**It);
+				}
+			}
+		}
+		return true;
+	}
+
+	void ShowUnitShapes(bool bShow)
+	{
+		if (bShow == UnitShapesTicker.IsValid())
+		{
+			return;
+		}
+		if (bShow)
+		{
+			UnitShapesTicker = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateStatic(&TickUnitShapes));
+		}
+		else
+		{
+			FTSTicker::GetCoreTicker().RemoveTicker(UnitShapesTicker);
+			UnitShapesTicker.Reset();
+		}
+	}
+
+	/**
+	 * Where the unit's collision box and Obstacle overlap on the ground, as world X by Y in cm; zero when they do not. The
+	 * obstacle shots stand the unit along an axis, so its box's bounds are the box.
+	 */
+	FVector2D GetHullOverlap(const ARTSUnit& Unit, const FBox& Obstacle)
+	{
+		const FBox Hull = Unit.GetShape().Hull.TransformBy(Unit.GetActorTransform());
+		const FVector2D Min = FVector2D::Max(FVector2D(Hull.Min), FVector2D(Obstacle.Min));
+		const FVector2D Max = FVector2D::Min(FVector2D(Hull.Max), FVector2D(Obstacle.Max));
+		return FVector2D::Max(Max - Min, FVector2D::ZeroVector);
+	}
 
 	struct FFrameStats
 	{
@@ -288,9 +402,12 @@ namespace RTSUnitDebugCommands
 				Run.Unit->SetAimOverride({});
 				return Run.Drive();
 			}, DriveSeconds, false, true });
+			AddObstacleShots();
 			// The same view at the default zoom with the stats on, before and after the stress grid, to compare.
 			Shots.Add({ TEXT("stats_one"), [](FUnitShotsRun& Run)
 			{
+				ShowUnitShapes(false);
+				Run.Obstacle.Reset();
 				Run.Unit->SetAimOverride({});
 				Run.UseRTSCamera(Run.GetCameraPawn()->GetDefaultZoom(), 0.f);
 				Run.SetStats(true);
@@ -306,6 +423,84 @@ namespace RTSUnitDebugCommands
 					return true;
 				}, SettleSeconds, true });
 			}
+		}
+
+		/**
+		 * The unit driving head-on into Block_North from the north, and into a vehicle factory from the camera's side, with its
+		 * shapes drawn: what keeps a vehicle out of a solid obstacle. The factory is placed now, so its navmesh hole is built
+		 * by the time its shot comes.
+		 */
+		void AddObstacleShots()
+		{
+			TOptional<FBox> Block;
+#if WITH_EDITOR
+			for (TActorIterator<AStaticMeshActor> It(World.Get()); It; ++It)
+			{
+				if (It->GetActorLabel() == ObstacleBlockLabel)
+				{
+					Block = It->GetComponentsBoundingBox(/*bNonColliding*/ false);
+				}
+			}
+#endif
+			if (Block)
+			{
+				Shots.Add({ TEXT("obstacle_block"), [Box = *Block](FUnitShotsRun& Run)
+				{
+					return Run.DriveInto(Box, ObstacleBlockLabel, FVector::RightVector);
+				}, ObstacleSeconds });
+			}
+			else
+			{
+				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.UnitShots: no %s in this level, so no block shot"), ObstacleBlockLabel);
+			}
+
+			URTSBuildingData* FactoryData = LoadObject<URTSBuildingData>(nullptr, ObstacleBuildingPath);
+			ARTSBuilding* Factory = FactoryData ? World->SpawnActorDeferred<ARTSBuilding>(ARTSBuilding::StaticClass(),
+				FTransform(ObstacleBuildingSpot), nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn) : nullptr;
+			if (Factory)
+			{
+				Factory->InitFromData(FactoryData, Unit->GetTeamId());
+				Factory->FinishSpawning(FTransform(ObstacleBuildingSpot));
+				const FBox Box = Factory->GetComponentsBoundingBox(/*bNonColliding*/ false);
+				Shots.Add({ TEXT("obstacle_building"), [Box, Name = FactoryData->GetName()](FUnitShotsRun& Run)
+				{
+					return Run.DriveInto(Box, Name, FVector::BackwardVector);
+				}, ObstacleSeconds });
+			}
+			else
+			{
+				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.UnitShots: could not place %s, so no building shot"), ObstacleBuildingPath);
+			}
+		}
+
+		/**
+		 * Stands the unit ObstacleRunUp out from Box on its Approach side, facing it, orders it into Box's middle as the player
+		 * would and frames the contact at the default zoom with the shapes drawn.
+		 */
+		bool DriveInto(const FBox& Box, const FString& Name, const FVector& Approach)
+		{
+			ShowUnitShapes(true);
+			Unit->SetAimOverride({});
+			FRTSCommand Stop;
+			Stop.Type = ERTSCommandType::Stop;
+			Unit->ExecuteCommand(Stop);
+
+			const FVector Center(Box.GetCenter().X, Box.GetCenter().Y, Unit->GetActorLocation().Z);
+			const float Edge = FMath::Abs(Approach.X) * Box.GetExtent().X + FMath::Abs(Approach.Y) * Box.GetExtent().Y;
+			const FVector Start = Center + Approach * (Edge + ObstacleRunUp);
+			Unit->SetActorLocationAndRotation(Start, (-Approach).Rotation());
+
+			FRTSCommand Move;
+			Move.Type = ERTSCommandType::Move;
+			Move.TargetLocation = FVector(Center.X, Center.Y, Unit->GetNavAgentLocation().Z);
+			GetController()->Server_IssueCommand({ Unit.Get() }, Move);
+
+			GetController()->SetViewTarget(GetCameraPawn());
+			GetCameraPawn()->JumpTo(Center + Approach * Edge);
+			GetCameraPawn()->SetZoomNow(GetCameraPawn()->GetDefaultZoom());
+			Obstacle = Box;
+			ObstacleName = Name;
+			return true;
 		}
 
 		/** Sets up the next shot, or finishes after the last; false once finished, so the ticker drops the run. */
@@ -482,6 +677,12 @@ namespace RTSUnitDebugCommands
 			{
 				LogDrive();
 			}
+			if (Obstacle)
+			{
+				const FVector2D Overlap = GetHullOverlap(*Unit, *Obstacle);
+				UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.UnitShots: %s: the hull overlaps %s by %.0f x %.0f cm"),
+					*Shots[ShotIndex].Name, *ObstacleName, Overlap.X, Overlap.Y);
+			}
 			const APlayerCameraManager* View = GetController()->PlayerCameraManager;
 			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.UnitShots: %s from %s looking %s at %s, unit at %s"), *Shots[ShotIndex].Name,
 				*View->GetCameraLocation().ToString(), *View->GetCameraRotation().ToString(), *GetNameSafe(GetController()->GetViewTarget()),
@@ -525,6 +726,7 @@ namespace RTSUnitDebugCommands
 		/** Gives the player their camera back; false, so the ticker drops the run. */
 		bool Finish(const FString& Error)
 		{
+			ShowUnitShapes(false);
 			if (World.IsValid())
 			{
 				SetStats(false);
@@ -577,6 +779,9 @@ namespace RTSUnitDebugCommands
 		FVector DriveStart = FVector::ZeroVector;
 		int32 WheelPart = INDEX_NONE;
 		FTransform WheelBefore;
+		/** The obstacle the current shot drives into, for the log. */
+		TOptional<FBox> Obstacle;
+		FString ObstacleName;
 		int32 Written = 0;
 		FFrameStats Stats;
 
@@ -634,6 +839,19 @@ namespace RTSUnitDebugCommands
 		}
 		Output.Logf(TEXT("rts.Debug.AimTurret: %d selected units with a turret"), Count);
 	}
+
+	void RunUnitShapesCommand(const TArray<FString>& Args, UWorld* World, FOutputDevice& Output)
+	{
+		const bool bShow = Args.IsEmpty() ? !UnitShapesTicker.IsValid() : FCString::Atoi(*Args[0]) != 0;
+		ShowUnitShapes(bShow);
+		Output.Logf(TEXT("rts.Debug.UnitShapes: %s"), bShow ? TEXT("on") : TEXT("off"));
+	}
+
+	FAutoConsoleCommandWithWorldArgsAndOutputDevice UnitShapesCommand(
+		TEXT("rts.Debug.UnitShapes"),
+		TEXT("rts.Debug.UnitShapes [1|0]: draws every unit's collision box (red), selection bounds (yellow), footprint (green), ")
+		TEXT("navmesh clearance (cyan) and origin (white); without an argument it toggles."),
+		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunUnitShapesCommand));
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice UnitShotsCommand(
 		TEXT("rts.Debug.UnitShots"),

@@ -215,8 +215,9 @@ bool FRTSGunElevationTest::RunTest(const FString& Parameters)
 	ARTSUnit* Tank = TestWorld.SpawnUnit(MakeVehicleData(MakeWeapon()), 0, FVector::ZeroVector);
 	URTSUnitData* TargetData = NewObject<URTSUnitData>();
 	TargetData->MaxHealth = 100.f;
-	// Ahead and well above the gun, as on a ridge.
-	ARTSUnit* High = TestWorld.SpawnUnit(TargetData, 1, FVector(2000.f, 0.f, 600.f));
+	// Ahead and well above the gun, as on a ridge: 8 m above the ground under the tank.
+	const float GroundZ = Tank->GetNavAgentLocation().Z;
+	ARTSUnit* High = TestWorld.SpawnUnit(TargetData, 1, FVector(2000.f, 0.f, GroundZ + 800.f));
 
 	Tank->GetWeaponComponent()->UpdateWeapon(0.05f);
 	TestTrue(TEXT("The tank picks the target"), Tank->GetWeaponComponent()->GetTarget() == High);
@@ -225,7 +226,7 @@ bool FRTSGunElevationTest::RunTest(const FString& Parameters)
 	{
 		Tank->UpdateTurret(0.05f);
 	}
-	// The trunnion stands about 30 cm below the tank's middle: some 630 cm up over 1950 cm, about 18 degrees, under the limit.
+	// The trunnion stands about 170 cm above the ground: some 630 cm up over 1950 cm, about 18 degrees, under the limit.
 	TestTrue(FString::Printf(TEXT("The gun rose toward the target (%.1f)"), Tank->GetGunPitch()),
 		Tank->GetGunPitch() > 15.f && Tank->GetGunPitch() < 19.5f);
 	TestTrue(TEXT("The muzzle rose with it"), Tank->GetMuzzleLocation().Z > MuzzleBefore + 20.f);

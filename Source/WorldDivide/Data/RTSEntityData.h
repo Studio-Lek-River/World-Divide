@@ -44,7 +44,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FVector MeshScale = FVector::OneVector;
 
-	/** Footprint radius in cm, used for collision, selection brackets and formation spacing. */
+	/**
+	 * Interaction radius in cm: how far a unit stands off a dock or a building site and holds short of a new building, and
+	 * for now its avoidance circle and formation spacing. A unit's collision, brackets and footprint come from its mesh
+	 * (FRTSUnitShape); this sizes them only for data without one.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display", meta = (ClampMin = "10"))
 	float SelectionRadius = 60.f;
 

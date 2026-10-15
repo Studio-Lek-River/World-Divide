@@ -47,6 +47,18 @@ public:
 	/** The line under the title: whose forces were eliminated; empty while the match runs. */
 	static FString GetMatchResultMessage(ERTSMatchResult Result);
 
+	/**
+	 * The screen rect, in viewport pixels, of the unit's selection bounds as Project maps world points to the screen: the
+	 * eight corners' bounds, at least MinUnitRectSize across. False while a corner cannot be projected.
+	 */
+	static bool GetUnitScreenRect(const ARTSUnit& Unit, TFunctionRef<bool(const FVector&, FVector2D&)> Project, FBox2D& OutRect);
+
+	/** As above, through the controller's view. */
+	static bool GetUnitScreenRect(const ARTSPlayerController& Controller, const ARTSUnit& Unit, FBox2D& OutRect);
+
+	/** Brackets never shrink below this many pixels, so a far unit stays visible. */
+	static constexpr float MinUnitRectSize = 16.f;
+
 private:
 	void DrawSelectionBox(const FVector2D& Start, const FVector2D& End);
 	void DrawBrackets(float Left, float Top, float Right, float Bottom);
@@ -55,11 +67,9 @@ private:
 	/** The health bar a selected unit shows, without the brackets. */
 	void DrawUnitHealth(const ARTSPlayerController& Controller, const ARTSUnit& Unit);
 
-	/** Above the circle, in viewport pixels, that the unit's selection radius covers on screen. */
-	void DrawUnitHealthBar(const FVector2D& Center, float Radius, const ARTSUnit& Unit);
+	/** Above the unit's screen rect (GetUnitScreenRect), as wide as it. */
+	void DrawUnitHealthBar(const FBox2D& Rect, const ARTSUnit& Unit);
 
-	/** That circle, at least 8 pixels across; false while the unit cannot be projected. */
-	static bool GetUnitScreenCircle(const ARTSPlayerController& Controller, const ARTSUnit& Unit, FVector2D& OutCenter, float& OutRadius);
 	void DrawBuildingMarker(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawConstructionBar(const ARTSPlayerController& Controller, const ARTSBuilding& Building);
 	void DrawBuildingHealth(const ARTSPlayerController& Controller, const ARTSBuilding& Building);

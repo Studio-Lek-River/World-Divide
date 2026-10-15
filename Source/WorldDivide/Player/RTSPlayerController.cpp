@@ -665,9 +665,10 @@ void ARTSPlayerController::SelectInBox(const FVector2D& Start, const FVector2D& 
 	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
 	{
 		ARTSUnit* Unit = *It;
+		// The box has to cover the middle of the unit's brackets, not the actor origin.
 		FVector2D ScreenLocation;
 		if (IsOwnUnit(Unit)
-			&& ProjectWorldLocationToScreen(Unit->GetActorLocation(), ScreenLocation)
+			&& ProjectWorldLocationToScreen(Unit->GetSelectionCenter(), ScreenLocation)
 			&& Box.IsInside(ScreenLocation))
 		{
 			SelectedUnits.AddUnique(Unit);

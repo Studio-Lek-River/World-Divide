@@ -239,3 +239,26 @@ Game thread per frame in the `stress_240` region (Insights, inclusive):
 - `TickOrders` (orders and the ground snap) is about 2.2 µs per unit; path following and the AI controllers do not show up.
 - The avoidance pass is cheap on the stress grid because the grid spacing keeps units apart; the packed-crowd case is measured by `RTSAvoidanceTests` in step 2.
 - The M20 and the placeholder tank cost the same on the game thread. The M20 costs more on the GPU (51 M triangles, 2556 draw calls: Nanite off and one material instance per slot per unit), which belongs to the LOD and rendering phase, not this plan.
+
+### Step 1: box collision and selection bounds (2026-10-15)
+
+Same method as step 0, `-Trace` on.
+
+| Stress 240 | M20 Guardian | `DA_TestTank` |
+|---|---:|---:|
+| Frame, with trace | 11.43 ms | 11.42 ms |
+| Avoidance pass (log) | 0.09 ms, max 0.21 ms | 0.10 ms, max 0.22 ms |
+| GPU | 4.0 ms | 2.5 ms |
+| Draw calls / triangles | 2556 / 51.2 M | 952 / 2.9 M |
+
+Game thread per frame in the `stress_240` region (Insights, inclusive):
+
+| Scope | Calls per frame | M20 Guardian | `DA_TestTank` |
+|---|---:|---:|---:|
+| `UWorld_Tick` | 1 | 9.15 ms | 9.14 ms |
+| `URTSWeaponComponent::UpdateWeapon` | 280 | 7.20 ms | 7.32 ms |
+| `ARTSUnit::TickOrders` | 278 | 0.62 ms | 0.53 ms |
+| `URTSAvoidanceSubsystem::Separate` | 1 | 0.09 ms | 0.10 ms |
+| Slate (`DrawWindows`) | 1 | 0.93 ms | 0.95 ms |
+
+**Finding.** No scope got slower. The box root, the stadium edge and the projected brackets cost nothing measurable; every figure is at or under step 0. The bench comparison and its M20 grid change are in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md#step-1-133-box-collision-and-selection-bounds).
