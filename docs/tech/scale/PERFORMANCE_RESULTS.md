@@ -25,10 +25,10 @@ A **provisional target** is a budget from plan §6 item 7; it is not a result un
 |---|---|---|---|
 | 1080p / 60 FPS (16.7 ms frame) with 200 active units on RTX 3060 class | Provisional target, **not measured** | — | #152, #160 |
 | Eight-player battle | **Not measured** | — | #152 |
-| No server frame > 33 ms on a 240-unit move order | **Met** on this PC at step 7: 20.27 ms (M20), 6.93 ms (tank) slowest frame; the order itself 1.8–2.1 ms | 20.42 ms (M20), 19.76 ms (tank) slowest frame | #139, #136 |
+| No server frame > 33 ms on a 240-unit move order | **Met** on this PC at step 7: 20.27 ms (M20), 6.93 ms (tank) slowest frame; the order itself 1.8–2.1 ms. **Met** at step 4 at real scale: 30.12 ms (M20), 6.5 to 8.4 ms (tank) | 20.42 ms (M20), 19.76 ms (tank) slowest frame | #139, #136 |
 | Avoidance mean < 1.0 ms, max < 2.0 ms (200 mixed units) | **Met** on this PC at step 2: 0.29–0.44 ms mean, 0.54–1.16 ms max in `WorldDivide.Avoidance.Mixed` (three runs) | 240 moving M20s: 0.535 ms mean, 0.872 ms max | #134 |
 | Target acquisition < 0.5 ms with 240 idle armed units | **Met** on this PC at step 2: 0.013 ms (M20), 0.012 ms (tank) | 5.67 ms (M20), 5.50 ms (tank) | #134 |
-| 240 `DA_TestTank`: game thread no worse than this baseline | Comparison | idle 8.16 ms, move 4.16 ms | #136 |
+| 240 `DA_TestTank`: game thread no worse than this baseline | Comparison; **measured** at step 4: idle 2.31 ms, move 4.44 ms median of five (+0.28 ms, inside the 0.6 ms run-to-run spread) | idle 8.16 ms, move 4.16 ms | #136 |
 | 240 moving M20s ≤ 240 moving tanks | **Deferred** until after #150 and #151 | 17.41 ms against 4.16 ms | after #151 |
 | GPU memory | **Not measured**: the bench records process physical memory only | — | — |
 
@@ -267,3 +267,32 @@ Hulls as the current data gives them: infantry 31 × 70 cm, `DA_TestTank` 260 ×
 | `DA_TestTank` frame | 12.43 ms | 11.42 ms | 3.87 ms | 4.29 ms | 3.41 ms |
 
 The Insights split is in [plan §7](SCALE_IMPLEMENTATION_PLAN.md#7-measurements-per-step).
+
+## Step 4 (#136, real-scale data: units, buildings, weapons, maps, AI)
+
+Same machine, build configuration and method as step 0, on 2026-10-16; L_Bench, its camera and the bench code are unchanged, so the bench now measures the real-size units in the same scene. The step 0 run-to-run spread is about 0.6 ms game thread and 1 ms slowest frame.
+
+What changed: `DA_TestTank` grew from a 260 x 150 cm fit to 1037 x 370 cm (width binds), every other placeholder and building to the standard's size, weapon ranges about five times, speeds about two times, the generated maps three times (see [plan §7](SCALE_IMPLEMENTATION_PLAN.md#7-measurements-per-step)). The bench grid follows the hulls, so 240 tanks now cover about 135 x 135 m instead of 37 x 25 m.
+
+### 240 units against the step 0 baseline
+
+| Unit | Scenario | Step 0 game ms | Step 7 game ms | Step 4 game ms (five runs, median) | Slowest frame | Avoidance ms | Target search ms |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `DA_TestTank` | idle | 8.16 (9.85) | 2.13 (3.97) | 2.31 (2.25 to 2.42) | 3.43 to 4.08 | 0.28 to 0.29 | 0.05 to 0.06 |
+| `DA_TestTank` | move | 4.16 (19.76) | 3.99 (6.93) | **4.44** (4.24 to 4.77) | 6.53 to 8.38 | 0.28 to 0.33 | 0.000 |
+| M20 Guardian | idle | 8.43 (10.71) | 2.03 (2.67) | 2.67 (one run) | 4.12 | 0.30 | 0.07 |
+| M20 Guardian | move | 17.41 (20.42) | 15.21 (20.27) | 23.25 (one run) | 30.12 | 0.43 | 0.000 |
+
+- **240 tanks, game thread against step 0 (#136 gate, measured):** idle is 72 % lower. Moving is 0.28 ms (7 %) above the 4.16 ms baseline at the median of five runs, inside the 0.6 ms run-to-run spread; the fastest run is 4.24 ms. The Insights split of a traced move (`-Counts 240 -Trace`, region `DA_TestTank_240_move`) puts the cost in hull size, not in new code: pawn `Movement` 1.36 ms and its `Collision` sweeps 0.66 ms per frame for 240 larger boxes, `URTSAvoidanceSubsystem::Separate` 0.32 ms (0.17 ms at step 7: a 10 m hull covers more 6 m cells), `ARTSUnit::TickOrders` 0.55 ms, path following 0.13 ms.
+- **Slowest server frame on a 240-unit move order (provisional target 33 ms, measured):** 6.5 to 8.4 ms for tanks and 30.1 ms for M20s, both under it. The M20's margin is thin; its render-state cost is the M20 render lane (#151, #150).
+- **240 moving M20s against 240 tanks:** deferred until after #150 and #151 (D-G); not judged here.
+- The avoidance pass stays far under its 1.0 ms mean budget (0.28 to 0.43 ms).
+
+### `unitshots -Stress 240 -Trace` (L_TestMap)
+
+| Stress 240, with trace | Step 0 | Step 1 | Step 2 | Step 3 | Step 7 | Step 4 |
+|---|---:|---:|---:|---:|---:|---:|
+| M20 Guardian frame | 12.37 ms | 11.43 ms | 4.31 ms | 4.68 ms | 4.28 ms | 16.68 ms (game 5.13 ms, GPU 15.12 ms) |
+| `DA_TestTank` frame | 12.43 ms | 11.42 ms | 3.87 ms | 4.29 ms | 3.41 ms | 6.10 ms (game 4.11 ms, GPU 4.51 ms) |
+
+The stress grid now follows the hull (length + 3 m, width + 2.5 m, about square) on L_TestMap's north strip, so the whole 240-unit grid stands in front of the RTS camera, which still uses the pre-#137 values: more units are drawn than before, which is most of the GPU and frame rise. These numbers are not comparable with the earlier columns and are kept for continuity only; the bench above is the comparison.

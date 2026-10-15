@@ -5,16 +5,18 @@
 #include "Commands/RTSCommand.h"
 #include "Data/RTSUnitData.h"
 #include "Editor.h"
+#include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestPIE.h"
+#include "Tests/RTSTestScale.h"
 #include "Units/RTSUnit.h"
 
 /**
  * Terrain on L_TestMap: a tank and an infantry of the east team drive west over Hill_East, the ridge between Wall_East and
- * the east base, 1 m high with 15 degree ramps. Every frame both stand on the ground under them, neither floating nor
+ * the east base, with 15 degree ramps. Every frame both stand on the ground under them, neither floating nor
  * sunk; they cross the top rather than going around; the tank's mesh leans on the ramps and the infantry stays upright.
  */
 namespace RTSTerrainSmokeTest
@@ -25,18 +27,47 @@ namespace RTSTerrainSmokeTest
 	constexpr double NavTimeout = 30.0;
 	constexpr double DriveTimeout = 30.0;
 
-	/** The east team, so the east army standing nearby leaves them be; clear of its blocks and of Wall_East. */
+	/**
+	 * The east team, so the east army standing nearby leaves them be. They start a tank's length east of the hill's east foot
+	 * and drive to a tank's length west of its west foot, on a lane midway between Wall_East's north end and the hill's, clear
+	 * of the wall and the army (InitLayout sets them from Hill_East_Top, Wall_East and the tank).
+	 */
 	constexpr int32 EastTeam = 1;
-	const FVector TankStart(5250.f, 1300.f, 0.f);
-	const FVector InfantryStart(5250.f, 1600.f, 0.f);
-	constexpr float TargetX = 3700.f;
-
-	constexpr float HillHeight = 100.f;
+	constexpr float RampSlope = 15.f;
+	FVector TankStart;
+	FVector InfantryStart;
+	float TargetX = 0.f;
+	float HillHeight = 0.f;
+	/** A tank's length. */
+	float ArrivalRadius = 0.f;
 	/** Feet may be this far from the ground in any frame. */
 	constexpr float GroundTolerance = 5.f;
 	/** On a 15 degree ramp the tank's mesh leans at least this much. */
 	constexpr float MinRampTilt = 10.f;
-	constexpr float ArrivalRadius = 300.f;
+
+	bool InitLayout(const UWorld& World, FString& OutError)
+	{
+		const URTSUnitData* Tank = LoadObject<URTSUnitData>(nullptr, TankPath);
+		const AStaticMeshActor* Top = RTSTests::FindLabelledActor(World, TEXT("Hill_East_Top"));
+		const FBox2D Wall = RTSTests::GetLabelledBox(World, TEXT("Wall_East"));
+		if (!Tank || !Top || !Wall.bIsValid)
+		{
+			OutError = TEXT("Missing the test tank, or L_TestMap lacks Hill_East_Top or Wall_East");
+			return false;
+		}
+		FVector Center;
+		FVector Extent;
+		Top->GetActorBounds(false, Center, Extent);
+		HillHeight = Center.Z + Extent.Z;
+		const float Run = HillHeight / FMath::Tan(FMath::DegreesToRadians(RampSlope));
+		const FVector2D Hull = RTSTests::GetHullSize(*Tank);
+		const float LaneY = 0.5f * (Wall.Max.Y + Center.Y + Extent.Y);
+		TankStart = FVector(Center.X + Extent.X + Run + Hull.X, LaneY, 0.f);
+		InfantryStart = TankStart + FVector(0.f, Hull.Y + 300.f, 0.f);
+		TargetX = Center.X - Extent.X - Run - Hull.X;
+		ArrivalRadius = Hull.X;
+		return true;
+	}
 
 	struct FTerrainState
 	{
@@ -105,6 +136,11 @@ bool FRTSTerrainWaitForNavigation::Update()
 	if (World && World->HasBegunPlay() && RTSTests::IsNavigationReady(*World))
 	{
 		RTSTests::ApplyTestTimeDilation(*World);
+		FString Error;
+		if (!RTSTerrainSmokeTest::InitLayout(*World, Error))
+		{
+			Test->AddError(Error);
+		}
 		State->PhaseStart = FPlatformTime::Seconds();
 		return true;
 	}

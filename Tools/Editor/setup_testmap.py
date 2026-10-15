@@ -353,6 +353,20 @@ def fit_scale(mesh, length, width, height=None):
     return (scale, scale, height / (box.max.z - box.min.z) if height else scale)
 
 
+def fit_height(mesh, height):
+    """Uniform MeshScale giving the mesh height (WORLD_SCALE_STANDARD.md rule 2: units are never stretched)."""
+    box = mesh.get_bounding_box()
+    scale = height / (box.max.z - box.min.z)
+    return (scale, scale, scale)
+
+
+def interaction_radius(mesh, scale):
+    """A unit's SelectionRadius, its interaction radius (docking, build reach, holding short): half the longer side of the
+    scaled mesh, so a unit that stops that far from a building's edge clears it whichever way it faces."""
+    box = mesh.get_bounding_box()
+    return round(max((box.max.x - box.min.x) * scale[0], (box.max.y - box.min.y) * scale[1]) / 2.0, 1)
+
+
 def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_scale, shell_color, arc_height=0.0,
                 ground=True, air=False):
     return plan_data_asset(name, WEAPON_DIR, unreal.RTSWeaponData, {
@@ -368,12 +382,12 @@ def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_
     })
 
 
-def make_unit(name, display_name, mesh, scale, radius, health, weapon, speed, turn_rate, cost, build_time):
+def make_unit(name, display_name, mesh, scale, health, weapon, speed, turn_rate, cost, build_time):
     return plan_data_asset(name, UNIT_DIR, unreal.RTSUnitData, {
         "display_name": unreal.Text(display_name),
         "mesh": mesh,
         "mesh_scale": unreal.Vector(*scale),
-        "selection_radius": radius,
+        "selection_radius": interaction_radius(mesh, scale),
         "max_health": health,
         "weapon": weapon,
         "move_speed": speed,
@@ -388,13 +402,13 @@ def add_properties(asset, properties):
     data_assets[asset.get_path_name().split(".")[0]][2].update(properties)
 
 
-def make_harvester(name, display_name, mesh, scale, radius, health, speed, turn_rate, cost, build_time,
+def make_harvester(name, display_name, mesh, scale, health, speed, turn_rate, cost, build_time,
                    carry_amount, gather_seconds, search_radius):
     return plan_data_asset(name, UNIT_DIR, unreal.RTSHarvesterData, {
         "display_name": unreal.Text(display_name),
         "mesh": mesh,
         "mesh_scale": unreal.Vector(*scale),
-        "selection_radius": radius,
+        "selection_radius": interaction_radius(mesh, scale),
         "max_health": health,
         "weapon": None,
         "move_speed": speed,
@@ -407,12 +421,12 @@ def make_harvester(name, display_name, mesh, scale, radius, health, speed, turn_
     })
 
 
-def make_builder(name, display_name, mesh, scale, radius, health, speed, turn_rate, cost, build_time, buildings):
+def make_builder(name, display_name, mesh, scale, health, speed, turn_rate, cost, build_time, buildings):
     return plan_data_asset(name, UNIT_DIR, unreal.RTSBuilderData, {
         "display_name": unreal.Text(display_name),
         "mesh": mesh,
         "mesh_scale": unreal.Vector(*scale),
-        "selection_radius": radius,
+        "selection_radius": interaction_radius(mesh, scale),
         "max_health": health,
         "weapon": None,
         "move_speed": speed,
@@ -423,13 +437,13 @@ def make_builder(name, display_name, mesh, scale, radius, health, speed, turn_ra
     })
 
 
-def make_aircraft(name, display_name, mesh, scale, radius, health, weapon, speed, turn_rate, cost, build_time,
+def make_aircraft(name, display_name, mesh, scale, health, weapon, speed, turn_rate, cost, build_time,
                   cruise_altitude, climb_rate, max_bank_angle, ammo_per_sortie, rearm_seconds):
     return plan_data_asset(name, UNIT_DIR, unreal.RTSAircraftData, {
         "display_name": unreal.Text(display_name),
         "mesh": mesh,
         "mesh_scale": unreal.Vector(*scale),
-        "selection_radius": radius,
+        "selection_radius": interaction_radius(mesh, scale),
         "max_health": health,
         "weapon": weapon,
         "move_speed": speed,
@@ -470,7 +484,7 @@ def make_building(name, display_name, mesh, scale, footprint, health, weapon, co
         # (charge time, delay, radius, damage, edge damage), or None for a building that is not a superweapon.
         "superweapon_charge_time": superweapon[0] if superweapon else 0.0,
         "superweapon_delay": superweapon[1] if superweapon else 3.0,
-        "superweapon_radius": superweapon[2] if superweapon else 1500.0,
+        "superweapon_radius": superweapon[2] if superweapon else 4000.0,
         "superweapon_damage": superweapon[3] if superweapon else 1000.0,
         "superweapon_edge_damage": superweapon[4] if superweapon else 0.25,
     })
@@ -707,10 +721,12 @@ def spawn_wall(label, location, scale, piece):
     return block
 
 
-def spawn_supply_source(location, amount, footprint, mesh):
+def spawn_supply_source(location, amount, mesh):
+    """A supply source of the standard's size (WORLD_SCALE_STANDARD.md section 3)."""
     source = spawn(unreal.RTSSupplySource, location, label=f"SupplySource_{int(location[0])}_{int(location[1])}")
     source.set_editor_property("amount", amount)
-    source.set_editor_property("footprint", unreal.IntPoint(*footprint))
+    source.set_editor_property("footprint", unreal.IntPoint(*SUPPLY_FOOTPRINT))
+    source.set_editor_property("height", SUPPLY_HEIGHT)
     source.set_editor_property("mesh", mesh)
     return source
 
@@ -749,41 +765,44 @@ def spawn_lighting():
 
 def build_map(tank, infantry, builder, m20, wall, crate, ground, digest):
     new_level(MAP_PATH)
+    check_map_lanes(TEST_MAP)
 
-    # 200 x 200 m ground, top face at z = 0.
-    spawn_ground(10000.0, ground)
+    # 600 x 600 m ground, top face at z = 0.
+    spawn_ground(TEST_MAP.half_size, ground)
 
     # Obstacles between the two bases so pathfinding has something to do.
-    spawn_wall("Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0), wall)
-    spawn_obstacle("Block_North", (1000.0, 2500.0, 200.0), (8.0, 8.0, 4.0))
-    spawn_obstacle("Block_South", (1000.0, -2500.0, 200.0), (8.0, 8.0, 4.0))
-    spawn_wall("Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0), wall)
+    for kind, label, location, scale in TEST_MAP.obstacles:
+        if kind == "wall":
+            spawn_wall(label, location, scale, wall)
+        else:
+            spawn_obstacle(label, location, scale)
     # A ridge between Wall_East and the east base, which the east army crosses on its way to the middle. Not labelled Wall_ or
     # Block_: the tests take those to be the obstacles.
-    spawn_hill("Hill_East", 4500.0, 300.0, 4000.0, 100.0, 15.0, ground)
+    spawn_hill("Hill_East", *TEST_HILL, ground)
 
     spawn_lighting()
 
     # The default volume brush is a 200 uu cube, so this covers the whole ground.
     nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
-    nav.set_actor_scale3d(unreal.Vector(100.0, 100.0, 10.0))
+    nav.set_actor_scale3d(unreal.Vector(TEST_MAP.half_size / 100.0, TEST_MAP.half_size / 100.0, 10.0))
     _, nav_extent = nav.get_actor_bounds(False)
     unreal.log(f"NavMeshBoundsVolume extent: {nav_extent}")
     if nav_extent.x < 1000.0:
         unreal.log_warning("NavMeshBoundsVolume has no usable brush: drag one into L_TestMap by hand and save.")
 
-    for team_id, x, yaw in ((0, -6000.0, 0.0), (1, 6000.0, 180.0)):
+    for team_id, x, _, yaw in TEST_MAP.spots:
         start = spawn(unreal.PlayerStart, (x, 0.0, 100.0), yaw, label=f"PlayerStart_Team{team_id}")
         start.set_editor_property("player_start_tag", f"Team{team_id}")
         forward = 1.0 if yaw == 0.0 else -1.0
-        spawn_units(tank, 6, team_id, (x + 600.0 * forward, -900.0, 0.0), yaw)
-        spawn_units(infantry, 10, team_id, (x + 600.0 * forward, 900.0, 0.0), yaw)
-        spawn_units(builder, 2, team_id, (x - 400.0 * forward, 0.0, 0.0), yaw)
+        # The army in front of the headquarters, tanks to its right and infantry to its left, and the builders behind it.
+        spawn_units(tank, 6, team_id, (x + BASE_ARMY_AHEAD * forward, -BASE_ARMY_SIDE, 0.0), yaw)
+        spawn_units(infantry, 10, team_id, (x + BASE_ARMY_AHEAD * forward, BASE_ARMY_SIDE, 0.0), yaw)
+        spawn_units(builder, 2, team_id, (x - BASE_BUILDERS_BEHIND * forward, 0.0, 0.0), yaw)
         if team_id == 0:
             # The real-size test tank, beside the base and clear of the army's paths.
-            spawn_units(m20, 2, team_id, (x + 800.0, -2600.0, 0.0), yaw)
-        # Beside each base, clear of the units' paths and of the empty strip at y = 7000 the tests build in.
-        spawn_supply_source((x - 50.0 * forward, 2550.0 * forward, 0.0), 5000, (3, 3), crate)
+            spawn_units(m20, 2, team_id, (x + 2400.0, -7800.0, 0.0), yaw)
+        # Beside each base, clear of the units' paths and of the empty strip at y = 21000 the tests build in.
+        spawn_supply_source((*base_source(x, 0.0, yaw), 0.0), 5000, crate)
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     build_navigation(world, MAP_PATH)
@@ -794,8 +813,9 @@ def build_map(tank, infantry, builder, m20, wall, crate, ground, digest):
 
 def make_map(tank, infantry, builder, m20, wall, crate, ground):
     plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, builder, m20, wall, crate, ground, digest),
-                 spec_hash([build_map, build_navigation, spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source,
-                            spawn_ground, spawn_lighting], MAP_PATH, CUBE, tank, infantry, builder, m20, wall, crate, ground,
+                 spec_hash([build_map, build_navigation, check_map_lanes, base_source, spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall,
+                            spawn_units, spawn_supply_source, spawn_ground, spawn_lighting], MAP_PATH, TEST_MAP, TEST_HILL,
+                           BASE_LAYOUT, MAP_LANE_RULES, CUBE, tank, infantry, builder, m20, wall, crate, ground,
                            material_hashes[ground], ENGINE_VERSION, NAV_CONFIG))
 
 
@@ -841,56 +861,117 @@ def ring_spots(radius, angles):
 # (x, y, amount) the bases contest, besides the one by each base. The preview covers the whole ground.
 SkirmishMap = collections.namedtuple("SkirmishMap", "path half_size spots obstacles sources")
 
-# L_TestMap's ground and obstacles; west and east as in L_TestMap, south and north on the empty strips.
+# Real scale (WORLD_SCALE_STANDARD.md section 6, PLACEHOLDER_SCALE_AUDIT.md): the generated maps are laid out three times
+# as large as before, for real-size vehicles and 16 to 28 m buildings. Rocks and walls keep their thickness, so the gaps
+# between them only grow.
+# A supply source's footprint in 1 m cells and its height, in cm.
+SUPPLY_FOOTPRINT = (12, 12)
+SUPPLY_HEIGHT = 300.0
+# What stands by each start spot, in cm along the spot's facing and to its left: the army (L_TestMap only) ahead of the
+# 28 m headquarters, the builders behind it and the base's own supply source beside it.
+BASE_ARMY_AHEAD = 3000.0
+BASE_ARMY_SIDE = 2700.0
+BASE_BUILDERS_BEHIND = 2400.0
+BASE_SOURCE_BEHIND = 150.0
+BASE_SOURCE_SIDE = 7650.0
+BASE_LAYOUT = (BASE_ARMY_AHEAD, BASE_ARMY_SIDE, BASE_BUILDERS_BEHIND, BASE_SOURCE_BEHIND, BASE_SOURCE_SIDE, SUPPLY_FOOTPRINT,
+               SUPPLY_HEIGHT)
+# check_map_lanes: a gap between two obstacles, or between an obstacle and the ground's edge, is closed or at least
+# VEHICLE_LANE wide (standard rule 4: 8 m carriageways), and every base keeps BASE_CLEARANCE around its spot free: the
+# headquarters' half size (14 m), its exit and the builders behind it.
+VEHICLE_LANE = 800.0
+BASE_CLEARANCE = 4000.0
+MAP_LANE_RULES = (VEHICLE_LANE, BASE_CLEARANCE)
+
+
+def check_map_lanes(spec):
+    """Raises unless spec's obstacles leave vehicle-wide lanes and its bases room (MAP_LANE_RULES)."""
+    def footprint(location, scale):
+        return (location[0] - scale[0] * 50.0, location[1] - scale[1] * 50.0,
+                location[0] + scale[0] * 50.0, location[1] + scale[1] * 50.0)
+
+    def gap(a, b):
+        return max(b[0] - a[2], a[0] - b[2], b[1] - a[3], a[1] - b[3])
+
+    boxes = [(label, footprint(location, scale)) for _, label, location, scale in spec.obstacles]
+    edge = spec.half_size
+    for index, (label, box) in enumerate(boxes):
+        for other, other_box in boxes[index + 1:]:
+            if 0.0 < gap(box, other_box) < VEHICLE_LANE:
+                raise RuntimeError(f"{spec.path}: {label} and {other} leave a {gap(box, other_box):.0f} cm gap, under {VEHICLE_LANE:.0f}")
+        to_edge = min(box[0] + edge, box[1] + edge, edge - box[2], edge - box[3])
+        if 0.0 < to_edge < VEHICLE_LANE:
+            raise RuntimeError(f"{spec.path}: {label} leaves a {to_edge:.0f} cm gap to the edge, under {VEHICLE_LANE:.0f}")
+    for spot, x, y, _ in spec.spots:
+        base = (x - BASE_CLEARANCE, y - BASE_CLEARANCE, x + BASE_CLEARANCE, y + BASE_CLEARANCE)
+        if max(abs(x), abs(y)) + BASE_CLEARANCE > edge:
+            raise RuntimeError(f"{spec.path}: start spot {spot} has no room for its base inside the ground")
+        for label, box in boxes:
+            if gap(base, box) < 0.0:
+                raise RuntimeError(f"{spec.path}: {label} stands in the base of start spot {spot}")
+
+
+def base_source(x, y, yaw):
+    """Where the supply source of the base at (x, y) facing yaw goes: to its left, seen from the middle."""
+    forward = (math.cos(math.radians(yaw)), math.sin(math.radians(yaw)))
+    return (x - BASE_SOURCE_BEHIND * forward[0] - BASE_SOURCE_SIDE * forward[1],
+            y - BASE_SOURCE_BEHIND * forward[1] + BASE_SOURCE_SIDE * forward[0])
+
+
+# L_TestMap's ground and obstacles, 600 x 600 m; west and east as in L_TestMap, south and north on the empty strips.
 TEST_OBSTACLES = (
-    ("wall", "Wall_West", (-2500.0, 0.0, 150.0), (2.0, 20.0, 3.0)),
-    ("block", "Block_North", (1000.0, 2500.0, 200.0), (8.0, 8.0, 4.0)),
-    ("block", "Block_South", (1000.0, -2500.0, 200.0), (8.0, 8.0, 4.0)),
-    ("wall", "Wall_East", (3500.0, 0.0, 150.0), (2.0, 12.0, 3.0)),
+    ("wall", "Wall_West", (-7500.0, 0.0, 150.0), (2.0, 60.0, 3.0)),
+    ("block", "Block_North", (3000.0, 7500.0, 200.0), (8.0, 8.0, 4.0)),
+    ("block", "Block_South", (3000.0, -7500.0, 200.0), (8.0, 8.0, 4.0)),
+    ("wall", "Wall_East", (10500.0, 0.0, 150.0), (2.0, 36.0, 3.0)),
 )
-TEST_SPOTS = ((0, -6000.0, 0.0, 0.0), (1, 6000.0, 0.0, 180.0), (2, 0.0, -7000.0, 90.0), (3, 0.0, 7000.0, -90.0))
-SKIRMISH_MAP = SkirmishMap("/Game/Maps/L_Skirmish", 10000.0, TEST_SPOTS, TEST_OBSTACLES, ())
-DUEL_MAP = SkirmishMap("/Game/Maps/L_SkirmishDuel", 10000.0, TEST_SPOTS[:2], TEST_OBSTACLES, ())
+TEST_SPOTS = ((0, -18000.0, 0.0, 0.0), (1, 18000.0, 0.0, 180.0), (2, 0.0, -21000.0, 90.0), (3, 0.0, 21000.0, -90.0))
+TEST_MAP = SkirmishMap(MAP_PATH, 30000.0, TEST_SPOTS[:2], TEST_OBSTACLES, ())
+# L_TestMap's ridge: x, top width, length along y, height and ramp slope in degrees (spawn_hill).
+TEST_HILL = (13500.0, 900.0, 12000.0, 300.0, 15.0)
+SKIRMISH_MAP = SkirmishMap("/Game/Maps/L_Skirmish", 30000.0, TEST_SPOTS, TEST_OBSTACLES, ())
+DUEL_MAP = SkirmishMap("/Game/Maps/L_SkirmishDuel", 30000.0, TEST_SPOTS[:2], TEST_OBSTACLES, ())
 
-# 160 x 160 m, west against east across a river running north to south. It is crossed at two fords, each between two
-# rocks, with a supply source by each ford, one on either bank.
-RIVER_FORD_MAP = SkirmishMap("/Game/Maps/L_RiverFord", 8000.0, (
-    (0, -5500.0, 0.0, 0.0), (1, 5500.0, 0.0, 180.0),
+# 500 x 500 m, west against east across a 24 m river running north to south from edge to edge. It is crossed at two
+# 36 m fords, each between two rocks, with a supply source by each ford, one on either bank.
+RIVER_FORD_MAP = SkirmishMap("/Game/Maps/L_RiverFord", 25000.0, (
+    (0, -16500.0, 0.0, 0.0), (1, 16500.0, 0.0, 180.0),
 ), (
-    ("water", "Water_South", (0.0, -6300.0, 1.0), (8.0, 34.0, 0.1)),
-    ("water", "Water_Middle", (0.0, 0.0, 1.0), (8.0, 68.0, 0.1)),
-    ("water", "Water_North", (0.0, 6300.0, 1.0), (8.0, 34.0, 0.1)),
-    ("block", "Block_FordNorthWest", (-1500.0, 5300.0, 150.0), (5.0, 5.0, 3.0)),
-    ("block", "Block_FordNorthEast", (1500.0, 2700.0, 150.0), (5.0, 5.0, 3.0)),
-    ("block", "Block_FordSouthWest", (-1500.0, -2700.0, 150.0), (5.0, 5.0, 3.0)),
-    ("block", "Block_FordSouthEast", (1500.0, -5300.0, 150.0), (5.0, 5.0, 3.0)),
-    ("wall", "Wall_West", (-3800.0, -4500.0, 150.0), (2.0, 24.0, 3.0)),
-    ("wall", "Wall_East", (3800.0, 4500.0, 150.0), (2.0, 24.0, 3.0)),
+    ("water", "Water_South", (0.0, -19400.0, 1.0), (24.0, 112.0, 0.1)),
+    ("water", "Water_Middle", (0.0, 0.0, 1.0), (24.0, 204.0, 0.1)),
+    ("water", "Water_North", (0.0, 19400.0, 1.0), (24.0, 112.0, 0.1)),
+    ("block", "Block_FordNorthWest", (-4500.0, 15900.0, 150.0), (5.0, 5.0, 3.0)),
+    ("block", "Block_FordNorthEast", (4500.0, 8100.0, 150.0), (5.0, 5.0, 3.0)),
+    ("block", "Block_FordSouthWest", (-4500.0, -8100.0, 150.0), (5.0, 5.0, 3.0)),
+    ("block", "Block_FordSouthEast", (4500.0, -15900.0, 150.0), (5.0, 5.0, 3.0)),
+    ("wall", "Wall_West", (-11400.0, -13500.0, 150.0), (2.0, 72.0, 3.0)),
+    ("wall", "Wall_East", (11400.0, 13500.0, 150.0), (2.0, 72.0, 3.0)),
 ), (
-    (-2500.0, 5500.0, 8000), (2500.0, -5500.0, 8000),
+    (-7500.0, 16500.0, 8000), (7500.0, -16500.0, 8000),
 ))
 
-# 220 x 220 m, a base in each corner. A quarry in the middle, walled to the west and east and open to the north and
+# 660 x 660 m, a base in each corner. A quarry in the middle, walled to the west and east and open to the north and
 # south, holds two rich supply sources; a rock stands between every two neighbouring bases.
-QUARRY_CROSS_MAP = SkirmishMap("/Game/Maps/L_QuarryCross", 11000.0, (
-    (0, -7000.0, -7000.0, 45.0), (1, 7000.0, 7000.0, -135.0), (2, 7000.0, -7000.0, 135.0), (3, -7000.0, 7000.0, -45.0),
+QUARRY_CROSS_MAP = SkirmishMap("/Game/Maps/L_QuarryCross", 33000.0, (
+    (0, -21000.0, -21000.0, 45.0), (1, 21000.0, 21000.0, -135.0), (2, 21000.0, -21000.0, 135.0),
+    (3, -21000.0, 21000.0, -45.0),
 ), (
-    ("wall", "Wall_QuarryWest", (-2000.0, 0.0, 150.0), (2.0, 40.0, 3.0)),
-    ("wall", "Wall_QuarryEast", (2000.0, 0.0, 150.0), (2.0, 40.0, 3.0)),
-    ("block", "Block_East", (7000.0, 0.0, 200.0), (8.0, 8.0, 4.0)),
-    ("block", "Block_West", (-7000.0, 0.0, 200.0), (8.0, 8.0, 4.0)),
-    ("block", "Block_North", (0.0, 7000.0, 200.0), (8.0, 8.0, 4.0)),
-    ("block", "Block_South", (0.0, -7000.0, 200.0), (8.0, 8.0, 4.0)),
+    ("wall", "Wall_QuarryWest", (-6000.0, 0.0, 150.0), (2.0, 120.0, 3.0)),
+    ("wall", "Wall_QuarryEast", (6000.0, 0.0, 150.0), (2.0, 120.0, 3.0)),
+    ("block", "Block_East", (21000.0, 0.0, 200.0), (8.0, 8.0, 4.0)),
+    ("block", "Block_West", (-21000.0, 0.0, 200.0), (8.0, 8.0, 4.0)),
+    ("block", "Block_North", (0.0, 21000.0, 200.0), (8.0, 8.0, 4.0)),
+    ("block", "Block_South", (0.0, -21000.0, 200.0), (8.0, 8.0, 4.0)),
 ), (
-    (0.0, 1000.0, 10000), (0.0, -1000.0, 10000),
+    (0.0, 3000.0, 10000), (0.0, -3000.0, 10000),
 ))
 
-# 240 x 240 m, six bases on a ring, each opposite another. A peak stands between every two neighbouring bases and six
+# 720 x 720 m, six bases on a ring, each opposite another. A peak stands between every two neighbouring bases and six
 # rocks ring the middle; a supply source lies in front of each peak.
-SIX_PEAKS_MAP = SkirmishMap("/Game/Maps/L_SixPeaks", 12000.0, ring_spots(9000.0, (180.0, 0.0, 240.0, 60.0, 120.0, 300.0)), (
-    *(("block", f"Block_Peak{index}", (*ring(8000.0, 30.0 + 60.0 * index), 250.0), (8.0, 8.0, 5.0)) for index in range(6)),
-    *(("block", f"Block_Middle{index}", (*ring(3000.0, 60.0 * index), 150.0), (6.0, 6.0, 3.0)) for index in range(6)),
-), tuple((*ring(5500.0, 30.0 + 60.0 * index), 6000) for index in range(6)))
+SIX_PEAKS_MAP = SkirmishMap("/Game/Maps/L_SixPeaks", 36000.0, ring_spots(27000.0, (180.0, 0.0, 240.0, 60.0, 120.0, 300.0)), (
+    *(("block", f"Block_Peak{index}", (*ring(24000.0, 30.0 + 60.0 * index), 250.0), (8.0, 8.0, 5.0)) for index in range(6)),
+    *(("block", f"Block_Middle{index}", (*ring(9000.0, 60.0 * index), 150.0), (6.0, 6.0, 3.0)) for index in range(6)),
+), tuple((*ring(16500.0, 30.0 + 60.0 * index), 6000) for index in range(6)))
 
 
 def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
@@ -900,6 +981,7 @@ def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
     path = spec.path
     new_level(path)
 
+    check_map_lanes(spec)
     spawn_ground(spec.half_size, ground)
     for kind, label, location, scale in spec.obstacles:
         if kind == "wall":
@@ -919,12 +1001,10 @@ def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
         start.set_editor_property("player_start_tag", f"Team{spot}")
         forward = (math.cos(math.radians(yaw)), math.sin(math.radians(yaw)))
         # The units of a spot carry its number; the game mode hands them to the team playing from it.
-        spawn_units(builder, 2, spot, (x - 400.0 * forward[0], y - 400.0 * forward[1], 0.0), yaw)
-        # To the left of the base, seen from the middle.
-        spawn_supply_source((x - 50.0 * forward[0] - 2550.0 * forward[1], y - 50.0 * forward[1] + 2550.0 * forward[0], 0.0),
-                            5000, (3, 3), crate)
+        spawn_units(builder, 2, spot, (x - BASE_BUILDERS_BEHIND * forward[0], y - BASE_BUILDERS_BEHIND * forward[1], 0.0), yaw)
+        spawn_supply_source((*base_source(x, y, yaw), 0.0), 5000, crate)
     for x, y, amount in spec.sources:
-        spawn_supply_source((x, y, 0.0), amount, (3, 3), crate)
+        spawn_supply_source((x, y, 0.0), amount, crate)
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     world.get_world_settings().set_editor_property("default_game_mode", unreal.RTSSkirmishGameMode.static_class())
@@ -936,9 +1016,10 @@ def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
 
 def make_skirmish_map(spec, builder, wall, crate, ground, water):
     """Queues the level and then its preview."""
-    digest = spec_hash([build_skirmish_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_wall, spawn_units,
-                        spawn_supply_source, spawn_ground, spawn_water, spawn_lighting], spec, CUBE, builder, wall, crate, ground,
-                       water, material_hashes[ground], material_hashes[water], ENGINE_VERSION, NAV_CONFIG)
+    digest = spec_hash([build_skirmish_map, build_navigation, check_map_lanes, base_source, spawn, spawn_block, spawn_obstacle,
+                        spawn_wall, spawn_units, spawn_supply_source, spawn_ground, spawn_water, spawn_lighting], spec, BASE_LAYOUT,
+                       MAP_LANE_RULES, CUBE, builder, wall, crate, ground, water, material_hashes[ground], material_hashes[water],
+                       ENGINE_VERSION, NAV_CONFIG)
     plan_rebuild(spec.path, ".umap", lambda digest: build_skirmish_map(spec, builder, wall, crate, ground, water, digest), digest)
     make_map_preview(spec, digest)
 
@@ -1416,11 +1497,12 @@ def write_pending():
 if os.path.exists(READ_ONLY_REPORT):
     os.remove(READ_ONLY_REPORT)
 
-# Placeholder models (CC0, see Art/Source/Placeholder/CREDITS.md). The Kenney vehicles and characters face +Y once
-# imported; yaw turns them all to face +X. The tank is our own (Tools/Art/build_usa_tank_blender.py) and already faces
-# +X: only its house-colour panels take the full team colour.
-tank_mesh = make_art("Tank", "Original/usa_mbt.glb", tint={"Body": 0.15, "Dark": 0.0, "Detail": 0.0, "HouseColor": 0.9})
-infantry_mesh = make_art("Infantry", "Kenney/MiniCharacters/character-male-a.glb", yaw=-90.0)
+# Placeholder models (CC0, see Art/Source/Placeholder/CREDITS.md). The Kenney vehicles face +Y once imported; yaw turns
+# them to face +X. The tank and the soldier are our own (Tools/Art/build_usa_tank_blender.py, build_soldier_blender.py) and
+# already face +X: only their house-colour panels take the full team colour.
+OWN_MODEL_TINT = {"Body": 0.15, "Dark": 0.0, "Detail": 0.0, "HouseColor": 0.9}
+tank_mesh = make_art("Tank", "Original/usa_mbt.glb", tint=OWN_MODEL_TINT)
+infantry_mesh = make_art("Infantry", "Original/infantry_soldier.glb", tint=OWN_MODEL_TINT)
 truck_mesh = make_art("Truck", "Kenney/CarKit/delivery.glb", yaw=-90.0)
 builder_mesh = make_art("Builder", "Kenney/CarKit/tractor-shovel.glb", yaw=-90.0)
 power_plant_mesh = make_art("PowerPlant", "Kenney/CityKitIndustrial/building-m.glb")
@@ -1435,75 +1517,92 @@ crate_mesh = make_art("SupplyCrate", "Kenney/FactoryKit/box-wide.glb", tint=0.0)
 jet_mesh = make_art("Jet", "Quaternius/Spaceship/spaceship.glb", yaw=-90.0)
 airfield_mesh = make_art("Airfield", "Kenney/FactoryKit/box-wide.glb")
 
+
+def building_fit(mesh, footprint, height):
+    """A building's MeshScale: the mesh fills its footprint (1 m cells) less a 5 % border, stretched to the height the
+    standard gives that kind of building (WORLD_SCALE_STANDARD.md section 3; rule 2 forbids stretching units only)."""
+    return fit_scale(mesh, footprint[0] * 95.0, footprint[1] * 95.0, height)
+
+
+# Real-scale sizes, speeds and ranges (WORLD_SCALE_STANDARD.md sections 3 and 5, PLACEHOLDER_SCALE_AUDIT.md). Vehicles and
+# infantry are real size with a uniform scale: each fit box is the standard's length x width for that class, and the
+# placeholder's proportions decide which side binds.
 # A defence outranges a standard tank by a quarter, so tanks take fire while they close in.
-TANK_RANGE = 1200.0
+TANK_RANGE = 6500.0
 TOWER_RANGE_OVER_TANK = 1.25
 
-# Shell speed in cm/s, effect scale, shell colour; the grenade lobs.
-cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 6000.0, 1.6, (1.0, 0.45, 0.1))
-rifle = make_weapon("DA_TestRifle", 700.0, 8.0, 0.5, 9000.0, 0.4, (1.0, 0.85, 0.3))
-tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 260.0, 150.0), 90.0, 200.0, cannon, 600.0,
-                 180.0, 700, 10.0)
+# Shell speed in cm/s, effect scale, shell colour; the grenade lobs. Shell speeds grew with the ranges, so a shot still
+# flies 0.2 to 1 s.
+cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 30000.0, 1.6, (1.0, 0.45, 0.1))
+rifle = make_weapon("DA_TestRifle", 3500.0, 8.0, 0.5, 45000.0, 0.4, (1.0, 0.85, 0.3))
+# A main battle tank, 9.8 x 3.7 m with its gun forward; the placeholder's long gun lets the width bind.
+tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 1080.0, 370.0), 200.0, cannon, 1100.0, 75.0,
+                 700, 10.0)
 # A heavier second tank to try out. It wears the standard tank's model here; on a machine with the local Abrams art,
 # import_local_art.py gives it that model and its traversing turret.
-heavy_cannon = make_weapon("DA_TestHeavyCannon", TANK_RANGE, 60.0, 2.5, 6500.0, 2.0, (1.0, 0.4, 0.08))
-abrams = make_unit("DA_TestAbrams", "Test Abrams", tank_mesh, fit_scale(tank_mesh, 290.0, 160.0), 100.0, 350.0, heavy_cannon,
-                   500.0, 150.0, 1100, 14.0)
-# The M20 Guardian at its real size, to try the Blender to Unreal pipeline out: the heavy tank's weapon, speed and cost,
-# and a turret that traverses at 45 degrees a second. No building offers it; two stand in L_TestMap.
+heavy_cannon = make_weapon("DA_TestHeavyCannon", TANK_RANGE, 60.0, 2.5, 32500.0, 2.0, (1.0, 0.4, 0.08))
+abrams = make_unit("DA_TestAbrams", "Test Abrams", tank_mesh, fit_scale(tank_mesh, 1080.0, 380.0), 350.0, heavy_cannon,
+                   1000.0, 60.0, 1100, 14.0)
+# The M20 Guardian at its real size (7.1 m hull), to try the Blender to Unreal pipeline out: the heavy tank's weapon and
+# cost, a light tank's speed and turn rate, and a turret that traverses at 45 degrees a second. No building offers it;
+# two stand in L_TestMap.
 m20_mesh, m20_parts = make_m20_guardian()
-m20 = make_unit("DA_TestM20Guardian", "Test M20 Guardian", m20_mesh, (1.0, 1.0, 1.0), 400.0, 350.0, heavy_cannon, 500.0, 150.0,
+m20 = make_unit("DA_TestM20Guardian", "Test M20 Guardian", m20_mesh, (1.0, 1.0, 1.0), 350.0, heavy_cannon, 1250.0, 100.0,
                 1100, 14.0)
 add_properties(m20, dict(m20_parts, turret_turn_rate=45.0))
-# Infantry stays narrower than the infantry nav agent (radius 40 cm, WORLD_SCALE_STANDARD.md), arms and all, so it walks that navmesh.
-infantry = make_unit("DA_TestInfantry", "Test Infantry", infantry_mesh, fit_scale(infantry_mesh, 100.0, 70.0), 30.0, 100.0,
-                     rifle, 350.0, 540.0, 150, 4.0)
-grenade = make_weapon("DA_TestGrenade", 600.0, 25.0, 1.5, 1500.0, 1.0, (1.0, 0.6, 0.2), arc_height=250.0)
-grenadier = make_unit("DA_TestGrenadier", "Test Grenadier", infantry_mesh, fit_scale(infantry_mesh, 130.0, 78.0), 35.0, 120.0,
-                      grenade, 320.0, 540.0, 300, 6.0)
+# Infantry is 1.8 m tall and narrower than the infantry nav agent (radius 40 cm), rifle and all, so it walks that navmesh.
+INFANTRY_HEIGHT = 180.0
+infantry = make_unit("DA_TestInfantry", "Test Infantry", infantry_mesh, fit_height(infantry_mesh, INFANTRY_HEIGHT), 100.0,
+                     rifle, 450.0, 540.0, 150, 4.0)
+grenade = make_weapon("DA_TestGrenade", 3000.0, 25.0, 1.5, 7500.0, 1.0, (1.0, 0.6, 0.2), arc_height=800.0)
+grenadier = make_unit("DA_TestGrenadier", "Test Grenadier", infantry_mesh, fit_height(infantry_mesh, INFANTRY_HEIGHT), 120.0,
+                      grenade, 420.0, 540.0, 300, 6.0)
 rifle_training = make_upgrade("DA_TestRifleTraining", "Test Rifle Training", 400, 8.0, unreal.RTSUpgradeStat.WEAPON_DAMAGE, 1.5,
                               [infantry])
 # The grenadier comes only once the barracks has researched rifle training.
 add_properties(grenadier, {"prerequisites": [rifle_training]})
 # The tower hits ground and air alike; the flak truck only aircraft in flight, the jet's missiles only the ground.
-tower_gun = make_weapon("DA_TestTowerGun", TANK_RANGE * TOWER_RANGE_OVER_TANK, 30.0, 1.0, 7000.0, 1.2, (0.4, 0.8, 1.0),
+tower_gun = make_weapon("DA_TestTowerGun", TANK_RANGE * TOWER_RANGE_OVER_TANK, 30.0, 1.0, 35000.0, 1.2, (0.4, 0.8, 1.0),
                         air=True)
-flak = make_weapon("DA_TestFlak", 1400.0, 25.0, 0.6, 8000.0, 0.8, (0.9, 0.9, 0.5), ground=False, air=True)
-flak_truck = make_unit("DA_TestFlakTruck", "Test Flak Truck", truck_mesh, fit_scale(truck_mesh, 200.0, 120.0), 75.0, 250.0,
-                       flak, 450.0, 360.0, 800, 8.0)
-missiles = make_weapon("DA_TestJetMissiles", 900.0, 60.0, 1.0, 4000.0, 1.2, (1.0, 0.3, 0.2))
-# Four missiles a sortie, eight seconds on its pad to rearm.
-jet = make_aircraft("DA_TestJet", "Test Jet", jet_mesh, fit_scale(jet_mesh, 180.0, 150.0), 70.0, 150.0, missiles, 1500.0,
-                    100.0, 1200, 12.0, 900.0, 500.0, 45.0, 4, 8.0)
-power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", power_plant_mesh, fit_scale(power_plant_mesh, 380.0, 380.0),
-                            (4, 4), 800.0, None, 800, 6.0, 5, 0)
-tower = make_building("DA_TestTower", "Test Tower", tower_mesh, fit_scale(tower_mesh, 160.0, 160.0, 260.0), (2, 2), 500.0,
+flak = make_weapon("DA_TestFlak", 8000.0, 25.0, 0.6, 40000.0, 0.8, (0.9, 0.9, 0.5), ground=False, air=True)
+# An air-defence truck, 7.0 x 2.5 m; the van's proportions let the width bind.
+flak_truck = make_unit("DA_TestFlakTruck", "Test Flak Truck", truck_mesh, fit_scale(truck_mesh, 700.0, 250.0), 250.0,
+                       flak, 1400.0, 75.0, 800, 8.0)
+missiles = make_weapon("DA_TestJetMissiles", 5000.0, 60.0, 1.0, 20000.0, 1.2, (1.0, 0.3, 0.2))
+# A fighter compressed to 0.6x, 10 m long with a 7 m span. Four missiles a sortie, eight seconds on its pad to rearm.
+jet = make_aircraft("DA_TestJet", "Test Jet", jet_mesh, fit_scale(jet_mesh, 1000.0, 700.0), 150.0, missiles, 4000.0,
+                    75.0, 1200, 12.0, 3000.0, 1200.0, 45.0, 4, 8.0)
+power_plant = make_building("DA_TestPowerPlant", "Test Power Plant", power_plant_mesh,
+                            building_fit(power_plant_mesh, (20, 20), 1400.0), (20, 20), 800.0, None, 800, 6.0, 5, 0)
+tower = make_building("DA_TestTower", "Test Tower", tower_mesh, building_fit(tower_mesh, (6, 6), 1100.0), (6, 6), 500.0,
                       tower_gun, 600, 3.0, 0, 2, requires_power=True, defense=True)
-harvester = make_harvester("DA_TestHarvester", "Test Harvester", truck_mesh, fit_scale(truck_mesh, 180.0, 110.0), 70.0,
-                           300.0, 450.0, 360.0, 600, 8.0, 100, 3.0, 6000.0)
+# A heavy supply truck, 10 x 2.5 m; the van's proportions let the width bind at about 5.4 m long (accepted in the audit).
+harvester = make_harvester("DA_TestHarvester", "Test Harvester", truck_mesh, fit_scale(truck_mesh, 1000.0, 250.0),
+                           300.0, 1300.0, 60.0, 600, 8.0, 100, 3.0, 20000.0)
 # The depot brings one harvester and produces replacements, so a lost harvester needs no vehicle factory.
 supply_depot = make_building("DA_TestSupplyDepot", "Test Supply Depot", supply_depot_mesh,
-                             fit_scale(supply_depot_mesh, 280.0, 280.0), (3, 3), 1000.0, None, 1500, 5.0, 0, 1,
+                             building_fit(supply_depot_mesh, (16, 16), 900.0), (16, 16), 1000.0, None, 1500, 5.0, 0, 1,
                              spawn_on_complete=harvester, accepts_supply=True, units=[harvester])
-builder = make_builder("DA_TestBuilder", "Test Builder", builder_mesh, fit_scale(builder_mesh, 150.0, 100.0), 60.0, 300.0,
-                       500.0, 360.0, 1000, 10.0, [])
-barracks = make_building("DA_TestBarracks", "Test Barracks", barracks_mesh, fit_scale(barracks_mesh, 280.0, 280.0), (3, 3),
-                         800.0, None, 500, 5.0, 0, 1, units=[infantry, grenadier], upgrades=[rifle_training])
+# An engineering vehicle, 6.5 x 3.0 m.
+builder = make_builder("DA_TestBuilder", "Test Builder", builder_mesh, fit_scale(builder_mesh, 650.0, 300.0), 300.0,
+                       1100.0, 90.0, 1000, 10.0, [])
+barracks = make_building("DA_TestBarracks", "Test Barracks", barracks_mesh, building_fit(barracks_mesh, (16, 16), 700.0),
+                         (16, 16), 800.0, None, 500, 5.0, 0, 1, units=[infantry, grenadier], upgrades=[rifle_training])
 vehicle_factory = make_building("DA_TestVehicleFactory", "Test Vehicle Factory", vehicle_factory_mesh,
-                                fit_scale(vehicle_factory_mesh, 380.0, 380.0), (4, 4), 1200.0, None, 1200, 8.0, 0, 2,
+                                building_fit(vehicle_factory_mesh, (24, 24), 1300.0), (24, 24), 1200.0, None, 1200, 8.0, 0, 2,
                                 units=[tank, abrams, harvester, flak_truck])
-# Four pads side by side on a low slab; each jet it produces parks on one.
-airfield = make_building("DA_TestAirfield", "Test Airfield", airfield_mesh, fit_scale(airfield_mesh, 380.0, 780.0, 40.0), (4, 8),
-                         1500.0, None, 1000, 10.0, 0, 2, units=[jet], airfield_pads=4)
+# Four pads of 12 x 24 m side by side on a low slab; each jet it produces parks on one.
+airfield = make_building("DA_TestAirfield", "Test Airfield", airfield_mesh, building_fit(airfield_mesh, (24, 48), 100.0),
+                         (24, 48), 1500.0, None, 1000, 10.0, 0, 2, units=[jet], airfield_pads=4)
 # Every team starts with one at its PlayerStart and may own only one; a team that lost it builds it again.
 headquarters = make_building("DA_TestHeadquarters", "Test Headquarters", headquarters_mesh,
-                             fit_scale(headquarters_mesh, 380.0, 380.0), (4, 4), 3000.0, None, 2500, 12.0, 0, 0,
+                             building_fit(headquarters_mesh, (28, 28), 2200.0), (28, 28), 3000.0, None, 2500, 12.0, 0, 0,
                              units=[builder], max_count=1)
-# The tower's spire scaled up. Two minutes to charge; three seconds after launch the strike lands, 15 m across at full
+# The tower's spire scaled up. Two minutes to charge; three seconds after launch the strike lands, 80 m across at full
 # damage near the centre and a quarter of it at the edge. One per team.
-superweapon = make_building("DA_TestSuperweapon", "Test Superweapon", tower_mesh, fit_scale(tower_mesh, 380.0, 380.0, 700.0),
-                            (4, 4), 2000.0, None, 3000, 30.0, 0, 3, max_count=1,
-                            superweapon=(120.0, 3.0, 1500.0, 1500.0, 0.25))
+superweapon = make_building("DA_TestSuperweapon", "Test Superweapon", tower_mesh, building_fit(tower_mesh, (24, 24), 3200.0),
+                            (24, 24), 2000.0, None, 3000, 30.0, 0, 3, max_count=1,
+                            superweapon=(120.0, 3.0, 4000.0, 1500.0, 0.25))
 buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory, headquarters, airfield, superweapon]
 # The headquarters produces the builder, which builds the rest.
 add_properties(builder, {"buildings": buildings})

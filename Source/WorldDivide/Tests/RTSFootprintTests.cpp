@@ -271,10 +271,19 @@ namespace RTSFootprintTests
 	{
 		const FRTSTestWorld TestWorld;
 		const ARTSCameraPawn* Camera = GetDefault<ARTSCameraPawn>();
-		// A close look, the default, between and the farthest zoom; closer than about 10 m the camera is inside an M20.
-		const float Zooms[] = { 1000.f, Camera->GetDefaultZoom(), (Camera->GetDefaultZoom() + Camera->GetMaxZoom()) * 0.5f, Camera->GetMaxZoom() };
+		// A close look, the default, between and the farthest zoom. The close look keeps the camera a quarter of the longest
+		// hull beyond it, or 10 m, whichever is further: closer than about 10 m the camera is inside an M20.
+		const TArray<FUnitCase> Cases = LoadCases(*this);
+		float Longest = 0.f;
+		for (const FUnitCase& Case : Cases)
+		{
+			const FRTSUnitShape Shape = RTSUnitShape::FromData(*Case.Data);
+			Longest = FMath::Max(Longest, 2.f * Shape.GetHalfLength());
+		}
+		const float Zooms[] = { FMath::Max(1000.f, 1.25f * Longest), Camera->GetDefaultZoom(), (Camera->GetDefaultZoom() + Camera->GetMaxZoom()) * 0.5f,
+			Camera->GetMaxZoom() };
 		const float TopDownPitch = Camera->GetPitchForZoom(Camera->GetMaxZoom());
-		for (const FUnitCase& Case : LoadCases(*this))
+		for (const FUnitCase& Case : Cases)
 		{
 			for (const float UnitYaw : { 0.f, 45.f, 90.f })
 			{

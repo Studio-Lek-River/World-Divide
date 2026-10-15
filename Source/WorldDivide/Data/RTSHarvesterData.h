@@ -21,5 +21,5 @@ public:
 
 	/** How far from where it stands the harvester looks for another source once its own runs dry, in cm. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Harvest", meta = (ClampMin = "0"))
-	float SearchRadius = 6000.f;
+	float SearchRadius = 20000.f;
 };

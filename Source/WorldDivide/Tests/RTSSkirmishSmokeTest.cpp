@@ -3,7 +3,9 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "AI/RTSAIPlayer.h"
+#include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
+#include "Data/RTSBuildingData.h"
 #include "Core/RTSGameInstance.h"
 #include "Core/RTSGameMode.h"
 #include "Core/RTSGameState.h"
@@ -64,8 +66,15 @@ namespace RTSSkirmishSmokeTest
 	constexpr int32 TeamSpots[] = { 3, 1, 0 };
 	constexpr int32 EmptySpot = 2;
 
-	/** Within this of its start spot a building belongs to that base. */
-	constexpr float BaseRadius = 1500.f;
+	/**
+	 * Within this of its start spot a building belongs to that base: the headquarters' half diagonal and the AI's lane
+	 * around it, which no other building of that base stands closer than.
+	 */
+	float GetBaseRadius()
+	{
+		const URTSBuildingData* Headquarters = LoadObject<URTSBuildingData>(nullptr, TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters"));
+		return (Headquarters ? RTSBuildPlacement::GetFootprintExtent(Headquarters->Footprint).Size2D() : 0.f) + ARTSAIPlayer::GetBuildingGap();
+	}
 	constexpr double SessionTimeout = 60.0;
 	constexpr double ReplicationTimeout = 15.0;
 	/** Game seconds for the AI to issue its first order. */
@@ -131,6 +140,7 @@ namespace RTSSkirmishSmokeTest
 	int32 Count(UWorld& World, int32 TeamId, int32 Spot = INDEX_NONE)
 	{
 		const APlayerStart* Start = Spot == INDEX_NONE ? nullptr : FindSpot(World, Spot);
+		const float BaseRadius = GetBaseRadius();
 		int32 Result = 0;
 		for (TActorIterator<ActorType> It(&World); It; ++It)
 		{

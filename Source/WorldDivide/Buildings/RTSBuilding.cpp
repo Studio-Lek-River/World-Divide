@@ -36,7 +36,11 @@ namespace
 	/** Collision height when the data has no mesh. */
 	constexpr float DefaultHeight = 200.f;
 
-	/** A producer's rally point starts this far outside the exit edge, so finished units clear the spawn spot. */
+	/**
+	 * A producer's rally point starts at the end of its exit lane (RTSBuildPlacement::GetExitLaneLength), a hull length past
+	 * where its widest unit spawns, so finished units clear the spawn spot; this far outside the exit edge for a building
+	 * that sends out no ground unit.
+	 */
 	constexpr float DefaultRallyDistance = 400.f;
 
 	/** Units held short of a new building go on regardless once its navmesh hole takes this long. */
@@ -214,7 +218,8 @@ void ARTSBuilding::UpdateConstruction(float DeltaSeconds)
 			RefreshWeapon();
 		}
 		SpawnCompletionUnit();
-		ProductionComponent->SetRallyPoint(GetExitLocation(DefaultRallyDistance));
+		const float ExitLane = RTSBuildPlacement::GetExitLaneLength(*BuildingData);
+		ProductionComponent->SetRallyPoint(GetExitLocation(ExitLane > 0.f ? ExitLane : DefaultRallyDistance));
 		if (SuperweaponComponent->IsSuperweapon())
 		{
 			SuperweaponComponent->StartCharging();

@@ -233,6 +233,8 @@ namespace RTSAITests
 	{
 		const FRTSTestWorld TestWorld;
 		TestWorld.SpawnGameState();
+		// Laid out in DefenseRadius: what counts as near the base follows the AI's own radius.
+		const float R = ARTSAIPlayer::DefenseRadius;
 		URTSWeaponData* Weapon = MakeWeapon();
 		URTSUnitData* Tank = MakeUnit(700, Weapon);
 		URTSBuilderData* Builder = NewObject<URTSBuilderData>();
@@ -241,14 +243,14 @@ namespace RTSAITests
 		Harvester->Weapon = Weapon;
 
 		ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
-		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-3000.f, 0.f, 0.f));
-		SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(3000.f, 0.f, 0.f));
+		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-1.2f * R, 0.f, 0.f));
+		SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(1.2f * R, 0.f, 0.f));
 		// Armed builders and harvesters keep working; only the rest is army.
-		TestWorld.SpawnUnit(Builder, AITeam, FVector(2500.f, 600.f, 0.f));
-		TestWorld.SpawnUnit(Harvester, AITeam, FVector(2500.f, -600.f, 0.f));
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(2000.f, 0.f, 0.f));
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(2000.f, 300.f, 0.f));
-		TestWorld.SpawnUnit(Tank, PlayerTeam, FVector(-2000.f, 0.f, 0.f));
+		TestWorld.SpawnUnit(Builder, AITeam, FVector(1.0f * R, 600.f, 0.f));
+		TestWorld.SpawnUnit(Harvester, AITeam, FVector(1.0f * R, -600.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.8f * R, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.8f * R, 300.f, 0.f));
+		TestWorld.SpawnUnit(Tank, PlayerTeam, FVector(-0.8f * R, 0.f, 0.f));
 
 		FRTSAIWaveSettings Settings;
 		Settings.Size = 3;
@@ -258,7 +260,7 @@ namespace RTSAITests
 
 		AI->Think(10.f);
 		TestEqual(TEXT("Two tanks are no full wave, and the interval has not passed"), AI->GetWaveCount(), 0);
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(2000.f, -300.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.8f * R, -300.f, 0.f));
 		AI->Think(1.f);
 		TestEqual(TEXT("A third tank fills the wave"), AI->GetWaveCount(), 1);
 		const TArray<ARTSUnit*> Wave = AI->GetWaveUnits();
@@ -269,8 +271,8 @@ namespace RTSAITests
 			TestEqual(TEXT("Of the AI's team"), Unit->GetTeamId(), AITeam);
 		}
 
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(1800.f, 0.f, 0.f));
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(1800.f, 300.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.72f * R, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.72f * R, 300.f, 0.f));
 		AI->Think(10.f);
 		TestEqual(TEXT("Two new tanks wait for the interval"), AI->GetWaveCount(), 1);
 		AI->Think(20.f);
@@ -316,15 +318,17 @@ namespace RTSAITests
 	{
 		const FRTSTestWorld TestWorld;
 		TestWorld.SpawnGameState();
+		// Laid out in DefenseRadius: what counts as near the base follows the AI's own radius.
+		const float R = ARTSAIPlayer::DefenseRadius;
 		URTSUnitData* Tank = MakeUnit(700, MakeWeapon());
 
 		ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
-		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-3000.f, 0.f, 0.f));
-		SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(3000.f, 0.f, 0.f));
-		ARTSUnit* Enemy = TestWorld.SpawnUnit(Tank, PlayerTeam, FVector(-2000.f, 0.f, 0.f));
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 0.f, 0.f));
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 300.f, 0.f));
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, -300.f, 0.f));
+		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-1.2f * R, 0.f, 0.f));
+		SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(1.2f * R, 0.f, 0.f));
+		ARTSUnit* Enemy = TestWorld.SpawnUnit(Tank, PlayerTeam, FVector(-0.8f * R, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.6f * R, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.6f * R, 300.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.6f * R, -300.f, 0.f));
 
 		FRTSAIWaveSettings Settings;
 		Settings.Size = 3;
@@ -340,14 +344,14 @@ namespace RTSAITests
 
 		// One wave tank is well on its way; two new tanks gather, too few for a wave.
 		ARTSUnit* FarWaveUnit = Wave[0];
-		FarWaveUnit->SetActorLocation(FVector(-1500.f, 0.f, 0.f));
-		ARTSUnit* ArmyA = TestWorld.SpawnUnit(Tank, AITeam, FVector(1800.f, 0.f, 0.f));
-		ARTSUnit* ArmyB = TestWorld.SpawnUnit(Tank, AITeam, FVector(1800.f, 300.f, 0.f));
+		FarWaveUnit->SetActorLocation(FVector(-0.6f * R, 0.f, 0.f));
+		ARTSUnit* ArmyA = TestWorld.SpawnUnit(Tank, AITeam, FVector(0.72f * R, 0.f, 0.f));
+		ARTSUnit* ArmyB = TestWorld.SpawnUnit(Tank, AITeam, FVector(0.72f * R, 300.f, 0.f));
 		AI->Think(1.f);
 		TestFalse(TEXT("Still no threat"), AI->IsDefending());
 		TestEqual(TEXT("Nobody defends"), AI->GetDefenders().Num(), 0);
 
-		Enemy->SetActorLocation(FVector(2000.f, 1500.f, 0.f));
+		Enemy->SetActorLocation(FVector(0.8f * R, 0.6f * R, 0.f));
 		const int32 IssuedBefore = AI->GetIssuedCommandCount();
 		AI->Think(1.f);
 		TestTrue(TEXT("An enemy near its building puts the AI on the defence"), AI->IsDefending());
@@ -387,15 +391,17 @@ namespace RTSAITests
 	{
 		const FRTSTestWorld TestWorld;
 		TestWorld.SpawnGameState();
+		// Laid out in DefenseRadius: what counts as near the base follows the AI's own radius.
+		const float R = ARTSAIPlayer::DefenseRadius;
 		URTSUnitData* Tank = MakeUnit(700, MakeWeapon());
 
 		ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
-		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-6000.f, 0.f, 0.f));
-		ARTSBuilding* Base = SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(3000.f, 0.f, 0.f));
+		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-2.4f * R, 0.f, 0.f));
+		ARTSBuilding* Base = SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(1.2f * R, 0.f, 0.f));
 		// Well outside DefenseRadius of the AI's only building.
-		ARTSUnit* Shooter = TestWorld.SpawnUnit(Tank, PlayerTeam, FVector(-500.f, 0.f, 0.f));
-		ARTSUnit* Friend = TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 0.f, 0.f));
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 300.f, 0.f));
+		ARTSUnit* Shooter = TestWorld.SpawnUnit(Tank, PlayerTeam, FVector(-0.2f * R, 0.f, 0.f));
+		ARTSUnit* Friend = TestWorld.SpawnUnit(Tank, AITeam, FVector(0.6f * R, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.6f * R, 300.f, 0.f));
 
 		// Waves out of reach, so only the defence moves the army.
 		FRTSAIWaveSettings Settings;
@@ -434,18 +440,20 @@ namespace RTSAITests
 	{
 		const FRTSTestWorld TestWorld;
 		TestWorld.SpawnGameState();
+		// Laid out in DefenseRadius: what counts as near the base follows the AI's own radius.
+		const float R = ARTSAIPlayer::DefenseRadius;
 		URTSUnitData* Tank = MakeUnit(700, MakeWeapon());
 		URTSBuildingData* Defence = MakeBuilding();
 		Defence->Weapon = MakeWeapon();
 
 		ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
 		// Keeps the match going once the tower falls.
-		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-6000.f, 0.f, 0.f));
-		ARTSBuilding* Base = SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(3000.f, 0.f, 0.f));
+		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-2.4f * R, 0.f, 0.f));
+		ARTSBuilding* Base = SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(1.2f * R, 0.f, 0.f));
 		// Well outside DefenseRadius of the AI's only building.
-		ARTSBuilding* Tower = SpawnCompleted(TestWorld, Defence, PlayerTeam, FVector(-500.f, 0.f, 0.f));
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 0.f, 0.f));
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(1500.f, 300.f, 0.f));
+		ARTSBuilding* Tower = SpawnCompleted(TestWorld, Defence, PlayerTeam, FVector(-0.2f * R, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.6f * R, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.6f * R, 300.f, 0.f));
 
 		// Waves out of reach, so only the defence moves the army.
 		FRTSAIWaveSettings Settings;
@@ -495,22 +503,24 @@ namespace RTSAITests
 	{
 		const FRTSTestWorld TestWorld;
 		TestWorld.SpawnGameState();
+		// Laid out in DefenseRadius: what counts as near the base follows the AI's own radius.
+		const float R = ARTSAIPlayer::DefenseRadius;
 		URTSWeaponData* Weapon = MakeWeapon();
 		URTSUnitData* Tank = MakeUnit(700, Weapon);
 		URTSHarvesterData* HarvesterData = NewObject<URTSHarvesterData>();
 		HarvesterData->MaxHealth = 100.f;
 
 		ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
-		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-12000.f, 0.f, 0.f));
-		SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(3000.f, 0.f, 0.f));
+		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-4.8f * R, 0.f, 0.f));
+		SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(1.2f * R, 0.f, 0.f));
 		// A harvester at a distant source, well outside DefenseRadius of the AI's only building, with an enemy beside it.
-		ARTSUnit* Harvester = TestWorld.SpawnUnit(HarvesterData, AITeam, FVector(-8000.f, 0.f, 0.f));
-		ARTSUnit* Shooter = TestWorld.SpawnUnit(Tank, PlayerTeam, FVector(-8000.f, 400.f, 0.f));
+		ARTSUnit* Harvester = TestWorld.SpawnUnit(HarvesterData, AITeam, FVector(-3.2f * R, 0.f, 0.f));
+		ARTSUnit* Shooter = TestWorld.SpawnUnit(Tank, PlayerTeam, FVector(-3.2f * R, 400.f, 0.f));
 		// Two tanks nearer the harvester than the other two.
-		ARTSUnit* Near1 = TestWorld.SpawnUnit(Tank, AITeam, FVector(1000.f, 0.f, 0.f));
-		ARTSUnit* Near2 = TestWorld.SpawnUnit(Tank, AITeam, FVector(1000.f, 300.f, 0.f));
-		ARTSUnit* Far = TestWorld.SpawnUnit(Tank, AITeam, FVector(2000.f, 0.f, 0.f));
-		TestWorld.SpawnUnit(Tank, AITeam, FVector(2000.f, 300.f, 0.f));
+		ARTSUnit* Near1 = TestWorld.SpawnUnit(Tank, AITeam, FVector(0.4f * R, 0.f, 0.f));
+		ARTSUnit* Near2 = TestWorld.SpawnUnit(Tank, AITeam, FVector(0.4f * R, 300.f, 0.f));
+		ARTSUnit* Far = TestWorld.SpawnUnit(Tank, AITeam, FVector(0.8f * R, 0.f, 0.f));
+		TestWorld.SpawnUnit(Tank, AITeam, FVector(0.8f * R, 300.f, 0.f));
 
 		// Waves out of reach, so only the response moves the army.
 		FRTSAIWaveSettings Settings;

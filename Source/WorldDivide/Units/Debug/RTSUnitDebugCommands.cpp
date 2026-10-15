@@ -31,6 +31,7 @@
 #include "UnrealClient.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitShape.h"
 #include "WorldDivide.h"
 
 /**
@@ -89,13 +90,12 @@ namespace RTSUnitDebugCommands
 	constexpr double DriveSeconds = 2.5;
 
 	/**
-	 * The stress grid: columns along X by rows along Y, spaced for a tank's length and width, centred here. Bigger units
-	 * stand further apart, clear of each other's selection circle, so the avoidance does not keep pushing them.
+	 * The stress grid, as rts.Debug.Bench lays its grid out: units facing +X, each its hull's length plus StressRowGap apart
+	 * along X and its width plus StressColumnGap apart along Y, about square overall, centred on L_TestMap's empty north strip.
 	 */
-	constexpr int32 StressColumns = 24;
-	const FVector2D StressSpacing(800.f, 500.f);
-	constexpr float StressClearance = 2.05f;
-	const FVector StressCentre(0.f, 6200.f, 0.f);
+	constexpr float StressRowGap = 300.f;
+	constexpr float StressColumnGap = 250.f;
+	const FVector StressCentre(0.f, 18600.f, 0.f);
 
 	/** The obstacle shots: the unit starts this far out from the obstacle's edge and is ordered into its middle. */
 	const TCHAR* ObstacleBlockLabel = TEXT("Block_North");
@@ -103,7 +103,7 @@ namespace RTSUnitDebugCommands
 	constexpr double ObstacleSeconds = 6.0;
 	/** The building shot's vehicle factory, placed on the empty south strip when the shots are planned. */
 	const TCHAR* ObstacleBuildingPath = TEXT("/Game/Data/Buildings/DA_TestVehicleFactory.DA_TestVehicleFactory");
-	const FVector ObstacleBuildingSpot(-2000.f, -6500.f, 0.f);
+	const FVector ObstacleBuildingSpot(-6000.f, -19500.f, 0.f);
 
 	/** Lines a little above the ground, so the footprint and the clearance do not sink into it. */
 	constexpr float ShapeLift = 5.f;
@@ -622,13 +622,15 @@ namespace RTSUnitDebugCommands
 
 		void SpawnStressGrid()
 		{
-			const int32 Rows = FMath::DivideAndRoundUp(StressCount, StressColumns);
-			const FVector2D Spacing = FVector2D::Max(StressSpacing, FVector2D(Unit->GetSelectionRadius() * StressClearance));
-			const FVector2D Size((StressColumns - 1) * Spacing.X, (Rows - 1) * Spacing.Y);
+			const FRTSUnitShape Shape = RTSUnitShape::FromData(*Unit->GetUnitData());
+			const FVector2D Spacing(2.f * Shape.GetHalfLength() + StressRowGap, 2.f * Shape.GetHalfWidth() + StressColumnGap);
+			const int32 Columns = FMath::Max(1, FMath::CeilToInt(FMath::Sqrt(StressCount * Spacing.X / Spacing.Y)));
+			const int32 Rows = FMath::DivideAndRoundUp(StressCount, Columns);
+			const FVector2D Size((Rows - 1) * Spacing.X, (Columns - 1) * Spacing.Y);
 			for (int32 Index = 0; Index < StressCount; ++Index)
 			{
-				const FVector Location = StressCentre + FVector(Index % StressColumns * Spacing.X - Size.X / 2.f,
-					Index / StressColumns * Spacing.Y - Size.Y / 2.f, Unit->GetGroundOffset());
+				const FVector Location = StressCentre + FVector(Index / Columns * Spacing.X - Size.X / 2.f,
+					Index % Columns * Spacing.Y - Size.Y / 2.f, Unit->GetGroundOffset());
 				const FTransform Transform(FRotator::ZeroRotator, Location);
 				ARTSUnit* Spawned = World->SpawnActorDeferred<ARTSUnit>(ARTSUnit::StaticClass(), Transform);
 				Spawned->InitFromData(Unit->GetUnitData(), Unit->GetTeamId());

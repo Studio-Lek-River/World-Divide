@@ -33,7 +33,7 @@ public:
 
 	/** The world XY rectangle the preview covers. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Preview")
-	FBox2D PreviewArea = FBox2D(FVector2D(-10000.0), FVector2D(10000.0));
+	FBox2D PreviewArea = FBox2D(FVector2D(-30000.0), FVector2D(30000.0));
 
 	/** Where the PlayerStart tagged "Team<N>" is on the preview, at index N: 0..1 from the left and from the top. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Preview")

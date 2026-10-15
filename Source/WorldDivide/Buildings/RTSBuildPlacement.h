@@ -16,7 +16,7 @@ namespace RTSBuildPlacement
 	constexpr float GridSize = 100.f;
 
 	/** Gap between the footprint's exit edge and a unit spawned at the exit, beyond the unit's longer half. */
-	constexpr float ExitClearance = 80.f;
+	constexpr float ExitClearance = 200.f;
 
 	/**
 	 * The widest ground unit a building of Data sends out of its exit, produced or brought along, by the nav agent class it
@@ -26,6 +26,12 @@ namespace RTSBuildPlacement
 
 	/** How far in front of the building's centre a unit of Unit spawns: half the footprint, the unit's longer half and ExitClearance. */
 	WORLDDIVIDE_API float GetExitDistance(const URTSBuildingData& Data, const URTSUnitData& Unit);
+
+	/**
+	 * How far out from the exit edge the widest unit a building of Data sends out (GetWidestExitUnit) needs room: to where
+	 * it spawns, and on for its own length (what CanUnitsLeave checks). Zero when it sends out no ground unit.
+	 */
+	WORLDDIVIDE_API float GetExitLaneLength(const URTSBuildingData& Data);
 
 	/**
 	 * Whether the widest unit a building of Data sends out (GetWidestExitUnit) fits at its exit at Location, turned

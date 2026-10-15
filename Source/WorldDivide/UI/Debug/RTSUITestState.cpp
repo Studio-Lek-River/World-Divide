@@ -2,6 +2,7 @@
 
 #if !UE_BUILD_SHIPPING
 
+#include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Core/RTSPlayerState.h"
@@ -15,17 +16,21 @@
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSPlayerController.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitShape.h"
 
-const FVector RTSUITestState::Center(0.f, 7000.f, 0.f);
+const FVector RTSUITestState::Center(0.f, 21000.f, 0.f);
 const FName RTSUITestState::SpawnedTag(TEXT("RTSUITestState"));
 
 namespace
 {
-	/** The buildings stand in a row behind the units, this far apart, the first at RowStart. */
-	const FVector BuildingRowStart(-1400.f, 800.f, 0.f);
-	constexpr float BuildingSpacing = 700.f;
-	const FVector UnitRowStart(-750.f, -300.f, 0.f);
-	constexpr float UnitSpacing = 300.f;
+	/**
+	 * The buildings stand in a row along X behind the units, their footprints BuildingGap apart, the first from RowStart; the
+	 * units stand in a row in front, their hulls UnitGap apart.
+	 */
+	const FVector BuildingRowStart(-3000.f, 800.f, 0.f);
+	constexpr float BuildingGap = 800.f;
+	const FVector UnitRowStart(-1500.f, -600.f, 0.f);
+	constexpr float UnitGap = 300.f;
 	/** More towers than this and the faction's power draw is too small for the state. */
 	constexpr int32 MaxPowerDrawBuildings = 8;
 	constexpr float GroundSearchHeight = 5000.f;
@@ -166,16 +171,22 @@ bool RTSUITestState::Apply(ARTSPlayerController& Controller, FString& OutError)
 	Player->RecalculatePower();
 
 	const int32 TeamId = Player->GetTeamId();
-	int32 Slot = 0;
-	auto NextBuildingSpot = [&]() { return OnGround(*World, BuildingRowStart + FVector(BuildingSpacing * Slot++, 0.f, 0.f)); };
+	float BuildingRow = 0.f;
+	auto NextBuildingSpot = [&](const URTSBuildingData& Building)
+	{
+		const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Building.Footprint);
+		const FVector Spot = BuildingRowStart + FVector(BuildingRow + Extent.X, Extent.Y, 0.f);
+		BuildingRow += 2.f * Extent.X + BuildingGap;
+		return OnGround(*World, Spot);
+	};
 
-	SpawnConstructed(*World, *Data.PowerPlant, TeamId, NextBuildingSpot());
-	ARTSBuilding* Barracks = SpawnConstructed(*World, *Data.Barracks, TeamId, NextBuildingSpot());
+	SpawnConstructed(*World, *Data.PowerPlant, TeamId, NextBuildingSpot(*Data.PowerPlant));
+	ARTSBuilding* Barracks = SpawnConstructed(*World, *Data.Barracks, TeamId, NextBuildingSpot(*Data.Barracks));
 	ARTSBuilding* LastDraw = nullptr;
 	Player->RecalculatePower();
 	for (int32 Index = 0; Index < MaxPowerDrawBuildings && !Player->IsLowPower(); ++Index)
 	{
-		LastDraw = SpawnConstructed(*World, *Data.PowerDraw, TeamId, NextBuildingSpot());
+		LastDraw = SpawnConstructed(*World, *Data.PowerDraw, TeamId, NextBuildingSpot(*Data.PowerDraw));
 		Player->RecalculatePower();
 	}
 	if (!Barracks || !Player->IsLowPower())
@@ -202,10 +213,13 @@ bool RTSUITestState::Apply(ARTSPlayerController& Controller, FString& OutError)
 	Player->AddCredits(Credits - Player->GetCredits());
 
 	TArray<ARTSUnit*> Selection;
+	float UnitRow = 0.f;
 	for (int32 Index = 0; Index < SelectedUnits; ++Index)
 	{
 		URTSUnitData* UnitData = Index == 0 ? Data.Builder : Data.Units[(Index - 1) % Data.Units.Num()];
-		const FVector Location = OnGround(*World, UnitRowStart + FVector(UnitSpacing * Index, 0.f, 0.f));
+		const FRTSUnitShape Shape = RTSUnitShape::FromData(*UnitData);
+		const FVector Location = OnGround(*World, UnitRowStart + FVector(UnitRow + Shape.GetHalfLength(), 0.f, 0.f));
+		UnitRow += 2.f * Shape.GetHalfLength() + UnitGap;
 		if (ARTSUnit* Unit = SpawnUnit(*World, *UnitData, TeamId, Location))
 		{
 			Selection.Add(Unit);

@@ -2,6 +2,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
+#include "AI/RTSAIPlayer.h"
 #include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSProductionComponent.h"
@@ -30,6 +31,7 @@
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestFormation.h"
 #include "Tests/RTSTestMaps.h"
+#include "Tests/RTSTestScale.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
 
@@ -70,9 +72,14 @@ namespace RTSListenServerTest
 	constexpr double SessionTimeout = 60.0;
 	constexpr double MoveTimeout = 60.0;
 
-	/** The empty strip north of both bases, far out of range of every unit. */
-	const FVector HostBuildingSpot(0.f, 7000.f, 0.f);
-	const FVector ClientSiteSpot(-3000.f, 7000.f, 0.f);
+	/**
+	 * Where the test puts things on L_TestMap. Every spot comes from the map and the game's data once the session is up
+	 * (InitLayout, called by FRTSWaitForListenSession), so it moves with the scale (#136).
+	 */
+
+	/** The empty strip north of both bases, far out of range of every unit: midway between Block_North and the edge. */
+	FVector HostBuildingSpot;
+	FVector ClientSiteSpot;
 	const TCHAR* PowerPlantPath = TEXT("/Game/Data/Buildings/DA_TestPowerPlant.DA_TestPowerPlant");
 	constexpr double ReplicationTimeout = 15.0;
 	/** The client's builder walks from the middle of the map to its site before placing it. */
@@ -82,8 +89,8 @@ namespace RTSListenServerTest
 	/** The client's barracks stands north of its cancelled site, clear of the hole that site left; its infantry gather east of it. */
 	const TCHAR* BarracksPath = TEXT("/Game/Data/Buildings/DA_TestBarracks.DA_TestBarracks");
 	const TCHAR* InfantryPath = TEXT("/Game/Data/Units/DA_TestInfantry.DA_TestInfantry");
-	const FVector ClientBarracksSpot(-3000.f, 8500.f, 0.f);
-	const FVector ClientRallySpot(-1800.f, 8900.f, 0.f);
+	FVector ClientBarracksSpot;
+	FVector ClientRallySpot;
 	constexpr float RallyArrivalRadius = 250.f;
 	/** Without a power plant the client produces at the low-power rate. */
 	constexpr double ProductionTimeout = 60.0;
@@ -95,25 +102,27 @@ namespace RTSListenServerTest
 
 	/**
 	 * The client's tank attack-moves along the empty strip south of the bases, away from the units gathered at the host
-	 * building. The host infantry stands beside the lane, inside the tank's range as it passes but outside its own.
+	 * building. The host infantry stands beside the lane, inside the tank's range as it passes but outside its own. The tank
+	 * stops within half its hull of its target.
 	 */
 	const TCHAR* TankPath = TEXT("/Game/Data/Units/DA_TestTank.DA_TestTank");
-	const FVector ClientTankStart(-3000.f, -7000.f, 0.f);
-	const FVector ClientTankTarget(3000.f, -7000.f, 0.f);
-	const FVector HostInfantrySpot(0.f, -7900.f, 0.f);
-	constexpr float AttackMoveArrivalRadius = 150.f;
+	FVector ClientTankStart;
+	FVector ClientTankTarget;
+	FVector HostInfantrySpot;
+	float AttackMoveArrivalRadius = 0.f;
 	constexpr double AttackMoveTimeout = 60.0;
 
 	/**
 	 * The client's airfield stands at the east end of the south strip, by its own base; the jet's target, a host infantry, at
-	 * the west end, out of range of every unit. Without a power plant the client produces the jet at the low-power rate.
+	 * the west end, south of the strip and out of range of every unit. Without a power plant the client produces the jet at
+	 * the low-power rate.
 	 */
 	const TCHAR* AirfieldPath = TEXT("/Game/Data/Buildings/DA_TestAirfield.DA_TestAirfield");
 	const TCHAR* JetPath = TEXT("/Game/Data/Units/DA_TestJet.DA_TestJet");
-	const FVector ClientAirfieldSpot(6000.f, -8500.f, 0.f);
-	const FVector HostSortieTargetSpot(-2000.f, -9000.f, 0.f);
-	/** How high above its pad the client must see the jet, well into its climb to cruise altitude. */
-	constexpr float SortieClimbSeen = 400.f;
+	FVector ClientAirfieldSpot;
+	FVector HostSortieTargetSpot;
+	/** How high above its pad the client must see the jet, well into its climb: 40 % of its cruise altitude. */
+	float SortieClimbSeen = 0.f;
 	/** Replicated movement rounds locations to whole centimetres. */
 	constexpr float ReplicatedLocationTolerance = 5.f;
 	constexpr double JetProductionTimeout = 90.0;
@@ -124,9 +133,9 @@ namespace RTSListenServerTest
 	 * in the north-west corner, a strike's radius clear of everything else.
 	 */
 	const TCHAR* SuperweaponPath = TEXT("/Game/Data/Buildings/DA_TestSuperweapon.DA_TestSuperweapon");
-	const FVector ClientSuperweaponSpot(8000.f, 8000.f, 0.f);
-	const FVector ClientPlantSpots[] = { FVector(8000.f, 5500.f, 0.f), FVector(8000.f, 4500.f, 0.f) };
-	const FVector HostStrikeTargetSpot(-7500.f, 5500.f, 0.f);
+	FVector ClientSuperweaponSpot;
+	FVector ClientPlantSpots[2];
+	FVector HostStrikeTargetSpot;
 	/** Seconds by which the client's countdown may trail the server's: a few network updates at the test time dilation. */
 	constexpr float CountdownTolerance = 1.f;
 	/** Game seconds the client watches its countdown run before comparing it with the server's. */
@@ -140,6 +149,64 @@ namespace RTSListenServerTest
 
 	constexpr int32 HostTeam = 0;
 	constexpr int32 ClientTeam = 1;
+
+	/** Lays the spots out from the map in World and the test data. False, with the reason in OutError, when something is missing. */
+	bool InitLayout(const UWorld& World, FString& OutError)
+	{
+		const URTSUnitData* Tank = LoadObject<URTSUnitData>(nullptr, TankPath);
+		const URTSUnitData* Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
+		const URTSAircraftData* Jet = LoadObject<URTSAircraftData>(nullptr, JetPath);
+		const URTSBuildingData* Plant = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+		const URTSBuildingData* Barracks = LoadObject<URTSBuildingData>(nullptr, BarracksPath);
+		const URTSBuildingData* Airfield = LoadObject<URTSBuildingData>(nullptr, AirfieldPath);
+		const URTSBuildingData* Superweapon = LoadObject<URTSBuildingData>(nullptr, SuperweaponPath);
+		const float HalfSize = RTSTests::GetMapHalfSize(World);
+		const FBox2D Block = RTSTests::GetLabelledBox(World, TEXT("Block_North"));
+		const FName ClientTag(*FString::Printf(TEXT("Team%d"), ClientTeam));
+		const APlayerStart* ClientStart = nullptr;
+		for (TActorIterator<APlayerStart> It(&World); It; ++It)
+		{
+			ClientStart = It->PlayerStartTag == ClientTag ? *It : ClientStart;
+		}
+		if (!Tank || !Infantry || !Jet || !Plant || !Barracks || !Airfield || !Superweapon || HalfSize <= 0.f || !Block.bIsValid || !ClientStart)
+		{
+			OutError = TEXT("Missing test data, or L_TestMap lacks its NavMeshBoundsVolume, Block_North or the client's PlayerStart");
+			return false;
+		}
+
+		const FVector2D TankHull = RTSTests::GetHullSize(*Tank);
+		const float TankRange = RTSTests::GetRange(*Tank);
+		const float RifleRange = RTSTests::GetRange(*Infantry);
+		const FVector2D PlantExtent = RTSTests::GetFootprintExtent(*Plant);
+		const FVector2D BarracksExtent = RTSTests::GetFootprintExtent(*Barracks);
+		const FVector2D AirfieldExtent = RTSTests::GetFootprintExtent(*Airfield);
+		const FVector2D SuperweaponExtent = RTSTests::GetFootprintExtent(*Superweapon);
+		const float Lane = ARTSAIPlayer::GetBuildingGap();
+		const float StripY = FMath::RoundToFloat(0.5f * (Block.Max.Y + HalfSize) / RTSBuildPlacement::GridSize) * RTSBuildPlacement::GridSize;
+		const float Pitch = FMath::Max(AirfieldExtent.X, AirfieldExtent.Y) + PlantExtent.X + 2.f * Lane;
+		const float OutOfRange = PlantExtent.X + TankRange + 2.f * TankHull.X;
+
+		HostBuildingSpot = FVector(0.f, StripY, 0.f);
+		ClientSiteSpot = FVector(-Pitch, StripY, 0.f);
+		ClientBarracksSpot = ClientSiteSpot + FVector(0.f, PlantExtent.Y + BarracksExtent.Y + 2.f * Lane, 0.f);
+		ClientRallySpot = ClientBarracksSpot + FVector(BarracksExtent.X + 2.f * TankHull.X, 0.5f * BarracksExtent.Y, 0.f);
+
+		ClientTankStart = FVector(-OutOfRange, -StripY, 0.f);
+		ClientTankTarget = FVector(OutOfRange, -StripY, 0.f);
+		HostInfantrySpot = FVector(0.f, -StripY - 0.5f * (TankRange + RifleRange), 0.f);
+		AttackMoveArrivalRadius = 0.5f * TankHull.X;
+
+		ClientAirfieldSpot = FVector(ClientStart->GetActorLocation().X, -StripY - AirfieldExtent.Y, 0.f);
+		HostSortieTargetSpot = FVector(-Pitch, -StripY - TankRange - 2.f * TankHull.X, 0.f);
+		SortieClimbSeen = 0.4f * Jet->CruiseAltitude;
+
+		// The north-east corner for the superweapon and its plants, the north-west one for its target.
+		ClientSuperweaponSpot = FVector(0.8f * HalfSize, 0.8f * HalfSize, 0.f);
+		ClientPlantSpots[0] = ClientSuperweaponSpot - FVector(0.f, SuperweaponExtent.Y + PlantExtent.Y + Lane, 0.f);
+		ClientPlantSpots[1] = ClientPlantSpots[0] - FVector(0.f, 2.f * PlantExtent.Y + Lane, 0.f);
+		HostStrikeTargetSpot = FVector(-0.75f * HalfSize, 0.55f * HalfSize, 0.f);
+		return true;
+	}
 
 	struct FSessionState
 	{
@@ -406,6 +473,11 @@ namespace RTSListenServerTest
 			// The client takes the server's dilation through replication; setting its copy too keeps both in step at once.
 			RTSTests::ApplyTestTimeDilation(*ServerWorld);
 			RTSTests::ApplyTestTimeDilation(*ClientWorld);
+			FString Error;
+			if (!InitLayout(*ServerWorld, Error))
+			{
+				Test->AddError(Error);
+			}
 			return true;
 		}
 		if (FPlatformTime::Seconds() - State->PhaseStart > SessionTimeout)

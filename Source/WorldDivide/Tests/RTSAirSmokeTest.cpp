@@ -2,6 +2,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
+#include "AI/RTSAIPlayer.h"
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
@@ -17,6 +18,7 @@
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestPIE.h"
+#include "Tests/RTSTestScale.h"
 #include "UI/Layout/RTSUIBinding.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
@@ -34,10 +36,33 @@ namespace RTSAirSmokeTest
 	const TCHAR* JetPath = TEXT("/Game/Data/Units/DA_TestJet.DA_TestJet");
 	const TCHAR* PowerPlantPath = TEXT("/Game/Data/Buildings/DA_TestPowerPlant.DA_TestPowerPlant");
 
-	/** The empty strip south of both bases, far out of range of the map's own units. */
-	const FVector AirfieldSpot(-6000.f, -8000.f, 0.f);
-	const FVector PowerPlantSpot(-3000.f, -8500.f, 0.f);
-	const FVector TargetSpot(5000.f, -8000.f, 0.f);
+	/**
+	 * The empty strip south of both bases, far out of range of the map's own units: midway between Block_South and the
+	 * ground's south edge, the airfield at the west base's end, the target at the east base's (InitLayout sets them).
+	 */
+	FVector AirfieldSpot;
+	FVector PowerPlantSpot;
+	FVector TargetSpot;
+
+	bool InitLayout(const UWorld& World, FString& OutError)
+	{
+		const URTSBuildingData* Airfield = LoadObject<URTSBuildingData>(nullptr, AirfieldPath);
+		const URTSBuildingData* Plant = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+		const float HalfSize = RTSTests::GetMapHalfSize(World);
+		const FBox2D Block = RTSTests::GetLabelledBox(World, TEXT("Block_South"));
+		if (!Airfield || !Plant || HalfSize <= 0.f || !Block.bIsValid)
+		{
+			OutError = TEXT("Missing test data, or L_TestMap lacks its NavMeshBoundsVolume or Block_South");
+			return false;
+		}
+		const float StripY = FMath::RoundToFloat(0.5f * (Block.Min.Y - HalfSize) / RTSBuildPlacement::GridSize) * RTSBuildPlacement::GridSize;
+		const FVector2D AirfieldExtent = RTSTests::GetFootprintExtent(*Airfield);
+		const FVector2D PlantExtent = RTSTests::GetFootprintExtent(*Plant);
+		AirfieldSpot = FVector(-0.6f * HalfSize, StripY, 0.f);
+		PowerPlantSpot = AirfieldSpot + FVector(AirfieldExtent.X + PlantExtent.X + 2.f * ARTSAIPlayer::GetBuildingGap(), 0.f, 0.f);
+		TargetSpot = FVector(0.5f * HalfSize, StripY, 0.f);
+		return true;
+	}
 
 	constexpr double NavTimeout = 30.0;
 	constexpr double ProductionTimeout = 60.0;
@@ -92,6 +117,11 @@ namespace RTSAirSmokeTest
 			&& RTSTests::IsNavigationReady(*World))
 		{
 			RTSTests::ApplyTestTimeDilation(*World);
+			FString Error;
+			if (!InitLayout(*World, Error))
+			{
+				Test->AddError(Error);
+			}
 			return true;
 		}
 		if (FPlatformTime::Seconds() - State->PhaseStart > NavTimeout)

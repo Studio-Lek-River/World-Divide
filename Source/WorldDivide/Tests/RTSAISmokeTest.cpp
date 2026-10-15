@@ -3,6 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "AI/RTSAIPlayer.h"
+#include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Core/RTSGameState.h"
@@ -11,6 +12,7 @@
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Data/RTSUnitData.h"
+#include "Economy/RTSSupplySource.h"
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "NavigationSystem.h"
@@ -21,6 +23,7 @@
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestPIE.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitShape.h"
 
 /**
  * End to end on L_Skirmish, where the skirmish game mode gives team 1 to an AI opponent. The base test watches the AI work
@@ -44,11 +47,11 @@ namespace RTSAISmokeTest
 	constexpr float BaseGameSeconds = 300.f;
 	constexpr double BaseTimeout = 400.0;
 
-	/** How far from its headquarters the AI's buildings may stand, in cm. */
-	constexpr float BaseRadius = 4500.f;
-
-	/** Game seconds for a wave to reach the player's headquarters and damage it, or destroy it. */
-	constexpr float WaveGameSeconds = 150.f;
+	/**
+	 * Game seconds for a wave to reach the player's headquarters and damage it, or destroy it: twice the slowest army unit's
+	 * walk between the headquarters, plus WaveSlackSeconds to gather and fight (FRTSWaitForSkirmish sets it).
+	 */
+	constexpr float WaveSlackSeconds = 60.f;
 	constexpr double WaveTimeout = 250.0;
 
 	/** Game seconds the AI is watched after the match ends. */
@@ -70,6 +73,12 @@ namespace RTSAISmokeTest
 		bool bEarned = false;
 		bool bWaveSoon = false;
 		int32 IssuedAtEnd = 0;
+		/**
+		 * How far from its headquarters the AI's buildings may stand: as far as its own supply source, where its depot goes,
+		 * and that depot's footprint and the AI's lane beyond it (FRTSWaitForSkirmish sets it).
+		 */
+		float BaseRadius = 0.f;
+		float WaveGameSeconds = 0.f;
 	};
 
 	UWorld* GetWorld()
@@ -216,6 +225,33 @@ namespace RTSAISmokeTest
 		Test->TestTrue(TEXT("The player has its headquarters"), State->PlayerHeadquarters.IsValid());
 		Test->TestTrue(TEXT("The AI has at most its starting credits"), Player->GetCredits() <= StartingCredits);
 		State->LastCredits = Player->GetCredits();
+
+		const ARTSBuilding* Headquarters = State->AIHeadquarters.Get();
+		const ARTSBuilding* PlayerHeadquarters = State->PlayerHeadquarters.Get();
+		const URTSAIBuildOrderData* BuildOrder = AI->GetBuildOrder();
+		if (Headquarters && PlayerHeadquarters && BuildOrder)
+		{
+			const FVector Base = Headquarters->GetActorLocation();
+			const ARTSSupplySource* Source = ARTSSupplySource::FindNearest(*World, Base, TNumericLimits<float>::Max());
+			float Reach = RTSBuildPlacement::GetFootprintExtent(Headquarters->GetBuildingData()->Footprint).Size2D();
+			float Slowest = TNumericLimits<float>::Max();
+			for (const FRTSBuildOrderStep& Step : BuildOrder->Steps)
+			{
+				if (const URTSBuildingData* Building = Cast<URTSBuildingData>(Step.Entry))
+				{
+					const float Diagonal = 2.f * RTSBuildPlacement::GetFootprintExtent(Building->Footprint).Size2D();
+					Reach = FMath::Max(Reach, (Source ? FVector::Dist2D(Base, Source->GetActorLocation())
+						+ RTSBuildPlacement::GetFootprintExtent(Source->Footprint).Size2D() : 0.f) + Diagonal + ARTSAIPlayer::GetBuildingGap());
+				}
+				else if (const URTSUnitData* Unit = Cast<URTSUnitData>(Step.Entry); Unit && Unit->Weapon)
+				{
+					Slowest = FMath::Min(Slowest, Unit->MoveSpeed);
+				}
+			}
+			State->BaseRadius = Reach;
+			State->WaveGameSeconds = WaveSlackSeconds + 2.f * FVector::Dist2D(Base, PlayerHeadquarters->GetActorLocation()) / Slowest;
+			Test->AddInfo(FString::Printf(TEXT("Base radius %.0f cm, waves within %.0f game seconds"), State->BaseRadius, State->WaveGameSeconds));
+		}
 		StartPhase(*State, *World);
 		return true;
 	}
@@ -248,7 +284,7 @@ namespace RTSAISmokeTest
 			{
 				State->PlacedOrder.Add(Data);
 				Test->TestTrue(FString::Printf(TEXT("%s stands near the AI's headquarters"), *GetNameSafe(Data)),
-					FVector::Dist2D(It->GetActorLocation(), Headquarters->GetActorLocation()) < BaseRadius);
+					FVector::Dist2D(It->GetActorLocation(), Headquarters->GetActorLocation()) < State->BaseRadius);
 			}
 		}
 
@@ -301,7 +337,7 @@ namespace RTSAISmokeTest
 		const URTSHealthComponent* Health = Target->GetHealthComponent();
 		if (AI->GetWaveCount() == 0 || Health->GetHealth() >= Health->GetMaxHealth())
 		{
-			return TimedOut(*Test, *State, *World, WaveGameSeconds, WaveTimeout, TEXT("No AI wave damaged the player's headquarters"));
+			return TimedOut(*Test, *State, *World, State->WaveGameSeconds, WaveTimeout, TEXT("No AI wave damaged the player's headquarters"));
 		}
 		Test->AddInfo(FString::Printf(TEXT("%d waves sent; the player's headquarters is down to %.0f"), AI->GetWaveCount(), Health->GetHealth()));
 		return true;
@@ -320,9 +356,13 @@ namespace RTSAISmokeTest
 			Test->AddError(TEXT("Lost the AI or its headquarters, or the test tank is missing"));
 			return true;
 		}
+		// In a column along the headquarters' west face, a tank's length clear of it, side by side a hull's width and a gap apart.
+		const FRTSUnitShape Shape = RTSUnitShape::FromData(*Tank);
+		const float Ahead = RTSBuildPlacement::GetFootprintExtent(Headquarters->GetBuildingData()->Footprint).X + 2.f * Shape.GetHalfLength();
 		for (int32 Index = 0; Index < ColumnSize; ++Index)
 		{
-			const FTransform Transform(Headquarters->GetActorLocation() + FVector(-800.f, (Index - ColumnSize / 2) * 250.f, 0.f));
+			const FTransform Transform(Headquarters->GetActorLocation()
+				+ FVector(-Ahead, (Index - ColumnSize / 2) * (2.f * Shape.GetHalfWidth() + 250.f), 0.f));
 			ARTSUnit* Unit = World->SpawnActorDeferred<ARTSUnit>(ARTSUnit::StaticClass(), Transform, nullptr, nullptr,
 				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 			Unit->InitFromData(Tank, AITeam);
@@ -351,7 +391,7 @@ namespace RTSAISmokeTest
 		}
 		if (!GameState->IsMatchOver())
 		{
-			return TimedOut(*Test, *State, *World, WaveGameSeconds, WaveTimeout, TEXT("The AI did not destroy the player's headquarters"));
+			return TimedOut(*Test, *State, *World, State->WaveGameSeconds, WaveTimeout, TEXT("The AI did not destroy the player's headquarters"));
 		}
 		Test->TestFalse(TEXT("The player's headquarters is destroyed"), State->PlayerHeadquarters.IsValid()
 			&& !State->PlayerHeadquarters->IsActorBeingDestroyed());

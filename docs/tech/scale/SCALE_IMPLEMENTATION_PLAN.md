@@ -368,3 +368,35 @@ A 240-unit move order on L_Bench (`ue.ps1 -Task bench -Counts 240 -Trace`), the 
 - The unit AI controllers no longer tick. The capture has no per-actor tick scopes (no named events), so that saving is not split out; `WorldDivide.Units.IdleGrounding` checks the tick is off, and the smoke tests check that move orders still complete.
 - The whole 240-unit order costs about 2 ms on the frame it is given, under the 5 ms of #139's acceptance; the formation itself is a tenth of that. The bench's slowest move frame is 6.9 ms (tank) and 20.3 ms (M20), under the 33 ms budget. The bench comparison is in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md#step-7-139-footprint-formations-on-log-n-slots-idle-tick-savings).
 - `Separate` is within the run-to-run spread of step 3 (0.31 → 0.35 ms M20, 0.21 → 0.20 ms tank).
+
+### Step 4: real-scale data (2026-10-16)
+
+**Sizes** (hull box from the data, `WorldDivide.Scale.PlaceholderDimensions`; the binding axis is checked against the standard within 10 %):
+
+| Asset | Before (L x W x H cm) | After (L x W x H cm) | Binding axis | Speed / turn before → after |
+|---|---|---|---|---|
+| `DA_TestTank` | 260 x 93 (fit 260 x 150) | 1037 x 370 x 380 | width 370 | 600 / 180 → 1100 / 75 |
+| `DA_TestAbrams` | fit 290 x 160 | fit 1080 x 380 (the placeholder tank model; the local Abrams art measures 824 x 380 x 189) | width 380 | 500 / 150 → 1000 / 60 |
+| `DA_TestM20Guardian` | 710 x 354 x 336 | unchanged | hull 710.2 | 500 / 150 → 1250 / 100 |
+| `DA_TestInfantry`, `DA_TestGrenadier` | Kenney chibi, about 61 cm tall | new rifleman (`Tools/Art/build_soldier_blender.py`), 66 x 53 x 180 | height 180 | 350 / 540 → 450 / 540; 320 → 420 |
+| `DA_TestFlakTruck`, `DA_TestHarvester` | fit 200 x 120, 180 x 110 | 542 x 250 x 275 | width 250 | 450 / 360 → 1400 / 75, 1300 / 60 |
+| `DA_TestBuilder` | fit 150 x 100 | 446 x 300 x 273 | width 300 | 500 / 360 → 1100 / 90 |
+| `DA_TestJet` | fit 180 x 150 | 786 x 700 x 165 | span 700 | 1500 / 100 → 4000 / 75; altitude 900 → 3000 |
+
+Buildings (footprint in m, mesh height): headquarters 4 x 4 → 28 x 28, 22 m; vehicle factory 4 x 4 → 24 x 24, 13 m; power plant 4 x 4 → 20 x 20, 14 m; barracks 3 x 3 → 16 x 16, 7 m; supply depot 3 x 3 → 16 x 16, 9 m; superweapon 4 x 4 → 24 x 24, 32 m (strike radius 15 → 40 m); tower 2 x 2 → 6 x 6, 11 m; airfield 4 x 8 → 24 x 48, 1 m; supply source 3 x 3 → 12 x 12, 3 m. Buildings keep their explicit height (standard rule 2 forbids stretching units only).
+
+Weapons: tank and heavy cannon 1200 → 6500, tower 1500 → 8125, rifle 700 → 3500, grenade 600 → 3000, flak 1400 → 8000, jet missiles 900 → 5000; shell speeds about five times, so flight times stay 0.2 to 1 s.
+
+**Maps** (half size, `setup_testmap.py`; layouts three times as large, blocks keep their size, every gap at least 8 m, checked by `check_map_lanes` in setup and `WorldDivide.Scale.MapVehicleLanes`):
+
+| Map | Half size before → after | Tiles per agent |
+|---|---|---:|
+| L_TestMap, L_Skirmish, L_SkirmishDuel | 10000 → 30000 | 300 |
+| L_RiverFord | 8000 → 25000 | 192 |
+| L_QuarryCross | 11000 → 33000 | 363 |
+| L_SixPeaks | 12000 → 36000 | 432 |
+| L_Bench | 15000, unchanged (comparison scene) | 75 |
+
+**AI and gameplay distances:** `BuildingGap` 300 → `GetBuildingGap()` (widest agent diameter + 2 x 2 m, whole cells: 800); `ExitLaneLength` 600 → per building `RTSBuildPlacement::GetExitLaneLength`; the `+ 600` start margin → the headquarters' half diagonal; `RingStep` and candidate spacing → half the placed building's short side; `GatherDistance` 1500 from the centre → 3600 past the headquarters' edge; `DefenseRadius` 2500 → 8000; `BuildSearchDistance` and `DepotSourceDistance` 4000 → 12000; `ExitClearance` 80 → 200; the rally point → the end of the exit lane; `DockStandOff` 100 → 200; `MoveSnapDistance` 1000 → 3000; `AttackAlertRadius` 3000 → 8000; `SelectionRadius` (interaction) → half the longer side of the scaled mesh. `MoveAcceptanceRadius` (25) and `MoveSnapStep` (50) stay: they set how close a hull stops at an obstacle (#135's 50 cm), not the world scale.
+
+**Measurements:** the bench and unitshots figures are in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md#step-4-136-real-scale-data-units-buildings-weapons-maps-ai). Skirmish AI against AI on L_SkirmishDuel (`WorldDivide.Smoke.AIvsAI`): both build their order, harvest, send vehicles out of their factories and waves at each other, and team 0 won after 228 game seconds.

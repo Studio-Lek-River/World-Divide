@@ -42,7 +42,7 @@ namespace
 	constexpr float UnitAlertCooldown = 15.f;
 
 	/** Ground distance within which hits count as the same base area for the cooldown. */
-	constexpr float AttackAlertRadius = 3000.f;
+	constexpr float AttackAlertRadius = 8000.f;
 
 	UInputAction* MakeAction(UObject* Outer, const TCHAR* Name, EInputActionValueType ValueType)
 	{

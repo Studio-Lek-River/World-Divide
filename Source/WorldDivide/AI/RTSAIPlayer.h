@@ -56,14 +56,23 @@ public:
 	/** Seconds between two rounds of decisions. */
 	static constexpr float ThinkInterval = 1.f;
 
-	/** Free space kept between the AI's buildings and anything else on the ground, in cm. */
-	static constexpr float BuildingGap = 300.f;
+	/** Room left on either side of the widest nav agent in the lane between two of the AI's buildings, in cm. */
+	static constexpr float VehicleLaneMargin = 200.f;
 
-	/** How far ahead of the base, towards the enemy, the army gathers between waves, in cm. */
-	static constexpr float GatherDistance = 1500.f;
+	/**
+	 * Free space kept between the AI's buildings and anything else on the ground, in cm: a lane the widest nav agent drives
+	 * through with VehicleLaneMargin on either side, in whole grid cells (8 m with the Vehicle agent's 190 cm radius).
+	 */
+	static float GetBuildingGap();
 
-	/** How close to one of the AI's buildings an enemy unit comes before the army turns on it, in cm. */
-	static constexpr float DefenseRadius = 2500.f;
+	/** How far past the edge of its base building, towards the enemy, the army gathers between waves, in cm. */
+	static constexpr float GatherDistance = 3600.f;
+
+	/**
+	 * How close to one of the AI's buildings (its centre) an enemy unit comes before the army turns on it, in cm: a tank's
+	 * range (65 m) outside the edge of a 28 m headquarters.
+	 */
+	static constexpr float DefenseRadius = 8000.f;
 
 	/** How long an enemy unit or building that hit one of the AI's buildings stays a threat wherever it is, in seconds. */
 	static constexpr float AttackerMemory = 10.f;
@@ -199,15 +208,18 @@ private:
 
 	/**
 	 * A spot for Data on a ring around the base, or around the supply source nearest it for a depot, that a builder can place
-	 * it on and that keeps BuildingGap to everything else, the exits of own production buildings and pending builds.
+	 * it on and that keeps GetBuildingGap to everything else, the exits of own production buildings and pending builds.
 	 */
 	bool FindBuildSpot(const URTSBuildingData& Data, FVector& OutLocation) const;
 
-	/** The footprint at Location keeps BuildingGap to every building, supply source, pending build and own exit lane. */
+	/** The footprint at Location keeps GetBuildingGap to every building, supply source, pending build and own exit lane. */
 	bool HasRoom(const URTSBuildingData& Data, const FVector& Location) const;
 
 	/** The own headquarters, else the PlayerStart, else any own building, else the world origin. */
 	FVector GetBaseLocation() const;
+
+	/** Half the footprint of the faction's headquarters, which stands at the base location; zero without one. */
+	FVector GetBaseExtent() const;
 
 	/** The standing enemy building nearest From, or null. */
 	ARTSBuilding* FindNearestEnemyBuilding(const FVector& From) const;

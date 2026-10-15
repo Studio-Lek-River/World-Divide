@@ -97,6 +97,13 @@ namespace RTSBuildPlacement
 		return GetFootprintExtent(Data.Footprint).X + FMath::Max(Shape.GetHalfLength(), Shape.GetHalfWidth()) + ExitClearance;
 	}
 
+	float GetExitLaneLength(const URTSBuildingData& Data)
+	{
+		const URTSUnitData* Unit = GetWidestExitUnit(Data);
+		return Unit ? GetExitDistance(Data, *Unit) - GetFootprintExtent(Data.Footprint).X + 2.f * RTSUnitShape::FromData(*Unit).GetHalfLength()
+			: 0.f;
+	}
+
 	bool CanUnitsLeave(const UWorld& World, const URTSBuildingData& Data, const FVector& Location, int32 QuarterTurns)
 	{
 		const URTSUnitData* Unit = GetWidestExitUnit(Data);

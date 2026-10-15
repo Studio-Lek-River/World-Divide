@@ -19,7 +19,7 @@ class WORLDDIVIDE_API URTSBuildingData : public URTSEntityData
 public:
 	/** Size in 100 cm grid cells along X and Y. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Placement", meta = (ClampMin = "1"))
-	FIntPoint Footprint = FIntPoint(2, 2);
+	FIntPoint Footprint = FIntPoint(16, 16);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power", meta = (ClampMin = "0"))
 	int32 PowerOutput = 0;
@@ -81,7 +81,7 @@ public:
 
 	/** Ground distance from the target point, to a unit or to a building's footprint edge, within which the strike deals damage. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Superweapon", meta = (ClampMin = "0"))
-	float SuperweaponRadius = 1500.f;
+	float SuperweaponRadius = 4000.f;
 
 	/** Damage at the target point; it falls off linearly to SuperweaponEdgeDamage of it at the radius. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Superweapon", meta = (ClampMin = "0"))

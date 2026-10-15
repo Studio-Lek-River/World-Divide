@@ -39,14 +39,14 @@ public:
 
 	/** Size in 100 cm grid cells along X and Y. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Supply", meta = (ClampMin = "1"))
-	FIntPoint Footprint = FIntPoint(3, 3);
+	FIntPoint Footprint = FIntPoint(12, 12);
 
 	/** Stretched to fill the footprint up to Height while full. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Display")
 	TObjectPtr<UStaticMesh> Mesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Display", meta = (ClampMin = "10"))
-	float Height = 150.f;
+	float Height = 300.f;
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void PostInitializeComponents() override;

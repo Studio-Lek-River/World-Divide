@@ -4,6 +4,8 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Buildings/RTSBuildPlacement.h"
+#include "Buildings/RTSBuilding.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
@@ -32,15 +34,25 @@ namespace RTSTests
 		return FMath::Max(Dilation, 1.f);
 	}
 
-	/** Every PlayerStart of World has navmesh 10 m beside it, clear of the headquarters standing on it. */
+	/** Every PlayerStart of World has navmesh 10 m beside it, clear of the footprint of the headquarters standing on it. */
 	inline bool HasNavigationAtStarts(UWorld& World)
 	{
 		const UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
 		bool bAny = false;
 		for (TActorIterator<APlayerStart> It(&World); It && NavSystem; ++It)
 		{
+			float Clear = 0.f;
+			for (TActorIterator<ARTSBuilding> Building(&World); Building; ++Building)
+			{
+				const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Building->GetFootprint());
+				const FVector Offset = It->GetActorLocation() - Building->GetActorLocation();
+				if (FMath::Abs(Offset.X) <= Extent.X && FMath::Abs(Offset.Y) <= Extent.Y)
+				{
+					Clear = FMath::Max(Clear, static_cast<float>(Extent.Y - Offset.Y));
+				}
+			}
 			FNavLocation NavPoint;
-			const FVector Beside = It->GetActorLocation() + FVector(0.f, 1000.f, 0.f);
+			const FVector Beside = It->GetActorLocation() + FVector(0.f, Clear + 1000.f, 0.f);
 			if (!NavSystem->ProjectPointToNavigation(Beside, NavPoint, FVector(100.f, 100.f, 300.f)))
 			{
 				return false;

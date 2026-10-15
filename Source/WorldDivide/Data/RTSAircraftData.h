@@ -17,11 +17,11 @@ class WORLDDIVIDE_API URTSAircraftData : public URTSUnitData
 public:
 	/** Height above the ground it flies at, in cm. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flight", meta = (ClampMin = "0"))
-	float CruiseAltitude = 800.f;
+	float CruiseAltitude = 3000.f;
 
 	/** How fast it climbs off its pad and descends, in cm/s. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flight", meta = (ClampMin = "1"))
-	float ClimbRate = 400.f;
+	float ClimbRate = 1200.f;
 
 	/** How far it rolls into its tightest turn, in degrees. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Flight", meta = (ClampMin = "0", ClampMax = "89"))

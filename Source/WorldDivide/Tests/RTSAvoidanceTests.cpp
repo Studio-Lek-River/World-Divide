@@ -7,6 +7,7 @@
 #include "Commands/RTSCommand.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
+#include "Economy/RTSSupplySource.h"
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "HAL/IConsoleManager.h"
@@ -17,6 +18,7 @@
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestFormation.h"
 #include "Tests/RTSTestPIE.h"
+#include "Tests/RTSTestScale.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
@@ -38,12 +40,21 @@ namespace RTSAvoidanceTests
 	const TCHAR* PowerPlantPath = TEXT("/Game/Data/Buildings/DA_TestPowerPlant.DA_TestPowerPlant");
 	constexpr double NavTimeout = 30.0;
 
-	/** The crowd test: 50 units in a block west of the strip's centre, sent to one point east of it. */
+	/**
+	 * Where the tests put things on L_TestMap. Every spot comes from the map and the game's data once the session is up
+	 * (InitLayout, called by FRTSAvoidanceWaitForNavigation), so it moves with the scale (#136): the strip lies midway between
+	 * Block_North and the ground's north edge, and blocks of units stand a tank's hull plus a gap apart.
+	 */
+	float StripY = 0.f;
+	/** Blocks of tanks and infantry: a tank's length plus BlockGap along X, its width plus BlockGap along Y. */
+	FVector2D BlockSpacing = FVector2D::ZeroVector;
+	constexpr float BlockGap = 250.f;
+
+	/** The crowd test: 50 units in a block west of the strip's centre, sent to one point east of it, three hulls clear of it. */
 	constexpr int32 CrowdCount = 50;
 	constexpr int32 CrowdColumns = 10;
-	const FVector CrowdOrigin(-4500.f, 6500.f, 0.f);
-	constexpr float CrowdSpacing = 250.f;
-	const FVector CrowdTarget(1500.f, 7000.f, 0.f);
+	FVector CrowdOrigin;
+	FVector CrowdTarget;
 	/** Pairs may end overlapping by no more than this share of the sum of their footprints' radii. */
 	constexpr float CrowdMaxOverlap = 0.1f;
 	/** Game seconds the crowd stands once every order is done, before it is measured. */
@@ -51,31 +62,32 @@ namespace RTSAvoidanceTests
 	constexpr double CrowdTimeout = 60.0;
 
 	/**
-	 * The gap test: 4x4 power plants stand along x = 0 from y = 5300 to 8700, but for a gap from 6900 to 7100, one grid cell
-	 * wider than a navmesh agent on each side. Going around either end is half as long again as going through.
+	 * The gap test: four power plants side by side on either side of the strip's lane along x = 0, but for a gap of
+	 * 2 * GapHalfWidth across the lane, one grid cell wider than the infantry nav agent on each side. Going around either end
+	 * is far longer than going through. GapPlantYs run south to north.
 	 */
-	const float GapPlantYs[] = { 5500.f, 5900.f, 6300.f, 6700.f, 7300.f, 7700.f, 8100.f, 8500.f };
-	constexpr float GapCenterY = 7000.f;
+	float GapPlantYs[8];
+	float GapCenterY = 0.f;
 	constexpr float GapHalfWidth = 100.f;
 	constexpr int32 GapSquadCount = 12;
 	constexpr int32 GapSquadColumns = 3;
-	const FVector GapSquadOrigin(-2000.f, 6600.f, 0.f);
+	FVector GapSquadOrigin;
 	constexpr float GapSquadSpacing = 200.f;
-	const FVector GapTarget(1500.f, 7000.f, 0.f);
+	FVector GapTarget;
 	constexpr double GapTimeout = 60.0;
 
 	/** The frame-time test: 200 units, half tanks and half infantry, walk across the strip and back. */
 	constexpr int32 FrameTimeCount = 200;
 	constexpr int32 FrameTimeColumns = 20;
-	const FVector FrameTimeOrigin(-5000.f, 6000.f, 0.f);
-	constexpr float FrameTimeSpacing = 220.f;
-	const FVector FrameTimeEast(3000.f, 7000.f, 0.f);
-	const FVector FrameTimeWest(-3000.f, 7000.f, 0.f);
+	FVector FrameTimeOrigin;
+	FVector FrameTimeEast;
+	FVector FrameTimeWest;
 	/**
-	 * The empty strip the walks stay in: north of Block_North and the bases' supply crates, inside the map's edge. A formation
-	 * that would reach past it is moved in, so its slots never land in a wall or off the navmesh.
+	 * The empty strip the walks stay in: north of Block_North and the bases' supply sources, StripMargin inside the map's
+	 * edge. A formation that would reach past it is moved in, so its slots never land in a wall or off the navmesh.
 	 */
-	const FBox2D Strip(FVector2D(-9500.f, 3300.f), FVector2D(9500.f, 9500.f));
+	FBox2D Strip(ForceInit);
+	constexpr float StripMargin = 500.f;
 	/** Real seconds sampled in each half. */
 	constexpr double FrameTimeSampleSeconds = 4.0;
 	/** Mean time of the avoidance pass over 200 units that would start to show in a 60 fps frame. */
@@ -84,22 +96,77 @@ namespace RTSAvoidanceTests
 	/** The mixed test: 180 tanks and infantry as in the frame-time test, and 20 M20s in a block of their own to the south. */
 	constexpr int32 MixedM20Count = 20;
 	constexpr int32 MixedM20Columns = 5;
-	const FVector MixedM20Origin(-5000.f, 3800.f, 0.f);
+	FVector MixedM20Origin;
 	/** Clearance between the M20s' footprints in the block. */
 	constexpr float MixedM20Clearance = 300.f;
 	/** Provisional: the slowest pass in the mixed test (plan section 6, item 7). */
 	constexpr double MixedMaxPassBudgetMs = 2.0;
 
 	/** The tank-pair tests: two M20s facing east in the strip, watched for this many game seconds. */
-	const FVector PairOrigin(-3000.f, 7000.f, 0.f);
+	FVector PairOrigin;
 	constexpr float PairSideBySide = 450.f;
 	constexpr float PairEndToEndOverlap = 200.f;
 	constexpr double PairWatchSeconds = 2.0;
 	/** Standing clear, neither may drift more than this. */
 	constexpr float PairStillTolerance = 1.f;
-	/** The grid must return every unit within QueryReach of these points. */
-	const FVector QueryPoints[] = { FVector(-3000.f, 7000.f, 0.f), FVector(-6000.f, 0.f, 0.f), FVector(6000.f, 0.f, 0.f), FVector::ZeroVector };
-	constexpr float QueryReach = 2500.f;
+	/** The grid must return every unit within QueryReach of these points: the strip, both bases and the middle. */
+	FVector QueryPoints[4];
+	float QueryReach = 0.f;
+
+	/** Lays the spots out from the map in World and the test data. False, with the reason in OutError, when something is missing. */
+	bool InitLayout(const UWorld& World, FString& OutError)
+	{
+		const URTSUnitData* Tank = LoadObject<URTSUnitData>(nullptr, TankPath);
+		const URTSBuildingData* Plant = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+		const float HalfSize = RTSTests::GetMapHalfSize(World);
+		const FBox2D Block = RTSTests::GetLabelledBox(World, TEXT("Block_North"));
+		float SourcesMaxY = Block.Max.Y;
+		for (TActorIterator<ARTSSupplySource> It(&World); It; ++It)
+		{
+			SourcesMaxY = FMath::Max(SourcesMaxY, It->GetActorLocation().Y + RTSBuildPlacement::GetFootprintExtent(It->Footprint).Y);
+		}
+		if (!Tank || !Plant || HalfSize <= 0.f || !Block.bIsValid)
+		{
+			OutError = TEXT("Missing test data, or L_TestMap lacks its NavMeshBoundsVolume or Block_North");
+			return false;
+		}
+		const FVector2D TankHull = RTSTests::GetHullSize(*Tank);
+		const FVector2D PlantExtent = RTSTests::GetFootprintExtent(*Plant);
+
+		StripY = 0.5f * (Block.Max.Y + HalfSize);
+		Strip = FBox2D(FVector2D(-HalfSize + StripMargin, SourcesMaxY + StripMargin), FVector2D(HalfSize - StripMargin, HalfSize - StripMargin));
+		BlockSpacing = TankHull + FVector2D(BlockGap);
+
+		CrowdTarget = FVector(3.f * TankHull.X, StripY, 0.f);
+		const int32 CrowdRows = FMath::DivideAndRoundUp(CrowdCount, CrowdColumns);
+		CrowdOrigin = FVector(CrowdTarget.X - 6.f * TankHull.X - CrowdColumns * BlockSpacing.X, StripY - 0.5f * (CrowdRows - 1) * BlockSpacing.Y, 0.f);
+
+		// On a grid line, so the plants' even footprints centre where the gap needs them.
+		GapCenterY = FMath::RoundToFloat(StripY / RTSBuildPlacement::GridSize) * RTSBuildPlacement::GridSize;
+		for (int32 Index = 0; Index < 4; ++Index)
+		{
+			const float Offset = GapHalfWidth + PlantExtent.Y + Index * 2.f * PlantExtent.Y;
+			GapPlantYs[3 - Index] = GapCenterY - Offset;
+			GapPlantYs[4 + Index] = GapCenterY + Offset;
+		}
+		GapSquadOrigin = FVector(-(PlantExtent.X + 2000.f), GapCenterY - 400.f, 0.f);
+		GapTarget = FVector(PlantExtent.X + 1500.f, GapCenterY, 0.f);
+
+		const int32 FrameTimeRows = FMath::DivideAndRoundUp(FrameTimeCount, FrameTimeColumns);
+		FrameTimeOrigin = FVector(-0.5f * (FrameTimeColumns - 1) * BlockSpacing.X, StripY - 0.5f * (FrameTimeRows - 1) * BlockSpacing.Y, 0.f);
+		FrameTimeEast = FVector(0.3f * HalfSize, StripY, 0.f);
+		FrameTimeWest = FVector(-0.3f * HalfSize, StripY, 0.f);
+		// South of the frame-time block, inside the strip.
+		MixedM20Origin = FVector(FrameTimeOrigin.X, Strip.Min.Y + 1000.f, 0.f);
+
+		PairOrigin = FVector(-0.3f * HalfSize, StripY, 0.f);
+		QueryPoints[0] = PairOrigin;
+		QueryPoints[1] = FVector(-0.6f * HalfSize, 0.f, 0.f);
+		QueryPoints[2] = FVector(0.6f * HalfSize, 0.f, 0.f);
+		QueryPoints[3] = FVector::ZeroVector;
+		QueryReach = 0.25f * HalfSize;
+		return true;
+	}
 
 	struct FAvoidanceState
 	{
@@ -154,7 +221,7 @@ namespace RTSAvoidanceTests
 
 	/** Count units of the player's team in a block of Columns columns from Origin, tanks and infantry taking turns. */
 	bool SpawnBlock(FAutomationTestBase& Test, FAvoidanceState& State, int32 Count, int32 Columns, const FVector& Origin,
-		float Spacing, bool bTanks)
+		const FVector2D& Spacing, bool bTanks)
 	{
 		ARTSPlayerController* Controller = GetController(Test);
 		URTSUnitData* Tank = LoadObject<URTSUnitData>(nullptr, TankPath);
@@ -166,7 +233,7 @@ namespace RTSAvoidanceTests
 		}
 		for (int32 Index = 0; Index < Count; ++Index)
 		{
-			const FVector Location = Origin + FVector((Index % Columns) * Spacing, (Index / Columns) * Spacing, 0.f);
+			const FVector Location = Origin + FVector((Index % Columns) * Spacing.X, (Index / Columns) * Spacing.Y, 0.f);
 			URTSUnitData* Data = bTanks && Index % 2 == 0 ? Tank : Infantry;
 			State.Units.Add(SpawnUnit(Controller->GetWorld(), Data, Controller->GetTeamId(), Location));
 		}
@@ -268,6 +335,11 @@ bool FRTSAvoidanceWaitForNavigation::Update()
 	if (bPlaying && RTSTests::IsNavigationReady(*World))
 	{
 		RTSTests::ApplyTestTimeDilation(*World);
+		FString Error;
+		if (!InitLayout(*World, Error))
+		{
+			Test->AddError(Error);
+		}
 		State->PhaseStart = FPlatformTime::Seconds();
 		return true;
 	}
@@ -282,7 +354,7 @@ bool FRTSAvoidanceWaitForNavigation::Update()
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSAvoidanceIssueCrowd, FAutomationTestBase*, Test, TSharedRef<FAvoidanceState>, State);
 bool FRTSAvoidanceIssueCrowd::Update()
 {
-	if (!SpawnBlock(*Test, *State, CrowdCount, CrowdColumns, CrowdOrigin, CrowdSpacing, /*bTanks*/ true))
+	if (!SpawnBlock(*Test, *State, CrowdCount, CrowdColumns, CrowdOrigin, BlockSpacing, /*bTanks*/ true))
 	{
 		return true;
 	}
@@ -424,7 +496,7 @@ bool FRTSAvoidanceWaitForGap::Update()
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSAvoidanceIssueGapMove, FAutomationTestBase*, Test, TSharedRef<FAvoidanceState>, State);
 bool FRTSAvoidanceIssueGapMove::Update()
 {
-	if (!SpawnBlock(*Test, *State, GapSquadCount, GapSquadColumns, GapSquadOrigin, GapSquadSpacing, /*bTanks*/ false))
+	if (!SpawnBlock(*Test, *State, GapSquadCount, GapSquadColumns, GapSquadOrigin, FVector2D(GapSquadSpacing), /*bTanks*/ false))
 	{
 		return true;
 	}
@@ -493,7 +565,7 @@ DEFINE_LATENT_AUTOMATION_COMMAND_THREE_PARAMETER(FRTSAvoidanceIssueFrameTimeMove
 bool FRTSAvoidanceIssueFrameTimeMove::Update()
 {
 	if (State->Units.IsEmpty()
-		&& !SpawnBlock(*Test, *State, FrameTimeCount, FrameTimeColumns, FrameTimeOrigin, FrameTimeSpacing, /*bTanks*/ true))
+		&& !SpawnBlock(*Test, *State, FrameTimeCount, FrameTimeColumns, FrameTimeOrigin, BlockSpacing, /*bTanks*/ true))
 	{
 		return true;
 	}
@@ -581,7 +653,7 @@ bool FRTSAvoidanceSpawnMixed::Update()
 		return true;
 	}
 	State->bMixed = true;
-	if (!SpawnBlock(*Test, *State, FrameTimeCount - MixedM20Count, FrameTimeColumns, FrameTimeOrigin, FrameTimeSpacing, /*bTanks*/ true))
+	if (!SpawnBlock(*Test, *State, FrameTimeCount - MixedM20Count, FrameTimeColumns, FrameTimeOrigin, BlockSpacing, /*bTanks*/ true))
 	{
 		return true;
 	}

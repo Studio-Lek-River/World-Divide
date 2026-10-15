@@ -20,6 +20,7 @@
 #include "Economy/RTSSupplySource.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "Navigation/RTSNavAgents.h"
 #include "TimerManager.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
@@ -27,14 +28,11 @@
 
 namespace
 {
-	/** How far out from its centre the ring search for a building spot goes, in cm. */
-	constexpr float BuildSearchDistance = 4000.f;
+	/** How far out past its first ring the ring search for a building spot goes, in cm. */
+	constexpr float BuildSearchDistance = 12000.f;
 
-	/** How far from the base a supply source may lie for a depot to go beside it, in cm. */
-	constexpr float DepotSourceDistance = 4000.f;
-
-	/** The strip in front of a production building's exit kept free for the units it produces, in cm. */
-	constexpr float ExitLaneLength = 600.f;
+	/** How far past the edge of the base building a supply source may lie for a depot to go beside it, in cm. */
+	constexpr float DepotSourceDistance = 12000.f;
 
 	/** Army units a production building has queued at most once the build order is done. */
 	constexpr int32 ArmyQueueLength = 2;
@@ -743,8 +741,13 @@ void ARTSAIPlayer::DefendBase(float DeltaSeconds)
 	TArray<ARTSUnit*> Pulled = GatherArmy();
 	for (const TWeakObjectPtr<ARTSUnit>& Unit : WaveUnits)
 	{
+		// A wave unit may have died since the last think.
+		if (!IsStanding(Unit.Get()))
+		{
+			continue;
+		}
 		const FVector Location = Unit->GetActorLocation();
-		if (IsStanding(Unit.Get()) && Buildings.ContainsByPredicate([&Location](const FVector& Building)
+		if (Buildings.ContainsByPredicate([&Location](const FVector& Building)
 		{
 			return FVector::DistSquared2D(Location, Building) <= FMath::Square(DefenseRadius);
 		}))
@@ -871,7 +874,7 @@ bool ARTSAIPlayer::GetGatherPoint(FVector& OutLocation) const
 	{
 		return false;
 	}
-	OutLocation = Base + (Enemy->GetActorLocation() - Base).GetSafeNormal2D() * GatherDistance;
+	OutLocation = Base + (Enemy->GetActorLocation() - Base).GetSafeNormal2D() * (GetBaseExtent().GetMax() + GatherDistance);
 	return true;
 }
 
@@ -898,21 +901,27 @@ bool ARTSAIPlayer::FindBuildSpot(const URTSBuildingData& Data, FVector& OutLocat
 	const int32 TeamId = GetRTSPlayerState()->GetTeamId();
 	const FVector Base = GetBaseLocation();
 	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Data.Footprint);
+	const FVector BaseExtent = GetBaseExtent();
+	const float Gap = GetBuildingGap();
 
+	// The first ring clears the base building; HasRoom then keeps its exit lane free.
 	FVector Center = Base;
-	float StartRadius = Extent.Size2D() + BuildingGap + 600.f;
+	float StartRadius = BaseExtent.Size2D() + Extent.Size2D() + Gap;
 	if (Data.bAcceptsSupply)
 	{
 		// A depot goes beside the source its harvesters will work.
-		if (const ARTSSupplySource* Source = ARTSSupplySource::FindNearest(*World, Base, DepotSourceDistance))
+		if (const ARTSSupplySource* Source = ARTSSupplySource::FindNearest(*World, Base, BaseExtent.GetMax() + DepotSourceDistance))
 		{
 			Center = Source->GetActorLocation();
-			StartRadius = (RTSBuildPlacement::GetFootprintExtent(Source->Footprint) + Extent).GetMax() + BuildingGap;
+			StartRadius = (RTSBuildPlacement::GetFootprintExtent(Source->Footprint) + Extent).GetMax() + Gap;
 		}
 	}
 
-	constexpr float RingStep = 2.f * RTSBuildPlacement::GridSize;
-	constexpr float CandidateSpacing = 300.f;
+	// Rings and the candidates on them half the building's shorter side apart, at least two grid cells: a big building
+	// searches as many candidates as a small one.
+	const float RingStep = FMath::Max(2.f * RTSBuildPlacement::GridSize,
+		FMath::GridSnap(FMath::Min(Extent.X, Extent.Y), RTSBuildPlacement::GridSize));
+	const float CandidateSpacing = RingStep;
 	for (float Radius = StartRadius; Radius <= StartRadius + BuildSearchDistance; Radius += RingStep)
 	{
 		const int32 Candidates = FMath::Max(8, FMath::CeilToInt(2.f * PI * Radius / CandidateSpacing));
@@ -935,6 +944,7 @@ bool ARTSAIPlayer::HasRoom(const URTSBuildingData& Data, const FVector& Location
 	const UWorld* World = GetWorld();
 	const int32 TeamId = GetRTSPlayerState()->GetTeamId();
 	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Data.Footprint);
+	const float BuildingGap = GetBuildingGap();
 
 	for (TActorIterator<ARTSBuilding> It(World); It; ++It)
 	{
@@ -948,10 +958,10 @@ bool ARTSAIPlayer::HasRoom(const URTSBuildingData& Data, const FVector& Location
 		{
 			return false;
 		}
-		// Units come out of the +X edge; nothing may stand in their way.
+		// Units come out of the +X edge; nothing may stand in their way until they have driven clear of it.
 		if (It->GetTeamId() == TeamId && !Other->Units.IsEmpty())
 		{
-			const FVector LaneExtent(ExitLaneLength * 0.5f, OtherExtent.Y, 0.f);
+			const FVector LaneExtent(RTSBuildPlacement::GetExitLaneLength(*Other) * 0.5f, OtherExtent.Y, 0.f);
 			const FVector Lane = It->GetActorLocation() + FVector(OtherExtent.X + LaneExtent.X, 0.f, 0.f);
 			if (!AreApart(Location, Extent, Lane, LaneExtent, 0.f))
 			{
@@ -976,6 +986,19 @@ bool ARTSAIPlayer::HasRoom(const URTSBuildingData& Data, const FVector& Location
 		}
 	}
 	return true;
+}
+
+float ARTSAIPlayer::GetBuildingGap()
+{
+	const float Lane = 2.f * (RTSNavAgents::GetAgents().Last().AgentRadius + VehicleLaneMargin);
+	return FMath::CeilToFloat(Lane / RTSBuildPlacement::GridSize) * RTSBuildPlacement::GridSize;
+}
+
+FVector ARTSAIPlayer::GetBaseExtent() const
+{
+	const ARTSPlayerState* Player = GetRTSPlayerState();
+	const URTSBuildingData* Headquarters = Player && Player->GetFaction() ? Player->GetFaction()->Headquarters.Get() : nullptr;
+	return Headquarters ? RTSBuildPlacement::GetFootprintExtent(Headquarters->Footprint) : FVector::ZeroVector;
 }
 
 FVector ARTSAIPlayer::GetBaseLocation() const

@@ -22,6 +22,7 @@
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestGeometry.h"
 #include "Tests/RTSTestPIE.h"
+#include "Tests/RTSTestScale.h"
 #include "Tests/RTSTestWorld.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Units/RTSUnit.h"
@@ -46,8 +47,32 @@ namespace RTSNavigationTests
 	const TCHAR* CubePath = TEXT("/Engine/BasicShapes/Cube.Cube");
 	constexpr double NavTimeout = 30.0;
 
-	/** Hulls the agents were not tuned for: length, width and height in cm. */
-	const FVector LongVehicleSize(1000.f, 160.f, 250.f);
+	/** The placeholders whose hulls the long vehicle must outgrow. */
+	const TCHAR* PlaceholderPaths[] = {
+		TEXT("/Game/Data/Units/DA_TestTank.DA_TestTank"),
+		TEXT("/Game/Data/Units/DA_TestAbrams.DA_TestAbrams"),
+		TEXT("/Game/Data/Units/DA_TestM20Guardian.DA_TestM20Guardian"),
+		TEXT("/Game/Data/Units/DA_TestHarvester.DA_TestHarvester"),
+		TEXT("/Game/Data/Units/DA_TestFlakTruck.DA_TestFlakTruck"),
+		TEXT("/Game/Data/Units/DA_TestBuilder.DA_TestBuilder"),
+	};
+
+	/**
+	 * Hulls the agents were not tuned for: length, width and height in cm. The long vehicle is a tenth longer than the longest
+	 * placeholder and narrower than any vehicle, still too wide for the infantry navmesh.
+	 */
+	FVector GetLongVehicleSize()
+	{
+		float Longest = 0.f;
+		for (const TCHAR* Path : PlaceholderPaths)
+		{
+			if (const URTSUnitData* Data = LoadObject<URTSUnitData>(nullptr, Path))
+			{
+				Longest = FMath::Max(Longest, RTSTests::GetHullSize(*Data).X);
+			}
+		}
+		return FVector(FMath::RoundToFloat(1.1f * Longest), 160.f, 250.f);
+	}
 	const FVector NarrowVehicleSize(450.f, 70.f, 150.f);
 
 	/** A hull may touch an obstacle by this much at most: the hull box against the obstacle's collision box. */
@@ -60,22 +85,86 @@ namespace RTSNavigationTests
 	constexpr double SettleSeconds = 0.5;
 
 	/**
-	 * The gap test's walls of power plants along x = 0: north of the bases one with a 3 m gap from y = 6800 to 7100, south
-	 * of them one with a 6 m gap from y = -7300 to -6700. Going around either end is far longer than going through.
+	 * Where the tests put things on L_TestMap, from the map and the game's data (InitLayout, called once the map is open), so
+	 * it moves with the scale (#136). Offsets around obstacles are in lengths of the long vehicle, the longest hull driven.
 	 */
-	const float NarrowGapPlantYs[] = { 5400.f, 5800.f, 6200.f, 6600.f, 7300.f, 7700.f, 8100.f, 8500.f };
-	constexpr float NarrowGapMinY = 6800.f;
-	constexpr float NarrowGapMaxY = 7100.f;
-	const float WideGapPlantYs[] = { -8700.f, -8300.f, -7900.f, -7500.f, -6500.f, -6100.f, -5700.f, -5300.f };
-	constexpr float WideGapMinY = -7300.f;
-	constexpr float WideGapMaxY = -6700.f;
-	constexpr float GateStartX = -2000.f;
-	constexpr float GateTargetX = 1800.f;
-	/** A unit counts as arrived this close to its target; units sent together to one point crowd around it. */
-	constexpr float ArrivalRadius = 900.f;
+	FVector LongVehicleSize = FVector::ZeroVector;
+
+	/**
+	 * The gap test's walls of four power plants on either side of a gap, along x = 0: on the strip north of the bases one
+	 * with a 3 m gap, on the strip south of them one with a 6 m gap. Going around either end is far longer than going through.
+	 */
+	constexpr float NarrowGapWidth = 300.f;
+	constexpr float WideGapWidth = 600.f;
+	float NarrowGapPlantYs[8];
+	float NarrowGapMinY = 0.f;
+	float NarrowGapMaxY = 0.f;
+	float WideGapPlantYs[8];
+	float WideGapMinY = 0.f;
+	float WideGapMaxY = 0.f;
+	float GateStartX = 0.f;
+	float GateTargetX = 0.f;
+	/** A unit counts as arrived this close to its target; units sent together to one point crowd around it: a long hull. */
+	float ArrivalRadius = 0.f;
 
 	/** The vehicle factory the hull test drives at, where rts.Debug.UnitShots puts one, its exit facing east. */
-	const FVector FactorySpot(-2000.f, -6500.f, 0.f);
+	const FVector FactorySpot(-6000.f, -19500.f, 0.f);
+
+	/** The map's obstacles the hull test drives at, seen from above. */
+	FBox2D BlockBox(ForceInit);
+	FBox2D WallBox(ForceInit);
+
+	/** Plants side by side along x = 0 around a gap of Width centred near CenterY, from south to north, and the gap's edges. */
+	void LayGapWall(float CenterY, float Width, float PlantHalf, float (&OutYs)[8], float& OutMinY, float& OutMaxY)
+	{
+		// Even footprints centre on a grid line: the first plant south of the gap is snapped, the rest follow at a plant's pitch.
+		const float South = FMath::RoundToFloat((CenterY - 0.5f * Width - PlantHalf) / RTSBuildPlacement::GridSize) * RTSBuildPlacement::GridSize;
+		const float North = South + 2.f * PlantHalf + Width;
+		for (int32 Index = 0; Index < 4; ++Index)
+		{
+			OutYs[3 - Index] = South - Index * 2.f * PlantHalf;
+			OutYs[4 + Index] = North + Index * 2.f * PlantHalf;
+		}
+		OutMinY = South + PlantHalf;
+		OutMaxY = North - PlantHalf;
+	}
+
+	/** Lays the spots out from the map in World and the test data. False, with the reason in OutError, when something is missing. */
+	bool InitLayout(const UWorld& World, FString& OutError)
+	{
+		const URTSBuildingData* Plant = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+		const float HalfSize = RTSTests::GetMapHalfSize(World);
+		BlockBox = RTSTests::GetLabelledBox(World, TEXT("Block_North"));
+		WallBox = RTSTests::GetLabelledBox(World, TEXT("Wall_West"));
+		LongVehicleSize = GetLongVehicleSize();
+		if (!Plant || HalfSize <= 0.f || !BlockBox.bIsValid || !WallBox.bIsValid || LongVehicleSize.X <= 0.f)
+		{
+			OutError = TEXT("Missing test data, or L_TestMap lacks its NavMeshBoundsVolume, Block_North or Wall_West");
+			return false;
+		}
+		const float PlantHalf = RTSTests::GetFootprintExtent(*Plant).Y;
+		// The strips north and south of the bases: midway between Block_North (or Block_South) and the ground's edge.
+		const float StripY = 0.5f * (BlockBox.Max.Y + HalfSize);
+		LayGapWall(StripY, NarrowGapWidth, PlantHalf, NarrowGapPlantYs, NarrowGapMinY, NarrowGapMaxY);
+		LayGapWall(-StripY, WideGapWidth, PlantHalf, WideGapPlantYs, WideGapMinY, WideGapMaxY);
+		GateStartX = -(RTSTests::GetFootprintExtent(*Plant).X + 2.f * LongVehicleSize.X);
+		GateTargetX = -GateStartX;
+		ArrivalRadius = LongVehicleSize.X;
+		return true;
+	}
+
+	/** InitLayout on the editor's copy of the map AutomationOpenMap opened, before the play session starts. */
+	bool InitLayoutFromEditor(FAutomationTestBase& Test)
+	{
+		const UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+		FString Error = TEXT("No editor world");
+		if (!World || !InitLayout(*World, Error))
+		{
+			Test.AddError(Error);
+			return false;
+		}
+		return true;
+	}
 
 	/** A placeholder hull for a size no unit has: an engine cube stretched to Size. */
 	URTSUnitData* MakeBoxUnit(const TCHAR* Name, const FVector& Size, float Speed, float TurnRate)
@@ -156,7 +245,7 @@ namespace RTSNavigationTests
 			M20 = LoadObject<URTSUnitData>(nullptr, M20Path);
 			Tank = LoadObject<URTSUnitData>(nullptr, TankPath);
 			Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
-			LongVehicle = MakeBoxUnit(TEXT("NavTestLongVehicle"), LongVehicleSize, 450.f, 90.f);
+			LongVehicle = MakeBoxUnit(TEXT("NavTestLongVehicle"), GetLongVehicleSize(), 450.f, 90.f);
 			NarrowVehicle = MakeBoxUnit(TEXT("NavTestNarrowVehicle"), NarrowVehicleSize, 500.f, 180.f);
 			BoxUnits.Emplace(LongVehicle);
 			BoxUnits.Emplace(NarrowVehicle);
@@ -580,17 +669,22 @@ bool FRTSNavCheckFactoryExit::Update()
 	Test->AddInfo(FString::Printf(TEXT("The factory's widest unit: %s, spawned %.0f cm in front of its centre"), *DescribeUnit(*Widest),
 		RTSBuildPlacement::GetExitDistance(*Factory, *Widest)));
 
-	// Block_North's west face is at x = 600: a factory centred at x = 0 facing east puts its exit within the vehicle
-	// navmesh's erosion of it, one at x = -1000 well clear.
+	// Facing Block_North's west face: a factory whose exit lane reaches half way into the block is refused, one a lane and
+	// the vehicle navmesh's erosion further west is accepted.
+	const float FactoryHalf = RTSBuildPlacement::GetFootprintExtent(Factory->Footprint).X;
+	const float ExitLane = RTSBuildPlacement::GetExitLaneLength(*Factory);
+	const FVector Blocked(BlockBox.Min.X - FactoryHalf - 0.5f * ExitLane, BlockBox.GetCenter().Y, 0.f);
+	const FVector Clear(BlockBox.Min.X - FactoryHalf - ExitLane - 2.f * RTSNavAgents::GetAgents().Last().AgentRadius - 1000.f,
+		BlockBox.GetCenter().Y, 0.f);
 	FVector Location;
 	Test->TestFalse(TEXT("A vehicle factory whose exit faces a block too closely is refused"),
-		RTSBuildPlacement::CanPlace(*World, *Factory, FVector(0.f, 2500.f, 0.f), Location));
+		RTSBuildPlacement::CanPlace(*World, *Factory, Blocked, Location));
 	Test->TestTrue(TEXT("The same factory turned to face away from the block is accepted"),
-		RTSBuildPlacement::CanPlace(*World, *Factory, FVector(0.f, 2500.f, 0.f), Location, nullptr, 2));
+		RTSBuildPlacement::CanPlace(*World, *Factory, Blocked, Location, nullptr, 2));
 	Test->TestTrue(TEXT("A vehicle factory with room in front of its exit is accepted"),
-		RTSBuildPlacement::CanPlace(*World, *Factory, FVector(-1000.f, 2500.f, 0.f), Location));
+		RTSBuildPlacement::CanPlace(*World, *Factory, Clear, Location));
 	Test->TestTrue(TEXT("A barracks, whose infantry fit, is accepted where the factory is refused"),
-		RTSBuildPlacement::CanPlace(*World, *Barracks, FVector(0.f, 2500.f, 0.f), Location));
+		RTSBuildPlacement::CanPlace(*World, *Barracks, Blocked, Location));
 	return true;
 }
 
@@ -635,7 +729,7 @@ bool FRTSNavAgentSelectionTest::RunTest(const FString& Parameters)
 	const URTSUnitData* M20 = LoadObject<URTSUnitData>(nullptr, M20Path);
 	const URTSUnitData* Tank = LoadObject<URTSUnitData>(nullptr, TankPath);
 	const URTSUnitData* Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
-	const TStrongObjectPtr<URTSUnitData> LongVehicle(MakeBoxUnit(TEXT("NavTestLongVehicle"), LongVehicleSize, 450.f, 90.f));
+	const TStrongObjectPtr<URTSUnitData> LongVehicle(MakeBoxUnit(TEXT("NavTestLongVehicle"), GetLongVehicleSize(), 450.f, 90.f));
 	const TStrongObjectPtr<URTSUnitData> NarrowVehicle(MakeBoxUnit(TEXT("NavTestNarrowVehicle"), NarrowVehicleSize, 500.f, 180.f));
 	if (!TestNotNull(TEXT("M20 data"), M20) || !TestNotNull(TEXT("Tank data"), Tank) || !TestNotNull(TEXT("Infantry data"), Infantry))
 	{
@@ -676,7 +770,7 @@ bool FRTSNavVehicleAgentTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	const TSharedRef<FNavState> State = MakeShared<FNavState>();
-	if (!State->LoadUnits(*this))
+	if (!InitLayoutFromEditor(*this) || !State->LoadUnits(*this))
 	{
 		return false;
 	}
@@ -711,13 +805,15 @@ bool FRTSNavVehicleAgentTest::RunTest(const FString& Parameters)
 	Gate(TEXT("6 m gap"), { { State->M20, WideStart, 0.f } }, WideY, EGate::Through, WideGapMinY, WideGapMaxY);
 	Gate(TEXT("6 m gap"), { { State->Tank, WideStart, 0.f } }, WideY, EGate::Through, WideGapMinY, WideGapMaxY);
 	Gate(TEXT("6 m gap"), { { State->LongVehicle, WideStart, 0.f } }, WideY, EGate::Through, WideGapMinY, WideGapMaxY);
-	// Every size at once, each on its own order to its own spot beyond the gap, as a formation would send them.
+	// Every size at once, each on its own order to its own spot beyond the gap, as a formation would send them; spread along
+	// the drive in lengths of the long vehicle (L).
+	const float L = LongVehicleSize.X / 1000.f;
 	Gate(TEXT("6 m gap, mixed"), {
 		{ State->M20, WideStart, 0.f, FVector(0.f, 0.f, 0.f) },
-		{ State->Tank, WideStart + FVector(-900.f, 400.f, 0.f), 0.f, FVector(-800.f, 400.f, 0.f) },
-		{ State->LongVehicle, WideStart + FVector(-1500.f, -300.f, 0.f), 0.f, FVector(-1500.f, -300.f, 0.f) },
-		{ State->NarrowVehicle, WideStart + FVector(-900.f, -400.f, 0.f), 0.f, FVector(800.f, -400.f, 0.f) },
-		{ State->Infantry, WideStart + FVector(-2100.f, 200.f, 0.f), 0.f, FVector(800.f, 300.f, 0.f) },
+		{ State->Tank, WideStart + FVector(-900.f * L, 400.f, 0.f), 0.f, FVector(-800.f * L, 400.f, 0.f) },
+		{ State->LongVehicle, WideStart + FVector(-1500.f * L, -300.f, 0.f), 0.f, FVector(-1500.f * L, -300.f, 0.f) },
+		{ State->NarrowVehicle, WideStart + FVector(-900.f * L, -400.f, 0.f), 0.f, FVector(800.f * L, -400.f, 0.f) },
+		{ State->Infantry, WideStart + FVector(-2100.f * L, 200.f, 0.f), 0.f, FVector(800.f * L, 300.f, 0.f) },
 	}, WideY, EGate::Through, WideGapMinY, WideGapMaxY);
 
 	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
@@ -764,15 +860,22 @@ bool FRTSNavHullClearanceTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	const TSharedRef<FNavState> State = MakeShared<FNavState>();
-	if (!State->LoadUnits(*this))
+	const URTSBuildingData* Factory = LoadObject<URTSBuildingData>(nullptr, VehicleFactoryPath);
+	if (!InitLayoutFromEditor(*this) || !State->LoadUnits(*this) || !TestNotNull(TEXT("Vehicle factory data"), Factory))
 	{
 		return false;
 	}
 	State->PlacedSpots.Add(FactorySpot);
 
-	// Block_North spans x 600 to 1400 and y 2100 to 2900, Wall_West x -2600 to -2400 and y -1000 to 1000, the factory
-	// 4 x 4 cells around FactorySpot. Each is far enough from the others for three units to drive at once, one at each, and
-	// four rounds take every unit to every obstacle.
+	// Block_North, Wall_West and the factory around FactorySpot. Each is far enough from the others for three units to drive
+	// at once, one at each, and four rounds take every unit to every obstacle. Starts and targets lie off each face by
+	// lengths of the long vehicle (L, per 1000 cm), as they did for the 10 m long vehicle of before the real scale.
+	const float L = LongVehicleSize.X / 1000.f;
+	const FVector2D B = BlockBox.GetCenter();
+	const FVector2D BH = BlockBox.GetExtent();
+	const FVector2D W = WallBox.GetCenter();
+	const FVector2D WH = WallBox.GetExtent();
+	const FVector2D FH(RTSBuildPlacement::GetFootprintExtent(Factory->Footprint));
 	struct FCourse
 	{
 		FVector Start;
@@ -780,19 +883,19 @@ bool FRTSNavHullClearanceTest::RunTest(const FString& Parameters)
 		FVector Target;
 	};
 	const FCourse HeadOn[] = {
-		{ FVector(1000.f, 4500.f, 0.f), -90.f, FVector(1000.f, 2500.f, 0.f) },
-		{ FVector(-900.f, 0.f, 0.f), 180.f, FVector(-2500.f, 0.f, 0.f) },
-		{ FactorySpot + FVector(0.f, 1700.f, 0.f), -90.f, FactorySpot },
+		{ FVector(B.X, B.Y + BH.Y + 1600.f * L, 0.f), -90.f, FVector(B, 0.f) },
+		{ FVector(W.X + WH.X + 1500.f * L, W.Y, 0.f), 180.f, FVector(W, 0.f) },
+		{ FactorySpot + FVector(0.f, FH.Y + 1500.f * L, 0.f), -90.f, FactorySpot },
 	};
 	const FCourse Along[] = {
-		{ FVector(-600.f, 3150.f, 0.f), 0.f, FVector(2600.f, 3150.f, 0.f) },
-		{ FVector(-2150.f, -1600.f, 0.f), 90.f, FVector(-2150.f, 1600.f, 0.f) },
-		{ FactorySpot + FVector(-1300.f, 450.f, 0.f), 0.f, FactorySpot + FVector(1300.f, 450.f, 0.f) },
+		{ FVector(B.X - BH.X - 1200.f * L, B.Y + BH.Y + 250.f * L, 0.f), 0.f, FVector(B.X + BH.X + 1200.f * L, B.Y + BH.Y + 250.f * L, 0.f) },
+		{ FVector(W.X + WH.X + 250.f * L, W.Y - WH.Y - 600.f * L, 0.f), 90.f, FVector(W.X + WH.X + 250.f * L, W.Y + WH.Y + 600.f * L, 0.f) },
+		{ FactorySpot + FVector(-FH.X - 1100.f * L, FH.Y + 250.f * L, 0.f), 0.f, FactorySpot + FVector(FH.X + 1100.f * L, FH.Y + 250.f * L, 0.f) },
 	};
 	const FCourse Around[] = {
-		{ FVector(200.f, 3500.f, 0.f), 0.f, FVector(1900.f, 1600.f, 0.f) },
-		{ FVector(-1800.f, 600.f, 0.f), 90.f, FVector(-3300.f, 600.f, 0.f) },
-		{ FactorySpot + FVector(-800.f, 700.f, 0.f), 0.f, FactorySpot + FVector(700.f, -900.f, 0.f) },
+		{ FVector(B.X - BH.X - 400.f * L, B.Y + BH.Y + 600.f * L, 0.f), 0.f, FVector(B.X + BH.X + 500.f * L, B.Y - BH.Y - 500.f * L, 0.f) },
+		{ FVector(W.X + WH.X + 600.f * L, W.Y + 0.6f * WH.Y, 0.f), 90.f, FVector(W.X - WH.X - 800.f * L, W.Y + 0.6f * WH.Y, 0.f) },
+		{ FactorySpot + FVector(-FH.X - 600.f * L, FH.Y + 500.f * L, 0.f), 0.f, FactorySpot + FVector(FH.X + 500.f * L, -FH.Y - 700.f * L, 0.f) },
 	};
 	URTSUnitData* const Hulls[] = { State->M20, State->Tank, State->LongVehicle, State->NarrowVehicle };
 	auto AddRounds = [&](const FString& Name, const FCourse (&Courses)[3], bool bStopAtObstacle)
@@ -836,6 +939,10 @@ bool FRTSNavFactoryExitTest::RunTest(const FString& Parameters)
 		return false;
 	}
 	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!InitLayoutFromEditor(*this))
+	{
+		return false;
+	}
 	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavCheckFactoryExit(this));

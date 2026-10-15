@@ -34,8 +34,9 @@ TEST_TANK_FILE = "Content/Data/Units/DA_TestTank.uasset"
 ABRAMS = "/Game/Data/Units/DA_TestAbrams"
 ABRAMS_FILE = "Content/Data/Units/DA_TestAbrams.uasset"
 ABRAMS_DIR = os.path.join("Crytek", "Abrams")
-# The footprint setup_testmap.py gives DA_TestAbrams.
-ABRAMS_FOOTPRINT = (290.0, 160.0)
+# The fit boxes setup_testmap.py gives DA_TestAbrams and DA_TestTank (length x width, cm).
+ABRAMS_FOOTPRINT = (1080.0, 380.0)
+TEST_TANK_FOOTPRINT = (1080.0, 370.0)
 PROJECT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Source", "Local")
 
@@ -119,12 +120,12 @@ def use_for_abrams(hull, turret):
 
 
 def use_for_test_tank(mesh):
-    """Points DA_TestTank at mesh, scaled to the 260 x 150 footprint setup_testmap.py gives the committed tank, and
+    """Points DA_TestTank at mesh, scaled to the fit box setup_testmap.py gives the committed tank, and
     hides the change from git."""
     keep_local(TEST_TANK_FILE)
 
     box = mesh.get_bounding_box()
-    scale = min(260.0 / (box.max.x - box.min.x), 150.0 / (box.max.y - box.min.y))
+    scale = min(TEST_TANK_FOOTPRINT[0] / (box.max.x - box.min.x), TEST_TANK_FOOTPRINT[1] / (box.max.y - box.min.y))
     tank = unreal.load_asset(TEST_TANK)
     tank.set_editor_property("mesh", mesh)
     tank.set_editor_property("mesh_scale", unreal.Vector(scale, scale, scale))

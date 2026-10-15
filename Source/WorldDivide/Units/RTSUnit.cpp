@@ -44,13 +44,16 @@ namespace
 	constexpr float BuildingApproachFraction = 0.5f;
 
 	/** Units that cannot harvest or build stop this far outside the edge of a supply source or construction site they were sent to. */
-	constexpr float DockStandOff = 100.f;
+	constexpr float DockStandOff = 200.f;
 
-	/** A move into a wall or a building steps back toward the unit by this much until it finds navmesh, up to the distance. */
+	/**
+	 * A move into a wall or a building steps back toward the unit by this much until it finds navmesh, up to the distance:
+	 * further than the middle of the largest building (a 28 m headquarters, a 24 x 48 m airfield) lies from its edge.
+	 */
 	constexpr float MoveSnapStep = 50.f;
-	constexpr float MoveSnapDistance = 1000.f;
-	/** Tall enough to reach the ground from the roof of a block, where a click on it lands. */
-	const FVector MoveSnapExtent(MoveSnapStep, MoveSnapStep, 1000.f);
+	constexpr float MoveSnapDistance = 3000.f;
+	/** Tall enough to reach the ground from the roof of the tallest building (the 32 m superweapon), where a click on it lands. */
+	const FVector MoveSnapExtent(MoveSnapStep, MoveSnapStep, 3500.f);
 
 	/** A unit holds short of a new building once this much of its travel time lies between it and the footprint. */
 	constexpr float HoldLookaheadSeconds = 0.2f;

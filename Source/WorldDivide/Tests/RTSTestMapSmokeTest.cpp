@@ -2,6 +2,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
+#include "AI/RTSAIPlayer.h"
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
@@ -43,6 +44,7 @@
 #include "Tests/RTSTestGeometry.h"
 #include "Tests/RTSTestMaps.h"
 #include "Tests/RTSTestPIE.h"
+#include "Tests/RTSTestScale.h"
 #include "Tests/RTSTestUI.h"
 #include "UI/Layout/RTSLayoutScreen.h"
 #include "UI/Layout/RTSLayoutWidget.h"
@@ -104,33 +106,55 @@ namespace
 	const FVector2D HUDViewportSize(1920.f, 1080.f);
 	constexpr double MoveTimeout = 60.0;
 
-	/** The empty strip north of both bases, far out of range of the map's own units. */
-	const FVector AttackerStart(-1500.f, 7000.f, 0.f);
-	const FVector VictimStart(1500.f, 7000.f, 0.f);
-	constexpr double AttackTimeout = 30.0;
-
 	const TCHAR* TowerPath = TEXT("/Game/Data/Buildings/DA_TestTower.DA_TestTower");
 	const TCHAR* HeadquartersPath = TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters");
 	const TCHAR* PowerPlantPath = TEXT("/Game/Data/Buildings/DA_TestPowerPlant.DA_TestPowerPlant");
 	const TCHAR* TankPath = TEXT("/Game/Data/Units/DA_TestTank.DA_TestTank");
 	const TCHAR* InfantryPath = TEXT("/Game/Data/Units/DA_TestInfantry.DA_TestInfantry");
+	const TCHAR* HarvesterPath = TEXT("/Game/Data/Units/DA_TestHarvester.DA_TestHarvester");
+	const TCHAR* SupplyDepotPath = TEXT("/Game/Data/Buildings/DA_TestSupplyDepot.DA_TestSupplyDepot");
+	const TCHAR* BuilderPath = TEXT("/Game/Data/Units/DA_TestBuilder.DA_TestBuilder");
+	const TCHAR* BarracksPath = TEXT("/Game/Data/Buildings/DA_TestBarracks.DA_TestBarracks");
+	const TCHAR* VehicleFactoryPath = TEXT("/Game/Data/Buildings/DA_TestVehicleFactory.DA_TestVehicleFactory");
+	const TCHAR* RifleTrainingPath = TEXT("/Game/Data/Upgrades/DA_TestRifleTraining.DA_TestRifleTraining");
+	const TCHAR* GrenadierPath = TEXT("/Game/Data/Units/DA_TestGrenadier.DA_TestGrenadier");
+	const TCHAR* AirfieldPath = TEXT("/Game/Data/Buildings/DA_TestAirfield.DA_TestAirfield");
+	const TCHAR* WallLabel = TEXT("Wall_West");
+	const TCHAR* ObstacleLabel = TEXT("Block_North");
 
-	/** Spots in the empty north strip, plus a wall and a spot beyond the edge of the ground. */
-	const FVector BuildSpot(0.f, 7000.f, 0.f);
-	const FVector UnitSpot(3000.f, 7000.f, 0.f);
-	const FVector OtherBuildSpot(-3000.f, 7000.f, 0.f);
-	const FVector WallSpot(-2500.f, 0.f, 0.f);
-	const FVector OffMapSpot(11000.f, 0.f, 0.f);
+	/**
+	 * Where the tests put things on L_TestMap. Every spot comes from the map and the game's data when the play session is up
+	 * (InitLayout, called by FRTSWaitForNavigation), so it moves with the scale (#136): the map's half size and its obstacles,
+	 * the hulls, footprints, ranges and speeds of the test units and buildings, and the AI's lane between buildings.
+	 */
+
+	/** The empty strip north of both bases, far out of range of the map's own units: the lane along it, at y = StripY. */
+	float StripY = 0.f;
+	/** How far apart two neighbouring spots on the strip lie: room for the widest test building beside a power plant. */
+	float SpotPitch = 0.f;
+
+	/** The attack test: a lone tank and an infantry on the strip, further apart than the tank's range. */
+	FVector AttackerStart;
+	FVector VictimStart;
+	constexpr double AttackTimeout = 30.0;
+
+	/** Spots on the strip, plus a wall and a spot beyond the edge of the ground. */
+	FVector BuildSpot;
+	FVector UnitSpot;
+	FVector OtherBuildSpot;
+	FVector WallSpot;
+	FVector OffMapSpot;
 	constexpr double ConstructionTimeout = 15.0;
 
-	/** Where the building tests give the player a power plant, in the empty strip south of the bases. */
-	const FVector PowerPlantSpot(-3000.f, -7000.f, 0.f);
+	/** Where the building tests give the player a power plant, on the empty strip south of the bases. */
+	FVector PowerPlantSpot;
 
 	/** The route test drives a tank straight through BuildSpot after a power plant goes down there. */
-	const FVector RouteStart(-1500.f, 7000.f, 0.f);
-	const FVector RouteTarget(1500.f, 7000.f, 0.f);
-	constexpr float RouteArrivalRadius = 150.f;
-	constexpr double RouteTimeout = 30.0;
+	FVector RouteStart;
+	FVector RouteTarget;
+	/** Half a tank's hull: how close to its target a lone tank stops. */
+	float RouteArrivalRadius = 0.f;
+	double RouteTimeout = 30.0;
 
 	/**
 	 * The path test places the power plant on BuildSpot just before the moving tank's circle comes closer than this to its
@@ -138,87 +162,71 @@ namespace
 	 * building.
 	 */
 	constexpr float PathPlacementLead = 40.f;
-	const FVector BystanderStart(-1500.f, 6200.f, 0.f);
-	const FVector BystanderTarget(1500.f, 6200.f, 0.f);
+	FVector BystanderStart;
+	FVector BystanderTarget;
 
 	/** The building attack puts an enemy power plant on BuildSpot and sends tanks at it from well out of range. */
-	const FVector BuildingAttackerStarts[] = {
-		FVector(-3500.f, 6700.f, 0.f),
-		FVector(-3500.f, 7000.f, 0.f),
-		FVector(-3500.f, 7300.f, 0.f),
-	};
-	constexpr double BuildingAttackTimeout = 45.0;
+	FVector BuildingAttackerStarts[3];
+	double BuildingAttackTimeout = 45.0;
 
 	/**
-	 * The wall test puts an enemy power plant just east of Wall_West, 200 cm thick at WallSpot. Its west edge lies half a
-	 * tank's range east of the wall's centre, so the spot facing the tanks to the west lies inside the wall.
+	 * The wall test puts an enemy power plant just east of Wall_West. Its west edge lies half a tank's range east of the
+	 * wall's centre, so the spot facing the tanks to the west lies inside the wall.
 	 */
-	const TCHAR* WallLabel = TEXT("Wall_West");
-	const FVector BehindWallSpot(-1700.f, 0.f, 0.f);
-	const FVector WallAttackerStarts[] = {
-		FVector(-3500.f, -300.f, 0.f),
-		FVector(-3500.f, 0.f, 0.f),
-		FVector(-3500.f, 300.f, 0.f),
-	};
+	FVector BehindWallSpot;
+	FVector WallAttackerStarts[3];
 
-	/** The unreachable test puts targets beyond the ground's east edge at x = 10000, out of range of any navmesh. */
-	const FVector UnreachableBuildingSpot(13000.f, 7000.f, 0.f);
-	const FVector UnreachableSourceSpot(13000.f, 5000.f, 0.f);
-	const FVector UnreachableAttackerStart(8000.f, 7000.f, 0.f);
-	const FVector UnreachableHarvesterStart(8000.f, 5000.f, 0.f);
+	/** The unreachable test puts targets beyond the ground's east edge, out of range of any navmesh. */
+	FVector UnreachableBuildingSpot;
+	FVector UnreachableSourceSpot;
+	FVector UnreachableAttackerStart;
+	FVector UnreachableHarvesterStart;
 	constexpr double UnreachableTimeout = 5.0;
-	const TCHAR* HarvesterPath = TEXT("/Game/Data/Units/DA_TestHarvester.DA_TestHarvester");
 
-	/** The harvest test puts a supply depot on BuildSpot and a source holding three loads beside it. */
-	const TCHAR* SupplyDepotPath = TEXT("/Game/Data/Buildings/DA_TestSupplyDepot.DA_TestSupplyDepot");
-	const FVector HarvestSourceSpot(900.f, 7000.f, 0.f);
+	/** The harvest test puts a supply depot on BuildSpot and a source holding three loads beside it, two harvesters apart. */
+	FVector HarvestSourceSpot;
 	constexpr int32 HarvestLoads = 3;
 	constexpr double HarvestTimeout = 90.0;
 	/** Allowed difference in seconds between two cycles on the same route. */
 	constexpr double CycleTolerance = 1.5;
 
 	/**
-	 * The unreachable-docks test walls a source and a depot in with a ring of ten of the player's power plants, two cells
-	 * wide. Seen from the harvester each lies nearer than its reachable counterpart: the open source south of it, the open
-	 * depot north of it.
+	 * The unreachable-docks test walls a source and a depot in with a ring of ten of the player's power plants, side by side
+	 * on a power plant's pitch. Seen from the harvester each lies nearer than its reachable counterpart: the open source south
+	 * of it, the open depot north of it.
 	 */
-	const FVector WalledSourceSpot(-400.f, 7000.f, 0.f);
-	const FVector WalledDepotSpot(0.f, 7000.f, 0.f);
-	const FVector RingSpots[] = {
-		FVector(-800.f, 6600.f, 0.f), FVector(-400.f, 6600.f, 0.f), FVector(0.f, 6600.f, 0.f), FVector(400.f, 6600.f, 0.f),
-		FVector(-800.f, 7000.f, 0.f), FVector(400.f, 7000.f, 0.f),
-		FVector(-800.f, 7400.f, 0.f), FVector(-400.f, 7400.f, 0.f), FVector(0.f, 7400.f, 0.f), FVector(400.f, 7400.f, 0.f),
-	};
-	const FVector OpenSourceSpot(1500.f, 5000.f, 0.f);
-	const FVector OpenDepotSpot(1500.f, 9000.f, 0.f);
-	const FVector DockHarvesterStart(1500.f, 7000.f, 0.f);
+	FVector WalledSourceSpot;
+	FVector WalledDepotSpot;
+	FVector RingSpots[10];
+	FVector OpenSourceSpot;
+	FVector OpenDepotSpot;
+	FVector DockHarvesterStart;
 	/** How far beyond its stand-off radius from a depot's footprint edge a harvester stands when it delivers there, with some slack. */
 	constexpr float DeliveryReach = 230.f;
 	constexpr double UnreachableDocksTimeout = 60.0;
 
-	/** The obstacle move test sends three tanks from north of Block_North onto its roof, where a click on it lands. */
-	const TCHAR* ObstacleLabel = TEXT("Block_North");
-	const FVector ObstacleMoverStarts[] = {
-		FVector(800.f, 4500.f, 0.f),
-		FVector(1000.f, 4500.f, 0.f),
-		FVector(1200.f, 4500.f, 0.f),
-	};
+	/**
+	 * The obstacle move test sends tanks, each on its own order, onto Block_North's roof, where a click on it lands: one from
+	 * the north and one from the east, each three hulls out from its face. The 8 m block has room for one real-size tank per
+	 * face.
+	 */
+	FVector ObstacleMoverStarts[2];
+	const FVector2D ObstacleMoverSides[2] = { FVector2D(0.f, 1.f), FVector2D(1.f, 0.f) };
 	/** How far from the block's face a tank's hull may stop, and how far it may reach into it (RTSHullClearance). */
 	constexpr float ObstacleEdgeTolerance = 50.f;
 	constexpr float ObstacleOverlapTolerance = 2.f;
 	constexpr double ObstacleMoveTimeout = 30.0;
 
 	/**
-	 * The builder test: two builders in the north strip take turns on a tower at BuildSpot, then the first builds a power
-	 * plant and a tower queued behind it. A third builder by the west wall is sent off the map and into the wall.
+	 * The builder test: two builders on the strip take turns on a tower at BuildSpot, then the first builds a power plant and
+	 * a tower queued behind it. A third builder by the west wall is sent off the map and into the wall.
 	 */
-	const TCHAR* BuilderPath = TEXT("/Game/Data/Units/DA_TestBuilder.DA_TestBuilder");
-	const FVector BuilderStart(-2500.f, 7000.f, 0.f);
-	const FVector SecondBuilderStart(2500.f, 7000.f, 0.f);
-	const FVector BuilderAwaySpot(-2500.f, 6000.f, 0.f);
-	const FVector NonBuilderStart(-2000.f, 7600.f, 0.f);
-	const FVector ProbeStart(-3300.f, 0.f, 0.f);
-	const FVector QueuedTowerSpot(-3000.f, 6000.f, 0.f);
+	FVector BuilderStart;
+	FVector SecondBuilderStart;
+	FVector BuilderAwaySpot;
+	FVector NonBuilderStart;
+	FVector ProbeStart;
+	FVector QueuedTowerSpot;
 	/** How far from the footprint edge a builder at work stands: its reach of 150 cm beyond its radius, plus some slack. */
 	constexpr float BuilderReach = 200.f;
 	constexpr double BuilderTimeout = 30.0;
@@ -227,17 +235,16 @@ namespace
 
 	/**
 	 * The site clearing test: an enemy parked on OtherBuildSpot refuses the builder, then an idle own tank and an own infantry
-	 * attacking a sturdy enemy dummy north of BuildSpot stand on the site of a tower there.
+	 * attacking a sturdy enemy dummy north of BuildSpot, in the infantry's range, stand on the site of a tower there.
 	 */
-	const FVector SiteInfantryStart(60.f, 6960.f, 0.f);
-	const FVector SiteDummySpot(0.f, 7500.f, 0.f);
+	FVector SiteInfantryStart;
+	FVector SiteDummySpot;
 
 	/** The production test: a barracks at BuildSpot sends three infantry to a rally point north-east of it. */
-	const TCHAR* BarracksPath = TEXT("/Game/Data/Buildings/DA_TestBarracks.DA_TestBarracks");
-	const FVector RallySpot(1200.f, 7600.f, 0.f);
+	FVector RallySpot;
 	constexpr int32 ProductionCount = 3;
-	/** Units sent to the same rally point crowd around it. */
-	constexpr float RallyArrivalRadius = 250.f;
+	/** Units sent to the same rally point crowd around it, within a tank's length. */
+	float RallyArrivalRadius = 0.f;
 	/** Game seconds a unit may come out later or sooner than one build time after the one before it. */
 	constexpr double ProductionTolerance = 0.5;
 	constexpr double ProductionTimeout = 60.0;
@@ -246,24 +253,21 @@ namespace
 	 * The produced-harvester tests: a vehicle factory at BuildSpot sends a harvester and a tank to RallySpot, with a source east
 	 * of it and a depot north of that source; or that depot sends only a harvester there.
 	 */
-	const TCHAR* VehicleFactoryPath = TEXT("/Game/Data/Buildings/DA_TestVehicleFactory.DA_TestVehicleFactory");
-	const FVector ProducedSourceSpot(2400.f, 7600.f, 0.f);
-	const FVector ProducedDepotSpot(2400.f, 8800.f, 0.f);
+	FVector ProducedSourceSpot;
+	FVector ProducedDepotSpot;
 	constexpr double ProducedHarvesterTimeout = 60.0;
 
 	/** The upgrade test: a barracks at BuildSpot researches rifle training, with an infantry already standing at UnitSpot. */
-	const TCHAR* RifleTrainingPath = TEXT("/Game/Data/Upgrades/DA_TestRifleTraining.DA_TestRifleTraining");
-	const TCHAR* GrenadierPath = TEXT("/Game/Data/Units/DA_TestGrenadier.DA_TestGrenadier");
 	constexpr double UpgradeTimeout = 30.0;
 
 	/**
-	 * The attack-move tests run along the north strip. The enemy stands beside the lane: inside a tank's range (1200 cm) as it
-	 * passes, but outside the infantry rifle's (700 cm), so the infantry never hits back.
+	 * The attack-move tests run along the strip. The enemy stands beside the lane: inside a tank's range as it passes, but
+	 * outside the infantry rifle's, so the infantry never hits back.
 	 */
-	const FVector AttackMoveWest(-3000.f, 7000.f, 0.f);
-	const FVector AttackMoveEast(3000.f, 7000.f, 0.f);
-	const FVector AttackMoveEnemySpot(0.f, 7900.f, 0.f);
-	const FVector AttackMoveBuildingTarget(3500.f, 7000.f, 0.f);
+	FVector AttackMoveWest;
+	FVector AttackMoveEast;
+	FVector AttackMoveEnemySpot;
+	FVector AttackMoveBuildingTarget;
 	constexpr double AttackMoveTimeout = 45.0;
 
 	/**
@@ -273,57 +277,233 @@ namespace
 	constexpr double HeadquartersTimeout = 30.0;
 	/** Game seconds a refused order is watched for any movement. */
 	constexpr double RefusedOrderSeconds = 2.0;
-	/** Tanks that fought on the way were at least this far short of their target when the enemy fell. */
-	constexpr float AttackMoveShortfall = 1000.f;
+	/** Tanks that fought on the way were at least this far short of their target when the enemy fell: four hulls. */
+	float AttackMoveShortfall = 0.f;
 	// A few frames are enough for PlayerTick to notice the emptied selection.
 	constexpr double AttackMoveDisarmTimeout = 5.0;
 
 	/**
-	 * The hovered unit test: an enemy and an own tank on the north strip, out of each other's range (1200 cm), and empty
-	 * ground between them. The cursor ray comes down from the camera's height; a headless editor has no viewport to
-	 * project a real mouse position through.
+	 * The hovered unit test: an enemy and an own tank on the strip, out of each other's range, and empty ground between them.
+	 * The cursor ray comes down from the camera's height; a headless editor has no viewport to project a real mouse position
+	 * through.
 	 */
-	const FVector HoverEnemySpot(1000.f, 7000.f, 0.f);
-	const FVector HoverOwnSpot(-1000.f, 7000.f, 0.f);
-	const FVector HoverEmptySpot(0.f, 7000.f, 0.f);
+	FVector HoverEnemySpot;
+	FVector HoverOwnSpot;
+	FVector HoverEmptySpot;
 	const FVector HoverRayOffset(-1700.f, 0.f, 2500.f);
 
 	/**
-	 * The match-end test: a harvester between a depot and a source on the empty strip, as in the harvest test, a tank walking
-	 * past them to the north and a builder at a vehicle factory site beyond, and a tank in range of an enemy tower south of
-	 * the bases. The walk takes over 13 s, the site 8 s and each queued builder 10 s, so all are under way when the match ends.
+	 * The match-end test: a harvester between a depot and a source on the strip, as in the harvest test, a tank walking past
+	 * them to the north and a builder at a vehicle factory site beyond, and a tank in range of an enemy tower south of the
+	 * bases. The walk takes MatchEndWalkSeconds, the site 8 s and each queued builder 10 s, so all are under way when the match
+	 * ends.
 	 */
-	const FVector MatchEndWalkerStart(-4000.f, 8200.f, 0.f);
-	const FVector MatchEndWalkerTarget(4000.f, 8200.f, 0.f);
-	const FVector MatchEndTowerSpot(3000.f, -7000.f, 0.f);
-	const FVector MatchEndFighterStart(2000.f, -7000.f, 0.f);
-	const FVector MatchEndSiteSpot(0.f, 9300.f, 0.f);
-	const FVector MatchEndBuilderStart(0.f, 9600.f, 0.f);
+	constexpr float MatchEndWalkSeconds = 14.f;
+	FVector MatchEndWalkerStart;
+	FVector MatchEndWalkerTarget;
+	FVector MatchEndTowerSpot;
+	FVector MatchEndFighterStart;
+	FVector MatchEndSiteSpot;
+	FVector MatchEndBuilderStart;
 	constexpr int32 MatchEndQueuedBuilders = 3;
 	constexpr int32 MatchEndSourceLoads = 10;
 	/** Game seconds everything runs before the enemy falls, and then is watched for any change. */
 	constexpr double MatchEndRunSeconds = 2.0;
 	constexpr double MatchEndFrozenSeconds = 3.0;
-	/** A unit may still move in the frame the match ends, before its own tick stops it. */
+	/** A building, or a slow unit, may still move this much in the frame the match ends, before its own tick stops it. */
 	constexpr float MatchEndStopTolerance = 50.f;
+	/** A unit may drive on for the frame the match ends in: a tenth of a game second at its speed. */
+	constexpr float MatchEndStopSeconds = 0.1f;
 
 	/**
-	 * The rotation test turns the 4x8 airfield a quarter at BuildSpot, so it spans 8 cells along X and 4 along Y. A plant
-	 * beside it east fits only beside the unturned airfield, one north only beside the turned one; a point inside the turned
-	 * footprint only must lose its navmesh.
+	 * The rotation test turns the airfield a quarter at BuildSpot, so its long side runs along X. A plant beside it east
+	 * fits only beside the unturned airfield, one north only beside the turned one; a point inside the turned footprint only
+	 * must lose its navmesh.
 	 */
-	const TCHAR* AirfieldPath = TEXT("/Game/Data/Buildings/DA_TestAirfield.DA_TestAirfield");
-	const FVector RotatedEastSpot(500.f, 7000.f, 0.f);
-	const FVector RotatedNorthSpot(0.f, 7500.f, 0.f);
-	const FVector RotatedOnlyPoint(300.f, 7000.f, 0.f);
-	const FVector PrerequisiteFactorySpot(3000.f, -7000.f, 0.f);
+	FVector RotatedEastSpot;
+	FVector RotatedNorthSpot;
+	FVector RotatedOnlyPoint;
+	FVector PrerequisiteFactorySpot;
 
 	/**
 	 * The queued-site test: a builder walks to a plant at UnitSpot with another queued at OtherBuildSpot. A plant overlapping
-	 * the queued one is refused; one flush beside it is accepted.
+	 * the queued one by half is refused; one flush beside it is accepted.
 	 */
-	const FVector QueuedOverlapSpot(-3000.f, 7200.f, 0.f);
-	const FVector QueuedFlushSpot(-3000.f, 7400.f, 0.f);
+	FVector QueuedOverlapSpot;
+	FVector QueuedFlushSpot;
+
+	/** The cancel test's enemy tower, two pitches west of BuildSpot. */
+	FVector CancelEnemySpot;
+
+	/** The selection panel test: two tanks one behind the other and an infantry beside them on UnitSpot. */
+	FVector SelectionTankSpot;
+	FVector SelectionOtherTankSpot;
+	FVector SelectionInfantrySpot;
+
+	/**
+	 * Lays the spots out from the map in World and the test data. False, with the reason in OutError, when something they
+	 * come from is missing.
+	 */
+	bool InitLayout(const UWorld& World, FString& OutError)
+	{
+		const URTSUnitData* Tank = LoadObject<URTSUnitData>(nullptr, TankPath);
+		const URTSUnitData* Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
+		const URTSUnitData* Harvester = LoadObject<URTSUnitData>(nullptr, HarvesterPath);
+		const URTSUnitData* Builder = LoadObject<URTSUnitData>(nullptr, BuilderPath);
+		const URTSBuildingData* Plant = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+		const URTSBuildingData* Tower = LoadObject<URTSBuildingData>(nullptr, TowerPath);
+		const URTSBuildingData* Depot = LoadObject<URTSBuildingData>(nullptr, SupplyDepotPath);
+		const URTSBuildingData* Factory = LoadObject<URTSBuildingData>(nullptr, VehicleFactoryPath);
+		const URTSBuildingData* Airfield = LoadObject<URTSBuildingData>(nullptr, AirfieldPath);
+		const float HalfSize = RTSTests::GetMapHalfSize(World);
+		const FBox2D Block = RTSTests::GetLabelledBox(World, ObstacleLabel);
+		const FBox2D Wall = RTSTests::GetLabelledBox(World, WallLabel);
+		if (!Tank || !Infantry || !Harvester || !Builder || !Plant || !Tower || !Depot || !Factory || !Airfield)
+		{
+			OutError = TEXT("Missing test unit or building data");
+			return false;
+		}
+		if (HalfSize <= 0.f || !Block.bIsValid || !Wall.bIsValid)
+		{
+			OutError = FString::Printf(TEXT("L_TestMap lacks its NavMeshBoundsVolume, %s or %s"), ObstacleLabel, WallLabel);
+			return false;
+		}
+
+		const FVector2D TankHull = RTSTests::GetHullSize(*Tank);
+		const float TankRange = RTSTests::GetRange(*Tank);
+		const float RifleRange = RTSTests::GetRange(*Infantry);
+		const float HarvesterLength = RTSTests::GetHullSize(*Harvester).X;
+		const float BuilderLength = RTSTests::GetHullSize(*Builder).X;
+		const FVector2D PlantExtent = RTSTests::GetFootprintExtent(*Plant);
+		const FVector2D TowerExtent = RTSTests::GetFootprintExtent(*Tower);
+		const FVector2D DepotExtent = RTSTests::GetFootprintExtent(*Depot);
+		const FVector2D FactoryExtent = RTSTests::GetFootprintExtent(*Factory);
+		const FVector2D AirfieldExtent = RTSTests::GetFootprintExtent(*Airfield);
+		const FVector2D SourceExtent(RTSBuildPlacement::GetFootprintExtent(GetDefault<ARTSSupplySource>()->Footprint));
+		const float Lane = ARTSAIPlayer::GetBuildingGap();
+		const auto Strip = [](float X, float Y = 0.f) { return FVector(X, StripY + Y, 0.f); };
+
+		// The strip: midway between Block_North and the ground's north edge, on a grid line so buildings stand where asked.
+		StripY = FMath::RoundToFloat(0.5f * (Block.Max.Y + HalfSize) / RTSBuildPlacement::GridSize) * RTSBuildPlacement::GridSize;
+		SpotPitch = FMath::Max(AirfieldExtent.X, AirfieldExtent.Y) + PlantExtent.X + 2.f * Lane;
+		BuildSpot = Strip(0.f);
+		UnitSpot = Strip(SpotPitch);
+		OtherBuildSpot = Strip(-SpotPitch);
+		WallSpot = FVector(FVector2D(Wall.GetCenter()), 0.f);
+		OffMapSpot = FVector(HalfSize + 1000.f, 0.f, 0.f);
+		PowerPlantSpot = FVector(-SpotPitch, -StripY, 0.f);
+		CancelEnemySpot = Strip(-2.f * SpotPitch);
+
+		// Out of range: a tank's range, a power plant and two hulls clear of the target.
+		const float OutOfRange = PlantExtent.X + TankRange + 2.f * TankHull.X;
+		AttackerStart = Strip(-0.5f * (TankRange + TankHull.X + 1000.f));
+		VictimStart = Strip(0.5f * (TankRange + TankHull.X + 1000.f));
+
+		const float RouteHalf = PlantExtent.X + 3.f * TankHull.X;
+		RouteStart = Strip(-RouteHalf);
+		RouteTarget = Strip(RouteHalf);
+		RouteArrivalRadius = 0.5f * TankHull.X;
+		RouteTimeout = RTSTests::GetTravelTimeout(4.f * RouteHalf, Tank->MoveSpeed);
+		BystanderStart = Strip(-RouteHalf, -(PlantExtent.Y + TankHull.X + Lane));
+		BystanderTarget = Strip(RouteHalf, -(PlantExtent.Y + TankHull.X + Lane));
+
+		for (int32 Index = 0; Index < 3; ++Index)
+		{
+			BuildingAttackerStarts[Index] = Strip(-OutOfRange, (Index - 1) * 2.f * TankHull.Y);
+		}
+		BuildingAttackTimeout = 15.0 + RTSTests::GetTravelTimeout(OutOfRange, Tank->MoveSpeed);
+
+		BehindWallSpot = FVector(Wall.GetCenter().X + 0.5f * TankRange + PlantExtent.X, Wall.GetCenter().Y, 0.f);
+		for (int32 Index = 0; Index < 3; ++Index)
+		{
+			WallAttackerStarts[Index] = FVector(BehindWallSpot.X - PlantExtent.X - TankRange - TankHull.X,
+				Wall.GetCenter().Y + (Index - 1) * 2.f * TankHull.Y, 0.f);
+		}
+
+		// Further beyond the ground's east edge than a tank reaches from it, and the tank and harvester three hulls inside it.
+		UnreachableBuildingSpot = FVector(HalfSize + PlantExtent.X + TankRange + 2.f * TankHull.X, StripY, 0.f);
+		UnreachableSourceSpot = UnreachableBuildingSpot - FVector(0.f, SpotPitch, 0.f);
+		UnreachableAttackerStart = FVector(HalfSize - 3.f * TankHull.X, StripY, 0.f);
+		UnreachableHarvesterStart = UnreachableAttackerStart - FVector(0.f, SpotPitch, 0.f);
+
+		HarvestSourceSpot = Strip(DepotExtent.X + SourceExtent.X + 2.f * HarvesterLength);
+
+		// The ring: plants side by side, the walled source and depot in two of its cells, too tight a fit for a harvester.
+		const float Cell = 2.f * PlantExtent.X;
+		int32 Ring = 0;
+		for (int32 Row = -1; Row <= 1; ++Row)
+		{
+			for (int32 Column = -2; Column <= 1; ++Column)
+			{
+				if (Row != 0 || Column == -2 || Column == 1)
+				{
+					RingSpots[Ring++] = Strip(Column * Cell, Row * Cell);
+				}
+			}
+		}
+		WalledSourceSpot = Strip(-Cell);
+		WalledDepotSpot = Strip(0.f);
+		DockHarvesterStart = Strip(Cell + PlantExtent.X + HarvesterLength + Lane);
+		const float OpenDistance = DockHarvesterStart.X - WalledSourceSpot.X + 2.f * SourceExtent.X;
+		OpenSourceSpot = DockHarvesterStart - FVector(0.f, OpenDistance, 0.f);
+		OpenDepotSpot = DockHarvesterStart + FVector(0.f, OpenDistance, 0.f);
+
+		for (int32 Index = 0; Index < UE_ARRAY_COUNT(ObstacleMoverStarts); ++Index)
+		{
+			const FVector2D Side = ObstacleMoverSides[Index];
+			ObstacleMoverStarts[Index] = FVector(Block.GetCenter() + Side * (Block.GetExtent() + FVector2D(3.f * TankHull.X)), 0.f);
+		}
+
+		BuilderStart = Strip(-0.5f * SpotPitch);
+		SecondBuilderStart = Strip(0.5f * SpotPitch);
+		BuilderAwaySpot = Strip(-0.5f * SpotPitch, -0.5f * SpotPitch);
+		NonBuilderStart = Strip(-0.5f * SpotPitch, 0.25f * SpotPitch);
+		ProbeStart = FVector(Wall.Min.X - 2.f * BuilderLength, Wall.GetCenter().Y, 0.f);
+		QueuedTowerSpot = Strip(-SpotPitch, -0.5f * SpotPitch);
+
+		// On the tower's site, and the dummy north of it in rifle range.
+		SiteInfantryStart = BuildSpot + FVector(0.6f * TowerExtent.X, -0.4f * TowerExtent.Y, 0.f);
+		SiteDummySpot = BuildSpot + FVector(0.f, TowerExtent.Y + 0.5f * RifleRange, 0.f);
+
+		RallySpot = Strip(FactoryExtent.X + 2.f * TankHull.X, FactoryExtent.Y * 0.5f);
+		RallyArrivalRadius = TankHull.X;
+		ProducedSourceSpot = RallySpot + FVector(2.f * TankHull.X + SourceExtent.X, 0.f, 0.f);
+		ProducedDepotSpot = ProducedSourceSpot + FVector(0.f, SourceExtent.Y + DepotExtent.Y + 2.f * HarvesterLength, 0.f);
+
+		AttackMoveWest = Strip(-OutOfRange);
+		AttackMoveEast = Strip(OutOfRange);
+		AttackMoveEnemySpot = Strip(0.f, 0.5f * (TankRange + RifleRange));
+		AttackMoveBuildingTarget = AttackMoveEast;
+		AttackMoveShortfall = 4.f * TankHull.X;
+
+		HoverEnemySpot = Strip(0.5f * TankRange + TankHull.X);
+		HoverOwnSpot = Strip(-(0.5f * TankRange + TankHull.X));
+		HoverEmptySpot = BuildSpot;
+
+		const float WalkHalf = 0.5f * Tank->MoveSpeed * MatchEndWalkSeconds;
+		const float WalkY = DepotExtent.Y + 2.f * TankHull.X;
+		MatchEndWalkerStart = Strip(-WalkHalf, WalkY);
+		MatchEndWalkerTarget = Strip(WalkHalf, WalkY);
+		MatchEndSiteSpot = Strip(0.f, WalkY + FactoryExtent.Y + 2.f * TankHull.X);
+		MatchEndBuilderStart = MatchEndSiteSpot + FVector(0.f, FactoryExtent.Y + BuilderLength, 0.f);
+		MatchEndTowerSpot = FVector(SpotPitch, -StripY, 0.f);
+		MatchEndFighterStart = MatchEndTowerSpot - FVector(TowerExtent.X + 0.5f * TankRange, 0.f, 0.f);
+
+		// Turned, the airfield reaches AirfieldExtent.Y along X and AirfieldExtent.X along Y.
+		const float Wing = 0.5f * (AirfieldExtent.Y - AirfieldExtent.X);
+		RotatedEastSpot = Strip(AirfieldExtent.X + PlantExtent.X + Wing);
+		RotatedNorthSpot = Strip(0.f, AirfieldExtent.X + PlantExtent.Y + Wing);
+		RotatedOnlyPoint = Strip(0.5f * (AirfieldExtent.X + AirfieldExtent.Y));
+		PrerequisiteFactorySpot = FVector(SpotPitch, -StripY, 0.f);
+
+		QueuedOverlapSpot = OtherBuildSpot + FVector(0.f, PlantExtent.Y, 0.f);
+		QueuedFlushSpot = OtherBuildSpot + FVector(0.f, 2.f * PlantExtent.Y, 0.f);
+
+		SelectionTankSpot = UnitSpot;
+		SelectionOtherTankSpot = UnitSpot + FVector(TankHull.X + 300.f, 0.f, 0.f);
+		SelectionInfantrySpot = UnitSpot + FVector(0.f, TankHull.Y + 300.f, 0.f);
+		return true;
+	}
 
 	struct FSmokeState
 	{
@@ -420,6 +600,8 @@ namespace
 			TWeakObjectPtr<AActor> Actor;
 			FVector Location = FVector::ZeroVector;
 			float Health = 0.f;
+			/** How far it may still move: MatchEndStopTolerance, or for a unit what it drives in MatchEndStopSeconds. */
+			float Tolerance = 0.f;
 		};
 		TWeakObjectPtr<ARTSUnit> Fighter;
 		TWeakObjectPtr<ARTSBuilding> EnemyTower;
@@ -669,6 +851,11 @@ bool FRTSWaitForNavigation::Update()
 	{
 		Test->AddInfo(FString::Printf(TEXT("Navmesh ready with %d tiles"), NavMesh->GetNavMeshTilesCount()));
 		RTSTests::ApplyTestTimeDilation(*World);
+		FString Error;
+		if (!InitLayout(*World, Error))
+		{
+			Test->AddError(Error);
+		}
 		return true;
 	}
 	if (FPlatformTime::Seconds() - State->PhaseStart > NavTimeout)
@@ -978,7 +1165,7 @@ bool FRTSCheckCancelConstruction::Update()
 	Test->TestEqual(TEXT("Half built, half the cost comes back"), Refund, TowerData->Cost / 2);
 
 	// Only own buildings are selectable, and only own construction sites can be cancelled.
-	const FTransform EnemyTransform(FVector(-6000.f, 7000.f, 0.f));
+	const FTransform EnemyTransform(CancelEnemySpot);
 	ARTSBuilding* Enemy = World->SpawnActorDeferred<ARTSBuilding>(
 		ARTSBuilding::StaticClass(), EnemyTransform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	Enemy->InitFromData(TowerData, Controller->GetTeamId() + 1);
@@ -1529,6 +1716,16 @@ bool FRTSBuySupplyDepot::Update()
 	Source->Amount = HarvestLoads * State->CarryAmount;
 	Source->FinishSpawning(SourceTransform);
 	State->Source = Source;
+	// Once this one runs dry the harvester must find no other: the map's own sources lie beyond its search, from either dock.
+	for (TActorIterator<ARTSSupplySource> It(World); It; ++It)
+	{
+		if (*It != Source)
+		{
+			const float Nearest = FMath::Min(FVector::Dist2D(It->GetActorLocation(), HarvestSourceSpot), FVector::Dist2D(It->GetActorLocation(), BuildSpot));
+			Test->TestTrue(FString::Printf(TEXT("%s lies beyond the harvester's search"), *It->GetName()),
+				Nearest - 2.f * RTSBuildPlacement::GetFootprintExtent(It->Footprint).X > HarvesterData->SearchRadius);
+		}
+	}
 
 	const int32 CreditsBefore = Player->GetCredits();
 	ARTSBuilding* Building = RequestBuild(*Controller, Depot, BuildSpot);
@@ -1827,23 +2024,20 @@ bool FRTSIssueObstacleMove::Update()
 	}
 	State->ObstacleBox = Obstacle->GetComponentsBoundingBox();
 
-	TArray<ARTSUnit*> Movers;
-	for (const FVector& Start : ObstacleMoverStarts)
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(ObstacleMoverStarts); ++Index)
 	{
-		ARTSUnit* Mover = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), Start);
+		ARTSUnit* Mover = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), ObstacleMoverStarts[Index]);
 		if (!Mover)
 		{
 			Test->AddError(TEXT("Could not spawn a tank"));
 			return true;
 		}
-		Movers.Add(Mover);
 		State->Movers.Add(Mover);
+		FRTSCommand Command;
+		Command.Type = ERTSCommandType::Move;
+		Command.TargetLocation = FVector(State->ObstacleBox.GetCenter().X, State->ObstacleBox.GetCenter().Y, State->ObstacleBox.Max.Z);
+		Controller->Server_IssueCommand({ Mover }, Command);
 	}
-
-	FRTSCommand Command;
-	Command.Type = ERTSCommandType::Move;
-	Command.TargetLocation = FVector(State->ObstacleBox.GetCenter().X, State->ObstacleBox.GetCenter().Y, State->ObstacleBox.Max.Z);
-	Controller->Server_IssueCommand(Movers, Command);
 	State->PhaseStart = FPlatformTime::Seconds();
 	return true;
 }
@@ -1869,8 +2063,9 @@ bool FRTSVerifyObstacleMove::Update()
 		return false;
 	}
 
-	for (const TWeakObjectPtr<ARTSUnit>& Mover : State->Movers)
+	for (int32 Index = 0; Index < State->Movers.Num(); ++Index)
 	{
+		const TWeakObjectPtr<ARTSUnit>& Mover = State->Movers[Index];
 		if (!Mover.IsValid())
 		{
 			Test->AddError(TEXT("A tank disappeared"));
@@ -1882,7 +2077,10 @@ bool FRTSVerifyObstacleMove::Update()
 		Test->TestTrue(FString::Printf(TEXT("%s stopped with its hull at the block's edge (%.0f cm out, at %s after %.1f s)"),
 			*Mover->GetName(), Distance, *Location.ToCompactString(), Elapsed),
 			Distance >= -ObstacleOverlapTolerance && Distance <= ObstacleEdgeTolerance);
-		Test->TestTrue(FString::Printf(TEXT("%s stayed on its own side of the block"), *Mover->GetName()), Location.Y > Box.Max.Y);
+		const FVector2D Side = ObstacleMoverSides[Index];
+		const FVector2D Face = FVector2D(Box.GetCenter()) + Side * FVector2D(Box.GetExtent());
+		Test->TestTrue(FString::Printf(TEXT("%s stayed on its own side of the block"), *Mover->GetName()),
+			FVector2D::DotProduct(FVector2D(Location) - Face, Side) > 0.f);
 		Test->TestEqual(FString::Printf(TEXT("%s finished its order"), *Mover->GetName()), Mover->GetQueuedCommandCount(), 0);
 	}
 	return true;
@@ -1982,7 +2180,7 @@ bool FRTSWaitForBuilderSite::Update()
 	State->Building = Site;
 	Test->TestTrue(FString::Printf(TEXT("The builder walked to the site (from %s to %s)"),
 		*BuilderStart.ToCompactString(), *Builder->GetActorLocation().ToCompactString()),
-		FVector::Dist2D(Builder->GetActorLocation(), BuilderStart) > 1500.f);
+		FVector::Dist2D(Builder->GetActorLocation(), BuilderStart) > 0.6f * FVector::Dist2D(BuildSpot, BuilderStart));
 	Test->TestTrue(TEXT("The builder stands at the site when it places it"), IsAtSite(*Builder, *Site));
 	Test->TestEqual(TEXT("Placed for the builder's team"), Site->GetTeamId(), Builder->GetTeamId());
 	Test->TestEqual(TEXT("Placing charged nothing more"), State->Player->GetCredits(), State->BuilderCredits - Tower->Cost);
@@ -2212,7 +2410,7 @@ bool FRTSPlaceRotatedAirfield::Update()
 		Test->AddError(TEXT("Missing the airfield, plant or factory data, or the player"));
 		return true;
 	}
-	Test->TestEqual(TEXT("The test airfield is not square"), Airfield->Footprint, FIntPoint(4, 8));
+	Test->TestTrue(TEXT("The test airfield is longer along Y"), Airfield->Footprint.Y > Airfield->Footprint.X);
 	// The airfield needs a vehicle factory.
 	SpawnBuilding(World, Factory, Controller->GetTeamId(), PrerequisiteFactorySpot, /*bConstructed*/ true);
 	Player->AddCredits(Airfield->Cost + 2 * Plant->Cost);
@@ -2242,13 +2440,15 @@ bool FRTSPlaceRotatedAirfield::Update()
 
 	Test->TestTrue(FString::Printf(TEXT("The airfield is turned a quarter (yaw %.1f)"), Building->GetActorRotation().Yaw),
 		FMath::IsNearlyEqual(FRotator::NormalizeAxis(Building->GetActorRotation().Yaw), 90.f, 1.f));
-	Test->TestEqual(TEXT("Its footprint is 8 by 4 cells"), Building->GetFootprint(), FIntPoint(8, 4));
+	const FIntPoint Turned(Airfield->Footprint.Y, Airfield->Footprint.X);
+	const FVector TurnedExtent = RTSBuildPlacement::GetFootprintExtent(Turned);
+	Test->TestEqual(TEXT("Its footprint is the data's, turned"), Building->GetFootprint(), Turned);
 	Test->TestTrue(TEXT("It stands where the ghost snapped"),
-		FVector::Dist2D(Building->GetActorLocation(), RTSBuildPlacement::SnapToGrid(BuildSpot, FIntPoint(8, 4))) < 1.f);
-	Test->TestEqual(TEXT("Its east edge lies 4 cells out"),
-		Building->GetClosestFootprintPoint(BuildSpot + FVector(1000.f, 0.f, 0.f)).X, BuildSpot.X + 400.0);
-	Test->TestEqual(TEXT("Its north edge lies 2 cells out"),
-		Building->GetClosestFootprintPoint(BuildSpot + FVector(0.f, 1000.f, 0.f)).Y, BuildSpot.Y + 200.0);
+		FVector::Dist2D(Building->GetActorLocation(), RTSBuildPlacement::SnapToGrid(BuildSpot, Turned)) < 1.f);
+	Test->TestEqual(TEXT("Its east edge lies half its length out"),
+		Building->GetClosestFootprintPoint(BuildSpot + FVector(2.f * TurnedExtent.X, 0.f, 0.f)).X, BuildSpot.X + TurnedExtent.X);
+	Test->TestEqual(TEXT("Its north edge lies half its width out"),
+		Building->GetClosestFootprintPoint(BuildSpot + FVector(0.f, 2.f * TurnedExtent.Y, 0.f)).Y, BuildSpot.Y + TurnedExtent.Y);
 
 	// Client and server agree, along the turned footprint rather than the data's.
 	Test->TestFalse(TEXT("Client rejects a plant on the turned airfield's east wing"), ClientAccepts(*World, *Plant, RotatedEastSpot));
@@ -3378,9 +3578,6 @@ namespace
 	};
 
 	constexpr double SelectionPanelTimeout = 5.0;
-	const FVector SelectionTankSpot(3000.f, 7000.f, 0.f);
-	const FVector SelectionOtherTankSpot(3300.f, 7000.f, 0.f);
-	const FVector SelectionInfantrySpot(3000.f, 7300.f, 0.f);
 
 	/** What the selection panel's binding source gives Key for the controller's player. */
 	FRTSUIValue GetSelectionValue(ARTSPlayerController& Controller, const TCHAR* Key)
@@ -5329,7 +5526,10 @@ bool FRTSEndMatchWhileBusy::Update()
 		const IRTSTargetable* Targetable = Cast<IRTSTargetable>(*It);
 		if (Targetable && !It->IsActorBeingDestroyed())
 		{
-			State->Frozen.Add({ *It, It->GetActorLocation(), Targetable->GetHealthComponent()->GetHealth() });
+			const ARTSUnit* Unit = Cast<ARTSUnit>(*It);
+			const float Speed = Unit && Unit->GetUnitData() ? Unit->GetUnitData()->MoveSpeed : 0.f;
+			State->Frozen.Add({ *It, It->GetActorLocation(), Targetable->GetHealthComponent()->GetHealth(),
+				FMath::Max(MatchEndStopTolerance, Speed * MatchEndStopSeconds) });
 			State->FrozenUnits += It->IsA<ARTSUnit>() ? 1 : 0;
 		}
 	}
@@ -5369,7 +5569,8 @@ bool FRTSVerifySimulationStopped::Update()
 			continue;
 		}
 		const float Moved = FVector::Dist2D(Actor->GetActorLocation(), Frozen.Location);
-		Test->TestTrue(FString::Printf(TEXT("%s stays put (moved %.0f)"), *Actor->GetName(), Moved), Moved <= MatchEndStopTolerance);
+		Test->TestTrue(FString::Printf(TEXT("%s stays put (moved %.0f, %.0f allowed)"), *Actor->GetName(), Moved, Frozen.Tolerance),
+			Moved <= Frozen.Tolerance);
 		Test->TestEqual(FString::Printf(TEXT("%s takes no damage"), *Actor->GetName()),
 			Cast<IRTSTargetable>(Actor)->GetHealthComponent()->GetHealth(), Frozen.Health);
 	}

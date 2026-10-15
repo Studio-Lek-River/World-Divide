@@ -1,6 +1,6 @@
 # Placeholder scale audit
 
-Status: **audit**, Phase 2A (2026-10-15). The target sizes come from the [world scale standard](WORLD_SCALE_STANDARD.md).
+Status: **audit**, Phase 2A (2026-10-15); **applied** in step 4 (#136, 2026-10-16), with the deviations listed in [plan §7](SCALE_IMPLEMENTATION_PLAN.md#7-measurements-per-step) (a new infantry mesh, `MoveAcceptanceRadius` and `MoveSnapStep` kept). The target sizes come from the [world scale standard](WORLD_SCALE_STANDARD.md).
 
 ## Where placeholder sizes come from
 
