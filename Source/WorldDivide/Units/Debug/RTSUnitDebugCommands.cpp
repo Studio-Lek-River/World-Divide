@@ -194,7 +194,9 @@ namespace RTSUnitDebugCommands
 		const FBox Hull = Unit.GetShape().Hull.TransformBy(Unit.GetActorTransform());
 		const FVector2D Min = FVector2D::Max(FVector2D(Hull.Min), FVector2D(Obstacle.Min));
 		const FVector2D Max = FVector2D::Min(FVector2D(Hull.Max), FVector2D(Obstacle.Max));
-		return FVector2D::Max(Max - Min, FVector2D::ZeroVector);
+		// Apart on either axis is no overlap at all: a hull beside the block shares its extent along the other axis only.
+		const FVector2D Overlap = Max - Min;
+		return Overlap.X > 0.f && Overlap.Y > 0.f ? Overlap : FVector2D::ZeroVector;
 	}
 
 	struct FFrameStats

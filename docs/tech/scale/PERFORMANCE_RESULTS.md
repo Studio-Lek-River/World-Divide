@@ -186,3 +186,33 @@ Not a bench scene: `WorldDivide.Avoidance.Mixed` walks 180 tanks and infantry pl
 | `DA_TestTank` frame | 12.43 ms | 11.42 ms | 3.87 ms |
 
 The Insights split is in [plan §7](SCALE_IMPLEMENTATION_PLAN.md#7-measurements-per-step).
+
+## Step 3 (#135, infantry and vehicle nav agents, hull clearance)
+
+Same machine, build configuration and method as step 0, on 2026-10-15. "Before" is the step 2 "after" column above, benched earlier the same day; read the differences against the run-to-run spread of step 0 (about 0.6 ms game thread, 1 ms slowest frame).
+
+What changed: two navmeshes (Infantry radius 40 / height 180, Vehicle 190 / 350); each unit walks the narrowest agent wide enough for its hull. `RTSHullClearance` fits each new path to the unit's stadium footprint, and the avoidance pass backs a hull out of an obstacle when the navmesh edge comes inside it. The placement of a production building is refused when its units cannot leave the exit.
+
+### Before and after, 240 units
+
+| Unit | Scenario | Game ms before | Game ms after | Render ms before → after | Avoidance ms before → after | Target search ms before → after |
+|---|---|---:|---:|---:|---:|---:|
+| `DA_TestTank` | idle | 2.45 (3.17) | 2.74 (3.69) | 1.77 → 1.68 | 0.104 → 0.200 | 0.012 → 0.013 |
+| `DA_TestTank` | move | 4.19 (16.30) | 4.31 (16.62) | 1.88 → 1.89 | 0.118 → 0.189 | 0.000 → 0.000 |
+| M20 Guardian | idle | 2.46 (3.60) | 2.68 (4.60) | 3.96 → 3.93 | 0.137 → 0.254 | 0.013 → 0.011 |
+| M20 Guardian | move | 16.63 (20.06) | 16.95 (22.73) | 6.95 → 7.03 | 0.651 → 0.782 | 0.008 → 0.008 |
+
+- **Game thread** is within the run-to-run spread in every row (+0.1 to +0.3 ms); the slowest move frame stays under the 33 ms budget (22.7 ms M20, 16.6 ms tank).
+- **Avoidance** costs about 0.1 ms more: `Separate` now checks the hull of every unit it moved against the navmesh edge (`RTSHullClearance::GetClearance`, cached per unit for a short time and skipped while the unit's slack covers the move). It stays far under the 1.0 ms mean budget.
+- **Target search and rendering** did not change.
+
+The full tables are in `Saved/Bench/<DataAsset>/` of the run.
+
+### `unitshots -Stress 240 -Trace` (L_TestMap)
+
+| Stress 240, with trace | Step 0 | Step 1 | Step 2 | Step 3 |
+|---|---:|---:|---:|---:|
+| M20 Guardian frame | 12.37 ms | 11.43 ms | 4.31 ms | 4.68 ms |
+| `DA_TestTank` frame | 12.43 ms | 11.42 ms | 3.87 ms | 4.29 ms |
+
+The obstacle shots log `the hull overlaps Block_North by 0 x 0 cm` and `the hull overlaps DA_TestVehicleFactory by 0 x 0 cm` for both units. The navmesh build figures and the Insights split are in [plan §7](SCALE_IMPLEMENTATION_PLAN.md#7-measurements-per-step).

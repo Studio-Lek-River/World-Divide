@@ -269,23 +269,23 @@ void URTSAvoidanceSubsystem::ApplyPushes(float DeltaSeconds)
 		// stays on the navmesh, the rest of the hull is checked here (RTSHullClearance), only once it may have closed the gap.
 		FRTSFootprint Footprint = Unit->GetFootprint();
 		Footprint.Center += FVector(Step, 0.f);
-		FRTSHullClearanceCache& Cache = Unit->GetHullClearanceCache();
+		FRTSHullClearanceCache& HullCache = Unit->GetHullClearanceCache();
 		const ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(NavData);
 		// A hull backs out by up to a few frames' driving at once: more only a building dropped on it would ask for.
 		float BackOut = HullBackOutFrames * Unit->GetUnitData()->MoveSpeed * DeltaSeconds;
-		for (int32 Pass = 0; NavMesh && Pass < HullBackOutPasses && !Cache.IsClear(Footprint, Now); ++Pass)
+		for (int32 Pass = 0; NavMesh && Pass < HullBackOutPasses && !HullCache.IsClear(Footprint, Now); ++Pass)
 		{
 			FVector2D Away = FVector2D::ZeroVector;
 			const float Clearance = RTSHullClearance::GetClearance(*NavMesh, Footprint, &Away, HullCheckExtraReach);
 			if (Clearance >= 0.f)
 			{
-				Cache.Center = FVector2D(Footprint.Center);
-				Cache.Axis = FVector2D(Footprint.Axis);
-				Cache.Slack = Clearance;
-				Cache.ExpireTime = Now + HullCheckSeconds;
+				HullCache.Center = FVector2D(Footprint.Center);
+				HullCache.Axis = FVector2D(Footprint.Axis);
+				HullCache.Slack = Clearance;
+				HullCache.ExpireTime = Now + HullCheckSeconds;
 				break;
 			}
-			Cache.Slack = -1.f;
+			HullCache.Slack = -1.f;
 			// Out along the way the clearance grows fastest: beside a wall's end the deepest point alone may point straight
 			// back along the way the unit drives, and hold it there.
 			auto ClearanceAt = [&](const FVector2D& Offset)

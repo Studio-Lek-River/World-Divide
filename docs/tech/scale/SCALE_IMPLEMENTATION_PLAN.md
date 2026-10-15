@@ -289,3 +289,46 @@ Game thread per frame in the `stress_240` region (Insights, inclusive):
 - Acquisition went from 7.2–7.3 ms (step 1) to about 0.02 ms per frame. Searches per frame fell from 274 to about 6: each weapon without a target searches once per 0.2 s, and at about 230 frames per second that is one frame in 46. At 60 fps it would be about 23 searches, roughly 0.06 ms at the measured 2–3 µs each.
 - `UWorld_Tick` fell from about 9.1 ms to 1.8–2.0 ms; `TickOrders` is now the largest gameplay scope.
 - `Separate` rose from 0.09–0.10 ms to 0.10–0.16 ms: the pass now indexes every unit, aircraft included, for `QueryRadius`, and the M20's footprint covers several 600 cm cells. The bench comparison is in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md#step-2-134-fixed-cell-avoidance-and-throttled-acquisition).
+
+### Step 3: infantry and vehicle nav agents, hull clearance (2026-10-15)
+
+**Navmesh per level.** `ue.ps1 -Task setup`, `URTSEditorScripting::BuildNavigation` in the editor commandlet: both agents built together, `TileSizeUU` 6400, `RuntimeGeneration=Dynamic`. Memory is the built tiles (`LogMemUsed`) and the compressed tile cache the dynamic navmesh keeps to rebuild tiles around new buildings, per agent.
+
+| Level | Tiles per agent | Infantry MB (tile cache) | Vehicle MB (tile cache) | Build, both agents: CellSize 25 | CellSize 30 |
+|---|---:|---:|---:|---:|---:|
+| L_TestMap | 48 | 0.01 (0.02) | 0.02 (0.02) | 0.13 s | 0.09 s |
+| L_Bench | 75 | 0.02 (0.03) | 0.02 (0.03) | 0.30 s | 0.20 s |
+| L_Skirmish | 48 | 0.01 (0.02) | 0.01 (0.02) | 0.15 s | 0.09 s |
+| L_SkirmishDuel | 48 | 0.01 (0.02) | 0.01 (0.02) | 0.16 s | 0.09 s |
+| L_RiverFord | 27 | 0.02 (0.02) | 0.02 (0.02) | 0.12 s | 0.08 s |
+| L_QuarryCross | 48 | 0.02 (0.03) | 0.02 (0.03) | 0.17 s | 0.11 s |
+| L_SixPeaks | 48 | 0.02 (0.03) | 0.03 (0.04) | 0.21 s | 0.13 s |
+
+**CellSize is 25.** At 30 the build is about a third faster, but both are a fraction of a second per level and memory does not change at two decimals. At 30 the navmesh edges around blocks and building holes move by up to a cell, and the clearance tests fail: `WorldDivide.Navigation.HullClearance.Measure` finds 8 hulls overlapping an obstacle that the clearance misses, and `HullClearance.Drive` stops the long narrow test vehicle 50.8 cm from the obstacle, over the 50 cm gap. At 25 both pass.
+
+**Unitshots**, same method as step 0, `-Trace` on.
+
+| Stress 240 | M20 Guardian | `DA_TestTank` |
+|---|---:|---:|
+| Frame, with trace | 4.68 ms | 4.29 ms |
+| Avoidance pass (log) | 0.31 ms, max 0.47 ms | 0.21 ms, max 0.47 ms |
+| GPU | 4.1 ms | 1.7 ms |
+| Draw calls / triangles | 2560 / 51.2 M | 957 / 2.9 M |
+| Obstacle shots: hull overlap with Block_North / the vehicle factory | 0 × 0 cm / 0 × 0 cm | 0 × 0 cm / 0 × 0 cm |
+
+Game thread per frame in the `stress_240` region (Insights, inclusive):
+
+| Scope | Calls per frame | M20 Guardian | `DA_TestTank` |
+|---|---:|---:|---:|
+| `UWorld_Tick` | 1 | 2.40 ms | 2.05 ms |
+| `URTSWeaponComponent::UpdateWeapon` | 281 | 0.030 ms | 0.023 ms |
+| of which `FindNearestEnemyInRange` (grid query) | 6.7 (M20), 6.1 (tank) | 0.021 ms | 0.014 ms |
+| `ARTSUnit::TickOrders` | 278 | 0.67 ms | 0.54 ms |
+| `URTSAvoidanceSubsystem::Separate` | 1 | 0.31 ms | 0.21 ms |
+| of which `RTSHullClearance::GetClearance` | 27 (M20), 2.3 (tank) | 0.054 ms | 0.002 ms |
+| Slate (`DrawWindows`) | 1 | 0.94 ms | 0.97 ms |
+
+**Findings.**
+- `Separate` rose from 0.10–0.16 ms to 0.21–0.31 ms. The hull check itself is small (0.05 ms for the M20, whose 1103 cm hull reaches the navmesh edges of its stress grid more often); the rest of the rise is spread over the pass and not attributed to one scope.
+- `UWorld_Tick` rose by 0.3–0.4 ms against step 2, about half of it `Separate`; `TickOrders` is unchanged. Path fitting runs once per new path and does not show up on the stress grid, where nobody repaths.
+- The bench comparison is in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md#step-3-135-infantry-and-vehicle-nav-agents-hull-clearance).
