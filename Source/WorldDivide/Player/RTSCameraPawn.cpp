@@ -104,6 +104,13 @@ void ARTSCameraPawn::AddZoomInput(float Steps)
 	TargetZoom = FMath::Clamp(TargetZoom - Steps * ZoomStep, MinZoom, MaxZoom);
 }
 
+void ARTSCameraPawn::SetZoomNow(float ArmLength)
+{
+	TargetZoom = FMath::Clamp(ArmLength, MinZoom, MaxZoom);
+	SpringArm->TargetArmLength = TargetZoom;
+	UpdateArm();
+}
+
 void ARTSCameraPawn::AddRotateInput(float Degrees)
 {
 	PendingYaw += Degrees;

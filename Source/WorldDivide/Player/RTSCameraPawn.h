@@ -37,6 +37,13 @@ public:
 	/** Current arm length, which eases towards the zoom the input asked for. */
 	float GetZoom() const;
 
+	/** Sets the zoom at once, within MinZoom and MaxZoom, without easing to it; for scripted views. */
+	void SetZoomNow(float ArmLength);
+
+	float GetMinZoom() const { return MinZoom; }
+	float GetMaxZoom() const { return MaxZoom; }
+	float GetDefaultZoom() const { return DefaultZoom; }
+
 	/** Where the camera settles once the spring arm's lag has caught up. */
 	FVector GetCameraGoal() const;
 

@@ -11,6 +11,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task s
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task editor
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots -Panel ResourceBar
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestM20Guardian -Stress 240
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uibindings
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uicheck -Path Saved/UIIntake/HUD_2026-10-14/staging/UI
 
@@ -21,13 +22,17 @@ Setup runs without a renderer and draws the lobby's map previews; -Render gives 
 Editor opens the editor with the Unreal MCP server at http://127.0.0.1:8000/mcp (docs/ui/AI_TEAM.md); test and setup run without it.
 Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in the UI test state for each faction look at
 1920x1080, 2560x1440 and 3440x1440 to Saved/UIShots/HUD, or with -Panel to Saved/UIShots/<Panel> with a crop of that panel.
+Unitshots plays L_TestMap with a renderer (a GPU is needed) at 1920x1080 and saves views of the first unit with the data
+asset -Unit (rts.Debug.UnitShots): the RTS camera at its default, closest and farthest zoom, a close-up, the turret turned,
+the unit picked, selected and driving on a move order, and the default view with stat unit and stat rhi, to Saved/UnitShots/<Unit>; with -Stress N also N more of the unit in a
+grid with the stats on. The frame time, draw calls and triangles of the stat views are printed.
 Uibindings writes every binding key, list and action with its panels, and the widgets, colours, fonts and sprites a layout
 may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck validates the layouts of the UI folder -Path
 (an unpacked delivery, for /ui-intake) and prints each problem. -Out and -Path are relative to the repository root.
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'uibindings', 'uicheck')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'uibindings', 'uicheck')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -37,6 +42,10 @@ param(
 	[switch]$Render,
 
 	[string]$Panel = '',
+
+	[string]$Unit = 'DA_TestM20Guardian',
+
+	[int]$Stress = 0,
 
 	[string]$Out = 'Saved/UIBriefs/bindings.json',
 
@@ -206,6 +215,35 @@ function Invoke-UIShots {
 	Write-Host "UISHOTS SUCCEEDED: $ShotDir"
 }
 
+function Invoke-UnitShots {
+	Assert-EditorClosed 'the game run loads the same project.'
+	$ShotDir = Join-Path $RepoRoot "Saved\UnitShots\$Unit"
+	$LogFile = Join-Path $RepoRoot 'Saved\Logs\UnitShots.log'
+	if (Test-Path $ShotDir) { Remove-Item -Recurse -Force $ShotDir }
+
+	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList @(
+		"`"$Project`"", '/Game/Maps/L_TestMap', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
+		"`"-ExecCmds=rts.Debug.UnitShots $Unit $Stress`"", '-RTSUnitShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		'-unattended', '-nosplash', '-nosound')
+	$GameExit = $Process.ExitCode
+
+	$Shots = @('rts_default', 'zoom_in_max', 'zoom_out_max', 'closeup', 'turret_rotated', 'driving', 'stats_one')
+	if ($Stress -gt 0) { $Shots += "stress_$Stress" }
+	$Problems = @($Shots | Where-Object { -not (Test-Path (Join-Path $ShotDir "$_.png")) } | ForEach-Object { "missing $_.png" })
+	if (Test-Path $LogFile) {
+		Select-String -Path $LogFile -Pattern 'rts.Debug.UnitShots: (\S+ over|picked|drove)' | ForEach-Object { $_.Line -replace '^.*rts.Debug.UnitShots: ', '  ' }
+	}
+	if ($GameExit -ne 0 -or $Problems.Count -gt 0) {
+		$Problems | ForEach-Object { Write-Host "  $_" }
+		if (Test-Path $LogFile) {
+			Select-String -Path $LogFile -Pattern 'rts.Debug|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line }
+		}
+		Write-Host "UNITSHOTS FAILED (game exit $GameExit). Log: $LogFile"
+		exit 1
+	}
+	Write-Host "UNITSHOTS SUCCEEDED: $ShotDir"
+}
+
 # The headless UI commandlet (URTSUICommandlet) with Argument; returns its exit code, its log in LogFile.
 function Invoke-UICommandlet([string]$Argument, [string]$LogFile) {
 	& $EditorCmd $Project -run=RTSUI $Argument "-abslog=$LogFile" $NoMCPPlugins -unattended -nullrhi -nosplash -nosound | Out-Null
@@ -251,6 +289,7 @@ switch ($Task) {
 	'setup' { Invoke-Setup }
 	'editor' { Invoke-Editor }
 	'uishots' { Invoke-UIShots }
+	'unitshots' { Invoke-UnitShots }
 	'uibindings' { Invoke-UIBindings }
 	'uicheck' { Invoke-UICheck }
 }

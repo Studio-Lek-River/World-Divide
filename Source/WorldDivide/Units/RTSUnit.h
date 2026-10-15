@@ -8,6 +8,7 @@
 
 class AAIController;
 class UCapsuleComponent;
+class UInstancedStaticMeshComponent;
 class UStaticMeshComponent;
 class UFloatingPawnMovement;
 class URTSAircraftComponent;
@@ -121,8 +122,32 @@ public:
 	/** True once the turret points at Target closely enough to fire; always true without a turret, which turns the unit. */
 	bool IsAimedAt(const AActor& Target) const;
 
-	/** Every machine. The barrel tip in world space; only meaningful with a turret. */
+	/** Every machine. The barrel tip in world space, on the gun when the data gives one; only meaningful with a turret. */
 	FVector GetMuzzleLocation() const;
+
+	/** A turret unit whose data also gives it a gun that elevates. */
+	bool HasGun() const;
+
+	/** Every machine. The gun's elevation in degrees, up positive; zero without a gun. */
+	float GetGunPitch() const { return GunPitch; }
+
+	/**
+	 * Server only. Holds the turret at Yaw and the gun at Pitch (degrees, relative to the hull) instead of aiming at the
+	 * weapon's target, for inspecting a vehicle; unset gives the aiming back. Shots still wait for a turret aimed at the target.
+	 */
+	void SetAimOverride(TOptional<FVector2D> YawPitch);
+
+	/**
+	 * Every machine. Where URTSUnitData::Parts[PartIndex] is drawn, in world space; false when there is no such part. Wheels
+	 * include their roll.
+	 */
+	bool GetPartTransform(int32 PartIndex, FTransform& OutTransform) const;
+
+	/**
+	 * Every machine. Rolls the wheels by how far the unit drove and turned since the last call, each by the ground speed on
+	 * its own side; nothing to do while the unit stands. Runs every tick; public so tests can step it.
+	 */
+	void UpdateRunningGear();
 
 	static FLinearColor GetTeamColor(int32 InTeamId);
 
@@ -161,6 +186,13 @@ private:
 
 	UFUNCTION()
 	void OnRep_TurretYaw();
+
+	UFUNCTION()
+	void OnRep_GunPitch();
+
+	/** Creates the gun and the parts the data asks for, replacing any made before. */
+	void CreateParts();
+
 	void StartNextCommand();
 
 	/** Empties the order queue, refunding what its orders still hold. */
@@ -233,6 +265,14 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> Turret;
 
+	/** Attached to Turret; made by CreateParts only for data with a gun. */
+	UPROPERTY(VisibleAnywhere, Transient, Category = "Components")
+	TObjectPtr<UStaticMeshComponent> Gun;
+
+	/** The components CreateParts made for URTSUnitData::Parts: one per part, one instanced component per wheel mesh. */
+	UPROPERTY(VisibleAnywhere, Transient, Category = "Components")
+	TArray<TObjectPtr<UStaticMeshComponent>> PartComponents;
+
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UFloatingPawnMovement> Movement;
 
@@ -260,6 +300,38 @@ private:
 	/** Relative to the hull, in degrees. The server traverses it; clients follow, as they follow the unit's rotation. */
 	UPROPERTY(ReplicatedUsing = OnRep_TurretYaw)
 	float TurretYaw = 0.f;
+
+	/** Degrees, up positive. The server elevates it; clients follow. */
+	UPROPERTY(ReplicatedUsing = OnRep_GunPitch)
+	float GunPitch = 0.f;
+
+	/** Server only. See SetAimOverride. */
+	TOptional<FVector2D> AimOverride;
+
+	/** Where each of URTSUnitData::Parts is drawn: its component, and its instance when that is instanced. */
+	struct FPartSlot
+	{
+		UStaticMeshComponent* Component = nullptr;
+		int32 Instance = INDEX_NONE;
+	};
+	TArray<FPartSlot> PartSlots;
+
+	/** A wheel's roll, kept per instance of its instanced component. */
+	struct FWheel
+	{
+		UInstancedStaticMeshComponent* Component = nullptr;
+		int32 Instance = 0;
+		/** Its rest place on the hull, before the roll. */
+		FTransform Rest;
+		/** In world cm; with Side, how far it rolls for a distance driven and an angle turned. */
+		float Radius = 1.f;
+		float Side = 0.f;
+		float Angle = 0.f;
+	};
+	TArray<FWheel> Wheels;
+
+	/** The unit's place when UpdateRunningGear last ran. */
+	TOptional<FTransform> LastGearPose;
 
 	/** Server only. Front entry is the order being executed. A UPROPERTY so GC sees and clears attack targets. */
 	UPROPERTY(Transient)

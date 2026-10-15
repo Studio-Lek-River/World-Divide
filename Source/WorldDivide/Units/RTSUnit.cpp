@@ -6,6 +6,7 @@
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
@@ -23,6 +24,7 @@
 #include "NavigationSystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/RTSPlayerController.h"
+#include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSGround.h"
@@ -67,6 +69,42 @@ namespace
 
 	/** A turret fires once it points this close to its target, in degrees. */
 	constexpr float TurretAimTolerance = 5.f;
+
+	/** Below this much driving (cm) and turning (degrees) since the last frame the wheels stand still. */
+	constexpr float GearMinDistance = 0.01f;
+	constexpr float GearMinTurn = 0.001f;
+
+	/** Mesh's box, in Mesh's own space, grown by the parts on the hull: running gear reaches the ground below the hull. */
+	FBox GetHullBox(const URTSUnitData& Data)
+	{
+		FBox Box(ForceInit);
+		if (Data.Mesh)
+		{
+			Box += Data.Mesh->GetBoundingBox();
+		}
+		for (const FRTSVehiclePart& Part : Data.Parts)
+		{
+			if (Part.Mesh && Part.MountedOn == ERTSVehiclePartMount::Hull)
+			{
+				Box += Part.Mesh->GetBoundingBox().TransformBy(FTransform(Part.Rotation, Part.Offset));
+			}
+		}
+		return Box;
+	}
+
+	/** A cosmetic part on Parent, like Mesh and Turret: the capsule alone collides and is picked. */
+	template <typename T>
+	T* MakePartComponent(AActor& Owner, USceneComponent& Parent, UStaticMesh* PartMesh)
+	{
+		T* Part = NewObject<T>(&Owner);
+		Part->SetStaticMesh(PartMesh);
+		Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Part->SetCanEverAffectNavigation(false);
+		Part->SetupAttachment(&Parent);
+		Owner.AddInstanceComponent(Part);
+		Part->RegisterComponent();
+		return Part;
+	}
 }
 
 /** Engine basic shapes expose this parameter; real unit and building materials should too. */
@@ -206,37 +244,153 @@ void ARTSUnit::ApplyUnitData()
 
 	const float Radius = UnitData->SelectionRadius;
 	float MeshHalfHeight = Radius;
-	float MeshOriginZ = 0.f;
+	float MeshBottomZ = -Radius;
 
 	Mesh->SetStaticMesh(UnitData->Mesh);
 	Mesh->SetRelativeScale3D(UnitData->MeshScale);
-	if (UnitData->Mesh)
+	if (const FBox HullBox = GetHullBox(*UnitData); HullBox.IsValid)
 	{
-		const FBoxSphereBounds Bounds = UnitData->Mesh->GetBounds();
-		MeshHalfHeight = Bounds.BoxExtent.Z * UnitData->MeshScale.Z;
-		MeshOriginZ = Bounds.Origin.Z * UnitData->MeshScale.Z;
+		MeshHalfHeight = HullBox.GetExtent().Z * UnitData->MeshScale.Z;
+		MeshBottomZ = HullBox.Min.Z * UnitData->MeshScale.Z;
 	}
 
 	const float HalfHeight = FMath::Max(MeshHalfHeight, Radius);
 	Collision->SetCapsuleSize(Radius, HalfHeight);
-	// Stand the mesh on the bottom of the capsule.
-	MeshRestLocation = FVector(0.f, 0.f, -HalfHeight + MeshHalfHeight - MeshOriginZ);
+	// Stand the mesh, or the running gear below it, on the bottom of the capsule.
+	MeshRestLocation = FVector(0.f, 0.f, -HalfHeight - MeshBottomZ);
 	UpdateMeshTransform();
 
 	Turret->SetStaticMesh(UnitData->TurretMesh);
 	Turret->SetVisibility(UnitData->TurretMesh != nullptr);
 	Turret->SetRelativeLocationAndRotation(UnitData->TurretOffset, FRotator(0.f, TurretYaw, 0.f));
+	CreateParts();
 
 	Movement->MaxSpeed = UnitData->MoveSpeed;
 
 	ApplyTeamColor();
 }
 
+void ARTSUnit::CreateParts()
+{
+	for (UStaticMeshComponent* Part : PartComponents)
+	{
+		Part->DestroyComponent();
+	}
+	PartComponents.Reset();
+	PartSlots.Reset();
+	Wheels.Reset();
+	LastGearPose.Reset();
+	if (Gun)
+	{
+		Gun->DestroyComponent();
+		Gun = nullptr;
+	}
+
+	if (HasGun())
+	{
+		Gun = MakePartComponent<UStaticMeshComponent>(*this, *Turret, UnitData->GunMesh);
+		Gun->SetRelativeLocationAndRotation(UnitData->GunOffset, FRotator(GunPitch, 0.f, 0.f));
+	}
+
+	TMap<UStaticMesh*, UInstancedStaticMeshComponent*> WheelSets;
+	for (const FRTSVehiclePart& Part : UnitData->Parts)
+	{
+		FPartSlot& Slot = PartSlots.AddDefaulted_GetRef();
+		USceneComponent* Parent = Part.MountedOn == ERTSVehiclePartMount::Gun ? Gun.Get()
+			: Part.MountedOn == ERTSVehiclePartMount::Turret ? (HasTurret() ? Turret.Get() : nullptr) : Mesh.Get();
+		if (!Part.Mesh || !Parent)
+		{
+			continue;
+		}
+		const FTransform Rest(Part.Rotation, Part.Offset);
+		if (!Part.bWheel || Part.MountedOn != ERTSVehiclePartMount::Hull)
+		{
+			Slot.Component = MakePartComponent<UStaticMeshComponent>(*this, *Parent, Part.Mesh);
+			Slot.Component->SetRelativeTransform(Rest);
+			PartComponents.Add(Slot.Component);
+			continue;
+		}
+
+		// One draw for every wheel of a kind: each wheel is an instance, placed relative to the hull.
+		UInstancedStaticMeshComponent*& Set = WheelSets.FindOrAdd(Part.Mesh.Get());
+		if (!Set)
+		{
+			Set = MakePartComponent<UInstancedStaticMeshComponent>(*this, *Parent, Part.Mesh);
+			PartComponents.Add(Set);
+		}
+		Slot.Component = Set;
+		Slot.Instance = Set->AddInstance(Rest, /*bWorldSpace*/ false);
+
+		FWheel& Wheel = Wheels.AddDefaulted_GetRef();
+		Wheel.Component = Set;
+		Wheel.Instance = Slot.Instance;
+		Wheel.Rest = Rest;
+		Wheel.Radius = FMath::Max(Part.Mesh->GetBoundingBox().GetExtent().Z * UnitData->MeshScale.Z, 1.f);
+		Wheel.Side = Part.Offset.Y * UnitData->MeshScale.Y;
+	}
+}
+
+bool ARTSUnit::GetPartTransform(int32 PartIndex, FTransform& OutTransform) const
+{
+	if (!PartSlots.IsValidIndex(PartIndex) || !PartSlots[PartIndex].Component)
+	{
+		return false;
+	}
+	const FPartSlot& Slot = PartSlots[PartIndex];
+	if (Slot.Instance == INDEX_NONE)
+	{
+		OutTransform = Slot.Component->GetComponentTransform();
+		return true;
+	}
+	return CastChecked<UInstancedStaticMeshComponent>(Slot.Component)->GetInstanceTransform(Slot.Instance, OutTransform, /*bWorldSpace*/ true);
+}
+
+void ARTSUnit::UpdateRunningGear()
+{
+	if (Wheels.IsEmpty())
+	{
+		return;
+	}
+	const FTransform Pose = GetActorTransform();
+	if (!LastGearPose.IsSet())
+	{
+		LastGearPose = Pose;
+		return;
+	}
+	const float Driven = FVector::DotProduct(Pose.GetLocation() - LastGearPose->GetLocation(), Pose.GetUnitAxis(EAxis::X));
+	const float Turned = FMath::FindDeltaAngleDegrees(LastGearPose->Rotator().Yaw, Pose.Rotator().Yaw);
+	LastGearPose = Pose;
+	if (FMath::Abs(Driven) < GearMinDistance && FMath::Abs(Turned) < GearMinTurn)
+	{
+		return;
+	}
+
+	// Turning right (positive yaw) drives the left side (negative Y) forward and the right side back.
+	const float TurnedRadians = FMath::DegreesToRadians(Turned);
+	TMap<UInstancedStaticMeshComponent*, TArray<FTransform>> Updates;
+	for (FWheel& Wheel : Wheels)
+	{
+		Wheel.Angle = FMath::Fmod(Wheel.Angle + (Driven - Wheel.Side * TurnedRadians) / Wheel.Radius, UE_TWO_PI);
+		// Rolling forward brings the top of the wheel forward: a nose-down pitch about the hull's Y axis, after the wheel's
+		// own turn on the hull.
+		const FQuat Roll = FRotator(-FMath::RadiansToDegrees(Wheel.Angle), 0.f, 0.f).Quaternion();
+		TArray<FTransform>& Transforms = Updates.FindOrAdd(Wheel.Component);
+		Transforms.SetNum(FMath::Max(Transforms.Num(), Wheel.Instance + 1));
+		Transforms[Wheel.Instance] = FTransform(Roll * Wheel.Rest.GetRotation(), Wheel.Rest.GetLocation());
+	}
+	for (const TPair<UInstancedStaticMeshComponent*, TArray<FTransform>>& Update : Updates)
+	{
+		Update.Key->BatchUpdateInstancesTransforms(0, Update.Value, /*bWorldSpace*/ false, /*bMarkRenderStateDirty*/ true);
+	}
+}
+
 void ARTSUnit::ApplyTeamColor()
 {
-	for (UStaticMeshComponent* Part : { Mesh.Get(), Turret.Get() })
+	TArray<UStaticMeshComponent*, TInlineAllocator<8>> Parts = { Mesh.Get(), Turret.Get(), Gun.Get() };
+	Parts.Append(PartComponents);
+	for (UStaticMeshComponent* Part : Parts)
 	{
-		if (!Part->GetStaticMesh())
+		if (!Part || !Part->GetStaticMesh())
 		{
 			continue;
 		}
@@ -256,6 +410,17 @@ bool ARTSUnit::HasTurret() const
 	return UnitData && UnitData->TurretMesh;
 }
 
+bool ARTSUnit::HasGun() const
+{
+	return HasTurret() && UnitData->GunMesh;
+}
+
+void ARTSUnit::SetAimOverride(TOptional<FVector2D> YawPitch)
+{
+	check(HasAuthority());
+	AimOverride = YawPitch;
+}
+
 float ARTSUnit::GetTurretYawToward(const AActor& Target) const
 {
 	const FVector ToTarget = Target.GetActorLocation() - GetActorLocation();
@@ -269,18 +434,49 @@ void ARTSUnit::UpdateTurret(float DeltaSeconds)
 		return;
 	}
 	const AActor* Target = WeaponComponent->GetTarget();
-	const float Goal = Target ? GetTurretYawToward(*Target) : 0.f;
+	const float Goal = AimOverride ? AimOverride->X : Target ? GetTurretYawToward(*Target) : 0.f;
 	const float Yaw = FMath::FixedTurn(TurretYaw, Goal, UnitData->TurretTurnRate * DeltaSeconds);
 	if (Yaw != TurretYaw)
 	{
 		TurretYaw = FRotator::NormalizeAxis(Yaw);
 		OnRep_TurretYaw();
 	}
+
+	if (!HasGun())
+	{
+		return;
+	}
+	// Up toward the target's middle from the trunnion; the hull's tilt is left out.
+	float PitchGoal = 0.f;
+	if (AimOverride)
+	{
+		PitchGoal = AimOverride->Y;
+	}
+	else if (Target)
+	{
+		const FVector ToTarget = Target->GetActorLocation() - Gun->GetComponentLocation();
+		PitchGoal = FMath::RadiansToDegrees(FMath::Atan2(ToTarget.Z, ToTarget.Size2D()));
+	}
+	PitchGoal = FMath::Clamp(PitchGoal, UnitData->GunMinPitch, UnitData->GunMaxPitch);
+	const float Pitch = FMath::FixedTurn(GunPitch, PitchGoal, UnitData->GunElevationRate * DeltaSeconds);
+	if (Pitch != GunPitch)
+	{
+		GunPitch = Pitch;
+		OnRep_GunPitch();
+	}
 }
 
 void ARTSUnit::OnRep_TurretYaw()
 {
 	Turret->SetRelativeRotation(FRotator(0.f, TurretYaw, 0.f));
+}
+
+void ARTSUnit::OnRep_GunPitch()
+{
+	if (Gun)
+	{
+		Gun->SetRelativeRotation(FRotator(GunPitch, 0.f, 0.f));
+	}
 }
 
 bool ARTSUnit::IsAimedAt(const AActor& Target) const
@@ -290,6 +486,10 @@ bool ARTSUnit::IsAimedAt(const AActor& Target) const
 
 FVector ARTSUnit::GetMuzzleLocation() const
 {
+	if (Gun)
+	{
+		return Gun->GetComponentTransform().TransformPosition(UnitData->GunMuzzleOffset);
+	}
 	return Turret->GetComponentTransform().TransformPosition(UnitData ? UnitData->MuzzleOffset : FVector::ZeroVector);
 }
 
@@ -429,10 +629,13 @@ void ARTSUnit::Tick(float DeltaSeconds)
 	{
 		UpdateMeshTransform();
 	}
+	UpdateRunningGear();
 }
 
 void ARTSUnit::TickOrders(float DeltaSeconds)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(ARTSUnit::TickOrders);
+
 	// Once the match is over the unit stands where it is; its orders stay queued but never run again.
 	if (ARTSGameState::IsMatchOver(*GetWorld()))
 	{
@@ -960,4 +1163,5 @@ void ARTSUnit::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 	DOREPLIFETIME_CONDITION(ARTSUnit, UnitData, COND_InitialOnly);
 	DOREPLIFETIME_CONDITION(ARTSUnit, TeamId, COND_InitialOnly);
 	DOREPLIFETIME(ARTSUnit, TurretYaw);
+	DOREPLIFETIME(ARTSUnit, GunPitch);
 }

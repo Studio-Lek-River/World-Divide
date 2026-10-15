@@ -1,0 +1,63 @@
+# WD_RiverCrossing_01: producer actions
+
+What only the producer can do or decide, ordered by when it blocks work.
+
+## 1. Decisions
+
+| # | Decision | Blocks | Recommendation |
+|---|---|---|---|
+| D1 | **Real-scale target values** for units, buildings, ranges and the camera. The direction is decided (2026-10-15); the numbers are not. | Phase 0 and every map number | Start from the planning envelope in [02_MAP_DESIGN.md](02_MAP_DESIGN.md) |
+| D2 | Minimum spec PC and fps target (for example, 60 fps at 1080p with 200 units) | Phases 6–8 | Name a GPU class |
+| D3 | Season and biome: summer or early autumn temperate | Phase 1 pack choice | Late summer (greens with dry field tones) |
+| D4 | Do playable woods slow or block vehicles, or are they cover only? | Phase 6 | Cover only for 01 |
+| D5 | Are village buildings garrisonable at the map's launch, or only tagged for later? | Phase 5 | Tag now, garrison when the system exists |
+| D6 | Does `WD_RiverCrossing_01` join the lobby next to `L_RiverFord`, or replace it? | Phase 2 and 9 | Join; retire `L_RiverFord` once the rescale is done |
+| D7 | Is Lumen hardware ray tracing allowed on the minimum spec? | Phase 7 | Software Lumen |
+| D8 | Approve enabling the **Water** and **PCG** plugins (optionally LandscapePatch and GeometryScripting) in `WorldDivide.uproject` | Phase 2 | Approve Water and PCG |
+
+## 2. Assets to add from your Fab library
+
+Nothing from your Fab library is on this machine yet: the launcher's vault cache is empty and no pack is imported (see [01_ASSET_AUDIT.md](01_ASSET_AUDIT.md)). I can't see your account library, so please check which of your packs cover these categories:
+
+| Category | Minimum set |
+|---|---|
+| Landscape surfaces | Grass, meadow, dirt, mud, gravel, rock, sand/riverbank, asphalt. One consistent (ideally scanned) family, 2K or more. |
+| Trees | At least 3 deciduous and 1–2 conifer species with Nanite foliage or LODs and impostors, real-scale |
+| Bushes, grass, flowers | Hedgerow bushes, shrubs, grass and wildflower cards for Landscape Grass |
+| Buildings | One modern European village kit: houses, farmhouse, barn, workshop/garage, a landmark (church or mill) |
+| Infrastructure | Two-lane road bridge or modular bridge kit, road decals and kerbs, fences, power poles and lines, streetlights, signs, concrete barriers |
+| Natural details | Rocks, small cliffs, logs, debris, from the same family as the surfaces |
+
+**How to add a pack** (no purchase is needed for packs already in your library):
+1. Open the project: `Tools\Scripts\ue.ps1 -Task editor`.
+2. In the editor, open the **Fab** window (Window → Fab, or the Content Browser's *Add → Add Fab content*). The Fab plugin is installed in the engine.
+3. Sign in there, open **My Library**, and press **Add to project** on each pack. Megascans assets can also come through **Quixel Bridge**, which is installed.
+4. Alternatively, use the Epic Games Launcher → Fab Library → *Add to project* → WorldDivide (5.8).
+5. Tell me the folder names that appear under `Content/`. I will then check them through the Asset Registry and update 01.
+
+**Before importing:**
+- Check each pack's licence covers use in a commercial game.
+- Note any pack that is not offered for UE 5.8 (it may need *Show all projects*).
+
+## 3. Existing files to resolve
+
+- **`Content/HighPoly_Tree_Model/`** (untracked).
+  - Confirm where it came from and that its licence allows shipping it.
+  - Then decide whether to commit it (37 MB, LFS) or delete it.
+  - It is fine as a hero tree but too heavy for forests.
+- **`Content/Art/Local/` Abrams** is git-ignored on purpose. It is the only real-scale MBT besides the M20 Guardian; keep that in mind for the scale checks in phase 1.
+
+## 4. Editor and settings
+
+- **Turning on the plugins:** after D8 I'll add Water and PCG to `WorldDivide.uproject`. You then reopen the editor once so the plugins compile and load.
+- **Navigation settings:** two nav agents and bigger tiles in `Config/DefaultEngine.ini` are part of the phase 0 issue, not a separate change.
+- **Running editor checks:** for phases 1 and onward, keep the editor open with `ue.ps1 -Task editor` while I run checks. The MCP server only reads and plays; it can't save.
+- **LFS locks on the level:** landscape sculpting and painting lock `WD_RiverCrossing_01.umap` through LFS. Only one person can sculpt at a time.
+
+## 5. Access that is missing
+
+| Missing | Effect | Fix |
+|---|---|---|
+| Unreal MCP server was not running during this audit | Asset types and Nanite flags were read from file headers, not the Asset Registry | Open the editor before phase 1 |
+| Fab account library | Can't tell which of your packs exist or fit | Your list of pack names, or add them as in §2 |
+| GitHub milestone work orders (M1–M5) | Can't place this map in the milestone order from repository files alone | Tell me the milestone, or I'll propose one when I open the issues |

@@ -39,6 +39,7 @@
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
+#include "Tests/RTSTestMaps.h"
 #include "Tests/RTSTestPIE.h"
 #include "Tests/RTSTestUI.h"
 #include "UI/Layout/RTSLayoutScreen.h"
@@ -688,6 +689,10 @@ bool FRTSIssueMoveToAll::Update()
 	TArray<ARTSUnit*> Everyone;
 	for (TActorIterator<ARTSUnit> It(World); It; ++It)
 	{
+		if (!RTSTests::IsArmyUnit(**It))
+		{
+			continue;
+		}
 		Everyone.Add(*It);
 		if (It->GetTeamId() == Controller->GetTeamId())
 		{

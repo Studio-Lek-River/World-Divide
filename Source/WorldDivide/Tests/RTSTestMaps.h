@@ -6,10 +6,21 @@
 
 #include "Core/RTSSettings.h"
 #include "Data/RTSMapData.h"
+#include "Data/RTSUnitData.h"
 #include "Misc/AutomationTest.h"
+#include "Units/RTSUnit.h"
 
 namespace RTSTests
 {
+	/**
+	 * L_TestMap's two real-size M20 Guardians stand by the west base to inspect the vehicle art (ue.ps1 -Task unitshots);
+	 * they are not part of the army the smoke tests count and move.
+	 */
+	inline bool IsArmyUnit(const ARTSUnit& Unit)
+	{
+		return !Unit.GetUnitData() || Unit.GetUnitData()->GetName() != TEXT("DA_TestM20Guardian");
+	}
+
 	/** The maps only the tests play: the lobby does not offer them, the lobby smoke tests swap them in. */
 	inline TArray<TSoftObjectPtr<URTSMapData>> GetTestSkirmishMaps()
 	{

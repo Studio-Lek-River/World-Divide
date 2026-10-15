@@ -24,6 +24,7 @@ To render the map previews instead of drawing them, replace -nullrhi with -Allow
 import collections
 import hashlib
 import inspect
+import json
 import math
 import os
 import struct
@@ -37,6 +38,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import placeholder_art as art  # noqa: E402
 import placeholder_icons  # noqa: E402
 import ui_sources  # noqa: E402
+import vehicle_art  # noqa: E402
 
 UNIT_DIR = "/Game/Data/Units"
 WEAPON_DIR = "/Game/Data/Weapons"
@@ -69,6 +71,9 @@ PROJECT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_di
 CONTENT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir())
 READ_ONLY_REPORT = os.path.join(PROJECT_DIR, "Saved", "Setup", "ReadOnlyAssets.txt")
 ART_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Source", "Placeholder")
+# The M20 Guardian as Tools/Art/m20_guardian_blender.py exported it, and where its assets go.
+M20_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "USA", "vehicles", "m20_guardian")
+M20_DIR = "/Game/Art/USA/Vehicles/M20Guardian"
 
 assets = unreal.EditorAssetLibrary
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
@@ -242,6 +247,79 @@ def make_art(name, source, yaw=0.0, tint=TEAM_TINT):
     return plan_now(f"{art.MESH_DIR}/{mesh_name}", lambda: art.import_mesh(source, mesh_name, yaw, slot_materials),
                     spec_hash([art.import_mesh, art.import_static_mesh], mesh_name, file_hash(source), yaw,
                               sorted((slot, object_path(instance)) for slot, instance in slot_materials.items())))
+
+
+def make_m20_guardian():
+    """Imports the M20 Guardian's parts, textures and material instances (see vehicle_art.py) and returns its unit data
+    properties: the hull as Mesh at real size, the turret, the gun and every other part where m20_guardian.json puts it.
+    The wheels of the right side are the exported left wheel turned round."""
+    with open(os.path.join(M20_SOURCE_DIR, "m20_guardian.json")) as file:
+        layout = json.load(file)
+    texture_dir, material_dir, mesh_dir = (f"{M20_DIR}/{folder}" for folder in ("Textures", "Materials", "Meshes"))
+
+    textures = {}
+    for texture_set in ("Hull", "Turret", "Running", "Track"):
+        for kind in vehicle_art.TEXTURE_KINDS:
+            name = f"T_M20_{texture_set}_{kind}"
+            source = os.path.join(M20_SOURCE_DIR, "textures", f"{name}.png")
+            textures[texture_set, kind] = plan_now(
+                f"{texture_dir}/{name}", lambda s=source, n=name, k=kind: vehicle_art.import_texture(s, texture_dir, n, k),
+                spec_hash([vehicle_art.import_texture], texture_dir, name, kind, file_hash(source)))
+
+    hull_textures = {kind: textures["Hull", kind] for kind in vehicle_art.TEXTURE_KINDS}
+    master = plan_now(f"{vehicle_art.MATERIAL_DIR}/{vehicle_art.VEHICLE_MATERIAL}",
+                      lambda: vehicle_art.build_vehicle_material(hull_textures),
+                      spec_hash([vehicle_art.build_vehicle_material], sorted(map(object_path, hull_textures.values()))))
+    lamp = plan_now(f"{vehicle_art.MATERIAL_DIR}/{vehicle_art.LAMP_MATERIAL}", vehicle_art.build_lamp_material,
+                    spec_hash([vehicle_art.build_lamp_material]))
+    slot_materials = {"M20_Emissive": lamp}
+    for texture_set in ("Hull", "Turret", "Running", "Track"):
+        name = f"MI_M20_{texture_set}"
+        set_textures = {kind: textures[texture_set, kind] for kind in vehicle_art.TEXTURE_KINDS}
+        slot_materials[f"M20_{texture_set}"] = plan_now(
+            f"{material_dir}/{name}",
+            lambda n=name, t=set_textures: vehicle_art.build_material_instance(material_dir, n, master, t),
+            spec_hash([vehicle_art.build_material_instance], material_dir, name, master,
+                      sorted(map(object_path, set_textures.values()))))
+
+    # Each part's length along X as exported (m20_guardian_blender.py --verify), to catch a unit mix-up on import.
+    meshes = {}
+    for part, length in (("Hull", 710.2), ("Turret", 424.2), ("Gun", 322.0), ("RWS", 165.0), ("Track_L", 647.3),
+                         ("Track_R", 647.3), ("RoadWheel", 68.0), ("Sprocket", 68.4), ("Idler", 54.0)):
+        name = f"SM_M20_{part}"
+        source = os.path.join(M20_SOURCE_DIR, "fbx", f"{name}.fbx")
+        meshes[part] = plan_now(
+            f"{mesh_dir}/{name}",
+            lambda s=source, n=name, l=length: vehicle_art.import_part(s, mesh_dir, n, slot_materials, l),
+            spec_hash([vehicle_art.import_part], mesh_dir, name, length, file_hash(source),
+                      sorted((slot, object_path(material)) for slot, material in slot_materials.items())))
+
+    def part(mesh, mount, offset, yaw=0.0, wheel=False):
+        value = unreal.RTSVehiclePart()
+        value.set_editor_property("mesh", mesh)
+        value.set_editor_property("mounted_on", mount)
+        value.set_editor_property("offset", unreal.Vector(*offset))
+        value.set_editor_property("rotation", unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw))
+        value.set_editor_property("wheel", wheel)
+        return value
+
+    parts = [part(meshes["RWS"], unreal.RTSVehiclePartMount.TURRET, layout["rws_offset"])]
+    parts += [part(meshes[name[len("M20_"):]], unreal.RTSVehiclePartMount.HULL, offset)
+              for name, offset in sorted(layout["track_offsets"].items())]
+    for name, offset in sorted(layout["wheels"].items()):
+        kind = next(kind for kind in ("RoadWheel", "Sprocket", "Idler") if name.startswith(f"M20_{kind}"))
+        right = name.rstrip("0123456789").endswith("R")
+        parts.append(part(meshes[kind], unreal.RTSVehiclePartMount.HULL, offset, 180.0 if right else 0.0, True))
+
+    return meshes["Hull"], {
+        "turret_mesh": meshes["Turret"],
+        "turret_offset": unreal.Vector(*layout["turret_offset"]),
+        "muzzle_offset": unreal.Vector(*layout["muzzle_offset"]),
+        "gun_mesh": meshes["Gun"],
+        "gun_offset": unreal.Vector(*layout["gun_pivot_offset"]),
+        "gun_muzzle_offset": unreal.Vector(*layout["gun_muzzle_offset"]),
+        "parts": parts,
+    }
 
 
 def fit_scale(mesh, length, width, height=None):
@@ -646,7 +724,7 @@ def spawn_lighting():
     spawn(unreal.SkyAtmosphere, (0.0, 0.0, 0.0), label="SkyAtmosphere")
 
 
-def build_map(tank, infantry, builder, wall, crate, ground, digest):
+def build_map(tank, infantry, builder, m20, wall, crate, ground, digest):
     new_level(MAP_PATH)
 
     # 200 x 200 m ground, top face at z = 0.
@@ -678,6 +756,9 @@ def build_map(tank, infantry, builder, wall, crate, ground, digest):
         spawn_units(tank, 6, team_id, (x + 600.0 * forward, -900.0, 0.0), yaw)
         spawn_units(infantry, 10, team_id, (x + 600.0 * forward, 900.0, 0.0), yaw)
         spawn_units(builder, 2, team_id, (x - 400.0 * forward, 0.0, 0.0), yaw)
+        if team_id == 0:
+            # The real-size test tank, beside the base and clear of the army's paths.
+            spawn_units(m20, 2, team_id, (x + 800.0, -2600.0, 0.0), yaw)
         # Beside each base, clear of the units' paths and of the empty strip at y = 7000 the tests build in.
         spawn_supply_source((x - 50.0 * forward, 2550.0 * forward, 0.0), 5000, (3, 3), crate)
 
@@ -688,10 +769,10 @@ def build_map(tank, infantry, builder, wall, crate, ground, digest):
         raise RuntimeError(f"Could not save {MAP_PATH}")
 
 
-def make_map(tank, infantry, builder, wall, crate, ground):
-    plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, builder, wall, crate, ground, digest),
+def make_map(tank, infantry, builder, m20, wall, crate, ground):
+    plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, builder, m20, wall, crate, ground, digest),
                  spec_hash([build_map, build_navigation, spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source,
-                            spawn_ground, spawn_lighting], MAP_PATH, CUBE, tank, infantry, builder, wall, crate, ground,
+                            spawn_ground, spawn_lighting], MAP_PATH, CUBE, tank, infantry, builder, m20, wall, crate, ground,
                            material_hashes[ground], ENGINE_VERSION))
 
 
@@ -1318,6 +1399,12 @@ tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 260
 heavy_cannon = make_weapon("DA_TestHeavyCannon", TANK_RANGE, 60.0, 2.5, 6500.0, 2.0, (1.0, 0.4, 0.08))
 abrams = make_unit("DA_TestAbrams", "Test Abrams", tank_mesh, fit_scale(tank_mesh, 290.0, 160.0), 100.0, 350.0, heavy_cannon,
                    500.0, 150.0, 1100, 14.0)
+# The M20 Guardian at its real size, to try the Blender to Unreal pipeline out: the heavy tank's weapon, speed and cost,
+# and a turret that traverses at 45 degrees a second. No building offers it; two stand in L_TestMap.
+m20_mesh, m20_parts = make_m20_guardian()
+m20 = make_unit("DA_TestM20Guardian", "Test M20 Guardian", m20_mesh, (1.0, 1.0, 1.0), 400.0, 350.0, heavy_cannon, 500.0, 150.0,
+                1100, 14.0)
+add_properties(m20, dict(m20_parts, turret_turn_rate=45.0))
 infantry = make_unit("DA_TestInfantry", "Test Infantry", infantry_mesh, fit_scale(infantry_mesh, 100.0, 100.0), 30.0, 100.0,
                      rifle, 350.0, 540.0, 150, 4.0)
 grenade = make_weapon("DA_TestGrenade", 600.0, 25.0, 1.5, 1500.0, 1.0, (1.0, 0.6, 0.2), arc_height=250.0)
@@ -1370,7 +1457,7 @@ buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory, headqu
 # The headquarters produces the builder, which builds the rest.
 add_properties(builder, {"buildings": buildings})
 # Vehicles lean with the slope; infantry stays upright.
-for vehicle in (tank, abrams, harvester, builder, flak_truck):
+for vehicle in (tank, abrams, m20, harvester, builder, flak_truck):
     add_properties(vehicle, {"tilts_to_ground": True})
 # A harvester needs a depot to deliver to, so the factory only offers one once a depot stands.
 add_properties(harvester, {"prerequisites": [supply_depot]})
@@ -1395,6 +1482,7 @@ add_properties(usa, {"faction_tag": USA_TAG})
 for entity, icon, hotkey, description in (
     (tank, "Icon.Tank", "T", "Main battle tank. Strong against vehicles and buildings."),
     (abrams, "Icon.Abrams", "M", "Heavy tank. Tougher and harder-hitting than the main battle tank, but slower and dearer."),
+    (m20, "Icon.M20Guardian", "N", "M20 Guardian main battle tank at real size, for testing the vehicle art pipeline."),
     (infantry, "Icon.Infantry", "I", "Rifle squad. Cheap, and quick to train."),
     (grenadier, "Icon.Grenadier", "G", "Infantry with a grenade launcher that lobs over cover. Needs rifle training."),
     (flak_truck, "Icon.FlakTruck", "F", "Anti-aircraft truck. Hits only aircraft in flight."),
@@ -1416,7 +1504,7 @@ make_ghost_material("M_PlacementGhost")
 make_shot_material("M_ShotFx")
 ground = make_surface_material("M_Ground", (0.06, 0.075, 0.04), 0.9)
 water = make_surface_material("M_Water", (0.015, 0.04, 0.08), 0.1)
-make_map(tank, infantry, builder, wall_mesh, crate_mesh, ground)
+make_map(tank, infantry, builder, m20, wall_mesh, crate_mesh, ground)
 for spec in (SKIRMISH_MAP, DUEL_MAP, RIVER_FORD_MAP, QUARRY_CROSS_MAP, SIX_PEAKS_MAP):
     make_skirmish_map(spec, builder, wall_mesh, crate_mesh, ground, water)
 # The lobby's maps, listed in Config/DefaultGame.ini: by default a player against an AI opponent; the other seats are open.

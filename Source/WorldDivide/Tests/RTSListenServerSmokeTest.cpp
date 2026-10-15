@@ -28,6 +28,7 @@
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
+#include "Tests/RTSTestMaps.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
 
@@ -239,7 +240,7 @@ namespace RTSListenServerTest
 		int32 Count = 0;
 		for (TActorIterator<ARTSUnit> It(&World); It; ++It)
 		{
-			++Count;
+			Count += RTSTests::IsArmyUnit(**It) ? 1 : 0;
 		}
 		return Count;
 	}
@@ -290,6 +291,10 @@ namespace RTSListenServerTest
 	{
 		for (TActorIterator<ARTSUnit> It(&World); It; ++It)
 		{
+			if (!RTSTests::IsArmyUnit(**It))
+			{
+				continue;
+			}
 			if (It->GetTeamId() == HostTeam || It->GetTeamId() == ClientTeam)
 			{
 				OutUnits[It->GetTeamId()].Add(*It);
@@ -460,6 +465,10 @@ namespace RTSListenServerTest
 		ARTSUnit* ClientUnit = nullptr;
 		for (TActorIterator<ARTSUnit> It(ServerWorld); It; ++It)
 		{
+			if (!RTSTests::IsArmyUnit(**It))
+			{
+				continue;
+			}
 			if (It->GetTeamId() == HostTeam && !HostUnit)
 			{
 				HostUnit = *It;
@@ -547,7 +556,10 @@ namespace RTSListenServerTest
 		TArray<ARTSUnit*> Everyone;
 		for (TActorIterator<ARTSUnit> It(ClientWorld); It; ++It)
 		{
-			Everyone.Add(*It);
+			if (RTSTests::IsArmyUnit(**It))
+			{
+				Everyone.Add(*It);
+			}
 		}
 		FRTSCommand Command;
 		Command.Type = ERTSCommandType::Move;

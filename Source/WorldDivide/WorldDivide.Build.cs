@@ -31,6 +31,9 @@ public class WorldDivide : ModuleRules
 		// The HUD screenshots of rts.UI.Screenshot write their PNGs from an image view.
 		PrivateDependencyModuleNames.Add("ImageCore");
 
+		// rts.Debug.UnitShots logs the frame's draw calls, GPU time and game thread time.
+		PrivateDependencyModuleNames.AddRange(new string[] { "RHI", "RenderCore" });
+
 		// The HUD reads its layout files at runtime (URTSLayoutWidget), so they ship with the game.
 		RuntimeDependencies.Add("$(ProjectDir)/UI/Layouts/...", StagedFileType.UFS);
 
