@@ -35,14 +35,14 @@ namespace
 }
 
 /**
- * L_TestMap, every map the lobby offers and the test maps are saved with their navmesh built, so a map the editor did not start with,
+ * L_TestMap, L_Bench, every map the lobby offers and the test maps are saved with their navmesh built, so a map the editor did not start with,
  * or one loaded in a packaged build, has a full navmesh from its first frame.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSSavedNavMeshTest, "WorldDivide.Maps.SavedNavMesh", TestFlags)
 
 bool FRTSSavedNavMeshTest::RunTest(const FString& Parameters)
 {
-	TArray<FString> MapPaths = { TEXT("/Game/Maps/L_TestMap") };
+	TArray<FString> MapPaths = { TEXT("/Game/Maps/L_TestMap"), TEXT("/Game/Maps/L_Bench") };
 	for (const TSoftObjectPtr<URTSMapData>& MapPtr : RTSTests::GetCheckedMaps())
 	{
 		const URTSMapData* Map = MapPtr.LoadSynchronous();

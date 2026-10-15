@@ -52,6 +52,10 @@ UI_STYLE_DIR = "/Game/UI/Styles"
 FONT_POINTS_PER_PIXEL = 0.75
 MATERIAL_DIR = "/Game/Materials"
 MAP_PATH = "/Game/Maps/L_TestMap"
+# rts.Debug.Bench's level: 300 x 300 m, team 0's headquarters at (-BENCH_CORNER, -BENCH_CORNER), team 1's opposite.
+BENCH_MAP_PATH = "/Game/Maps/L_Bench"
+BENCH_HALF_SIZE = 15000.0
+BENCH_CORNER = 12000.0
 MAIN_MENU_MAP_PATH = "/Game/Maps/L_MainMenu"
 LOBBY_MAP_PATH = "/Game/Maps/L_Lobby"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
@@ -774,6 +778,33 @@ def make_map(tank, infantry, builder, m20, wall, crate, ground):
                  spec_hash([build_map, build_navigation, spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall, spawn_units, spawn_supply_source,
                             spawn_ground, spawn_lighting], MAP_PATH, CUBE, tank, infantry, builder, m20, wall, crate, ground,
                            material_hashes[ground], ENGINE_VERSION))
+
+
+def build_bench_map(ground, digest):
+    """The benchmark level of rts.Debug.Bench (ue.ps1 -Task bench): flat open ground with room in the middle for a grid of
+    240 vehicles and their move order, and a headquarters for each of two teams in far corners, which keep both teams in
+    the match while the benchmark's units come and go. It does not change with the game's scale, so measurements stay
+    comparable."""
+    new_level(BENCH_MAP_PATH)
+    spawn_ground(BENCH_HALF_SIZE, ground)
+    spawn_lighting()
+    nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
+    nav.set_actor_scale3d(unreal.Vector(BENCH_HALF_SIZE / 100.0, BENCH_HALF_SIZE / 100.0, 10.0))
+    for team_id, corner in ((0, -1.0), (1, 1.0)):
+        start = spawn(unreal.PlayerStart, (corner * BENCH_CORNER, corner * BENCH_CORNER, 100.0), label=f"PlayerStart_Team{team_id}")
+        start.set_editor_property("player_start_tag", f"Team{team_id}")
+
+    world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    build_navigation(world, BENCH_MAP_PATH)
+    assets.set_metadata_tag(world, HASH_TAG, digest)
+    if not levels.save_current_level():
+        raise RuntimeError(f"Could not save {BENCH_MAP_PATH}")
+
+
+def make_bench_map(ground):
+    plan_rebuild(BENCH_MAP_PATH, ".umap", lambda digest: build_bench_map(ground, digest),
+                 spec_hash([build_bench_map, build_navigation, spawn, spawn_block, spawn_ground, spawn_lighting],
+                           BENCH_MAP_PATH, BENCH_HALF_SIZE, BENCH_CORNER, CUBE, ground, material_hashes[ground], ENGINE_VERSION))
 
 
 def ring(radius, angle):
@@ -1505,6 +1536,7 @@ make_shot_material("M_ShotFx")
 ground = make_surface_material("M_Ground", (0.06, 0.075, 0.04), 0.9)
 water = make_surface_material("M_Water", (0.015, 0.04, 0.08), 0.1)
 make_map(tank, infantry, builder, m20, wall_mesh, crate_mesh, ground)
+make_bench_map(ground)
 for spec in (SKIRMISH_MAP, DUEL_MAP, RIVER_FORD_MAP, QUARRY_CROSS_MAP, SIX_PEAKS_MAP):
     make_skirmish_map(spec, builder, wall_mesh, crate_mesh, ground, water)
 # The lobby's maps, listed in Config/DefaultGame.ini: by default a player against an AI opponent; the other seats are open.

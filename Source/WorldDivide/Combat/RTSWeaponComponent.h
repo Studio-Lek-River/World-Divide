@@ -65,6 +65,9 @@ public:
 	/** Server only. Advances the reload and fires when possible. Public so tests can step it deterministically. */
 	void UpdateWeapon(float DeltaSeconds);
 
+	/** Seconds every weapon has spent searching for a target since the last call, which resets it; for rts.Debug.Bench. */
+	static double TakeSearchSeconds();
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

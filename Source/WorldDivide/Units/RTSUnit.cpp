@@ -347,6 +347,8 @@ bool ARTSUnit::GetPartTransform(int32 PartIndex, FTransform& OutTransform) const
 
 void ARTSUnit::UpdateRunningGear()
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE(ARTSUnit::UpdateRunningGear);
+
 	if (Wheels.IsEmpty())
 	{
 		return;

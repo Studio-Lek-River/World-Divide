@@ -13,6 +13,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task u
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots -Panel ResourceBar
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestM20Guardian -Stress 240
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestTank -Stress 240 -Trace
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestTank -Counts 240 -Trace
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uibindings
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uicheck -Path Saved/UIIntake/HUD_2026-10-14/staging/UI
 
@@ -29,13 +31,17 @@ the unit picked, selected and driving on a move order, and the default view with
 grid with the stats on. The frame time, game thread time, avoidance pass, draw calls and triangles of the stat views are
 printed. -Trace also records an Unreal Insights capture (cpu, frame and region channels; each stat view is a region) to
 Saved/Traces/UnitShots_<Unit>_<Stress>.utrace.
+Bench plays L_Bench with a renderer (a GPU is needed) and measures -Unit (rts.Debug.Bench) at 1, 30, 120 and 240 units, or
+the comma-separated -Counts, standing in a grid and then driving on a move order, from one fixed camera at 1920x1080 with
+dynamic resolution off and no frame rate cap. The table is printed and written with a CSV to Saved/Bench/<Unit>. -Trace
+records an Unreal Insights capture to Saved/Traces/Bench_<Unit>.utrace, each scenario a region.
 Uibindings writes every binding key, list and action with its panels, and the widgets, colours, fonts and sprites a layout
 may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck validates the layouts of the UI folder -Path
 (an unpacked delivery, for /ui-intake) and prints each problem. -Out and -Path are relative to the repository root.
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'uibindings', 'uicheck')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'bench', 'uibindings', 'uicheck')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -49,6 +55,8 @@ param(
 	[string]$Unit = 'DA_TestM20Guardian',
 
 	[int]$Stress = 0,
+
+	[string]$Counts = '',
 
 	[switch]$Trace,
 
@@ -257,6 +265,38 @@ function Invoke-UnitShots {
 	Write-Host "UNITSHOTS SUCCEEDED: $ShotDir"
 }
 
+function Invoke-Bench {
+	Assert-EditorClosed 'the game run loads the same project.'
+	$OutDir = Join-Path $RepoRoot "Saved\Bench\$Unit"
+	$LogFile = Join-Path $RepoRoot 'Saved\Logs\Bench.log'
+	if (Test-Path $OutDir) { Remove-Item -Recurse -Force $OutDir }
+	$TraceArgs = @()
+	if ($Trace) {
+		$TraceFile = Join-Path $RepoRoot "Saved\Traces\Bench_$Unit.utrace"
+		New-Item -ItemType Directory -Force (Split-Path $TraceFile) | Out-Null
+		if (Test-Path $TraceFile) { Remove-Item -Force $TraceFile }
+		$TraceArgs = @('-trace=cpu,frame,region,gpu', "`"-tracefile=$TraceFile`"")
+	}
+
+	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
+		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
+		"`"-ExecCmds=rts.Debug.Bench $Unit $Counts`"", '-RTSBenchQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		'-unattended', '-nosplash', '-nosound') + $TraceArgs)
+	$GameExit = $Process.ExitCode
+
+	$Table = Join-Path $OutDir 'bench.md'
+	if ($GameExit -ne 0 -or -not (Test-Path $Table)) {
+		if (Test-Path $LogFile) {
+			Select-String -Path $LogFile -Pattern 'rts.Debug|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line }
+		}
+		Write-Host "BENCH FAILED (game exit $GameExit). Log: $LogFile"
+		exit 1
+	}
+	Get-Content $Table | ForEach-Object { Write-Host $_ }
+	if ($Trace) { Write-Host "Trace: $TraceFile" }
+	Write-Host "BENCH SUCCEEDED: $OutDir"
+}
+
 # The headless UI commandlet (URTSUICommandlet) with Argument; returns its exit code, its log in LogFile.
 function Invoke-UICommandlet([string]$Argument, [string]$LogFile) {
 	& $EditorCmd $Project -run=RTSUI $Argument "-abslog=$LogFile" $NoMCPPlugins -unattended -nullrhi -nosplash -nosound | Out-Null
@@ -303,6 +343,7 @@ switch ($Task) {
 	'editor' { Invoke-Editor }
 	'uishots' { Invoke-UIShots }
 	'unitshots' { Invoke-UnitShots }
+	'bench' { Invoke-Bench }
 	'uibindings' { Invoke-UIBindings }
 	'uicheck' { Invoke-UICheck }
 }

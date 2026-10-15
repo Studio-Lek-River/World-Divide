@@ -77,9 +77,29 @@ bool URTSWeaponComponent::IsInRange(const AActor* Candidate) const
 	return FVector::Dist2D(Origin, Targetable->GetClosestFootprintPoint(Origin)) <= WeaponData->Range;
 }
 
+namespace
+{
+	/** Cycles spent in FindNearestInRange since the last TakeSearchSeconds, game thread only. */
+	uint64 WeaponSearchCycles = 0;
+
+	struct FWeaponSearchTimer
+	{
+		const uint64 Start = FPlatformTime::Cycles64();
+		~FWeaponSearchTimer() { WeaponSearchCycles += FPlatformTime::Cycles64() - Start; }
+	};
+}
+
+double URTSWeaponComponent::TakeSearchSeconds()
+{
+	const double Seconds = FPlatformTime::ToSeconds64(WeaponSearchCycles);
+	WeaponSearchCycles = 0;
+	return Seconds;
+}
+
 template <typename T>
 T* URTSWeaponComponent::FindNearestInRange() const
 {
+	const FWeaponSearchTimer Timer;
 	// A full scan is fine at prototype unit counts; a spatial query replaces it once armies grow.
 	T* Nearest = nullptr;
 	float NearestDistSq = TNumericLimits<float>::Max();
