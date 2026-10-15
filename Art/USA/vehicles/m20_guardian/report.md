@@ -1,4 +1,221 @@
-# M20 Guardian — detail integration pass (v3)
+# M20 Guardian — final material realism pass (v5)
+
+Built from code by `Tools/Art/m20_guardian_blender.py` (Blender 5.1) with `m20_guardian_materials.py`,
+`m20_guardian_bake.py`, `m20_guardian_render.py` and `m20_guardian_validate.py`; rebuild with
+`blender -b --python Tools/Art/m20_guardian_blender.py` (`-- --samples 64` for quick renders). V4 is kept in `_v4/`
+(.blend, FBX, renders, JSON, reports and the scripts as `*_v4.py`), like `_v3/`, `_v2/` and `_v1/`.
+
+This is a material pass only. The game meshes, UVs, pivots and sockets are unchanged: `export_triangles.json` and
+`m20_guardian.json` are identical to `_v4`, `--verify` passes on every FBX, and texture memory is still 43.3 MB for the
+game set. Three groups of faces changed material without changing geometry: the gun tube (now `Barrel`), the ratchet
+straps and rolled tarp (now `Canvas`), and the track's end connectors and guide horns (now track steel instead of
+bright mechanism steel).
+
+## Deliverables
+
+- `source/M20_Guardian_V5.blend`, `textures/T_M20_<Set>_{BC,N,ORM}.png` (game set) and `textures/source/` (bake size),
+  `fbx/SM_M20_*.fbx`.
+- Renders asked for: `m20_hero34` (front three-quarter), `m20_close_side_armor` (new), `m20_close_optics` and
+  `m20_studio_close_optics` (new, lenses facing the key light), `m20_close_tracks`, `m20_concept_compare`.
+- Also `m20_v4_v5_compare`, `m20_close_mantlet`, `m20_close_turret`, `m20_close_running_gear`, `m20_rear34`, the RTS
+  views, the studio and overcast hero views, and the orthographic views.
+
+## What changed in the materials
+
+- **Desert tan armour.** Macro clouds about a metre across (darker grimy and lighter sun-faded areas, ±20% value) break
+  up every large plate; each plate now really shifts lighter *or* darker (see the fix below); pale dusty and dark grimy
+  flecks in patches, as on the sheet; stronger orange peel and grain in the normal map; roughness 0.5–0.85 driven by
+  clouds, dust and wear.
+- **Seams, bolts and edges.** Grime packed into seams and round bolts with a softer dirt halo; bolts and welds sit a
+  little darker than their plate, so they read as the sheet's dark dots; a lighter rubbed band on exposed edges that
+  catches the light at range, then chips, primer and dull steel only on the most worn rims.
+- **Blue ID panels.** Saturated cobalt instead of grey-blue, satin roughness, half the dirt of the tan. They are
+  overpainted: chips and worn rims show the tan underneath before primer. Fewer flecks, so the ID stays clean and
+  readable at the RTS camera.
+- **Lower hull and running gear.** A darker road-grime band over the lower hull, dust built up towards the ground,
+  spray streaks rising from the skirt bottoms, and light mud flecks. The wheel discs are dusty khaki.
+- **Tracks.** Dark steel (V4: light grey), dirt packed into the recesses, sparse rust, and bright metal only on
+  scraped contact faces. The end connectors and guide horns use the same steel, so the track side no longer reads as
+  chrome.
+- **Rubber.** Near-black, with smoother, slightly lighter contact faces and cuts in the tread. Grime and streaks now use
+  a darken blend, so dirt can no longer make rubber or black fittings *lighter*, which is what made them grey in V4.
+- **Metal, dark fittings, rails.** Worn gunmetal for mechanisms, rails, handles, hooks and the mantlet clamp ring,
+  oily in patches, polished where it is touched (tops of rails and handles, sharp edges). Phosphate-black fittings
+  stay dielectric and rougher, with less edge wear, so the two read as different materials.
+- **Optics.** The housing round each window shades it, which gives a radial position: a dark anodised retaining ring,
+  a thin amber-green coating ring, then deep blue-violet coated glass, near black at the centre. The glass is partly
+  metallic (0.45), so its reflection is tinted the way multi-coated optics reflect, and it is dished in the normal map.
+  This lives in BC, N and ORM only, so it carries into Unreal as it is.
+- **Gun.** The thermal sleeve is toned per section between the clamp bands; the bands are dark steel; soot builds up
+  over the last half metre and the muzzle is heat-blackened gunmetal.
+- **Rear stowage.** Webbing straps and the rolled tarp are khaki canvas with a weave in the normal map. Bins and cans
+  vary per piece through the per-plate shift, and the rack bars are worn gunmetal.
+
+**Fixed: clamped signed maths.** Blender's Math node clamps to 0–1 by default. In V4 that silently cut every negative
+per-plate shift to zero, so plates could only get lighter and half of them did not vary at all. In this pass it also
+made the barrel bands cover the whole tube. Signed values now use unclamped nodes.
+
+## Materials as baked
+
+`report_stats.md` has a new table: for each procedural material, its area-weighted albedo, roughness and metallic in
+the game textures, checked against a luminance target. It found the V4 rubber, tracks and black fittings coming out
+mid-grey, and it guards against that now. All materials pass:
+
+| Material | sRGB luminance (V4 → V5) | Target |
+|---|---|---|
+| Paint (tan) | 0.36 → 0.32 | 0.30–0.46 |
+| Blue | 0.29 → 0.29, saturation (0.26, 0.29, 0.36) → (0.24, 0.28, 0.42) | 0.18–0.32 |
+| Rubber | 0.29 → 0.21 | 0.08–0.22 |
+| Track | 0.34 → 0.24 | 0.12–0.24 |
+| Dark | 0.25 → 0.20 | 0.10–0.22 |
+| Metal | 0.36 → 0.36 | 0.25–0.42 |
+
+The optics average 0.17 because the coated glass is tinted on purpose and the faces include the lens rims.
+
+## Is it closer to the concept?
+
+Yes, clearly, for colour and material separation. The blue reads like the sheet's cobalt, the gun has the sheet's
+toned sleeve and dark bands, the tracks and rubber are dark, and the plates no longer look like one flat beige.
+
+The sheet is still richer in two ways that this pass keeps on purpose or cannot reach:
+
+1. **Weathering density.** The sheet has heavy speckled grime over every surface. The brief asked for restrained,
+   operational wear, so V5 stays lighter. More dirt is one number per layer in `weather()` if wanted.
+2. **Bolt density.** The sheet has hundreds of bolt heads on every plate; that is geometry (normal-map detail on the
+   high twins), not material.
+
+## Ready for Unreal validation?
+
+**Yes.** LOD0 is visually ready: the look is all in BC, N and ORM, and the game set validates (UVs, normal encoding,
+ORM ranges, team mask, per-material ranges, geometry identical to V4). The import and master-material setup are as in
+V4 below. The blue panels keep the team mask in BC alpha. Their BC luminance is about 0.29, so `TeamColor` ×
+luminance stays in a sensible range.
+
+Still open, unchanged from V4: no per-unit weathering variation (baked), extreme close-ups go soft at 2K (a tiling
+detail normal in the master material would help), gun length, rigid tracks, LODs and collision.
+
+---
+
+# Previous pass (v4): production PBR materials
+
+Built from code by `Tools/Art/m20_guardian_blender.py` (Blender 5.1) with `m20_guardian_materials.py`,
+`m20_guardian_bake.py`, `m20_guardian_render.py` and the new `m20_guardian_validate.py`; rebuild with
+`blender -b --python Tools/Art/m20_guardian_blender.py` (about 12 minutes on the RTX 4090, `-- --samples 64` for quick
+renders). V3 is kept in `_v3/` (.blend, FBX, renders, JSON, reports and the scripts as `*_v3.py`), like `_v2/` and `_v1/`.
+
+This is a material and texturing pass. The game meshes, pivots and sockets are unchanged: `export_triangles.json` and
+`m20_guardian.json` are identical to `_v3`, and `--verify` passes on every FBX. Only the high-poly bake twins changed:
+bolts and welds are now painted like the plate they sit on instead of bare steel.
+
+## Deliverables
+
+- `source/M20_Guardian_V4.blend`: game meshes with the baked game materials, and the hidden `M20_High` twins with the
+  procedural bake-source materials.
+- `textures/T_M20_<Set>_{BC,N,ORM}.png`: the game set Unreal imports (Hull, Turret and Running 2K, Track 1K).
+- `textures/source/`: the same maps at bake size (Hull and Turret 4K, Running and Track 2K).
+- `fbx/SM_M20_*.fbx`: unchanged geometry; the optics now sit in the set materials, so only the hull keeps an
+  `M20_Emissive` section (its lamps).
+- `renders/`: see below. `report_stats.md`: triangles, texture memory and the validation tables.
+
+## Renders
+
+- Lighting: `m20_hero34` (warm battlefield sun, low and late), `m20_studio_hero34` (neutral grey studio),
+  `m20_overcast_hero34` (bright uniform overcast sky).
+- Close-ups (warm): `m20_close_turret` (also `m20_studio_close_turret`), `m20_close_optics`, `m20_close_tracks`,
+  `m20_close_running_gear`, `m20_close_commander`, `m20_close_smoke`, `m20_close_mantlet`.
+- RTS camera: `m20_rts_default` (30 m arm, 55°, 90° FOV as in `ARTSCameraPawn`) and `m20_rts_mid` (15 m).
+- Comparisons: `m20_concept_compare` (V4 hero beside the concept sheet) and `m20_v3_v4_compare` (the v1 camera).
+- Also `m20_rear34`, `m20_pivot_test` and the orthographic `m20_front/side/top`.
+
+## Materials
+
+Procedural bake-source materials in Blender (never exported). Every surface shares one set of masks: height above the
+ground, facing, convex edges (Bevel node plus AO cast inside the mesh, which finds the rounded bevels), cavities (two AO
+radii), a random value per plate (mesh island) and a `detail` attribute on bolts and welds.
+
+| Material | Look | Roughness | Metallic |
+|---|---|---|---|
+| Paint (desert tan) | tan with a low-frequency olive-gray drift, ±12% value and a small hue shift per plate, grain and orange peel | 0.55–0.70, varies per plate | 0; 1 only where edges are worn to steel |
+| Blue (ID panels) | desaturated military blue, matte; half the dirt and 60% of the wear, so the ID stays readable | ~0.66 | 0 / 1 at worn edges |
+| Olive (RWS, sights, stowage) | olive-gray, same paint model | ~0.64 | 0 / 1 at worn edges |
+| Metal (mechanisms, hubs, pins) | dark oiled steel, dry and oily patches, oxide only deep in cavities, light polish on edges | 0.35–0.62 | 1 (0 under oxide and dust) |
+| Dark (grilles, cables, fittings) | phosphate black, worn to steel on the sharpest edges | 0.52–0.66 | 0 / 1 at worn edges |
+| Rubber (tyres, pads, boots) | near-black, lighter and smoother on contact faces, little dust | 0.74–0.92 | 0 |
+| Track (link shoes) | dark steel, dirt packed in the recesses, polished ground-contact faces | 0.26–0.95 | 1 / 0 under mud |
+| Optics | near-black glass with a faint blue-green coating, smudges, a dark rim at the frame; not emissive | 0.035–0.15 | 0 |
+| Lamps (white, red) | emissive, from the mesh's colour attribute | 0.1 | 0 |
+
+Weathering, in the order it is applied: deposits in recesses and round bolts; short streaks on vertical faces; dust that
+builds up over the lower third (skirts, running gear) and as a light film on top faces, capped per surface (paint 55%,
+metal 45%, rubber 15%) so rubber, metal and the blue ID panels still read; heat discolouration and soot round the rear
+exhaust grille; then edge wear in three steps (rubbed lighter paint, primer, dull steel), a few chips near edges and low
+down, and sparse scuffs. Bolts and welds take their plate's paint, no per-plate shift and a quarter of the edge wear, so
+fasteners no longer read as bright dots.
+
+## Textures
+
+| Set | Objects | Game | Source | BC | N | ORM |
+|---|---|---:|---:|---|---|---|
+| M20_Hull | hull and suspension | 2048 | 4096 | sRGB, team mask in alpha | DirectX tangent | linear R AO, G roughness, B metallic |
+| M20_Turret | turret, gun, RWS | 2048 | 4096 | as above | as above | as above |
+| M20_Running | road wheel, sprocket, idler | 2048 | 2048 | as above | as above | as above |
+| M20_Track | one link, tiled | 1024 | 2048 | as above | as above | as above |
+
+All PNG, 8 bits per channel, RGBA. The game set is the source set box-filtered (normals renormalised). The empty space
+between UV islands is black past the bake margin (16 px at 4K); it is never sampled.
+
+**Texture memory in Unreal** (BC3 BaseColor with the team mask, BC5 normal, BC1 ORM, full mips, before streaming):
+**43.3 MB** for the game set (Hull 13.3, Turret 13.3, Running 13.3, Track 3.3), 133.3 MB if the source sizes were
+imported. V3 shipped 123.3 MB.
+
+## UVs
+
+One UV channel per mesh. Smart-project islands (60°), equal texel density, then each island scaled by how much the
+player sees it: undersides 0.4×, the lower hull behind the tracks 0.45×, the suspension 0.6×, the road wheel's
+inboard face 0.5×, specks under 10 cm² 0.6×. Packed with a fixed 0.12% margin instead of a per-island scaled margin,
+which had left most of the V3 atlas empty.
+
+| Set | UV coverage | Overlaps | Texel density at game size (median / 10th percentile) |
+|---|---:|---:|---:|
+| M20_Hull | 68% (V3: 24%) | 0 | 159 / 66 px/m (V3: 94 / 38) |
+| M20_Turret | 65% (V3: 19%) | 0 | 182 / 73 px/m (V3: 98 / 39) |
+| M20_Running | 58% | 0 | 586 / 293 px/m |
+| M20_Track | 84% | tiled by design | 1328 px/m |
+
+The two tracks repeat one link's UVs, and the 12 road wheels, 2 sprockets and 2 idlers are instances of one mesh each:
+those share texels on purpose.
+
+## Unreal Engine 5 reconstruction
+
+Nothing in the FBX depends on Blender shaders: every look is in the three images per set.
+
+- **Import** each FBX with "Import Normals and Tangents", no material creation (or replace the created slots).
+- **Textures**: BC `sRGB` on, compression Default (BC3 keeps the alpha). N compression Normalmap (BC5), no green flip:
+  the maps are DirectX. ORM sRGB off, compression Masks. Set LOD bias or Max Texture Size to 2048 if the source set is
+  imported instead.
+- **Master material `M_M20_Vehicle`** (opaque, default lit): BaseColor = lerp(BC.rgb, BC.rgb luminance × `TeamColor`,
+  BC.a × `TeamStrength`) for the ID panels (the parameter `ARTSUnit::TeamColorParameter` already sets); Normal = N;
+  AmbientOcclusion = ORM.r; Roughness = ORM.g; Metallic = ORM.b. One material instance per set: `MI_M20_Hull`,
+  `MI_M20_Turret`, `MI_M20_Running`, `MI_M20_Track`. The track instance can pan its UVs along U for track movement.
+- **`M_M20_Emissive`**: BaseColor and Emissive from Vertex Color × an emissive strength (about 4); only the lamps use it.
+
+## Known limitations
+
+- Texel density at 2K (about 160–180 px/m on the hull and turret, ~6 mm per texel) is right for the RTS camera and fine
+  at mid zoom; extreme close-ups go soft. The 4K source set doubles it for cinematics. A tiling detail normal in the
+  master material would sharpen paint grain without new UVs.
+- Weathering is baked, so all tanks look alike; per-unit variation (dust amount, damage) would need masks or decals in
+  Unreal.
+- The optics have no real reflection or parallax depth: they are opaque dark glass with low roughness, which reads
+  well under Lumen reflections but not as recessed lenses.
+- The track texture is one link at 1K, tiled: no per-link variation.
+- The concept sheet's look is heavier and darker than this pass (thick grime, high-contrast chips). V4 stays restrained
+  as asked, so the faction blue and the plate layout stay readable at RTS distance.
+- Still open from V3: gun length (1.1 m past the hull), rigid tracks without sag, LODs and collision.
+
+---
+
+# Previous pass (v3): detail integration
 
 Built from code by `Tools/Art/m20_guardian_blender.py` (Blender 5.1) with `m20_guardian_materials.py`,
 `m20_guardian_bake.py` and `m20_guardian_render.py`; rebuild with `blender -b --python Tools/Art/m20_guardian_blender.py`.

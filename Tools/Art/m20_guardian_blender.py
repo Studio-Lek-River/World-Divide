@@ -1,7 +1,7 @@
 """Builds the M20 Guardian main battle tank (original Lek River Studio work, after the blueprint sheet in
 Art/USA/vehicles/m20_guardian) from code, as a modular hero model for close-zoom review and the game:
 
-  blender -b --python Tools/Art/m20_guardian_blender.py -- [--stage 1|2] [--no-bake] [--preview] [--verify]
+  blender -b --python Tools/Art/m20_guardian_blender.py -- [--stage 1|2] [--no-bake] [--preview] [--verify] [--samples N]
 
 --stage 1 builds the blockout (hull, running gear, turret, gun) and renders it. --stage 2 (the default) adds the detail,
 applies the bevels to the game meshes, lays out the UVs, bakes the texture sets from the high-poly twins, and writes the
@@ -33,14 +33,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import m20_guardian_bake as bake  # noqa: E402
 import m20_guardian_materials as mats  # noqa: E402
 import m20_guardian_render as presentation  # noqa: E402
+import m20_guardian_validate as validation  # noqa: E402
 
 PROJECT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 OUT_DIR = os.path.join(PROJECT_DIR, "Art", "USA", "vehicles", "m20_guardian")
-BLEND = os.path.join(OUT_DIR, "source", "m20_guardian.blend")
+BLEND = os.path.join(OUT_DIR, "source", "M20_Guardian_V5.blend")
 FBX_DIR = os.path.join(OUT_DIR, "fbx")
 RENDER_DIR = os.path.join(OUT_DIR, "renders")
 TEXTURE_DIR = os.path.join(OUT_DIR, "textures")
-PREVIOUS_FRONT34 = os.path.join(OUT_DIR, "_v2", "renders", "m20_front34.png")
+PREVIOUS_FRONT34 = os.path.join(OUT_DIR, "_v4", "renders", "m20_front34.png")
+CONCEPT = os.path.join(OUT_DIR, "M20 Guardian_ Technische Tankblauwdruk.png")
 
 # ---- dimensions ----
 HULL_ROOF = 1.40
@@ -99,7 +101,7 @@ SMALL = 0.35
 SHARP_ANGLE = math.radians(35.0)
 
 # Material slots in the order every object lists them.
-MATERIALS = ("Paint", "Olive", "Blue", "Metal", "Rubber", "Track", "Dark", "Optics", "LightWhite", "LightRed")
+MATERIALS = mats.SLOTS
 # Face components for the triangle report, in first-use order.
 COMPONENTS = []
 
@@ -108,6 +110,7 @@ STAGE = int(ARGS[ARGS.index("--stage") + 1]) if "--stage" in ARGS else 2
 DETAIL = STAGE >= 2
 PREVIEW = "--preview" in ARGS
 BAKE = DETAIL and not PREVIEW and "--no-bake" not in ARGS
+SAMPLES = int(ARGS[ARGS.index("--samples") + 1]) if "--samples" in ARGS else None
 
 
 # ---- geometry ----
@@ -123,6 +126,8 @@ class Part:
         for bm in (self.bm, self.high):
             bm.edges.layers.float.new("bevel_weight_edge")
             bm.faces.layers.int.new("component")
+        # High-only detail (bolts, welds) is flagged so the materials keep it painted and wear it less.
+        self.high.faces.layers.int.new("detail")
         self.zone(name.replace("M20_", ""))
 
     def zone(self, component):
@@ -139,6 +144,7 @@ class Part:
             weight = 0.0  # round parts carry their chamfers in their profile
         layer = bm.edges.layers.float["bevel_weight_edge"]
         component = bm.faces.layers.int["component"]
+        detail = bm.faces.layers.int.get("detail")
         start = len(bm.faces)
         build(bm)
         bm.faces.ensure_lookup_table()
@@ -149,6 +155,8 @@ class Part:
             face.material_index = index
             face.smooth = True
             face[component] = self.component
+            if detail is not None:
+                face[detail] = 1
             if weight:
                 for edge in face.edges:
                     if edge.is_manifold and edge.calc_face_angle(0.0) > math.radians(30.0):
@@ -439,23 +447,24 @@ def mirrored(points_xy):
     return list(points_xy) + [(x, -y) for x, y in reversed(points_xy)]
 
 
-def bolt_row(part, quad, u0, u1, v, out, count):
+def bolt_row(part, quad, u0, u1, v, out, count, material="Paint"):
+    """Bolts are painted over with the plate they hold (high-poly detail only)."""
     for i in range(count):
-        part.add("Metal", quad.bolt(u0 + (u1 - u0) * i / max(1, count - 1), v, out), bevel=False, high=True)
+        part.add(material, quad.bolt(u0 + (u1 - u0) * i / max(1, count - 1), v, out), bevel=False, high=True)
 
 
-def bolt_frame(part, quad, u0, u1, v0, v1, out, spacing=0.22):
+def bolt_frame(part, quad, u0, u1, v0, v1, out, spacing=0.22, material="Paint"):
     count_u = max(2, round((u1 - u0) * quad.u_len / spacing) + 1)
     count_v = max(2, round((v1 - v0) * quad.v_len / spacing) + 1)
     for v in (v0, v1):
-        bolt_row(part, quad, u0, u1, v, out, count_u)
+        bolt_row(part, quad, u0, u1, v, out, count_u, material)
     for u in (u0, u1):
         for i in range(1, count_v - 1):
-            part.add("Metal", quad.bolt(u, v0 + (v1 - v0) * i / (count_v - 1), out), bevel=False, high=True)
+            part.add(material, quad.bolt(u, v0 + (v1 - v0) * i / (count_v - 1), out), bevel=False, high=True)
 
 
 def weld(part, points, radius=0.009):
-    part.add("Metal", polyline_tube(points, radius, segments=6), bevel=False, high=True)
+    part.add("Paint", polyline_tube(points, radius, segments=6), bevel=False, high=True)
 
 
 # ---- hull ----
@@ -547,7 +556,7 @@ def build_skirts(hull):
                 for v in (0.05, 0.95):
                     if front and v < 0.5 and u > 0.6:
                         continue
-                    hull.add("Metal", face.bolt(u, v, 0.0), bevel=False, high=True)
+                    hull.add(material, face.bolt(u, v, 0.0), bevel=False, high=True)
             # Hanger bracket at the module's rear top corner, over the rail.
             hull.add("Olive", box(a + 0.05, a + 0.17, side * 1.56, side * (SKIRT_Y + 0.04), z1 - 0.06, z1 + 0.05),
                      SMALL)
@@ -574,7 +583,7 @@ def build_front(hull):
                              (0.83, 0.985, "Blue")):
         hull.add(material, glacis.panel(u0, u1, 0.06, 0.88, 0.06, gap=0.008, taper=0.025))
         hull.add(material, glacis.panel(u0 + 0.025, u1 - 0.025, 0.2, 0.74, 0.016, gap=0.068), SMALL)
-        bolt_frame(hull, glacis, u0 + 0.012, u1 - 0.012, 0.12, 0.82, 0.068)
+        bolt_frame(hull, glacis, u0 + 0.012, u1 - 0.012, 0.12, 0.82, 0.068, material=material)
     # Spine plate between the centre modules, with lifting eyes either side.
     hull.add("Paint", glacis.panel(0.475, 0.525, 0.08, 0.90, 0.03, gap=0.006), SMALL)
     for u in (0.44, 0.56):
@@ -682,7 +691,7 @@ def build_deck(hull):
         # Bolts along the deck edges (normal map).
         for i in range(15):
             x = -3.10 + i * 0.38
-            hull.add("Metal", cylinder((x, side * 1.55, roof + 0.011), (0, 0, 1), 0.02, 0.022, segments=6),
+            hull.add("Paint", cylinder((x, side * 1.55, roof + 0.011), (0, 0, 1), 0.02, 0.022, segments=6),
                      bevel=False, high=True)
 
 
@@ -817,8 +826,8 @@ def build_turret_armour(turret):
         out = 0.035 + 0.17
         turret.add("Paint", cheek.panel(0.10, 0.52, 0.15, 0.85, 0.022, gap=out), SMALL)
         turret.add("Blue", cheek.panel(0.56, 0.91, 0.15, 0.85, 0.022, gap=out), SMALL)
-        for u0, u1 in ((0.10, 0.52), (0.56, 0.91)):
-            bolt_frame(turret, cheek, u0 + 0.02, u1 - 0.02, 0.2, 0.8, out + 0.022, spacing=0.18)
+        for u0, u1, material in ((0.10, 0.52, "Paint"), (0.56, 0.91, "Blue")):
+            bolt_frame(turret, cheek, u0 + 0.02, u1 - 0.02, 0.2, 0.8, out + 0.022, spacing=0.18, material=material)
         for u in (0.2, 0.5, 0.8):
             turret.add("Olive", cheek.block(u, 0.5, 0.035, 0.22, 0.0, 0.036), SMALL)
         # Flank: four bolt-on slabs with a raised centre plate, hung from hooks on the shell top; the front one blue.
@@ -827,7 +836,7 @@ def build_turret_armour(turret):
                                  (0.75, 0.98, "Paint")):
             turret.add(material, flank.panel(u0, u1, 0.07, 0.90, 0.08, gap=0.028, taper=0.022))
             turret.add(material, flank.panel(u0 + 0.022, u1 - 0.022, 0.24, 0.76, 0.015, gap=0.108), SMALL)
-            bolt_frame(turret, flank, u0 + 0.01, u1 - 0.01, 0.12, 0.85, 0.108, spacing=0.2)
+            bolt_frame(turret, flank, u0 + 0.01, u1 - 0.01, 0.12, 0.85, 0.108, spacing=0.2, material=material)
             turret.add("Olive", flank.block((u0 + u1) / 2.0, 0.94, 0.05, 0.025, -0.01, 0.09), SMALL)
         build_smoke_dischargers(turret, side)
 
@@ -926,13 +935,13 @@ def build_bustle(turret):
         turret.add("Metal", box(-2.598, -2.588, (y0 + y1) / 2.0 - 0.03, (y0 + y1) / 2.0 + 0.03, 1.70, 1.76), False)
         # Ratchet straps over the lid and down both faces to the rack floor.
         for y in ((y0 + y1) / 2.0 - 0.07, (y0 + y1) / 2.0 + 0.07):
-            turret.add("Dark", polyline_tube([(-2.595, y, 1.60), (-2.595, y, 1.965), (-2.345, y, 1.965),
-                                              (-2.345, y, 1.60)], 0.007, segments=4), False)
+            turret.add("Canvas", polyline_tube([(-2.595, y, 1.60), (-2.595, y, 1.965), (-2.345, y, 1.965),
+                                                (-2.345, y, 1.60)], 0.007, segments=4), False)
     for y in (0.16, 0.36):
         jerry(turret, Vector((-2.47, y, 1.60)))
-    turret.add("Olive", lathe((-2.47, 0.98, 1.74), (0, 1, 0), [(-0.30, 0.10), (-0.32, 0.115), (-0.30, 0.13),
-                                                              (0.30, 0.13), (0.32, 0.115), (0.30, 0.10)],
-                              segments=14), False)
+    turret.add("Canvas", lathe((-2.47, 0.98, 1.74), (0, 1, 0), [(-0.30, 0.10), (-0.32, 0.115), (-0.30, 0.13),
+                                                               (0.30, 0.13), (0.32, 0.115), (0.30, 0.10)],
+                               segments=14), False)
     for y in (0.80, 1.16):
         turret.add("Dark", torus((-2.47, y, 1.74), (0, 1, 0), 0.133, 0.008, segments=14, sides=4), False)
     turret.add("Paint", box(-2.58, -2.36, 0.60, 0.74, 1.60, 1.84), SMALL)
@@ -981,7 +990,7 @@ def build_turret_roof(turret):
                                               (0.035, 0.04)], segments=20, closed=False), SMALL)
     for i in range(8):
         t = 2.0 * math.pi * (i + 0.5) / 8
-        turret.add("Metal", cylinder(c + Vector((math.cos(t) * 0.165, math.sin(t) * 0.165, 0.045)), (0, 0, 1),
+        turret.add("Paint", cylinder(c + Vector((math.cos(t) * 0.165, math.sin(t) * 0.165, 0.045)), (0, 0, 1),
                                      0.016, 0.02, segments=6), bevel=False, high=True)
     turret.add("Olive", lathe(c, (0, 0, 1), [(0.03, 0.04), (0.03, 0.12), (0.06, 0.11), (0.15, 0.10), (0.165, 0.125),
                                              (0.19, 0.125), (0.20, 0.09), (0.20, 0.04)], segments=16, closed=False),
@@ -1055,7 +1064,7 @@ def build_turret_roof(turret):
                                                                        antenna.y - 0.09, antenna.y + 0.09)), False)
         for dx in (-0.07, 0.07):
             for dy in (-0.07, 0.07):
-                turret.add("Metal", cylinder(antenna + Vector((dx, dy, 0.035)), (0, 0, 1), 0.012, 0.02, segments=6),
+                turret.add("Paint", cylinder(antenna + Vector((dx, dy, 0.035)), (0, 0, 1), 0.012, 0.02, segments=6),
                            bevel=False, high=True)
         antenna = antenna + Vector((0.0, 0.0, 0.025))
         turret.add("Metal", lathe(antenna, (0, 0, 1), [(0.0, 0.06), (0.05, 0.06), (0.07, 0.035), (0.14, 0.03)],
@@ -1085,7 +1094,7 @@ def build_turret_roof(turret):
         # Roof bolt rows (normal map).
         for i in range(8):
             x = -2.15 + i * 0.42
-            turret.add("Metal", cylinder((x, side * 1.10, roof + 0.011), (0, 0, 1), 0.02, 0.022, segments=6),
+            turret.add("Paint", cylinder((x, side * 1.10, roof + 0.011), (0, 0, 1), 0.02, 0.022, segments=6),
                        bevel=False, high=True)
     # Rear roof plate: a bolted access panel behind the hatches, and the weld seam where the front roof plate meets it.
     rear = Quad((-2.05, -0.80, roof), (-2.05, 0.80, roof), (-1.15, -0.80, roof), (-1.15, 0.80, roof),
@@ -1138,7 +1147,7 @@ def build_gun(turret):
     gun.add("Paint", loft(octagon(MANTLET_FRONT, 0.32, 0.20, 0.08), octagon(MANTLET_FRONT + 0.03, 0.30, 0.18, 0.07)),
             SMALL)
     gun.zone("Barrel")
-    gun.add("Paint", lathe((0.0, 0.0, z), (1, 0, 0), barrel_profile(), segments=24), bevel=False)
+    gun.add("Barrel", lathe((0.0, 0.0, z), (1, 0, 0), barrel_profile(), segments=24), bevel=False)
     if DETAIL:
         gun.zone("Mantlet")
         front = Quad((MANTLET_FRONT + 0.03, 0.30, z - 0.18), (MANTLET_FRONT + 0.03, -0.30, z - 0.18),
@@ -1204,7 +1213,7 @@ def build_rws(turret):
     rws.add("Dark", tube(c + Vector((0.0, 0.0, 0.008)), (0, 0, 1), 0.20, 0.258, 0.016, segments=24), SMALL)
     for i in range(12):
         t = 2.0 * math.pi * (i + 0.5) / 12
-        rws.add("Metal", cylinder(c + Vector((math.cos(t) * 0.225, math.sin(t) * 0.225, 0.045)), (0, 0, 1), 0.012,
+        rws.add("Dark", cylinder(c + Vector((math.cos(t) * 0.225, math.sin(t) * 0.225, 0.045)), (0, 0, 1), 0.012,
                                   0.016, segments=6), bevel=False, high=True)
     rws.add("Olive", plan_prism([(c.x - 0.24, c.y - 0.12), (c.x - 0.19, c.y - 0.17), (c.x + 0.16, c.y - 0.17),
                                  (c.x + 0.16, c.y + 0.17), (c.x - 0.19, c.y + 0.17), (c.x - 0.24, c.y + 0.12)],
@@ -1215,7 +1224,7 @@ def build_rws(turret):
                       (c.x - 0.2225, c.y - 0.095, c.z + 0.22), (c.x - 0.2225, c.y + 0.095, c.z + 0.22),
                       c + Vector((0, 0, 0.15)))
     rws.add("Olive", side_cover.panel(0.05, 0.95, 0.12, 0.88, 0.012, gap=0.0), SMALL)
-    bolt_frame(rws, side_cover, 0.08, 0.92, 0.18, 0.82, 0.012, spacing=0.08)
+    bolt_frame(rws, side_cover, 0.08, 0.92, 0.18, 0.82, 0.012, spacing=0.08, material="Olive")
     # Cradle: two yoke plates holding the gun on its elevation axis.
     for dy in (-0.085, 0.085):
         rws.add("Olive", side_prism([(c.x - 0.12, c.z + 0.22), (c.x + 0.12, c.z + 0.22), (c.x + 0.10, gun_z + 0.07),
@@ -1380,14 +1389,14 @@ def track_link(part, centre, u, v, w, pitch):
         part.add("Rubber", oriented_box(shoe + w * 0.045 + v * side * 0.135, u, v, w, pitch * 0.36, 0.115, 0.015),
                  bevel=False)
     for side in (1, -1):
-        part.add("Metal", oriented_box(shoe + v * side * TRACK_HALF_WIDTH * 0.95, u, v, w, pitch * 0.5, 0.028, 0.038),
+        part.add("Track", oriented_box(shoe + v * side * TRACK_HALF_WIDTH * 0.95, u, v, w, pitch * 0.5, 0.028, 0.038),
                  bevel=False)
-    part.add("Metal", tapered_box(shoe - w * 0.08, u, v, -w, (0.048, 0.034), (0.024, 0.017), 0.05), bevel=False)
+    part.add("Track", tapered_box(shoe - w * 0.08, u, v, -w, (0.048, 0.034), (0.024, 0.017), 0.05), bevel=False)
     # Normal-map detail: wedge bolts on the end connectors, pad bolts.
     for side in (1, -1):
-        part.add("Metal", cylinder(shoe + v * side * (TRACK_HALF_WIDTH * 0.95 + 0.03), v, 0.016, 0.012, segments=6),
+        part.add("Track", cylinder(shoe + v * side * (TRACK_HALF_WIDTH * 0.95 + 0.03), v, 0.016, 0.012, segments=6),
                  bevel=False, high=True)
-        part.add("Metal", cylinder(shoe + w * 0.062 + v * side * 0.135, w, 0.012, 0.006, segments=6), bevel=False,
+        part.add("Track", cylinder(shoe + w * 0.062 + v * side * 0.135, w, 0.012, 0.006, segments=6), bevel=False,
                  high=True)
 
 
@@ -1445,6 +1454,7 @@ def build_tank():
     scene = bpy.context.scene
     scene.unit_settings.system = "METRIC"
     scene.unit_settings.scale_length = 1.0
+    mats.BARREL.update(bands=SLEEVE_BANDS, sleeve_end=SLEEVE_END, muzzle=MUZZLE_X)
     mats.make_procedural()
     parts = {"hull": build_hull()}
     turret = build_turret()
@@ -1518,7 +1528,26 @@ def evaluated_stats():
     return low, high, triangles, components
 
 
-TEXTURE_SETS = (("M20_Hull", 4096), ("M20_Turret", 4096), ("M20_Running", 2048), ("M20_Track", 1024))
+# (set, bake/source size, game size): baked at source size, box-filtered to the game size Unreal imports.
+TEXTURE_SETS = (("M20_Hull", 4096, 2048), ("M20_Turret", 4096, 2048), ("M20_Running", 2048, 2048),
+                ("M20_Track", 2048, 1024))
+
+
+def hidden_weight(centre, normal):
+    """Relative texel density by how much the player sees a face: undersides, the lower hull behind the tracks and
+    the suspension get less, so the visible armour gets more."""
+    if normal.z < -0.5:
+        return 0.4
+    if abs(centre.y) < LOWER_HALF_WIDTH + 0.08 and centre.z < 1.0 and -3.1 < centre.x < 2.65:
+        return 0.45
+    if LOWER_HALF_WIDTH < abs(centre.y) < SKIRT_Y and centre.z < 0.95 and -3.1 < centre.x < 3.1:
+        return 0.6
+    return 1.0
+
+
+def running_weight(centre, normal):
+    """The road wheel, sprocket and idler are built on the left side: their inboard faces (towards -Y) get less."""
+    return 0.5 if normal.y < -0.6 else 1.0
 
 
 def finish_game_meshes(parts):
@@ -1531,8 +1560,9 @@ def finish_game_meshes(parts):
     hull, turret, gun, rws = parts["hull"], parts["turret"], parts["gun"], parts["rws"]
     running = [bpy.data.objects[n] for n in ("M20_RoadWheel_L1", "M20_Sprocket_L", "M20_Idler_L")]
     sets = {"M20_Hull": [hull], "M20_Turret": [turret, gun, rws], "M20_Running": running, "M20_Track": [template]}
-    for lows in sets.values():
-        bake.unwrap(lows)
+    weights = {"M20_Hull": hidden_weight, "M20_Turret": hidden_weight, "M20_Running": running_weight}
+    for name, lows in sets.items():
+        bake.unwrap(lows, weight=weights.get(name))
     for track in tracks:
         bake.copy_uvs_tiled(template, track)
     bake.finalize(linked, list(MATERIALS))
@@ -1546,14 +1576,14 @@ def finish_game_meshes(parts):
     body = [hull, turret, gun, rws] + tracks + [w for w in parts["wheels"]]
     ao_scope = {"M20_Hull": body, "M20_Turret": body, "M20_Running": running, "M20_Track": [template]}
     paths = {}
-    for name, size in TEXTURE_SETS:
+    for name, size, game_size in TEXTURE_SETS:
         lows = sets[name]
         pairs = [(low, bpy.data.objects[f"{low.name}_High"] if f"{low.name}_High" in bpy.data.objects else
                   next(c for c in low.children if c.name.endswith("_High"))) for low in lows]
-        print(f"baking {name} ({size})")
-        paths[name] = bake.bake_set(name, pairs, size, TEXTURE_DIR, ao_scope[name])
+        print(f"baking {name} ({size} -> {game_size})")
+        paths[name] = bake.bake_set(name, pairs, size, TEXTURE_DIR, ao_scope[name], game_size)
     emissive = mats.emissive_game()
-    for name, _ in TEXTURE_SETS:
+    for name, _, _ in TEXTURE_SETS:
         material = mats.textured(name, paths[name]["BC"], paths[name]["N"], paths[name]["ORM"])
         lows = sets[name] + (tracks if name == "M20_Track" else [])
         bake.assign_game_materials(lows, material, emissive, list(MATERIALS))
@@ -1649,13 +1679,17 @@ def write_report(low, high, triangles, components):
     used = sorted({m.name for o in game_objects() if o.name != "M20_TrackLink" for m in o.data.materials})
     lines += ["", "## Materials and textures", "", f"- {len(used)} materials: {', '.join(used)}"]
     if BAKE:
-        lines += ["", "| Texture set | Size | Unreal memory (BC3/BC5/BC1, mips) |", "|---|---:|---:|"]
-        memory = 0.0
-        for name, size_px in TEXTURE_SETS:
-            mb = texture_memory(size_px)
-            memory += mb
-            lines.append(f"| {name} | {size_px} | {mb:.1f} MB |")
-        lines.append(f"| **Total** | | **{memory:.1f} MB** |")
+        lines += ["", "| Texture set | Game size | Unreal memory (game) | Source size | Unreal memory (source) |",
+                  "|---|---:|---:|---:|---:|"]
+        game_total = source_total = 0.0
+        for name, size_px, game_px in TEXTURE_SETS:
+            game_mb, source_mb = texture_memory(game_px), texture_memory(size_px)
+            game_total += game_mb
+            source_total += source_mb
+            lines.append(f"| {name} | {game_px} | {game_mb:.1f} MB | {size_px} | {source_mb:.1f} MB |")
+        lines.append(f"| **Total** | | **{game_total:.1f} MB** | | **{source_total:.1f} MB** |")
+        lines += ["", "Unreal memory: BaseColor BC3 (team mask in alpha), Normal BC5, ORM BC1, full mip chain, "
+                      "before streaming."]
     lines.append("")
     with open(os.path.join(OUT_DIR, "report_stats.md"), "w") as file:
         file.write("\n".join(lines))
@@ -1709,9 +1743,13 @@ def main():
     with open(os.path.join(OUT_DIR, "export_triangles.json"), "w") as file:
         json.dump({file_name: triangles[object_name] for object_name, file_name in EXPORTS}, file, indent=2)
     export_fbx()
+    if BAKE:
+        lines, _ = validation.validate()
+        with open(os.path.join(OUT_DIR, "report_stats.md"), "a") as file:
+            file.write("\n".join(lines))
     os.makedirs(os.path.dirname(BLEND), exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
-    presentation.render_all(RENDER_DIR, parts, previous_front34=PREVIOUS_FRONT34)
+    presentation.render_all(RENDER_DIR, parts, previous_front34=PREVIOUS_FRONT34, concept=CONCEPT, samples=SAMPLES)
     # The renders added and removed their lights and camera; save again so the .blend has none of them.
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 
