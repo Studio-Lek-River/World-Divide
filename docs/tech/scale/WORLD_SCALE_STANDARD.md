@@ -1,6 +1,6 @@
 # World Divide: world scale standard
 
-Status: **proposal**, waiting for producer approval (Phase 2A, 2026-10-15). Companion documents in this folder:
+Status: **approved** by the producer (2026-10-15, recovery decision D-F in [the recovery audit](../../production/SHARED_FOUNDATION_RECOVERY.md)). This is the authoritative source for world scale: 1 Unreal unit = 1 cm, and any change to the world scale needs the producer's explicit approval. Companion documents in this folder:
 [placeholder audit](PLACEHOLDER_SCALE_AUDIT.md), [collision and selection](VEHICLE_COLLISION_AND_SELECTION.md),
 [movement performance](RTS_MOVEMENT_PERFORMANCE.md), [implementation plan](SCALE_IMPLEMENTATION_PLAN.md).
 
@@ -68,7 +68,7 @@ The overall length includes the gun pointing forward. "Hull" is the body without
 1. **Vehicles fit their buildings.** A building that produces or docks a unit has an exit or dock lane at least the largest such unit's width plus 2 × 2 m.
 2. **No visual scaling for gameplay.** Make a unit easier to see with HUD markers (brackets, health bars, team colour), not by enlarging the mesh. `MeshScale` stays uniform. Non-uniform Z stretching (`fit_scale(..., height)`) is not used for units.
 3. **Gameplay spacing is separate from mesh size.** Formation gaps, exit clearance and avoidance margins are their own values (see [collision and selection](VEHICLE_COLLISION_AND_SELECTION.md)). They are never baked into the mesh or the selection size.
-4. **Navigation clearance follows vehicle width.** Every gap meant for vehicles is at least the vehicle nav agent diameter (4 m) plus 2 m, so at least 6 m. A road or bridge carriageway is at least 8 m. The 12 m bridge in RiverCrossing satisfies this.
+4. **Navigation clearance follows vehicle width.** The vehicle nav agent has a radius of 190 cm and a height of 350 cm; the infantry agent 40 cm and 180 cm (D-D, implemented in #135). Every gap meant for vehicles is at least the vehicle nav agent diameter (3.8 m) plus about 2 m, so at least 6 m. A road or bridge carriageway is at least 8 m. The 12 m bridge in RiverCrossing satisfies this.
 5. **New art is delivered at real size.** It is checked on import against one reference dimension, which fails setup if the size is wrong. Buildings and aircraft are modelled at their compressed size.
 
 ## 5. Starting bands for per-unit gameplay values

@@ -4,6 +4,8 @@ A 1v1 skirmish map set in the modern European countryside. The two players' halv
 
 All numbers here are **provisional**. They assume the producer's decision of 2026-10-15 to move the game to **real scale**, which lands first as its own gameplay issue (phase 0 in [04_IMPLEMENTATION_ROADMAP.md](04_IMPLEMENTATION_ROADMAP.md)). They are checked again once that issue fixes the final unit values.
 
+**Source of truth for scale.** [`WORLD_SCALE_STANDARD.md`](../../../tech/scale/WORLD_SCALE_STANDARD.md) (approved 2026-10-15) is authoritative for unit and building sizes, weapon ranges, speeds, the nav agents and the camera. Where this document and the standard differ, the standard wins. The planning envelope below was reconciled to it on 2026-10-15 (recovery decision D-E); the layout, symmetry, base-building space, village and river crossings are unchanged.
+
 ## Scale basis
 
 ### Current gameplay values
@@ -23,19 +25,22 @@ Generator verified, `Tools/Editor/setup_testmap.py`:
 
 ### Planning envelope for real scale
 
-These are target values the rescale issue should confirm or replace.
+These values come from the world scale standard (§3, §5, §6). The rescale issue (#136) sets each unit's final value within them.
 
 | Entity | Planning size | Planning speed | Planning range |
 |---|---|---|---|
-| Main battle tank (Abrams; mesh is already about 8.0 × 3.7 m) | 8 × 3.7 m | 12 m/s on roads and fields (compressed for RTS pacing) | 180–220 m |
-| Wheeled support (truck, builder, flak) | 6–7 × 2.5 m | 13–15 m/s | |
-| Infantry | 0.8 m, nav radius 0.4 m | 4 m/s | 100–150 m |
-| Headquarters | about 30 × 30 m | | |
-| Vehicle factory | about 30 × 40 m | | |
-| Airfield | about 50 × 110 m | | |
-| Camera | arm about 40–300 m | | |
+| Main battle tank (M1A2 class) | 9.8 m overall, 7.9 × 3.7 m hull | 10–12 m/s (RTS time) | 60–75 m |
+| IFV / light tank (M20 Guardian, 7.1 × 3.54 m hull) | 7–8 m overall | 12–14 m/s | 50–65 m |
+| Wheeled support (truck, builder, flak) | 6.5–10 × 2.5–3.0 m | 13–15 m/s | AA 70–90 m against air |
+| Infantry | 1.8 m tall, footprint radius 0.4 m | 4–5 m/s | rifle 30–40 m |
+| Defence tower | 6 × 6 m | | 1.25 × the standard tank's range |
+| Headquarters | 28 × 28 m (compressed) | | |
+| Vehicle factory | 24 × 24 m (compressed), exit lane for a 9.8 × 3.7 m tank | | |
+| Airfield | 24 × 48 m (compressed) | | |
+| Nav agents | vehicle radius 1.9 m, height 3.5 m; infantry 0.4 m, 1.8 m | | |
+| Camera | FOV 60°, default arm about 150 m (about 170 m across), max arm about 300 m | | |
 
-With these values a 2 km map gives a base-to-base road trip of about 2 minutes for tanks. That is a typical Generals-like pacing, so **2.0 × 2.0 km of playable area is kept** as the target.
+With these values an MBT crosses the 2 km map in about 3 minutes (standard §5). That is a Generals-like pacing, so **2.0 × 2.0 km of playable area is kept** as the target. Weapon ranges are short against the map size (60–75 m against 2 km), so terrain cover and the bridges' approaches matter at close range; sightlines are checked in the greybox against the final #136 ranges.
 
 ## Overall layout
 
@@ -80,7 +85,7 @@ The sketch is schematic. The river runs north to south through the centre in an 
 **Rules for the bases**
 - **Flat pad.** Keep the pad near-flat. `URTSBuildPlacement::CanPlace` has **no slope check**; it only needs navmesh under the centre and the four corners and an empty overlap box. A flat pad keeps buildings level and their exits clear.
 - **No decorative collision on the pad.** Any WorldStatic or WorldDynamic mesh there blocks the overlap test. Grass with no collision is allowed.
-- **Room to grow.** A 350 m pad holds about 20–25 buildings of 30–40 m with 15 m lanes, plus one airfield. The AI's base search radius (`BuildSearchDistance`, 40 m today, `AI/RTSAIPlayer.cpp`) and the 45 m `BaseRadius` of `WorldDivide.Smoke.AIBuildsBase` (`Tests/RTSAISmokeTest.cpp`) **must scale** with the rescale issue.
+- **Room to grow.** A 350 m pad holds well over 25 buildings of the standard's compressed sizes (16–28 m) with 15 m lanes, plus airfields of 24 × 48 m; the pad size is kept, so bases have spare room. The AI's base search radius (`BuildSearchDistance`, 40 m today, `AI/RTSAIPlayer.cpp`) and the 45 m `BaseRadius` of `WorldDivide.Smoke.AIBuildsBase` (`Tests/RTSAISmokeTest.cpp`) **must scale** with the rescale issue.
 - **Exits.** Each base needs at least three exits: the main road to the home bridge, a farm track to the forward supply, and an open-field exit toward the far bridge. No exit should be a single choke.
 
 ## River
@@ -106,7 +111,7 @@ There are two road bridges, at roughly (0, +300) and (0, -300), a point-symmetri
 | Approach | 60 m of straight, obstacle-free road on both ends for columns forming up |
 | Collision | Deck on **WorldStatic** so `RTSGround::Trace` and the building/HQ ground traces find it |
 
-The final width is checked against the vehicle nav agent radius chosen in the rescale issue. The usable lane is the carriageway minus twice the agent radius, and it must stay at least 6 m.
+The usable lane is the carriageway minus twice the vehicle nav agent radius (1.9 m), so 12 − 3.8 = 8.2 m, which meets the 6 m minimum.
 
 The bridges can be destroyed later (DESIGN_FOUNDATION §6, persistent ruins). That is out of scope for 01, but the bridge mesh should be built as separate spans to allow it.
 
@@ -165,7 +170,7 @@ Measured in the greybox phase with the navmesh and recorded in phase 2 of the ro
 
 ## Camera and readability
 
-- **Camera reach.** At the planned maximum zoom (arm about 300 m, pitch -55°) the view covers about 500–600 m. That shows a bridge and both of its approaches, but never both bases at once.
+- **Camera reach.** At the standard's maximum zoom (FOV 60°, arm about 300 m, pitch -55°) the view covers about 350 m across. That shows a bridge and its near approach, and never both bases at once. The final values are the producer's choice in #137.
 - **Tree height:**
   - 25 m trees hide about 17 m of ground behind them at -55°.
   - Within 40 m of roads, bridges and village streets, keep trees ≤ 18 m.

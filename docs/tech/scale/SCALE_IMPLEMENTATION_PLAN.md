@@ -17,10 +17,11 @@ The work is split into seven issues, each built, tested and committed on its own
 | 6 | **Vehicle movement:** `URTSUnitMovement` (pivot, turn radius, acceleration) | 1, 4 | M |
 | 7 | **Formation:** spacing from the footprint, O(n log n) assignment; idle-tick savings | 1, 2 | S |
 
-- Issues (M4): step 0 #132, 1 #133, 2 #134, 3 #135, 4 #136, 5 #137, 6 #138, 7 #139; the UI designer's requirements brief after step 7 is #140.
-- Steps 2 and 3 can run in parallel.
+- Issues (M1b): step 0 #132, 1 #133, 2 #134, 3 #135, 4 #136, 5 #137, 6 #138, 7 #139; the UI designer's requirements brief after step 7 is #140. #141–#148 are closed duplicates; #132–#139 are canonical (recovery decision D-A, [recovery audit](../../production/SHARED_FOUNDATION_RECOVERY.md)).
+- Steps 2 and 3 can run in parallel. Step 7 needs only steps 1 and 2 and may run before step 4.
+- **M20 render lane** (#151 track animation → #150 shared materials → #149 LODs) may start once step 1 is stable (D-H). It stays separate from the shared gameplay work, and no two sessions edit `Units/RTSUnit.cpp` at the same time.
 - **WD_RiverCrossing_01** can start greyboxing after step 4. Its map numbers in `02_MAP_DESIGN` stay provisional until then (`03_TECHNICAL_PLAN.md` §14).
-- LOD generation and the shared team-colour material are **not** part of this plan. They follow as art and graphics issues.
+- LOD generation and the shared team-colour material are **not** part of this plan. They follow as art and graphics issues (the M20 render lane above).
 
 ## 2. Files and systems per step
 
@@ -28,6 +29,7 @@ The work is split into seven issues, each built, tested and committed on its own
 - `Units/RTSUnit.cpp` (`TickOrders`), `Combat/RTSWeaponComponent.cpp` (`UpdateWeapon`), `Units/RTSAvoidanceSubsystem.cpp` (`Separate`): add `TRACE_CPUPROFILER_EVENT_SCOPE`.
 - `Tools/Scripts/ue.ps1` `unitshots`: an optional `-Trace` that passes `-trace=cpu,frame`.
 - Output: a baseline capture of `-Stress 240` for the M20 and for `DA_TestTank`, with the numbers added to this document.
+- **Benchmark** (#141's scope, folded into #132): `Units/Debug/RTSBenchCommand.cpp` (`rts.Debug.Bench`), the flat `L_Bench` level from `setup_testmap.py`, and `ue.ps1 -Task bench -Unit <DA> [-Counts] [-Trace]`. 1, 30, 120 and 240 units, idle and on a move order, one fixed camera, 1920 × 1080, dynamic resolution off. Results in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md). From step 0 on, the bench is the comparison method for every step's performance gate.
 
 ### Step 1: collision and selection split
 - `Units/RTSUnit.h/.cpp`:
@@ -193,16 +195,21 @@ The work is split into seven issues, each built, tested and committed on its own
 4. A click on empty ground 1 m beside a tank's hull does not select it. A click anywhere on the hull does.
 5. Two tanks side by side at 4.5 m centre distance do not push each other. Two tanks overlapping end to end separate without moving more than `MoveSpeed × 0.5` per second.
 6. Vehicles never path through gaps narrower than 6 m. Infantry still use 1 m gaps.
-7. Performance (same machine and method as `report_ue5.md`):
-   - 240 M20s at real-scale spacing: game thread ≤ today's 240-tank figure (10.8 ms);
-   - avoidance pass mean < 1.0 ms with 200 mixed units including 20 M20s;
-   - no server frame > 33 ms on a 240-unit move order.
+7. Performance (D-G). Budgets stay measurable. Every comparison uses the same build, the same bench scene (`L_Bench`), the same camera and the same method; a figure is either a **provisional target** (a budget not yet met or not yet measured) or a **measured** result with its machine and date in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md).
+   - Provisional target: no server frame > 33 ms on a 240-unit move order (#139, #136).
+   - Provisional target: avoidance pass mean < 1.0 ms and max < 2.0 ms with 200 mixed units including 20 M20s (#134).
+   - Provisional target: target acquisition < 0.5 ms per frame with 240 idle armed units (#134).
+   - `DA_TestTank` at 240 units: game thread no worse than the step 0 bench baseline, re-measured on the same build (#136).
+   - 240 moving M20s: game thread ≤ 240 moving placeholder tanks. **Deferred** until after #150 and #151; the M20's render-state cost does not fail #136.
+   - Provisional minimum-spec design target (D-J): 1080p / 60 FPS with 200 active units on RTX 3060-class hardware. It is a design target, **not** a verified result; neither it nor an eight-player battle has been measured.
 8. Tracked vehicles do not move sideways faster than 50 cm/s, and pivot when ordered behind.
 9. The default camera shows about 170 m across, and an MBT reads at about 5–6 % of the screen width.
 10. A listen-server smoke test passes: client units move, select and show brackets identically to the server.
 11. The full automation suite is green and setup is idempotent.
 
 ## 7. Measurements per step
+
+The bench figures for every step (`ue.ps1 -Task bench`, `L_Bench`) are in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md), next to the step 0 bench baseline. The tables below are the earlier `unitshots` method, kept for continuity with `report_ue5.md`.
 
 Method: `ue.ps1 -Task unitshots -Unit <Unit> -Stress 240 [-Trace]` on L_TestMap, Development editor `-game`, 1920×1080 offscreen, RTX 4090 machine of `report_ue5.md`. Every number is the mean over the 120 measured frames of the `stress_240` view (278 units: the map's 38 plus 240). The scoped timers come from the Insights capture, exported for the `stress_240` region with `UnrealInsights.exe -OpenTraceFile=<trace> -NoUI -AutoQuit -ExecOnAnalysisCompleteCmd="TimingInsights.ExportTimerStatistics <csv> -threads=GameThread -timers=* -region=stress_240"`.
 

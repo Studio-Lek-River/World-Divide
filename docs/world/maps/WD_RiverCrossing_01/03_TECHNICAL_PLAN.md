@@ -134,7 +134,7 @@ Heightmap authoring:
   - **WorldStatic** collision with simple box collision on the deck.
   - Bridges sit on the navmesh as normal geometry; no nav links are needed.
   - **To validate** with a navmesh draw (`show Navigation`): deck connectivity and the gap between the deck and the `Water_*` volume.
-- **Bridge width:** a 12 m carriageway, checked against the vehicle agent radius chosen in the rescale issue (lane = carriageway − 2 × radius ≥ 6 m).
+- **Bridge width:** a 12 m carriageway, checked against the vehicle agent radius of 190 cm (§9): lane = 12 m − 2 × 1.9 m = 8.2 m, which meets the ≥ 6 m rule.
 
 ## 9. Navigation at 2 km
 
@@ -144,11 +144,11 @@ Today:
 
 Recommendations (part of the rescale issue, not this map):
 - **Two `SupportedAgents`:**
-  - Infantry: radius about 40 cm, height 180 cm.
-  - Vehicle: radius about 200–250 cm, height 300 cm.
+  - Infantry: radius 40 cm, height 180 cm.
+  - Vehicle: radius 190 cm, height 350 cm. Decided by the producer (D-D, 2026-10-15) to match [the world scale standard](../../../tech/scale/WORLD_SCALE_STANDARD.md) rule 4; 350 cm clears the M20's 3.36 m hull. The implementation is #135.
   - `ARTSUnit` picks its agent from its data, through the `NavAgentProperties` of its movement component.
   - This is a gameplay change and needs its own issue and tests.
-- **Bigger tiles:** `TileSizeUU` about 6400 and `CellSize` about 25–40, which gives about 1,000 tiles. **To validate:** build time and how the buildings' dynamic obstacle holes look.
+- **Bigger tiles:** `TileSizeUU` about 6400 and `CellSize` about 25–30 (#135), which gives about 1,000 tiles. **To validate:** build time and how the buildings' dynamic obstacle holes look.
 - **Keep the saved navmesh:**
   - `Maps.SavedNavMesh` requires a navmesh saved in the level.
   - Keep `RuntimeGeneration=Dynamic` so buildings still cut it. `DynamicModifiersOnly` is cheaper but must first be proven with the building obstacle (`NavArea_Null` dynamic obstacle in `Buildings/RTSBuilding.cpp`) **[to validate]**.
