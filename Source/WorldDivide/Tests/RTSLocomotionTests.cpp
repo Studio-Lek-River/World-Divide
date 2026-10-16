@@ -471,9 +471,9 @@ bool FRTSVehiclePivotFirstTest::RunTest(const FString& Parameters)
 }
 
 /**
- * The placeholder vehicles get their tracks and wheels from their data (the Abrams too, but a machine with the local Abrams
- * art keeps its own copy of that asset, so it is left out here), the same movement component drives all of them,
- * infantry keeps its legs, and a profile with impossible values is refused and falls back to legs.
+ * The placeholder vehicles get their tracks and wheels from their data, the same movement component drives all of them,
+ * the Abrams drives forward, backs up and pivots on its own profile, infantry keeps its legs, and a profile with
+ * impossible values is refused and falls back to legs.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSVehicleProfilesTest, "WorldDivide.Units.VehicleProfiles", RTSTests::TestFlags)
 
@@ -483,6 +483,7 @@ bool FRTSVehicleProfilesTest::RunTest(const FString& Parameters)
 	const TPair<const TCHAR*, ERTSLocomotionType> Expected[] = {
 		{ TEXT("DA_TestM20Guardian"), ERTSLocomotionType::Tracked },
 		{ TEXT("DA_TestTank"), ERTSLocomotionType::Tracked },
+		{ TEXT("DA_TestAbrams"), ERTSLocomotionType::Tracked },
 		{ TEXT("DA_TestFlakTruck"), ERTSLocomotionType::Wheeled },
 		{ TEXT("DA_TestHarvester"), ERTSLocomotionType::Wheeled },
 		{ TEXT("DA_TestBuilder"), ERTSLocomotionType::Wheeled },
@@ -503,6 +504,38 @@ bool FRTSVehicleProfilesTest::RunTest(const FString& Parameters)
 		ARTSUnit* Unit = TestWorld.SpawnUnit(Data, 0, FVector(0.f, 0.f, 10000.f));
 		TestEqual(*FString::Printf(TEXT("%s is driven by its gear only on tracks or wheels"), Entry.Key),
 			Unit->GetUnitMovement()->UsesLocomotion(), Entry.Value != ERTSLocomotionType::Legs);
+	}
+
+	// The Abrams on the profile setup_testmap.py gives it: forward and back along its hull, and a pivot on the spot.
+	if (URTSUnitData* Abrams = LoadObject<URTSUnitData>(nullptr, TEXT("/Game/Data/Units/DA_TestAbrams.DA_TestAbrams")))
+	{
+		const FRTSLocomotionProfile& Profile = Abrams->Locomotion;
+		TestEqual(TEXT("The Abrams's track gauge"), Profile.TrackGauge, 300.f);
+		TestEqual(TEXT("The Abrams's reverse speed"), Profile.ReverseSpeed, 300.f);
+		TestEqual(TEXT("The Abrams's acceleration"), Profile.Acceleration, 300.f);
+		TestEqual(TEXT("The Abrams's braking"), Profile.Braking, 850.f);
+
+		ARTSUnit* Unit = TestWorld.SpawnUnit(Abrams, 0, FVector(0.f, 20000.f, 0.f));
+		const RTSLocomotion::FLimits& Limits = Unit->GetUnitMovement()->GetLimits();
+		constexpr double Rate = 60.0;
+		auto Along = [Unit]() { return Unit->GetActorLocation().X; };
+
+		double Start = Along();
+		Run(*Unit, RTSLocomotion::FCommand::FromTracks(Limits, 200.f, 200.f), 2.0, Rate);
+		TestTrue(FString::Printf(TEXT("The Abrams drives forward (%.1f cm)"), Along() - Start), Along() - Start > 100.0);
+		Run(*Unit, RTSLocomotion::FCommand(), 2.0, Rate);
+
+		Start = Along();
+		Run(*Unit, RTSLocomotion::FCommand::FromTracks(Limits, -200.f, -200.f), 2.0, Rate);
+		TestTrue(FString::Printf(TEXT("and backs up (%.1f cm)"), Along() - Start), Along() - Start < -100.0);
+		Run(*Unit, RTSLocomotion::FCommand(), 2.0, Rate);
+
+		const FVector2D Before(Unit->GetActorLocation());
+		const float YawBefore = Unit->GetActorRotation().Yaw;
+		Run(*Unit, RTSLocomotion::FCommand::FromTracks(Limits, 200.f, -200.f), 1.0, Rate);
+		const float Turned = FMath::Abs(FMath::FindDeltaAngleDegrees(YawBefore, Unit->GetActorRotation().Yaw));
+		const float Drifted = FVector2D::Distance(Before, FVector2D(Unit->GetActorLocation()));
+		TestTrue(FString::Printf(TEXT("and pivots on the spot (%.1f degrees, %.2f cm off)"), Turned, Drifted), Turned > 10.f && Drifted < 1.f);
 	}
 
 	auto Refused = [this, &TestWorld](const TCHAR* What, TFunctionRef<void(FRTSLocomotionProfile&)> Spoil, ERTSLocomotionType Type)
