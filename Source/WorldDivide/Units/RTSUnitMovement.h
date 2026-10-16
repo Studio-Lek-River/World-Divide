@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/FloatingPawnMovement.h"
+#include "Navigation/RTSHullClearance.h"
 #include "Units/RTSLocomotion.h"
 #include "RTSUnitMovement.generated.h"
 
@@ -78,13 +79,17 @@ public:
 	/** Server only. Stops the gear dead, not braking: the match ended, or the unit was put somewhere else. */
 	void HaltImmediately();
 
+	/**
+	 * Server only. Whether the hull may stand at Footprint as far as the solids the navmesh leaves out go (#168): clear of
+	 * them, or no deeper into one than it is now. Looks round the hull again only once it may have left what it last saw.
+	 */
+	bool IsClearOfSolids(const FRTSFootprint& Footprint);
+
+	/** Server only. The solids the navmesh leaves out round the hull, as last looked at. */
+	const FRTSSolidNeighbourhood& GetSolidNeighbourhood() const { return Solids; }
+
 	/** Real seconds every unit's gear took on this machine since the last call; the benchmark reads it once a frame. */
 	static double TakeLocomotionSeconds();
-
-#if WITH_DEV_AUTOMATION_TESTS
-	/** Tests only: boxes on the ground every vehicle's gear treats as solid, an immovable blockage no navmesh knows about. */
-	static TArray<FBox2D> TestObstacles;
-#endif
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void RequestDirectMove(const FVector& MoveVelocity, bool bForceMaxSpeed) override;
@@ -153,4 +158,7 @@ private:
 	/** Server only: where the gear left the hull, so anything else that moved it since counts as recovery. */
 	TOptional<FVector2D> CommittedLocation;
 	float CommittedYaw = 0.f;
+
+	/** Server only. See IsClearOfSolids. */
+	FRTSSolidNeighbourhood Solids;
 };

@@ -4,13 +4,17 @@
 
 #include "AIController.h"
 #include "Commands/RTSCommand.h"
+#include "Components/StaticMeshComponent.h"
 #include "Data/RTSUnitData.h"
 #include "Editor.h"
+#include "Engine/CollisionProfile.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "EngineUtils.h"
 #include "Misc/App.h"
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "Navigation/RTSHullClearance.h"
 #include "Player/RTSPlayerController.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
@@ -18,8 +22,10 @@
 #include "Tests/RTSTestGeometry.h"
 #include "Tests/RTSTestPIE.h"
 #include "Tests/RTSTestScale.h"
+#include "Units/RTSGround.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitMovement.h"
+#include "Units/RTSUnitShape.h"
 
 /**
  * Track-driven vehicles on L_TestMap (#138), with its navmesh and obstacles: driven flat out into a block they stop against
@@ -131,6 +137,20 @@ namespace RTSVehicleMovementTests
 		const AAIController* AI = Unit.GetController<AAIController>();
 		return AI && AI->GetMoveStatus() != EPathFollowingStatus::Idle;
 	}
+
+	/** A solid engine cube filling Box that navigation leaves out (#168): the navmesh runs on under it. */
+	AActor* SpawnSolid(UWorld& World, const FBox& Box)
+	{
+		const FTransform Transform(FRotator::ZeroRotator, Box.GetCenter(), Box.GetSize() / 100.f);
+		AStaticMeshActor* Actor = World.SpawnActorDeferred<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Transform);
+		UStaticMeshComponent* Component = Actor->GetStaticMeshComponent();
+		Component->SetMobility(EComponentMobility::Movable);
+		Component->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube")));
+		Component->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+		Component->SetCanEverAffectNavigation(false);
+		Actor->FinishSpawning(Transform);
+		return Actor;
+	}
 }
 
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVehicleWaitForPlay, FAutomationTestBase*, Test, TSharedRef<RTSVehicleMovementTests::FState>, State);
@@ -200,7 +220,6 @@ bool FRTSVehicleRunScenarios::Update()
 	++State->Index;
 	if (!State->Scenarios.IsValidIndex(State->Index))
 	{
-		URTSUnitMovement::TestObstacles.Reset();
 		return true;
 	}
 	FScenario& Next = State->Scenarios[State->Index];
@@ -468,12 +487,13 @@ bool FRTSVehicleBlockedTest::RunTest(const FString& Parameters)
 		float RestDrift = 0.f;
 		int32 SignChanges = 0;
 		float LastSign = 0.f;
+		TWeakObjectPtr<AActor> Wall;
 	};
 	TSharedRef<FData> Data = MakeShared<FData>();
-	Scenario.Begin = [Target](ARTSUnit& Unit, ARTSPlayerController& Controller)
+	Scenario.Begin = [Target, Data](ARTSUnit& Unit, ARTSPlayerController& Controller)
 	{
-		// A wall of the test's own across the way, 15 m ahead and 40 m wide.
-		URTSUnitMovement::TestObstacles = { FBox2D(FVector2D(-6000.f + 1500.f, 20000.f - 2000.f), FVector2D(-6000.f + 1700.f, 20000.f + 2000.f)) };
+		// A wall of the test's own across the way, 15 m ahead and 40 m wide, that navigation leaves out (#168).
+		Data->Wall = SpawnSolid(*Unit.GetWorld(), FBox(FVector(-6000.f + 1500.f, 20000.f - 2000.f, 0.f), FVector(-6000.f + 1700.f, 20000.f + 2000.f, 300.f)));
 		IssueMove(Controller, Unit, Target);
 	};
 	Scenario.Tick = [Data](ARTSUnit& Unit, double Elapsed)
@@ -510,7 +530,10 @@ bool FRTSVehicleBlockedTest::RunTest(const FString& Parameters)
 	};
 	Scenario.End = [Data, Target](ARTSUnit& Unit, FAutomationTestBase& Test)
 	{
-		URTSUnitMovement::TestObstacles.Reset();
+		if (Data->Wall.IsValid())
+		{
+			Data->Wall->Destroy();
+		}
 		if (!Test.TestTrue(TEXT("The M20 stops against the blockage"), Data->FirstBlocked.IsSet())
 			|| !Test.TestTrue(TEXT("and gives its move up"), Data->GaveUp.IsSet()) || !Data->Handled)
 		{
@@ -528,6 +551,458 @@ bool FRTSVehicleBlockedTest::RunTest(const FString& Parameters)
 			Data->SignChanges), Data->SignChanges <= 2);
 	};
 
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleWaitForPlay(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleRunScenarios(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+namespace RTSVehicleMovementTests
+{
+	const TCHAR* AbramsPath = TEXT("/Game/Data/Units/DA_TestAbrams.DA_TestAbrams");
+	const TCHAR* TruckPath = TEXT("/Game/Data/Units/DA_TestFlakTruck.DA_TestFlakTruck");
+
+	/** Open, flat ground west of the middle, where the drives at solids the navmesh leaves out (#168) take place. */
+	const FVector OpenGround(-6000.f, 20000.f, 0.f);
+
+	/** #168: a hull stops within this (cm) of such a solid. */
+	constexpr float SolidStopGap = 50.f;
+
+	/** A wall across the way, this far ahead of the drive's start, this wide and this high; and the thin one, as thick. */
+	constexpr float WallAhead = 2500.f;
+	constexpr float WallHalfWidth = 1500.f;
+	constexpr float WallThickness = 100.f;
+	constexpr float WallHeight = 300.f;
+	constexpr float ThinWallThickness = 10.f;
+
+	/** What a drive at a solid saw: its closest gap to the solids, and the gear once blocked. */
+	struct FSolidDrive
+	{
+		TArray<TWeakObjectPtr<AActor>> Solids;
+		TArray<FBox2D> Boxes;
+		TArray<TWeakObjectPtr<ARTSUnit>> Others;
+		float MinGap = FLT_MAX;
+		TOptional<double> BlockedAt;
+		double BlockedTravel = 0.0;
+		float AfterBlocked = 0.f;
+		int32 SignChanges = 0;
+		float LastSign = 0.f;
+		bool bDriving = false;
+	};
+
+	void AddSolid(UWorld& World, FSolidDrive& Drive, const FBox& Box)
+	{
+		Drive.Solids.Add(SpawnSolid(World, Box));
+		Drive.Boxes.Add(FBox2D(FVector2D(Box.Min), FVector2D(Box.Max)));
+	}
+
+	void Clear(FSolidDrive& Drive)
+	{
+		for (const TWeakObjectPtr<AActor>& Solid : Drive.Solids)
+		{
+			if (Solid.IsValid())
+			{
+				Solid->Destroy();
+			}
+		}
+		for (const TWeakObjectPtr<ARTSUnit>& Other : Drive.Others)
+		{
+			if (Other.IsValid())
+			{
+				Other->Destroy();
+			}
+		}
+		Drive.Solids.Reset();
+		Drive.Others.Reset();
+	}
+
+	/** Adds Unit's closest gap to the drive's solids and what its gear did this frame. */
+	void Watch(FSolidDrive& Drive, const ARTSUnit& Unit, double Elapsed)
+	{
+		for (const FBox2D& Box : Drive.Boxes)
+		{
+			Drive.MinGap = FMath::Min(Drive.MinGap, RTSTests::GetHullGap(Unit.GetFootprint(), Box));
+		}
+		const FRTSRealizedMotion& Motion = Unit.GetRealizedMotion();
+		if (Drive.BlockedAt)
+		{
+			Drive.AfterBlocked = FMath::Max(Drive.AfterBlocked, static_cast<float>(FMath::Abs(Motion.DrivenDistance - Drive.BlockedTravel)));
+			const float Sign = FMath::Abs(Motion.ForwardSpeed) > 1.f ? FMath::Sign(Motion.ForwardSpeed) : 0.f;
+			if (Sign != 0.f && Drive.LastSign != 0.f && Sign != Drive.LastSign)
+			{
+				++Drive.SignChanges;
+			}
+			Drive.LastSign = Sign != 0.f ? Sign : Drive.LastSign;
+		}
+		else if (Motion.Status == ERTSLocomotionStatus::Blocked)
+		{
+			Drive.BlockedAt = Elapsed;
+			Drive.BlockedTravel = Motion.DrivenDistance;
+		}
+	}
+
+	float GetGap(const FSolidDrive& Drive, const ARTSUnit& Unit)
+	{
+		float Gap = FLT_MAX;
+		for (const FBox2D& Box : Drive.Boxes)
+		{
+			Gap = FMath::Min(Gap, RTSTests::GetHullGap(Unit.GetFootprint(), Box));
+		}
+		return Gap;
+	}
+
+	void DriveFlatOut(ARTSUnit& Unit)
+	{
+		RTSLocomotion::FCommand Command;
+		Command.Speed = 1.e5f;
+		Unit.GetUnitMovement()->SetCommandOverride(Command);
+	}
+
+	/**
+	 * Flat out from Start, facing Yaw, at Wall, which navigation leaves out: the gear stops the hull at its face, no more
+	 * than 1 cm in and no further than 50 cm short, on the side it came from, and drives no further once blocked. A turret
+	 * is turned round first: a gun over the front would stop the hull at the barrel's reach (#162), not at its own face.
+	 */
+	void AddWallDrive(const TSharedRef<FState>& State, const FString& Name, const TCHAR* DataPath, const FVector& Start, float Yaw, const FBox& Wall)
+	{
+		FScenario& Scenario = State->Scenarios.AddDefaulted_GetRef();
+		Scenario.Name = Name;
+		Scenario.DataPath = DataPath;
+		Scenario.Start = Start;
+		Scenario.Yaw = Yaw;
+		Scenario.Timeout = 35.0;
+		TSharedRef<FSolidDrive> Drive = MakeShared<FSolidDrive>();
+		Scenario.Begin = [Drive, Wall](ARTSUnit& Unit, ARTSPlayerController&)
+		{
+			AddSolid(*Unit.GetWorld(), *Drive, Wall);
+			Unit.SetAimOverride(FVector2D(180.f, 0.f));
+		};
+		Scenario.Tick = [Drive](ARTSUnit& Unit, double Elapsed)
+		{
+			if (!Drive->bDriving)
+			{
+				Drive->bDriving = !Unit.GetShape().Barrel || FMath::Abs(FMath::FindDeltaAngleDegrees(Unit.GetTurretYaw(), 180.f)) < 1.f;
+				if (Drive->bDriving)
+				{
+					DriveFlatOut(Unit);
+				}
+				return false;
+			}
+			Watch(*Drive, Unit, Elapsed);
+			return Drive->BlockedAt && Elapsed - *Drive->BlockedAt > 2.0;
+		};
+		Scenario.End = [Drive, Name, Start, Wall](ARTSUnit& Unit, FAutomationTestBase& Test)
+		{
+			const float Gap = GetGap(*Drive, Unit);
+			const FVector2D Toward = FVector2D(Wall.GetCenter() - Start);
+			Test.AddInfo(FString::Printf(TEXT("%s: stopped %.2f cm short, closest %.2f cm"), *Name, Gap, Drive->MinGap));
+			Test.TestTrue(*FString::Printf(TEXT("%s: the gear reports itself blocked"), *Name), Drive->BlockedAt.IsSet());
+			Test.TestTrue(*FString::Printf(TEXT("%s: the hull never goes more than %.0f cm into the wall (closest %.2f cm)"), *Name, PenetrationTolerance,
+				Drive->MinGap), Drive->MinGap >= -PenetrationTolerance);
+			Test.TestTrue(*FString::Printf(TEXT("%s: it stays on its side, not through"), *Name),
+				FVector2D::DotProduct(FVector2D(Unit.GetActorLocation() - Wall.GetCenter()), Toward) < 0.f);
+			Test.TestTrue(*FString::Printf(TEXT("%s: it stops within %.0f cm of the face (%.1f cm)"), *Name, SolidStopGap, Gap),
+				Gap >= -PenetrationTolerance && Gap <= SolidStopGap);
+			Test.TestTrue(*FString::Printf(TEXT("%s: and drives no further once blocked (%.3f cm)"), *Name, Drive->AfterBlocked),
+				Drive->AfterBlocked <= BlockedTravel);
+			Test.TestTrue(*FString::Printf(TEXT("%s: without rocking back and forth (%d changes of direction)"), *Name, Drive->SignChanges),
+				Drive->SignChanges <= 2);
+			Clear(*Drive);
+		};
+	}
+
+	/** A wall across the way at X, of Thickness, centred on Y. */
+	FBox WallAcross(float X, float Y, float Thickness)
+	{
+		return FBox(FVector(X, Y - WallHalfWidth, 0.f), FVector(X + Thickness, Y + WallHalfWidth, WallHeight));
+	}
+
+	/** Every drive of the off-navmesh test, at the rate the test runs with. */
+	void AddOffNavmeshScenarios(const TSharedRef<FState>& State, const UWorld& EditorWorld, FAutomationTestBase& Test)
+	{
+		const FBox2D Block = RTSTests::GetLabelledBox(EditorWorld, TEXT("Block_North"));
+		const float WallX = OpenGround.X + WallAhead;
+		const FBox Wall = WallAcross(WallX, OpenGround.Y, WallThickness);
+
+		// The neighbourhood itself: what it finds, what it leaves to the navmesh, when it looks again, and the hull's box on a slope.
+		{
+			FScenario& Scenario = State->Scenarios.AddDefaulted_GetRef();
+			Scenario.Name = TEXT("Solid neighbourhood");
+			Scenario.DataPath = AbramsPath;
+			Scenario.Start = OpenGround;
+			Scenario.Timeout = 5.0;
+			TSharedRef<FSolidDrive> Drive = MakeShared<FSolidDrive>();
+			Scenario.Begin = [Drive, Block, &Test](ARTSUnit& Unit, ARTSPlayerController&)
+			{
+				UWorld& World = *Unit.GetWorld();
+				const double Now = World.GetTimeSeconds();
+				const FRTSUnitShape& Shape = Unit.GetShape();
+				const float Height = Shape.Hull.GetSize().Z;
+				const FRTSFootprint Here = Unit.GetFootprint();
+				const float GroundZ = Here.Center.Z - Unit.GetGroundOffset();
+				auto Look = [&](const FRTSFootprint& Footprint)
+				{
+					FRTSSolidNeighbourhood Neighbourhood;
+					Neighbourhood.Update(World, Footprint, Footprint.Center.Z - Unit.GetGroundOffset(), Height, 200.f, Now, 1.0);
+					return Neighbourhood;
+				};
+				Test.TestEqual(TEXT("On open ground the neighbourhood holds no solid"), Look(Here).Solids.Num(), 0);
+
+				// Beside Block_North, which cuts the navmesh: the navmesh's to keep the hull out of, not the collision's.
+				FRTSFootprint ByBlock = Here;
+				ByBlock.Center = FVector(Block.GetCenter().X, Block.Max.Y + Here.Radius + 100.f, Here.Center.Z);
+				Test.TestEqual(TEXT("Beside a block the navmesh knows, it holds no solid"), Look(ByBlock).Solids.Num(), 0);
+
+				// A prop navigation leaves out, 1 m ahead of the hull.
+				const float Front = Here.Center.X + Here.HalfSegment + Here.Radius;
+				AddSolid(World, *Drive, FBox(FVector(Front + 100.f, Here.Center.Y - 200.f, GroundZ), FVector(Front + 300.f, Here.Center.Y + 200.f, GroundZ + 300.f)));
+				const FRTSSolidNeighbourhood Neighbourhood = Look(Here);
+				Test.TestEqual(TEXT("A prop navigation leaves out is in it"), Neighbourhood.Solids.Num(), 1);
+				Test.TestTrue(TEXT("Where it was made it is current"), Neighbourhood.IsCurrent(Here, Now));
+				FRTSFootprint Moved = Here;
+				Moved.Center.X += 190.f;
+				Test.TestTrue(TEXT("and within its margin"), Neighbourhood.IsCurrent(Moved, Now));
+				Moved.Center.X += 20.f;
+				Test.TestFalse(TEXT("but not beyond it"), Neighbourhood.IsCurrent(Moved, Now));
+				Test.TestFalse(TEXT("nor once it expired"), Neighbourhood.IsCurrent(Here, Now + 1.5));
+
+				const FVector Up = FVector::UpVector;
+				auto BoxAt = [&](float Ahead)
+				{
+					FRTSFootprint At = Here;
+					At.Center.X += Ahead;
+					return RTSHullClearance::MakeHullBox(At, GroundZ, Up, 35.f, Height, 0.f);
+				};
+				Test.TestTrue(TEXT("The hull where it stands is clear of the prop"), Neighbourhood.IsClear(BoxAt(0.f), BoxAt(0.f), 0.5f));
+				Test.TestTrue(TEXT("and 99 cm on"), Neighbourhood.IsClear(BoxAt(99.f), BoxAt(0.f), 0.5f));
+				Test.TestFalse(TEXT("but not 102 cm on, 2 cm into it"), Neighbourhood.IsClear(BoxAt(102.f), BoxAt(0.f), 0.5f));
+				Test.TestFalse(TEXT("Inside it, deeper is not clear"), Neighbourhood.IsClear(BoxAt(150.f), BoxAt(120.f), 0.5f));
+				Test.TestTrue(TEXT("but back out is"), Neighbourhood.IsClear(BoxAt(110.f), BoxAt(120.f), 0.5f));
+
+				// Up the ridge's ramp: the box follows the slope and starts a step above it, so the ramp is no wall.
+				TOptional<FVector> Ramp;
+				FVector Normal = Up;
+				for (float X = 11300.f; X < 16200.f && !Ramp; X += 50.f)
+				{
+					float Z = 0.f;
+					FVector Back = Up, Middle = Up, Ahead = Up;
+					float Ignored = 0.f;
+					if (RTSGround::Trace(World, FVector(X, 3000.f, 0.f), 1000.f, 1000.f, Z, &Middle) && Middle.Z < 0.99f
+						&& RTSGround::Trace(World, FVector(X - Here.HalfSegment - Here.Radius, 3000.f, 0.f), 1000.f, 1000.f, Ignored, &Back)
+						&& RTSGround::Trace(World, FVector(X + Here.HalfSegment + Here.Radius, 3000.f, 0.f), 1000.f, 1000.f, Ignored, &Ahead)
+						&& Back.Equals(Middle, 0.01f) && Ahead.Equals(Middle, 0.01f))
+					{
+						Ramp = FVector(X, 3000.f, Z);
+						Normal = Middle;
+					}
+				}
+				if (Test.TestTrue(TEXT("The ridge has a ramp as long as the hull"), Ramp.IsSet()))
+				{
+					FRTSFootprint OnRamp = Here;
+					OnRamp.Center = *Ramp + FVector(0.f, 0.f, Unit.GetGroundOffset());
+					OnRamp.Axis = FVector::ForwardVector;
+					Test.TestTrue(TEXT("On it the hull's box, tilted to the ground, overlaps nothing"),
+						RTSHullClearance::IsSolidClear(World, OnRamp, Ramp->Z, Height, 0.f, Normal));
+					Test.TestFalse(TEXT("where a level box would cut into the ramp"), RTSHullClearance::IsSolidClear(World, OnRamp, Ramp->Z, Height, 0.f, Up));
+					Test.TestEqual(TEXT("and the ramp is no solid of the neighbourhood"), Look(OnRamp).Solids.Num(), 0);
+				}
+				Clear(*Drive);
+			};
+			Scenario.Tick = [](ARTSUnit&, double) { return true; };
+			Scenario.End = [](ARTSUnit&, FAutomationTestBase&) {};
+		}
+
+		// At a wall from in front, at a slant and from behind; the placeholder tank, the long Abrams and the wheeled truck.
+		AddWallDrive(State, TEXT("M20 flat out at a wall left out of navigation"), M20Path, OpenGround, 0.f, Wall);
+		AddWallDrive(State, TEXT("M20 at the wall at 30 degrees"), M20Path, OpenGround - FVector(0.f, 1000.f, 0.f), 30.f, Wall);
+		AddWallDrive(State, TEXT("M20 at the wall from the far side"), M20Path, FVector(WallX + WallThickness + WallAhead, OpenGround.Y, 0.f), 180.f, Wall);
+		AddWallDrive(State, TEXT("Placeholder tank at the wall"), TankPath, OpenGround, 0.f, Wall);
+		AddWallDrive(State, TEXT("Abrams at the wall"), AbramsPath, OpenGround, 0.f, Wall);
+		AddWallDrive(State, TEXT("Abrams at the wall at -30 degrees"), AbramsPath, OpenGround + FVector(0.f, 1000.f, 0.f), -30.f, Wall);
+		AddWallDrive(State, TEXT("Flak truck at the wall"), TruckPath, OpenGround, 0.f, Wall);
+
+		// A 10 cm wall at top speed, from far enough to reach it.
+		const FBox Thin = WallAcross(OpenGround.X + 2.f * WallAhead, OpenGround.Y, ThinWallThickness);
+		AddWallDrive(State, TEXT("M20 at a thin wall at top speed"), M20Path, OpenGround, 0.f, Thin);
+		AddWallDrive(State, TEXT("Flak truck at a thin wall at top speed"), TruckPath, OpenGround, 0.f, Thin);
+
+		// Pivoting beside a wall 15 cm off its side: it turns until a corner meets the wall, and no further in.
+		{
+			FScenario& Scenario = State->Scenarios.AddDefaulted_GetRef();
+			Scenario.Name = TEXT("Pivot beside a wall");
+			Scenario.Start = OpenGround;
+			Scenario.Timeout = 10.0;
+			TSharedRef<FSolidDrive> Drive = MakeShared<FSolidDrive>();
+			TSharedRef<float> MaxTurn = MakeShared<float>(0.f);
+			TSharedRef<float> Turned = MakeShared<float>(0.f);
+			Scenario.Begin = [Drive](ARTSUnit& Unit, ARTSPlayerController&)
+			{
+				const FRTSFootprint Footprint = Unit.GetFootprint();
+				const float Side = Footprint.Center.Y + Footprint.Radius + 15.f;
+				AddSolid(*Unit.GetWorld(), *Drive, FBox(FVector(Footprint.Center.X - 1000.f, Side, 0.f), FVector(Footprint.Center.X + 1000.f, Side + WallThickness, WallHeight)));
+				RTSLocomotion::FCommand Command;
+				Command.bPivot = true;
+				Command.PivotYawRate = Unit.GetUnitMovement()->GetLimits().MaxYawRate;
+				Unit.GetUnitMovement()->SetCommandOverride(Command);
+			};
+			Scenario.Tick = [Drive, MaxTurn, Turned](ARTSUnit& Unit, double Elapsed)
+			{
+				Watch(*Drive, Unit, Elapsed);
+				*Turned = FMath::Abs(FMath::FindDeltaAngleDegrees(0.f, Unit.GetActorRotation().Yaw));
+				*MaxTurn = FMath::Max(*MaxTurn, *Turned);
+				return Elapsed > 4.0;
+			};
+			Scenario.End = [Drive, MaxTurn, Turned](ARTSUnit& Unit, FAutomationTestBase& Test)
+			{
+				Test.TestTrue(*FString::Printf(TEXT("Pivot beside a wall: it turns (%.2f degrees)"), *MaxTurn), *MaxTurn > 0.5f);
+				Test.TestTrue(*FString::Printf(TEXT("until a corner meets the wall, short of a quarter turn (%.2f degrees)"), *MaxTurn), *MaxTurn < 45.f);
+				Test.TestTrue(*FString::Printf(TEXT("no more than %.0f cm into it (closest %.2f cm)"), PenetrationTolerance, Drive->MinGap),
+					Drive->MinGap >= -PenetrationTolerance);
+				Test.TestTrue(*FString::Printf(TEXT("and holds there (%.2f of %.2f degrees)"), *Turned, *MaxTurn), *MaxTurn - *Turned < 0.5f);
+				Clear(*Drive);
+			};
+		}
+
+		// Along a wall 30 cm off its side, to a point past its far end.
+		{
+			FScenario& Scenario = State->Scenarios.AddDefaulted_GetRef();
+			Scenario.Name = TEXT("Along a wall");
+			Scenario.Start = OpenGround;
+			Scenario.Timeout = 30.0;
+			const FVector Target = OpenGround + FVector(3500.f, 0.f, 0.f);
+			TSharedRef<FSolidDrive> Drive = MakeShared<FSolidDrive>();
+			Scenario.Begin = [Drive, Target](ARTSUnit& Unit, ARTSPlayerController& Controller)
+			{
+				const FRTSFootprint Footprint = Unit.GetFootprint();
+				const float Side = Footprint.Center.Y + Footprint.Radius + 30.f;
+				AddSolid(*Unit.GetWorld(), *Drive, FBox(FVector(Footprint.Center.X - 500.f, Side, 0.f), FVector(Footprint.Center.X + 3000.f, Side + WallThickness, WallHeight)));
+				IssueMove(Controller, Unit, Target);
+			};
+			Scenario.Tick = [Drive](ARTSUnit& Unit, double Elapsed)
+			{
+				Watch(*Drive, Unit, Elapsed);
+				return Elapsed > 1.0 && Unit.GetQueuedCommandCount() == 0;
+			};
+			Scenario.End = [Drive, Target](ARTSUnit& Unit, FAutomationTestBase& Test)
+			{
+				Test.TestTrue(*FString::Printf(TEXT("Along a wall: never more than %.0f cm into it (closest %.2f cm)"), PenetrationTolerance, Drive->MinGap),
+					Drive->MinGap >= -PenetrationTolerance);
+				Test.TestTrue(*FString::Printf(TEXT("and arrives (%.0f cm from the target)"), FVector::Dist2D(Unit.GetActorLocation(), Target)),
+					FVector::Dist2D(Unit.GetActorLocation(), Target) <= 100.f);
+				Clear(*Drive);
+			};
+		}
+
+		// Six M20s ordered past a pillar that navigation leaves out, in their way: pushing each other, none goes into it.
+		{
+			FScenario& Scenario = State->Scenarios.AddDefaulted_GetRef();
+			Scenario.Name = TEXT("A group past a pillar");
+			Scenario.Start = OpenGround;
+			Scenario.Timeout = 60.0;
+			const FVector Target = OpenGround + FVector(5000.f, 0.f, 0.f);
+			TSharedRef<FSolidDrive> Drive = MakeShared<FSolidDrive>();
+			Scenario.Begin = [Drive, Target](ARTSUnit& Unit, ARTSPlayerController& Controller)
+			{
+				UWorld& World = *Unit.GetWorld();
+				const FVector Pillar = OpenGround + FVector(2500.f, 0.f, 0.f);
+				AddSolid(World, *Drive, FBox(Pillar + FVector(-150.f, -150.f, 0.f), Pillar + FVector(150.f, 150.f, WallHeight)));
+				IssueMove(Controller, Unit, Target);
+				for (int32 Index = 1; Index < 6; ++Index)
+				{
+					const FVector Offset((Index / 3) * -1000.f, (Index % 3 - 1) * 600.f, 0.f);
+					ARTSUnit* Other = SpawnUnit(World, Unit.GetUnitData(), Unit.GetTeamId(), OpenGround + Offset, 0.f);
+					Drive->Others.Add(Other);
+					IssueMove(Controller, *Other, Target + Offset);
+				}
+			};
+			Scenario.Tick = [Drive](ARTSUnit& Unit, double Elapsed)
+			{
+				Watch(*Drive, Unit, Elapsed);
+				bool bMoving = Unit.GetQueuedCommandCount() > 0;
+				for (const TWeakObjectPtr<ARTSUnit>& Other : Drive->Others)
+				{
+					if (Other.IsValid())
+					{
+						for (const FBox2D& Box : Drive->Boxes)
+						{
+							Drive->MinGap = FMath::Min(Drive->MinGap, RTSTests::GetHullGap(Other->GetFootprint(), Box));
+						}
+						bMoving |= Other->GetQueuedCommandCount() > 0;
+					}
+				}
+				return Elapsed > 1.0 && !bMoving;
+			};
+			Scenario.End = [Drive](ARTSUnit& Unit, FAutomationTestBase& Test)
+			{
+				Test.TestTrue(*FString::Printf(TEXT("A group past a pillar: no hull more than %.0f cm into it (closest %.2f cm)"), PenetrationTolerance,
+					Drive->MinGap), Drive->MinGap >= -PenetrationTolerance);
+				Clear(*Drive);
+			};
+		}
+
+		// The long hull and the wheels over the ridge: slopes and its crest are ground, not walls.
+		for (const TCHAR* DataPath : { AbramsPath, TruckPath })
+		{
+			FScenario& Scenario = State->Scenarios.AddDefaulted_GetRef();
+			Scenario.Name = FString::Printf(TEXT("Over the ridge (%s)"), DataPath == AbramsPath ? TEXT("Abrams") : TEXT("flak truck"));
+			Scenario.DataPath = DataPath;
+			Scenario.Start = FVector(11300.f, 3000.f, 0.f);
+			Scenario.Timeout = 50.0;
+			const FVector Target(16200.f, 3000.f, 0.f);
+			TSharedRef<float> Highest = MakeShared<float>(-FLT_MAX);
+			const FString Name = Scenario.Name;
+			Scenario.Begin = [Target](ARTSUnit& Unit, ARTSPlayerController& Controller) { IssueMove(Controller, Unit, Target); };
+			Scenario.Tick = [Highest](ARTSUnit& Unit, double Elapsed)
+			{
+				*Highest = FMath::Max(*Highest, static_cast<float>(Unit.GetNavAgentLocation().Z));
+				return Elapsed > 1.0 && Unit.GetQueuedCommandCount() == 0;
+			};
+			Scenario.End = [Highest, Target, Name](ARTSUnit& Unit, FAutomationTestBase& Test)
+			{
+				Test.TestTrue(*FString::Printf(TEXT("%s: it climbs to the top (%.0f cm up)"), *Name, *Highest), *Highest > 250.f);
+				Test.TestTrue(*FString::Printf(TEXT("%s: and arrives on the far side (%.0f cm from the target)"), *Name, FVector::Dist2D(Unit.GetActorLocation(), Target)),
+					FVector::Dist2D(Unit.GetActorLocation(), Target) <= 100.f);
+			};
+		}
+	}
+}
+
+/**
+ * Solids that navigation leaves out (#168), on L_TestMap at 30, 60 and 120 game updates a second: what the hull's
+ * neighbourhood finds and leaves to the navmesh, and its box on a slope; the M20, the placeholder tank, the long Abrams and
+ * the wheeled flak truck driven flat out at such a wall, from in front, at a slant and from behind, and at a thin one at top
+ * speed, stop 0-50 cm short of it and no more than 1 cm in, without rocking; an M20 pivots beside one and drives along one
+ * without going in; a group ordered past such a pillar keeps out of it; the Abrams and the truck still cross the ridge.
+ */
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(FRTSVehicleOffNavmeshTest, "WorldDivide.Navigation.VehicleOffNavmesh", RTSTests::TestFlags)
+
+void FRTSVehicleOffNavmeshTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray<FString>& OutTestCommands) const
+{
+	for (const TCHAR* Rate : { TEXT("30"), TEXT("60"), TEXT("120") })
+	{
+		OutBeautifiedNames.Add(FString::Printf(TEXT("%sHz"), Rate));
+		OutTestCommands.Add(Rate);
+	}
+}
+
+bool FRTSVehicleOffNavmeshTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSVehicleMovementTests;
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+	const UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
+	TSharedRef<FState> State = MakeShared<FState>();
+	State->Rate = FCString::Atod(*Parameters);
+	if (!EditorWorld || State->Rate <= 0.0)
+	{
+		AddError(TEXT("No editor world or rate"));
+		return false;
+	}
+	AddOffNavmeshScenarios(State, *EditorWorld, *this);
 	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleWaitForPlay(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleRunScenarios(this, State));

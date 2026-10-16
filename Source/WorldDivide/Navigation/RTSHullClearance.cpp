@@ -1,5 +1,7 @@
 #include "Navigation/RTSHullClearance.h"
 
+#include "Components/PrimitiveComponent.h"
+#include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "NavigationData.h"
@@ -240,21 +242,29 @@ namespace RTSHullClearance
 		return NavMesh.GetCellSize(ENavigationDataResolution::Default) + GetMargin(NavMesh);
 	}
 
-	bool IsSolidClear(const UWorld& World, const FRTSFootprint& Footprint, float GroundZ, float Height, float Skin)
+	bool IsSolidClear(const UWorld& World, const FRTSFootprint& Footprint, float GroundZ, float Height, float Skin, const FVector& GroundNormal)
 	{
 		TRACE_CPUPROFILER_EVENT_SCOPE(RTSHullClearance::IsSolidClear);
 
-		const float Bottom = GroundZ + SolidStepHeight;
-		const float Top = GroundZ + Height;
-		if (Top <= Bottom)
+		if (Height <= SolidStepHeight)
 		{
 			return true;
 		}
-		const FVector HalfExtent(Footprint.HalfSegment + Footprint.Radius + Skin, Footprint.Radius + Skin, 0.5f * (Top - Bottom));
-		const FVector Center(Footprint.Center.X, Footprint.Center.Y, 0.5f * (Bottom + Top));
-		const FQuat Rotation = FRotationMatrix::MakeFromX(FVector(Footprint.Axis.X, Footprint.Axis.Y, 0.f)).ToQuat();
-		return !World.OverlapAnyTestByObjectType(Center, Rotation, RTSBarrelClearance::GetObstacleObjects(),
-			FCollisionShape::MakeBox(HalfExtent), FCollisionQueryParams(SolidQueryTag));
+		const FHullBox Box = MakeHullBox(Footprint, GroundZ, GroundNormal, SolidStepHeight, Height, Skin);
+		return !World.OverlapAnyTestByObjectType(Box.Center, Box.Rotation, RTSBarrelClearance::GetObstacleObjects(),
+			FCollisionShape::MakeBox(Box.HalfExtent), FCollisionQueryParams(SolidQueryTag));
+	}
+
+	FHullBox MakeHullBox(const FRTSFootprint& Footprint, float GroundZ, const FVector& GroundNormal, float StepHeight, float Height, float Skin)
+	{
+		const FVector Up = GroundNormal.Z > UE_KINDA_SMALL_NUMBER ? GroundNormal.GetSafeNormal() : FVector::UpVector;
+		FHullBox Box;
+		Box.Rotation = FRotationMatrix::MakeFromZX(Up, FVector(Footprint.Axis.X, Footprint.Axis.Y, 0.f)).ToQuat();
+		const float Floor = FMath::Min(StepHeight, Height);
+		Box.HalfExtent = FVector(Footprint.HalfSegment + Footprint.Radius + Skin, Footprint.Radius + Skin, 0.5f * (Height - Floor));
+		// Up from the ground under the centre, along the normal: the box's floor runs parallel to the slope.
+		Box.Center = FVector(Footprint.Center.X, Footprint.Center.Y, GroundZ) + Box.Rotation.GetUpVector() * (0.5f * (Floor + Height));
+		return Box;
 	}
 
 	FRTSFootprint MakeFootprint(const FRTSUnitShape& Shape, const FVector& Location, const FVector2D& Heading)
@@ -438,4 +448,113 @@ bool FRTSHullClearanceCache::IsClear(const FRTSFootprint& Footprint, double Now)
 	const float Turn = FMath::Acos(FMath::Clamp(FVector2D::DotProduct(Axis, FVector2D(Footprint.Axis)), -1.f, 1.f));
 	const float Moved = FVector2D::Distance(Center, FVector2D(Footprint.Center)) + Turn * GetHalfDiagonal(Footprint);
 	return Moved < Slack;
+}
+
+namespace
+{
+	FRTSSolidStats GSolidStats;
+
+	/** Adds the cycles of its scope to Seconds. */
+	struct FSolidTimer
+	{
+		double& Seconds;
+		const uint64 Start = FPlatformTime::Cycles64();
+		explicit FSolidTimer(double& InSeconds) : Seconds(InSeconds) {}
+		~FSolidTimer() { Seconds += FPlatformTime::ToSeconds64(FPlatformTime::Cycles64() - Start); }
+	};
+
+	/** The broad overlap's results, kept between calls so a look round a hull allocates nothing once warm. */
+	TArray<FOverlapResult> GSolidOverlaps;
+
+	/** How deep a box of Shape at Box's pose reaches into Component; zero when it does not. */
+	float GetDepth(UPrimitiveComponent& Component, const RTSHullClearance::FHullBox& Box, const FCollisionShape& Shape)
+	{
+		FMTDResult Result;
+		return Component.ComputePenetration(Result, Shape, Box.Center, Box.Rotation) ? Result.Distance : 0.f;
+	}
+}
+
+bool FRTSSolidNeighbourhood::IsCurrent(const FRTSFootprint& Footprint, double Now) const
+{
+	// The looked-at box is level and as wide as the hull's half diagonal at any heading, and as tall as Margin allows a slope.
+	return Margin >= 0.f && Now <= ExpireTime && FVector2D::Distance(FVector2D(Center), FVector2D(Footprint.Center)) <= Margin
+		&& FMath::Abs(Center.Z - Footprint.Center.Z) <= Margin;
+}
+
+void FRTSSolidNeighbourhood::Update(const UWorld& World, const FRTSFootprint& Footprint, float GroundZ, float Height, float InMargin,
+	double Now, double Lifetime)
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(FRTSSolidNeighbourhood::Update);
+	FSolidTimer Timer(GSolidStats.BroadSeconds);
+	++GSolidStats.Updates;
+
+	Center = Footprint.Center;
+	Margin = InMargin;
+	ExpireTime = Now + Lifetime;
+	Solids.Reset();
+	// Any heading within Margin of the centre, on a slope of up to 45 degrees from there: the hull's half diagonal plus the
+	// margin each way across, and that much more up and down than the hull is tall.
+	const float Across = GetHalfDiagonal(Footprint) + Margin;
+	const FVector HalfExtent(Across, Across, 0.5f * Height + Across);
+	const FVector BoxCenter(Footprint.Center.X, Footprint.Center.Y, GroundZ + 0.5f * Height);
+	GSolidOverlaps.Reset();
+	World.OverlapMultiByObjectType(GSolidOverlaps, BoxCenter, FQuat::Identity, RTSBarrelClearance::GetObstacleObjects(),
+		FCollisionShape::MakeBox(HalfExtent), FCollisionQueryParams(SolidQueryTag));
+	for (const FOverlapResult& Overlap : GSolidOverlaps)
+	{
+		UPrimitiveComponent* Component = Overlap.GetComponent();
+		// What navigation knows is the navmesh's to keep the hull out of; what does not stop a pawn is not solid.
+		if (Component && !Component->IsNavigationRelevant() && Component->GetCollisionResponseToChannel(ECC_Pawn) == ECR_Block)
+		{
+			Solids.AddUnique(Component);
+		}
+	}
+	GSolidOverlaps.Reset();
+}
+
+bool FRTSSolidNeighbourhood::IsClear(const RTSHullClearance::FHullBox& Box, const RTSHullClearance::FHullBox& Current, float Tolerance) const
+{
+	if (Solids.IsEmpty())
+	{
+		return true;
+	}
+	TRACE_CPUPROFILER_EVENT_SCOPE(FRTSSolidNeighbourhood::IsClear);
+	FSolidTimer Timer(GSolidStats.NarrowSeconds);
+	++GSolidStats.Checks;
+
+	const FCollisionShape Shape = FCollisionShape::MakeBox((Box.HalfExtent - FVector(Tolerance)).ComponentMax(FVector(1.f)));
+	const FCollisionShape CurrentShape = FCollisionShape::MakeBox((Current.HalfExtent - FVector(Tolerance)).ComponentMax(FVector(1.f)));
+	for (const TWeakObjectPtr<UPrimitiveComponent>& Weak : Solids)
+	{
+		UPrimitiveComponent* Component = Weak.Get();
+		if (!Component || !Component->IsCollisionEnabled())
+		{
+			continue;
+		}
+		++GSolidStats.ComponentQueries;
+		if (!Component->OverlapComponent(Box.Center, Box.Rotation, Shape))
+		{
+			continue;
+		}
+		// In it where it stands too: out, or along, but no deeper.
+		GSolidStats.ComponentQueries += 3;
+		if (!Component->OverlapComponent(Current.Center, Current.Rotation, CurrentShape)
+			|| GetDepth(*Component, Box, Shape) > GetDepth(*Component, Current, CurrentShape) + KINDA_SMALL_NUMBER)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+void FRTSSolidStats::AddReuse()
+{
+	++GSolidStats.Reuses;
+}
+
+FRTSSolidStats FRTSSolidStats::Take()
+{
+	const FRTSSolidStats Stats = GSolidStats;
+	GSolidStats = FRTSSolidStats();
+	return Stats;
 }

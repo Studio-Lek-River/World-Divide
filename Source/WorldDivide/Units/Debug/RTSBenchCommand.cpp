@@ -140,6 +140,25 @@ namespace RTSBenchCommand
 		TArray<float> LocomotionFrames;
 		double P95GameMs = 0.0;
 		double P95LocomotionMs = 0.0;
+		/** The solids the navmesh leaves out (#168), summed over the frames: see FRTSSolidStats. */
+		FRTSSolidStats Solids;
+
+		void AddSolids(const FRTSSolidStats& Frame)
+		{
+			Solids.Updates += Frame.Updates;
+			Solids.Reuses += Frame.Reuses;
+			Solids.Checks += Frame.Checks;
+			Solids.ComponentQueries += Frame.ComponentQueries;
+			Solids.BroadSeconds += Frame.BroadSeconds;
+			Solids.NarrowSeconds += Frame.NarrowSeconds;
+		}
+
+		/** The share of solid checks that reused their neighbourhood instead of looking again. */
+		double SolidReuseShare() const
+		{
+			const int32 Looks = Solids.Updates + Solids.Reuses;
+			return Looks > 0 ? static_cast<double>(Solids.Reuses) / Looks : 0.0;
+		}
 
 		void Add(double InFrameMs, double InGameMs, double InRenderMs, double InRHIMs, double InGPUMs, double InDrawCalls,
 			double InTriangles, double InAvoidanceMs, double InSearchMs, double InLocomotionMs)
@@ -191,15 +210,17 @@ namespace RTSBenchCommand
 		static FString CsvHeader()
 		{
 			return TEXT("count,scenario,sample,frames,units,frame_ms,game_ms,p95_game_ms,max_game_ms,render_ms,rhi_ms,gpu_ms,draw_calls,triangles,")
-				TEXT("avoidance_ms,max_avoidance_ms,search_ms,locomotion_ms,p95_locomotion_ms,max_locomotion_ms,used_memory_mb,peak_memory_mb,render_width,render_height");
+				TEXT("avoidance_ms,max_avoidance_ms,search_ms,locomotion_ms,p95_locomotion_ms,max_locomotion_ms,used_memory_mb,peak_memory_mb,render_width,render_height,")
+				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d"),
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f"),
 				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
 				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
-				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y);
+				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y, Mean(Solids.Updates), SolidReuseShare(),
+				Mean(Solids.Checks), Mean(Solids.ComponentQueries), Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0));
 		}
 
 		static FString MarkdownHeader()
@@ -216,6 +237,13 @@ namespace RTSBenchCommand
 				Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs), Mean(DrawCalls), Mean(Triangles) / 1.0e6,
 				Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs, MaxLocomotionMs, UsedMemoryMB,
 				PeakMemoryMB, RenderSize.X, RenderSize.Y);
+		}
+
+		FString ToSolidsMarkdown() const
+		{
+			return FString::Printf(TEXT("| %d | %s | %d | %.2f | %.1f%% | %.2f | %.2f | %.4f | %.4f |\n"), Count, *Scenario, Sample,
+				Mean(Solids.Updates), SolidReuseShare() * 100.0, Mean(Solids.Checks), Mean(Solids.ComponentQueries),
+				Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0));
 		}
 	};
 
@@ -589,6 +617,7 @@ namespace RTSBenchCommand
 			Current.MaxGameMs = Next == EStep::MeasureMove ? Lead.MaxGameMs : 0.0;
 			URTSWeaponComponent::TakeSearchSeconds();
 			URTSUnitMovement::TakeLocomotionSeconds();
+			FRTSSolidStats::Take();
 			TRACE_BEGIN_REGION(*RegionName());
 			GoTo(Next);
 		}
@@ -628,6 +657,7 @@ namespace RTSBenchCommand
 				FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)), GNumDrawCallsRHI[0], GNumPrimitivesDrawnRHI[0],
 				Avoidance ? Avoidance->GetLastSeparateSeconds() * 1000.0 : 0.0, URTSWeaponComponent::TakeSearchSeconds() * 1000.0,
 				URTSUnitMovement::TakeLocomotionSeconds() * 1000.0);
+			Stats.AddSolids(FRTSSolidStats::Take());
 		}
 
 		/** Takes one frame of the scenario; true once it has all of them, logged and kept. */
@@ -682,6 +712,13 @@ namespace RTSBenchCommand
 			{
 				Csv += Result.ToCsv() + TEXT("\n");
 				Markdown += Result.ToMarkdown();
+			}
+			Markdown += TEXT("\nSolids the navmesh leaves out (#168), per frame:\n\n")
+				TEXT("| Units | Scenario | Sample | Broad overlaps | Reused | Hull checks | Component queries | Broad ms | Narrow ms |\n")
+				TEXT("|---:|---|---:|---:|---:|---:|---:|---:|---:|\n");
+			for (const FScenarioStats& Result : Results)
+			{
+				Markdown += Result.ToSolidsMarkdown();
 			}
 			return FFileHelper::SaveStringToFile(Csv, *FPaths::Combine(Dir, TEXT("bench.csv")))
 				&& FFileHelper::SaveStringToFile(Markdown, *FPaths::Combine(Dir, TEXT("bench.md")))

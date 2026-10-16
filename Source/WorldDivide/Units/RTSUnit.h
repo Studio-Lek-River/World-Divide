@@ -151,6 +151,9 @@ public:
 	/** Distance from the actor origin down to the ground contact point: half the hull's height. */
 	float GetGroundOffset() const;
 
+	/** Server only. The ground's normal where SnapToGround last stood the unit; up before it first did. */
+	FVector GetGroundNormal() const { return GroundNormal.Get(FVector::UpVector); }
+
 	/**
 	 * Server only. Stands a ground unit on the ground under it, which the movement does not follow by itself; aircraft keep
 	 * their own height. Leaves the unit where it is over no ground. Runs every tick but traces only once the unit has moved

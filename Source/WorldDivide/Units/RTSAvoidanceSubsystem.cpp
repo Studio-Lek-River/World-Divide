@@ -344,7 +344,7 @@ void URTSAvoidanceSubsystem::ApplyPushes(float DeltaSeconds)
 			const float Skin = Gear ? 0.f : HullSolidSkin;
 			const bool bClear = bNearSolid
 				? RTSHullClearance::IsSolidClear(*GetWorld(), Footprint, Unit->GetActorLocation().Z - Unit->GetGroundOffset(),
-					Unit->GetShape().Hull.GetSize().Z, Skin)
+					Unit->GetShape().Hull.GetSize().Z, Skin, Unit->GetGroundNormal())
 				: Clearance >= 0.f;
 			if (bClear)
 			{
@@ -392,6 +392,16 @@ void URTSAvoidanceSubsystem::ApplyPushes(float DeltaSeconds)
 			Footprint.Center = Unit->GetFootprint().Center + FVector(Step, 0.f);
 		}
 
+		// Nor into a solid the navmesh leaves out (#168), which only the collision sees: such a push is dropped.
+		if (Gear && !Step.IsNearlyZero())
+		{
+			FRTSFootprint Pushed = Unit->GetFootprint();
+			Pushed.Center += FVector(Step, 0.f);
+			if (!Gear->IsClearOfSolids(Pushed))
+			{
+				Step = FVector2D::ZeroVector;
+			}
+		}
 		if (!Step.IsNearlyZero())
 		{
 			Unit->SetActorLocation(Unit->GetActorLocation() + FVector(Step, 0.f));

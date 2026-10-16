@@ -31,6 +31,17 @@ namespace
 	constexpr float GearSolidAbove = 10.f;
 	constexpr float GearSolidSkin = 2.f;
 
+	/**
+	 * The solids the navmesh leaves out (#168) are looked for round the hull out to the distance it drives in about
+	 * SolidLookSeconds, at least SolidMinMargin; each unit looks again a little earlier or later than that, so units that
+	 * started together do not all look on the same frame. A hull may graze one by up to SolidTolerance, so it can drive and
+	 * turn along a face it stopped against. Without a step height of its own, a hull steps over this much.
+	 */
+	constexpr float SolidMinMargin = 200.f;
+	constexpr double SolidLookSeconds = 1.0;
+	constexpr float SolidTolerance = 0.5f;
+	constexpr float SolidStepHeight = 50.f;
+
 	/** A step that swings the hull's corners further than this is checked halfway too, so a pivot cannot swing through a corner. */
 	constexpr float RotationCheckDistance = 10.f;
 
@@ -84,10 +95,6 @@ namespace
 	uint64 LocomotionCycles = 0;
 }
 
-#if WITH_DEV_AUTOMATION_TESTS
-TArray<FBox2D> URTSUnitMovement::TestObstacles;
-#endif
-
 URTSUnitMovement::URTSUnitMovement()
 {
 }
@@ -109,6 +116,7 @@ void URTSUnitMovement::ApplyUnitData(const URTSUnitData& Data, float InHullLengt
 	Guidance = RTSLocomotion::FGuidanceState();
 	BlockedSeconds = 0.f;
 	CommittedLocation.Reset();
+	Solids.Reset();
 }
 
 float URTSUnitMovement::GetStoppingDistance() const
@@ -402,20 +410,11 @@ bool URTSUnitMovement::IsPoseClear(const FVector& Location, float Yaw, FCurrentC
 	}
 	const FRTSUnitShape& Shape = Unit->GetShape();
 	const FRTSFootprint Footprint = RTSUnitShape::MakeFootprint(Shape, FTransform(FRotator(0.f, Yaw, 0.f), Location));
-#if WITH_DEV_AUTOMATION_TESTS
-	for (const FBox2D& Obstacle : TestObstacles)
+	// What the navmesh leaves out it cannot read either: the collision alone decides, wherever the navmesh says the hull is.
+	if (!IsClearOfSolids(Footprint))
 	{
-		const FVector2D Start(Footprint.Center - Footprint.Axis * Footprint.HalfSegment);
-		const FVector2D End(Footprint.Center + Footprint.Axis * Footprint.HalfSegment);
-		for (int32 Sample = 0; Sample <= 8; ++Sample)
-		{
-			if (Obstacle.ComputeSquaredDistanceToPoint(FMath::Lerp(Start, End, Sample / 8.f)) < FMath::Square(Footprint.Radius))
-			{
-				return false;
-			}
-		}
+		return false;
 	}
-#endif
 	FRTSHullClearanceCache& Cache = Unit->GetHullClearanceCache();
 	const double Now = World->GetTimeSeconds();
 	if (Cache.IsClear(Footprint, Now))
@@ -450,10 +449,10 @@ bool URTSUnitMovement::IsPoseClear(const FVector& Location, float Yaw, FCurrentC
 		{
 			const float GroundZ = Location.Z - Unit->GetGroundOffset();
 			const float Height = Shape.Hull.GetSize().Z;
-			const bool bSkinClear = RTSHullClearance::IsSolidClear(*World, Footprint, GroundZ, Height, GearSolidSkin);
+			const bool bSkinClear = RTSHullClearance::IsSolidClear(*World, Footprint, GroundZ, Height, GearSolidSkin, Unit->GetGroundNormal());
 			// Within the skin the hull may still drive on, up to touching, but is checked again every update: along a wall
 			// the navmesh's reading wavers by a few millimetres, which must not stop a hull that touches nothing.
-			if ((bSkinClear || RTSHullClearance::IsSolidClear(*World, Footprint, GroundZ, Height, 0.f))
+			if ((bSkinClear || RTSHullClearance::IsSolidClear(*World, Footprint, GroundZ, Height, 0.f, Unit->GetGroundNormal()))
 				&& (Clearance >= 0.f || IsGroundUnder(Footprint, GroundZ)))
 			{
 				if (bSkinClear && Clearance >= 0.f)
@@ -464,7 +463,7 @@ bool URTSUnitMovement::IsPoseClear(const FVector& Location, float Yaw, FCurrentC
 			}
 			// A hull grazing something may still move along or away from it, or turn, as long as it reaches no further in than
 			// GrazeDepth; avoidance backs it out of the graze (URTSAvoidanceSubsystem).
-			if (RTSHullClearance::IsSolidClear(*World, Footprint, GroundZ, Height, -GrazeDepth) && IsGroundUnder(Footprint, GroundZ))
+			if (RTSHullClearance::IsSolidClear(*World, Footprint, GroundZ, Height, -GrazeDepth, Unit->GetGroundNormal()) && IsGroundUnder(Footprint, GroundZ))
 			{
 				if (FMath::IsNaN(InOutCurrent.Clearance))
 				{
@@ -494,6 +493,56 @@ bool URTSUnitMovement::IsPoseClear(const FVector& Location, float Yaw, FCurrentC
 	const float Turned = FMath::Abs(FMath::FindDeltaAngleDegrees(UpdatedComponent->GetComponentRotation().Yaw, Yaw));
 	const float Band = RTSHullClearance::GetNavUncertainty(*NavMesh) + (UE_SQRT_2 - 1.f) * RTSHullClearance::GetErosion(*NavMesh);
 	return bNotToward && (Turned < StraightTurn ? Clearance >= FMath::Min(-Band, InOutCurrent.Clearance) : Clearance >= InOutCurrent.Clearance - NavNoise);
+}
+
+bool URTSUnitMovement::IsClearOfSolids(const FRTSFootprint& Footprint)
+{
+	ARTSUnit* Unit = GetUnit();
+	UWorld* World = GetWorld();
+	if (!Unit || !World)
+	{
+		return true;
+	}
+	const double Now = World->GetTimeSeconds();
+	const float GroundOffset = Unit->GetGroundOffset();
+	const float Height = Unit->GetShape().Hull.GetSize().Z;
+	if (Solids.IsCurrent(Footprint, Now))
+	{
+		FRTSSolidStats::AddReuse();
+	}
+	else
+	{
+		const float Margin = FMath::Max(SolidMinMargin, FMath::Abs(Drive.GetSpeed(Limits)) * static_cast<float>(SolidLookSeconds));
+		const double Lifetime = SolidLookSeconds * (0.75 + 0.5 * (Unit->GetUniqueID() % 16) / 16.0);
+		Solids.Update(*World, Footprint, Footprint.Center.Z - GroundOffset, Height, Margin, Now, Lifetime);
+	}
+	if (Solids.Solids.IsEmpty())
+	{
+		return true;
+	}
+
+	const float StepHeight = GetNavAgentPropertiesRef().AgentStepHeight > 0.f ? GetNavAgentPropertiesRef().AgentStepHeight : SolidStepHeight;
+	const FVector Normal = Unit->GetGroundNormal();
+	auto BoxOf = [&](const FRTSFootprint& Pose)
+	{
+		return RTSHullClearance::MakeHullBox(Pose, Pose.Center.Z - GroundOffset, Normal, StepHeight, Height, 0.f);
+	};
+	const FRTSFootprint Here = Unit->GetFootprint();
+	const RTSHullClearance::FHullBox Current = BoxOf(Here);
+	// The box at the end of a step covers all the step's leading face swept as long as the step is shorter than the box is
+	// narrow; a longer one, which would jump a thin wall, is looked at on the way too.
+	const float Moved = FVector::Dist2D(Here.Center, Footprint.Center);
+	const int32 Pieces = FMath::Max(1, FMath::CeilToInt32(Moved / FMath::Max(Footprint.Radius, 1.f)));
+	for (int32 Piece = 1; Piece < Pieces; ++Piece)
+	{
+		FRTSFootprint Between = Footprint;
+		Between.Center = FMath::Lerp(Here.Center, Footprint.Center, static_cast<float>(Piece) / Pieces);
+		if (!Solids.IsClear(BoxOf(Between), Current, SolidTolerance))
+		{
+			return false;
+		}
+	}
+	return Solids.IsClear(BoxOf(Footprint), Current, SolidTolerance);
 }
 
 bool URTSUnitMovement::IsGroundUnder(const FRTSFootprint& Footprint, float GroundZ) const

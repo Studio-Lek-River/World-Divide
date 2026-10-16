@@ -602,3 +602,61 @@ At 30 and 120 moving M20s, the game thread went from 2.09 to 1.58 ms and from 3.
 - **#149 (LODs):** the wheel sets keep their per-instance LOD selection; their bounds follow their instances.
 - **#150 (materials):** no material change; each set keeps its team-colour material instances.
 - **Motion vectors of the wheels:** they now come from instance updates instead of a proxy rebuilt each frame. Nothing smeared in the checks so far; a close look on a vehicle whose wheels show (the M20's skirts hide most of its own) is part of the manual check.
+
+## #168 (hulls stopped at solids the navmesh leaves out)
+
+Same machine and build configuration as #165, on 2026-10-17. "Before" is `a4e8364` (the #165 follow-up HEAD), stored as a long baseline (`-SaveBaseline`). "After" is the #168 change, run with `ue.ps1 -Task bench -Long -Unit DA_TestM20Guardian,DA_TestTank -Compare`. The comparison names `RTSBenchCommand.cpp` as changed: it only gained the solid counters below.
+
+### Root cause and what changed
+
+- **Why hulls went through.** `URTSUnitMovement::IsPoseClear` asked the collision only within 10 cm of a navmesh wall. A wall or prop whose navigation is off does not cut the navmesh, so the hull read as clear and drove in.
+- **Broad phase.** Each vehicle keeps an `FRTSSolidNeighbourhood`: a single `OverlapMultiByObjectType` of a level box round the hull, as wide as its half diagonal plus a margin (max of 200 cm or one second of driving). It keeps only components that block pawns and are not navigation relevant. The ground, ramps, blocks and buildings are left to the navmesh. The neighbourhood is reused until the hull leaves the margin or about a second passes, staggered per unit. The kept list is inline, so normal driving allocates nothing.
+- **Narrow phase.** Only where the neighbourhood holds a solid: `OverlapComponent` of the hull's real box against those components alone.
+  - The box is tilted to the ground normal and starts at the agent's step height, so slopes and ramps stay traversable.
+  - A hull already in a solid may only go no deeper (`ComputePenetration`).
+  - A step longer than the hull's half width is checked on the way too, so a thin wall cannot be jumped.
+- **Movement integration.** The check runs inside `IsPoseClear`, so the gear's existing blocked shares, pivots and back-off stop it. Realized motion and track/wheel travel stay what was driven, and #165's running gear is untouched. Avoidance drops a vehicle push that would end in such a solid. The navmesh-band `IsSolidClear` box now also follows the ground's slope.
+
+### Before and after, 240 units, long method (three 60 s samples)
+
+| Unit | Scenario | Game ms (p95) before → after | Locomotion ms before → after: mean (p95) |
+|---|---|---|---|
+| M20 Guardian | move | 4.17 (7.85) → 4.21 (7.86) | 0.44 (1.15) → 0.45 (1.16) |
+| M20 Guardian | idle | 1.94 (2.33) → 1.94 (2.34) | 0.05 (0.07) → 0.05 (0.07) |
+| `DA_TestTank` | move | 2.92 (4.12) → 2.98 (4.22) | 0.44 (0.97) → 0.46 (1.01) |
+
+Every row is inside the run-to-run spread of about 0.6 ms. At 1, 30 and 120 moving M20s the locomotion p95 is 0.02, 0.18 and 0.62 ms, as before.
+
+### Solid queries (from the bench's new "Solids" table, 240 moving units, per frame)
+
+| Unit | Broad overlaps | Reused | Narrow checks | Broad ms | Narrow ms |
+|---|---:|---:|---:|---:|---:|
+| M20 Guardian | 0.83 | 99.4% | 0 | 0.0056 | 0 |
+| `DA_TestTank` | 0.60 | 99.7% | 0 | 0.0055 | 0 |
+
+A broad overlap costs about 7 µs. L_Bench has no solids that navigation leaves out, so no narrow check runs there; standing units make no query at all.
+
+### Against the budget
+
+| Budget (240 moving M20s) | Before (`a4e8364`) | After |
+|---|---|---|
+| Locomotion mean ≤ 1.0 ms | Met (0.44) | **Met (0.44–0.45)** |
+| Locomotion p95 ≤ 2.0 ms | Met (1.15) | **Met (1.15–1.16)** |
+
+### Collision results (`WorldDivide.Navigation.VehicleOffNavmesh`, 30, 60 and 120 Hz)
+
+- **Flat-out drives at a 1 m wall that navigation leaves out.** The M20 approaches head-on, at 30° and from the far side; the placeholder tank head-on; the Abrams head-on and at -30°; the flak truck head-on. A turret is turned to the rear first, so the barrel does not stop the hull (#162). Every hull stops 0.3–12.9 cm short, never inside.
+- **A 10 cm wall at top speed:** the M20 and the truck stop 1.3–4.3 cm short, with no tunnelling.
+- **Pivot beside a wall 15 cm off the side:** turns until a corner meets it, never more than 1 cm in, and holds.
+- **Along a wall 30 cm off the side:** arrives, never more than 1 cm in.
+- **A group of six M20s past a pillar:** no hull more than 1 cm into it.
+- **Over the ridge:** the Abrams and the truck still climb it and arrive.
+- **The neighbourhood itself:** open ground and Block_North give no solid; the prop is found. The neighbourhood expires on moving past the margin or after its lifetime. A tilted box on the ridge's ramp is clear where a level one would cut in.
+- **`WorldDivide.Navigation.VehicleBlocked`** now drives into a real wall that navigation leaves out, instead of the removed `TestObstacles` stand-in.
+
+### Remaining limitations
+
+- **A gun over the front stops a hull at the barrel's reach** when the turret cannot turn aside, as #162 designed. The 0–50 cm gap applies to the hull itself.
+- **Narrow-phase cost is not measured at scale:** L_Bench has no such solids. A bench scene with props that navigation leaves out would measure it.
+- **No Insights capture for #168.** The bench counters time the broad and narrow phases directly; the trace scopes `FRTSSolidNeighbourhood::Update` and `::IsClear` are in place for one.
+- **A nav-relevant prop placed at runtime** relies on the navmesh rebuild, as before: up to the existing 1 s cache expiry.

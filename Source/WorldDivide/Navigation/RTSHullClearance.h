@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 
 class ARecastNavMesh;
+class UPrimitiveComponent;
 class UWorld;
 struct FNavPathPoint;
 struct FRTSFootprint;
@@ -27,6 +28,9 @@ struct FRTSUnitShape;
  * navmesh alone cannot tell where in that cell the face is, so it errs safe by up to GetNavUncertainty. Within that of an
  * obstacle the collision decides: a path into one ends where the hull's box overlaps nothing solid (AdjustPath), and
  * URTSAvoidanceSubsystem only backs a hull that close out when its box overlaps something (IsSolidClear).
+ *
+ * A solid navigation leaves out does not cut the navmesh at all, so none of this sees it: FRTSSolidNeighbourhood finds such
+ * solids round a vehicle's hull, and its gear and avoidance's pushes keep the hull out of them by their collision (#168).
  */
 namespace RTSHullClearance
 {
@@ -62,9 +66,26 @@ namespace RTSHullClearance
 
 	/**
 	 * True when the box of Footprint, grown by Skin, overlaps nothing solid between a step above GroundZ and Height above
-	 * it: one overlap against the world's static and dynamic geometry, which units are not.
+	 * it, tilted to GroundNormal: one overlap against the world's static and dynamic geometry, which units are not.
 	 */
-	WORLDDIVIDE_API bool IsSolidClear(const UWorld& World, const FRTSFootprint& Footprint, float GroundZ, float Height, float Skin);
+	WORLDDIVIDE_API bool IsSolidClear(const UWorld& World, const FRTSFootprint& Footprint, float GroundZ, float Height, float Skin,
+		const FVector& GroundNormal = FVector::UpVector);
+
+	/** A hull's box as the collision sees it, in world space. */
+	struct FHullBox
+	{
+		FVector Center = FVector::ZeroVector;
+		FQuat Rotation = FQuat::Identity;
+		FVector HalfExtent = FVector::ZeroVector;
+	};
+
+	/**
+	 * The box of Footprint grown by Skin, from StepHeight above the ground under its centre, at GroundZ, up to Height above
+	 * it, its floor parallel to the ground of GroundNormal: on a slope the hull's ends lie no closer to the ground than its
+	 * middle, so the ground and a ramp the hull stands on never reach into it.
+	 */
+	WORLDDIVIDE_API FHullBox MakeHullBox(const FRTSFootprint& Footprint, float GroundZ, const FVector& GroundNormal, float StepHeight,
+		float Height, float Skin);
 
 	/** The footprint of Shape standing at Location, its long side along Heading. */
 	WORLDDIVIDE_API FRTSFootprint MakeFootprint(const FRTSUnitShape& Shape, const FVector& Location, const FVector2D& Heading);
@@ -82,4 +103,63 @@ struct FRTSHullClearanceCache
 
 	/** True while Footprint cannot have moved or turned into anything since the check. */
 	WORLDDIVIDE_API bool IsClear(const FRTSFootprint& Footprint, double Now) const;
+};
+
+/**
+ * The solids near a hull that the navmesh leaves out (#168): a wall or prop whose navigation is off stands on the navmesh
+ * without cutting it, so GetClearance cannot see it. One overlap of a box round the hull, wide enough for any heading
+ * within Margin of where it was made, finds what blocks a pawn there and is not navigation relevant; everything that is,
+ * the ground, ramps, blocks and buildings, is the navmesh's. The hull's own box is checked against those few components
+ * alone, and only while there are any: on open ground a moving hull pays one overlap every second or so.
+ */
+struct FRTSSolidNeighbourhood
+{
+	FVector Center = FVector::ZeroVector;
+	/** How far the hull may drive from Center and still lie inside what was looked at; negative when nothing was. */
+	float Margin = -1.f;
+	/** World seconds after which a newly placed prop may stand there. */
+	double ExpireTime = 0.0;
+	TArray<TWeakObjectPtr<UPrimitiveComponent>, TInlineAllocator<4>> Solids;
+
+	void Reset()
+	{
+		Margin = -1.f;
+		Solids.Reset();
+	}
+
+	/** True while Footprint, at any heading, lies inside what was looked at. */
+	WORLDDIVIDE_API bool IsCurrent(const FRTSFootprint& Footprint, double Now) const;
+
+	/**
+	 * Looks again round Footprint, standing at GroundZ with a hull Height high, for a hull that may drive up to InMargin
+	 * before Now + Lifetime.
+	 */
+	WORLDDIVIDE_API void Update(const UWorld& World, const FRTSFootprint& Footprint, float GroundZ, float Height, float InMargin,
+		double Now, double Lifetime);
+
+	/**
+	 * True when Box overlaps none of the solids, or goes no deeper into one than Current, the hull where it stands, already
+	 * is: a hull a prop was dropped on may still drive out of it. Tolerance shrinks both boxes, so a hull stopped against a
+	 * face may drive and turn along it.
+	 */
+	WORLDDIVIDE_API bool IsClear(const RTSHullClearance::FHullBox& Box, const RTSHullClearance::FHullBox& Current, float Tolerance) const;
+};
+
+/** What the solid neighbourhoods cost on this machine since the benchmark last read it, game thread only. */
+struct FRTSSolidStats
+{
+	/** Broad overlaps made, and checks that reused a neighbourhood instead. */
+	int32 Updates = 0;
+	int32 Reuses = 0;
+	/** Hull checks against a neighbourhood with solids in it, and the component queries they made. */
+	int32 Checks = 0;
+	int32 ComponentQueries = 0;
+	double BroadSeconds = 0.0;
+	double NarrowSeconds = 0.0;
+
+	/** Counts a check that found its neighbourhood current. */
+	WORLDDIVIDE_API static void AddReuse();
+
+	/** The stats gathered since the last call, which starts them again. */
+	WORLDDIVIDE_API static FRTSSolidStats Take();
 };
