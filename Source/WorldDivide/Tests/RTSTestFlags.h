@@ -7,12 +7,16 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Engine/World.h"
+#if WITH_EDITOR
+#include "Editor.h"
+#endif
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
 #include "GameFramework/WorldSettings.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "Navigation/RTSNavAgents.h"
 #include "NavigationSystem.h"
+#include "Misc/App.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -85,9 +89,56 @@ namespace RTSTests
 		return HasNavigationAtStarts(World);
 	}
 
-	/** Runs World at the test time dilation. A listen server replicates it to its clients. */
+	/** The fixed game step rate in Hz the PIE smoke tests tick at: -RTSTestFixedStep=N on the command line, 0 (off) without it. */
+	inline double GetTestFixedStepRate()
+	{
+		double Rate = 0.0;
+		FParse::Value(FCommandLine::Get(), TEXT("RTSTestFixedStep="), Rate);
+		return FMath::Max(Rate, 0.0);
+	}
+
+#if WITH_EDITOR
+	/**
+	 * Ticks the engine at a fixed 1/Rate game seconds per frame, without the editor's frame rate cap, until this PIE session
+	 * ends: game time then runs as fast as the CPU ticks instead of in step with real time. The engine's previous time step
+	 * is restored when PIE ends, so the Session Frontend leaves the editor as it was.
+	 */
+	inline void ApplyTestFixedStep(double Rate)
+	{
+		static FDelegateHandle RestoreHandle;
+		if (RestoreHandle.IsValid())
+		{
+			return;
+		}
+		const bool bWasFixed = FApp::UseFixedTimeStep();
+		const double WasDeltaTime = FApp::GetFixedDeltaTime();
+		FApp::SetUseFixedTimeStep(true);
+		FApp::SetFixedDeltaTime(1.0 / Rate);
+		RestoreHandle = FEditorDelegates::EndPIE.AddLambda([bWasFixed, WasDeltaTime](bool)
+		{
+			FApp::SetUseFixedTimeStep(bWasFixed);
+			FApp::SetFixedDeltaTime(WasDeltaTime);
+			FEditorDelegates::EndPIE.Remove(RestoreHandle);
+			RestoreHandle.Reset();
+		});
+	}
+#endif
+
+	/**
+	 * Speeds up World's game time for the test run. With -RTSTestFixedStep the engine ticks at that fixed step as fast as it
+	 * can (every world of the session alike); otherwise World runs at the test time dilation, which a listen server
+	 * replicates to its clients.
+	 */
 	inline void ApplyTestTimeDilation(UWorld& World)
 	{
+		const double FixedStepRate = GetTestFixedStepRate();
+		if (FixedStepRate > 0.0)
+		{
+#if WITH_EDITOR
+			ApplyTestFixedStep(FixedStepRate);
+#endif
+			return;
+		}
 		if (AWorldSettings* Settings = World.GetWorldSettings())
 		{
 			Settings->SetTimeDilation(GetTestTimeDilation());

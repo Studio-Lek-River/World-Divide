@@ -88,8 +88,8 @@ namespace RTSAvoidanceTests
 	 */
 	FBox2D Strip(ForceInit);
 	constexpr float StripMargin = 500.f;
-	/** Real seconds sampled in each half. */
-	constexpr double FrameTimeSampleSeconds = 4.0;
+	/** Game seconds sampled in each half, so a fixed-step run samples the same walk as a real-time one. */
+	constexpr double FrameTimeSampleSeconds = 16.0;
 	/** Mean time of the avoidance pass over 200 units that would start to show in a 60 fps frame. */
 	constexpr double FrameTimeBudgetMs = 1.0;
 
@@ -180,7 +180,8 @@ namespace RTSAvoidanceTests
 		TArray<FVector> LastLocations;
 		TArray<TOptional<float>> CrossingYs;
 
-		// Frame-time test only.
+		// Frame-time test only. SampleStart is in game seconds, LastFrame in real ones.
+		double SampleStart = 0.0;
 		double LastFrame = 0.0;
 		int32 Frames = 0;
 		double FrameSeconds = 0.0;
@@ -576,8 +577,8 @@ bool FRTSAvoidanceIssueFrameTimeMove::Update()
 	Test->AddInfo(FString::Printf(TEXT("Walking to %s, the formation %.0f x %.0f cm"), *Target.ToCompactString(), Bounds.GetSize().X, Bounds.GetSize().Y));
 	GetController(*Test)->Server_IssueCommand(Units, MakeMove(Target));
 
-	State->PhaseStart = FPlatformTime::Seconds();
-	State->LastFrame = State->PhaseStart;
+	State->SampleStart = GetController(*Test)->GetWorld()->GetTimeSeconds();
+	State->LastFrame = FPlatformTime::Seconds();
 	State->Frames = 0;
 	State->FrameSeconds = 0.0;
 	State->Passes = 0;
@@ -613,7 +614,7 @@ bool FRTSAvoidanceSampleFrameTime::Update()
 	{
 		State->WalkingSum += Unit->GetVelocity().SizeSquared2D() > 1.f ? 1 : 0;
 	}
-	if (Now - State->PhaseStart < FrameTimeSampleSeconds)
+	if (World->GetTimeSeconds() - State->SampleStart < FrameTimeSampleSeconds)
 	{
 		return false;
 	}

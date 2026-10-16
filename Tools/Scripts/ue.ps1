@@ -20,7 +20,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task u
 
 The engine is taken from $env:UE_ROOT, falling back to D:\Program Files\Epic Games\UE_5.8.
 Exits nonzero on any failure: 2 when the editor is running (build, editor), 3 when setup must rewrite read-only LFS assets.
-The PIE smoke tests run TimeDilation game seconds per real second (default 4); -TimeDilation 1 runs them at real time.
+The PIE smoke tests tick a fixed 1/30 game second per frame as fast as the CPU allows (-RTSTestFixedStep=30); -TimeDilation N
+instead runs them in step with real time at N game seconds per real second, -TimeDilation 1 at real time.
 Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
 Editor opens the editor with the Unreal MCP server at http://127.0.0.1:8000/mcp (docs/ui/AI_TEAM.md); test and setup run without it.
 Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in the UI test state for each faction look at
@@ -48,7 +49,7 @@ param(
 
 	[string]$Filter = 'WorldDivide',
 
-	[double]$TimeDilation = 4,
+	[double]$TimeDilation = 0,
 
 	[switch]$Render,
 
@@ -134,8 +135,10 @@ function Invoke-Test {
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\AutomationRun.log'
 	if (Test-Path $ReportDir) { Remove-Item -Recurse -Force $ReportDir }
 
+	# A fixed time step unless -TimeDilation asks for real-time ticking (RTSTests::ApplyTestTimeDilation).
+	$TimeArg = if ($TimeDilation -gt 0) { "-RTSTestTimeDilation=$TimeDilation" } else { '-RTSTestFixedStep=30' }
 	& $EditorCmd $Project "-ExecCmds=Automation RunTests $Filter;Quit" '-TestExit=Automation Test Queue Empty' `
-		"-ReportExportPath=$ReportDir" "-abslog=$LogFile" "-RTSTestTimeDilation=$TimeDilation" $NoMCPPlugins -unattended -nullrhi -nosplash -nosound
+		"-ReportExportPath=$ReportDir" "-abslog=$LogFile" $TimeArg $NoMCPPlugins -unattended -nullrhi -nosplash -nosound
 	$EditorExit = $LASTEXITCODE
 
 	$Index = Join-Path $ReportDir 'index.json'
