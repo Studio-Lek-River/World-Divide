@@ -876,6 +876,8 @@ void ARTSUnit::TickOrders(float DeltaSeconds)
 		{
 			AI->StopMovement();
 		}
+		// Stopping the path leaves the speed, which the movement would brake off over several frames, coasting on.
+		Movement->StopMovementImmediately();
 		return;
 	}
 
