@@ -9,6 +9,7 @@
 #include "Tests/RTSTestWorld.h"
 #include "Units/RTSBarrelClearance.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitMovement.h"
 #include "Units/RTSUnitShape.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -121,6 +122,8 @@ namespace RTSBarrelClearanceTests
 		Unit.GetWorld()->TimeSeconds += Step;
 		if (bTick)
 		{
+			// The movement first, as the engine ticks it: a vehicle's gear turns its hull (#138).
+			Unit.GetUnitMovement()->TickComponent(Step, LEVELTICK_All, nullptr);
 			Unit.Tick(Step);
 		}
 		else

@@ -29,6 +29,7 @@
 #include "UnrealClient.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitMovement.h"
 #include "WorldDivide.h"
 
 /**
@@ -39,9 +40,13 @@
  * from the same fixed camera, at a fixed 1920x1080 with dynamic resolution off and the screen percentage at 100, without a
  * frame rate cap. Logged and written to Saved/Bench/<UnitData>/bench.csv and bench.md per scenario: the frame, game thread,
  * render thread, RHI thread and GPU times, the slowest game thread frame, draw calls, triangles drawn, the avoidance pass
- * and the weapons' target search, the memory in use and its peak, and the internal render resolution. The table's header
+ * and the weapons' target search, the vehicles' locomotion (#138), the memory in use and its peak, and the internal render resolution. The table's header
  * names the CPU, GPU, driver, RHI and build it was measured on. With -RTSBenchQuit on the command
  * line the game quits when done, with exit code 1 on failure.
+ *
+ * The long method (a third argument "long", ue.ps1 -Long; #138) warms each scenario up for 10 s and then measures 60 s samples,
+ * three at the largest count and one below it, each its own row with the 95th percentile of the game thread next to the mean.
+ * Its units keep driving: the move order goes back and forth between the grid's place and a point 30 m west every 15 s.
  */
 namespace RTSBenchCommand
 {
@@ -59,6 +64,16 @@ namespace RTSBenchCommand
 	constexpr double ClearSeconds = 1.0;
 	constexpr int32 MeasureFrames = 120;
 
+	/** The long method: warm-up and sample length in real seconds, the samples at the largest count and below it. */
+	constexpr double LongWarmupSeconds = 10.0;
+	constexpr double LongSampleSeconds = 60.0;
+	constexpr int32 LongSamplesAtLargest = 3;
+	constexpr int32 LongSamplesBelow = 1;
+	/** Real seconds between the long method's move orders, which alternate between the point ahead and the grid's place. */
+	constexpr double LongMoveSeconds = 15.0;
+	/** Frames a sample keeps room for without growing: 60 s above 500 frames per second. */
+	constexpr int32 LongFrameCapacity = 32768;
+
 	/**
 	 * The grid: units face +X in rows across Y, as a formation would stand: each unit's length plus RowGap apart along X and
 	 * its width plus ColumnGap apart along Y, about square overall, centred on GridCentre. The move order sends them MoveDistance
@@ -71,6 +86,14 @@ namespace RTSBenchCommand
 
 	/** The fixed camera: looking down at the RTS pitch over the middle of the grid and the move, far enough to see both. */
 	const FVector CameraLookAt(MoveDistance / 2.f, 0.f, 0.f);
+
+	/**
+	 * The long method's grid and drive: its units shoot at whatever comes into range while they stand, and over minutes 240
+	 * of them would destroy the enemy's headquarters and end the match. So the grid stands south-west of the middle, every
+	 * unit out of range of the headquarters in the north-east corner, and drives the other way: half as far, to the west.
+	 */
+	const FVector LongGridCentre(-3000.f, -1000.f, 0.f);
+	constexpr float LongMoveDistance = -3000.f;
 	constexpr float CameraPitch = -55.f;
 	constexpr float CameraDistance = 17000.f;
 	constexpr float CameraFOV = 60.f;
@@ -87,6 +110,8 @@ namespace RTSBenchCommand
 	{
 		FString Scenario;
 		int32 Count = 0;
+		/** The long method's sample, from 1; 0 for the short method. */
+		int32 Sample = 0;
 		int32 Units = 0;
 		int32 Frames = 0;
 		double FrameMs = 0.0;
@@ -103,14 +128,31 @@ namespace RTSBenchCommand
 		double UsedMemoryMB = 0.0;
 		double PeakMemoryMB = 0.0;
 		FIntPoint RenderSize = FIntPoint::ZeroValue;
+		double LocomotionMs = 0.0;
+		double MaxLocomotionMs = 0.0;
+		/** Each frame's game thread and locomotion time, kept for the percentiles; reserved up front so measuring never allocates. */
+		TArray<float> GameFrames;
+		TArray<float> LocomotionFrames;
+		double P95GameMs = 0.0;
+		double P95LocomotionMs = 0.0;
 
 		void Add(double InFrameMs, double InGameMs, double InRenderMs, double InRHIMs, double InGPUMs, double InDrawCalls,
-			double InTriangles, double InAvoidanceMs, double InSearchMs)
+			double InTriangles, double InAvoidanceMs, double InSearchMs, double InLocomotionMs)
 		{
+			LocomotionMs += InLocomotionMs;
+			MaxLocomotionMs = FMath::Max(MaxLocomotionMs, InLocomotionMs);
+			if (LocomotionFrames.Num() < LocomotionFrames.Max())
+			{
+				LocomotionFrames.Add(InLocomotionMs);
+			}
 			++Frames;
 			FrameMs += InFrameMs;
 			GameMs += InGameMs;
 			MaxGameMs = FMath::Max(MaxGameMs, InGameMs);
+			if (GameFrames.Num() < GameFrames.Max())
+			{
+				GameFrames.Add(InGameMs);
+			}
 			RenderMs += InRenderMs;
 			RHIMs += InRHIMs;
 			GPUMs += InGPUMs;
@@ -123,32 +165,51 @@ namespace RTSBenchCommand
 
 		double Mean(double Sum) const { return Frames > 0 ? Sum / Frames : 0.0; }
 
+		/** The 95th percentiles of the kept frames, once the sample is complete. */
+		void TakePercentiles()
+		{
+			auto P95 = [](TArray<float>& Frames)
+			{
+				if (Frames.IsEmpty())
+				{
+					return 0.0;
+				}
+				Frames.Sort();
+				const double Value = Frames[FMath::Min(Frames.Num() - 1, FMath::CeilToInt(0.95 * Frames.Num()) - 1)];
+				Frames.Empty();
+				return Value;
+			};
+			P95GameMs = P95(GameFrames);
+			P95LocomotionMs = P95(LocomotionFrames);
+		}
+
 		static FString CsvHeader()
 		{
-			return TEXT("count,scenario,units,frame_ms,game_ms,max_game_ms,render_ms,rhi_ms,gpu_ms,draw_calls,triangles,")
-				TEXT("avoidance_ms,max_avoidance_ms,search_ms,used_memory_mb,peak_memory_mb,render_width,render_height");
+			return TEXT("count,scenario,sample,frames,units,frame_ms,game_ms,p95_game_ms,max_game_ms,render_ms,rhi_ms,gpu_ms,draw_calls,triangles,")
+				TEXT("avoidance_ms,max_avoidance_ms,search_ms,locomotion_ms,p95_locomotion_ms,max_locomotion_ms,used_memory_mb,peak_memory_mb,render_width,render_height");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d"),
-				Count, *Scenario, Units, Mean(FrameMs), Mean(GameMs), MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
-				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), UsedMemoryMB,
-				PeakMemoryMB, RenderSize.X, RenderSize.Y);
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d"),
+				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
+				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
+				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y);
 		}
 
 		static FString MarkdownHeader()
 		{
-			return TEXT("| Units | Scenario | Frame ms | Game ms (max) | Render ms | RHI ms | GPU ms | Draw calls | Triangles | ")
-				TEXT("Avoidance ms (max) | Target search ms | Memory MB (peak) | Render res |\n")
-				TEXT("|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|\n");
+			return TEXT("| Units | Scenario | Sample | Frame ms | Game ms (p95, max) | Render ms | RHI ms | GPU ms | Draw calls | Triangles | ")
+				TEXT("Avoidance ms (max) | Target search ms | Locomotion ms (p95, max) | Memory MB (peak) | Render res |\n")
+				TEXT("|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|\n");
 		}
 
 		FString ToMarkdown() const
 		{
-			return FString::Printf(TEXT("| %d | %s | %.2f | %.2f (%.2f) | %.2f | %.2f | %.2f | %.0f | %.2f M | %.3f (%.3f) | %.3f | %.0f (%.0f) | %dx%d |\n"),
-				Count, *Scenario, Mean(FrameMs), Mean(GameMs), MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
-				Mean(DrawCalls), Mean(Triangles) / 1.0e6, Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), UsedMemoryMB,
+			return FString::Printf(TEXT("| %d | %s | %s | %.2f | %.2f (%.2f, %.2f) | %.2f | %.2f | %.2f | %.0f | %.2f M | %.3f (%.3f) | %.3f | %.3f (%.3f, %.3f) | %.0f (%.0f) | %dx%d |\n"),
+				Count, *Scenario, Sample > 0 ? *FString::Printf(TEXT("%d (%d frames)"), Sample, Frames) : TEXT("-"), Mean(FrameMs),
+				Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs), Mean(DrawCalls), Mean(Triangles) / 1.0e6,
+				Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs, MaxLocomotionMs, UsedMemoryMB,
 				PeakMemoryMB, RenderSize.X, RenderSize.Y);
 		}
 	};
@@ -156,8 +217,8 @@ namespace RTSBenchCommand
 	class FBenchRun : public TSharedFromThis<FBenchRun>
 	{
 	public:
-		FBenchRun(UWorld& InWorld, const FString& InUnitName, const TArray<int32>& InCounts)
-			: World(&InWorld), UnitName(InUnitName), Counts(InCounts)
+		FBenchRun(UWorld& InWorld, const FString& InUnitName, const TArray<int32>& InCounts, bool bInLong)
+			: World(&InWorld), UnitName(InUnitName), Counts(InCounts), bLong(bInLong)
 		{
 		}
 
@@ -206,13 +267,13 @@ namespace RTSBenchCommand
 			case EStep::Resize:
 				return Resize();
 			case EStep::SettleIdle:
-				if (FPlatformTime::Seconds() - StepStart >= SettleSeconds)
+				if (FPlatformTime::Seconds() - StepStart >= (bLong ? LongWarmupSeconds : SettleSeconds))
 				{
 					BeginMeasure(TEXT("idle"), EStep::MeasureIdle);
 				}
 				return true;
 			case EStep::MeasureIdle:
-				if (Measure())
+				if (Measure() && !NextSample(EStep::MeasureIdle))
 				{
 					Lead = FScenarioStats();
 					IssueMove();
@@ -222,14 +283,17 @@ namespace RTSBenchCommand
 			case EStep::LeadMove:
 				// The order's own frame is the dispatch; its cost shows in the slowest game thread frame of the move.
 				TakeFrame(Lead);
-				if (FPlatformTime::Seconds() - StepStart >= MoveLeadSeconds)
+				KeepMoving();
+				if (FPlatformTime::Seconds() - StepStart >= (bLong ? LongWarmupSeconds : MoveLeadSeconds))
 				{
 					BeginMeasure(TEXT("move"), EStep::MeasureMove);
 				}
 				return true;
 			case EStep::MeasureMove:
-				if (Measure())
+				KeepMoving();
+				if (Measure() && !NextSample(EStep::MeasureMove))
 				{
+					++CountIndex;
 					ClearUnits();
 					GoTo(EStep::Clear);
 				}
@@ -348,7 +412,8 @@ namespace RTSBenchCommand
 			Camera->GetCameraComponent()->SetFieldOfView(CameraFOV);
 			Camera->GetCameraComponent()->bConstrainAspectRatio = false;
 			const FRotator Rotation(CameraPitch, 0.f, 0.f);
-			Camera->SetActorLocationAndRotation(CameraLookAt - Rotation.Vector() * CameraDistance, Rotation);
+			const FVector LookAt = bLong ? LongGridCentre + FVector(LongMoveDistance / 2.f, 0.f, 0.f) : CameraLookAt;
+			Camera->SetActorLocationAndRotation(LookAt - Rotation.Vector() * CameraDistance, Rotation);
 			GetController()->SetViewTarget(Camera.Get());
 		}
 
@@ -390,7 +455,7 @@ namespace RTSBenchCommand
 			const int32 Kinds = FMath::Min(Count, UnitData.Num());
 			for (int32 Index = 0; Index < Kinds; ++Index)
 			{
-				ARTSUnit* First = SpawnUnit(GridCentre + FVector(0.f, 0.f, 10000.f * (Index + 1)), Index);
+				ARTSUnit* First = SpawnUnit(GetGridCentre() + FVector(0.f, 0.f, 10000.f * (Index + 1)), Index);
 				if (!First)
 				{
 					return false;
@@ -404,7 +469,7 @@ namespace RTSBenchCommand
 			const FVector2D Size((Rows - 1) * Spacing.X, (Columns - 1) * Spacing.Y);
 			for (int32 Index = 0; Index < Count; ++Index)
 			{
-				const FVector Location = GridCentre + FVector(Index / Columns * Spacing.X - Size.X / 2.f,
+				const FVector Location = GetGridCentre() + FVector(Index / Columns * Spacing.X - Size.X / 2.f,
 					Index % Columns * Spacing.Y - Size.Y / 2.f, 0.f);
 				if (Index < Kinds)
 				{
@@ -425,6 +490,17 @@ namespace RTSBenchCommand
 			return true;
 		}
 
+		FVector GetGridCentre() const { return bLong ? LongGridCentre : GridCentre; }
+
+		/** The long method's units keep driving: back to the grid's place, then ahead again, each LongMoveSeconds. */
+		void KeepMoving()
+		{
+			if (bLong && FPlatformTime::Seconds() - LastMoveTime >= LongMoveSeconds)
+			{
+				IssueMove();
+			}
+		}
+
 		void IssueMove()
 		{
 			TArray<ARTSUnit*> Ordered;
@@ -437,8 +513,10 @@ namespace RTSBenchCommand
 			}
 			FRTSCommand Move;
 			Move.Type = ERTSCommandType::Move;
-			Move.TargetLocation = GridCentre + FVector(MoveDistance, 0.f, 0.f);
+			Move.TargetLocation = GetGridCentre() + FVector(bMoveBack ? 0.f : bLong ? LongMoveDistance : MoveDistance, 0.f, 0.f);
 			GetController()->Server_IssueCommand(Ordered, Move);
+			bMoveBack = !bMoveBack;
+			LastMoveTime = FPlatformTime::Seconds();
 		}
 
 		void ClearUnits()
@@ -455,6 +533,7 @@ namespace RTSBenchCommand
 				}
 			}
 			Units.Reset();
+			bMoveBack = false;
 			GEngine->ForceGarbageCollection(true);
 		}
 
@@ -463,16 +542,42 @@ namespace RTSBenchCommand
 			Current = FScenarioStats();
 			Current.Scenario = Scenario;
 			Current.Count = Counts[CountIndex];
+			Current.Sample = bLong ? 1 : 0;
+			Current.GameFrames.Reserve(bLong ? LongFrameCapacity : MeasureFrames);
+			Current.LocomotionFrames.Reserve(bLong ? LongFrameCapacity : MeasureFrames);
 			// The move's slowest frame includes the order's own frame, before the measured ones.
 			Current.MaxGameMs = Next == EStep::MeasureMove ? Lead.MaxGameMs : 0.0;
 			URTSWeaponComponent::TakeSearchSeconds();
+			URTSUnitMovement::TakeLocomotionSeconds();
 			TRACE_BEGIN_REGION(*RegionName());
 			GoTo(Next);
 		}
 
 		FString RegionName() const
 		{
-			return FString::Printf(TEXT("%s_%d_%s"), *UnitName, Current.Count, *Current.Scenario);
+			return Current.Sample > 0 ? FString::Printf(TEXT("%s_%d_%s_%d"), *UnitName, Current.Count, *Current.Scenario, Current.Sample)
+				: FString::Printf(TEXT("%s_%d_%s"), *UnitName, Current.Count, *Current.Scenario);
+		}
+
+		/** Starts the long method's next sample of the same scenario; false once the scenario has all of them. */
+		bool NextSample(EStep MeasureStep)
+		{
+			const int32 Samples = Counts[CountIndex] == Counts.Last() ? LongSamplesAtLargest : LongSamplesBelow;
+			if (!bLong || Current.Sample >= Samples)
+			{
+				return false;
+			}
+			const int32 Sample = Current.Sample + 1;
+			const FString Scenario = Current.Scenario;
+			Current = FScenarioStats();
+			Current.Scenario = Scenario;
+			Current.Count = Counts[CountIndex];
+			Current.Sample = Sample;
+			Current.GameFrames.Reserve(LongFrameCapacity);
+			Current.LocomotionFrames.Reserve(LongFrameCapacity);
+			TRACE_BEGIN_REGION(*RegionName());
+			GoTo(MeasureStep);
+			return true;
 		}
 
 		/** Adds this frame's numbers to Stats. */
@@ -482,18 +587,20 @@ namespace RTSBenchCommand
 			Stats.Add(FApp::GetDeltaTime() * 1000.0, FPlatformTime::ToMilliseconds(GGameThreadTime),
 				FPlatformTime::ToMilliseconds(GRenderThreadTime), FPlatformTime::ToMilliseconds(GRHIThreadTime),
 				FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)), GNumDrawCallsRHI[0], GNumPrimitivesDrawnRHI[0],
-				Avoidance ? Avoidance->GetLastSeparateSeconds() * 1000.0 : 0.0, URTSWeaponComponent::TakeSearchSeconds() * 1000.0);
+				Avoidance ? Avoidance->GetLastSeparateSeconds() * 1000.0 : 0.0, URTSWeaponComponent::TakeSearchSeconds() * 1000.0,
+				URTSUnitMovement::TakeLocomotionSeconds() * 1000.0);
 		}
 
 		/** Takes one frame of the scenario; true once it has all of them, logged and kept. */
 		bool Measure()
 		{
 			TakeFrame(Current);
-			if (StepFrames < MeasureFrames)
+			if (bLong ? FPlatformTime::Seconds() - StepStart < LongSampleSeconds : StepFrames < MeasureFrames)
 			{
 				return false;
 			}
 			TRACE_END_REGION(*RegionName());
+			Current.TakePercentiles();
 			Current.Units = Units.Num();
 			const FPlatformMemoryStats Memory = FPlatformMemory::GetStats();
 			Current.UsedMemoryMB = Memory.UsedPhysical / (1024.0 * 1024.0);
@@ -501,10 +608,6 @@ namespace RTSBenchCommand
 			Current.RenderSize = GetRenderSize();
 			Results.Add(Current);
 			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.Bench: %s"), *Current.ToCsv());
-			if (Current.Scenario == TEXT("move"))
-			{
-				++CountIndex;
-			}
 			return true;
 		}
 
@@ -531,8 +634,8 @@ namespace RTSBenchCommand
 		{
 			const FString Dir = GetOutputDir(UnitName);
 			FString Csv = FScenarioStats::CsvHeader() + TEXT("\n");
-			FString Markdown = FString::Printf(TEXT("%s on %s, %s\n\n- CPU: %s\n- GPU: %s, driver %s, %s\n- Build: %s\n\n"),
-				*UnitName, *World->GetMapName(), *FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M")),
+			FString Markdown = FString::Printf(TEXT("%s on %s, %s, %s method\n\n- CPU: %s\n- GPU: %s, driver %s, %s\n- Build: %s\n\n"),
+				*UnitName, *World->GetMapName(), *FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M")), bLong ? TEXT("long") : TEXT("short"),
 				*FPlatformMisc::GetCPUBrand().TrimStartAndEnd(), *GRHIAdapterName, *GRHIAdapterUserDriverVersion,
 				GDynamicRHI ? GDynamicRHI->GetName() : TEXT("no RHI"), LexToString(FApp::GetBuildConfiguration()));
 			Markdown += FScenarioStats::MarkdownHeader();
@@ -589,6 +692,7 @@ namespace RTSBenchCommand
 		TWeakObjectPtr<UWorld> World;
 		FString UnitName;
 		TArray<int32> Counts;
+		bool bLong = false;
 		/** The mix, held through the garbage collection between counts, when no unit refers to it. */
 		TArray<TStrongObjectPtr<URTSUnitData>> UnitData;
 		int32 TeamId = 0;
@@ -599,6 +703,8 @@ namespace RTSBenchCommand
 		int32 StepFrames = 0;
 		double StepStart = 0.0;
 		int32 CountIndex = 0;
+		bool bMoveBack = false;
+		double LastMoveTime = 0.0;
 		FScenarioStats Current;
 		/** The frames between the move order and the measured ones. */
 		FScenarioStats Lead;
@@ -614,7 +720,7 @@ namespace RTSBenchCommand
 	{
 		if (!World || !World->IsGameWorld() || Args.IsEmpty())
 		{
-			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.Bench <UnitData> [Count,Count,...] needs a running game"));
+			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.Bench <UnitData> [Count,Count,...] [long] needs a running game"));
 			return;
 		}
 		if (FBenchRun::IsRunning())
@@ -641,12 +747,13 @@ namespace RTSBenchCommand
 			Counts = DefaultCounts;
 		}
 		Output.Logf(TEXT("rts.Debug.Bench: %s to %s"), *Args[0], *FPaths::ConvertRelativePathToFull(FBenchRun::GetOutputDir(Args[0])));
-		FBenchRun::Start(MakeShared<FBenchRun>(*World, Args[0], Counts));
+		const bool bLong = Args.Num() > 2 && Args[2] == TEXT("long");
+		FBenchRun::Start(MakeShared<FBenchRun>(*World, Args[0], Counts, bLong));
 	}
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice BenchCommand(
 		TEXT("rts.Debug.Bench"),
-		TEXT("rts.Debug.Bench <UnitData>[+UnitData...] [Count,Count,...]: measures that many of the unit, or of the mix in turn (by default 1, 30, 120 and 240) ")
+		TEXT("rts.Debug.Bench <UnitData>[+UnitData...] [Count,Count,...] [long]: measures that many of the unit, or of the mix in turn (by default 1, 30, 120 and 240) ")
 		TEXT("standing in a grid and driving on a move order, from a fixed camera, to Saved/Bench/<UnitData>."),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunBenchCommand));
 }

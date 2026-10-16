@@ -5,6 +5,7 @@
 #include "Combat/RTSTargetable.h"
 #include "Commands/RTSCommand.h"
 #include "Navigation/RTSHullClearance.h"
+#include "Units/RTSLocomotion.h"
 #include "Units/RTSUnitShape.h"
 #include "RTSUnit.generated.h"
 
@@ -12,13 +13,13 @@ class AAIController;
 class UBoxComponent;
 class UInstancedStaticMeshComponent;
 class UStaticMeshComponent;
-class UFloatingPawnMovement;
 class URTSAircraftComponent;
 class URTSBuilderComponent;
 class URTSHarvesterComponent;
 class URTSHealthComponent;
 class URTSWeaponComponent;
 class URTSUnitData;
+class URTSUnitMovement;
 struct FPathFollowingResult;
 
 /**
@@ -88,6 +89,14 @@ public:
 	URTSHarvesterComponent* GetHarvesterComponent() const { return HarvesterComponent; }
 	URTSBuilderComponent* GetBuilderComponent() const { return BuilderComponent; }
 	URTSAircraftComponent* GetAircraftComponent() const { return AircraftComponent; }
+	URTSUnitMovement* GetUnitMovement() const { return Movement; }
+
+	/** Every machine. What the tracks or wheels of a vehicle did, for presentation (#151); see FRTSRealizedMotion. */
+	const FRTSRealizedMotion& GetRealizedMotion() const;
+
+	/** The gear state clients rebuild the realized motion from; the server's movement sets it. */
+	const FRTSLocomotionNet& GetLocomotionNet() const { return LocomotionNet; }
+	void SetLocomotionNet(const FRTSLocomotionNet& Net);
 	/**
 	 * The interaction radius from the data: how far the unit stands off a dock or a building site and holds short of a new
 	 * building. Not its size; that is GetShape.
@@ -313,6 +322,12 @@ private:
 	/** Server only. Each tick: runs the current order, stands the unit on the ground and turns it, or flies it. */
 	void TickOrders(float DeltaSeconds);
 
+	/**
+	 * Server only. Each tick for a vehicle under way: one whose gear has been stuck against something for a moment backs off
+	 * a little and paths again; stuck again soon after, or its goal out of reach of its steering, it gives the move up.
+	 */
+	void UpdateBlockedMove();
+
 	void FaceTowardYaw(float Yaw, float DeltaSeconds);
 
 	/** Eases the mesh back from a fire kick. Returns true when the mesh has to move. */
@@ -347,7 +362,7 @@ private:
 	TArray<TObjectPtr<UStaticMeshComponent>> PartComponents;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
-	TObjectPtr<UFloatingPawnMovement> Movement;
+	TObjectPtr<URTSUnitMovement> Movement;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<URTSHealthComponent> HealthComponent;
@@ -377,6 +392,16 @@ private:
 	/** Degrees, up positive. The server elevates it; clients follow. */
 	UPROPERTY(ReplicatedUsing = OnRep_GunPitch)
 	float GunPitch = 0.f;
+
+	UPROPERTY(Replicated)
+	FRTSLocomotionNet LocomotionNet;
+
+	/** Server only. World seconds of the last time UpdateBlockedMove paths a stuck vehicle again. */
+	double BlockedReplanTime = -1.0e9;
+
+	/** The realized travel UpdateRunningGear last rolled the wheels to. */
+	double GearDriven = 0.0;
+	double GearTurned = 0.0;
 
 	/** Server only. See SetAimOverride. */
 	TOptional<FVector2D> AimOverride;

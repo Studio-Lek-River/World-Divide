@@ -16,6 +16,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task u
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task camerashots
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestTank -Counts 240 -Trace
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian -Long
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uibindings
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uicheck -Path Saved/UIIntake/HUD_2026-10-14/staging/UI
 
@@ -42,7 +43,10 @@ Bench plays L_Bench with a renderer (a GPU is needed) and measures -Unit (rts.De
 the comma-separated -Counts, a mix of sizes when -Unit joins several with '+' (DA_TestM20Guardian+DA_TestTank+DA_TestInfantry),
 standing in a grid and then driving on a move order, from one fixed camera at 1920x1080 with
 dynamic resolution off and no frame rate cap. The table is printed and written with a CSV to Saved/Bench/<Unit>. -Trace
-records an Unreal Insights capture to Saved/Traces/Bench_<Unit>.utrace, each scenario a region.
+records an Unreal Insights capture to Saved/Traces/Bench_<Unit>.utrace, each scenario a region. -Long uses the long method
+of #138: a 10 s warm-up, then 60 s samples (three at the largest count, one below it) with the game thread's 95th
+percentile, while the units keep driving back and forth every 15 s, to a point 30 m west of a grid that stands
+south-west of the middle, out of the enemy headquarters' range.
 Uibindings writes every binding key, list and action with its panels, and the widgets, colours, fonts and sprites a layout
 may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck validates the layouts of the UI folder -Path
 (an unpacked delivery, for /ui-intake) and prints each problem. -Out and -Path are relative to the repository root.
@@ -67,6 +71,8 @@ param(
 	[string]$Counts = '',
 
 	[switch]$Trace,
+
+	[switch]$Long,
 
 	[string]$Out = 'Saved/UIBriefs/bindings.json',
 
@@ -314,9 +320,11 @@ function Invoke-Bench {
 
 	# -ExecCmds splits its commands at commas, so the counts go to rts.Debug.Bench joined by '+'.
 	$BenchCounts = ($Counts -split '[,\s+]+' | Where-Object { $_ }) -join '+'
+	if (-not $BenchCounts) { $BenchCounts = '1+30+120+240' }
+	$BenchMethod = if ($Long) { ' long' } else { '' }
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
 		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
-		"`"-ExecCmds=rts.Debug.Bench $Unit $BenchCounts`"", '-RTSBenchQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		"`"-ExecCmds=rts.Debug.Bench $Unit $BenchCounts$BenchMethod`"", '-RTSBenchQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
 		'-unattended', '-nosplash', '-nosound') + $TraceArgs)
 	$GameExit = $Process.ExitCode
 

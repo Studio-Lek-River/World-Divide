@@ -16,6 +16,7 @@
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitMovement.h"
 #include "Units/RTSUnitShape.h"
 
 namespace
@@ -29,6 +30,13 @@ namespace
 
 	/** Two walking units running into each other also step this share of the overlap to their own right, so they pass. */
 	constexpr float SidestepFraction = 0.5f;
+
+	/**
+	 * Vehicles cannot step sideways: running into each other they steer right on a curve of this radius (cm) instead, and
+	 * one pushed back against its way slows down by that share of its push, to no less than the minimum share of its speed.
+	 */
+	constexpr float HeadOnSteerRadius = 2000.f;
+	constexpr float MinYieldSpeedShare = 0.25f;
 
 	/** Golden angle in radians: coincident units part in directions that differ for every pair. */
 	constexpr float CoincidentAngleStep = 2.39996f;
@@ -111,6 +119,7 @@ bool URTSAvoidanceSubsystem::BuildIndex(float DeltaSeconds)
 		Agent.Radius = Footprint.Radius;
 		Agent.BoundRadius = Footprint.HalfSegment + Footprint.Radius;
 		Agent.bAvoids = Unit->GetUnitData() && !Unit->GetAircraftComponent()->CanFly();
+		Agent.bGear = Agent.bAvoids && Unit->GetUnitMovement()->UsesLocomotion();
 		Agent.MaxStep = Agent.bAvoids ? Unit->GetUnitData()->MoveSpeed * SeparationSpeedFraction * DeltaSeconds : 0.f;
 		Agent.bWalking = AI && AI->GetMoveStatus() != EPathFollowingStatus::Idle;
 		Agent.bIdle = !Agent.bWalking && Unit->GetQueuedCommandCount() == 0;
@@ -206,8 +215,18 @@ void URTSAvoidanceSubsystem::Separate(float DeltaSeconds)
 				if (A.bWalking && B.bWalking && FVector2D::DotProduct(A.Velocity, Normal) > 0.f
 					&& FVector2D::DotProduct(B.Velocity, Normal) < 0.f)
 				{
-					A.Push += RightOf(A.Velocity.GetSafeNormal()) * Overlap * ShareA * SidestepFraction;
-					B.Push += RightOf(B.Velocity.GetSafeNormal()) * Overlap * ShareB * SidestepFraction;
+					// Vehicles steer out of each other's way rather than slide.
+					for (FAgent* Agent : { &A, &B })
+					{
+						if (Agent->bGear)
+						{
+							Agent->bHeadOn = true;
+						}
+						else
+						{
+							Agent->Push += RightOf(Agent->Velocity.GetSafeNormal()) * Overlap * (Agent == &A ? ShareA : ShareB) * SidestepFraction;
+						}
+					}
 				}
 
 				// Touching a unit that already stands on the same goal: this one has arrived as well.
@@ -257,6 +276,16 @@ void URTSAvoidanceSubsystem::ApplyPushes(float DeltaSeconds)
 		{
 			continue;
 		}
+		// A vehicle's gear yields instead: it slows when pushed back against its way and steers right when head on. The push
+		// itself still parts the hulls, and the gear reports it as recovery, not as driving.
+		URTSUnitMovement* Gear = Agent.bGear ? Unit->GetUnitMovement() : nullptr;
+		if (Gear && Agent.bWalking)
+		{
+			const float Against = -FVector2D::DotProduct(Agent.Push, Agent.Velocity.GetSafeNormal());
+			const float SpeedShare = Against > 0.f && Agent.MaxStep > 0.f ? FMath::Max(1.f - Against / Agent.MaxStep, MinYieldSpeedShare) : 1.f;
+			Gear->SetAvoidance(SpeedShare, Agent.bHeadOn ? 1.f / HeadOnSteerRadius : 0.f);
+		}
+
 		const FVector From = Unit->GetNavAgentLocation();
 		// The unit's own navmesh, so a push never takes it where it could not drive.
 		const ANavigationData* NavData = NavSystem->GetNavDataForProps(Unit->GetNavAgentPropertiesRef(), From);
@@ -279,7 +308,8 @@ void URTSAvoidanceSubsystem::ApplyPushes(float DeltaSeconds)
 		// A barrel near an obstacle (RTSBarrelClearance) turns or rises out of the way first; one that cannot in time keeps the
 		// unit from driving it in: no step and no speed onward while next frame's move would take it into the obstacle. A barrel
 		// already in one (a building went up around it) may drive out.
-		UPawnMovementComponent* Movement = Unit->GetMovementComponent();
+		// A vehicle's gear checks its own barrel before it drives (URTSUnitMovement); only the pushes are left to check here.
+		UPawnMovementComponent* Movement = Gear ? nullptr : Unit->GetMovementComponent();
 		if (Unit->IsBarrelNearObstacle() && Movement && !Movement->Velocity.IsNearlyZero())
 		{
 			const FVector2D Driving = FVector2D(Movement->Velocity).GetSafeNormal();
@@ -309,15 +339,18 @@ void URTSAvoidanceSubsystem::ApplyPushes(float DeltaSeconds)
 			FVector2D Away = FVector2D::ZeroVector;
 			const float Clearance = RTSHullClearance::GetClearance(*NavMesh, Footprint, &Away, HullCheckExtraReach);
 			const bool bNearSolid = Clearance < HullSolidAbove && Clearance >= -RTSHullClearance::GetNavUncertainty(*NavMesh);
+			// A vehicle's gear drives its hull up to touching and no further (URTSUnitMovement): only a hull that does touch
+			// something is backed out.
+			const float Skin = Gear ? 0.f : HullSolidSkin;
 			const bool bClear = bNearSolid
 				? RTSHullClearance::IsSolidClear(*GetWorld(), Footprint, Unit->GetActorLocation().Z - Unit->GetGroundOffset(),
-					Unit->GetShape().Hull.GetSize().Z, HullSolidSkin)
+					Unit->GetShape().Hull.GetSize().Z, Skin)
 				: Clearance >= 0.f;
 			if (bClear)
 			{
 				HullCache.Center = FVector2D(Footprint.Center);
 				HullCache.Axis = FVector2D(Footprint.Axis);
-				HullCache.Slack = bNearSolid ? HullSolidSkin : Clearance;
+				HullCache.Slack = bNearSolid ? Skin : Clearance;
 				HullCache.ExpireTime = Now + HullCheckSeconds;
 				break;
 			}

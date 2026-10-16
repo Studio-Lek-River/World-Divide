@@ -18,7 +18,6 @@
 #include "Economy/RTSHarvesterComponent.h"
 #include "Economy/RTSSupplySource.h"
 #include "Engine/StaticMesh.h"
-#include "GameFramework/FloatingPawnMovement.h"
 #include "HAL/IConsoleManager.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Navigation/PathFollowingComponent.h"
@@ -33,6 +32,7 @@
 #include "Units/RTSBarrelClearance.h"
 #include "Units/RTSGround.h"
 #include "Units/RTSUnitAIController.h"
+#include "Units/RTSUnitMovement.h"
 #include "WorldDivide.h"
 
 namespace
@@ -57,8 +57,24 @@ namespace
 	/** Tall enough to reach the ground from the roof of the tallest building (the 32 m superweapon), where a click on it lands. */
 	const FVector MoveSnapExtent(MoveSnapStep, MoveSnapStep, 3500.f);
 
-	/** A unit holds short of a new building once this much of its travel time lies between it and the footprint. */
+	/**
+	 * A unit holds short of a new building once this much of its travel time lies between it and the footprint, or a vehicle
+	 * its braking distance and this margin, in cm.
+	 */
 	constexpr float HoldLookaheadSeconds = 0.2f;
+	constexpr float HoldBrakingMargin = 100.f;
+
+	/**
+	 * A vehicle stuck against something this many seconds backs off a little and paths again; stuck as long again within the
+	 * second span, it gives the move up.
+	 */
+	constexpr float BlockedReplanSeconds = 0.6f;
+	/** The first time it is stuck it backs off for this many seconds before it follows its new path. */
+	constexpr float BlockedBackOffSeconds = 0.4f;
+	constexpr double BlockedGiveUpSeconds = 3.0;
+
+	/** A vehicle slower than this (cm/s) stands, and may pivot toward its target. */
+	constexpr float StandingSpeed = 10.f;
 
 	/** A fire kick jolts the mesh back this many cm per unit of effect scale and eases it home over this long. */
 	constexpr float FireKickPerScale = 8.f;
@@ -162,7 +178,7 @@ ARTSUnit::ARTSUnit()
 	Turret->SetCanEverAffectNavigation(false);
 	Turret->SetVisibility(false);
 
-	Movement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("Movement"));
+	Movement = CreateDefaultSubobject<URTSUnitMovement>(TEXT("Movement"));
 	Movement->UpdatedComponent = Collision;
 	// No plane constraint: the path climbs and descends with the navmesh, and SnapToGround stands the unit on the ground.
 	// Path following feeds acceleration input, so MaxSpeed and braking behave like player input would.
@@ -283,6 +299,8 @@ void ARTSUnit::ApplyUnitData()
 	Movement->MaxSpeed = UnitData->MoveSpeed;
 	// The narrowest agent class wide enough for the hull: its navmesh keeps every path wide enough for the unit.
 	Movement->NavAgentProps = RTSNavAgents::SelectAgent(Shape);
+	// Tracks or wheels drive a vehicle (#138); infantry walks.
+	Movement->ApplyUnitData(*UnitData, Shape.Hull.GetSize().X);
 	HullClearanceCache = FRTSHullClearanceCache();
 	BarrelReachCache = FRTSHullClearanceCache();
 	bBarrelNearObstacle = false;
@@ -301,6 +319,8 @@ void ARTSUnit::CreateParts()
 	PartSlots.Reset();
 	Wheels.Reset();
 	LastGearPose.Reset();
+	GearDriven = Movement->GetRealizedMotion().DrivenDistance;
+	GearTurned = Movement->GetRealizedMotion().TurnedRadians;
 	if (Gun)
 	{
 		Gun->DestroyComponent();
@@ -374,22 +394,35 @@ void ARTSUnit::UpdateRunningGear()
 	{
 		return;
 	}
-	const FTransform Pose = GetActorTransform();
-	if (!LastGearPose.IsSet())
+	float Driven = 0.f;
+	float TurnedRadians = 0.f;
+	if (Movement->UsesLocomotion())
 	{
-		LastGearPose = Pose;
-		return;
+		// A vehicle's wheels roll with what its gear drove, never with a push, a correction or a teleport.
+		const FRTSRealizedMotion& Motion = Movement->GetRealizedMotion();
+		Driven = static_cast<float>(Motion.DrivenDistance - GearDriven);
+		TurnedRadians = static_cast<float>(Motion.TurnedRadians - GearTurned);
+		GearDriven = Motion.DrivenDistance;
+		GearTurned = Motion.TurnedRadians;
 	}
-	const float Driven = FVector::DotProduct(Pose.GetLocation() - LastGearPose->GetLocation(), Pose.GetUnitAxis(EAxis::X));
-	const float Turned = FMath::FindDeltaAngleDegrees(LastGearPose->Rotator().Yaw, Pose.Rotator().Yaw);
-	LastGearPose = Pose;
-	if (FMath::Abs(Driven) < GearMinDistance && FMath::Abs(Turned) < GearMinTurn)
+	else
+	{
+		const FTransform Pose = GetActorTransform();
+		if (!LastGearPose.IsSet())
+		{
+			LastGearPose = Pose;
+			return;
+		}
+		Driven = FVector::DotProduct(Pose.GetLocation() - LastGearPose->GetLocation(), Pose.GetUnitAxis(EAxis::X));
+		TurnedRadians = FMath::DegreesToRadians(FMath::FindDeltaAngleDegrees(LastGearPose->Rotator().Yaw, Pose.Rotator().Yaw));
+		LastGearPose = Pose;
+	}
+	if (FMath::Abs(Driven) < GearMinDistance && FMath::Abs(FMath::RadiansToDegrees(TurnedRadians)) < GearMinTurn)
 	{
 		return;
 	}
 
 	// Turning right (positive yaw) drives the left side (negative Y) forward and the right side back.
-	const float TurnedRadians = FMath::DegreesToRadians(Turned);
 	TMap<UInstancedStaticMeshComponent*, TArray<FTransform>> Updates;
 	for (FWheel& Wheel : Wheels)
 	{
@@ -705,6 +738,19 @@ FLinearColor ARTSUnit::GetTeamColor(int32 InTeamId)
 	return Colors[FMath::Abs(InTeamId) % UE_ARRAY_COUNT(Colors)];
 }
 
+const FRTSRealizedMotion& ARTSUnit::GetRealizedMotion() const
+{
+	return Movement->GetRealizedMotion();
+}
+
+void ARTSUnit::SetLocomotionNet(const FRTSLocomotionNet& Net)
+{
+	if (!(LocomotionNet == Net))
+	{
+		LocomotionNet = Net;
+	}
+}
+
 float ARTSUnit::GetSelectionRadius() const
 {
 	return UnitData ? UnitData->SelectionRadius : Collision->GetUnscaledBoxExtent().X;
@@ -878,6 +924,7 @@ void ARTSUnit::TickOrders(float DeltaSeconds)
 		}
 		// Stopping the path leaves the speed, which the movement would brake off over several frames, coasting on.
 		Movement->StopMovementImmediately();
+		Movement->HaltImmediately();
 		return;
 	}
 
@@ -894,9 +941,26 @@ void ARTSUnit::TickOrders(float DeltaSeconds)
 	UpdateBuildOrder(DeltaSeconds);
 	SnapToGround();
 
-	// Turn toward the direction of travel, or toward the target while standing, unless a turret does the aiming or its barrel
-	// cannot point there without reaching into an obstacle. Rotation replicates with movement.
-	if (Movement->Velocity.SizeSquared2D() > FMath::Square(10.f))
+	// A vehicle's gear turns its hull (URTSUnitMovement): standing, a tracked one pivots toward its target unless a turret does
+	// the aiming or its barrel cannot point there without reaching into an obstacle; wheels cannot turn standing.
+	if (Movement->UsesLocomotion())
+	{
+		TOptional<float> Facing;
+		const AActor* Target = WeaponComponent->GetTarget();
+		if (Target && (!HasTurret() || bAimBlocked) && Movement->Velocity.SizeSquared2D() < FMath::Square(StandingSpeed))
+		{
+			const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
+			if (!ToTarget.IsNearlyZero())
+			{
+				Facing = ToTarget.Rotation().Yaw;
+			}
+		}
+		Movement->SetFacingRequest(Facing);
+		UpdateBlockedMove();
+	}
+	// Infantry turns toward the direction of travel, or toward the target while standing, unless a turret does the aiming or
+	// its barrel cannot point there without reaching into an obstacle. Rotation replicates with movement.
+	else if (Movement->Velocity.SizeSquared2D() > FMath::Square(10.f))
 	{
 		FaceTowardYaw(Movement->Velocity.Rotation().Yaw, DeltaSeconds);
 	}
@@ -915,6 +979,38 @@ void ARTSUnit::TickOrders(float DeltaSeconds)
 		}
 	}
 	UpdateTurret(DeltaSeconds);
+}
+
+void ARTSUnit::UpdateBlockedMove()
+{
+	AAIController* AI = GetController<AAIController>();
+	if (!AI || AI->GetMoveStatus() != EPathFollowingStatus::Moving)
+	{
+		return;
+	}
+	const bool bOutOfReach = Movement->HasGuidanceFailed();
+	if (!bOutOfReach && Movement->GetBlockedSeconds() < BlockedReplanSeconds)
+	{
+		return;
+	}
+	const double Now = GetWorld()->GetTimeSeconds();
+	const bool bStuckAgain = Now - BlockedReplanTime < BlockedGiveUpSeconds;
+	const bool bMoveOrder = !CommandQueue.IsEmpty()
+		&& (CommandQueue[0].Type == ERTSCommandType::Move || CommandQueue[0].Type == ERTSCommandType::AttackMove);
+	if (!bOutOfReach && !bStuckAgain && bMoveOrder)
+	{
+		// A fresh path from where it stands, with whatever moved into its way since.
+		UE_LOG(LogWorldDivide, Verbose, TEXT("%s is stuck, backs off and paths again"), *GetName());
+		BlockedReplanTime = Now;
+		Movement->BackOff(BlockedBackOffSeconds);
+		StartNextCommand();
+		return;
+	}
+	// Stuck again, or a goal its steering cannot reach: the move ends where the unit stands. Attacks, harvests and builds
+	// start their own moves again.
+	UE_LOG(LogWorldDivide, Verbose, TEXT("%s gives up its move: %s"), *GetName(), bOutOfReach ? TEXT("out of reach") : TEXT("stuck"));
+	BlockedReplanTime = Now;
+	AI->StopMovement();
 }
 
 void ARTSUnit::FaceTowardYaw(float Yaw, float DeltaSeconds)
@@ -1045,7 +1141,12 @@ bool ARTSUnit::HoldShortOf(const FBox& Footprint)
 	const FBox Area = Flat.ExpandBy(FVector(GetSelectionRadius(), GetSelectionRadius(), 0.f));
 
 	const TArray<FNavPathPoint>& Points = Path->GetPathPoints();
+	// A vehicle looks as far ahead as it needs to brake.
 	float Remaining = Movement->GetMaxSpeed() * HoldLookaheadSeconds;
+	if (Movement->UsesLocomotion())
+	{
+		Remaining = FMath::Max(Remaining, Movement->GetStoppingDistance() + HoldBrakingMargin);
+	}
 	FVector Start = GetActorLocation();
 	bool bEnters = false;
 	for (int32 Index = PathFollowing->GetNextPathIndex(); !bEnters && Remaining > 0.f && Points.IsValidIndex(Index); ++Index)
@@ -1406,4 +1507,5 @@ void ARTSUnit::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetime
 	DOREPLIFETIME_CONDITION(ARTSUnit, TeamId, COND_InitialOnly);
 	DOREPLIFETIME(ARTSUnit, TurretYaw);
 	DOREPLIFETIME(ARTSUnit, GunPitch);
+	DOREPLIFETIME(ARTSUnit, LocomotionNet);
 }

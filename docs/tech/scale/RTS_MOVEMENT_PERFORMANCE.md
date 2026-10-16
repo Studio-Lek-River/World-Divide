@@ -80,23 +80,19 @@ Status: **audit and proposal**, Phase 2A (2026-10-15). The framework stays: an `
   - **Mixed selections:** group by class (infantry, vehicles), with vehicles in front. That is optional and a design choice.
   - **Not proposed:** speed matching (a formation moving at its slowest unit). It is a design question for later.
 
-### 3.6 Vehicle turning and acceleration (confirmed in code)
+### 3.6 Vehicle turning and acceleration
 
-- **Today:**
-  - The facing interpolates toward the **velocity** at `TurnRate` (`RTSUnit.cpp:662-681`).
-  - Velocity follows the path direction regardless of facing (`MoveToLocation(..., bCanStrafe=true)`, `:920-923`).
-  - A 9.8 m tank reversing its course moves sideways and backwards at full speed while its hull turns.
-  - Acceleration and deceleration are the `UFloatingPawnMovement` defaults (4000 / 8000 cm/s²), so a 60 t tank reaches full speed in a quarter of a second.
-- **Proposal:** a small `URTSUnitMovement : UFloatingPawnMovement`, which is the one new class this plan adds. It overrides only `ApplyControlInputToVelocity` and does what an RTS vehicle needs:
-  - **Tracked vehicles** (`bPivotTurn = true`) turn the hull toward the **path direction**. Speed is scaled by alignment, `max(0, cos(heading error))`. Beyond about 60° of error the vehicle stops and pivots in place. Velocity always runs along the hull.
-  - **Wheeled vehicles** (`MinTurnRadius > 0`) cap the yaw rate at `speed / MinTurnRadius` and slow for sharp corners. Below a crawl speed they may pivot slowly, so they never orbit a waypoint.
-  - **Infantry** (both unset) behave exactly as today.
-  - **Data:** `Acceleration` and `Deceleration` per unit in `URTSUnitData`, copied to the movement component in `ApplyUnitData` as `MaxSpeed` already is.
-  - **Multiplayer:** the server only, through replicated movement. Clients do not simulate it.
-  - **Risks:**
-    - Arrival with a deceleration distance overshoots a 25 cm acceptance radius, so it grows to 50 cm.
-    - Attack-move approaches need the vehicle to face its route first, which adds about 1 s for MBTs.
-    - Tests that time moves need new tolerances.
+- **Before #138:**
+  - The facing interpolated toward the **velocity** at `TurnRate`.
+  - Velocity followed the path regardless of facing (`bCanStrafe=true`), so a 9.8 m tank reversing its course moved sideways and backwards at full speed while its hull turned.
+  - Acceleration and deceleration were the `UFloatingPawnMovement` defaults (4000 / 8000 cm/s²).
+- **Now:** tracks and wheels drive the hull (#138). The heading-only proposal that stood here is superseded by [vehicle locomotion](VEHICLE_LOCOMOTION.md):
+  - A data profile per vehicle.
+  - Differential-drive tracks that pivot, and bicycle-model wheels with a turning circle.
+  - Acceleration and braking through zero.
+  - Collision-checked moves.
+  - A realized-motion state for the running gear.
+  - Infantry and aircraft are unchanged.
 
 ## 4. Draw calls (noted, out of scope)
 

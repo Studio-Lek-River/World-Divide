@@ -398,3 +398,70 @@ What changed: the RTS camera's settings (field of view 60, arm 600 / 15000 / 450
 - **The tank rows are within the run-to-run spread** (about 0.6 ms game thread).
 - **The M20 rows are single runs in the M20's wide spread.** Its move scenario has measured 17.3 to 23.3 ms across the earlier runs (step 4: 23.25 ms; the #162 follow-up: 17.3 to 21.9 ms), and the camera change adds no work on that path. The slowest frame, 28.27 ms, stays under the 33 ms target.
 - **`unitshots -Stress 240 -Trace`** (`DA_TestTank`): 3.84 ms frame, 3.84 ms game thread, 2.09 ms GPU, from the farthest zoom, which now shows the whole map; see [plan §7](SCALE_IMPLEMENTATION_PLAN.md#step-5-camera-retune-2026-10-16).
+
+## Step 6 (#138, vehicle locomotion)
+
+Same machine (Ryzen 7 7800X3D, RTX 4090, Development `-game` at 1920 × 1080), on 2026-10-16, with the **long method** #138 asks for (`ue.ps1 -Task bench -Long`):
+- each scenario gets a 10 s warm-up, then 60 s samples: three at 240 units and one at 1, 30 and 120;
+- the units keep driving: their move order goes back and forth every 15 s between the grid's place and a point 30 m west;
+- the grid stands south-west of the middle, out of range of the enemy headquarters, so the match never ends during a run;
+- the game thread's and the locomotion's 95th percentile are recorded next to the mean.
+
+"Before" is this method on the same build with the pre-#138 data, in which every unit has legs and runs the old movement. "After" has the M20 and the tanks on tracks and the trucks and the builder on wheels. "Locomotion" is `URTSUnitMovement::TickLocomotion` summed over every unit in a frame: guidance, kinematics, collision checks and the hull's move itself.
+
+### 240 units (mean of the three samples; p95 is the mean of the samples' 95th percentiles)
+
+| Unit | Scenario | Game ms before (p95) | Game ms after (p95) | Locomotion ms after: mean (p95, max) | Avoidance ms before → after |
+|---|---|---:|---:|---:|---:|
+| M20 Guardian | idle | 2.54 (3.26) | 2.45 (3.13) | 0.055 (0.077, 3.14) | 0.33 → 0.30 |
+| M20 Guardian | move | 5.98 (24.4) | 6.49 (19.6) | **0.585 (2.38, 4.91)** | 0.42 → 0.46 |
+| `DA_TestTank` | idle | 2.47 (2.97) | 2.41 (3.18) | 0.062 (0.086, 1.33) | 0.34 → 0.31 |
+| `DA_TestTank` | move | 3.75 (6.39) | 3.50 (4.93) | 0.486 (1.04, 4.51) | 0.49 → 0.57 |
+| Mix (M20, tank, flak truck, builder) | idle | 2.39 (3.38) | 2.36 (2.98) | 0.067 (0.084, 0.70) | 0.28 → 0.26 |
+| Mix (M20, tank, flak truck, builder) | move | 3.67 (9.09) | 4.41 (8.52) | 0.506 (1.33, 3.95) | 0.32 → 0.48 |
+
+### 1, 30 and 120 moving units (one sample each)
+
+| Unit | Game ms before → after at 1 / 30 / 120 | Locomotion ms after at 1 / 30 / 120: mean (p95) |
+|---|---|---|
+| M20 Guardian | 1.46 → 1.34 / 2.54 → 2.31 / 3.29 → 3.77 | 0.010 (0.020) / 0.104 (0.287) / 0.281 (1.13) |
+| `DA_TestTank` | 1.38 → 1.31 / 1.69 → 1.62 / 2.61 → 2.47 | 0.008 (0.014) / 0.080 (0.150) / 0.273 (0.586) |
+| Mix | 1.43 → 1.35 / 1.94 → 1.83 / 3.22 → 3.06 | 0.010 (0.020) / 0.097 (0.206) / 0.295 (0.653) |
+
+### Against #138's budget
+
+| Budget (240 moving vehicles) | Tank | Mix | M20 |
+|---|---|---|---|
+| Locomotion mean ≤ 1.0 ms | **Met** (0.49) | **Met** (0.51) | **Met** (0.59) |
+| Locomotion p95 ≤ 2.0 ms | **Met** (1.04) | **Met** (1.33) | **Not met** (2.38), accepted by the producer on 2026-10-16 |
+| Existing gates: no server frame > 33 ms on a 240-unit move order | Met (max 21.4 ms) | Met (22.6 ms) | Sample maxima 27.0 to 35.5 ms. The M20's single spikes were 32 to 35 ms before #138 too. Its p95 improved from 24.4 to 19.6 ms. |
+
+**Where the M20's locomotion time goes.** The Insights capture of 240 moving M20s (`ue.ps1 -Task bench -Unit DA_TestM20Guardian -Counts 240 -Trace`) splits it:
+- 78 % is `URTSUnitMovement::MoveHull`, the engine's move of the hull's root with the transforms of every component it carries: mesh, turret, gun, weapon station and instanced wheels.
+- 2 % is guidance (`RTSLocomotion::Guide`).
+- 2 % is the collision checks (`IsPoseClear`, 41,520 calls against 4,719 navmesh clearance queries).
+- The rest is the kinematics and bookkeeping.
+
+The old movement paid the same transform update twice per frame, once for the floating pawn's move and once for `SetActorRotation`, outside any locomotion scope. That is why the M20's game-thread p95 dropped.
+
+Making the M20's parts cheaper to move belongs with its LODs and parts work (#150, #151).
+
+**Other observations:**
+- **Avoidance** costs 0.04 to 0.16 ms more while moving. Vehicles now slow down for and steer round one another instead of only being pushed, and stay in contact a little longer.
+- **No per-frame allocation.** The path is copied to the gear once per path, and the bench's sample arrays are reserved before measuring.
+- **No vehicle-pair pass** was added; avoidance's fixed-cell grid is unchanged.
+
+### Replication (`WorldDivide.Net.Vehicle.ListenServer`)
+
+The test plays a listen server and one client in PIE at a fixed 30 Hz step, with 240 tanks driving back and forth. It measures the server's net driver per game second:
+
+| Run | Bytes / game s | Packets / game s |
+|---|---:|---:|
+| Before #138 (legs data, same test) | 70,380 | 84 |
+| After, `rts.Net.LocomotionState 0` | 69,548 | 83 |
+| After, gear state on | 70,403 | 84 |
+
+- **The gear state adds 1.2 %**, inside #138's 10 %. It is `FRTSLocomotionNet`: 4 bytes, sent only when the yaw rate, steering or status changes.
+- **The engine's 100 KB/s `MaxClientRate`** is not reached per game second. Because the fixed-step test runs faster than real time, it may cap the rate per real second, as it would at the real-scale bench's 240 always-relevant units.
+
+**Convergence under 100 ms round trip and about 2 % packet loss** (`WorldDivide.Net.Vehicle.Dedicated`, dedicated server, two clients): after a stop, a reverse, a pivot and a drive into Block_North, both clients rested on the server's pose within 0.01 s of the rest reaching them, at most 0.07° and 0.00 cm apart.

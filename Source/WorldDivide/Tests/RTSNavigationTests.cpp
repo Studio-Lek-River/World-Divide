@@ -168,7 +168,7 @@ namespace RTSNavigationTests
 		return true;
 	}
 
-	/** A placeholder hull for a size no unit has: an engine cube stretched to Size. */
+	/** A placeholder hull for a size no unit has: an engine cube stretched to Size, on tracks (#138) as the tanks are. */
 	URTSUnitData* MakeBoxUnit(const TCHAR* Name, const FVector& Size, float Speed, float TurnRate)
 	{
 		URTSUnitData* Data = NewObject<URTSUnitData>(GetTransientPackage(), MakeUniqueObjectName(GetTransientPackage(), URTSUnitData::StaticClass(), Name));
@@ -178,6 +178,11 @@ namespace RTSNavigationTests
 		Data->MaxHealth = 300.f;
 		Data->MoveSpeed = Speed;
 		Data->TurnRate = TurnRate;
+		Data->Locomotion.Type = ERTSLocomotionType::Tracked;
+		Data->Locomotion.TrackGauge = 0.75f * Size.Y;
+		Data->Locomotion.ReverseSpeed = Speed / 3.f;
+		Data->Locomotion.Acceleration = 300.f;
+		Data->Locomotion.Braking = 900.f;
 		return Data;
 	}
 
@@ -1068,6 +1073,21 @@ namespace RTSNavigationTests
 			{ FVector(W.X + WH.X + 600.f * L, W.Y + 0.6f * WH.Y, 0.f), 90.f, FVector(W.X - WH.X - 800.f * L, W.Y + 0.6f * WH.Y, 0.f) },
 			{ FactorySpot + FVector(-FH.X - 600.f * L, FH.Y + 500.f * L, 0.f), 0.f, FactorySpot + FVector(FH.X + 500.f * L, -FH.Y - 700.f * L, 0.f) },
 		};
+		// Pivots beside a corner (#138, #163): each hull stands alongside a face near its end, its centre as far from the face
+		// and past the corner as the long vehicle's half diagonal and a little, facing away from the corner, and is sent round
+		// it behind itself. It turns on the spot there, its hull's corners sweeping past the obstacle's, and again at the
+		// corner of its path.
+		const float Pivot = 0.5f * FVector2D(LongVehicleSize.X, LongVehicleSize.Y).Size() + 60.f;
+		const FCourse PivotCorners[] = {
+			{ FVector(B.X - BH.X + Pivot, B.Y + BH.Y + Pivot, 0.f), 0.f, FVector(B.X - BH.X - 800.f * L, B.Y, 0.f) },
+			{ FVector(W.X + WH.X + Pivot, W.Y - WH.Y + Pivot, 0.f), 90.f, FVector(W.X - WH.X - 800.f * L, W.Y - WH.Y - 500.f * L, 0.f) },
+			{ FactorySpot + FVector(FH.X + Pivot, FH.Y - Pivot, 0.f), -90.f, FactorySpot + FVector(-0.5f * FH.X, FH.Y + 800.f * L, 0.f) },
+		};
+		const FCourse PivotOtherCorners[] = {
+			{ FVector(B.X + BH.X - Pivot, B.Y - BH.Y - Pivot, 0.f), 180.f, FVector(B.X + BH.X + 800.f * L, B.Y, 0.f) },
+			{ FVector(W.X - WH.X - Pivot, W.Y + WH.Y - Pivot, 0.f), -90.f, FVector(W.X + WH.X + 800.f * L, W.Y + WH.Y + 500.f * L, 0.f) },
+			{ FactorySpot + FVector(-FH.X - Pivot, -FH.Y + Pivot, 0.f), 90.f, FactorySpot + FVector(0.5f * FH.X, -FH.Y - 800.f * L, 0.f) },
+		};
 		const TArray<URTSUnitData*> Hulls = GetHulls(*State);
 		auto AddRounds = [&](const FString& Name, const FCourse (&Courses)[3], bool bStopAtObstacle)
 		{
@@ -1091,6 +1111,8 @@ namespace RTSNavigationTests
 		AddRounds(TEXT("Head on into Block_North +X, Wall_West's north end and the factory +X"), HeadOnRest, true);
 		AddRounds(TEXT("Along Block_North, Wall_West and the factory"), Along, false);
 		AddRounds(TEXT("Around Block_North, Wall_West and the factory"), Around, false);
+		AddRounds(TEXT("Pivoting at Block_North's north-west corner, Wall_West's south end and the factory's north-east corner"), PivotCorners, false);
+		AddRounds(TEXT("Pivoting at Block_North's south-east corner, Wall_West's north end and the factory's south-west corner"), PivotOtherCorners, false);
 
 		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(&Test, State));
@@ -1103,9 +1125,9 @@ namespace RTSNavigationTests
 }
 
 /**
- * The M20, the placeholder tank, the long vehicle and the narrow one each drive head on into, along and around a corner of
- * Block_North, Wall_West and a vehicle factory: their hulls never overlap them, and stop within 50 cm of the ones they
- * were ordered into.
+ * The M20, the placeholder tank, the long vehicle and the narrow one, all on tracks, each drive head on into, along and
+ * around a corner of Block_North, Wall_West and a vehicle factory, and pivot beside their corners and both ends of the
+ * wall: their hulls never overlap them, and stop within 50 cm of the ones they were ordered into.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavHullClearanceTest, "WorldDivide.Navigation.HullClearance.Drive", RTSTests::TestFlags)
 

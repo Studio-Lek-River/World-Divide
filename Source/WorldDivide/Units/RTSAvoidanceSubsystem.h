@@ -65,6 +65,10 @@ private:
 		FIntPoint MaxCell = FIntPoint::ZeroValue;
 		/** Ground units that are pushed; aircraft are only indexed. */
 		bool bAvoids = false;
+		/** A vehicle driven by its tracks or wheels (URTSUnitMovement), which steers and slows instead of sidestepping. */
+		bool bGear = false;
+		/** A vehicle running head on into another this frame. */
+		bool bHeadOn = false;
 		bool bWalking = false;
 		/** Standing with no orders at all. */
 		bool bIdle = false;

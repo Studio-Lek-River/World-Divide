@@ -41,6 +41,88 @@ struct FRTSVehiclePart
 	bool bWheel = false;
 };
 
+/** What moves a ground unit: legs walk anywhere they face, tracks and wheels drive the hull (RTSLocomotion). */
+UENUM(BlueprintType)
+enum class ERTSLocomotionType : uint8
+{
+	/** Infantry: walks the way its path goes and turns to face it. Aircraft fly by their own rules and ignore it. */
+	Legs,
+	/** Left and right tracks at their own speeds: drives, turns and, when allowed, pivots on the spot. */
+	Tracked,
+	/** Steered front wheels: turns only while rolling, no tighter than its turning circle. */
+	Wheeled,
+};
+
+/**
+ * How a vehicle's tracks or wheels move its hull (RTSLocomotion, URTSUnitMovement). URTSUnitData::MoveSpeed is the top
+ * speed forward and URTSUnitData::TurnRate the fastest it turns. Distances in cm, angles in degrees, times in seconds.
+ */
+USTRUCT(BlueprintType)
+struct WORLDDIVIDE_API FRTSLocomotionProfile
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion")
+	ERTSLocomotionType Type = ERTSLocomotionType::Legs;
+
+	/** Top speed backwards in cm/s; 0 never reverses. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (ClampMin = "0"))
+	float ReverseSpeed = 0.f;
+
+	/** cm/s each second gained toward a faster speed. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (ClampMin = "1"))
+	float Acceleration = 400.f;
+
+	/** cm/s each second shed toward a slower speed or a standstill. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (ClampMin = "1"))
+	float Braking = 1000.f;
+
+	/** Tracked: the distance between the middles of the two tracks. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (ClampMin = "1", EditCondition = "Type == ERTSLocomotionType::Tracked"))
+	float TrackGauge = 280.f;
+
+	/** Tracked: turns on the spot, one track forward and one back, when its way lies far to the side or behind. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "Type == ERTSLocomotionType::Tracked"))
+	bool bAllowPivot = true;
+
+	/** Tracked: turns on the spot first once its way lies more than this many degrees off its heading. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (ClampMin = "1", ClampMax = "179", EditCondition = "Type == ERTSLocomotionType::Tracked"))
+	float PivotAngle = 60.f;
+
+	/** Wheeled: the distance between the front and rear axles. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (ClampMin = "1", EditCondition = "Type == ERTSLocomotionType::Wheeled"))
+	float Wheelbase = 400.f;
+
+	/** Wheeled: the distance between the left and right wheels, for how far each side rolls in a turn. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (ClampMin = "1", EditCondition = "Type == ERTSLocomotionType::Wheeled"))
+	float AxleTrack = 220.f;
+
+	/** Wheeled: the furthest the front wheels steer either way, in degrees. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (ClampMin = "1", ClampMax = "80", EditCondition = "Type == ERTSLocomotionType::Wheeled"))
+	float MaxSteerAngle = 35.f;
+
+	/** Wheeled: degrees per second the front wheels steer. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (ClampMin = "1", EditCondition = "Type == ERTSLocomotionType::Wheeled"))
+	float SteerRate = 60.f;
+
+	/** Wheeled: the tightest turn in cm, at the rear axle; 0 leaves it to the steering, Wheelbase / tan(MaxSteerAngle). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (ClampMin = "0", EditCondition = "Type == ERTSLocomotionType::Wheeled"))
+	float MinTurnRadius = 0.f;
+
+	/** cm/s² of sideways pull a turn may take before the vehicle slows for it: its grip. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Locomotion", meta = (ClampMin = "1"))
+	float MaxLateralAcceleration = 400.f;
+
+	/** True for tracks and wheels. */
+	bool IsVehicle() const { return Type != ERTSLocomotionType::Legs; }
+
+	/** Wheeled: the tightest turn the profile allows, from MinTurnRadius and the steering. */
+	float GetMinTurnRadius() const;
+
+	/** Whether every value the type uses is finite and in range; the first problem in OutError. Legs is always valid. */
+	bool Validate(FString* OutError = nullptr) const;
+};
+
 UCLASS(BlueprintType)
 class WORLDDIVIDE_API URTSUnitData : public URTSEntityData
 {
@@ -54,6 +136,10 @@ public:
 	/** Degrees per second the unit turns toward its heading. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats", meta = (ClampMin = "1"))
 	float TurnRate = 360.f;
+
+	/** Tracks or wheels, or legs (the default); aircraft ignore it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+	FRTSLocomotionProfile Locomotion;
 
 	/** Vehicles tilt their mesh to the slope they stand on; infantry stays upright. Aircraft ignore it. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
@@ -107,4 +193,8 @@ public:
 	/** Add-ons and running gear, placed on the hull, the turret or the gun. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	TArray<FRTSVehiclePart> Parts;
+
+#if WITH_EDITOR
+	virtual EDataValidationResult IsDataValid(class FDataValidationContext& Context) const override;
+#endif
 };

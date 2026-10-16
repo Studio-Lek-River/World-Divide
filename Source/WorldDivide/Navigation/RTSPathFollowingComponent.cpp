@@ -4,6 +4,7 @@
 #include "NavMesh/RecastNavMesh.h"
 #include "Navigation/RTSHullClearance.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitMovement.h"
 
 void URTSPathFollowingComponent::OnPathUpdated()
 {
@@ -22,4 +23,40 @@ void URTSPathFollowingComponent::OnPathUpdated()
 			&& FVector::Dist2D(*Goal, *Target) > 1.f;
 		RTSHullClearance::AdjustPath(*NavMesh, Unit->GetShape(), Path->GetPathPoints(), bShortOfTarget ? &Target.GetValue() : nullptr);
 	}
+	if (URTSUnitMovement* Locomotion = GetLocomotion(); Locomotion && Path.IsValid())
+	{
+		Locomotion->SetPath(Path->GetPathPoints());
+	}
+}
+
+URTSUnitMovement* URTSPathFollowingComponent::GetLocomotion() const
+{
+	const AAIController* Controller = Cast<AAIController>(GetOwner());
+	const ARTSUnit* Unit = Controller ? Controller->GetPawn<ARTSUnit>() : nullptr;
+	URTSUnitMovement* Movement = Unit ? Unit->GetUnitMovement() : nullptr;
+	return Movement && Movement->UsesLocomotion() ? Movement : nullptr;
+}
+
+void URTSPathFollowingComponent::FollowPathSegment(float DeltaTime)
+{
+	// The gear reads the path itself.
+	if (!GetLocomotion())
+	{
+		Super::FollowPathSegment(DeltaTime);
+	}
+}
+
+bool URTSPathFollowingComponent::HasReachedCurrentTarget(const FVector& CurrentLocation) const
+{
+	if (const URTSUnitMovement* Locomotion = GetLocomotion())
+	{
+		return Locomotion->GetGuidanceTarget() > MoveSegmentEndIndex;
+	}
+	return Super::HasReachedCurrentTarget(CurrentLocation);
+}
+
+bool URTSPathFollowingComponent::UpdateBlockDetection()
+{
+	// A pivot stands still for seconds; ARTSUnit::UpdateBlockedMove knows a stuck gear from a turning one.
+	return GetLocomotion() ? false : Super::UpdateBlockDetection();
 }

@@ -14,7 +14,7 @@ The work is split into seven issues, each built, tested and committed on its own
 | 3 | **Navigation agents:** two `SupportedAgents`, tile and cell sizes, saved navmesh rebuild | 1 | M |
 | 4 | **Data rescale:** placeholders, buildings, weapons, maps, AI and gameplay constants | 1, 2, 3 | L |
 | 5 | **Camera retune** | 4 | S |
-| 6 | **Vehicle movement:** `URTSUnitMovement` (pivot, turn radius, acceleration) | 1, 4 | M |
+| 6 | **Vehicle movement:** tracks and wheels drive the hull, `URTSUnitMovement` and `RTSLocomotion` (#138) | 1, 4 | M |
 | 7 | **Formation:** spacing from the footprint, O(n log n) assignment; idle-tick savings | 1, 2 | S |
 
 - Issues (M1b): step 0 #132, 1 #133, 2 #134, 3 #135, 4 #136, 5 #137, 6 #138, 7 #139; the UI designer's requirements brief after step 7 is #140. #141–#148 are closed duplicates; #132–#139 are canonical (recovery decision D-A, [recovery audit](../../production/SHARED_FOUNDATION_RECOVERY.md)).
@@ -144,17 +144,23 @@ The work is split into seven issues, each built, tested and committed on its own
 The sheet (`Saved/CameraShots/Sheet_*.jpg`, `metrics.csv`) pictures a vehicle, a mixed formation, a base and the battlefield on L_TestMap at the closest, default and farthest zoom, and the base at 2560 x 1440 and 3440 x 1440. Infantry measures 7 px broadside at the default zoom and 2 px at the farthest: readable through the HUD (brackets, health bars), as planned.
 
 ### Step 6: vehicle movement
-- New `Units/RTSUnitMovement.h/.cpp` (`URTSUnitMovement : UFloatingPawnMovement`, overrides `ApplyControlInputToVelocity`).
-- `Units/RTSUnit.cpp`:
-  - creates it instead of `UFloatingPawnMovement`;
-  - `TickOrders` faces the **path direction** for vehicles;
-  - `ApplyUnitData` copies the acceleration fields.
-- `Data/RTSUnitData.h`: `Acceleration`, `Deceleration`, `bPivotTurn`, `MinTurnRadius`.
-- `setup_testmap.py`: tracked vehicles get `bPivotTurn`. Trucks and the builder get `MinTurnRadius` of about 800–1000.
-- **Tests:** new `WorldDivide.Units.VehicleTurning`.
-  - A tracked tank ordered behind itself pivots first and never moves sideways faster than 50 cm/s.
-  - A truck's yaw rate stays within `speed / MinTurnRadius`.
-  - Infantry behaviour is unchanged.
+Superseded by #138, which replaced the heading-only proposal of before. Tracks and wheels decide how a vehicle moves; the navmesh decides where it goes ([vehicle locomotion](VEHICLE_LOCOMOTION.md)).
+- `Units/RTSUnitMovement.h/.cpp`: `URTSUnitMovement : UFloatingPawnMovement`. Legs pass through to the floating pawn. Vehicles are driven by their gear on the server, with collision-checked moves and a realized-motion state for presentation.
+- `Units/RTSLocomotion.h/.cpp`: the kinematics.
+  - Differential drive for tracks: `v = (vL + vR) / 2`, `yawRate = (vL − vR) / gauge`.
+  - Bicycle model for wheels: `yawRate = v · tan(steer) / wheelbase`.
+  - Speed ramps through zero.
+  - Pure-pursuit route guidance with pivots, reversing and turning-circle manoeuvres.
+- `Data/RTSUnitData.h`: `FRTSLocomotionProfile` (`Locomotion`): type, reverse speed, acceleration, braking, gauge or wheelbase and axle track, steering lock and rate, turning radius, pivot permission and angle, grip.
+- `setup_testmap.py`:
+  - The tanks and the M20 are tracked.
+  - The trucks and the builder are wheeled.
+  - Infantry keeps its legs.
+- **Tests:**
+  - `WorldDivide.Units.VehicleTurning`, `.VehicleLimits`, `.VehicleWheeled`, `.VehiclePivotFirst`, `.VehicleProfiles`, `.VehicleRealizedMotion`.
+  - `WorldDivide.Navigation.VehicleCollision` (30/60/120 Hz) and `.VehicleBlocked`.
+  - `WorldDivide.Navigation.HullClearance.Drive`, with pivots at the corners.
+  - `WorldDivide.Net.Vehicle.ListenServer` and `.Dedicated`.
 
 ### Step 7: formation and idle ticks
 - `Commands/RTSFormation.h/.cpp`: row and column spacing; sorted assignment.
@@ -220,7 +226,7 @@ The sheet (`Saved/CameraShots/Sheet_*.jpg`, `metrics.csv`) pictures a vehicle, a
    - `DA_TestTank` at 240 units: game thread no worse than the step 0 bench baseline, re-measured on the same build (#136).
    - 240 moving M20s: game thread ≤ 240 moving placeholder tanks. **Deferred** until after #150 and #151; the M20's render-state cost does not fail #136.
    - Provisional minimum-spec design target (D-J): 1080p / 60 FPS with 200 active units on RTX 3060-class hardware. It is a design target, **not** a verified result; neither it nor an eight-player battle has been measured.
-8. Tracked vehicles do not move sideways faster than 50 cm/s, and pivot when ordered behind.
+8. Vehicles are driven by their tracks or wheels (#138): no sideways propulsion faster than 50 cm/s, tracked vehicles pivot when ordered behind, wheeled ones keep their turning circle, and the gear's kinematics, limits and realized travel hold to #138's tolerances ([vehicle locomotion](VEHICLE_LOCOMOTION.md)).
 9. The default camera shows about 170 m across, and an MBT reads at about 5–6 % of the screen width.
 10. A listen-server smoke test passes: client units move, select and show brackets identically to the server.
 11. The full automation suite is green and setup is idempotent.

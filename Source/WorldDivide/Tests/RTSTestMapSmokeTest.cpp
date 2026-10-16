@@ -52,6 +52,7 @@
 #include "UI/RTSHUDWidget.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitMovement.h"
 
 /**
  * End to end: open L_TestMap in PIE, wait for the navmesh, order every unit (own and enemy) through the
@@ -158,8 +159,8 @@ namespace
 
 	/**
 	 * The path test places the power plant on BuildSpot just before the moving tank's circle comes closer than this to its
-	 * footprint, well before the navmesh can cut the hole. A second tank drives a parallel lane south of it, far from the
-	 * building.
+	 * footprint, plus the distance it needs to brake to a stop on its tracks (#138), well before the navmesh can cut the
+	 * hole. A second tank drives a parallel lane south of it, far from the building.
 	 */
 	constexpr float PathPlacementLead = 40.f;
 	FVector BystanderStart;
@@ -307,7 +308,7 @@ namespace
 	constexpr int32 MatchEndQueuedBuilders = 3;
 	constexpr int32 MatchEndSourceLoads = 10;
 	/** Game seconds everything runs before the enemy falls, and then is watched for any change. */
-	constexpr double MatchEndRunSeconds = 2.0;
+	constexpr double MatchEndRunSeconds = 4.0;
 	constexpr double MatchEndFrozenSeconds = 3.0;
 	/** A building, or a slow unit, may still move this much in the frame the match ends, before its own tick stops it. */
 	constexpr float MatchEndStopTolerance = 50.f;
@@ -775,14 +776,14 @@ namespace
 		return Plant;
 	}
 
-	ARTSUnit* SpawnTestUnit(UWorld* World, const TCHAR* DataPath, int32 TeamId, const FVector& Location)
+	ARTSUnit* SpawnTestUnit(UWorld* World, const TCHAR* DataPath, int32 TeamId, const FVector& Location, float Yaw = 0.f)
 	{
 		URTSUnitData* Data = LoadObject<URTSUnitData>(nullptr, DataPath);
 		if (!Data)
 		{
 			return nullptr;
 		}
-		FTransform Transform(Location);
+		FTransform Transform(FRotator(0.f, Yaw, 0.f), Location);
 		ARTSUnit* Unit = World->SpawnActorDeferred<ARTSUnit>(
 			ARTSUnit::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		Unit->InitFromData(Data, TeamId);
@@ -1312,7 +1313,8 @@ bool FRTSPlaceOnPath::Update()
 	// Placed in the last frame before the gap would drop under the lead, so the tank never gets closer than that, however
 	// far it moves per frame (a dilated test run moves it further).
 	const float NextStep = Walker->GetVelocity().Size2D() * Walker->GetWorld()->GetDeltaSeconds();
-	if (Gap - NextStep > PathPlacementLead)
+	const float Braking = Walker->GetUnitMovement()->GetStoppingDistance();
+	if (Gap - NextStep > PathPlacementLead + Braking)
 	{
 		if (FPlatformTime::Seconds() - State->PhaseStart > RouteTimeout)
 		{
@@ -5399,7 +5401,8 @@ bool FRTSStartMatchEndFight::Update()
 	URTSUnitData* BuilderData = LoadObject<URTSUnitData>(nullptr, BuilderPath);
 	ARTSUnit* Walker = SpawnTestUnit(World, TankPath, TeamId, MatchEndWalkerStart);
 	ARTSUnit* Fighter = SpawnTestUnit(World, TankPath, TeamId, MatchEndFighterStart);
-	ARTSUnit* Builder = SpawnTestUnit(World, BuilderPath, TeamId, MatchEndBuilderStart);
+	// Facing the site it drives to: on wheels (#138) it cannot turn on the spot.
+	ARTSUnit* Builder = SpawnTestUnit(World, BuilderPath, TeamId, MatchEndBuilderStart, -90.f);
 	if (!Player || !HeadquartersData || !TowerData || !FactoryData || !BuilderData || !Walker || !Fighter || !Builder)
 	{
 		Test->AddError(TEXT("Missing the player state, the test headquarters, tower, vehicle factory or builder, or a test unit"));
