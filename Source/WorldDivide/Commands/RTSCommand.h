@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "RTSCommand.generated.h"
 
+class ARTSPlayerState;
 class URTSEntityData;
 
 UENUM(BlueprintType)
@@ -79,4 +80,8 @@ struct WORLDDIVIDE_API FRTSCommand
 	/** Server only, never sent by clients: credits already taken for this order, refunded if it ends before its building is placed. */
 	UPROPERTY(NotReplicated)
 	int32 PaidCost = 0;
+
+	/** Server only, never sent by clients: the player who gave the order, told when it is refused (RTSCommands::Issue sets it). */
+	UPROPERTY(NotReplicated)
+	TObjectPtr<ARTSPlayerState> Issuer = nullptr;
 };

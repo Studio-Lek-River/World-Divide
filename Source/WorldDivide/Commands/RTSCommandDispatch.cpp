@@ -135,7 +135,10 @@ namespace RTSCommands
 		default:
 			break;
 		}
-		Dispatch(FilterOwnedUnits(Units, Player.GetTeamId()), Command);
+		// Whatever the client put in the server-only fields, the order is this player's.
+		FRTSCommand Issued = Command;
+		Issued.Issuer = &Player;
+		Dispatch(FilterOwnedUnits(Units, Player.GetTeamId()), Issued);
 	}
 
 	ARTSBuilding* PlaceBuilding(UWorld& World, const URTSFactionData* Faction, int32 TeamId, const FRTSCommand& Command)

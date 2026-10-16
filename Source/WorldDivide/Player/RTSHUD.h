@@ -107,6 +107,9 @@ private:
 	 */
 	void DrawAttackAlert(const ARTSPlayerController& Controller);
 
+	/** For a moment after a refused move order: a message under the warnings and a ring on the spot the order named. */
+	void DrawOrderRefusal(const ARTSPlayerController& Controller);
+
 	/**
 	 * Bottom center above the bottom panels, where the cancel button would be: that needs a selected building, attack-move
 	 * selected units.

@@ -11,6 +11,7 @@
 class ARTSBuilding;
 class ARTSCameraPawn;
 class ARTSPlacementGhost;
+class ARTSPlayerState;
 class ARTSUnit;
 class URTSBuildingData;
 class URTSEntityData;
@@ -345,6 +346,25 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_SuperweaponAlert(ERTSSuperweaponAlert Kind, bool bOwn);
 
+	/**
+	 * Server only. A move order Issuer gave cannot be carried out: no spot near Location is reachable. Tells Issuer's
+	 * controller through Client_OrderRefused, at most once per OrderRefusalCooldown, so a refused group gives one message.
+	 * Nothing for an AI player or a null Issuer.
+	 */
+	static void NotifyOrderRefused(const ARTSPlayerState* Issuer, const FVector& Location);
+
+	static constexpr float OrderRefusalCooldown = 1.f;
+
+	/** Refusals received, for tests; the HUD shows the last one for a few seconds. */
+	int32 GetOrderRefusalCount() const { return ReceivedOrderRefusal.Count; }
+
+	/** False before any refusal; else where the last refused order pointed and the seconds since it arrived. */
+	bool GetLastOrderRefusal(FVector& OutLocation, float& OutAge) const;
+
+	/** Owner only: a move order to Location was refused. */
+	UFUNCTION(Client, Reliable)
+	void Client_OrderRefused(const FVector& Location);
+
 protected:
 	virtual void SetupInputComponent() override;
 	virtual bool InputKey(const FInputKeyEventArgs& Params) override;
@@ -521,4 +541,17 @@ private:
 
 	/** Owning client. Indexed by ERTSSuperweaponAlert. */
 	FReceivedSuperweaponAlert ReceivedSuperweaponAlerts[2];
+
+	/** Server only. When the last refusal went out; within OrderRefusalCooldown of it further ones are held back. */
+	TOptional<float> LastOrderRefusalSent;
+
+	struct FReceivedOrderRefusal
+	{
+		int32 Count = 0;
+		FVector Location = FVector::ZeroVector;
+		float Time = 0.f;
+	};
+
+	/** Owning client. */
+	FReceivedOrderRefusal ReceivedOrderRefusal;
 };

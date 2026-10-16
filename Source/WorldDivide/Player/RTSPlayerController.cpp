@@ -1452,6 +1452,42 @@ bool ARTSPlayerController::GetLatestSuperweaponAlert(ERTSSuperweaponAlert& OutKi
 	return bFound;
 }
 
+void ARTSPlayerController::NotifyOrderRefused(const ARTSPlayerState* Issuer, const FVector& Location)
+{
+	ARTSPlayerController* Controller = Issuer ? Cast<ARTSPlayerController>(Issuer->GetPlayerController()) : nullptr;
+	if (!Controller)
+	{
+		return;
+	}
+	const float Now = Controller->GetWorld()->GetTimeSeconds();
+	if (Controller->LastOrderRefusalSent && Now - *Controller->LastOrderRefusalSent < OrderRefusalCooldown)
+	{
+		return;
+	}
+	Controller->LastOrderRefusalSent = Now;
+	Controller->Client_OrderRefused(Location);
+}
+
+void ARTSPlayerController::Client_OrderRefused_Implementation(const FVector& Location)
+{
+	++ReceivedOrderRefusal.Count;
+	ReceivedOrderRefusal.Location = Location;
+	ReceivedOrderRefusal.Time = GetWorld()->GetTimeSeconds();
+	// The units' double beep until refusals get a sound of their own; the server's cooldown spaces them.
+	RTSAlertSound::Play(*this, ERTSAttackAlert::Units);
+}
+
+bool ARTSPlayerController::GetLastOrderRefusal(FVector& OutLocation, float& OutAge) const
+{
+	if (ReceivedOrderRefusal.Count == 0)
+	{
+		return false;
+	}
+	OutLocation = ReceivedOrderRefusal.Location;
+	OutAge = GetWorld()->GetTimeSeconds() - ReceivedOrderRefusal.Time;
+	return true;
+}
+
 bool ARTSPlayerController::GetLastAttackAlert(ERTSAttackAlert Kind, FVector& OutLocation, float& OutAge) const
 {
 	const FReceivedAttackAlert& Received = ReceivedAttackAlerts[static_cast<int32>(Kind)];

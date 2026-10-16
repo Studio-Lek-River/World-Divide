@@ -23,6 +23,7 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "NavigationSystem.h"
 #include "NavMesh/RecastNavMesh.h"
+#include "Navigation/RTSMoveDestination.h"
 #include "Navigation/RTSNavAgents.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/RTSPlayerController.h"
@@ -49,13 +50,10 @@ namespace
 	constexpr float DockStandOff = 200.f;
 
 	/**
-	 * A move into a wall or a building steps back toward the unit by this much until it finds navmesh, up to the distance:
-	 * further than the middle of the largest building (a 28 m headquarters, a 24 x 48 m airfield) lies from its edge.
+	 * A move target within this of the navmesh is on it; any further off, in a wall or a building, RTSMoveDestination picks
+	 * the reachable spot nearest it. Narrower than a vehicle's query extent, so a click into a wall never lands on its far side.
 	 */
-	constexpr float MoveSnapStep = 50.f;
-	constexpr float MoveSnapDistance = 3000.f;
-	/** Tall enough to reach the ground from the roof of the tallest building (the 32 m superweapon), where a click on it lands. */
-	const FVector MoveSnapExtent(MoveSnapStep, MoveSnapStep, 3500.f);
+	const FVector MoveProjectExtent(50.f, 50.f, 250.f);
 
 	/**
 	 * A unit holds short of a new building once this much of its travel time lies between it and the footprint, or a vehicle
@@ -1234,25 +1232,19 @@ void ARTSUnit::PopCommand()
 	BuilderComponent->UpdatePlannedSites(CommandQueue);
 }
 
-bool ARTSUnit::RequestMove(AAIController& AI, const FVector& Location)
+ERTSMoveRequest ARTSUnit::RequestMove(AAIController& AI, const FVector& Location)
 {
-	// Inside a wall or a building there is no navmesh to stand on, so the unit stops at the edge on its own side
-	// instead of dropping the order or walking around to the far one.
+	// Inside a wall or a building there is no navmesh to stand on, so the unit heads for the reachable spot nearest the
+	// target instead, however deep the target lies and wherever the unit comes from.
 	FVector Destination = Location;
 	UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
 	const ANavigationData* NavData = NavSystem ? NavSystem->GetNavDataForProps(GetNavAgentPropertiesRef(), GetNavAgentLocation()) : nullptr;
 	FNavLocation NavPoint;
-	if (NavData && !NavSystem->ProjectPointToNavigation(Destination, NavPoint, INVALID_NAVEXTENT, NavData))
+	if (NavData && !NavSystem->ProjectPointToNavigation(Destination, NavPoint, MoveProjectExtent, NavData)
+		&& !RTSMoveDestination::FindReachable(*this, Location, Destination))
 	{
-		const FVector Back = (GetNavAgentLocation() - Destination).GetSafeNormal2D();
-		for (float Distance = 0.f; Distance <= MoveSnapDistance; Distance += MoveSnapStep)
-		{
-			if (NavSystem->ProjectPointToNavigation(Destination + Back * Distance, NavPoint, MoveSnapExtent, NavData))
-			{
-				Destination = NavPoint.Location;
-				break;
-			}
-		}
+		UE_LOG(LogWorldDivide, Verbose, TEXT("%s finds no reachable spot near %s"), *GetName(), *Location.ToString());
+		return ERTSMoveRequest::Refused;
 	}
 
 	MoveGoal = Destination;
@@ -1260,26 +1252,36 @@ bool ARTSUnit::RequestMove(AAIController& AI, const FVector& Location)
 
 	// The AI controller may report AlreadyAtGoal or a failure back through NotifyMoveFinished
 	// before MoveToLocation returns; that is handled here instead of re-entering the queue.
+	// Only a full path counts: a partial one would end on the near side of whatever cuts the goal off and call that done.
 	bRequestingMove = true;
 	bMoveFinishedDuringRequest = false;
 	const EPathFollowingRequestResult::Type Result = AI.MoveToLocation(
 		Destination, MoveAcceptanceRadius,
 		/*bStopOnOverlap*/ false, /*bUsePathfinding*/ true, /*bProjectDestinationToNavigation*/ true,
-		/*bCanStrafe*/ true, /*FilterClass*/ nullptr, /*bAllowPartialPath*/ true);
+		/*bCanStrafe*/ true, /*FilterClass*/ nullptr, /*bAllowPartialPath*/ false);
 	bRequestingMove = false;
 
 	if (Result == EPathFollowingRequestResult::Failed)
 	{
 		UE_LOG(LogWorldDivide, Verbose, TEXT("%s could not path to %s"), *GetName(), *Location.ToString());
+		MoveGoal.Reset();
+		MoveTarget.Reset();
+		return ERTSMoveRequest::Refused;
 	}
-	return Result == EPathFollowingRequestResult::RequestSuccessful && !bMoveFinishedDuringRequest;
+	return Result == EPathFollowingRequestResult::RequestSuccessful && !bMoveFinishedDuringRequest
+		? ERTSMoveRequest::Moving : ERTSMoveRequest::AtGoal;
 }
 
 bool ARTSUnit::StartCommand(AAIController& AI, FRTSCommand& Command)
 {
 	if (Command.Type == ERTSCommandType::Move || Command.Type == ERTSCommandType::AttackMove)
 	{
-		return RequestMove(AI, Command.TargetLocation);
+		const ERTSMoveRequest Request = RequestMove(AI, Command.TargetLocation);
+		if (Request == ERTSMoveRequest::Refused)
+		{
+			ARTSPlayerController::NotifyOrderRefused(Command.Issuer, Command.TargetLocation);
+		}
+		return Request == ERTSMoveRequest::Moving;
 	}
 	MoveGoal.Reset();
 	MoveTarget.Reset();
@@ -1431,7 +1433,7 @@ void ARTSUnit::UpdateAttackMoveOrder()
 			bStoppingToFight = false;
 		}
 	}
-	else if (!bMoving && !RequestMove(*AI, CommandQueue[0].TargetLocation))
+	else if (!bMoving && RequestMove(*AI, CommandQueue[0].TargetLocation) != ERTSMoveRequest::Moving)
 	{
 		// Already at the target, or no way left there.
 		PopCommand();

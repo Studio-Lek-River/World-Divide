@@ -22,6 +22,16 @@ class URTSUnitData;
 class URTSUnitMovement;
 struct FPathFollowingResult;
 
+/** How ARTSUnit::RequestMove went. */
+enum class ERTSMoveRequest : uint8
+{
+	Moving,
+	/** Already stands at the goal: the order is done. */
+	AtGoal,
+	/** No spot near the target is reachable, or no path to it: the order is dropped and its issuer told. */
+	Refused,
+};
+
 /**
  * A light pawn (no ACharacter) so hundreds of units stay cheap. Stats come from URTSUnitData.
  * Orders are executed on the server only; clients see the result through replication. An aircraft, whose data is
@@ -289,10 +299,10 @@ private:
 	bool StartCommand(AAIController& AI, FRTSCommand& Command);
 
 	/**
-	 * Paths to Location, stopping at the edge on the unit's side when it lies inside a wall or a building. Returns true while
-	 * the unit moves; false when it cannot path there or already stands at the goal.
+	 * Paths to Location by a full path. When it lies inside a wall or a building, paths to the reachable spot nearest it
+	 * instead (RTSMoveDestination). Refused when Location lies in an enclosed area or on another navmesh island.
 	 */
-	bool RequestMove(AAIController& AI, const FVector& Location);
+	ERTSMoveRequest RequestMove(AAIController& AI, const FVector& Location);
 
 	/**
 	 * Each tick while an Attack is the current order: drop it once the target is gone, otherwise close in or hold.

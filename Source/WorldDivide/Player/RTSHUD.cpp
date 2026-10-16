@@ -43,6 +43,8 @@ namespace
 	constexpr float AttackRingPulse = 16.f;
 	constexpr int32 AttackRingSegments = 24;
 	constexpr float SuperweaponAlertTop = 60.f;
+	constexpr float OrderRefusalSeconds = 2.f;
+	constexpr float OrderRefusalTop = 120.f;
 
 	/** A ring around Center, in segments. */
 	void DrawRing(AHUD& HUD, const FVector2D& Center, float Radius, const FLinearColor& Color)
@@ -155,6 +157,7 @@ void ARTSHUD::DrawHUD()
 	{
 		DrawAttackAlert(*Controller);
 		DrawSuperweaponAlert(*Controller);
+		DrawOrderRefusal(*Controller);
 	}
 
 	FVector2D Start;
@@ -517,6 +520,32 @@ void ARTSHUD::DrawAttackAlert(const ARTSPlayerController& Controller)
 	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, MenuMargin);
 	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
 	DrawText(Text, *TextColor, Min.X + ButtonPadding, Min.Y + ButtonPadding, Font, AttackAlertTextScale);
+}
+
+void ARTSHUD::DrawOrderRefusal(const ARTSPlayerController& Controller)
+{
+	FVector Location;
+	float Age = 0.f;
+	if (!Controller.GetLastOrderRefusal(Location, Age) || Age >= OrderRefusalSeconds)
+	{
+		return;
+	}
+	FVector2D Center;
+	if (Controller.ProjectWorldLocationToScreen(Location, Center))
+	{
+		DrawRing(*this, Center, AttackRingRadius, DefeatColor);
+	}
+
+	// Under the superweapon warning.
+	const TCHAR* Text = TEXT("Cannot move there");
+	UFont* Font = GEngine->GetLargeFont();
+	float Width = 0.f;
+	float Height = 0.f;
+	GetTextSize(Text, Width, Height, Font, AttackAlertTextScale);
+	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
+	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, MenuMargin + OrderRefusalTop);
+	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
+	DrawText(Text, DefeatColor, Min.X + ButtonPadding, Min.Y + ButtonPadding, Font, AttackAlertTextScale);
 }
 
 void ARTSHUD::DrawAttackMoveHint(const ARTSPlayerController& Controller)

@@ -15,6 +15,7 @@
 #include "HAL/IConsoleManager.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "Navigation/RTSHullClearance.h"
+#include "Navigation/RTSMoveDestination.h"
 #include "Navigation/RTSNavAgents.h"
 #include "NavigationSystem.h"
 #include "Player/RTSPlayerController.h"
@@ -81,6 +82,13 @@ namespace RTSNavigationTests
 	constexpr float OverlapTolerance = 2.f;
 	/** A hull ordered into an obstacle stops at most this far from it. */
 	constexpr float StopGap = 50.f;
+
+	/** Faster than this along or against its heading (cm/s) a unit drives forward or reverses; a switch counts as a reversal. */
+	constexpr float ReversalSpeed = 30.f;
+	/** A unit may back off and set off again (UpdateBlockedMove) but not keep switching. */
+	constexpr int32 MaxReversals = 2;
+	/** A unit whose order is refused stays within this of where it stood. */
+	constexpr float RefusedDrift = 50.f;
 
 	/** Game seconds a drive may take before it counts as stuck, and the time it stands once every order is done. */
 	constexpr double DriveTimeout = 40.0;
@@ -194,6 +202,8 @@ namespace RTSNavigationTests
 		float Yaw = 0.f;
 		/** Where it is sent, relative to the drive's target, as a formation would spread it. */
 		FVector TargetOffset = FVector::ZeroVector;
+		/** It must stop on the side of its target it started on, not drive round to another face. */
+		bool bOwnSide = false;
 	};
 
 	enum class EGate : uint8
@@ -216,6 +226,19 @@ namespace RTSNavigationTests
 		EGate Gate = EGate::None;
 		float GateMinY = 0.f;
 		float GateMaxY = 0.f;
+
+		/** Move or AttackMove. */
+		ERTSCommandType Order = ERTSCommandType::Move;
+		/** One order for every unit, as for a selected group, spread into a formation; each unit must end nearer the target. */
+		bool bGroupOrder = false;
+		/** Shift-queued after the first order, in turn; each unit must end at the last one. */
+		TArray<FVector> Queued;
+		/** Every order is refused: the units stay where they stand. */
+		bool bRefused = false;
+		/** Refusals the player must receive during the drive, one for a group refused at once (OrderRefusalCooldown). */
+		int32 ExpectedRefusals = 0;
+		/** Check that no unit keeps switching between driving forward and reversing. */
+		bool bCheckReversals = false;
 	};
 
 	struct FNavState
@@ -242,6 +265,11 @@ namespace RTSNavigationTests
 		TArray<TOptional<float>> CrossingYs;
 		TArray<float> MinGaps;
 		TArray<FString> MinGapObstacles;
+		TArray<FVector> StartLocations;
+		/** How often each unit switched between driving forward and reversing, and the way it drove last. */
+		TArray<int32> Reversals;
+		TArray<int32> LastDirections;
+		int32 RefusalsAtStart = 0;
 		/** Each unit's deepest barrel reach into an obstacle, checked for units with a barrel when bCheckBarrels is set. */
 		bool bCheckBarrels = false;
 		TArray<float> MaxBarrelDepths;
@@ -498,6 +526,13 @@ bool FRTSNavRunDrives::Update()
 				State->CrossingYs[Index] = FMath::Lerp(Last.Y, Location.Y, static_cast<float>(-Last.X / (Location.X - Last.X)));
 			}
 			State->LastLocations[Index] = Location;
+			const float Forward = FVector::DotProduct(Unit->GetVelocity(), Unit->GetActorForwardVector());
+			const int32 Direction = Forward > ReversalSpeed ? 1 : Forward < -ReversalSpeed ? -1 : 0;
+			if (Direction != 0)
+			{
+				State->Reversals[Index] += State->LastDirections[Index] == -Direction ? 1 : 0;
+				State->LastDirections[Index] = Direction;
+			}
 			FString Obstacle;
 			const float Gap = GetObstacleGap(*Unit, *State, &Obstacle);
 			if (Gap < State->MinGaps[Index])
@@ -521,7 +556,9 @@ bool FRTSNavRunDrives::Update()
 			State->SettleStart = Now;
 		}
 		const bool bTimedOut = Now - State->DriveStart > DriveTimeout;
-		if (!bTimedOut && (State->SettleStart < 0.0 || Now - State->SettleStart < SettleSeconds))
+		// After a refusal the next drive waits out the cooldown, so its own refusals reach the player.
+		const double Settle = Drive.ExpectedRefusals > 0 ? FMath::Max(SettleSeconds, double(ARTSPlayerController::OrderRefusalCooldown)) : SettleSeconds;
+		if (!bTimedOut && (State->SettleStart < 0.0 || Now - State->SettleStart < Settle))
 		{
 			return false;
 		}
@@ -545,15 +582,43 @@ bool FRTSNavRunDrives::Update()
 					State->MaxBarrelDepths[Index], *State->MaxBarrelObstacles[Index], Unit->GetTurretYaw(), Unit->GetGunPitch()));
 			}
 			const float FinalGap = GetObstacleGap(*Unit, *State);
-			if (Drive.bStopAtObstacle)
+			const FVector Final = Unit->GetActorLocation();
+			const FVector& Start = State->StartLocations[Index];
+			const FVector Target = Drive.Queued.IsEmpty() ? Drive.Target + Drive.Units[Index].TargetOffset : Drive.Queued.Last();
+			if (Drive.bCheckReversals)
+			{
+				Test->TestTrue(*FString::Printf(TEXT("%s did not keep switching between forward and reverse (%d switches)"), *What,
+					State->Reversals[Index]), State->Reversals[Index] <= MaxReversals);
+			}
+			if (Drive.Units[Index].bOwnSide)
+			{
+				Test->TestTrue(*FString::Printf(TEXT("%s stayed on its own side of the target"), *What),
+					FVector::DotProduct((Final - Target).GetSafeNormal2D(), (Start - Target).GetSafeNormal2D()) > 0.5f);
+			}
+			if (!Drive.Queued.IsEmpty())
+			{
+				Test->TestTrue(*FString::Printf(TEXT("%s drove up to the obstacle on its way (closest %.1f cm)"), *What, State->MinGaps[Index]),
+					State->MinGaps[Index] <= StopGap);
+			}
+			if (Drive.bRefused)
+			{
+				Test->TestTrue(*FString::Printf(TEXT("%s stood still (%.0f cm)"), *What, FVector::Dist2D(Final, Start)),
+					FVector::Dist2D(Final, Start) <= RefusedDrift);
+			}
+			else if (Drive.bGroupOrder)
+			{
+				Test->TestTrue(*FString::Printf(TEXT("%s closed in on the target (%.0f cm, from %.0f cm)"), *What, FVector::Dist2D(Final, Target),
+					FVector::Dist2D(Start, Target)), FVector::Dist2D(Final, Target) < FVector::Dist2D(Start, Target) - ArrivalRadius);
+			}
+			else if (Drive.bStopAtObstacle)
 			{
 				Test->TestTrue(*FString::Printf(TEXT("%s stopped within %.0f cm of the obstacle (%.1f cm)"), *What, StopGap, FinalGap),
 					FinalGap >= -OverlapTolerance && FinalGap <= StopGap);
 			}
 			else
 			{
-				Test->TestTrue(*FString::Printf(TEXT("%s arrived (%.0f cm from the target)"), *What, FVector::Dist2D(Unit->GetActorLocation(), Drive.Target + Drive.Units[Index].TargetOffset)),
-					FVector::Dist2D(Unit->GetActorLocation(), Drive.Target + Drive.Units[Index].TargetOffset) <= ArrivalRadius);
+				Test->TestTrue(*FString::Printf(TEXT("%s arrived (%.0f cm from the target)"), *What, FVector::Dist2D(Final, Target)),
+					FVector::Dist2D(Final, Target) <= ArrivalRadius);
 			}
 			const TOptional<float>& Crossing = State->CrossingYs[Index];
 			const bool bInGate = Crossing && *Crossing >= Drive.GateMinY && *Crossing <= Drive.GateMaxY;
@@ -571,6 +636,8 @@ bool FRTSNavRunDrives::Update()
 			Unit->Destroy();
 		}
 		State->Units.Reset();
+		Test->TestEqual(*FString::Printf(TEXT("%s: refusals the player received"), *Drive.Name),
+			Controller->GetOrderRefusalCount() - State->RefusalsAtStart, Drive.ExpectedRefusals);
 	}
 
 	++State->DriveIndex;
@@ -586,6 +653,9 @@ bool FRTSNavRunDrives::Update()
 	State->MinGapObstacles.Reset();
 	State->MaxBarrelDepths.Reset();
 	State->MaxBarrelObstacles.Reset();
+	State->StartLocations.Reset();
+	State->Reversals.Reset();
+	State->LastDirections.Reset();
 	for (const FUnitStart& Start : Next.Units)
 	{
 		ARTSUnit* Unit = SpawnUnit(World, Start.Data, Controller->GetTeamId(), Start.Location, Start.Yaw);
@@ -596,13 +666,29 @@ bool FRTSNavRunDrives::Update()
 		State->MinGapObstacles.AddDefaulted();
 		State->MaxBarrelDepths.Add(0.f);
 		State->MaxBarrelObstacles.AddDefaulted();
+		State->StartLocations.Add(Unit->GetActorLocation());
+		State->Reversals.Add(0);
+		State->LastDirections.Add(0);
 	}
-	for (int32 Index = 0; Index < State->Units.Num(); ++Index)
+	State->RefusalsAtStart = Controller->GetOrderRefusalCount();
+	TArray<ARTSUnit*> Group;
+	for (const TWeakObjectPtr<ARTSUnit>& Unit : State->Units)
 	{
+		Group.Add(Unit.Get());
+	}
+	for (int32 Index = 0; Index < (Next.bGroupOrder ? 1 : State->Units.Num()); ++Index)
+	{
+		const TArray<ARTSUnit*> Ordered = Next.bGroupOrder ? Group : TArray<ARTSUnit*>{ Group[Index] };
 		FRTSCommand Move;
-		Move.Type = ERTSCommandType::Move;
-		Move.TargetLocation = Next.Target + Next.Units[Index].TargetOffset;
-		Controller->Server_IssueCommand({ State->Units[Index].Get() }, Move);
+		Move.Type = Next.Order;
+		Move.TargetLocation = Next.Target + (Next.bGroupOrder ? FVector::ZeroVector : Next.Units[Index].TargetOffset);
+		Controller->Server_IssueCommand(Ordered, Move);
+		for (const FVector& Queued : Next.Queued)
+		{
+			Move.TargetLocation = Queued;
+			Move.bQueue = true;
+			Controller->Server_IssueCommand(Ordered, Move);
+		}
 	}
 	State->DriveStart = Now;
 	State->SettleStart = -1.0;
@@ -1052,7 +1138,7 @@ namespace RTSNavigationTests
 			{ FactorySpot + FVector(-FH.X - 1500.f * L, 0.f, 0.f), 0.f, FactorySpot },
 		};
 		// Wall_West's ends are narrower than any vehicle hull, which meets both corners at once; each is clicked near its end,
-		// as a move into the middle of the 60 m wall lies further in than RequestMove looks back for navmesh.
+		// so the hull drives into the end face (MoveIntoObstacle.Deep sends hulls onto the middle of the wall).
 		const FCourse HeadOnEnds[] = {
 			{ FVector(B.X - BH.X - 1600.f * L, B.Y, 0.f), 0.f, FVector(B, 0.f) },
 			{ FVector(W.X + 0.5f * WH.X, W.Y - WH.Y - 1500.f * L, 0.f), 90.f, FVector(W.X + 0.5f * WH.X, W.Y - WH.Y + 2.f * WH.X, 0.f) },
@@ -1350,6 +1436,336 @@ bool FRTSNavFactoryExitTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavCheckFactoryExit(this));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+namespace RTSNavigationTests
+{
+	/**
+	 * The enclosure the refusal tests use: four by four power plant cells on the strip north-west of the bases, the outer
+	 * twelve a ring of plants, one of the four inside a plant too. The other three inside form a navmesh island no unit
+	 * outside reaches; the plant inside is an obstacle only that island touches.
+	 */
+	FVector RingOrigin = FVector::ZeroVector;
+	float RingCell = 0.f;
+
+	FVector GetRingCell(int32 Column, int32 Row)
+	{
+		return RingOrigin + FVector(Column * RingCell, Row * RingCell, 0.f);
+	}
+
+	bool InitRing(FAutomationTestBase& Test)
+	{
+		const URTSBuildingData* Plant = LoadObject<URTSBuildingData>(nullptr, PowerPlantPath);
+		const UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+		if (!Test.TestNotNull(TEXT("Power plant data"), Plant) || !World)
+		{
+			return false;
+		}
+		RingCell = 2.f * RTSTests::GetFootprintExtent(*Plant).X;
+		const float StripY = 0.5f * (BlockBox.Max.Y + RTSTests::GetMapHalfSize(*World));
+		// Even footprints centre on a grid line.
+		RingOrigin = FVector(FMath::GridSnap(WallBox.GetCenter().X - 2.f * RingCell, RTSBuildPlacement::GridSize),
+			FMath::GridSnap(StripY, RTSBuildPlacement::GridSize), 0.f);
+		return true;
+	}
+
+	TArray<FVector> GetRingSpots()
+	{
+		TArray<FVector> Spots;
+		for (int32 Row = -1; Row <= 2; ++Row)
+		{
+			for (int32 Column = -1; Column <= 2; ++Column)
+			{
+				const bool bInside = Column >= 0 && Column <= 1 && Row >= 0 && Row <= 1;
+				if (!bInside || (Column == 1 && Row == 1))
+				{
+					Spots.Add(GetRingCell(Column, Row));
+				}
+			}
+		}
+		return Spots;
+	}
+
+	/** Places the vehicle factory at FactorySpot, then the ring, and waits until all of them are cut into the navmeshes. */
+	void QueuePlacements(FAutomationTestBase& Test, const TSharedRef<FNavState>& State)
+	{
+		State->PlacedSpots.Add(FactorySpot);
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSNavPlaceBuildings(&Test, State, VehicleFactoryPath));
+		ADD_LATENT_AUTOMATION_COMMAND(FFunctionLatentCommand([State]()
+		{
+			State->PlacedSpots = GetRingSpots();
+			return true;
+		}));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSNavPlaceBuildings(&Test, State, PowerPlantPath));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForHoles(&Test, State));
+	}
+
+	/** Opens L_TestMap and lays out the obstacles and the ring; false, with an error, when something is missing. */
+	bool OpenMoveDestinationMap(FAutomationTestBase& Test, const TSharedRef<FNavState>& State)
+	{
+		if (!AutomationOpenMap(TestMap))
+		{
+			Test.AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+			return false;
+		}
+		return InitLayoutFromEditor(Test) && State->LoadUnits(Test) && InitRing(Test)
+			&& Test.TestNotNull(TEXT("Vehicle factory data"), LoadObject<URTSBuildingData>(nullptr, VehicleFactoryPath));
+	}
+
+	/** Starts PIE, waits for the navmeshes, places the factory and the ring, and runs State's drives. */
+	void QueueDrives(FAutomationTestBase& Test, const TSharedRef<FNavState>& State)
+	{
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(&Test, State));
+		QueuePlacements(Test, State);
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSNavRunDrives(&Test, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	}
+}
+
+/**
+ * Move orders deep into solid obstacles (#164): the M20, the placeholder tank and infantry each sent onto the middle of the
+ * 60 m Wall_West from both its ends and both its sides, deeper than the 30 m the move once looked back for navmesh, and onto
+ * the centres of Block_North and a vehicle factory from every side, by move and by attack-move. Each drives to the reachable
+ * spot nearest the target, stops within 50 cm of the obstacle without entering it, stays on its own side when it came from
+ * one, and does not keep switching between forward and reverse.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavMoveIntoObstacleDeepTest, "WorldDivide.Navigation.MoveIntoObstacle.Deep", RTSTests::TestFlags)
+
+bool FRTSNavMoveIntoObstacleDeepTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!OpenMoveDestinationMap(*this, State))
+	{
+		return false;
+	}
+	const URTSBuildingData* Factory = LoadObject<URTSBuildingData>(nullptr, VehicleFactoryPath);
+	const float L = LongVehicleSize.X / 1000.f;
+	const FVector2D B = BlockBox.GetCenter();
+	const FVector2D BH = BlockBox.GetExtent();
+	const FVector2D W = WallBox.GetCenter();
+	const FVector2D WH = WallBox.GetExtent();
+	const FVector2D FH(RTSBuildPlacement::GetFootprintExtent(Factory->Footprint));
+	struct FCourse
+	{
+		FVector Start;
+		float Yaw;
+		FVector Target;
+		bool bOwnSide;
+	};
+	// One course at each obstacle per drive, so three units drive at once without meeting.
+	const FCourse Sets[4][3] = {
+		{
+			{ FVector(W.X, W.Y - WH.Y - 1500.f * L, 0.f), 90.f, FVector(W, 0.f), false },
+			{ FVector(B.X, B.Y + BH.Y + 1600.f * L, 0.f), -90.f, FVector(B, 0.f), true },
+			{ FactorySpot + FVector(0.f, FH.Y + 1500.f * L, 0.f), -90.f, FactorySpot, true },
+		},
+		{
+			{ FVector(W.X, W.Y + WH.Y + 1500.f * L, 0.f), -90.f, FVector(W, 0.f), false },
+			{ FVector(B.X - BH.X - 1600.f * L, B.Y, 0.f), 0.f, FVector(B, 0.f), true },
+			{ FactorySpot + FVector(-FH.X - 1500.f * L, 0.f, 0.f), 0.f, FactorySpot, true },
+		},
+		{
+			{ FVector(W.X + WH.X + 1500.f * L, W.Y + 0.3f * WH.Y, 0.f), 180.f, FVector(W, 0.f), true },
+			{ FVector(B.X, B.Y - BH.Y - 1600.f * L, 0.f), 90.f, FVector(B, 0.f), true },
+			{ FactorySpot + FVector(0.f, -FH.Y - 1500.f * L, 0.f), 90.f, FactorySpot, true },
+		},
+		{
+			{ FVector(W.X - WH.X - 1500.f * L, W.Y - 0.3f * WH.Y, 0.f), 0.f, FVector(W, 0.f), true },
+			{ FVector(B.X + BH.X + 1600.f * L, B.Y, 0.f), 180.f, FVector(B, 0.f), true },
+			{ FactorySpot + FVector(FH.X + 1500.f * L, 0.f, 0.f), 180.f, FactorySpot, true },
+		},
+	};
+	const FString SetNames[4] = {
+		TEXT("Wall_West's middle from its south end, Block_North +Y, the factory +Y"),
+		TEXT("Wall_West's middle from its north end, Block_North -X, the factory -X"),
+		TEXT("Wall_West's middle from its east side, Block_North -Y, the factory -Y"),
+		TEXT("Wall_West's middle from its west side, Block_North +X, the factory +X"),
+	};
+	const TArray<URTSUnitData*> Hulls = { State->M20, State->Tank, State->Infantry };
+	for (const ERTSCommandType Order : { ERTSCommandType::Move, ERTSCommandType::AttackMove })
+	{
+		for (int32 Set = 0; Set < UE_ARRAY_COUNT(Sets); ++Set)
+		{
+			for (int32 Round = 0; Round < Hulls.Num(); ++Round)
+			{
+				FDrive Drive;
+				Drive.Name = FString::Printf(TEXT("%s into %s, round %d"), Order == ERTSCommandType::Move ? TEXT("Move") : TEXT("Attack-move"),
+					*SetNames[Set], Round + 1);
+				Drive.Order = Order;
+				Drive.bStopAtObstacle = true;
+				Drive.bCheckReversals = true;
+				for (int32 Course = 0; Course < 3; ++Course)
+				{
+					const FCourse& Picked = Sets[Set][Course];
+					FUnitStart Start{ Hulls[(Round + Course) % Hulls.Num()], Picked.Start, Picked.Yaw, Picked.Target };
+					Start.bOwnSide = Picked.bOwnSide;
+					Drive.Units.Add(Start);
+				}
+				State->Drives.Add(Drive);
+			}
+		}
+	}
+	QueueDrives(*this, State);
+	return true;
+}
+
+/**
+ * Move orders nothing can reach (#164): a group sent into the navmesh island inside a ring of power plants, and units each
+ * sent onto the plant inside the ring, are refused. They stay where they stand, keep no order, and the player hears of it
+ * once per group, not once per unit.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavMoveIntoObstacleRefusedTest, "WorldDivide.Navigation.MoveIntoObstacle.Refused", RTSTests::TestFlags)
+
+bool FRTSNavMoveIntoObstacleRefusedTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!OpenMoveDestinationMap(*this, State))
+	{
+		return false;
+	}
+	// South of the ring, a cell and a half out from its south row.
+	const float StartY = GetRingCell(0, -1).Y - 1.5f * RingCell;
+	const TArray<URTSUnitData*> Hulls = { State->M20, State->Tank, State->Infantry };
+	auto AddRefused = [&](const FString& Name, const FVector& Target, bool bGroupOrder)
+	{
+		FDrive Drive;
+		Drive.Name = Name;
+		Drive.Target = Target;
+		Drive.bGroupOrder = bGroupOrder;
+		Drive.bRefused = true;
+		Drive.ExpectedRefusals = 1;
+		for (int32 Index = 0; Index < Hulls.Num(); ++Index)
+		{
+			Drive.Units.Add({ Hulls[Index], FVector(GetRingCell(Index, 0).X, StartY, 0.f), 90.f });
+		}
+		State->Drives.Add(Drive);
+	};
+	AddRefused(TEXT("A group into the ring's island"), GetRingCell(0, 0), true);
+	AddRefused(TEXT("Each unit onto the plant inside the ring"), GetRingCell(1, 1), false);
+	QueueDrives(*this, State);
+	return true;
+}
+
+/**
+ * Groups and queues into obstacles (#164): six units selected together sent onto the middle of Wall_West, by move and by
+ * attack-move, all close in on it; a tank given a Shift-queued chain, past the wall, into its middle, into the ring's island
+ * and on, drives every reachable leg, skips the refused one with one refusal, and ends at the last.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavMoveIntoObstacleGroupTest, "WorldDivide.Navigation.MoveIntoObstacle.Group", RTSTests::TestFlags)
+
+bool FRTSNavMoveIntoObstacleGroupTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!OpenMoveDestinationMap(*this, State))
+	{
+		return false;
+	}
+	const float L = LongVehicleSize.X / 1000.f;
+	const FVector2D W = WallBox.GetCenter();
+	const FVector2D WH = WallBox.GetExtent();
+	const TArray<URTSUnitData*> Hulls = { State->M20, State->Tank, State->Infantry, State->M20, State->Tank, State->Infantry };
+	for (const ERTSCommandType Order : { ERTSCommandType::Move, ERTSCommandType::AttackMove })
+	{
+		FDrive Drive;
+		Drive.Name = FString::Printf(TEXT("A group %s onto Wall_West's middle"), Order == ERTSCommandType::Move ? TEXT("moved") : TEXT("attack-moved"));
+		Drive.Order = Order;
+		Drive.Target = FVector(W, 0.f);
+		Drive.bGroupOrder = true;
+		Drive.bCheckReversals = true;
+		for (int32 Index = 0; Index < Hulls.Num(); ++Index)
+		{
+			Drive.Units.Add({ Hulls[Index], FVector(W.X + WH.X + 4000.f * L, W.Y + (Index - 2.5f) * 1000.f * L, 0.f), 180.f });
+		}
+		State->Drives.Add(Drive);
+	}
+
+	FDrive Chain;
+	Chain.Name = TEXT("A queued chain through Wall_West's middle and the ring's island");
+	Chain.Target = FVector(W.X + WH.X + 2000.f * L, W.Y + 1000.f * L, 0.f);
+	Chain.Queued = { FVector(W, 0.f), GetRingCell(0, 0), FVector(W.X + WH.X + 2000.f * L, W.Y - 1000.f * L, 0.f) };
+	Chain.ExpectedRefusals = 1;
+	Chain.bCheckReversals = true;
+	Chain.Units.Add({ State->Tank, FVector(W.X + WH.X + 3000.f * L, W.Y + 2000.f * L, 0.f), 180.f });
+	State->Drives.Add(Chain);
+	QueueDrives(*this, State);
+	return true;
+}
+
+namespace RTSNavigationTests
+{
+	/** Searches each cost run makes per hull, cycling through its targets: as many as a large selection ordered at once. */
+	constexpr int32 CostSearches = 50;
+	/** No single search may take longer than this, in ms: a frame's share for the rare order that needs one. */
+	constexpr double CostWorstMs = 5.0;
+}
+
+/**
+ * Times RTSMoveDestination::FindReachable (#164) for the M20, the placeholder tank and infantry on targets deep in
+ * Wall_West, Block_North, the factory and the plant inside the ring: the worst search and the total for a batch of orders.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavMeasureMoveDestination, FAutomationTestBase*, Test, TSharedRef<RTSNavigationTests::FNavState>, State);
+bool FRTSNavMeasureMoveDestination::Update()
+{
+	using namespace RTSNavigationTests;
+	ARTSPlayerController* Controller = GetController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld& World = *Controller->GetWorld();
+	const FVector2D W = WallBox.GetCenter();
+	const FVector2D WH = WallBox.GetExtent();
+	const FVector Start(W.X, W.Y - WH.Y - 1500.f, 0.f);
+	// The plant in the ring last: it alone has no reachable spot.
+	const FVector Targets[] = { FVector(W, 0.f), FVector(BlockBox.GetCenter(), 0.f), FactorySpot, GetRingCell(1, 1) };
+	constexpr int32 TargetCount = UE_ARRAY_COUNT(Targets);
+	for (URTSUnitData* Data : { State->M20, State->Tank, State->Infantry })
+	{
+		ARTSUnit* Unit = SpawnUnit(World, Data, Controller->GetTeamId(), Start, 90.f);
+		double Worst = 0.0;
+		double Total = 0.0;
+		int32 Found = 0;
+		int32 Expected = 0;
+		for (int32 Search = 0; Search < CostSearches; ++Search)
+		{
+			FVector Destination;
+			const double Begin = FPlatformTime::Seconds();
+			Found += RTSMoveDestination::FindReachable(*Unit, Targets[Search % TargetCount], Destination) ? 1 : 0;
+			const double Ms = (FPlatformTime::Seconds() - Begin) * 1000.0;
+			Worst = FMath::Max(Worst, Ms);
+			Total += Ms;
+			Expected += Search % TargetCount != TargetCount - 1 ? 1 : 0;
+		}
+		Test->AddInfo(FString::Printf(TEXT("%s: %d searches, %d found, worst %.3f ms, total %.3f ms"), *DescribeUnit(*Data),
+			CostSearches, Found, Worst, Total));
+		Test->TestTrue(*FString::Printf(TEXT("%s: worst search %.3f ms within %.1f ms"), *DescribeUnit(*Data), Worst, CostWorstMs),
+			Worst <= CostWorstMs);
+		Test->TestEqual(*FString::Printf(TEXT("%s: searches that found a spot"), *DescribeUnit(*Data)), Found, Expected);
+		Unit->Destroy();
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavMoveIntoObstacleCostTest, "WorldDivide.Navigation.MoveIntoObstacle.Cost", RTSTests::TestFlags)
+
+bool FRTSNavMoveIntoObstacleCostTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!OpenMoveDestinationMap(*this, State))
+	{
+		return false;
+	}
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
+	QueuePlacements(*this, State);
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavMeasureMoveDestination(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }
