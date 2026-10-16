@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "CollisionQueryParams.h"
 
 class UWorld;
 struct FRTSBarrel;
@@ -18,6 +19,9 @@ struct FRTSBarrel;
  */
 namespace RTSBarrelClearance
 {
+	/** What barrels and hulls are kept out of: the world's static and dynamic geometry. Units are pawns. */
+	WORLDDIVIDE_API FCollisionObjectQueryParams GetObstacleObjects();
+
 	/** The barrel's ends in world space for a unit standing at Actor with its turret at Yaw and its gun at Pitch (degrees). */
 	WORLDDIVIDE_API void GetSegment(const FRTSBarrel& Barrel, const FTransform& Actor, float Yaw, float Pitch, FVector& OutStart,
 		FVector& OutEnd);

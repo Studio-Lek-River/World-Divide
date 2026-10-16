@@ -207,11 +207,10 @@ namespace
 
 	/**
 	 * The obstacle move test sends tanks, each on its own order, onto Block_North's roof, where a click on it lands: one from
-	 * the north and one from the east, each three hulls out from its face. The 8 m block has room for one real-size tank per
-	 * face.
+	 * each side, each three hulls out from its face. The 8 m block has room for one real-size tank per face.
 	 */
-	FVector ObstacleMoverStarts[2];
-	const FVector2D ObstacleMoverSides[2] = { FVector2D(0.f, 1.f), FVector2D(1.f, 0.f) };
+	FVector ObstacleMoverStarts[4];
+	const FVector2D ObstacleMoverSides[4] = { FVector2D(0.f, 1.f), FVector2D(1.f, 0.f), FVector2D(0.f, -1.f), FVector2D(-1.f, 0.f) };
 	/** How far from the block's face a tank's hull may stop, and how far it may reach into it (RTSHullClearance). */
 	constexpr float ObstacleEdgeTolerance = 50.f;
 	constexpr float ObstacleOverlapTolerance = 2.f;

@@ -20,15 +20,6 @@ namespace
 
 	const FName SweepTag(TEXT("RTSBarrelClearance"));
 
-	/** What a barrel is kept out of: the world's static and dynamic geometry. Units are pawns. */
-	FCollisionObjectQueryParams GetObstacleObjects()
-	{
-		FCollisionObjectQueryParams Objects;
-		Objects.AddObjectTypesToQuery(ECC_WorldStatic);
-		Objects.AddObjectTypesToQuery(ECC_WorldDynamic);
-		return Objects;
-	}
-
 	/** The turn between two looks at a swinging barrel: its muzzle moves no more than the barrel is thick. */
 	float GetSwingStep(const FRTSBarrel& Barrel)
 	{
@@ -40,6 +31,14 @@ namespace
 
 namespace RTSBarrelClearance
 {
+	FCollisionObjectQueryParams GetObstacleObjects()
+	{
+		FCollisionObjectQueryParams Objects;
+		Objects.AddObjectTypesToQuery(ECC_WorldStatic);
+		Objects.AddObjectTypesToQuery(ECC_WorldDynamic);
+		return Objects;
+	}
+
 	void GetSegment(const FRTSBarrel& Barrel, const FTransform& Actor, float Yaw, float Pitch, FVector& OutStart, FVector& OutEnd)
 	{
 		const FRotator Turret(0.f, Yaw, 0.f);

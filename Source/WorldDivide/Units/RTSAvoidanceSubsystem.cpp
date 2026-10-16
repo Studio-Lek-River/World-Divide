@@ -59,6 +59,17 @@ namespace
 	/** How far a hull inside an obstacle is nudged each way to find which way out is quickest. */
 	constexpr float HullGradientStep = 5.f;
 
+	/**
+	 * A hull the navmesh reads closer to an obstacle than HullSolidAbove, and no deeper in one than it may err
+	 * (RTSHullClearance::GetNavUncertainty), is kept out by its collision instead: backed out only when its box, grown by
+	 * HullSolidSkin, overlaps something solid, and found clear, looked at again once it moved that far. Above zero, the
+	 * navmesh's simplified edge may cut across an obstacle's corner by a few cm.
+	 */
+	constexpr float HullSolidAbove = 10.f;
+	constexpr float HullSolidSkin = 2.f;
+	/** How far such a hull backs out at least, each pass, when its box does overlap something. */
+	constexpr float HullSolidBackOut = 5.f;
+
 	FIntPoint CellOf(const FVector2D& Location)
 	{
 		return FIntPoint(FMath::FloorToInt32(Location.X / CellSize), FMath::FloorToInt32(Location.Y / CellSize));
@@ -297,11 +308,16 @@ void URTSAvoidanceSubsystem::ApplyPushes(float DeltaSeconds)
 		{
 			FVector2D Away = FVector2D::ZeroVector;
 			const float Clearance = RTSHullClearance::GetClearance(*NavMesh, Footprint, &Away, HullCheckExtraReach);
-			if (Clearance >= 0.f)
+			const bool bNearSolid = Clearance < HullSolidAbove && Clearance >= -RTSHullClearance::GetNavUncertainty(*NavMesh);
+			const bool bClear = bNearSolid
+				? RTSHullClearance::IsSolidClear(*GetWorld(), Footprint, Unit->GetActorLocation().Z - Unit->GetGroundOffset(),
+					Unit->GetShape().Hull.GetSize().Z, HullSolidSkin)
+				: Clearance >= 0.f;
+			if (bClear)
 			{
 				HullCache.Center = FVector2D(Footprint.Center);
 				HullCache.Axis = FVector2D(Footprint.Axis);
-				HullCache.Slack = Clearance;
+				HullCache.Slack = bNearSolid ? HullSolidSkin : Clearance;
 				HullCache.ExpireTime = Now + HullCheckSeconds;
 				break;
 			}
@@ -326,7 +342,9 @@ void URTSAvoidanceSubsystem::ApplyPushes(float DeltaSeconds)
 			{
 				Step -= Away * Into;
 			}
-			const float Out = FMath::Min(-Clearance, BackOut);
+			// That close the collision decides both ways: a hull it finds in something backs out a little at a time, however
+			// little the navmesh reads, which beside a corner may be nothing at all.
+			const float Out = FMath::Min(bNearSolid ? FMath::Max(-Clearance, HullSolidBackOut) : -Clearance, BackOut);
 			Step += Away * Out;
 			// Nor does it keep driving in: the next frame's move starts without the speed toward the obstacle.
 			if (Movement)

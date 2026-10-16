@@ -332,3 +332,52 @@ What changed:
 - **No sweeps in the bench.** Temporary counters showed no overlap hits and no aim sweeps in the open grid. The cost there is the cached reach checks: 270 a second idle and, after widening the box, about the same driving.
 - **Moving units no longer re-check five times a second.** Before the box was widened, a moving unit re-checked 5 times a second (1080 checks a second in total). That first A/B measured move at 17.0 and 17.7 ms off against 20.6 and 21.2 ms on. That is fixed.
 - **The tank does not run barrel clearance.** `DA_TestTank` x 240 measured idle 2.33 ms and move 4.15 ms of game thread, against 2.39 and 4.25 ms before.
+
+## #163 (same stop gap on every obstacle face)
+
+Same machine and method, on 2026-10-16, one run each, `main` at `4181d3a` before and with the change.
+
+**Cause.** `RTSHullClearance` read an obstacle as lying exactly the navmesh's erosion behind the navmesh's edge. `WorldDivide.Navigation.HullClearance.EdgeOffsets` measures where the edge actually lies off each collision face:
+
+| Obstacle | +X, +Y faces | -X, -Y faces |
+|---|---:|---:|
+| Block_North, Wall_West (static meshes) | erosion + 0 cm | erosion + 25 cm (one cell) |
+| Vehicle factory, other buildings (null-area boxes) | erosion + 0 cm | erosion + 0 cm |
+
+The erosion is 200 cm for vehicles and 50 cm for infantry. Recast marks the voxel column a face lies in, so a mesh face that lies on a cell edge gains a whole cell on Recast's far side. Unreal hands geometry to Recast as (-X, Z, -Y), so that is Unreal's -X and -Y. Buildings cut the navmesh as area boxes, which Recast marks by cell centre, so they come out exact. Every face on the test map lies on the 25 cm grid. A face between grid lines gains 0 to 25 cm on either side. Path ends, the avoidance back-out and `MoveSnapStep` all read the same navmesh, so they inherited the extra cell; none of them causes it.
+
+**Fix.** The navmesh stays the safe model. It only decides the last stretch when the true face may still be up to one cell further than it reads (`RTSHullClearance::GetNavUncertainty`, a cell plus the half-cell margin):
+- When an order aims into an obstacle, the path end drives on along its last stretch while the hull's box, grown by 10 cm, overlaps nothing solid (`IsSolidClear`). That is one box overlap per step of a short bisection, once per path.
+- The avoidance hull check lets the collision decide for a hull that reads between 10 cm clear and one uncertainty deep. Such a hull backs out, at least 5 cm per pass, only when its box grown by 2 cm overlaps something. Found clear, it is checked again after it has moved 2 cm.
+
+**Stop gaps.** Hull to obstacle box, cm, `WorldDivide.Navigation.HullClearance.Drive` head on:
+
+| Face | Before: M20 / tank / long / narrow | After: M20 / tank / long / narrow |
+|---|---|---|
+| Block_North +X | 37.8 / 37.1 / 39.3 / 40.2 | 37.8 / 37.1 / 39.3 / 35.8 |
+| Block_North +Y | 37.8 / 37.1 / 39.3 / 40.2 | 37.8 / 37.1 / 39.3 / 35.8 |
+| Block_North -X | 58.8 / 57.9 / 56.5 / 61.8 | 34.9 / 38.8 / 37.2 / 38.8 |
+| Block_North -Y | 63.2 / 62.4 / 63.7 / 61.8 | 34.8 / 38.6 / 35.5 / 38.8 |
+| Wall_West +X | 38.1 / 37.0 / 38.9 / 36.7 | 38.1 / 37.0 / 38.9 / 36.7 |
+| Wall_West -X | 63.4 / 62.2 / 64.1 / 62.0 | 35.0 / 39.4 / 35.8 / 38.9 |
+| Wall_West north end (+Y) | not driven | 38.0 / 37.8 / 38.8 / 37.4 |
+| Wall_West south end (-Y), both corners at once | not driven | 38.0 / 37.8 / 38.8 / 38.9 |
+| Vehicle factory, all four faces | 38.0 / 37.8 / 38.8 / 37.4 | 38.0 / 37.8 / 38.8 / 37.4 |
+
+- **All faces now stop at 34.8–39.4 cm, against 36.7–64.1 before.** On the faces the navmesh read exactly, nothing changed. `WorldDivide.Smoke.MoveIntoObstacle`, back on all four faces of Block_North, stops tanks at 37, 37, 39 and 39 cm.
+- **The residual spread between opposite faces is at most 4.6 cm, and it is not a matter of direction.** The same hull stops within a few cm on +X and -X. The spread comes from the end's 5 cm bisection step and from where path following stops inside its 25 cm acceptance radius, and that rest of about 25 cm is the same on every face.
+- **No hull went inside an obstacle.** Before the change the closest a hull came on any drive (head on, along, around) was 4.2 cm; with it, 2.2 cm, on drives around a corner. The collision now keeps a 2 cm skin where the navmesh used to keep its half-cell margin. An earlier version that let the navmesh decide above zero let an M20 reach 4 cm into Wall_West's corner: there the navmesh's simplified edge cuts across the corner, so the collision now decides 10 cm above zero too.
+- **Barrels:** `WorldDivide.Navigation.BarrelClearance.Drive` drives the new faces too, with no barrel deeper than 0.0 cm.
+
+**240 units** (`ue.ps1 -Task bench -Counts 240 -Trace`):
+
+| Unit | Scenario | Before game ms (max) | After game ms (max) | Avoidance ms before → after (max) |
+|---|---|---:|---:|---:|
+| `DA_TestTank` | idle | 2.44 (3.08) | 2.40 (3.19) | 0.31 → 0.31 (0.62 → 0.42) |
+| `DA_TestTank` | move | 4.75 (8.58) | 4.85 (5.83) | 0.34 → 0.34 (0.54 → 0.57) |
+| M20 Guardian | idle | 2.34 (3.33) | 2.11 (3.58) | 0.28 → 0.24 (0.75 → 0.80) |
+| M20 Guardian | move | 20.56 (29.77) | 18.86 (28.84) | 0.39 → 0.38 (0.71 → 2.95) |
+
+- **Every row is within the run-to-run spread.** The open bench grid has no obstacle near any hull, and the Insights capture shows no `RTSHullClearance::IsSolidClear` call at all. The game thread's `URTSAvoidanceSubsystem::Separate` averages 0.18 ms after against 0.21 ms before for the M20, and 0.24 against 0.25 ms for the tank. `GetClearance` and `AdjustPath` counts are unchanged.
+- **The one 2.95 ms avoidance frame (M20 move) is a stall.** `GetClearance` and `AdjustPath` peak at 0.36 ms in the same capture against 0.035 ms before, and neither does more work than before there.
+- **Near obstacles** the cost is one box overlap per frame for each hull within 10 cm of an obstacle on the navmesh (or up to one uncertainty inside it), and about five overlaps per move order into an obstacle.

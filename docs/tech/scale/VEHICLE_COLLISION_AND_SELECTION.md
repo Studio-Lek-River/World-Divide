@@ -90,6 +90,10 @@ Today one default agent (radius 34 cm) serves every unit, so a 3.7 m wide tank p
   - `RTSAvoidanceSubsystem.cpp:146` uses `GetDefaultNavDataInstance` for its raycast clamp. It must use the unit's nav data, or a tank could be pushed into an infantry-only gap.
   - Anything else that calls `ProjectPointToNavigation` or `Raycast` without the props (to be listed in the implementation issue by searching for `GetDefaultNavDataInstance` and `GetNavigationSystem`).
 - **Building placement** keeps checking the infantry nav data (the finest). Separately, it checks that the vehicle agent can reach the exit of a factory placement.
+- **The navmesh edge errs safe by up to a cell (#163).** Recast rounds a static mesh's faces out to whole cells: on Unreal's -X and -Y faces by a full 25 cm cell when the face lies on a cell edge. Buildings, cut as null-area boxes, are exact. `RTSHullClearance` keeps reading the navmesh, and lets the collision decide the last stretch, a cell and a half-cell margin (`GetNavUncertainty`):
+  - A path ordered into an obstacle ends where the hull's box, 10 cm larger, overlaps nothing (`IsSolidClear`).
+  - A hull within 10 cm of a navmesh wall, or no deeper than that stretch inside it, is backed out only when its box, 2 cm larger, overlaps something.
+  - Hulls now stop 35 to 39 cm from every face, against 37 cm on +X/+Y and 62 cm on -X/-Y before ([performance results, #163](PERFORMANCE_RESULTS.md#163-same-stop-gap-on-every-obstacle-face)).
 
 ### 3.4 Avoidance and formation footprint: the stadium
 

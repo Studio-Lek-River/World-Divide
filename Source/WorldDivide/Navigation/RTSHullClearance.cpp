@@ -1,8 +1,10 @@
 #include "Navigation/RTSHullClearance.h"
 
+#include "Engine/World.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "NavigationData.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
+#include "Units/RTSBarrelClearance.h"
 #include "Units/RTSUnitShape.h"
 
 float RTSHullClearance::GetErosion(const ARecastNavMesh& NavMesh)
@@ -30,6 +32,14 @@ namespace
 
 	/** How far above and below a point the navmesh under it is looked for. */
 	constexpr float ProjectHeight = 250.f;
+
+	/** A path into an obstacle ends where the hull's box, grown by this much, overlaps nothing solid. */
+	constexpr float ContactGap = 10.f;
+
+	/** A hull's box looks for solids from this high above its ground: a kerb its navmesh lets it climb is none. */
+	constexpr float SolidStepHeight = 50.f;
+
+	const FName SolidQueryTag(TEXT("RTSHullClearance"));
 
 	/** One point of the hull: a disc of Radius, or a point when Radius is zero, in the footprint's frame. */
 	struct FSample
@@ -225,6 +235,28 @@ namespace RTSHullClearance
 		return Clearance;
 	}
 
+	float GetNavUncertainty(const ARecastNavMesh& NavMesh)
+	{
+		return NavMesh.GetCellSize(ENavigationDataResolution::Default) + GetMargin(NavMesh);
+	}
+
+	bool IsSolidClear(const UWorld& World, const FRTSFootprint& Footprint, float GroundZ, float Height, float Skin)
+	{
+		TRACE_CPUPROFILER_EVENT_SCOPE(RTSHullClearance::IsSolidClear);
+
+		const float Bottom = GroundZ + SolidStepHeight;
+		const float Top = GroundZ + Height;
+		if (Top <= Bottom)
+		{
+			return true;
+		}
+		const FVector HalfExtent(Footprint.HalfSegment + Footprint.Radius + Skin, Footprint.Radius + Skin, 0.5f * (Top - Bottom));
+		const FVector Center(Footprint.Center.X, Footprint.Center.Y, 0.5f * (Bottom + Top));
+		const FQuat Rotation = FRotationMatrix::MakeFromX(FVector(Footprint.Axis.X, Footprint.Axis.Y, 0.f)).ToQuat();
+		return !World.OverlapAnyTestByObjectType(Center, Rotation, RTSBarrelClearance::GetObstacleObjects(),
+			FCollisionShape::MakeBox(HalfExtent), FCollisionQueryParams(SolidQueryTag));
+	}
+
 	FRTSFootprint MakeFootprint(const FRTSUnitShape& Shape, const FVector& Location, const FVector2D& Heading)
 	{
 		const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Heading.Y, Heading.X));
@@ -316,6 +348,40 @@ namespace RTSHullClearance
 				FNavPathPoint Added = Points.Last();
 				Added.Location = At(Clear);
 				Points.Add(Added);
+			}
+		}
+
+		// The last cell before an obstacle: the navmesh may end up to GetNavUncertainty short of its true face, so the hull
+		// drives on along its last stretch while its box, a small gap larger, stays clear of anything solid.
+		const UWorld* World = NavMesh.GetWorld();
+		if (Beyond && World)
+		{
+			const FVector End = Points.Last().Location;
+			const FVector2D Heading = HeadingOf(Points.Num() - 2);
+			const float Distance = FMath::Min(FVector2D::DotProduct(FVector2D(*Beyond - End), Heading), GetNavUncertainty(NavMesh));
+			const float Height = Shape.Hull.GetSize().Z;
+			auto At = [&End, &Heading](float Along) { return End + FVector(Heading * Along, 0.f); };
+			auto SolidClearAt = [&](float Along)
+			{
+				return IsSolidClear(*World, MakeFootprint(Shape, At(Along), Heading), End.Z, Height, ContactGap);
+			};
+			if (!Heading.IsNearlyZero() && Distance > EndPrecision && SolidClearAt(0.f))
+			{
+				float Clear = 0.f;
+				float Blocked = Distance;
+				if (SolidClearAt(Distance))
+				{
+					Clear = Distance;
+				}
+				else
+				{
+					while (Blocked - Clear > EndPrecision)
+					{
+						const float Middle = 0.5f * (Clear + Blocked);
+						(SolidClearAt(Middle) ? Clear : Blocked) = Middle;
+					}
+				}
+				Points.Last().Location = At(Clear);
 			}
 		}
 

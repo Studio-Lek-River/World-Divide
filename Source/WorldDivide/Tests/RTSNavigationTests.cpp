@@ -705,6 +705,78 @@ bool FRTSNavMeasureClearance::Update()
 	return true;
 }
 
+/**
+ * Where each agent's navmesh edge lies off each face of Block_North, Wall_West and the placed vehicle factory, measured
+ * from the collision face (#163): never nearer than the erosion RTSHullClearance assumes, and at most a cell further, which
+ * is how far Recast's voxels may round the obstacle out.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavMeasureEdgeOffsets, FAutomationTestBase*, Test, TSharedRef<FNavState>, State);
+bool FRTSNavMeasureEdgeOffsets::Update()
+{
+	UWorld* World = AutomationCommon::GetAnyGameWorld();
+	if (!World)
+	{
+		Test->AddError(TEXT("No PIE world"));
+		return true;
+	}
+	GatherObstacles(*World, *State);
+
+	const FVector2D Faces[] = { FVector2D(1.f, 0.f), FVector2D(-1.f, 0.f), FVector2D(0.f, 1.f), FVector2D(0.f, -1.f) };
+	const TCHAR* FaceNames[] = { TEXT("+X"), TEXT("-X"), TEXT("+Y"), TEXT("-Y") };
+	int32 Measured = 0;
+	int32 Expected = 0;
+	for (const FNavDataConfig& Agent : RTSNavAgents::GetAgents())
+	{
+		const ARecastNavMesh* NavMesh = RTSNavAgents::GetNavMesh(*World, Agent);
+		if (!Test->TestNotNull(*FString::Printf(TEXT("%s navmesh"), *Agent.Name.ToString()), NavMesh))
+		{
+			continue;
+		}
+		const float Erosion = RTSHullClearance::GetErosion(*NavMesh);
+		const float Cell = NavMesh->GetCellSize(ENavigationDataResolution::Default);
+		for (int32 ObstacleIndex = 0; ObstacleIndex < State->Obstacles.Num(); ++ObstacleIndex)
+		{
+			const FString& Name = State->ObstacleNames[ObstacleIndex];
+			if ((Name.StartsWith(TEXT("Wall_")) && Name != TEXT("Wall_West")) || (Name.StartsWith(TEXT("Block_")) && Name != TEXT("Block_North")))
+			{
+				continue;
+			}
+			const FBox2D& Box = State->Obstacles[ObstacleIndex];
+			for (int32 FaceIndex = 0; FaceIndex < UE_ARRAY_COUNT(Faces); ++FaceIndex)
+			{
+				++Expected;
+				const FVector2D Normal = Faces[FaceIndex];
+				const FVector2D Face = Box.GetCenter() + Normal * Box.GetExtent();
+				FNavLocation Outside;
+				if (!Test->TestTrue(*FString::Printf(TEXT("Navmesh off %s's %s face"), *Name, FaceNames[FaceIndex]),
+					NavMesh->ProjectPoint(FVector(Face + Normal * (Erosion + 400.f), 0.f), Outside, FVector(10.f, 10.f, 250.f))))
+				{
+					continue;
+				}
+				FVector Hit;
+				const FVector Into(Face - Normal * 1.f, Outside.Location.Z);
+				if (!Test->TestTrue(*FString::Printf(TEXT("%s's navmesh ends before %s's %s face"), *Agent.Name.ToString(), *Name,
+					FaceNames[FaceIndex]), ARecastNavMesh::NavMeshRaycast(NavMesh, Outside.Location, Into, Hit, NavMesh->GetDefaultQueryFilter())))
+				{
+					continue;
+				}
+				const float Offset = FVector2D::DotProduct(FVector2D(Hit) - Face, Normal);
+				++Measured;
+				Test->AddInfo(FString::Printf(TEXT("%s navmesh: edge %.1f cm off %s's %s face (%.1f past the erosion; face at %.1f, %.2f cells into the grid)"),
+					*Agent.Name.ToString(), Offset, *Name, FaceNames[FaceIndex], Offset - Erosion,
+					FVector2D::DotProduct(Face, Normal), FMath::Fmod(FMath::Abs(FVector2D::DotProduct(Face, Normal)), Cell) / Cell));
+				Test->TestTrue(*FString::Printf(TEXT("%s's navmesh never comes nearer %s's %s face than its erosion (%.1f cm)"),
+					*Agent.Name.ToString(), *Name, FaceNames[FaceIndex], Offset), Offset >= Erosion - 1.f);
+				Test->TestTrue(*FString::Printf(TEXT("%s's navmesh ends within a cell past the erosion off %s's %s face (%.1f cm)"),
+					*Agent.Name.ToString(), *Name, FaceNames[FaceIndex], Offset), Offset <= Erosion + Cell + 1.f);
+			}
+		}
+	}
+	Test->TestEqual(TEXT("Every face of every obstacle measured on every navmesh"), Measured, Expected);
+	Test->TestTrue(TEXT("Block_North, Wall_West and the vehicle factory among them"), Expected >= 12 * RTSNavAgents::GetAgents().Num());
+	return true;
+}
+
 /** CanPlace with a vehicle factory whose exit faces Block_North's west face, and a barracks on the same spot. */
 DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FRTSNavCheckFactoryExit, FAutomationTestBase*, Test);
 bool FRTSNavCheckFactoryExit::Update()
@@ -900,6 +972,32 @@ bool FRTSNavHullClearanceMeasureTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+/**
+ * How far each navmesh's edge lies off the collision faces of Block_North, Wall_West and a vehicle factory, on all four
+ * sides (#163): RTSHullClearance relies on it never being nearer than the erosion, and the gap a hull stops at on how much
+ * further it may be.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavEdgeOffsetsTest, "WorldDivide.Navigation.HullClearance.EdgeOffsets", RTSTests::TestFlags)
+
+bool FRTSNavEdgeOffsetsTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	if (!AutomationOpenMap(TestMap) || !InitLayoutFromEditor(*this))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	State->PlacedSpots.Add(FactorySpot);
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavPlaceBuildings(this, State, VehicleFactoryPath));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForHoles(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavMeasureEdgeOffsets(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
 namespace RTSNavigationTests
 {
 	/**
@@ -942,6 +1040,24 @@ namespace RTSNavigationTests
 			{ FVector(W.X + WH.X + 1500.f * L, W.Y, 0.f), 180.f, FVector(W, 0.f) },
 			{ FactorySpot + FVector(0.f, FH.Y + 1500.f * L, 0.f), -90.f, FactorySpot },
 		};
+		// The faces facing -X and -Y, where Recast rounds a static mesh out by a cell more (#163), and the rest.
+		const FCourse HeadOnNegative[] = {
+			{ FVector(B.X, B.Y - BH.Y - 1600.f * L, 0.f), 90.f, FVector(B, 0.f) },
+			{ FVector(W.X - WH.X - 1500.f * L, W.Y, 0.f), 0.f, FVector(W, 0.f) },
+			{ FactorySpot + FVector(-FH.X - 1500.f * L, 0.f, 0.f), 0.f, FactorySpot },
+		};
+		// Wall_West's ends are narrower than any vehicle hull, which meets both corners at once; each is clicked near its end,
+		// as a move into the middle of the 60 m wall lies further in than RequestMove looks back for navmesh.
+		const FCourse HeadOnEnds[] = {
+			{ FVector(B.X - BH.X - 1600.f * L, B.Y, 0.f), 0.f, FVector(B, 0.f) },
+			{ FVector(W.X + 0.5f * WH.X, W.Y - WH.Y - 1500.f * L, 0.f), 90.f, FVector(W.X + 0.5f * WH.X, W.Y - WH.Y + 2.f * WH.X, 0.f) },
+			{ FactorySpot + FVector(0.f, -FH.Y - 1500.f * L, 0.f), 90.f, FactorySpot },
+		};
+		const FCourse HeadOnRest[] = {
+			{ FVector(B.X + BH.X + 1600.f * L, B.Y, 0.f), 180.f, FVector(B, 0.f) },
+			{ FVector(W.X, W.Y + WH.Y + 1500.f * L, 0.f), -90.f, FVector(W.X, W.Y + WH.Y - 2.f * WH.X, 0.f) },
+			{ FactorySpot + FVector(FH.X + 1500.f * L, 0.f, 0.f), 180.f, FactorySpot },
+		};
 		const FCourse Along[] = {
 			{ FVector(B.X - BH.X - 1200.f * L, B.Y + BH.Y + 250.f * L, 0.f), 0.f, FVector(B.X + BH.X + 1200.f * L, B.Y + BH.Y + 250.f * L, 0.f) },
 			{ FVector(W.X + WH.X + 250.f * L, W.Y - WH.Y - 600.f * L, 0.f), 90.f, FVector(W.X + WH.X + 250.f * L, W.Y + WH.Y + 600.f * L, 0.f) },
@@ -969,7 +1085,10 @@ namespace RTSNavigationTests
 				State->Drives.Add(Drive);
 			}
 		};
-		AddRounds(TEXT("Head on into Block_North, Wall_West and the factory"), HeadOn, true);
+		AddRounds(TEXT("Head on into Block_North +Y, Wall_West +X and the factory +Y"), HeadOn, true);
+		AddRounds(TEXT("Head on into Block_North -Y, Wall_West -X and the factory -X"), HeadOnNegative, true);
+		AddRounds(TEXT("Head on into Block_North -X, Wall_West's south end and the factory -Y"), HeadOnEnds, true);
+		AddRounds(TEXT("Head on into Block_North +X, Wall_West's north end and the factory +X"), HeadOnRest, true);
 		AddRounds(TEXT("Along Block_North, Wall_West and the factory"), Along, false);
 		AddRounds(TEXT("Around Block_North, Wall_West and the factory"), Around, false);
 
