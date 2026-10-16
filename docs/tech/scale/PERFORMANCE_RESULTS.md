@@ -44,6 +44,82 @@ A **provisional target** is a budget from plan §6 item 7; it is not a result un
 - **Teams:** L_Bench gives each of two teams a headquarters in opposite corners, about 170 m from the grid. The benchmark units therefore have an enemy, but none in range.
 - **Reproduce:** `ue.ps1 -Task bench -Unit <DataAsset> [-Counts 1,30,120,240] [-Trace]`. The table and a CSV go to `Saved/Bench/<DataAsset>/`, headed by the CPU, GPU, driver, RHI and build. `-Trace` writes an Unreal Insights capture with one region per scenario.
 
+## Bench workflow (#167): quick runs for iterating, the long method as the gate
+
+There are three methods. Their numbers live in `FRTSBenchPlan` (`Units/Debug/RTSBenchPlan.h`), and `WorldDivide.Debug.Bench.Plan` checks them, so the gate cannot change by accident.
+
+| Method | Switch | Counts | Scenarios | Warm-up | Samples | Use |
+|---|---|---|---|---|---|---|
+| Long | `-Long` (alias `-Full`) | 1, 30, 120, 240 | idle, move | 10 s each | 60 s: three at 240, one below | **The performance gate.** Unchanged from #138 (step 6 below). |
+| Quick | `-Quick` | 240 (or `-Counts`) | move | 3 s settle, 10 s after the order | one 30 s sample | **Iterating only. Never gate evidence.** |
+| Short | none | 1, 30, 120, 240 | idle, move | 3 s, 1 s after the order | 120 frames | The step 0 to step 4 method, kept for continuity. |
+
+- **Quick is the long scene, shortened.** It uses the same grid south-west of the middle, the same camera, and the same back-and-forth driving every 15 s. So its row is the same kind of number as the gate's 240-unit move rows. It writes the same CSV and table columns, and its table title says "diagnostic, not gate evidence".
+- **A quick result never closes a budget.** A gate in the table above is judged only on long-method rows, run on a committed build.
+- **Wall clock** on the development PC (2026-10-16), including the game's start and quit:
+
+| Run | Wall clock |
+|---|---:|
+| `-Quick -Unit DA_TestM20Guardian` | 63 s |
+| `-Quick -Unit DA_TestTank` | 58 s |
+| `-Quick -Unit DA_TestM20Guardian,DA_TestTank`, one session | 104 s |
+| `-Counts 240` short method, one set (unchanged) | 18 s |
+| `-Long`, one set | about 14 min (#167) |
+
+- **Quick against the gate**, 240 moving units, game thread mean (p95):
+
+| Unit | Quick, alone | Quick, in a two-set session | Step 6 long method |
+|---|---:|---:|---:|
+| M20 Guardian | 6.16 (20.30) | 6.14 (19.75) | 6.49 (19.6) |
+| `DA_TestTank` | 3.23 (4.57) | 3.34 (4.72) | 3.50 (4.93) |
+
+  Quick lands inside the gate's spread. It is still one sample: the M20's slowest frame was 27.3 ms in one quick run and 33.8 ms in the next.
+- **The long method was not re-run for #167.** Its code path is unchanged: the same numbers, now read from `FRTSBenchPlan` and checked by `WorldDivide.Debug.Bench.Plan`. A long run per unit type does not scale to a roster of over a hundred units; that is a follow-up.
+
+### Several unit sets in one run
+
+`-Unit` takes sets separated by `,`; `+` still joins the sizes of one mixed set. All sets run in one game session, one after another. Each set is its own run: its own camera, settings (saved and restored), warm-up, samples, statistics and `Saved/Bench/<set>/` folder. Its units are destroyed and garbage-collected, and the next set starts one second later. The order of the sets is the order given; each set's warm-up absorbs the first-use costs (shaders, streaming) that the first set pays. In the two-set quick run above, the tank, benched second, measured 3.34 ms against 3.23 ms alone. That is inside the spread.
+
+### Stored baselines
+
+Each run writes `bench.json` beside `bench.csv` with:
+- **method:** name, version, counts, scenarios, warm-ups and samples;
+- **scene:** map, unit set, resolution, render size, grid and camera;
+- **machine:** CPU, GPU, driver, RHI and build configuration;
+- **git:** commit, whether the worktree had changes, and the hashes of the bench code, `L_Bench` and the set's unit data;
+- **session:** the sets of the run and its wall clock.
+
+- **Storing.** `-SaveBaseline` stores each set's `bench.csv`, `bench.md` and `bench.json` under `Saved/Bench/Baselines/<commit>/<method>/<set>/`. It refuses to run on a worktree with changes, so a baseline is exactly its commit. Baselines stay on this machine (`Saved/` is not committed), because the numbers belong to the machine.
+- **Selecting.** `-Compare` reads the run against the baseline of `HEAD`, the commit your uncommitted change sits on. `-Baseline <commit>` picks an older one. That commit must be `HEAD` or one of its ancestors, and the comparison is headed **OUTDATED** with the number of commits in between. There is no fallback: when the baseline is missing, the run does not start. It prints **NO BASELINE**, the stored baselines and the command that makes the missing one.
+- **Validating.** Method, scene and machine must match field for field. On any difference, the run is printed but not compared, the differing fields are listed, and the command exits 1. Commit, worktree changes and content hashes are allowed to differ, since they are usually the change under test, but `compare.md` names each one.
+- **Reading.** `compare.md` (in `Saved/Bench/<set>/`, also printed) gives each row's baseline → now and the difference for the frame, game thread (mean, p95, max), render, GPU, avoidance and locomotion. A game-thread difference beyond the 0.6 ms run-to-run spread is bold. One quick sample against one quick sample is a hint, not a result: confirm a gain or loss with the long method.
+- **Regenerate a baseline** when `main` moves on and the new commit is your "before", when the GPU driver, GPU, CPU, RHI or build configuration changes, or when `FRTSBenchPlan::Version` is bumped (any change to a method's numbers or scene).
+
+### Commands
+
+```powershell
+# Iterate: 240 moving M20s, one 30 s sample (diagnostic)
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Quick -Unit DA_TestM20Guardian
+
+# Before a change, on a clean checkout of main: store quick and gate baselines of several sets
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Quick -Unit DA_TestM20Guardian,DA_TestTank -SaveBaseline
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Long -Unit DA_TestM20Guardian,DA_TestTank -SaveBaseline
+
+# While working: bench only "after" against HEAD's baseline
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Quick -Unit DA_TestM20Guardian,DA_TestTank -Compare
+
+# The gate for the result, against HEAD's long baseline (or an older one, marked OUTDATED)
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Long -Unit DA_TestM20Guardian,DA_TestTank -Compare
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Long -Unit DA_TestTank -Compare -Baseline c0d1387
+```
+
+### A second worktree for benching: not used
+
+A second worktree could keep building and testing while the bench runs. It is not used, and benches stay serialized:
+- **Contention.** The bench is CPU-bound: the game thread is the limit in every scenario with 120 units or more. A build in the other worktree runs UnrealBuildTool on every core, and the automation tests run a second engine process. Either would share the CPU, memory bandwidth and disk with the measured game, and move the numbers by far more than the 0.6 ms spread a step is read against.
+- **Cost and sharing.** A second worktree needs its own `Binaries` and `Intermediate`, which is a full editor build. It would share the derived data cache and the LFS lock server with the first. Its `Saved/` and generated content would be separate, but its baseline could not be the main worktree's: a different build of the same commit.
+- **What is left.** Quick runs cut the wait instead (above). Use the worktree only for work that needs no CPU, such as editing or reading code.
+
 ## Step 0 baseline (#132, before any real-scale change)
 
 ### M20 Guardian (`DA_TestM20Guardian`, 89,396 triangles, LOD0 only)

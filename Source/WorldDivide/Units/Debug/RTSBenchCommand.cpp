@@ -26,7 +26,12 @@
 #include "RHI.h"
 #include "RenderTimer.h"
 #include "UObject/StrongObjectPtr.h"
+#include "Dom/JsonObject.h"
+#include "Policies/PrettyJsonPrintPolicy.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 #include "UnrealClient.h"
+#include "Units/Debug/RTSBenchPlan.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitMovement.h"
@@ -47,6 +52,15 @@
  * The long method (a third argument "long", ue.ps1 -Long; #138) warms each scenario up for 10 s and then measures 60 s samples,
  * three at the largest count and one below it, each its own row with the 95th percentile of the game thread next to the mean.
  * Its units keep driving: the move order goes back and forth between the grid's place and a point 30 m west every 15 s.
+ *
+ * The quick method (a third argument "quick", ue.ps1 -Quick; #167) is the long scene for iterating: 240 units by default,
+ * moving only, a 10 s warm-up and one 30 s sample, the same columns. It is diagnostic and never the gate. The numbers of each
+ * method are FRTSBenchPlan's. Beside bench.csv and bench.md, bench.json records the method, the scene and the machine, so a
+ * stored baseline is only compared with a run of the same kind (ue.ps1 -Compare).
+ *
+ * The command given while a run is going is queued: ue.ps1 runs several unit sets one after another in one game session, each
+ * its own run with its own camera, settings, warm-up, samples and output folder, its units cleared before the next starts.
+ * -RTSBenchQuit quits after the last.
  */
 namespace RTSBenchCommand
 {
@@ -57,21 +71,12 @@ namespace RTSBenchCommand
 	constexpr double ResizeTimeout = 10.0;
 	const FIntPoint ScreenSize(1920, 1080);
 
-	const TArray<int32> DefaultCounts = { 1, 30, 120, 240 };
-	/** Real seconds for spawned units to settle and for a move order to get going, and the frames measured. */
-	constexpr double SettleSeconds = 3.0;
-	constexpr double MoveLeadSeconds = 1.0;
+	/** Real seconds the units of a count get to clear, and that a queued run waits before it starts. */
 	constexpr double ClearSeconds = 1.0;
-	constexpr int32 MeasureFrames = 120;
 
-	/** The long method: warm-up and sample length in real seconds, the samples at the largest count and below it. */
-	constexpr double LongWarmupSeconds = 10.0;
-	constexpr double LongSampleSeconds = 60.0;
-	constexpr int32 LongSamplesAtLargest = 3;
-	constexpr int32 LongSamplesBelow = 1;
-	/** Real seconds between the long method's move orders, which alternate between the point ahead and the grid's place. */
+	/** Real seconds between the long scene's move orders, which alternate between the point ahead and the grid's place. */
 	constexpr double LongMoveSeconds = 15.0;
-	/** Frames a sample keeps room for without growing: 60 s above 500 frames per second. */
+	/** Frames a timed sample keeps room for without growing: 60 s above 500 frames per second. */
 	constexpr int32 LongFrameCapacity = 32768;
 
 	/**
@@ -217,16 +222,30 @@ namespace RTSBenchCommand
 	class FBenchRun : public TSharedFromThis<FBenchRun>
 	{
 	public:
-		FBenchRun(UWorld& InWorld, const FString& InUnitName, const TArray<int32>& InCounts, bool bInLong)
-			: World(&InWorld), UnitName(InUnitName), Counts(InCounts), bLong(bInLong)
+		FBenchRun(UWorld& InWorld, const FString& InUnitName, const FRTSBenchPlan& InPlan)
+			: World(&InWorld), UnitName(InUnitName), Counts(InPlan.Counts), Plan(InPlan)
 		{
 		}
 
 		static bool IsRunning() { return Active.IsValid(); }
 
-		static void Start(const TSharedRef<FBenchRun>& Run)
+		/** Starts Run, or queues it behind the run going on; returns its place in the queue, 0 when it starts now. */
+		static int32 StartOrQueue(const TSharedRef<FBenchRun>& Run)
+		{
+			if (IsRunning())
+			{
+				Queued.Add(Run);
+				return Queued.Num();
+			}
+			bAnyFailed = false;
+			Start(Run, 0.0);
+			return 0;
+		}
+
+		static void Start(const TSharedRef<FBenchRun>& Run, double Delay)
 		{
 			Active = Run;
+			Run->StartDelay = Delay;
 			Run->StepStart = FPlatformTime::Seconds();
 			FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateSP(Run, &FBenchRun::Tick));
 		}
@@ -267,24 +286,29 @@ namespace RTSBenchCommand
 			case EStep::Resize:
 				return Resize();
 			case EStep::SettleIdle:
-				if (FPlatformTime::Seconds() - StepStart >= (bLong ? LongWarmupSeconds : SettleSeconds))
+				if (FPlatformTime::Seconds() - StepStart >= Plan.IdleWarmupSeconds)
 				{
-					BeginMeasure(TEXT("idle"), EStep::MeasureIdle);
+					if (Plan.bIdle)
+					{
+						BeginMeasure(TEXT("idle"), EStep::MeasureIdle);
+					}
+					else
+					{
+						StartMove();
+					}
 				}
 				return true;
 			case EStep::MeasureIdle:
 				if (Measure() && !NextSample(EStep::MeasureIdle))
 				{
-					Lead = FScenarioStats();
-					IssueMove();
-					GoTo(EStep::LeadMove);
+					StartMove();
 				}
 				return true;
 			case EStep::LeadMove:
 				// The order's own frame is the dispatch; its cost shows in the slowest game thread frame of the move.
 				TakeFrame(Lead);
 				KeepMoving();
-				if (FPlatformTime::Seconds() - StepStart >= (bLong ? LongWarmupSeconds : MoveLeadSeconds))
+				if (FPlatformTime::Seconds() - StepStart >= Plan.MoveWarmupSeconds)
 				{
 					BeginMeasure(TEXT("move"), EStep::MeasureMove);
 				}
@@ -308,6 +332,13 @@ namespace RTSBenchCommand
 			return true;
 		}
 
+		void StartMove()
+		{
+			Lead = FScenarioStats();
+			IssueMove();
+			GoTo(EStep::LeadMove);
+		}
+
 		void GoTo(EStep Next)
 		{
 			Step = Next;
@@ -328,6 +359,10 @@ namespace RTSBenchCommand
 
 		bool WaitForPlayer()
 		{
+			if (FPlatformTime::Seconds() - StepStart < StartDelay)
+			{
+				return true;
+			}
 			ARTSPlayerController* Controller = GetController();
 			if (!World->HasBegunPlay() || !Controller || !Controller->GetPawn())
 			{
@@ -412,7 +447,7 @@ namespace RTSBenchCommand
 			Camera->GetCameraComponent()->SetFieldOfView(CameraFOV);
 			Camera->GetCameraComponent()->bConstrainAspectRatio = false;
 			const FRotator Rotation(CameraPitch, 0.f, 0.f);
-			const FVector LookAt = bLong ? LongGridCentre + FVector(LongMoveDistance / 2.f, 0.f, 0.f) : CameraLookAt;
+			const FVector LookAt = GetCameraLookAt();
 			Camera->SetActorLocationAndRotation(LookAt - Rotation.Vector() * CameraDistance, Rotation);
 			GetController()->SetViewTarget(Camera.Get());
 		}
@@ -490,12 +525,17 @@ namespace RTSBenchCommand
 			return true;
 		}
 
-		FVector GetGridCentre() const { return bLong ? LongGridCentre : GridCentre; }
+		FVector GetGridCentre() const { return Plan.bLongScene ? LongGridCentre : GridCentre; }
 
-		/** The long method's units keep driving: back to the grid's place, then ahead again, each LongMoveSeconds. */
+		FVector GetCameraLookAt() const
+		{
+			return Plan.bLongScene ? LongGridCentre + FVector(LongMoveDistance / 2.f, 0.f, 0.f) : CameraLookAt;
+		}
+
+		/** The long scene's units keep driving: back to the grid's place, then ahead again, each LongMoveSeconds. */
 		void KeepMoving()
 		{
-			if (bLong && FPlatformTime::Seconds() - LastMoveTime >= LongMoveSeconds)
+			if (Plan.bLongScene && FPlatformTime::Seconds() - LastMoveTime >= LongMoveSeconds)
 			{
 				IssueMove();
 			}
@@ -513,7 +553,7 @@ namespace RTSBenchCommand
 			}
 			FRTSCommand Move;
 			Move.Type = ERTSCommandType::Move;
-			Move.TargetLocation = GetGridCentre() + FVector(bMoveBack ? 0.f : bLong ? LongMoveDistance : MoveDistance, 0.f, 0.f);
+			Move.TargetLocation = GetGridCentre() + FVector(bMoveBack ? 0.f : Plan.bLongScene ? LongMoveDistance : MoveDistance, 0.f, 0.f);
 			GetController()->Server_IssueCommand(Ordered, Move);
 			bMoveBack = !bMoveBack;
 			LastMoveTime = FPlatformTime::Seconds();
@@ -542,9 +582,9 @@ namespace RTSBenchCommand
 			Current = FScenarioStats();
 			Current.Scenario = Scenario;
 			Current.Count = Counts[CountIndex];
-			Current.Sample = bLong ? 1 : 0;
-			Current.GameFrames.Reserve(bLong ? LongFrameCapacity : MeasureFrames);
-			Current.LocomotionFrames.Reserve(bLong ? LongFrameCapacity : MeasureFrames);
+			Current.Sample = Plan.IsTimed() ? 1 : 0;
+			Current.GameFrames.Reserve(Plan.IsTimed() ? LongFrameCapacity : Plan.SampleFrames);
+			Current.LocomotionFrames.Reserve(Plan.IsTimed() ? LongFrameCapacity : Plan.SampleFrames);
 			// The move's slowest frame includes the order's own frame, before the measured ones.
 			Current.MaxGameMs = Next == EStep::MeasureMove ? Lead.MaxGameMs : 0.0;
 			URTSWeaponComponent::TakeSearchSeconds();
@@ -559,11 +599,10 @@ namespace RTSBenchCommand
 				: FString::Printf(TEXT("%s_%d_%s"), *UnitName, Current.Count, *Current.Scenario);
 		}
 
-		/** Starts the long method's next sample of the same scenario; false once the scenario has all of them. */
+		/** Starts a timed method's next sample of the same scenario; false once the scenario has all of them. */
 		bool NextSample(EStep MeasureStep)
 		{
-			const int32 Samples = Counts[CountIndex] == Counts.Last() ? LongSamplesAtLargest : LongSamplesBelow;
-			if (!bLong || Current.Sample >= Samples)
+			if (!Plan.IsTimed() || Current.Sample >= Plan.GetSamples(Counts[CountIndex]))
 			{
 				return false;
 			}
@@ -595,7 +634,7 @@ namespace RTSBenchCommand
 		bool Measure()
 		{
 			TakeFrame(Current);
-			if (bLong ? FPlatformTime::Seconds() - StepStart < LongSampleSeconds : StepFrames < MeasureFrames)
+			if (Plan.IsTimed() ? FPlatformTime::Seconds() - StepStart < Plan.SampleSeconds : StepFrames < Plan.SampleFrames)
 			{
 				return false;
 			}
@@ -634,10 +673,10 @@ namespace RTSBenchCommand
 		{
 			const FString Dir = GetOutputDir(UnitName);
 			FString Csv = FScenarioStats::CsvHeader() + TEXT("\n");
-			FString Markdown = FString::Printf(TEXT("%s on %s, %s, %s method\n\n- CPU: %s\n- GPU: %s, driver %s, %s\n- Build: %s\n\n"),
-				*UnitName, *World->GetMapName(), *FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M")), bLong ? TEXT("long") : TEXT("short"),
-				*FPlatformMisc::GetCPUBrand().TrimStartAndEnd(), *GRHIAdapterName, *GRHIAdapterUserDriverVersion,
-				GDynamicRHI ? GDynamicRHI->GetName() : TEXT("no RHI"), LexToString(FApp::GetBuildConfiguration()));
+			FString Markdown = FString::Printf(TEXT("%s on %s, %s, %s method%s\n\n- CPU: %s\n- GPU: %s, driver %s, %s\n- Build: %s\n\n"),
+				*UnitName, *World->GetMapName(), *FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M")), FRTSBenchPlan::GetMethodName(Plan.Method),
+				Plan.Method == ERTSBenchMethod::Quick ? TEXT(" (diagnostic, not gate evidence)") : TEXT(""),
+				*GetCPUName(), *GRHIAdapterName, *GRHIAdapterUserDriverVersion, GetRHIName(), LexToString(FApp::GetBuildConfiguration()));
 			Markdown += FScenarioStats::MarkdownHeader();
 			for (const FScenarioStats& Result : Results)
 			{
@@ -645,7 +684,81 @@ namespace RTSBenchCommand
 				Markdown += Result.ToMarkdown();
 			}
 			return FFileHelper::SaveStringToFile(Csv, *FPaths::Combine(Dir, TEXT("bench.csv")))
-				&& FFileHelper::SaveStringToFile(Markdown, *FPaths::Combine(Dir, TEXT("bench.md")));
+				&& FFileHelper::SaveStringToFile(Markdown, *FPaths::Combine(Dir, TEXT("bench.md")))
+				&& FFileHelper::SaveStringToFile(DescribeRun(), *FPaths::Combine(Dir, TEXT("bench.json")));
+		}
+
+		static FString GetCPUName() { return FPlatformMisc::GetCPUBrand().TrimStartAndEnd(); }
+		static const TCHAR* GetRHIName() { return GDynamicRHI ? GDynamicRHI->GetName() : TEXT("no RHI"); }
+
+		/**
+		 * bench.json: what a stored baseline must share with a run to be compared with it (ue.ps1 -Compare): the method, the
+		 * scene and the machine. ue.ps1 adds the commit and the content's hashes.
+		 */
+		FString DescribeRun() const
+		{
+			auto Numbers = [](const TArray<int32>& Values)
+			{
+				TArray<TSharedPtr<FJsonValue>> Array;
+				for (const int32 Value : Values)
+				{
+					Array.Add(MakeShared<FJsonValueNumber>(Value));
+				}
+				return Array;
+			};
+			auto Vector = [](const FVector& Value)
+			{
+				return TArray<TSharedPtr<FJsonValue>>{ MakeShared<FJsonValueNumber>(Value.X), MakeShared<FJsonValueNumber>(Value.Y),
+					MakeShared<FJsonValueNumber>(Value.Z) };
+			};
+
+			const TSharedRef<FJsonObject> Method = MakeShared<FJsonObject>();
+			Method->SetStringField(TEXT("name"), FRTSBenchPlan::GetMethodName(Plan.Method));
+			Method->SetNumberField(TEXT("version"), FRTSBenchPlan::Version);
+			Method->SetBoolField(TEXT("gate"), Plan.Method == ERTSBenchMethod::Long);
+			Method->SetArrayField(TEXT("counts"), Numbers(Counts));
+			TArray<TSharedPtr<FJsonValue>> Scenarios;
+			if (Plan.bIdle)
+			{
+				Scenarios.Add(MakeShared<FJsonValueString>(TEXT("idle")));
+			}
+			Scenarios.Add(MakeShared<FJsonValueString>(TEXT("move")));
+			Method->SetArrayField(TEXT("scenarios"), Scenarios);
+			Method->SetNumberField(TEXT("idle_warmup_s"), Plan.IdleWarmupSeconds);
+			Method->SetNumberField(TEXT("move_warmup_s"), Plan.MoveWarmupSeconds);
+			Method->SetNumberField(TEXT("sample_s"), Plan.SampleSeconds);
+			Method->SetNumberField(TEXT("sample_frames"), Plan.IsTimed() ? 0 : Plan.SampleFrames);
+			Method->SetNumberField(TEXT("samples_at_largest"), Plan.IsTimed() ? Plan.SamplesAtLargest : 1);
+			Method->SetNumberField(TEXT("samples_below"), Plan.IsTimed() ? Plan.SamplesBelow : 1);
+			Method->SetBoolField(TEXT("long_scene"), Plan.bLongScene);
+
+			const TSharedRef<FJsonObject> Scene = MakeShared<FJsonObject>();
+			Scene->SetStringField(TEXT("map"), World->GetMapName());
+			Scene->SetStringField(TEXT("units"), UnitName);
+			Scene->SetArrayField(TEXT("screen"), Numbers({ ScreenSize.X, ScreenSize.Y }));
+			const FIntPoint Render = Results.IsEmpty() ? FIntPoint::ZeroValue : Results.Last().RenderSize;
+			Scene->SetArrayField(TEXT("render"), Numbers({ Render.X, Render.Y }));
+			Scene->SetArrayField(TEXT("grid_centre"), Vector(GetGridCentre()));
+			Scene->SetArrayField(TEXT("camera_look_at"), Vector(GetCameraLookAt()));
+			Scene->SetNumberField(TEXT("camera_pitch"), CameraPitch);
+			Scene->SetNumberField(TEXT("camera_distance"), CameraDistance);
+			Scene->SetNumberField(TEXT("camera_fov"), CameraFOV);
+
+			const TSharedRef<FJsonObject> Machine = MakeShared<FJsonObject>();
+			Machine->SetStringField(TEXT("cpu"), GetCPUName());
+			Machine->SetStringField(TEXT("gpu"), GRHIAdapterName);
+			Machine->SetStringField(TEXT("driver"), GRHIAdapterUserDriverVersion);
+			Machine->SetStringField(TEXT("rhi"), GetRHIName());
+			Machine->SetStringField(TEXT("build"), LexToString(FApp::GetBuildConfiguration()));
+
+			const TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
+			Root->SetStringField(TEXT("date"), FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M")));
+			Root->SetObjectField(TEXT("method"), Method);
+			Root->SetObjectField(TEXT("scene"), Scene);
+			Root->SetObjectField(TEXT("machine"), Machine);
+			FString Json;
+			FJsonSerializer::Serialize(Root, TJsonWriterFactory<TCHAR, TPrettyJsonPrintPolicy<TCHAR>>::Create(&Json));
+			return Json;
 		}
 
 		bool Finish(FString Error)
@@ -677,22 +790,36 @@ namespace RTSBenchCommand
 			}
 			else
 			{
-				UE_LOG(LogWorldDivide, Error, TEXT("rts.Debug.Bench failed: %s"), *Error);
-			}
-			if (FParse::Param(FCommandLine::Get(), QuitParam))
-			{
-				FPlatformMisc::RequestExitWithStatus(false, Error.IsEmpty() ? 0 : 1);
+				UE_LOG(LogWorldDivide, Error, TEXT("rts.Debug.Bench failed: %s: %s"), *UnitName, *Error);
+				bAnyFailed = true;
 			}
 			Active.Reset();
+			// The next set starts after its units' clear time, on a world with none of this set's units left.
+			if (!Queued.IsEmpty())
+			{
+				const TSharedRef<FBenchRun> Next = Queued[0];
+				Queued.RemoveAt(0);
+				Start(Next, ClearSeconds);
+			}
+			else if (FParse::Param(FCommandLine::Get(), QuitParam))
+			{
+				FPlatformMisc::RequestExitWithStatus(false, bAnyFailed ? 1 : 0);
+			}
 			return false;
 		}
 
 		static TSharedPtr<FBenchRun> Active;
+		/** The runs given while one was going, started in turn. */
+		static TArray<TSharedRef<FBenchRun>> Queued;
+		/** Whether any run of the current queue failed. */
+		static bool bAnyFailed;
 
 		TWeakObjectPtr<UWorld> World;
 		FString UnitName;
 		TArray<int32> Counts;
-		bool bLong = false;
+		FRTSBenchPlan Plan;
+		/** Real seconds the run waits before it looks for the player: a queued run's clear time. */
+		double StartDelay = 0.0;
 		/** The mix, held through the garbage collection between counts, when no unit refers to it. */
 		TArray<TStrongObjectPtr<URTSUnitData>> UnitData;
 		int32 TeamId = 0;
@@ -715,46 +842,34 @@ namespace RTSBenchCommand
 	};
 
 	TSharedPtr<FBenchRun> FBenchRun::Active;
+	TArray<TSharedRef<FBenchRun>> FBenchRun::Queued;
+	bool FBenchRun::bAnyFailed = false;
 
 	void RunBenchCommand(const TArray<FString>& Args, UWorld* World, FOutputDevice& Output)
 	{
 		if (!World || !World->IsGameWorld() || Args.IsEmpty())
 		{
-			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.Bench <UnitData> [Count,Count,...] [long] needs a running game"));
+			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.Bench <UnitData> [Count,Count,...] [short|long|quick] needs a running game"));
 			return;
 		}
-		if (FBenchRun::IsRunning())
+		ERTSBenchMethod Method = ERTSBenchMethod::Short;
+		if (Args.Num() > 2 && !FRTSBenchPlan::ParseMethod(Args[2], Method))
 		{
-			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.Bench is already running"));
+			Output.Logf(ELogVerbosity::Error, TEXT("rts.Debug.Bench: no method named %s (short, long or quick)"), *Args[2]);
 			return;
 		}
-		TArray<int32> Counts;
-		if (Args.Num() > 1)
-		{
-			TArray<FString> Parts;
-			// Counts are separated by ',' or by '+', which ue.ps1 uses because -ExecCmds splits commands at commas.
-			Args[1].Replace(TEXT("+"), TEXT(",")).ParseIntoArray(Parts, TEXT(","));
-			for (const FString& Part : Parts)
-			{
-				if (const int32 Count = FCString::Atoi(*Part); Count > 0)
-				{
-					Counts.Add(Count);
-				}
-			}
-		}
-		if (Counts.IsEmpty())
-		{
-			Counts = DefaultCounts;
-		}
-		Output.Logf(TEXT("rts.Debug.Bench: %s to %s"), *Args[0], *FPaths::ConvertRelativePathToFull(FBenchRun::GetOutputDir(Args[0])));
-		const bool bLong = Args.Num() > 2 && Args[2] == TEXT("long");
-		FBenchRun::Start(MakeShared<FBenchRun>(*World, Args[0], Counts, bLong));
+		// A count of 0 (or none) takes the method's default counts, so "quick" can follow without them.
+		const FRTSBenchPlan Plan = FRTSBenchPlan::Make(Method, Args.Num() > 1 ? FRTSBenchPlan::ParseCounts(Args[1]) : TArray<int32>());
+		const int32 Place = FBenchRun::StartOrQueue(MakeShared<FBenchRun>(*World, Args[0], Plan));
+		Output.Logf(TEXT("rts.Debug.Bench: %s, %s method, to %s%s"), *Args[0], FRTSBenchPlan::GetMethodName(Method),
+			*FPaths::ConvertRelativePathToFull(FBenchRun::GetOutputDir(Args[0])),
+			Place > 0 ? *FString::Printf(TEXT(", queued %d"), Place) : TEXT(""));
 	}
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice BenchCommand(
 		TEXT("rts.Debug.Bench"),
-		TEXT("rts.Debug.Bench <UnitData>[+UnitData...] [Count,Count,...] [long]: measures that many of the unit, or of the mix in turn (by default 1, 30, 120 and 240) ")
-		TEXT("standing in a grid and driving on a move order, from a fixed camera, to Saved/Bench/<UnitData>."),
+		TEXT("rts.Debug.Bench <UnitData>[+UnitData...] [Count,Count,...|0] [short|long|quick]: measures that many of the unit, or of the mix in turn (by default 1, 30, 120 and 240; ")
+		TEXT("quick: 240) standing in a grid and driving on a move order, from a fixed camera, to Saved/Bench/<UnitData>. Given while a run is going, it is queued."),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunBenchCommand));
 }
 

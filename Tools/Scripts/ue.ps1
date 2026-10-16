@@ -17,6 +17,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task c
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestTank -Counts 240 -Trace
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian -Long
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestTank -Quick -Compare
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestTank -Long -SaveBaseline
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uibindings
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uicheck -Path Saved/UIIntake/HUD_2026-10-14/staging/UI
 
@@ -46,7 +48,13 @@ dynamic resolution off and no frame rate cap. The table is printed and written w
 records an Unreal Insights capture to Saved/Traces/Bench_<Unit>.utrace, each scenario a region. -Long uses the long method
 of #138: a 10 s warm-up, then 60 s samples (three at the largest count, one below it) with the game thread's 95th
 percentile, while the units keep driving back and forth every 15 s, to a point 30 m west of a grid that stands
-south-west of the middle, out of the enemy headquarters' range.
+south-west of the middle, out of the enemy headquarters' range. -Long (alias -Full) is the performance gate. -Quick (#167) is
+for iterating and never gate evidence: the long scene at 240 units (or -Counts), moving only, a 10 s warm-up and one 30 s
+sample, the same columns. -Unit A,B runs several sets one after another in one game session, each with its own warm-up,
+samples and folder. bench.json beside the table records the method, scene, machine, commit and content hashes.
+-SaveBaseline (clean worktree only) stores each set's run under Saved/Bench/Baselines/<commit>/<method>/<set>; -Compare reads
+the run against the baseline of HEAD, or of the ancestor -Baseline <commit> (marked OUTDATED), refuses one of another
+method, scene or machine, and writes compare.md. See docs/tech/scale/PERFORMANCE_RESULTS.md, "Bench workflow".
 Uibindings writes every binding key, list and action with its panels, and the widgets, colours, fonts and sprites a layout
 may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck validates the layouts of the UI folder -Path
 (an unpacked delivery, for /ui-intake) and prints each problem. -Out and -Path are relative to the repository root.
@@ -72,7 +80,16 @@ param(
 
 	[switch]$Trace,
 
+	[Alias('Full')]
 	[switch]$Long,
+
+	[switch]$Quick,
+
+	[switch]$SaveBaseline,
+
+	[switch]$Compare,
+
+	[string]$Baseline = '',
 
 	[string]$Out = 'Saved/UIBriefs/bindings.json',
 
@@ -305,40 +322,221 @@ function Invoke-CameraShots {
 	Write-Host "CAMERASHOTS SUCCEEDED: $ShotDir"
 }
 
+# The repository's git, quiet; returns its output trimmed.
+function Invoke-Git {
+	$ErrorActionPreference = 'Continue'
+	$Output = & git -C $RepoRoot @args 2>$null
+	if ($null -eq $Output) { return '' }
+	return ($Output -join "`n").Trim()
+}
+
+function Read-Json([string]$File) { return Get-Content -Raw -Path $File | ConvertFrom-Json }
+
+function Write-Json([string]$File, $Value) {
+	[IO.File]::WriteAllText($File, ($Value | ConvertTo-Json -Depth 8), (New-Object Text.UTF8Encoding $false))
+}
+
+# What bench.json leaves to the repository: the commit, whether the tree had changes, and the hashes of the bench's code, its
+# map and the set's unit data, so a comparison names what differs from its baseline.
+function Get-BenchGitFacts([string]$Set) {
+	$Hashes = [ordered]@{}
+	$Files = @('Source/WorldDivide/Units/Debug/RTSBenchCommand.cpp', 'Source/WorldDivide/Units/Debug/RTSBenchPlan.h',
+		'Content/Maps/L_Bench.umap') + ($Set -split '\+' | ForEach-Object { "Content/Data/Units/$_.uasset" })
+	foreach ($File in $Files) {
+		$Full = Join-Path $RepoRoot $File
+		$Hashes[$File] = if (Test-Path $Full) { Invoke-Git hash-object $Full } else { 'missing' }
+	}
+	return [ordered]@{
+		sha    = Invoke-Git rev-parse HEAD
+		dirty  = [bool](Invoke-Git status --porcelain)
+		hashes = $Hashes
+	}
+}
+
+function Get-BaselineDir([string]$Sha, [string]$Method, [string]$Set) {
+	return Join-Path $RepoRoot "Saved\Bench\Baselines\$Sha\$Method\$Set"
+}
+
+# The baseline a -Compare run is read against: the commit given by -Baseline, or HEAD, which the uncommitted change sits on.
+# Returns @{ Sha; Behind } or exits: a commit that is not HEAD or one of its ancestors is refused.
+function Resolve-BenchBaseline {
+	$Head = Invoke-Git rev-parse HEAD
+	if (-not $Baseline) { return @{ Sha = $Head; Behind = 0 } }
+	$Sha = Invoke-Git rev-parse --verify --quiet "$Baseline^{commit}"
+	if (-not $Sha) {
+		Write-Host "BENCH FAILED: -Baseline $Baseline is no commit."
+		exit 1
+	}
+	$ErrorActionPreference = 'Continue'
+	& git -C $RepoRoot merge-base --is-ancestor $Sha $Head 2>$null
+	if ($LASTEXITCODE -ne 0) {
+		Write-Host "BENCH FAILED: -Baseline $Baseline ($($Sha.Substring(0, 7))) is not HEAD or an ancestor of it."
+		exit 1
+	}
+	return @{ Sha = $Sha; Behind = [int](Invoke-Git rev-list --count "$Sha..$Head") }
+}
+
+# The fields of two bench.json sections that differ, as "section.field: baseline -> now".
+function Compare-JsonSection([string]$Name, $Before, $Now) {
+	$Differences = @()
+	$Fields = @($Before.PSObject.Properties.Name) + @($Now.PSObject.Properties.Name) | Select-Object -Unique
+	foreach ($Field in $Fields) {
+		$B = $Before.$Field | ConvertTo-Json -Compress -Depth 4
+		$N = $Now.$Field | ConvertTo-Json -Compress -Depth 4
+		if ($B -ne $N) { $Differences += "${Name}.${Field}: $B -> $N" }
+	}
+	return $Differences
+}
+
+# Compares the run of Set in OutDir with its stored baseline and writes compare.md there; false when they are not comparable.
+function Compare-BenchRun([string]$Set, [string]$OutDir, $Chosen, [string]$Method) {
+	$BaseDir = Get-BaselineDir $Chosen.Sha $Method $Set
+	$Before = Read-Json (Join-Path $BaseDir 'bench.json')
+	$Now = Read-Json (Join-Path $OutDir 'bench.json')
+	$Short = $Chosen.Sha.Substring(0, 7)
+
+	# The method, the scene and the machine must be the same: a mismatch is never compared.
+	$Hard = @()
+	foreach ($Section in 'method', 'scene', 'machine') { $Hard += Compare-JsonSection $Section $Before.$Section $Now.$Section }
+	if ($Hard.Count -gt 0) {
+		Write-Host "INCOMPATIBLE BASELINE for $Set at $Short ($Method). Regenerate it with -SaveBaseline on a clean checkout:"
+		$Hard | ForEach-Object { Write-Host "  $_" }
+		return $false
+	}
+
+	$Lines = @("# $Set, $Method method: baseline $Short against $($Now.git.sha.Substring(0, 7))$(if ($Now.git.dirty) { ' with uncommitted changes' })", '')
+	if ($Method -eq 'quick') { $Lines += '**Quick method: diagnostic, not gate evidence.** The gate is the long method (`-Long`).'; $Lines += '' }
+	if ($Chosen.Behind -gt 0) {
+		$Lines += "**OUTDATED baseline:** $Short is $($Chosen.Behind) commits behind HEAD; the difference includes those commits."
+		$Lines += ''
+	}
+	# What differs in the repository is the change under test, named so it is never silent.
+	$Soft = @()
+	if ($Before.git.dirty) { $Soft += 'the baseline had uncommitted changes' }
+	foreach ($File in $Now.git.hashes.PSObject.Properties.Name) {
+		if ($Before.git.hashes.$File -ne $Now.git.hashes.$File) { $Soft += "$File changed" }
+	}
+	$Lines += "- Baseline: $($Before.date), now $($Now.date); $($Now.machine.cpu), $($Now.machine.gpu) $($Now.machine.driver), $($Now.machine.rhi), $($Now.machine.build)"
+	$Lines += "- Changed since the baseline: $(if ($Soft) { $Soft -join '; ' } else { 'nothing the bench reads' })"
+	$Lines += '- Read the game thread against the run-to-run spread of about 0.6 ms (marked **bold** when beyond it).'
+	$Lines += ''
+
+	$Columns = 'frame_ms', 'game_ms', 'p95_game_ms', 'max_game_ms', 'render_ms', 'gpu_ms', 'avoidance_ms', 'locomotion_ms', 'p95_locomotion_ms'
+	$Lines += '| Units | Scenario | Sample | Frame ms | Game ms | Game p95 | Game max | Render ms | GPU ms | Avoidance ms | Locomotion ms | Locomotion p95 |'
+	$Lines += '|---:|---|---:|---|---|---|---|---|---|---|---|---|'
+	$BeforeRows = Import-Csv (Join-Path $BaseDir 'bench.csv')
+	foreach ($Row in Import-Csv (Join-Path $OutDir 'bench.csv')) {
+		$Match = $BeforeRows | Where-Object { $_.count -eq $Row.count -and $_.scenario -eq $Row.scenario -and $_.sample -eq $Row.sample }
+		$Cells = foreach ($Column in $Columns) {
+			if (-not $Match) { '-'; continue }
+			$B = [double]$Match.$Column; $N = [double]$Row.$Column; $D = $N - $B
+			$Cell = [string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0:0.00} -> {1:0.00} ({2:+0.00;-0.00;0.00})', $B, $N, $D)
+			if ($Column -eq 'game_ms' -and [Math]::Abs($D) -gt 0.6) { "**$Cell**" } else { $Cell }
+		}
+		$Lines += "| $($Row.count) | $($Row.scenario) | $($Row.sample) | $($Cells -join ' | ') |"
+	}
+	$File = Join-Path $OutDir 'compare.md'
+	[IO.File]::WriteAllLines($File, [string[]]$Lines, (New-Object Text.UTF8Encoding $false))
+	$Lines | ForEach-Object { Write-Host $_ }
+	return $true
+}
+
 function Invoke-Bench {
 	Assert-EditorClosed 'the game run loads the same project.'
-	$OutDir = Join-Path $RepoRoot "Saved\Bench\$Unit"
+	if ($Quick -and $Long) { Write-Host 'BENCH FAILED: -Quick and -Long are two methods; pick one.'; exit 1 }
+	if ($SaveBaseline -and $Compare) { Write-Host 'BENCH FAILED: -SaveBaseline stores the run of a clean checkout; -Compare reads a change against it. Pick one.'; exit 1 }
+	if ($Baseline -and -not $Compare) { Write-Host 'BENCH FAILED: -Baseline selects the baseline of -Compare.'; exit 1 }
+	$Method = if ($Quick) { 'quick' } elseif ($Long) { 'long' } else { 'short' }
+	# Several unit sets are separated by ','; '+' joins the sizes of one mixed set.
+	$Sets = @($Unit -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\Bench.log'
-	if (Test-Path $OutDir) { Remove-Item -Recurse -Force $OutDir }
+
+	if ($SaveBaseline -and (Invoke-Git status --porcelain)) {
+		Write-Host 'BENCH FAILED: -SaveBaseline needs a clean worktree, so the baseline is exactly its commit. Commit or set aside the changes:'
+		Invoke-Git status --short | Write-Host
+		exit 1
+	}
+	if ($Compare) {
+		$Chosen = Resolve-BenchBaseline
+		$Missing = @($Sets | Where-Object { -not (Test-Path (Join-Path (Get-BaselineDir $Chosen.Sha $Method $_) 'bench.json')) })
+		if ($Missing) {
+			$Short = $Chosen.Sha.Substring(0, 7)
+			Write-Host "NO BASELINE at $Short for the $Method method of: $($Missing -join ', ')"
+			$Stored = Join-Path $RepoRoot 'Saved\Bench\Baselines'
+			if (Test-Path $Stored) {
+				Write-Host 'Stored baselines (commit\method\set):'
+				Get-ChildItem $Stored -Directory | ForEach-Object { Get-ChildItem $_.FullName -Directory | ForEach-Object { Get-ChildItem $_.FullName -Directory } } |
+					ForEach-Object { Write-Host "  $($_.FullName.Substring($Stored.Length + 1))" }
+			}
+			$MethodArg = if ($Quick) { ' -Quick' } elseif ($Long) { ' -Long' } else { '' }
+			$CountsArg = if ($Counts) { " -Counts $Counts" } else { '' }
+			Write-Host "Make it on a clean checkout of $Short with: ue.ps1 -Task bench$MethodArg -Unit $($Missing -join ',')$CountsArg -SaveBaseline"
+			Write-Host 'or name an older one with -Baseline <commit> (it is marked OUTDATED).'
+			exit 1
+		}
+	}
+
+	foreach ($Set in $Sets) {
+		$OutDir = Join-Path $RepoRoot "Saved\Bench\$Set"
+		if (Test-Path $OutDir) { Remove-Item -Recurse -Force $OutDir }
+	}
 	$TraceArgs = @()
 	if ($Trace) {
-		$TraceFile = Join-Path $RepoRoot "Saved\Traces\Bench_$Unit.utrace"
+		$TraceFile = Join-Path $RepoRoot "Saved\Traces\Bench_$($Sets -join '_').utrace"
 		New-Item -ItemType Directory -Force (Split-Path $TraceFile) | Out-Null
 		if (Test-Path $TraceFile) { Remove-Item -Force $TraceFile }
 		$TraceArgs = @('-trace=cpu,frame,region,gpu', "`"-tracefile=$TraceFile`"")
 	}
 
-	# -ExecCmds splits its commands at commas, so the counts go to rts.Debug.Bench joined by '+'.
+	# -ExecCmds splits its commands at commas: one rts.Debug.Bench per set, which the game queues, and the counts joined by '+'.
 	$BenchCounts = ($Counts -split '[,\s+]+' | Where-Object { $_ }) -join '+'
-	if (-not $BenchCounts) { $BenchCounts = '1+30+120+240' }
-	$BenchMethod = if ($Long) { ' long' } else { '' }
+	if (-not $BenchCounts) { $BenchCounts = if ($Quick) { '240' } else { '1+30+120+240' } }
+	$BenchMethod = if ($Method -eq 'short') { '' } else { " $Method" }
+	$ExecCmds = ($Sets | ForEach-Object { "rts.Debug.Bench $_ $BenchCounts$BenchMethod" }) -join ','
+	$Clock = [Diagnostics.Stopwatch]::StartNew()
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
 		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
-		"`"-ExecCmds=rts.Debug.Bench $Unit $BenchCounts$BenchMethod`"", '-RTSBenchQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		"`"-ExecCmds=$ExecCmds`"", '-RTSBenchQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
 		'-unattended', '-nosplash', '-nosound') + $TraceArgs)
+	$Clock.Stop()
 	$GameExit = $Process.ExitCode
+	$Seconds = [Math]::Round($Clock.Elapsed.TotalSeconds)
 
-	$Table = Join-Path $OutDir 'bench.md'
-	if ($GameExit -ne 0 -or -not (Test-Path $Table)) {
+	$Failed = @($Sets | Where-Object { -not (Test-Path (Join-Path $RepoRoot "Saved\Bench\$_\bench.md")) })
+	if ($GameExit -ne 0 -or $Failed) {
 		if (Test-Path $LogFile) {
 			Select-String -Path $LogFile -Pattern 'rts.Debug|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line }
 		}
-		Write-Host "BENCH FAILED (game exit $GameExit). Log: $LogFile"
+		Write-Host "BENCH FAILED (game exit $GameExit$(if ($Failed) { "; no results for $($Failed -join ', ')" })). Log: $LogFile"
 		exit 1
 	}
-	Get-Content $Table | ForEach-Object { Write-Host $_ }
+
+	$Incompatible = $false
+	foreach ($Set in $Sets) {
+		$OutDir = Join-Path $RepoRoot "Saved\Bench\$Set"
+		$JsonFile = Join-Path $OutDir 'bench.json'
+		$Json = Read-Json $JsonFile
+		$Json | Add-Member -NotePropertyName git -NotePropertyValue (Get-BenchGitFacts $Set) -Force
+		$Json | Add-Member -NotePropertyName session -NotePropertyValue ([ordered]@{ sets = $Sets; wall_clock_s = $Seconds }) -Force
+		Write-Json $JsonFile $Json
+		Get-Content (Join-Path $OutDir 'bench.md') | ForEach-Object { Write-Host $_ }
+		Write-Host ''
+		if ($SaveBaseline) {
+			$BaseDir = Get-BaselineDir $Json.git.sha $Method $Set
+			if (Test-Path $BaseDir) { Remove-Item -Recurse -Force $BaseDir; Write-Host "Replacing the stored baseline $BaseDir" }
+			New-Item -ItemType Directory -Force $BaseDir | Out-Null
+			Copy-Item (Join-Path $OutDir 'bench.*') $BaseDir
+			Write-Host "BASELINE STORED: $BaseDir"
+		}
+		if ($Compare -and -not (Compare-BenchRun $Set $OutDir $Chosen $Method)) { $Incompatible = $true }
+	}
 	if ($Trace) { Write-Host "Trace: $TraceFile" }
-	Write-Host "BENCH SUCCEEDED: $OutDir"
+	Write-Host "Wall clock: $Seconds s for $($Sets.Count) set(s), $Method method$(if ($Method -eq 'quick') { ' (diagnostic, not gate evidence)' })"
+	if ($Incompatible) {
+		Write-Host 'BENCH FAILED: a baseline is incompatible (see above); its results were not compared.'
+		exit 1
+	}
+	Write-Host "BENCH SUCCEEDED: $(($Sets | ForEach-Object { Join-Path $RepoRoot "Saved\Bench\$_" }) -join ', ')"
 }
 
 # The headless UI commandlet (URTSUICommandlet) with Argument; returns its exit code, its log in LogFile.
