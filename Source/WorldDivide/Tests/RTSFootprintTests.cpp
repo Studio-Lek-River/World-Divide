@@ -231,6 +231,8 @@ namespace RTSFootprintTests
 			for (const float Yaw : { 0.f, 45.f, 160.f })
 			{
 				ARTSUnit* Unit = SpawnOnGround(TestWorld, Case.Data, FVector(300.f, 200.f, 0.f), Yaw);
+				// The wheels are placed in world space once a frame, after the hull's moves (#165): here, after the grounding.
+				Unit->UpdateRunningGear();
 				const UStaticMeshComponent* Mesh = Cast<UStaticMeshComponent>(Unit->GetDefaultSubobjectByName(TEXT("Mesh")));
 				const USceneComponent* Turret = Cast<USceneComponent>(Unit->GetDefaultSubobjectByName(TEXT("Turret")));
 				FBox Hull = GetLocalBounds(*Mesh, *Unit);

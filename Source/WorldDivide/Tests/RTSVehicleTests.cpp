@@ -1,10 +1,12 @@
 #include "Combat/RTSWeaponComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
 #include "Engine/StaticMesh.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
+#include "Units/RTSRunningGearSubsystem.h"
 #include "Units/RTSUnit.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -204,6 +206,72 @@ bool FRTSRunningGearTest::RunTest(const FString& Parameters)
 	const FTransform Turned = GetPart(*Unit, LeftWheel);
 	Unit->UpdateRunningGear();
 	TestTrue(TEXT("Once the unit stops, the wheels stop"), GetPart(*Unit, LeftWheel).Equals(Turned));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRunningGearPlacementTest, "WorldDivide.Units.RunningGear.FollowsHull", TestFlags)
+
+bool FRTSRunningGearPlacementTest::RunTest(const FString& Parameters)
+{
+	const FRTSTestWorld TestWorld;
+	ARTSUnit* Unit = TestWorld.SpawnUnit(MakeVehicleData(), 0, FVector(100.f, 200.f, 0.f));
+	URTSRunningGearSubsystem* Gear = TestWorld.World->GetSubsystem<URTSRunningGearSubsystem>();
+	if (!TestNotNull(TEXT("The world places running gear"), Gear))
+	{
+		return false;
+	}
+
+	TArray<UInstancedStaticMeshComponent*> Sets;
+	Unit->GetComponents(Sets);
+	if (!TestEqual(TEXT("The three wheels share one set"), Sets.Num(), 1))
+	{
+		return false;
+	}
+	UInstancedStaticMeshComponent& Set = *Sets[0];
+	TestTrue(TEXT("The set is placed in world space, so the hull's move does not carry it (#165)"),
+		Set.IsUsingAbsoluteLocation() && Set.IsUsingAbsoluteRotation() && Set.IsUsingAbsoluteScale());
+	TestTrue(TEXT("It stays attached to the hull, for its visibility"), Set.GetAttachParent() != nullptr);
+
+	// Instances in the order MakeVehicleData lists the wheels.
+	const int32 WheelParts[] = { LeftWheel, RightWheel, LeftRearWheel };
+	auto IsDrawnOnHull = [this, Unit, &Set, &WheelParts](const TCHAR* What)
+	{
+		bool bAll = true;
+		for (int32 Instance = 0; Instance < UE_ARRAY_COUNT(WheelParts); ++Instance)
+		{
+			FTransform Drawn;
+			Set.GetInstanceTransform(Instance, Drawn, /*bWorldSpace*/ true);
+			bAll &= Drawn.Equals(GetPart(*Unit, WheelParts[Instance]), 0.01f);
+		}
+		TestTrue(What, bAll);
+		return bAll;
+	};
+	IsDrawnOnHull(TEXT("The wheels are drawn on the hull from the start"));
+
+	Gear->PlaceAll();
+	const FVector Before = GetPart(*Unit, LeftWheel).GetLocation();
+	// A push sideways, as avoidance gives: the hull moves, the wheels do not roll.
+	const FVector Push(0.f, 30.f, 0.f);
+	Unit->SetActorLocation(Unit->GetActorLocation() + Push);
+	FTransform Stale;
+	Set.GetInstanceTransform(0, Stale, /*bWorldSpace*/ true);
+	TestTrue(TEXT("The hull's move alone leaves the instances where they were"), Stale.GetLocation().Equals(Before, 0.01f));
+	Gear->PlaceAll();
+	IsDrawnOnHull(TEXT("The gear pass puts them back on the pushed hull"));
+	TestTrue(TEXT("Pushed sideways, they moved with the hull"), GetPart(*Unit, LeftWheel).GetLocation().Equals(Before + Push, 0.01f));
+
+	// Forward, back, and a turn on the spot: rolled and placed together.
+	Drive(*Unit, 40.f);
+	IsDrawnOnHull(TEXT("Driven forward, the wheels are drawn rolled on the hull"));
+	Drive(*Unit, -60.f);
+	IsDrawnOnHull(TEXT("Reversed, too"));
+	Drive(*Unit, 0.f, 30.f);
+	IsDrawnOnHull(TEXT("Pivoted, too"));
+
+	// A hull tilted on its own, as on a slope, carries the wheels too.
+	Unit->SetActorRotation(Unit->GetActorRotation() + FRotator(5.f, 0.f, 0.f));
+	Gear->PlaceAll();
+	IsDrawnOnHull(TEXT("Tilted, too"));
 	return true;
 }
 

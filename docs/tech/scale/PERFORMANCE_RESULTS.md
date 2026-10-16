@@ -509,7 +509,7 @@ Same machine (Ryzen 7 7800X3D, RTX 4090, Development `-game` at 1920 × 1080), o
 | Budget (240 moving vehicles) | Tank | Mix | M20 |
 |---|---|---|---|
 | Locomotion mean ≤ 1.0 ms | **Met** (0.49) | **Met** (0.51) | **Met** (0.59) |
-| Locomotion p95 ≤ 2.0 ms | **Met** (1.04) | **Met** (1.33) | **Not met** (2.38), accepted by the producer on 2026-10-16 |
+| Locomotion p95 ≤ 2.0 ms | **Met** (1.04) | **Met** (1.33) | **Not met** (2.38), accepted by the producer on 2026-10-16; **met** after #165 (1.18, see below) |
 | Existing gates: no server frame > 33 ms on a 240-unit move order | Met (max 21.4 ms) | Met (22.6 ms) | Sample maxima 27.0 to 35.5 ms. The M20's single spikes were 32 to 35 ms before #138 too. Its p95 improved from 24.4 to 19.6 ms. |
 
 **Where the M20's locomotion time goes.** The Insights capture of 240 moving M20s (`ue.ps1 -Task bench -Unit DA_TestM20Guardian -Counts 240 -Trace`) splits it:
@@ -520,7 +520,7 @@ Same machine (Ryzen 7 7800X3D, RTX 4090, Development `-game` at 1920 × 1080), o
 
 The old movement paid the same transform update twice per frame, once for the floating pawn's move and once for `SetActorRotation`, outside any locomotion scope. That is why the M20's game-thread p95 dropped.
 
-Making the M20's parts cheaper to move belongs with its LODs and parts work (#150, #151).
+Making the M20's parts cheaper to move belongs with its LODs and parts work (#150, #151). #165 cut the running gear out of the hull's move (below).
 
 **Other observations:**
 - **Avoidance** costs 0.04 to 0.16 ms more while moving. Vehicles now slow down for and steer round one another instead of only being pushed, and stay in contact a little longer.
@@ -541,3 +541,64 @@ The test plays a listen server and one client in PIE at a fixed 30 Hz step, with
 - **The engine's 100 KB/s `MaxClientRate`** is not reached per game second. Because the fixed-step test runs faster than real time, it may cap the rate per real second, as it would at the real-scale bench's 240 always-relevant units.
 
 **Convergence under 100 ms round trip and about 2 % packet loss** (`WorldDivide.Net.Vehicle.Dedicated`, dedicated server, two clients): after a stop, a reverse, a pivot and a drive into Block_North, both clients rested on the server's pose within 0.01 s of the rest reaching them, at most 0.07° and 0.00 cm apart.
+
+## #165 (M20 hull move: running gear placed once a frame)
+
+Same machine and build configuration as step 6, on 2026-10-16. "Before" is `d7ec54f`, stored as a long baseline (`-SaveBaseline`). "After" is the #165 commit, run with `ue.ps1 -Task bench -Long -Unit DA_TestM20Guardian,DA_TestTank -Compare -Baseline d7ec54f`; the comparison is marked OUTDATED by the one commit under test. The Insights figures come from `-Counts 240 -Trace` captures of both builds, exported with `UnrealInsights -ExecOnAnalysisCompleteCmd` (`ExportTimerCallees`, `ExportTimingEvents`).
+
+### Baseline and bottleneck
+
+- **The before figure had moved since step 6.** At `d7ec54f`, 240 moving M20s measured a locomotion mean of 0.51 ms and a p95 of 1.83 to 1.87 ms, against step 6's 0.59 ms and 2.38 ms, so the p95 was already just inside the 2.0 ms budget. The commits in between (#163, #164) changed driving and stopping.
+- **Locomotion has two modes.** In the frames where all 240 units drive, it costs 1.69 ms; in the frames where they stand, 0.08 ms. The mean is low because the bench's units rest for most of each 15 s leg. The p95 is the cost of a driving frame.
+- **Of a driving frame, `MoveHull` is 1.48 ms**: 6.2 µs per unit, spent carrying the 10 components the root box holds. The three instanced wheel sets (road wheels, idlers, sprockets) took 1.9 µs of that, 0.8 µs of it in `UInstancedStaticMeshComponent::CalcBoundsImpl`. The root box took 1.4 µs, the hull 1.0 µs, the turret, gun and weapon station 0.9 µs, and the tracks 0.4 µs.
+- **The wheel sets were updated twice per driving frame.** They were carried by the hull's move, then rewritten by `ARTSUnit::UpdateRunningGear` with `bMarkRenderStateDirty`. That flag rebuilt the render proxy of every set of every M20 each frame: `DeferredRenderUpdates_GameThread` cost 5.28 ms per driving frame, with `UStaticMesh::GetUsedMaterials` and texture-streaming registration on every rebuild. This sat outside the locomotion figure but was the M20's largest game-thread cost while driving.
+- **No redundant root move.** There is one `MoveHull` per unit per frame. Collision and overlap work is small (`UpdateOverlaps` 0.2 µs per move).
+
+### What changed
+
+- **The wheel sets are placed in world space.** They stay attached to the hull, so they show, hide and take the team colour with it. They are absolute (location, rotation, scale) at the world's origin, and the engine skips absolute children in `UpdateChildTransforms`, so the hull's move no longer carries them.
+- **`UpdateRunningGear` writes each wheel's world transform** (roll × rest × hull) once a frame, whenever the wheels rolled or the hull moved for any reason: drive, push, tilt, fire kick or server correction.
+  - It writes without a render-state rebuild: the ISM's instance data manager sends the changed transforms to the renderer.
+  - It then updates the set's bounds and render transform.
+  - A standing unit costs one transform comparison.
+  - The per-call `TMap` and arrays are gone.
+- **`URTSRunningGearSubsystem`** runs that update for every vehicle with wheels in one tick function in `TG_PostUpdateWork`. That is after the actor ticks and after avoidance's pushes (a tickable), and before the frame's render updates, so the wheels are never a frame behind the hull.
+- `GetPartTransform` computes a wheel from the hull as it stands, so gameplay and tests never read a stale instance.
+- The tests are `WorldDivide.Units.RunningGear.FollowsHull` (new) and `WorldDivide.Units.RunningGear.Spin`. `WorldDivide.Units.CollisionMatchesHull` now steps the gear after grounding, as the frame does.
+
+### Before and after, 240 units, long method (three 60 s samples)
+
+| Unit | Scenario | Game ms (p95) before → after | Locomotion ms before → after: mean (p95) | Render ms before → after |
+|---|---|---|---|---|
+| M20 Guardian | move | 5.33 (14.47) → **4.19 (8.06)** | 0.52 (1.85) → **0.44 (1.18)** | 4.84 → 4.26 |
+| M20 Guardian | idle | 1.92 (2.27) → 1.93 (2.29) | 0.05 (0.07) → 0.05 (0.07) | 4.38 → 4.37 |
+| `DA_TestTank` | move | 2.93 (4.16) → 2.92 (4.12) | 0.44 (0.97) → 0.44 (0.96) | 1.80 → 1.80 |
+
+At 30 and 120 moving M20s, the game thread went from 2.09 to 1.58 ms and from 3.08 to 2.56 ms, and the locomotion p95 from 0.27 to 0.19 ms and from 0.88 to 0.61 ms. The tank has no wheel sets and is unchanged within the spread. The slowest sample frames of the M20 move rows went from 18.5–23.6 ms to 17.2–21.0 ms.
+
+**Insights, per driving frame of 240 M20s (`-Counts 240 -Trace`):**
+
+| | Before | After |
+|---|---:|---:|
+| Locomotion (`TickLocomotion`) | 1.69 ms | **0.92 ms** |
+| `MoveHull` | 1.48 ms (6.2 µs per unit) | **0.75 ms (3.1 µs per unit)** |
+| `DeferredRenderUpdates_GameThread` | 5.28 ms | **2.29 ms** |
+| Running gear (`UpdateRunningGear`) | about 0.9 ms, in the actor tick | about 1.0 ms, in `URTSRunningGearSubsystem::PlaceAll` |
+| Render thread frame (mean over the capture) | 4.95 ms | 4.26 ms |
+
+### Against the budget
+
+| Budget (240 moving M20s) | Before (`d7ec54f`) | After |
+|---|---|---|
+| Locomotion mean ≤ 1.0 ms | Met (0.52) | **Met (0.44)** |
+| Locomotion p95 ≤ 2.0 ms | Met by 0.15 ms (1.85); not met at step 6 (2.38) | **Met (1.16–1.19)** |
+| Game thread no worse | — | **1.1 ms better in mean, 6.4 ms better at p95** |
+
+### Remaining limitations and later work
+
+- **The root box is now the largest part of a move** (about 1.1 µs of the 3.1 µs): the physics body's transform, as every unit pays. Then come the hull, and the turret, gun and weapon station, which must stay separate for their articulation.
+- **`DeferredRenderUpdates` still costs 2.3 ms per driving frame of 240 M20s.** This is the render-transform update of the 7 components that still move with the hull (box, hull, two tracks, turret, gun, weapon station) and of the 3 wheel sets. Fewer components per vehicle is a matter for #150 and #149, not #165.
+- **#151 (track animation):** the tracks are untouched. `UpdateRunningGear` already owns the wheels' roll each frame and runs after every hull move, so it is the place to drive the tracks' scroll in step with the wheels.
+- **#149 (LODs):** the wheel sets keep their per-instance LOD selection; their bounds follow their instances.
+- **#150 (materials):** no material change; each set keeps its team-colour material instances.
+- **Motion vectors of the wheels:** they now come from instance updates instead of a proxy rebuilt each frame. Nothing smeared in the checks so far; a close look on a vehicle whose wheels show (the M20's skirts hide most of its own) is part of the manual check.

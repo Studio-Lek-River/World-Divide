@@ -32,6 +32,7 @@
 #include "Units/RTSApproach.h"
 #include "Units/RTSBarrelClearance.h"
 #include "Units/RTSGround.h"
+#include "Units/RTSRunningGearSubsystem.h"
 #include "Units/RTSUnitAIController.h"
 #include "Units/RTSUnitMovement.h"
 #include "WorldDivide.h"
@@ -129,10 +130,14 @@ namespace
 
 	/** A cosmetic part on Parent, like Mesh and Turret: the hull box alone collides and is picked. */
 	template <typename T>
-	T* MakePartComponent(AActor& Owner, USceneComponent& Parent, UStaticMesh* PartMesh)
+	T* MakePartComponent(AActor& Owner, USceneComponent& Parent, UStaticMesh* PartMesh, bool bWorldPlaced = false)
 	{
 		T* Part = NewObject<T>(&Owner);
 		Part->SetStaticMesh(PartMesh);
+		// A world-placed part is attached for its visibility only and stands at the world's origin; its maker places it.
+		Part->SetUsingAbsoluteLocation(bWorldPlaced);
+		Part->SetUsingAbsoluteRotation(bWorldPlaced);
+		Part->SetUsingAbsoluteScale(bWorldPlaced);
 		Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		Part->SetCanEverAffectNavigation(false);
 		Part->SetupAttachment(&Parent);
@@ -316,7 +321,9 @@ void ARTSUnit::CreateParts()
 	PartComponents.Reset();
 	PartSlots.Reset();
 	Wheels.Reset();
+	WheelSets.Reset();
 	LastGearPose.Reset();
+	GearHull.Reset();
 	GearDriven = Movement->GetRealizedMotion().DrivenDistance;
 	GearTurned = Movement->GetRealizedMotion().TurnedRadians;
 	if (Gun)
@@ -331,7 +338,8 @@ void ARTSUnit::CreateParts()
 		Gun->SetRelativeLocationAndRotation(UnitData->GunOffset, FRotator(GunPitch, 0.f, 0.f));
 	}
 
-	TMap<UStaticMesh*, UInstancedStaticMeshComponent*> WheelSets;
+	const FTransform Hull = Mesh->GetComponentTransform();
+	TMap<UStaticMesh*, int32> SetOfMesh;
 	for (const FRTSVehiclePart& Part : UnitData->Parts)
 	{
 		FPartSlot& Slot = PartSlots.AddDefaulted_GetRef();
@@ -350,23 +358,50 @@ void ARTSUnit::CreateParts()
 			continue;
 		}
 
-		// One draw for every wheel of a kind: each wheel is an instance, placed relative to the hull.
-		UInstancedStaticMeshComponent*& Set = WheelSets.FindOrAdd(Part.Mesh.Get());
-		if (!Set)
+		// One draw for every wheel of a kind: each wheel is an instance. The set stays attached to the hull, which it is shown,
+		// hidden and coloured with, but it does not move with it: UpdateRunningGear writes every instance in world space each
+		// frame the hull moves or the wheels roll. Carried by the hull's move as well, the set would be updated twice (#165).
+		int32* SetIndex = SetOfMesh.Find(Part.Mesh.Get());
+		if (!SetIndex)
 		{
-			Set = MakePartComponent<UInstancedStaticMeshComponent>(*this, *Parent, Part.Mesh);
-			PartComponents.Add(Set);
+			FWheelSet& NewSet = WheelSets.AddDefaulted_GetRef();
+			NewSet.Component = MakePartComponent<UInstancedStaticMeshComponent>(*this, *Parent, Part.Mesh, /*bWorldPlaced*/ true);
+			PartComponents.Add(NewSet.Component);
+			SetIndex = &SetOfMesh.Add(Part.Mesh.Get(), WheelSets.Num() - 1);
 		}
-		Slot.Component = Set;
-		Slot.Instance = Set->AddInstance(Rest, /*bWorldSpace*/ false);
+		FWheelSet& Set = WheelSets[*SetIndex];
+		Slot.Component = Set.Component;
+		Slot.Instance = Set.Component->AddInstance(Rest * Hull, /*bWorldSpace*/ false);
+		Slot.Wheel = Wheels.Num();
+		Set.Transforms.Add(Rest * Hull);
 
 		FWheel& Wheel = Wheels.AddDefaulted_GetRef();
-		Wheel.Component = Set;
+		Wheel.Set = *SetIndex;
 		Wheel.Instance = Slot.Instance;
 		Wheel.Rest = Rest;
 		Wheel.Radius = FMath::Max(Part.Mesh->GetBoundingBox().GetExtent().Z * UnitData->MeshScale.Z, 1.f);
 		Wheel.Side = Part.Offset.Y * UnitData->MeshScale.Y;
 	}
+
+	if (URTSRunningGearSubsystem* Gear = GetWorld() ? GetWorld()->GetSubsystem<URTSRunningGearSubsystem>() : nullptr)
+	{
+		if (Wheels.IsEmpty())
+		{
+			Gear->Unregister(*this);
+		}
+		else
+		{
+			Gear->Register(*this);
+		}
+	}
+}
+
+FTransform ARTSUnit::GetWheelTransform(const FWheel& Wheel) const
+{
+	// Rolling forward brings the top of the wheel forward: a nose-down pitch about the hull's Y axis, after the wheel's own
+	// turn on the hull.
+	const FQuat Roll = FRotator(-FMath::RadiansToDegrees(Wheel.Angle), 0.f, 0.f).Quaternion();
+	return FTransform(Roll * Wheel.Rest.GetRotation(), Wheel.Rest.GetLocation()) * Mesh->GetComponentTransform();
 }
 
 bool ARTSUnit::GetPartTransform(int32 PartIndex, FTransform& OutTransform) const
@@ -376,12 +411,9 @@ bool ARTSUnit::GetPartTransform(int32 PartIndex, FTransform& OutTransform) const
 		return false;
 	}
 	const FPartSlot& Slot = PartSlots[PartIndex];
-	if (Slot.Instance == INDEX_NONE)
-	{
-		OutTransform = Slot.Component->GetComponentTransform();
-		return true;
-	}
-	return CastChecked<UInstancedStaticMeshComponent>(Slot.Component)->GetInstanceTransform(Slot.Instance, OutTransform, /*bWorldSpace*/ true);
+	// A wheel from the hull as it stands now: its instance follows only once UpdateRunningGear has run this frame.
+	OutTransform = Slot.Wheel == INDEX_NONE ? Slot.Component->GetComponentTransform() : GetWheelTransform(Wheels[Slot.Wheel]);
+	return true;
 }
 
 void ARTSUnit::UpdateRunningGear()
@@ -405,36 +437,41 @@ void ARTSUnit::UpdateRunningGear()
 	}
 	else
 	{
+		// The first call only notes where the unit stands.
 		const FTransform Pose = GetActorTransform();
-		if (!LastGearPose.IsSet())
+		if (LastGearPose.IsSet())
 		{
-			LastGearPose = Pose;
-			return;
+			Driven = FVector::DotProduct(Pose.GetLocation() - LastGearPose->GetLocation(), Pose.GetUnitAxis(EAxis::X));
+			TurnedRadians = FMath::DegreesToRadians(FMath::FindDeltaAngleDegrees(LastGearPose->Rotator().Yaw, Pose.Rotator().Yaw));
 		}
-		Driven = FVector::DotProduct(Pose.GetLocation() - LastGearPose->GetLocation(), Pose.GetUnitAxis(EAxis::X));
-		TurnedRadians = FMath::DegreesToRadians(FMath::FindDeltaAngleDegrees(LastGearPose->Rotator().Yaw, Pose.Rotator().Yaw));
 		LastGearPose = Pose;
 	}
-	if (FMath::Abs(Driven) < GearMinDistance && FMath::Abs(FMath::RadiansToDegrees(TurnedRadians)) < GearMinTurn)
+	const bool bRolls = FMath::Abs(Driven) >= GearMinDistance || FMath::Abs(FMath::RadiansToDegrees(TurnedRadians)) >= GearMinTurn;
+	// The wheels are placed in world space, so they follow every move of the hull, rolled or not: a push, a tilt, a kick, a
+	// correction from the server.
+	const FTransform& Hull = Mesh->GetComponentTransform();
+	if (!bRolls && GearHull.IsSet() && GearHull->Equals(Hull))
 	{
 		return;
 	}
+	GearHull = Hull;
 
 	// Turning right (positive yaw) drives the left side (negative Y) forward and the right side back.
-	TMap<UInstancedStaticMeshComponent*, TArray<FTransform>> Updates;
 	for (FWheel& Wheel : Wheels)
 	{
-		Wheel.Angle = FMath::Fmod(Wheel.Angle + (Driven - Wheel.Side * TurnedRadians) / Wheel.Radius, UE_TWO_PI);
-		// Rolling forward brings the top of the wheel forward: a nose-down pitch about the hull's Y axis, after the wheel's
-		// own turn on the hull.
-		const FQuat Roll = FRotator(-FMath::RadiansToDegrees(Wheel.Angle), 0.f, 0.f).Quaternion();
-		TArray<FTransform>& Transforms = Updates.FindOrAdd(Wheel.Component);
-		Transforms.SetNum(FMath::Max(Transforms.Num(), Wheel.Instance + 1));
-		Transforms[Wheel.Instance] = FTransform(Roll * Wheel.Rest.GetRotation(), Wheel.Rest.GetLocation());
+		if (bRolls)
+		{
+			Wheel.Angle = FMath::Fmod(Wheel.Angle + (Driven - Wheel.Side * TurnedRadians) / Wheel.Radius, UE_TWO_PI);
+		}
+		WheelSets[Wheel.Set].Transforms[Wheel.Instance] = GetWheelTransform(Wheel);
 	}
-	for (const TPair<UInstancedStaticMeshComponent*, TArray<FTransform>>& Update : Updates)
+	for (const FWheelSet& Set : WheelSets)
 	{
-		Update.Key->BatchUpdateInstancesTransforms(0, Update.Value, /*bWorldSpace*/ false, /*bMarkRenderStateDirty*/ true);
+		// Without a render state rebuild: the set's instance data goes to the renderer as a change of transforms, where
+		// rebuilding the proxy of every set of every vehicle each frame cost more than the move itself (#165).
+		Set.Component->BatchUpdateInstancesTransforms(0, Set.Transforms, /*bWorldSpace*/ false, /*bMarkRenderStateDirty*/ false);
+		Set.Component->UpdateBounds();
+		Set.Component->MarkRenderTransformDirty();
 	}
 }
 
@@ -905,7 +942,16 @@ void ARTSUnit::Tick(float DeltaSeconds)
 	{
 		UpdateMeshTransform();
 	}
-	UpdateRunningGear();
+	// The wheels follow later in the frame, once avoidance has pushed the hull too: URTSRunningGearSubsystem.
+}
+
+void ARTSUnit::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (URTSRunningGearSubsystem* Gear = GetWorld()->GetSubsystem<URTSRunningGearSubsystem>())
+	{
+		Gear->Unregister(*this);
+	}
+	Super::EndPlay(EndPlayReason);
 }
 
 void ARTSUnit::TickOrders(float DeltaSeconds)

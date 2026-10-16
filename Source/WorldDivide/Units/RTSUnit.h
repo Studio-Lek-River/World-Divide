@@ -220,7 +220,8 @@ public:
 
 	/**
 	 * Every machine. Rolls the wheels by how far the unit drove and turned since the last call, each by the ground speed on
-	 * its own side; nothing to do while the unit stands. Runs every tick; public so tests can step it.
+	 * its own side, and places them on the hull where it stands now; nothing to do while the unit stands. Runs once a frame
+	 * after every hull move (URTSRunningGearSubsystem); public so tests can step it.
 	 */
 	void UpdateRunningGear();
 
@@ -234,6 +235,7 @@ public:
 
 	virtual void PostInitializeComponents() override;
 	virtual void Destroyed() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -428,18 +430,20 @@ private:
 	FVector2D ClearAim = FVector2D::ZeroVector;
 	bool bClearAimFound = false;
 
-	/** Where each of URTSUnitData::Parts is drawn: its component, and its instance when that is instanced. */
+	/** Where each of URTSUnitData::Parts is drawn: its component, and its instance and wheel when that is instanced. */
 	struct FPartSlot
 	{
 		UStaticMeshComponent* Component = nullptr;
 		int32 Instance = INDEX_NONE;
+		int32 Wheel = INDEX_NONE;
 	};
 	TArray<FPartSlot> PartSlots;
 
 	/** A wheel's roll, kept per instance of its instanced component. */
 	struct FWheel
 	{
-		UInstancedStaticMeshComponent* Component = nullptr;
+		/** Its set in WheelSets, and its instance there. */
+		int32 Set = 0;
 		int32 Instance = 0;
 		/** Its rest place on the hull, before the roll. */
 		FTransform Rest;
@@ -449,6 +453,20 @@ private:
 		float Angle = 0.f;
 	};
 	TArray<FWheel> Wheels;
+
+	/** The instanced component for every wheel of one mesh, with the world transforms UpdateRunningGear writes to it. */
+	struct FWheelSet
+	{
+		UInstancedStaticMeshComponent* Component = nullptr;
+		TArray<FTransform> Transforms;
+	};
+	TArray<FWheelSet> WheelSets;
+
+	/** The hull's world transform UpdateRunningGear last placed the wheels on. */
+	TOptional<FTransform> GearHull;
+
+	/** Where Wheel is drawn in world space with its roll, on the hull as it stands now. */
+	FTransform GetWheelTransform(const FWheel& Wheel) const;
 
 	/** The unit's place when UpdateRunningGear last ran. */
 	TOptional<FTransform> LastGearPose;
