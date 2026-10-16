@@ -246,6 +246,13 @@ private:
 	 */
 	void KeepBarrelClear(float& Yaw, float& Pitch, bool bHasTarget);
 
+	/**
+	 * Whether the turret can turn to the clear Aim (yaw, pitch) without sweeping its barrel through an obstacle on the way:
+	 * Aim stays when the short way is clear, becomes a point round the back when only the long way is, or keeps the turret
+	 * where it is while the gun first moves to Aim's pitch when only that clears the swing. False when neither way is clear.
+	 */
+	bool RouteToClearAim(FVector2D& Aim) const;
+
 	/** Where the unit will stand, facing along its path, once it has driven Distance further along it; here without a path. */
 	FTransform GetPoseAlongPath(float Distance) const;
 

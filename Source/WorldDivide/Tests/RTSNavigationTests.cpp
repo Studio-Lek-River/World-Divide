@@ -4,6 +4,7 @@
 
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
+#include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
@@ -1012,6 +1013,181 @@ bool FRTSNavBarrelClearanceTest::RunTest(const FString& Parameters)
 	{
 		return TArray<URTSUnitData*>{ State.M20, State.Tank };
 	});
+}
+
+namespace RTSNavigationTests
+{
+	/** A wall the barrel cannot clear raised, and a low one it reaches over, each across an idle M20's front. */
+	constexpr float OffNavmeshTallHeight = 500.f;
+	constexpr float OffNavmeshLowHeight = 100.f;
+	constexpr float OffNavmeshFrontGap = 20.f;
+	constexpr float OffNavmeshBeyondReach = 200.f;
+	constexpr float OffNavmeshHalfWidth = 300.f;
+	/** The two M20s stand this far apart, south of FactorySpot. */
+	constexpr float OffNavmeshSpacing = 2500.f;
+	/**
+	 * Game seconds for an idle unit to find the wall, at most a reach check's 1.25 s, and turn its barrel out of it, about
+	 * 45 degrees at 45 a second; then how long the barrel is watched.
+	 */
+	constexpr double OffNavmeshFindSeconds = 4.0;
+	constexpr double OffNavmeshWatchSeconds = 3.0;
+
+	struct FOffNavmeshState
+	{
+		TWeakObjectPtr<ARTSUnit> Tall;
+		TWeakObjectPtr<ARTSUnit> Low;
+		FBox TallBox = FBox(ForceInit);
+		FBox LowBox = FBox(ForceInit);
+		double SpawnTime = -1.0;
+		float TallDeepest = 0.f;
+		float LowDeepest = 0.f;
+	};
+
+	float GetBarrelDepth(const ARTSUnit& Unit, const FBox& Box)
+	{
+		FVector Start;
+		FVector End;
+		return Unit.GetBarrelSegment(Start, End) ? RTSBarrelClearance::GetPenetration(Start, End, Unit.GetShape().Barrel->Radius, Box) : 0.f;
+	}
+
+	/** A solid engine cube filling Box that navigation leaves out: the navmesh runs on under it. */
+	void SpawnOffNavmeshSolid(UWorld& World, const FBox& Box)
+	{
+		const FTransform Transform(FRotator::ZeroRotator, Box.GetCenter(), Box.GetSize() / 100.f);
+		AStaticMeshActor* Actor = World.SpawnActorDeferred<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Transform);
+		UStaticMeshComponent* Component = Actor->GetStaticMeshComponent();
+		Component->SetMobility(EComponentMobility::Movable);
+		Component->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, CubePath));
+		Component->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+		Component->SetCanEverAffectNavigation(false);
+		Actor->FinishSpawning(Transform);
+	}
+}
+
+/**
+ * Spawns two idle M20s near FactorySpot, gun forward, and then across each one's front a solid box that navigation leaves
+ * out: a tall one and a low one under the barrel.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavSpawnOffNavmesh, FAutomationTestBase*, Test, TSharedRef<RTSNavigationTests::FOffNavmeshState>, State);
+bool FRTSNavSpawnOffNavmesh::Update()
+{
+	using namespace RTSNavigationTests;
+	ARTSPlayerController* Controller = GetController(*Test);
+	URTSUnitData* Data = LoadObject<URTSUnitData>(nullptr, M20Path);
+	if (!Controller || !Test->TestNotNull(TEXT("M20 data"), Data))
+	{
+		return true;
+	}
+	UWorld& World = *Controller->GetWorld();
+	const FRTSUnitShape Shape = RTSUnitShape::FromData(*Data);
+	if (!Test->TestTrue(TEXT("The M20 has a separate barrel"), Shape.Barrel.IsSet()))
+	{
+		return true;
+	}
+	const ARecastNavMesh* NavMesh = RTSNavAgents::GetNavMesh(World, RTSNavAgents::SelectAgent(Shape));
+	if (!Test->TestNotNull(TEXT("The M20's navmesh"), NavMesh))
+	{
+		return true;
+	}
+	const float Reach = Shape.Barrel->GetReach();
+	auto Place = [&](const FVector& Spot, float Height, FBox& OutBox)
+	{
+		ARTSUnit* Unit = SpawnUnit(World, Data, Controller->GetTeamId(), Spot, 0.f);
+		// Open ground: nothing in the barrel's reach, on the navmesh or off it, before the box goes up.
+		FRTSFootprint Disc;
+		Disc.Center = Spot;
+		Disc.Radius = Reach;
+		Test->TestTrue(*FString::Printf(TEXT("Open ground at %s"), *Spot.ToCompactString()),
+			RTSHullClearance::GetClearance(*NavMesh, Disc) > 0.f
+			&& !RTSBarrelClearance::IsAnythingInReach(World, *Shape.Barrel, Unit->GetActorTransform(), Data->GunMinPitch, Data->GunMaxPitch, 0.f));
+		OutBox = FBox(Spot + FVector(Shape.Hull.Max.X + OffNavmeshFrontGap, -OffNavmeshHalfWidth, 0.f),
+			Spot + FVector(Reach + OffNavmeshBeyondReach, OffNavmeshHalfWidth, Height));
+		SpawnOffNavmeshSolid(World, OutBox);
+		return Unit;
+	};
+	const FVector TallSpot = FactorySpot;
+	const FVector LowSpot = FactorySpot - FVector(0.f, OffNavmeshSpacing, 0.f);
+	State->Tall = Place(TallSpot, OffNavmeshTallHeight, State->TallBox);
+	State->Low = Place(LowSpot, OffNavmeshLowHeight, State->LowBox);
+
+	FVector Start;
+	FVector End;
+	if (State->Low->GetBarrelSegment(Start, End))
+	{
+		Test->TestTrue(FString::Printf(TEXT("The barrel reaches over the low box (muzzle z %.0f, box %.0f high)"), End.Z, State->LowBox.Max.Z),
+			End.X > State->LowBox.Min.X && End.Z - Shape.Barrel->Radius > State->LowBox.Max.Z);
+	}
+	Test->TestTrue(TEXT("Parked with its gun forward, the barrel starts in the tall box"), GetBarrelDepth(*State->Tall, State->TallBox) > OverlapTolerance);
+	State->SpawnTime = World.GetTimeSeconds();
+	return true;
+}
+
+/** Watches both barrels once the M20s had time to find the boxes, then checks them and the navmesh under the boxes. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavWatchOffNavmesh, FAutomationTestBase*, Test, TSharedRef<RTSNavigationTests::FOffNavmeshState>, State);
+bool FRTSNavWatchOffNavmesh::Update()
+{
+	using namespace RTSNavigationTests;
+	UWorld* World = AutomationCommon::GetAnyGameWorld();
+	ARTSUnit* Tall = State->Tall.Get();
+	ARTSUnit* Low = State->Low.Get();
+	if (!World || !Tall || !Low || State->SpawnTime < 0.0)
+	{
+		Test->AddError(TEXT("Lost the PIE world or the M20s"));
+		return true;
+	}
+	const double Elapsed = World->GetTimeSeconds() - State->SpawnTime;
+	if (Elapsed < OffNavmeshFindSeconds)
+	{
+		return false;
+	}
+	State->TallDeepest = FMath::Max(State->TallDeepest, GetBarrelDepth(*Tall, State->TallBox));
+	State->LowDeepest = FMath::Max(State->LowDeepest, GetBarrelDepth(*Low, State->LowBox));
+	if (Elapsed < OffNavmeshFindSeconds + OffNavmeshWatchSeconds)
+	{
+		return false;
+	}
+
+	// The boxes are left out of navigation: the navmesh still runs under them, so only the barrel's own checks see them.
+	const ARecastNavMesh* NavMesh = RTSNavAgents::GetNavMesh(*World, Tall->GetNavAgentPropertiesRef());
+	FNavLocation Projected;
+	Test->TestTrue(TEXT("The navmesh runs on under the tall box"),
+		NavMesh && NavMesh->ProjectPoint(State->TallBox.GetCenter() * FVector(1.f, 1.f, 0.f), Projected, FVector(10.f, 10.f, 250.f)));
+
+	Test->TestTrue(TEXT("The tall box's M20 has no target"), Tall->GetWeaponComponent()->GetTarget() == nullptr);
+	Test->TestTrue(FString::Printf(TEXT("The turret turned the barrel out of the tall box (%.0f degrees)"), Tall->GetTurretYaw()),
+		FMath::Abs(Tall->GetTurretYaw()) >= 15.f);
+	Test->TestTrue(FString::Printf(TEXT("The barrel stayed out of the tall box (%.1f cm at most from %.0f s on)"), State->TallDeepest, OffNavmeshFindSeconds),
+		State->TallDeepest <= OverlapTolerance);
+
+	Test->TestTrue(TEXT("The low box's M20 has no target"), Low->GetWeaponComponent()->GetTarget() == nullptr);
+	Test->TestTrue(FString::Printf(TEXT("Over the low box the turret stays forward and the gun level (%.1f, %.1f degrees)"), Low->GetTurretYaw(),
+		Low->GetGunPitch()), FMath::IsNearlyZero(Low->GetTurretYaw(), 0.5f) && FMath::IsNearlyZero(Low->GetGunPitch(), 0.5f));
+	Test->TestTrue(FString::Printf(TEXT("The barrel stayed over the low box (%.1f cm at most)"), State->LowDeepest), State->LowDeepest <= OverlapTolerance);
+	return true;
+}
+
+/**
+ * A solid wall the navmesh leaves out stands across an idle M20's front (#162): its barrel turns out of it all the same,
+ * found by the barrel's own overlap rather than the navmesh; over a low one it stays forward.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavBarrelOffNavmeshTest, "WorldDivide.Navigation.BarrelClearance.OffNavmesh", RTSTests::TestFlags)
+
+bool FRTSNavBarrelOffNavmeshTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	const TSharedRef<FOffNavmeshState> OffNavmesh = MakeShared<FOffNavmeshState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavSpawnOffNavmesh(this, OffNavmesh));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWatchOffNavmesh(this, OffNavmesh));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
 }
 
 /** A production building is refused where its vehicles could not leave its exit; an infantry building on the same spot is not. */

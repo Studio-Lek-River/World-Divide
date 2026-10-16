@@ -100,6 +100,15 @@ namespace
 	constexpr double BarrelAimCheckSeconds = 0.2;
 	constexpr float BarrelAimRecheckAngle = 2.5f;
 
+	/**
+	 * The overlap that finds what the navmesh leaves out looks at least this many cm past the barrel's reach, so a unit
+	 * standing or creeping may move as far before it looks again.
+	 */
+	constexpr float BarrelReachMargin = 100.f;
+
+	/** A turret that must turn the long way round heads for a point this many degrees on, so it never turns back the short way. */
+	constexpr float BarrelLongWayStep = 170.f;
+
 	/** Below this much driving (cm) and turning (degrees) since the last frame the wheels stand still. */
 	constexpr float GearMinDistance = 0.01f;
 	constexpr float GearMinTurn = 0.001f;
@@ -481,7 +490,8 @@ void ARTSUnit::UpdateTurret(float DeltaSeconds)
 	const float Pitch = FMath::FixedTurn(GunPitch, PitchGoal, UnitData->GunElevationRate * DeltaSeconds);
 	if (Pitch != GunPitch)
 	{
-		GunPitch = Pitch;
+		// FixedTurn gives [0, 360): a lowered gun is stored below zero, as its limits and KeepBarrelClear compare it.
+		GunPitch = FRotator::NormalizeAxis(Pitch);
 		OnRep_GunPitch();
 	}
 }
@@ -503,7 +513,8 @@ void ARTSUnit::KeepBarrelClear(float& Yaw, float& Pitch, bool bHasTarget)
 	const float LookAheadSeconds = FMath::Clamp(BarrelLookAheadTurn / UnitData->TurretTurnRate, BarrelLookAheadMinSeconds, BarrelLookAheadMaxSeconds);
 	const float LookAhead = Movement->Velocity.Size2D() * LookAheadSeconds;
 
-	// The ground the barrel can sweep at any yaw, a disc round the unit: only a wall of the navmesh near it calls for sweeps.
+	// The ground the barrel can sweep at any yaw, a disc round the unit: only a wall of the navmesh near it, or something
+	// solid the navmesh leaves out, calls for sweeps.
 	FRTSFootprint Reach;
 	Reach.Center = GetActorLocation();
 	Reach.Radius = Barrel.GetReach();
@@ -517,9 +528,20 @@ void ARTSUnit::KeepBarrelClear(float& Yaw, float& Pitch, bool bHasTarget)
 		const ARecastNavMesh* NavMesh = RTSNavAgents::GetNavMesh(World, GetNavAgentPropertiesRef());
 		const float Clearance = NavMesh ? RTSHullClearance::GetClearance(*NavMesh, Reach, nullptr, LookAhead) : -1.f;
 		bBarrelNearObstacle = Clearance <= LookAhead;
+		float Slack = Clearance - LookAhead;
+		if (!bBarrelNearObstacle)
+		{
+			// A prop or wall left out of navigation stands on the navmesh without cutting it: one overlap at the barrel's height,
+			// wide enough for what the unit drives before the check expires, so a moving unit looks no more often than one standing.
+			const float Margin = FMath::Max(BarrelReachMargin, Movement->Velocity.Size2D() * static_cast<float>(BarrelReachCheckSeconds));
+			bBarrelNearObstacle = RTSBarrelClearance::IsAnythingInReach(World, Barrel, GetActorTransform(),
+				HasGun() ? UnitData->GunMinPitch : 0.f, HasGun() ? UnitData->GunMaxPitch : 0.f, Margin);
+			Slack = FMath::Min(Slack, Margin);
+		}
 		BarrelReachCache.Center = FVector2D(Reach.Center);
-		BarrelReachCache.Slack = bBarrelNearObstacle ? -1.f : Clearance - LookAhead;
-		BarrelReachCache.ExpireTime = Now + BarrelReachCheckSeconds;
+		BarrelReachCache.Slack = bBarrelNearObstacle ? -1.f : Slack;
+		// Spread over a quarter second either way per unit, so units spawned together do not all look on the same frame.
+		BarrelReachCache.ExpireTime = Now + BarrelReachCheckSeconds * (0.75 + 0.5 * (GetUniqueID() % 16) / 16.0);
 		NextBarrelReachCheck = Now + BarrelAimCheckSeconds;
 	}
 	if (!bBarrelNearObstacle)
@@ -542,7 +564,7 @@ void ARTSUnit::KeepBarrelClear(float& Yaw, float& Pitch, bool bHasTarget)
 			HasGun() ? UnitData->GunMaxPitch : 0.f);
 		CheckedAim = Wanted;
 		ClearAim = FVector2D(Aim.Yaw, Aim.Pitch);
-		bClearAimFound = Aim.bFound;
+		bClearAimFound = Aim.bFound && RouteToClearAim(ClearAim);
 		NextBarrelAimCheck = Now + BarrelAimCheckSeconds;
 	}
 	if (bClearAimFound)
@@ -561,6 +583,41 @@ void ARTSUnit::KeepBarrelClear(float& Yaw, float& Pitch, bool bHasTarget)
 		Pitch = GunPitch;
 	}
 	bAimBlocked = bHasTarget && (!bClearAimFound || FMath::Abs(FMath::FindDeltaAngleDegrees(Yaw, Wanted.X)) > TurretAimTolerance);
+}
+
+bool ARTSUnit::RouteToClearAim(FVector2D& Aim) const
+{
+	const UWorld& World = *GetWorld();
+	const FRTSBarrel& Barrel = *Shape.Barrel;
+	const FTransform Pose = GetActorTransform();
+	// A barrel already in an obstacle (a building went up around it) takes the short way out.
+	if (!RTSBarrelClearance::IsClearAt(World, Barrel, Pose, TurretYaw, GunPitch))
+	{
+		return true;
+	}
+	// FMath::FixedTurn takes the short way; the long way is round the back.
+	const float Delta = FMath::FindDeltaAngleDegrees(TurretYaw, Aim.X);
+	const float Short = Delta >= 0.f ? 1.f : -1.f;
+	for (const float Direction : { Short, -Short })
+	{
+		if (!RTSBarrelClearance::IsSwingClear(World, Barrel, Pose, TurretYaw, Aim.X, Direction, Aim.Y))
+		{
+			continue;
+		}
+		// The gun moves while the turret turns: clear at both ends of its way, or raised (or lowered) first.
+		if (!FMath::IsNearlyEqual(GunPitch, Aim.Y, 0.1f)
+			&& !RTSBarrelClearance::IsSwingClear(World, Barrel, Pose, TurretYaw, Aim.X, Direction, GunPitch))
+		{
+			Aim.X = TurretYaw;
+		}
+		else if (Direction != Short)
+		{
+			// The long way is half a turn or more: a point short of half a turn on is still the short way to FixedTurn.
+			Aim.X = FRotator::NormalizeAxis(TurretYaw - Short * BarrelLongWayStep);
+		}
+		return true;
+	}
+	return false;
 }
 
 FTransform ARTSUnit::GetPoseAlongPath(float Distance) const

@@ -312,3 +312,23 @@ What changed: a turret's barrel (`FRTSUnitShape::Barrel`) is kept out of walls a
 
 - Every row is within or under the step 0 run-to-run spread; the M20 rows are single runs, and their drop is spread, not a gain from #162. The bench grid stands in the open, so no barrel comes near a wall and the cost there is the cached reach check.
 - The obstacle shots of `unitshots` log `the barrel overlaps ... by 0 cm now, 0 cm at most on the way` for the M20 at Block_North (head on, along, round the corner) and the factory, with the turret turned 45 degrees where it parks nose to the wall; the tank logs that its gun is part of its hull box.
+
+### #162 follow-up: turret swing and obstacles left out of the navmesh
+
+Same machine and method, 2026-10-16. Each run is a `rts.Debug.Bench DA_TestM20Guardian 240` on L_Bench, interleaved with `-dpcvars=rts.BarrelClearance=0` and `=1`.
+
+What changed:
+- The turret's swing to a clear aim is swept too (`RTSBarrelClearance::IsSwingClear`), only while the barrel is near an obstacle.
+- An idle or moving turreted unit with nothing of the navmesh in reach makes one box overlap at its barrel's height (`IsAnythingInReach`). It runs on the reach cache, about once a second per unit, and the box is widened by a second's driving.
+
+| M20 x 240 | Game ms, barrel clearance off (runs) | Game ms, on (runs) | Mean off → on |
+|---|---|---|---:|
+| `f03df50` idle | 2.43, 2.44, 2.34 | 2.25, 2.46, 2.30 | 2.40 → 2.34 |
+| `f03df50` move | 19.69, 21.02, 19.48 | 17.61, 21.77, 21.92 | 20.06 → 20.43 |
+| follow-up idle | 2.31, 2.20, 2.33, 2.23, 2.16 | 2.44, 2.19, 2.34, 2.49, 2.48 | 2.25 → 2.39 |
+| follow-up move | 19.45, 18.05, 20.38, 17.61, 17.50 | 21.40, 17.30, 20.80, 20.46, 20.90 | 18.60 → 20.17 |
+
+- **Within the spread.** Run to run, the move scenario spreads by about 4 ms (17.3 to 21.9 ms, with clearance on or off). The on/off difference of either version lies inside that spread.
+- **No sweeps in the bench.** Temporary counters showed no overlap hits and no aim sweeps in the open grid. The cost there is the cached reach checks: 270 a second idle and, after widening the box, about the same driving.
+- **Moving units no longer re-check five times a second.** Before the box was widened, a moving unit re-checked 5 times a second (1080 checks a second in total). That first A/B measured move at 17.0 and 17.7 ms off against 20.6 and 21.2 ms on. That is fixed.
+- **The tank does not run barrel clearance.** `DA_TestTank` x 240 measured idle 2.33 ms and move 4.15 ms of game thread, against 2.39 and 4.25 ms before.

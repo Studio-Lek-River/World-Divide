@@ -77,17 +77,23 @@ namespace RTSBarrelClearanceTests
 		return TestWorld.SpawnUnit(Data, TeamId, FVector(Location.X, Location.Y, -Shape.Hull.Min.Z));
 	}
 
-	/** A solid box on the ground across the M20's way, Height tall, as the world's static geometry. */
-	FBox SpawnBox(const FRTSTestWorld& TestWorld, const FRTSUnitShape& Shape, float Height)
+	/** A solid box of the world's static geometry. */
+	void SpawnSolid(const FRTSTestWorld& TestWorld, const FBox& Box)
 	{
-		const float Front = Shape.Hull.Max.X + BoxFrontGap;
-		const FBox Box(FVector(Front, -BoxHalfWidth, 0.f), FVector(Shape.Barrel->GetReach() + BoxBeyondReach, BoxHalfWidth, Height));
 		AStaticMeshActor* Actor = TestWorld.World->SpawnActor<AStaticMeshActor>(Box.GetCenter(), FRotator::ZeroRotator);
 		Actor->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
 		Actor->GetStaticMeshComponent()->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, CubePath));
 		Actor->GetStaticMeshComponent()->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
 		// The engine cube is 100 cm a side round its middle.
 		Actor->SetActorScale3D(Box.GetSize() / 100.f);
+	}
+
+	/** A solid box on the ground across the M20's way, Height tall, as the world's static geometry. */
+	FBox SpawnBox(const FRTSTestWorld& TestWorld, const FRTSUnitShape& Shape, float Height)
+	{
+		const float Front = Shape.Hull.Max.X + BoxFrontGap;
+		const FBox Box(FVector(Front, -BoxHalfWidth, 0.f), FVector(Shape.Barrel->GetReach() + BoxBeyondReach, BoxHalfWidth, Height));
+		SpawnSolid(TestWorld, Box);
 		return Box;
 	}
 
@@ -98,20 +104,87 @@ namespace RTSBarrelClearanceTests
 		return Unit.GetBarrelSegment(Start, End) ? RTSBarrelClearance::GetPenetration(Start, End, Unit.GetShape().Barrel->Radius, Box) : 0.f;
 	}
 
+	/** The deepest the barrel reaches into any of Boxes. */
+	float GetPenetration(const ARTSUnit& Unit, TConstArrayView<FBox> Boxes)
+	{
+		float Deepest = 0.f;
+		for (const FBox& Box : Boxes)
+		{
+			Deepest = FMath::Max(Deepest, GetPenetration(Unit, Box));
+		}
+		return Deepest;
+	}
+
+	/** One frame: the world's clock, so the unit's checks come round as in play, then the turret (or, ticked, the whole unit) and weapon. */
+	void StepFrame(ARTSUnit& Unit, bool bTick)
+	{
+		Unit.GetWorld()->TimeSeconds += Step;
+		if (bTick)
+		{
+			Unit.Tick(Step);
+		}
+		else
+		{
+			Unit.UpdateTurret(Step);
+		}
+		Unit.GetWeaponComponent()->UpdateWeapon(Step);
+	}
+
 	/** Steps the turret and weapon for Seconds; the deepest the barrel reached into Box from TraverseSeconds on. */
 	float Run(ARTSUnit& Unit, const FBox& Box, float Seconds)
 	{
 		float Deepest = 0.f;
 		for (int32 Frame = 1; Frame * Step <= Seconds; ++Frame)
 		{
-			Unit.UpdateTurret(Step);
-			Unit.GetWeaponComponent()->UpdateWeapon(Step);
+			StepFrame(Unit, false);
 			if (Frame * Step >= TraverseSeconds)
 			{
 				Deepest = FMath::Max(Deepest, GetPenetration(Unit, Box));
 			}
 		}
 		return Deepest;
+	}
+
+	/** Steps the unit for Seconds; the deepest the barrel reached into any of Boxes on any frame, the swing included. */
+	float RunEveryFrame(ARTSUnit& Unit, TConstArrayView<FBox> Boxes, float Seconds, bool bTick = false)
+	{
+		float Deepest = 0.f;
+		for (int32 Frame = 1; Frame * Step <= Seconds; ++Frame)
+		{
+			StepFrame(Unit, bTick);
+			Deepest = FMath::Max(Deepest, GetPenetration(Unit, Boxes));
+		}
+		return Deepest;
+	}
+
+	/** The turret yaw closest to forward on Direction's side (1 left of the wall, -1 right) at which the level barrel is clear. */
+	TOptional<float> FindClearYaw(const ARTSUnit& Unit, float Direction)
+	{
+		for (float Yaw = 0.f; Yaw <= 180.f; Yaw += 1.f)
+		{
+			if (RTSBarrelClearance::IsClearAt(*Unit.GetWorld(), *Unit.GetShape().Barrel, Unit.GetActorTransform(), Direction * Yaw, 0.f))
+			{
+				return Direction * Yaw;
+			}
+		}
+		return {};
+	}
+
+	/** Turns the turret to Yaw with the inspection aim, then hands the aim back. */
+	void ParkTurret(ARTSUnit& Unit, float Yaw)
+	{
+		Unit.SetAimOverride(FVector2D(Yaw, 0.f));
+		for (float Time = 0.f; Time < SettleSeconds; Time += Step)
+		{
+			StepFrame(Unit, false);
+		}
+		Unit.SetAimOverride({});
+	}
+
+	/** A spot Distance from the unit's middle at World yaw Yaw (degrees), on the ground. */
+	FVector AtYaw(float Yaw, float Distance)
+	{
+		return FRotator(0.f, Yaw, 0.f).Vector() * Distance;
 	}
 }
 
@@ -240,6 +313,135 @@ bool FRTSBarrelClearanceTargetTest::RunTest(const FString& Parameters)
 		TestTrue(FString::Printf(TEXT("The barrel is out of the wall (%.1f cm)"), GetPenetration(*M20, Box)),
 			GetPenetration(*M20, Box) <= OverlapTolerance);
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBarrelClearanceTraverseTest, "WorldDivide.Combat.BarrelClearance.Traverse", RTSTests::TestFlags)
+
+bool FRTSBarrelClearanceTraverseTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSBarrelClearanceTests;
+	URTSUnitData* Data = MakeM20(*this);
+	if (!Data)
+	{
+		return false;
+	}
+	// The turret parked left of the tall wall, the enemy right of it: the short way, the way it would turn, sweeps through it.
+	constexpr float ParkedYaw = 80.f;
+	constexpr float EnemyYaw = -70.f;
+	constexpr float EnemyDistance = 1500.f;
+	/** Long enough for the turret to go round the back: 210 degrees at 45 a second, and to fire. */
+	constexpr float TraverseRoundSeconds = 10.f;
+	const float Short = FMath::FindDeltaAngleDegrees(ParkedYaw, EnemyYaw) >= 0.f ? 1.f : -1.f;
+
+	// Open behind: the turret goes round the back, its barrel out of the wall on every frame, and fires once round.
+	{
+		const FRTSTestWorld TestWorld;
+		ARTSUnit* M20 = SpawnOnGround(TestWorld, Data, 0, FVector::ZeroVector);
+		const FBox Box = SpawnBox(TestWorld, M20->GetShape(), TallBoxHeight);
+		const FRTSBarrel& Barrel = *M20->GetShape().Barrel;
+		const FTransform Pose = M20->GetActorTransform();
+		if (!TestTrue(TEXT("The barrel is clear parked and at the enemy"), RTSBarrelClearance::IsClearAt(*TestWorld.World, Barrel, Pose, ParkedYaw, 0.f)
+				&& RTSBarrelClearance::IsClearAt(*TestWorld.World, Barrel, Pose, EnemyYaw, 0.f))
+			|| !TestFalse(TEXT("The short way sweeps through the wall"),
+				RTSBarrelClearance::IsSwingClear(*TestWorld.World, Barrel, Pose, ParkedYaw, EnemyYaw, Short, 0.f))
+			|| !TestTrue(TEXT("The long way is clear"),
+				RTSBarrelClearance::IsSwingClear(*TestWorld.World, Barrel, Pose, ParkedYaw, EnemyYaw, -Short, 0.f)))
+		{
+			return false;
+		}
+		ParkTurret(*M20, ParkedYaw);
+		ARTSUnit* Enemy = SpawnOnGround(TestWorld, MakeTarget(), 1, AtYaw(EnemyYaw, EnemyDistance));
+		const float Deepest = RunEveryFrame(*M20, { Box }, TraverseRoundSeconds);
+		TestTrue(FString::Printf(TEXT("The barrel stayed out of the wall on every frame of the swing (%.1f cm at most)"), Deepest),
+			Deepest <= OverlapTolerance);
+		TestFalse(TEXT("Round the back, the aim is clear"), M20->IsAimBlocked());
+		TestTrue(FString::Printf(TEXT("The turret points at the enemy (%.0f degrees)"), M20->GetTurretYaw()), M20->IsAimedAt(*Enemy));
+		TestTrue(TEXT("The gun fired"), Enemy->GetHealthComponent()->GetHealth() < TargetHealth);
+	}
+
+	// A wall behind as well: neither way is clear, so the turret holds and the gun holds its fire.
+	{
+		const FRTSTestWorld TestWorld;
+		ARTSUnit* M20 = SpawnOnGround(TestWorld, Data, 0, FVector::ZeroVector);
+		const FRTSUnitShape& Shape = M20->GetShape();
+		const FBox Front = SpawnBox(TestWorld, Shape, TallBoxHeight);
+		const FBox Back(FVector(-Shape.Barrel->GetReach() - BoxBeyondReach, -BoxHalfWidth, 0.f),
+			FVector(Shape.Hull.Min.X - BoxFrontGap, BoxHalfWidth, TallBoxHeight));
+		SpawnSolid(TestWorld, Back);
+		const FRTSBarrel& Barrel = *Shape.Barrel;
+		const FTransform Pose = M20->GetActorTransform();
+		if (!TestTrue(TEXT("Between the walls the barrel is clear parked and at the enemy"),
+				RTSBarrelClearance::IsClearAt(*TestWorld.World, Barrel, Pose, ParkedYaw, 0.f)
+				&& RTSBarrelClearance::IsClearAt(*TestWorld.World, Barrel, Pose, EnemyYaw, 0.f))
+			|| !TestFalse(TEXT("The long way sweeps through the wall behind"),
+				RTSBarrelClearance::IsSwingClear(*TestWorld.World, Barrel, Pose, ParkedYaw, EnemyYaw, -Short, 0.f)))
+		{
+			return false;
+		}
+		ParkTurret(*M20, ParkedYaw);
+		ARTSUnit* Enemy = SpawnOnGround(TestWorld, MakeTarget(), 1, AtYaw(EnemyYaw, EnemyDistance));
+		const float Deepest = RunEveryFrame(*M20, { Front, Back }, TraverseRoundSeconds);
+		TestTrue(FString::Printf(TEXT("The barrel stayed out of both walls on every frame (%.1f cm at most)"), Deepest),
+			Deepest <= OverlapTolerance);
+		TestTrue(TEXT("The M20 targets the enemy"), M20->GetWeaponComponent()->GetTarget() == Enemy);
+		TestTrue(TEXT("Its aim is blocked"), M20->IsAimBlocked());
+		// Before the enemy is acquired the turret heads home as far as is clear: to the wall's edge, on its own side.
+		const TOptional<float> Edge = FindClearYaw(*M20, 1.f);
+		TestTrue(FString::Printf(TEXT("The turret held on its side of the wall (%.0f degrees, clear from %.0f to %.0f)"), M20->GetTurretYaw(),
+			Edge.Get(0.f), ParkedYaw), Edge && M20->GetTurretYaw() >= *Edge - 1.f && M20->GetTurretYaw() <= ParkedYaw + 1.f);
+		TestEqual(TEXT("The gun held its fire"), Enemy->GetHealthComponent()->GetHealth(), TargetHealth);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBarrelClearanceHullTurnTest, "WorldDivide.Combat.BarrelClearance.HullTurn", RTSTests::TestFlags)
+
+bool FRTSBarrelClearanceHullTurnTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSBarrelClearanceTests;
+	URTSUnitData* Data = MakeM20(*this);
+	if (!Data)
+	{
+		return false;
+	}
+	/** Long enough for the hull to turn a quarter turn and the turret to keep round. */
+	constexpr float HullTurnSeconds = 10.f;
+	/** How far the hull must have turned toward the enemy, out of the quarter turn. */
+	constexpr float MinHullTurn = 30.f;
+	constexpr float EnemyBeyondWall = 1000.f;
+
+	// A stationary M20 with a tall wall along its left and the enemy behind it: the aim is blocked, so the hull turns toward
+	// the enemy, ticked as in play, while the turret keeps the barrel out of the wall and the gun holds its fire.
+	const FRTSTestWorld TestWorld;
+	ARTSUnit* M20 = SpawnOnGround(TestWorld, Data, 0, FVector::ZeroVector);
+	const FRTSUnitShape& Shape = M20->GetShape();
+	const float Reach = Shape.Barrel->GetReach();
+	// Clear of the hull however it turns; only the barrel reaches the wall.
+	const float Near = FVector2D(Shape.GetHalfLength(), Shape.GetHalfWidth()).Size() + BoxFrontGap;
+	if (!TestTrue(FString::Printf(TEXT("The barrel reaches past the hull's turning circle (%.0f cm against %.0f)"), Reach, Near),
+		Reach > Near + 50.f))
+	{
+		return false;
+	}
+	const FBox Wall(FVector(-Reach - BoxBeyondReach, Near, 0.f), FVector(Reach + BoxBeyondReach, Near + 300.f, TallBoxHeight));
+	SpawnSolid(TestWorld, Wall);
+	if (!TestFalse(TEXT("The barrel cannot point at the enemy"),
+		RTSBarrelClearance::IsClearAt(*TestWorld.World, *Shape.Barrel, M20->GetActorTransform(), 90.f, 0.f)))
+	{
+		return false;
+	}
+	ARTSUnit* Enemy = SpawnOnGround(TestWorld, MakeTarget(), 1, FVector(0.f, Near + EnemyBeyondWall, 0.f));
+	const float Deepest = RunEveryFrame(*M20, { Wall }, HullTurnSeconds, /*bTick*/ true);
+	const float HullYaw = M20->GetActorRotation().Yaw;
+	TestTrue(TEXT("The M20 targets the enemy behind the wall"), M20->GetWeaponComponent()->GetTarget() == Enemy);
+	TestTrue(TEXT("Its aim is blocked"), M20->IsAimBlocked());
+	TestTrue(FString::Printf(TEXT("The hull turned toward the enemy (%.0f degrees)"), HullYaw), HullYaw >= MinHullTurn);
+	TestTrue(FString::Printf(TEXT("The M20 stood still (%.1f cm)"), FVector::Dist2D(M20->GetActorLocation(), FVector::ZeroVector)),
+		FVector::Dist2D(M20->GetActorLocation(), FVector::ZeroVector) <= 1.f);
+	TestEqual(TEXT("The gun held its fire"), Enemy->GetHealthComponent()->GetHealth(), TargetHealth);
+	TestTrue(FString::Printf(TEXT("The barrel stayed out of the wall on every frame of the turn (%.1f cm at most)"), Deepest),
+		Deepest <= OverlapTolerance);
 	return true;
 }
 
