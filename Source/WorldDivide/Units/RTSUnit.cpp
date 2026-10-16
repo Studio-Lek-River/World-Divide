@@ -19,6 +19,7 @@
 #include "Economy/RTSSupplySource.h"
 #include "Engine/StaticMesh.h"
 #include "GameFramework/FloatingPawnMovement.h"
+#include "HAL/IConsoleManager.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "NavigationSystem.h"
@@ -29,6 +30,7 @@
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSApproach.h"
+#include "Units/RTSBarrelClearance.h"
 #include "Units/RTSGround.h"
 #include "Units/RTSUnitAIController.h"
 #include "WorldDivide.h"
@@ -77,6 +79,26 @@ namespace
 
 	/** A turret fires once it points this close to its target, in degrees. */
 	constexpr float TurretAimTolerance = 5.f;
+
+	/**
+	 * A driving unit looks for obstacles in its barrel's way as far along its path as it drives in the time its turret takes
+	 * to traverse this many degrees, between these many seconds.
+	 */
+	constexpr float BarrelLookAheadTurn = 90.f;
+	constexpr float BarrelLookAheadMinSeconds = 0.5f;
+	constexpr float BarrelLookAheadMaxSeconds = 2.f;
+
+	/**
+	 * A barrel whose reach was found clear of walls is looked at again after this many seconds, in which a building may have
+	 * gone up; one near a wall is swept at most this often, or as soon as the aim it wants moves by this many degrees.
+	 */
+	TAutoConsoleVariable<bool> CVarBarrelClearance(
+		TEXT("rts.BarrelClearance"), true,
+		TEXT("Turns turrets and raises guns so barrels stay out of walls and buildings (RTSBarrelClearance), on the server."));
+
+	constexpr double BarrelReachCheckSeconds = 1.0;
+	constexpr double BarrelAimCheckSeconds = 0.2;
+	constexpr float BarrelAimRecheckAngle = 2.5f;
 
 	/** Below this much driving (cm) and turning (degrees) since the last frame the wheels stand still. */
 	constexpr float GearMinDistance = 0.01f;
@@ -253,6 +275,9 @@ void ARTSUnit::ApplyUnitData()
 	// The narrowest agent class wide enough for the hull: its navmesh keeps every path wide enough for the unit.
 	Movement->NavAgentProps = RTSNavAgents::SelectAgent(Shape);
 	HullClearanceCache = FRTSHullClearanceCache();
+	BarrelReachCache = FRTSHullClearanceCache();
+	bBarrelNearObstacle = false;
+	bClearAimFound = false;
 
 	ApplyTeamColor();
 }
@@ -423,7 +448,25 @@ void ARTSUnit::UpdateTurret(float DeltaSeconds)
 		return;
 	}
 	const AActor* Target = WeaponComponent->GetTarget();
-	const float Goal = AimOverride ? AimOverride->X : Target ? GetTurretYawToward(*Target) : 0.f;
+	float Goal = AimOverride ? AimOverride->X : Target ? GetTurretYawToward(*Target) : 0.f;
+	// Up toward the target's middle from the trunnion; the hull's tilt is left out.
+	float PitchGoal = 0.f;
+	if (AimOverride)
+	{
+		PitchGoal = AimOverride->Y;
+	}
+	else if (Target && Gun)
+	{
+		const FVector ToTarget = Target->GetActorLocation() - Gun->GetComponentLocation();
+		PitchGoal = FMath::RadiansToDegrees(FMath::Atan2(ToTarget.Z, ToTarget.Size2D()));
+	}
+	PitchGoal = HasGun() ? FMath::Clamp(PitchGoal, UnitData->GunMinPitch, UnitData->GunMaxPitch) : 0.f;
+	// An inspection aim is held as given.
+	if (!AimOverride)
+	{
+		KeepBarrelClear(Goal, PitchGoal, Target != nullptr);
+	}
+
 	const float Yaw = FMath::FixedTurn(TurretYaw, Goal, UnitData->TurretTurnRate * DeltaSeconds);
 	if (Yaw != TurretYaw)
 	{
@@ -435,24 +478,133 @@ void ARTSUnit::UpdateTurret(float DeltaSeconds)
 	{
 		return;
 	}
-	// Up toward the target's middle from the trunnion; the hull's tilt is left out.
-	float PitchGoal = 0.f;
-	if (AimOverride)
-	{
-		PitchGoal = AimOverride->Y;
-	}
-	else if (Target)
-	{
-		const FVector ToTarget = Target->GetActorLocation() - Gun->GetComponentLocation();
-		PitchGoal = FMath::RadiansToDegrees(FMath::Atan2(ToTarget.Z, ToTarget.Size2D()));
-	}
-	PitchGoal = FMath::Clamp(PitchGoal, UnitData->GunMinPitch, UnitData->GunMaxPitch);
 	const float Pitch = FMath::FixedTurn(GunPitch, PitchGoal, UnitData->GunElevationRate * DeltaSeconds);
 	if (Pitch != GunPitch)
 	{
 		GunPitch = Pitch;
 		OnRep_GunPitch();
 	}
+}
+
+void ARTSUnit::KeepBarrelClear(float& Yaw, float& Pitch, bool bHasTarget)
+{
+	TRACE_CPUPROFILER_EVENT_SCOPE(ARTSUnit::KeepBarrelClear);
+
+	bAimBlocked = false;
+	if (!Shape.Barrel || !CVarBarrelClearance.GetValueOnGameThread())
+	{
+		bBarrelNearObstacle = false;
+		return;
+	}
+	const FRTSBarrel& Barrel = *Shape.Barrel;
+	const UWorld& World = *GetWorld();
+	const double Now = World.GetTimeSeconds();
+	// Far enough ahead to traverse a quarter turn before the unit gets there.
+	const float LookAheadSeconds = FMath::Clamp(BarrelLookAheadTurn / UnitData->TurretTurnRate, BarrelLookAheadMinSeconds, BarrelLookAheadMaxSeconds);
+	const float LookAhead = Movement->Velocity.Size2D() * LookAheadSeconds;
+
+	// The ground the barrel can sweep at any yaw, a disc round the unit: only a wall of the navmesh near it calls for sweeps.
+	FRTSFootprint Reach;
+	Reach.Center = GetActorLocation();
+	Reach.Radius = Barrel.GetReach();
+	if (BarrelReachCache.IsClear(Reach, Now))
+	{
+		bBarrelNearObstacle = false;
+	}
+	else if (Now >= NextBarrelReachCheck)
+	{
+		// Without a navmesh to tell where the walls are, the sweeps alone decide.
+		const ARecastNavMesh* NavMesh = RTSNavAgents::GetNavMesh(World, GetNavAgentPropertiesRef());
+		const float Clearance = NavMesh ? RTSHullClearance::GetClearance(*NavMesh, Reach, nullptr, LookAhead) : -1.f;
+		bBarrelNearObstacle = Clearance <= LookAhead;
+		BarrelReachCache.Center = FVector2D(Reach.Center);
+		BarrelReachCache.Slack = bBarrelNearObstacle ? -1.f : Clearance - LookAhead;
+		BarrelReachCache.ExpireTime = Now + BarrelReachCheckSeconds;
+		NextBarrelReachCheck = Now + BarrelAimCheckSeconds;
+	}
+	if (!bBarrelNearObstacle)
+	{
+		bClearAimFound = false;
+		return;
+	}
+
+	const FVector2D Wanted(Yaw, Pitch);
+	if (Now >= NextBarrelAimCheck || FMath::Abs(FMath::FindDeltaAngleDegrees(CheckedAim.X, Wanted.X)) > BarrelAimRecheckAngle
+		|| FMath::Abs(CheckedAim.Y - Wanted.Y) > BarrelAimRecheckAngle)
+	{
+		// Where the unit stands, and where its path takes it before the turret could turn: the turret is round in time.
+		TArray<FTransform, TInlineAllocator<2>> Poses = { GetActorTransform() };
+		if (LookAhead > 1.f)
+		{
+			Poses.Add(GetPoseAlongPath(LookAhead));
+		}
+		const RTSBarrelClearance::FAim Aim = RTSBarrelClearance::FindClearAim(World, Barrel, Poses, Yaw, Pitch, TurretYaw,
+			HasGun() ? UnitData->GunMaxPitch : 0.f);
+		CheckedAim = Wanted;
+		ClearAim = FVector2D(Aim.Yaw, Aim.Pitch);
+		bClearAimFound = Aim.bFound;
+		NextBarrelAimCheck = Now + BarrelAimCheckSeconds;
+	}
+	if (bClearAimFound)
+	{
+		// The aim wanted at the check was clear: follow the aim wanted now, which may have moved a little since.
+		if (!ClearAim.Equals(CheckedAim, UE_KINDA_SMALL_NUMBER))
+		{
+			Yaw = ClearAim.X;
+			Pitch = ClearAim.Y;
+		}
+	}
+	else
+	{
+		// Nowhere clear: hold still rather than sweep through the obstacle.
+		Yaw = TurretYaw;
+		Pitch = GunPitch;
+	}
+	bAimBlocked = bHasTarget && (!bClearAimFound || FMath::Abs(FMath::FindDeltaAngleDegrees(Yaw, Wanted.X)) > TurretAimTolerance);
+}
+
+FTransform ARTSUnit::GetPoseAlongPath(float Distance) const
+{
+	FVector Location = GetActorLocation();
+	FVector Heading = GetActorForwardVector().GetSafeNormal2D();
+	const AAIController* AI = GetController<AAIController>();
+	const UPathFollowingComponent* Follow = AI ? AI->GetPathFollowingComponent() : nullptr;
+	const FNavPathSharedPtr Path = Follow && Follow->GetStatus() == EPathFollowingStatus::Moving ? Follow->GetPath() : nullptr;
+	if (Path.IsValid() && Path->IsValid())
+	{
+		const TArray<FNavPathPoint>& Points = Path->GetPathPoints();
+		for (int32 Index = Follow->GetNextPathIndex(); Index < Points.Num() && Distance > 0.f; ++Index)
+		{
+			// The path lies on the ground; the unit's origin stays at its own height above it.
+			const FVector Point(Points[Index].Location.X, Points[Index].Location.Y, Location.Z);
+			const float Leg = FVector::Dist2D(Location, Point);
+			if (Leg > UE_KINDA_SMALL_NUMBER)
+			{
+				Heading = (Point - Location).GetSafeNormal2D();
+			}
+			const float Step = FMath::Min(Leg, Distance);
+			Location += Heading * Step;
+			Distance -= Step;
+		}
+	}
+	return FTransform(Heading.Rotation(), Location);
+}
+
+bool ARTSUnit::IsBarrelClearAt(const FTransform& Pose) const
+{
+	return !Shape.Barrel || RTSBarrelClearance::IsClearAt(*GetWorld(), *Shape.Barrel, Pose, TurretYaw, GunPitch);
+}
+
+bool ARTSUnit::GetBarrelSegment(FVector& OutStart, FVector& OutEnd) const
+{
+	if (!HasTurret())
+	{
+		return false;
+	}
+	OutStart = Gun ? Gun->GetComponentLocation()
+		: Turret->GetComponentTransform().TransformPosition(FVector(0.f, 0.f, UnitData->MuzzleOffset.Z));
+	OutEnd = GetMuzzleLocation();
+	return true;
 }
 
 void ARTSUnit::OnRep_TurretYaw()
@@ -470,7 +622,8 @@ void ARTSUnit::OnRep_GunPitch()
 
 bool ARTSUnit::IsAimedAt(const AActor& Target) const
 {
-	return !HasTurret() || FMath::Abs(FMath::FindDeltaAngleDegrees(TurretYaw, GetTurretYawToward(Target))) <= TurretAimTolerance;
+	// A barrel that cannot point there without reaching into an obstacle waits, even where it passes the target on its way.
+	return !HasTurret() || (!bAimBlocked && FMath::Abs(FMath::FindDeltaAngleDegrees(TurretYaw, GetTurretYawToward(Target))) <= TurretAimTolerance);
 }
 
 FVector ARTSUnit::GetMuzzleLocation() const
@@ -682,18 +835,24 @@ void ARTSUnit::TickOrders(float DeltaSeconds)
 	UpdateBuildOrder(DeltaSeconds);
 	SnapToGround();
 
-	// Turn toward the direction of travel, or toward the target while standing, unless a turret does the aiming. Rotation
-	// replicates with movement.
+	// Turn toward the direction of travel, or toward the target while standing, unless a turret does the aiming or its barrel
+	// cannot point there without reaching into an obstacle. Rotation replicates with movement.
 	if (Movement->Velocity.SizeSquared2D() > FMath::Square(10.f))
 	{
 		FaceTowardYaw(Movement->Velocity.Rotation().Yaw, DeltaSeconds);
 	}
-	else if (const AActor* Target = WeaponComponent->GetTarget(); Target && !HasTurret())
+	else if (const AActor* Target = WeaponComponent->GetTarget(); Target && (!HasTurret() || bAimBlocked))
 	{
 		const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
 		if (!ToTarget.IsNearlyZero())
 		{
+			const FRotator Before = GetActorRotation();
 			FaceTowardYaw(ToTarget.Rotation().Yaw, DeltaSeconds);
+			// The hull swings the turret with it: not into the obstacle it is turning away from.
+			if (bAimBlocked && !IsBarrelClearAt(GetActorTransform()))
+			{
+				SetActorRotation(Before);
+			}
 		}
 	}
 	UpdateTurret(DeltaSeconds);

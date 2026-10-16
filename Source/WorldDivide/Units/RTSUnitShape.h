@@ -5,6 +5,32 @@
 class URTSUnitData;
 
 /**
+ * A turret's barrel as its data places it, scaled with the mesh, so RTSBarrelClearance can keep it out of obstacles at any
+ * yaw and pitch. The barrel runs from Start, on the turret, to the muzzle: from the gun's trunnion when the gun elevates,
+ * otherwise from the turret's middle at the muzzle's height.
+ */
+struct WORLDDIVIDE_API FRTSBarrel
+{
+	/** The turret's pivot in the actor's frame. */
+	FVector TurretPivot = FVector::ZeroVector;
+
+	/** Where the barrel starts, in the turret's frame. */
+	FVector Start = FVector::ZeroVector;
+
+	/** The muzzle relative to Start, at zero pitch, in the turret's frame. */
+	FVector Muzzle = FVector::ForwardVector;
+
+	/** Half the gun's thickness: the barrel is a capsule of this radius. */
+	float Radius = 0.f;
+
+	/** The gun elevates about Start; without a gun the barrel is fixed to the turret. */
+	bool bElevates = false;
+
+	/** How far from the actor's origin, on the ground, any part of the barrel reaches at any yaw, its thickness included. */
+	float GetReach() const;
+};
+
+/**
  * A unit's size as its data gives it, in the actor's frame, so it is known before the unit spawns. The hull is the
  * collision box and its length and width are the footprint; the selection bounds add the turret for the brackets.
  * SelectionRadius sizes it only for data without a mesh: it is the interaction radius (docking, build reach, holding short).
@@ -19,6 +45,12 @@ struct WORLDDIVIDE_API FRTSUnitShape
 
 	/** Where the mesh sits relative to the actor so that its hull fills Hull. */
 	FVector MeshOffset = FVector::ZeroVector;
+
+	/**
+	 * The barrel of a turret that traverses on its own; unset without one. A gun modelled on the hull, as on the placeholder
+	 * tank, lies inside Hull already and is kept out of obstacles with it.
+	 */
+	TOptional<FRTSBarrel> Barrel;
 
 	float GetHalfLength() const { return Hull.GetExtent().X; }
 	float GetHalfWidth() const { return Hull.GetExtent().Y; }

@@ -265,6 +265,26 @@ void URTSAvoidanceSubsystem::ApplyPushes(float DeltaSeconds)
 			Step = FVector2D(To - From);
 		}
 
+		// A barrel near an obstacle (RTSBarrelClearance) turns or rises out of the way first; one that cannot in time keeps the
+		// unit from driving it in: no step and no speed onward while next frame's move would take it into the obstacle. A barrel
+		// already in one (a building went up around it) may drive out.
+		UPawnMovementComponent* Movement = Unit->GetMovementComponent();
+		if (Unit->IsBarrelNearObstacle() && Movement && !Movement->Velocity.IsNearlyZero())
+		{
+			const FVector2D Driving = FVector2D(Movement->Velocity).GetSafeNormal();
+			FTransform Next = Unit->GetActorTransform();
+			Next.AddToTranslation(Movement->Velocity * DeltaSeconds + FVector(Step, 0.f));
+			if (!Unit->IsBarrelClearAt(Next) && Unit->IsBarrelClearAt(Unit->GetActorTransform()))
+			{
+				const float Onward = FVector2D::DotProduct(Step, Driving);
+				if (Onward > 0.f)
+				{
+					Step -= Driving * Onward;
+				}
+				Movement->Velocity -= FVector(Driving * FVector2D::DotProduct(FVector2D(Movement->Velocity), Driving), 0.f);
+			}
+		}
+
 		// The hull where it ends up, path following's move and the push together, kept out of obstacles: the centre alone
 		// stays on the navmesh, the rest of the hull is checked here (RTSHullClearance), only once it may have closed the gap.
 		FRTSFootprint Footprint = Unit->GetFootprint();
@@ -309,7 +329,7 @@ void URTSAvoidanceSubsystem::ApplyPushes(float DeltaSeconds)
 			const float Out = FMath::Min(-Clearance, BackOut);
 			Step += Away * Out;
 			// Nor does it keep driving in: the next frame's move starts without the speed toward the obstacle.
-			if (UPawnMovementComponent* Movement = Unit->GetMovementComponent())
+			if (Movement)
 			{
 				const float Toward = FVector2D::DotProduct(FVector2D(Movement->Velocity), Away);
 				if (Toward < 0.f)

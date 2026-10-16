@@ -25,6 +25,7 @@
 #include "Tests/RTSTestScale.h"
 #include "Tests/RTSTestWorld.h"
 #include "UObject/StrongObjectPtr.h"
+#include "Units/RTSBarrelClearance.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
 
@@ -235,9 +236,14 @@ namespace RTSNavigationTests
 		TArray<TOptional<float>> CrossingYs;
 		TArray<float> MinGaps;
 		TArray<FString> MinGapObstacles;
+		/** Each unit's deepest barrel reach into an obstacle, checked for units with a barrel when bCheckBarrels is set. */
+		bool bCheckBarrels = false;
+		TArray<float> MaxBarrelDepths;
+		TArray<FString> MaxBarrelObstacles;
 
-		/** The obstacles' boxes seen from above: the map's walls and blocks and every building. */
+		/** The obstacles' boxes seen from above: the map's walls and blocks and every building; and as solids, roof included. */
 		TArray<FBox2D> Obstacles;
+		TArray<FBox> ObstacleSolids;
 		TArray<FString> ObstacleNames;
 
 		bool LoadUnits(FAutomationTestBase& Test)
@@ -291,6 +297,7 @@ namespace RTSNavigationTests
 	void GatherObstacles(UWorld& World, FNavState& State)
 	{
 		State.Obstacles.Reset();
+		State.ObstacleSolids.Reset();
 		State.ObstacleNames.Reset();
 		for (TActorIterator<AStaticMeshActor> It(&World); It; ++It)
 		{
@@ -299,6 +306,7 @@ namespace RTSNavigationTests
 			{
 				const FBox Box = It->GetComponentsBoundingBox();
 				State.Obstacles.Add(FBox2D(FVector2D(Box.Min), FVector2D(Box.Max)));
+				State.ObstacleSolids.Add(Box);
 				State.ObstacleNames.Add(Label);
 			}
 		}
@@ -307,6 +315,8 @@ namespace RTSNavigationTests
 			const FVector Extent = RTSBuildPlacement::GetFootprintExtent(It->GetFootprint());
 			const FVector2D Center(It->GetActorLocation());
 			State.Obstacles.Add(FBox2D(Center - FVector2D(Extent), Center + FVector2D(Extent)));
+			// Its collision box: the footprint up to the roof.
+			State.ObstacleSolids.Add(It->GetComponentsBoundingBox(/*bNonColliding*/ false));
 			State.ObstacleNames.Add(It->GetName());
 		}
 	}
@@ -329,6 +339,31 @@ namespace RTSNavigationTests
 			}
 		}
 		return Gap;
+	}
+
+	/** How deep Unit's barrel reaches into any obstacle, and which one; zero without a barrel or when it stays out. */
+	float GetBarrelDepth(const ARTSUnit& Unit, const FNavState& State, FString* OutObstacle = nullptr)
+	{
+		FVector Start;
+		FVector End;
+		if (!Unit.GetShape().Barrel || !Unit.GetBarrelSegment(Start, End))
+		{
+			return 0.f;
+		}
+		float Deepest = 0.f;
+		for (int32 Index = 0; Index < State.ObstacleSolids.Num(); ++Index)
+		{
+			const float Depth = RTSBarrelClearance::GetPenetration(Start, End, Unit.GetShape().Barrel->Radius, State.ObstacleSolids[Index]);
+			if (Depth > Deepest)
+			{
+				Deepest = Depth;
+				if (OutObstacle)
+				{
+					*OutObstacle = State.ObstacleNames[Index];
+				}
+			}
+		}
+		return Deepest;
 	}
 
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavWaitForNavigation, FAutomationTestBase*, Test, TSharedRef<FNavState>, State);
@@ -464,6 +499,15 @@ bool FRTSNavRunDrives::Update()
 				State->MinGaps[Index] = Gap;
 				State->MinGapObstacles[Index] = Obstacle;
 			}
+			if (State->bCheckBarrels)
+			{
+				const float Depth = GetBarrelDepth(*Unit, *State, &Obstacle);
+				if (Depth > State->MaxBarrelDepths[Index])
+				{
+					State->MaxBarrelDepths[Index] = Depth;
+					State->MaxBarrelObstacles[Index] = Obstacle;
+				}
+			}
 			bDone &= Unit->GetQueuedCommandCount() == 0;
 		}
 		if (bDone && State->SettleStart < 0.0)
@@ -487,6 +531,13 @@ bool FRTSNavRunDrives::Update()
 			Test->TestEqual(*FString::Printf(TEXT("%s finished its order"), *What), Unit->GetQueuedCommandCount(), 0);
 			Test->TestTrue(*FString::Printf(TEXT("%s never overlapped an obstacle (closest %.1f cm, %s)"), *What, State->MinGaps[Index],
 				*State->MinGapObstacles[Index]), State->MinGaps[Index] >= -OverlapTolerance);
+			if (State->bCheckBarrels && Unit->GetShape().Barrel)
+			{
+				Test->TestTrue(*FString::Printf(TEXT("%s never reached its barrel into an obstacle (deepest %.1f cm, %s)"), *What,
+					State->MaxBarrelDepths[Index], *State->MaxBarrelObstacles[Index]), State->MaxBarrelDepths[Index] <= OverlapTolerance);
+				Test->AddInfo(FString::Printf(TEXT("%s: barrel at most %.1f cm into %s, turret ended at %.0f degrees, gun at %.0f"), *What,
+					State->MaxBarrelDepths[Index], *State->MaxBarrelObstacles[Index], Unit->GetTurretYaw(), Unit->GetGunPitch()));
+			}
 			const float FinalGap = GetObstacleGap(*Unit, *State);
 			if (Drive.bStopAtObstacle)
 			{
@@ -527,6 +578,8 @@ bool FRTSNavRunDrives::Update()
 	State->CrossingYs.Reset();
 	State->MinGaps.Reset();
 	State->MinGapObstacles.Reset();
+	State->MaxBarrelDepths.Reset();
+	State->MaxBarrelObstacles.Reset();
 	for (const FUnitStart& Start : Next.Units)
 	{
 		ARTSUnit* Unit = SpawnUnit(World, Start.Data, Controller->GetTeamId(), Start.Location, Start.Yaw);
@@ -535,6 +588,8 @@ bool FRTSNavRunDrives::Update()
 		State->CrossingYs.AddDefaulted();
 		State->MinGaps.Add(FLT_MAX);
 		State->MinGapObstacles.AddDefaulted();
+		State->MaxBarrelDepths.Add(0.f);
+		State->MaxBarrelObstacles.AddDefaulted();
 	}
 	for (int32 Index = 0; Index < State->Units.Num(); ++Index)
 	{
@@ -844,6 +899,89 @@ bool FRTSNavHullClearanceMeasureTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+namespace RTSNavigationTests
+{
+	/**
+	 * Drives each of Hulls head on into, along and around a corner of Block_North, Wall_West and a vehicle factory, and
+	 * checks each drive (FRTSNavRunDrives); with bCheckBarrels also that no barrel reaches into an obstacle.
+	 */
+	bool QueueObstacleDrives(FAutomationTestBase& Test, const TSharedRef<FNavState>& State, bool bCheckBarrels,
+		TFunctionRef<TArray<URTSUnitData*>(const FNavState&)> GetHulls)
+	{
+		if (!AutomationOpenMap(TestMap))
+		{
+			Test.AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+			return false;
+		}
+		const URTSBuildingData* Factory = LoadObject<URTSBuildingData>(nullptr, VehicleFactoryPath);
+		if (!InitLayoutFromEditor(Test) || !State->LoadUnits(Test) || !Test.TestNotNull(TEXT("Vehicle factory data"), Factory))
+		{
+			return false;
+		}
+		State->PlacedSpots.Add(FactorySpot);
+		State->bCheckBarrels = bCheckBarrels;
+
+		// Block_North, Wall_West and the factory around FactorySpot. Each is far enough from the others for three units to drive
+		// at once, one at each, and as many rounds as hulls take every unit to every obstacle. Starts and targets lie off each
+		// face by lengths of the long vehicle (L, per 1000 cm), as they did for the 10 m long vehicle of before the real scale.
+		const float L = LongVehicleSize.X / 1000.f;
+		const FVector2D B = BlockBox.GetCenter();
+		const FVector2D BH = BlockBox.GetExtent();
+		const FVector2D W = WallBox.GetCenter();
+		const FVector2D WH = WallBox.GetExtent();
+		const FVector2D FH(RTSBuildPlacement::GetFootprintExtent(Factory->Footprint));
+		struct FCourse
+		{
+			FVector Start;
+			float Yaw;
+			FVector Target;
+		};
+		const FCourse HeadOn[] = {
+			{ FVector(B.X, B.Y + BH.Y + 1600.f * L, 0.f), -90.f, FVector(B, 0.f) },
+			{ FVector(W.X + WH.X + 1500.f * L, W.Y, 0.f), 180.f, FVector(W, 0.f) },
+			{ FactorySpot + FVector(0.f, FH.Y + 1500.f * L, 0.f), -90.f, FactorySpot },
+		};
+		const FCourse Along[] = {
+			{ FVector(B.X - BH.X - 1200.f * L, B.Y + BH.Y + 250.f * L, 0.f), 0.f, FVector(B.X + BH.X + 1200.f * L, B.Y + BH.Y + 250.f * L, 0.f) },
+			{ FVector(W.X + WH.X + 250.f * L, W.Y - WH.Y - 600.f * L, 0.f), 90.f, FVector(W.X + WH.X + 250.f * L, W.Y + WH.Y + 600.f * L, 0.f) },
+			{ FactorySpot + FVector(-FH.X - 1100.f * L, FH.Y + 250.f * L, 0.f), 0.f, FactorySpot + FVector(FH.X + 1100.f * L, FH.Y + 250.f * L, 0.f) },
+		};
+		const FCourse Around[] = {
+			{ FVector(B.X - BH.X - 400.f * L, B.Y + BH.Y + 600.f * L, 0.f), 0.f, FVector(B.X + BH.X + 500.f * L, B.Y - BH.Y - 500.f * L, 0.f) },
+			{ FVector(W.X + WH.X + 600.f * L, W.Y + 0.6f * WH.Y, 0.f), 90.f, FVector(W.X - WH.X - 800.f * L, W.Y + 0.6f * WH.Y, 0.f) },
+			{ FactorySpot + FVector(-FH.X - 600.f * L, FH.Y + 500.f * L, 0.f), 0.f, FactorySpot + FVector(FH.X + 500.f * L, -FH.Y - 700.f * L, 0.f) },
+		};
+		const TArray<URTSUnitData*> Hulls = GetHulls(*State);
+		auto AddRounds = [&](const FString& Name, const FCourse (&Courses)[3], bool bStopAtObstacle)
+		{
+			for (int32 Round = 0; Round < Hulls.Num(); ++Round)
+			{
+				FDrive Drive;
+				Drive.Name = FString::Printf(TEXT("%s, round %d"), *Name, Round + 1);
+				Drive.bStopAtObstacle = bStopAtObstacle;
+				for (int32 Course = 0; Course < UE_ARRAY_COUNT(Courses); ++Course)
+				{
+					// Each target on its own: the drive's target stays at the origin.
+					const FCourse& Picked = Courses[Course];
+					Drive.Units.Add({ Hulls[(Round + Course) % Hulls.Num()], Picked.Start, Picked.Yaw, Picked.Target });
+				}
+				State->Drives.Add(Drive);
+			}
+		};
+		AddRounds(TEXT("Head on into Block_North, Wall_West and the factory"), HeadOn, true);
+		AddRounds(TEXT("Along Block_North, Wall_West and the factory"), Along, false);
+		AddRounds(TEXT("Around Block_North, Wall_West and the factory"), Around, false);
+
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(&Test, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSNavPlaceBuildings(&Test, State, VehicleFactoryPath));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForHoles(&Test, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSNavRunDrives(&Test, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+		return true;
+	}
+}
+
 /**
  * The M20, the placeholder tank, the long vehicle and the narrow one each drive head on into, along and around a corner of
  * Block_North, Wall_West and a vehicle factory: their hulls never overlap them, and stop within 50 cm of the ones they
@@ -854,77 +992,26 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavHullClearanceTest, "WorldDivide.Navigati
 bool FRTSNavHullClearanceTest::RunTest(const FString& Parameters)
 {
 	using namespace RTSNavigationTests;
-	if (!AutomationOpenMap(TestMap))
+	return QueueObstacleDrives(*this, MakeShared<FNavState>(), false, [](const FNavState& State)
 	{
-		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
-		return false;
-	}
-	const TSharedRef<FNavState> State = MakeShared<FNavState>();
-	const URTSBuildingData* Factory = LoadObject<URTSBuildingData>(nullptr, VehicleFactoryPath);
-	if (!InitLayoutFromEditor(*this) || !State->LoadUnits(*this) || !TestNotNull(TEXT("Vehicle factory data"), Factory))
-	{
-		return false;
-	}
-	State->PlacedSpots.Add(FactorySpot);
+		return TArray<URTSUnitData*>{ State.M20, State.Tank, State.LongVehicle, State.NarrowVehicle };
+	});
+}
 
-	// Block_North, Wall_West and the factory around FactorySpot. Each is far enough from the others for three units to drive
-	// at once, one at each, and four rounds take every unit to every obstacle. Starts and targets lie off each face by
-	// lengths of the long vehicle (L, per 1000 cm), as they did for the 10 m long vehicle of before the real scale.
-	const float L = LongVehicleSize.X / 1000.f;
-	const FVector2D B = BlockBox.GetCenter();
-	const FVector2D BH = BlockBox.GetExtent();
-	const FVector2D W = WallBox.GetCenter();
-	const FVector2D WH = WallBox.GetExtent();
-	const FVector2D FH(RTSBuildPlacement::GetFootprintExtent(Factory->Footprint));
-	struct FCourse
-	{
-		FVector Start;
-		float Yaw;
-		FVector Target;
-	};
-	const FCourse HeadOn[] = {
-		{ FVector(B.X, B.Y + BH.Y + 1600.f * L, 0.f), -90.f, FVector(B, 0.f) },
-		{ FVector(W.X + WH.X + 1500.f * L, W.Y, 0.f), 180.f, FVector(W, 0.f) },
-		{ FactorySpot + FVector(0.f, FH.Y + 1500.f * L, 0.f), -90.f, FactorySpot },
-	};
-	const FCourse Along[] = {
-		{ FVector(B.X - BH.X - 1200.f * L, B.Y + BH.Y + 250.f * L, 0.f), 0.f, FVector(B.X + BH.X + 1200.f * L, B.Y + BH.Y + 250.f * L, 0.f) },
-		{ FVector(W.X + WH.X + 250.f * L, W.Y - WH.Y - 600.f * L, 0.f), 90.f, FVector(W.X + WH.X + 250.f * L, W.Y + WH.Y + 600.f * L, 0.f) },
-		{ FactorySpot + FVector(-FH.X - 1100.f * L, FH.Y + 250.f * L, 0.f), 0.f, FactorySpot + FVector(FH.X + 1100.f * L, FH.Y + 250.f * L, 0.f) },
-	};
-	const FCourse Around[] = {
-		{ FVector(B.X - BH.X - 400.f * L, B.Y + BH.Y + 600.f * L, 0.f), 0.f, FVector(B.X + BH.X + 500.f * L, B.Y - BH.Y - 500.f * L, 0.f) },
-		{ FVector(W.X + WH.X + 600.f * L, W.Y + 0.6f * WH.Y, 0.f), 90.f, FVector(W.X - WH.X - 800.f * L, W.Y + 0.6f * WH.Y, 0.f) },
-		{ FactorySpot + FVector(-FH.X - 600.f * L, FH.Y + 500.f * L, 0.f), 0.f, FactorySpot + FVector(FH.X + 500.f * L, -FH.Y - 700.f * L, 0.f) },
-	};
-	URTSUnitData* const Hulls[] = { State->M20, State->Tank, State->LongVehicle, State->NarrowVehicle };
-	auto AddRounds = [&](const FString& Name, const FCourse (&Courses)[3], bool bStopAtObstacle)
-	{
-		for (int32 Round = 0; Round < UE_ARRAY_COUNT(Hulls); ++Round)
-		{
-			FDrive Drive;
-			Drive.Name = FString::Printf(TEXT("%s, round %d"), *Name, Round + 1);
-			Drive.bStopAtObstacle = bStopAtObstacle;
-			for (int32 Course = 0; Course < UE_ARRAY_COUNT(Courses); ++Course)
-			{
-				// Each target on its own: the drive's target stays at the origin.
-				const FCourse& Picked = Courses[Course];
-				Drive.Units.Add({ Hulls[(Round + Course) % UE_ARRAY_COUNT(Hulls)], Picked.Start, Picked.Yaw, Picked.Target });
-			}
-			State->Drives.Add(Drive);
-		}
-	};
-	AddRounds(TEXT("Head on into Block_North, Wall_West and the factory"), HeadOn, true);
-	AddRounds(TEXT("Along Block_North, Wall_West and the factory"), Along, false);
-	AddRounds(TEXT("Around Block_North, Wall_West and the factory"), Around, false);
+/**
+ * The M20, its turret forward as it sets off, and the placeholder tank drive the same courses (#162): besides their hulls'
+ * clearance, the M20's barrel never reaches into Block_North, Wall_West or the factory, head on, alongside or round a
+ * corner, turning or rising out of the way instead. The tank's gun is part of its hull box.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavBarrelClearanceTest, "WorldDivide.Navigation.BarrelClearance.Drive", RTSTests::TestFlags)
 
-	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
-	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
-	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavPlaceBuildings(this, State, VehicleFactoryPath));
-	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForHoles(this, State));
-	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavRunDrives(this, State));
-	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
-	return true;
+bool FRTSNavBarrelClearanceTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	return QueueObstacleDrives(*this, MakeShared<FNavState>(), true, [](const FNavState& State)
+	{
+		return TArray<URTSUnitData*>{ State.M20, State.Tank };
+	});
 }
 
 /** A production building is refused where its vehicles could not leave its exit; an infantry building on the same spot is not. */

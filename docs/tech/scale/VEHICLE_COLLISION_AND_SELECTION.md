@@ -39,7 +39,7 @@ Collision->SetCapsuleSize(Radius, HalfHeight);
 
 **Conclusion: a capsule cannot describe a large elongated vehicle.** No `SelectionRadius` value works for brackets, picking, avoidance and formation at the same time. The fix is to separate the concepts, not to tune the number.
 
-## 3. Five separate concepts
+## 3. Six separate concepts
 
 | Concept | Purpose | Shape | Source |
 |---|---|---|---|
@@ -48,6 +48,7 @@ Collision->SetCapsuleSize(Radius, HalfHeight);
 | **Selection bounds** | Brackets, health bar, marquee | Ground-anchored box: hull box plus turret, minus the gun | Derived, automatic |
 | **Nav footprint** | Pathfinding clearance | Cylinder of the nav agent | Picked from width: infantry or vehicle agent |
 | **Avoidance and formation footprint** | Separation, formation gaps, exits, target edge | 2D oriented **stadium** (a capsule lying flat) | Derived from hull length and width |
+| **Barrel** | Keeping a turret's gun out of walls and buildings (#162) | 3D capsule from the trunnion to the muzzle | `FRTSUnitShape::Barrel`, from the turret and gun offsets × `MeshScale` |
 
 `SelectionRadius` keeps only its **interaction** meaning: dock stand-off, build reach and `HoldShortOf`. Its comment changes to say so.
 
@@ -104,6 +105,17 @@ Each ground unit gets a 2D footprint: a segment along its heading of length `L -
   - **Formation** spacing (`RTSCommandDispatch.cpp:72`): column spacing = max W + 2.5 m, row spacing = max L + 3 m. Spacing is no longer max radius × 2.5 in both directions.
   - **Spawner and building exit:** half L + clearance along the exit direction.
 - **No new hand-written fields.** L and W come from the hull box. One optional override, `FootprintPadding` (cm, default 0), is added only if the playtests ask for it.
+
+### 3.5 Barrel: aim, not navigation (#162)
+
+The hull alone steers and stops a vehicle. The gun only chooses where the turret and gun point, so a long barrel never makes paths narrower or stops longer.
+
+- **Shape.** `RTSUnitShape::FromData` places the barrel from the data: from the gun's trunnion (`GunOffset`) to its muzzle (`GunMuzzleOffset`), or for a turret without a gun from the turret's middle to `MuzzleOffset`. Its radius is half the gun mesh's thinner side. A gun modelled on the hull mesh, as on the placeholder tank, lies inside the hull box and needs nothing more.
+- **Check.** `RTSBarrelClearance` sweeps the capsule against world-static and world-dynamic geometry. Units are pawns and ignore both, and surfaces facing up (ground, ramps) are passed over, so a barrel may reach over anything lower than itself: a low wall or a roof, never a side.
+- **When.** Sweeps only run once the ground the barrel can reach at any yaw, plus the distance the unit drives while its turret turns a quarter turn, comes near a wall of the unit's navmesh: one `RTSHullClearance::GetClearance` of a disc, cached like the hull's. Near a wall the aim is swept at most every 0.2 s, or when the wanted aim moves by 2.5°.
+- **Response, in order.** The wanted aim if clear; the gun raised to its limit at that yaw; the turret turned further either way in 15° steps, the side it already leans to first. It looks both where the unit stands and where its path takes it, so a driving turret is round before the hull arrives.
+- **Fallback.** When no aim clears in time, the unit does not drive the barrel in: `URTSAvoidanceSubsystem` drops the step and speed onward while next frame's move would put it into the obstacle.
+- **Combat.** A target the barrel cannot point at without reaching into an obstacle blocks the aim (`ARTSUnit::IsAimBlocked`): the turret holds where it is clear, the gun waits, and a unit standing still turns its hull toward the target, unless that would swing the barrel in.
 
 ## 4. Is a capsule plus avoidance enough?
 

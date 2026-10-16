@@ -27,7 +27,8 @@ Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in t
 1920x1080, 2560x1440 and 3440x1440 to Saved/UIShots/HUD, or with -Panel to Saved/UIShots/<Panel> with a crop of that panel.
 Unitshots plays L_TestMap with a renderer (a GPU is needed) at 1920x1080 and saves views of the first unit with the data
 asset -Unit (rts.Debug.UnitShots): the RTS camera at its default, closest and farthest zoom, a close-up, the turret turned,
-the unit picked, selected and driving on a move order, and the default view with stat unit and stat rhi, to Saved/UnitShots/<Unit>; with -Stress N also N more of the unit in a
+the unit picked, selected and driving on a move order, driving into, along and round obstacles with its shapes drawn (the hull's
+and barrel's overlap printed), and the default view with stat unit and stat rhi, to Saved/UnitShots/<Unit>; with -Stress N also N more of the unit in a
 grid with the stats on. The frame time, game thread time, avoidance pass, draw calls and triangles of the stat views are
 printed. -Trace also records an Unreal Insights capture (cpu, frame and region channels; each stat view is a region) to
 Saved/Traces/UnitShots_<Unit>_<Stress>.utrace.
@@ -248,11 +249,12 @@ function Invoke-UnitShots {
 		'-unattended', '-nosplash', '-nosound') + $TraceArgs)
 	$GameExit = $Process.ExitCode
 
-	$Shots = @('rts_default', 'zoom_in_max', 'zoom_out_max', 'closeup', 'turret_rotated', 'driving', 'stats_one')
+	$Shots = @('rts_default', 'zoom_in_max', 'zoom_out_max', 'closeup', 'turret_rotated', 'driving', 'obstacle_block',
+		'obstacle_along', 'obstacle_corner', 'obstacle_building', 'stats_one')
 	if ($Stress -gt 0) { $Shots += "stress_$Stress" }
 	$Problems = @($Shots | Where-Object { -not (Test-Path (Join-Path $ShotDir "$_.png")) } | ForEach-Object { "missing $_.png" })
 	if (Test-Path $LogFile) {
-		Select-String -Path $LogFile -Pattern 'rts.Debug.UnitShots: (\S+ over|picked|drove)' | ForEach-Object { $_.Line -replace '^.*rts.Debug.UnitShots: ', '  ' }
+		Select-String -Path $LogFile -Pattern 'rts.Debug.UnitShots: (\S+ over|picked|drove|\S+: the (hull|barrel) overlaps|\S+: no separate barrel)' | ForEach-Object { $_.Line -replace '^.*rts.Debug.UnitShots: ', '  ' }
 	}
 	if ($GameExit -ne 0 -or $Problems.Count -gt 0) {
 		$Problems | ForEach-Object { Write-Host "  $_" }

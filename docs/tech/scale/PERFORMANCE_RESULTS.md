@@ -296,3 +296,19 @@ What changed: `DA_TestTank` grew from a 260 x 150 cm fit to 1037 x 370 cm (width
 | `DA_TestTank` frame | 12.43 ms | 11.42 ms | 3.87 ms | 4.29 ms | 3.41 ms | 6.10 ms (game 4.11 ms, GPU 4.51 ms) |
 
 The stress grid now follows the hull (length + 3 m, width + 2.5 m, about square) on L_TestMap's north strip, so the whole 240-unit grid stands in front of the RTS camera, which still uses the pre-#137 values: more units are drawn than before, which is most of the GPU and frame rise. These numbers are not comparable with the earlier columns and are kept for continuity only; the bench above is the comparison.
+
+## #162 (gun barrels kept out of obstacles)
+
+Same machine, build configuration and method as step 0, on 2026-10-16, one run each; "Step 4" is the column above, `main` at `5df8edd`.
+
+What changed: a turret's barrel (`FRTSUnitShape::Barrel`) is kept out of walls and buildings by turning the turret or raising the gun (`RTSBarrelClearance`, [vehicle collision §3.5](VEHICLE_COLLISION_AND_SELECTION.md#35-barrel-aim-not-navigation-162)). Sweeps run only while a navmesh wall comes within the barrel's reach plus its look-ahead, found by one cached `GetClearance` of a disc per turreted unit; the tank has no separate barrel and skips it.
+
+| Unit | Scenario | Step 4 game ms | #162 game ms (max) | Avoidance ms step 4 → #162 |
+|---|---|---:|---:|---:|
+| `DA_TestTank` | idle | 2.31 | 2.39 (3.06) | 0.28 → 0.31 |
+| `DA_TestTank` | move | 4.44 | 4.25 (9.13) | 0.28 → 0.26 |
+| M20 Guardian | idle | 2.67 | 1.85 (2.88) | 0.30 → 0.21 |
+| M20 Guardian | move | 23.25 | 14.42 (19.76) | 0.43 → 0.27 |
+
+- Every row is within or under the step 0 run-to-run spread; the M20 rows are single runs, and their drop is spread, not a gain from #162. The bench grid stands in the open, so no barrel comes near a wall and the cost there is the cached reach check.
+- The obstacle shots of `unitshots` log `the barrel overlaps ... by 0 cm now, 0 cm at most on the way` for the M20 at Block_North (head on, along, round the corner) and the factory, with the turret turned 45 degrees where it parks nose to the wall; the tank logs that its gun is part of its hull box.

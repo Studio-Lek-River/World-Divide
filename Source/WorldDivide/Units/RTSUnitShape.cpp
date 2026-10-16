@@ -30,6 +30,39 @@ namespace
 		}
 		return Box;
 	}
+
+	/** The barrel of Data's turret, with the hull mesh standing at MeshOffset; unset without a turret. */
+	TOptional<FRTSBarrel> GetBarrel(const URTSUnitData& Data, const FVector& MeshOffset)
+	{
+		if (!Data.TurretMesh)
+		{
+			return {};
+		}
+		const FVector Scale3D = Data.MeshScale;
+		FRTSBarrel Barrel;
+		Barrel.TurretPivot = MeshOffset + Data.TurretOffset * Scale3D;
+		if (Data.GunMesh)
+		{
+			Barrel.Start = Data.GunOffset * Scale3D;
+			Barrel.Muzzle = Data.GunMuzzleOffset * Scale3D;
+			Barrel.bElevates = true;
+			// The gun's thinner side: a mantlet at the trunnion makes it thicker than the tube, which errs on the safe side.
+			const FVector Extent = Data.GunMesh->GetBoundingBox().GetExtent() * Scale3D;
+			Barrel.Radius = FMath::Min(Extent.Y, Extent.Z);
+		}
+		else
+		{
+			Barrel.Start = FVector(0.f, 0.f, Data.MuzzleOffset.Z) * Scale3D;
+			Barrel.Muzzle = Data.MuzzleOffset * Scale3D - Barrel.Start;
+		}
+		return Barrel;
+	}
+}
+
+float FRTSBarrel::GetReach() const
+{
+	// The gun turns about Start, so its muzzle stays within its length of it.
+	return FVector2D(TurretPivot).Size() + FVector2D(Start).Size() + Muzzle.Size() + Radius;
 }
 
 FVector FRTSFootprint::GetClosestSegmentPoint(const FVector& From) const
@@ -74,6 +107,7 @@ FRTSUnitShape RTSUnitShape::FromData(const URTSUnitData& Data)
 		{
 			Shape.Selection += Scale(Turret, Data.MeshScale);
 		}
+		Shape.Barrel = GetBarrel(Data, Shape.MeshOffset);
 		return Shape;
 	}
 
@@ -87,6 +121,7 @@ FRTSUnitShape RTSUnitShape::FromData(const URTSUnitData& Data)
 	}
 	// Brackets stand on the ground, even under a turret that overhangs the hull's bottom.
 	Shape.Selection.Min.Z = Shape.Hull.Min.Z;
+	Shape.Barrel = GetBarrel(Data, Shape.MeshOffset);
 	return Shape;
 }
 

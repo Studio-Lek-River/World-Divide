@@ -30,6 +30,7 @@
 #include "RenderTimer.h"
 #include "UnrealClient.h"
 #include "Units/RTSAvoidanceSubsystem.h"
+#include "Units/RTSBarrelClearance.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
 #include "WorldDivide.h"
@@ -41,15 +42,15 @@
  * relative to the hull) instead of aiming, or aim again with off.
  *
  * rts.Debug.UnitShapes [1|0]: draws every unit's shapes in every game world: the collision box (red), the selection
- * bounds (yellow), the footprint on the ground (green), the navmesh clearance its centre keeps from obstacles (cyan) and
- * the actor origin (white).
+ * bounds (yellow), the footprint on the ground (green), the navmesh clearance its centre keeps from obstacles (cyan), the
+ * actor origin (white) and the barrel (green when clear, orange while it is kept out of a nearby obstacle, red when in one).
  *
  * rts.Debug.UnitShots <UnitData> [StressCount]: pictures of the first unit whose data asset is named UnitData, as the
  * player's RTS camera sees it at its default zoom, zoomed fully in and fully out, and from a close inspection camera, then
  * with its turret turned and gun raised, then picked with the cursor's trace, selected and driving off on a move order
  * issued as the player issues it (the pick, the distance driven and the wheels' roll are logged), then with its shapes
- * drawn after driving head-on into Block_North and into a vehicle factory placed for it (the hull's overlap with each
- * is logged). With
+ * drawn after driving head-on into Block_North and into a vehicle factory placed for it, along Block_North and round its
+ * corner (the hull's overlap with each is logged, and the barrel's, now and at most on the way). With
  * StressCount, that many more of the unit stand in a grid and a last picture
  * shows them with stat unit and stat rhi; the frame time, game thread time, avoidance pass, draw calls and triangles are
  * logged. The pictures go to
@@ -101,6 +102,9 @@ namespace RTSUnitDebugCommands
 	const TCHAR* ObstacleBlockLabel = TEXT("Block_North");
 	constexpr float ObstacleRunUp = 1500.f;
 	constexpr double ObstacleSeconds = 6.0;
+	/** The courses along and round the block keep the hull this far off its faces, and take this long. */
+	constexpr float ObstacleSideGap = 100.f;
+	constexpr double ObstacleCourseSeconds = 14.0;
 	/** The building shot's vehicle factory, placed on the empty south strip when the shots are planned. */
 	const TCHAR* ObstacleBuildingPath = TEXT("/Game/Data/Buildings/DA_TestVehicleFactory.DA_TestVehicleFactory");
 	const FVector ObstacleBuildingSpot(-6000.f, -19500.f, 0.f);
@@ -148,6 +152,17 @@ namespace RTSUnitDebugCommands
 			DrawGroundCircle(World, Ground, NavMesh->AgentRadius, FColor::Cyan);
 		}
 		DrawDebugPoint(&World, Unit.GetActorLocation(), 10.f, FColor::White, false, -1.f, SDPG_Foreground);
+
+		FVector BarrelStart;
+		FVector BarrelEnd;
+		if (Unit.GetShape().Barrel && Unit.GetBarrelSegment(BarrelStart, BarrelEnd))
+		{
+			const float Radius = Unit.GetShape().Barrel->Radius;
+			const FColor Color = !RTSBarrelClearance::IsClear(World, BarrelStart, BarrelEnd, Radius) ? FColor::Red
+				: Unit.HasAuthority() && Unit.IsBarrelNearObstacle() ? FColor::Orange : FColor::Green;
+			DrawDebugCapsule(&World, (BarrelStart + BarrelEnd) / 2.f, FVector::Dist(BarrelStart, BarrelEnd) / 2.f + Radius, Radius,
+				FRotationMatrix::MakeFromZ(BarrelEnd - BarrelStart).ToQuat(), Color, false, -1.f, SDPG_Foreground, 1.f);
+		}
 	}
 
 	FTSTicker::FDelegateHandle UnitShapesTicker;
@@ -197,6 +212,29 @@ namespace RTSUnitDebugCommands
 		// Apart on either axis is no overlap at all: a hull beside the block shares its extent along the other axis only.
 		const FVector2D Overlap = Max - Min;
 		return Overlap.X > 0.f && Overlap.Y > 0.f ? Overlap : FVector2D::ZeroVector;
+	}
+
+	/** How deep the unit's barrel reaches into Obstacle, in cm; zero without a barrel or when it stays out. */
+	float GetBarrelOverlap(const ARTSUnit& Unit, const FBox& Obstacle)
+	{
+		FVector Start;
+		FVector End;
+		return Unit.GetShape().Barrel && Unit.GetBarrelSegment(Start, End)
+			? RTSBarrelClearance::GetPenetration(Start, End, Unit.GetShape().Barrel->Radius, Obstacle) : 0.f;
+	}
+
+	/** True when the unit's barrel reaches over Obstacle seen from above, all of it higher than its roof. */
+	bool IsBarrelOverRoof(const ARTSUnit& Unit, const FBox& Obstacle)
+	{
+		FVector Start;
+		FVector End;
+		if (!Unit.GetShape().Barrel || !Unit.GetBarrelSegment(Start, End))
+		{
+			return false;
+		}
+		const float Radius = Unit.GetShape().Barrel->Radius;
+		const FBox Above(FVector(Obstacle.Min.X, Obstacle.Min.Y, Obstacle.Max.Z), FVector(Obstacle.Max.X, Obstacle.Max.Y, Obstacle.Max.Z + 10000.f));
+		return RTSBarrelClearance::GetPenetration(Start, End, Radius, Above) > 0.f && GetBarrelOverlap(Unit, Obstacle) <= 0.f;
 	}
 
 	struct FFrameStats
@@ -273,6 +311,11 @@ namespace RTSUnitDebugCommands
 			case EStep::Resize:
 				return Resize();
 			case EStep::Settle:
+				if (Obstacle && Unit.IsValid())
+				{
+					MaxBarrelOverlap = FMath::Max(MaxBarrelOverlap, GetBarrelOverlap(*Unit, *Obstacle));
+					bBarrelWentOverRoof |= IsBarrelOverRoof(*Unit, *Obstacle);
+				}
 				if (FPlatformTime::Seconds() - StepStart >= Shots[ShotIndex].Settle)
 				{
 					GoTo(Shots[ShotIndex].bShowStats ? EStep::Measure : EStep::Capture);
@@ -450,6 +493,19 @@ namespace RTSUnitDebugCommands
 				{
 					return Run.DriveInto(Box, ObstacleBlockLabel, FVector::RightVector);
 				}, ObstacleSeconds });
+				// Along the block's north face, the hull ObstacleSideGap off it, and round its north-east corner to the east face.
+				Shots.Add({ TEXT("obstacle_along"), [Box = *Block](FUnitShotsRun& Run)
+				{
+					const float Side = Box.Max.Y + Run.Unit->GetShape().GetHalfWidth() + ObstacleSideGap;
+					return Run.DrivePast(Box, ObstacleBlockLabel, FVector(Box.Min.X - ObstacleRunUp, Side, 0.f),
+						FVector(Box.Max.X + ObstacleRunUp, Side, 0.f), FVector(Box.GetCenter().X, Box.Max.Y, 0.f));
+				}, ObstacleCourseSeconds });
+				Shots.Add({ TEXT("obstacle_corner"), [Box = *Block](FUnitShotsRun& Run)
+				{
+					const float Gap = Run.Unit->GetShape().GetHalfWidth() + ObstacleSideGap;
+					return Run.DrivePast(Box, ObstacleBlockLabel, FVector(Box.Min.X - ObstacleRunUp, Box.Max.Y + Gap, 0.f),
+						FVector(Box.Max.X + Gap, Box.Min.Y - ObstacleRunUp, 0.f), FVector(Box.Max.X, Box.Max.Y, 0.f));
+				}, ObstacleCourseSeconds });
 			}
 			else
 			{
@@ -487,21 +543,38 @@ namespace RTSUnitDebugCommands
 			Stop.Type = ERTSCommandType::Stop;
 			Unit->ExecuteCommand(Stop);
 
-			const FVector Center(Box.GetCenter().X, Box.GetCenter().Y, Unit->GetActorLocation().Z);
+			const FVector Center(Box.GetCenter().X, Box.GetCenter().Y, 0.f);
 			const float Edge = FMath::Abs(Approach.X) * Box.GetExtent().X + FMath::Abs(Approach.Y) * Box.GetExtent().Y;
-			const FVector Start = Center + Approach * (Edge + ObstacleRunUp);
-			Unit->SetActorLocationAndRotation(Start, (-Approach).Rotation());
+			return DrivePast(Box, Name, Center + Approach * (Edge + ObstacleRunUp), Center, Center + Approach * Edge);
+		}
+
+		/**
+		 * Stands the unit at Start (on the ground under it), facing Target, orders it to Target as the player would and frames
+		 * Focus at the default zoom with the shapes drawn. The barrel's deepest reach into Box on the way is logged.
+		 */
+		bool DrivePast(const FBox& Box, const FString& Name, const FVector& Start, const FVector& Target, const FVector& Focus)
+		{
+			ShowUnitShapes(true);
+			Unit->SetAimOverride({});
+			FRTSCommand Stop;
+			Stop.Type = ERTSCommandType::Stop;
+			Unit->ExecuteCommand(Stop);
+
+			const float Z = Unit->GetActorLocation().Z;
+			Unit->SetActorLocationAndRotation(FVector(Start.X, Start.Y, Z), (Target - Start).GetSafeNormal2D().Rotation());
 
 			FRTSCommand Move;
 			Move.Type = ERTSCommandType::Move;
-			Move.TargetLocation = FVector(Center.X, Center.Y, Unit->GetNavAgentLocation().Z);
+			Move.TargetLocation = FVector(Target.X, Target.Y, Unit->GetNavAgentLocation().Z);
 			GetController()->Server_IssueCommand({ Unit.Get() }, Move);
 
 			GetController()->SetViewTarget(GetCameraPawn());
-			GetCameraPawn()->JumpTo(Center + Approach * Edge);
+			GetCameraPawn()->JumpTo(FVector(Focus.X, Focus.Y, Z));
 			GetCameraPawn()->SetZoomNow(GetCameraPawn()->GetDefaultZoom());
 			Obstacle = Box;
 			ObstacleName = Name;
+			MaxBarrelOverlap = 0.f;
+			bBarrelWentOverRoof = false;
 			return true;
 		}
 
@@ -686,6 +759,19 @@ namespace RTSUnitDebugCommands
 				const FVector2D Overlap = GetHullOverlap(*Unit, *Obstacle);
 				UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.UnitShots: %s: the hull overlaps %s by %.0f x %.0f cm"),
 					*Shots[ShotIndex].Name, *ObstacleName, Overlap.X, Overlap.Y);
+				if (Unit->GetShape().Barrel)
+				{
+					UE_LOG(LogWorldDivide, Display,
+						TEXT("rts.Debug.UnitShots: %s: the barrel overlaps %s by %.0f cm now, %.0f cm at most on the way; %s; turret %.0f, gun %.0f degrees"),
+						*Shots[ShotIndex].Name, *ObstacleName, GetBarrelOverlap(*Unit, *Obstacle), MaxBarrelOverlap,
+						bBarrelWentOverRoof ? TEXT("it reached over the roof") : TEXT("it never reached over the roof"),
+						Unit->GetTurretYaw(), Unit->GetGunPitch());
+				}
+				else
+				{
+					UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.UnitShots: %s: no separate barrel; a gun on the hull is part of the hull box"),
+						*Shots[ShotIndex].Name);
+				}
 			}
 			const APlayerCameraManager* View = GetController()->PlayerCameraManager;
 			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.UnitShots: %s from %s looking %s at %s, unit at %s"), *Shots[ShotIndex].Name,
@@ -783,9 +869,11 @@ namespace RTSUnitDebugCommands
 		FVector DriveStart = FVector::ZeroVector;
 		int32 WheelPart = INDEX_NONE;
 		FTransform WheelBefore;
-		/** The obstacle the current shot drives into, for the log. */
+		/** The obstacle the current shot drives into, for the log, and how deep the barrel reached into it on the way. */
 		TOptional<FBox> Obstacle;
 		FString ObstacleName;
+		float MaxBarrelOverlap = 0.f;
+		bool bBarrelWentOverRoof = false;
 		int32 Written = 0;
 		FFrameStats Stats;
 
@@ -854,7 +942,8 @@ namespace RTSUnitDebugCommands
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice UnitShapesCommand(
 		TEXT("rts.Debug.UnitShapes"),
 		TEXT("rts.Debug.UnitShapes [1|0]: draws every unit's collision box (red), selection bounds (yellow), footprint (green), ")
-		TEXT("navmesh clearance (cyan) and origin (white); without an argument it toggles."),
+		TEXT("navmesh clearance (cyan), origin (white) and barrel (green clear, orange near an obstacle, red in one); without an ")
+		TEXT("argument it toggles."),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunUnitShapesCommand));
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice UnitShotsCommand(

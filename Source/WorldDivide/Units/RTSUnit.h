@@ -154,8 +154,29 @@ public:
 	 */
 	void UpdateTurret(float DeltaSeconds);
 
-	/** True once the turret points at Target closely enough to fire; always true without a turret, which turns the unit. */
+	/**
+	 * True once the turret points at Target closely enough to fire, and not while its aim is blocked (IsAimBlocked); always
+	 * true without a turret, which turns the unit.
+	 */
 	bool IsAimedAt(const AActor& Target) const;
+
+	/**
+	 * Server only. True while the barrel's reach comes near an obstacle, so UpdateTurret keeps it out (RTSBarrelClearance)
+	 * and URTSAvoidanceSubsystem does not drive it in. False without a barrel.
+	 */
+	bool IsBarrelNearObstacle() const { return bBarrelNearObstacle; }
+
+	/**
+	 * Server only. True while the barrel cannot point at the weapon's target without reaching into an obstacle: the turret
+	 * holds where it is clear, the gun waits, and a unit standing still turns its hull toward the target.
+	 */
+	bool IsAimBlocked() const { return bAimBlocked; }
+
+	/** Server only. Whether the barrel, with the turret and gun as they are, would be clear of obstacles with the unit at Pose. */
+	bool IsBarrelClearAt(const FTransform& Pose) const;
+
+	/** Every machine. The barrel as drawn, from where it starts on the turret to the muzzle; false without a turret. */
+	bool GetBarrelSegment(FVector& OutStart, FVector& OutEnd) const;
 
 	/** Every machine. The barrel tip in world space, on the gun when the data gives one; only meaningful with a turret. */
 	FVector GetMuzzleLocation() const;
@@ -218,6 +239,15 @@ private:
 
 	/** The turret's yaw toward Target relative to the hull, in degrees. */
 	float GetTurretYawToward(const AActor& Target) const;
+
+	/**
+	 * Turns the wanted turret Yaw and gun Pitch into the closest ones that keep the barrel out of obstacles, where the unit
+	 * stands and where its path takes it shortly, once the barrel's reach comes near one. See IsAimBlocked.
+	 */
+	void KeepBarrelClear(float& Yaw, float& Pitch, bool bHasTarget);
+
+	/** Where the unit will stand, facing along its path, once it has driven Distance further along it; here without a path. */
+	FTransform GetPoseAlongPath(float Distance) const;
 
 	UFUNCTION()
 	void OnRep_TurretYaw();
@@ -343,6 +373,18 @@ private:
 
 	/** Server only. See SetAimOverride. */
 	TOptional<FVector2D> AimOverride;
+
+	/** Server only. Where the barrel's reach was last found clear of the navmesh's walls; see KeepBarrelClear. */
+	FRTSHullClearanceCache BarrelReachCache;
+	bool bBarrelNearObstacle = false;
+	bool bAimBlocked = false;
+	/** World seconds after which a barrel near an obstacle looks at its reach, and its aim, again. */
+	double NextBarrelReachCheck = 0.0;
+	double NextBarrelAimCheck = 0.0;
+	/** The aim last wanted and the clear one found for it. */
+	FVector2D CheckedAim = FVector2D::ZeroVector;
+	FVector2D ClearAim = FVector2D::ZeroVector;
+	bool bClearAimFound = false;
 
 	/** Where each of URTSUnitData::Parts is drawn: its component, and its instance when that is instanced. */
 	struct FPartSlot
