@@ -22,6 +22,11 @@ ARTSCameraPawn::ARTSCameraPawn()
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+	// Less perspective over a wide area than the engine's 90. Horizontal at 16:9; keeping the vertical field of view, a
+	// wider screen sees more ground to the sides rather than less ahead.
+	Camera->SetFieldOfView(60.f);
+	Camera->bOverrideAspectRatioAxisConstraint = true;
+	Camera->SetAspectRatioAxisConstraint(EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV);
 
 	// Each client drives its own camera; the server copy just stays where it spawned.
 	SetReplicatingMovement(false);
@@ -31,6 +36,15 @@ void ARTSCameraPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
+	UpdatePanArea();
+	TargetZoom = FMath::Clamp(DefaultZoom, MinZoom, MaxZoom);
+	SpringArm->TargetArmLength = TargetZoom;
+	SetActorRotation(FRotator(0.f, GetActorRotation().Yaw, 0.f));
+	UpdateArm();
+}
+
+void ARTSCameraPawn::UpdatePanArea()
+{
 	// Every level setup_testmap.py builds has a NavMeshBoundsVolume over exactly its ground. Level actors load on every
 	// machine, so a client's camera finds the same bounds as the host's.
 	FBox2D MapArea(ForceInit);
@@ -40,21 +54,56 @@ void ARTSCameraPawn::BeginPlay()
 		MapArea += FBox2D(FVector2D(Bounds.Min), FVector2D(Bounds.Max));
 	}
 	PanArea = (MapArea.bIsValid ? MapArea : FallbackMapArea).ExpandBy(EdgeMargin);
+}
 
-	TargetZoom = FMath::Clamp(DefaultZoom, MinZoom, MaxZoom);
-	SpringArm->TargetArmLength = TargetZoom;
-	SetActorRotation(FRotator(0.f, GetActorRotation().Yaw, 0.f));
-	UpdateArm();
+FRTSCameraTuning ARTSCameraPawn::GetTuning() const
+{
+	FRTSCameraTuning Tuning;
+	Tuning.bKeepVerticalFOV = Camera->bOverrideAspectRatioAxisConstraint
+		&& Camera->AspectRatioAxisConstraint == EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV;
+	Tuning.FieldOfView = Camera->FieldOfView;
+	Tuning.PanSpeed = PanSpeed;
+	Tuning.DefaultZoom = DefaultZoom;
+	Tuning.MinZoom = MinZoom;
+	Tuning.MaxZoom = MaxZoom;
+	Tuning.ZoomStepFraction = ZoomStepFraction;
+	Tuning.TiltStartZoom = TiltStartZoom;
+	Tuning.EdgeMargin = EdgeMargin;
+	Tuning.FallbackMapArea = FallbackMapArea;
+	return Tuning;
+}
+
+void ARTSCameraPawn::ApplyTuning(const FRTSCameraTuning& Tuning)
+{
+	PanSpeed = Tuning.PanSpeed;
+	DefaultZoom = Tuning.DefaultZoom;
+	MinZoom = Tuning.MinZoom;
+	MaxZoom = Tuning.MaxZoom;
+	ZoomStepFraction = Tuning.ZoomStepFraction;
+	TiltStartZoom = Tuning.TiltStartZoom;
+	EdgeMargin = Tuning.EdgeMargin;
+	FallbackMapArea = Tuning.FallbackMapArea;
+
+	Camera->bOverrideAspectRatioAxisConstraint = true;
+	Camera->SetAspectRatioAxisConstraint(Tuning.bKeepVerticalFOV ? EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV
+		: EAspectRatioAxisConstraint::AspectRatio_MaintainXFOV);
+	// Either way the field of view is the horizontal one at the camera's 16:9 aspect ratio; keeping the vertical widens it
+	// on a wider screen.
+	Camera->SetFieldOfView(Tuning.FieldOfView);
+
+	UpdatePanArea();
+	SetActorLocation(ClampToPanArea(GetActorLocation()));
+	SetZoomNow(TargetZoom);
 }
 
 float ARTSCameraPawn::GetPitchForZoom(float ArmLength) const
 {
-	const float TiltRange = TiltStartZoom - MinZoom;
-	if (TiltRange <= KINDA_SMALL_NUMBER)
+	if (TiltStartZoom <= MinZoom + KINDA_SMALL_NUMBER || MinZoom <= KINDA_SMALL_NUMBER)
 	{
 		return TopDownPitch;
 	}
-	const float Alpha = FMath::Clamp((ArmLength - MinZoom) / TiltRange, 0.f, 1.f);
+	// Along the arm's logarithm, as the wheel zooms, so every notch over the tilt tilts the camera about as much.
+	const float Alpha = FMath::Clamp(FMath::Loge(FMath::Max(ArmLength, MinZoom) / MinZoom) / FMath::Loge(TiltStartZoom / MinZoom), 0.f, 1.f);
 	return FMath::Lerp(NearPitch, TopDownPitch, FMath::SmoothStep(0.f, 1.f, Alpha));
 }
 
@@ -101,7 +150,7 @@ void ARTSCameraPawn::AddPanInput(const FVector2D& Input)
 
 void ARTSCameraPawn::AddZoomInput(float Steps)
 {
-	TargetZoom = FMath::Clamp(TargetZoom - Steps * ZoomStep, MinZoom, MaxZoom);
+	TargetZoom = FMath::Clamp(TargetZoom * FMath::Pow(1.f + ZoomStepFraction, -Steps), MinZoom, MaxZoom);
 }
 
 void ARTSCameraPawn::SetZoomNow(float ArmLength)

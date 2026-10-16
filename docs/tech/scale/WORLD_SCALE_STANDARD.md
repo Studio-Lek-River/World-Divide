@@ -90,11 +90,11 @@ These are not rules. They are starting points for tuning so that the first real-
 
 The full argument is in [the implementation plan](SCALE_IMPLEMENTATION_PLAN.md#step-5-camera-retune).
 
-| | Today | Standard |
+| | Before real scale | Standard |
 |---|---|---|
-| Camera FOV | 90° (engine default) | 60° |
+| Camera FOV | 90° (engine default) | 60° horizontal at 16:9, the vertical kept on wider screens |
 | Default arm | 30 m (about 60 m of ground across the screen) | about 150 m (about 170 m across) |
-| Max arm | 70 m | about 300 m |
+| Max arm | 70 m | 450 m (about 520 m across: a base and its approaches) |
 | Pitch | -55° | -55° (unchanged) |
 | Test map (L_TestMap) | 200 × 200 m | 600 × 600 m |
 | Skirmish maps | 160–240 m across | 500–800 m across for small maps; full maps follow RiverCrossing (2 km playable) |

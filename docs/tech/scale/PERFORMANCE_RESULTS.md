@@ -381,3 +381,20 @@ The erosion is 200 cm for vehicles and 50 cm for infantry. Recast marks the voxe
 - **Every row is within the run-to-run spread.** The open bench grid has no obstacle near any hull, and the Insights capture shows no `RTSHullClearance::IsSolidClear` call at all. The game thread's `URTSAvoidanceSubsystem::Separate` averages 0.18 ms after against 0.21 ms before for the M20, and 0.24 against 0.25 ms for the tank. `GetClearance` and `AdjustPath` counts are unchanged.
 - **The one 2.95 ms avoidance frame (M20 move) is a stall.** `GetClearance` and `AdjustPath` peak at 0.36 ms in the same capture against 0.035 ms before, and neither does more work than before there.
 - **Near obstacles** the cost is one box overlap per frame for each hull within 10 cm of an obstacle on the navmesh (or up to one uncertainty inside it), and about five overlaps per move order into an obstacle.
+
+## Step 5 (#137, camera retune)
+
+Same machine and method, on 2026-10-16, one run each; "Before" is the #163 "after" column above.
+
+What changed: the RTS camera's settings (field of view 60, arm 600 / 15000 / 45000, zoom steps a share of the arm, the tilt along the arm's logarithm; [plan step 5](SCALE_IMPLEMENTATION_PLAN.md#step-5-camera-retune)). The camera pawn does the same work per frame as before: one arm update and one downward trace. L_Bench views from its own fixed camera, so the bench sees the same scene as before.
+
+| Unit | Scenario | Before game ms (max) | Step 5 game ms (max) | Avoidance ms before → after |
+|---|---|---:|---:|---:|
+| `DA_TestTank` | idle | 2.40 (3.19) | 2.30 (2.93) | 0.31 → 0.29 |
+| `DA_TestTank` | move | 4.85 (5.83) | 4.98 (7.45) | 0.34 → 0.34 |
+| M20 Guardian | idle | 2.11 (3.58) | 2.83 (3.86) | 0.24 → 0.34 |
+| M20 Guardian | move | 18.86 (28.84) | 23.14 (28.27) | 0.38 → 0.46 |
+
+- **The tank rows are within the run-to-run spread** (about 0.6 ms game thread).
+- **The M20 rows are single runs in the M20's wide spread.** Its move scenario has measured 17.3 to 23.3 ms across the earlier runs (step 4: 23.25 ms; the #162 follow-up: 17.3 to 21.9 ms), and the camera change adds no work on that path. The slowest frame, 28.27 ms, stays under the 33 ms target.
+- **`unitshots -Stress 240 -Trace`** (`DA_TestTank`): 3.84 ms frame, 3.84 ms game thread, 2.09 ms GPU, from the farthest zoom, which now shows the whole map; see [plan §7](SCALE_IMPLEMENTATION_PLAN.md#step-5-camera-retune-2026-10-16).

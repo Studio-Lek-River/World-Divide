@@ -33,9 +33,6 @@ namespace RTSMapSmokeTest
 	/** How far a headquarters may stand from its PlayerStart, in cm. */
 	constexpr double SpotTolerance = 200.0;
 
-	/** How far past the edge of the ground the camera may go, in cm. */
-	constexpr double MaxEdgeMargin = 1000.0;
-
 	/** The Seats option that plays every spot of a map with StartSpots spots, team N from spot N. */
 	FString MakeSeatsOption(int32 StartSpots)
 	{
@@ -192,12 +189,13 @@ namespace RTSMapSmokeTest
 			}
 		}
 
-		/** The camera stands at Corner of the ground or past it, by no more than MaxEdgeMargin along each axis. */
+		/** The camera stands at Corner of the ground or past it, by no more than its EdgeMargin along each axis. */
 		void VerifyAtCorner(const ARTSCameraPawn& Camera, const FVector2D& Corner, const TCHAR* How) const
 		{
 			const FVector2D Location(Camera.GetActorLocation());
 			const FVector2D Outward(FMath::Sign(Corner.X - Ground.GetCenter().X), FMath::Sign(Corner.Y - Ground.GetCenter().Y));
 			const FVector2D Past = (Location - Corner) * Outward;
+			const double MaxEdgeMargin = Camera.GetTuning().EdgeMargin;
 			Test->TestTrue(FString::Printf(TEXT("%s: %s towards corner %s reaches it, stopping at %s"), *Name, How,
 				*Corner.ToString(), *Location.ToString()),
 				Past.X >= -1.0 && Past.X <= MaxEdgeMargin && Past.Y >= -1.0 && Past.Y <= MaxEdgeMargin);

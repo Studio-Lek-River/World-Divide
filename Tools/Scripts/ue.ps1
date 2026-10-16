@@ -13,6 +13,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task u
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots -Panel ResourceBar
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestM20Guardian -Stress 240
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestTank -Stress 240 -Trace
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task camerashots
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestTank -Counts 240 -Trace
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uibindings
@@ -33,6 +34,10 @@ and barrel's overlap printed), and the default view with stat unit and stat rhi,
 grid with the stats on. The frame time, game thread time, avoidance pass, draw calls and triangles of the stat views are
 printed. -Trace also records an Unreal Insights capture (cpu, frame and region channels; each stat view is a region) to
 Saved/Traces/UnitShots_<Unit>_<Stress>.utrace.
+Camerashots plays L_TestMap with a renderer (a GPU is needed), stages a base and a mixed formation by Team0's start spot and
+saves the camera comparison (rts.Debug.CameraShots): the camera before the real-scale retune and the camera now
+at the closest, default and farthest zoom on a vehicle, the formation, the base and the battlefield, plus the base at
+2560x1440 and 3440x1440, with metrics.csv, to Saved/CameraShots, then composes the labelled Sheet_*.jpg there (camera_sheet.ps1).
 Bench plays L_Bench with a renderer (a GPU is needed) and measures -Unit (rts.Debug.Bench) at 1, 30, 120 and 240 units, or
 the comma-separated -Counts, a mix of sizes when -Unit joins several with '+' (DA_TestM20Guardian+DA_TestTank+DA_TestInfantry),
 standing in a grid and then driving on a move order, from one fixed camera at 1920x1080 with
@@ -44,7 +49,7 @@ may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck 
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'bench', 'uibindings', 'uicheck')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'camerashots', 'bench', 'uibindings', 'uicheck')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -271,6 +276,29 @@ function Invoke-UnitShots {
 	Write-Host "UNITSHOTS SUCCEEDED: $ShotDir"
 }
 
+function Invoke-CameraShots {
+	Assert-EditorClosed 'the game run loads the same project.'
+	$ShotDir = Join-Path $RepoRoot 'Saved\CameraShots'
+	$LogFile = Join-Path $RepoRoot 'Saved\Logs\CameraShots.log'
+	if (Test-Path $ShotDir) { Remove-Item -Recurse -Force $ShotDir }
+
+	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList @(
+		"`"$Project`"", '/Game/Maps/L_TestMap', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
+		'"-ExecCmds=rts.Debug.CameraShots"', '-RTSCameraShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		'-unattended', '-nosplash', '-nosound')
+	$GameExit = $Process.ExitCode
+	$Csv = Join-Path $ShotDir 'metrics.csv'
+	if ($GameExit -ne 0 -or -not (Test-Path $Csv)) {
+		if (Test-Path $LogFile) {
+			Select-String -Path $LogFile -Pattern 'rts.Debug|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line }
+		}
+		Write-Host "CAMERASHOTS FAILED (game exit $GameExit). Log: $LogFile"
+		exit 1
+	}
+	& (Join-Path $PSScriptRoot 'camera_sheet.ps1') -ShotDir $ShotDir
+	Write-Host "CAMERASHOTS SUCCEEDED: $ShotDir"
+}
+
 function Invoke-Bench {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$OutDir = Join-Path $RepoRoot "Saved\Bench\$Unit"
@@ -351,6 +379,7 @@ switch ($Task) {
 	'editor' { Invoke-Editor }
 	'uishots' { Invoke-UIShots }
 	'unitshots' { Invoke-UnitShots }
+	'camerashots' { Invoke-CameraShots }
 	'bench' { Invoke-Bench }
 	'uibindings' { Invoke-UIBindings }
 	'uicheck' { Invoke-UICheck }

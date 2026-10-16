@@ -2,6 +2,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Data/RTSUnitData.h"
@@ -33,7 +34,6 @@ namespace RTSFootprintTests
 	constexpr float Tolerance = 1.f;
 
 	/** The view the HUD projects through: the camera's field of view on a 1920 x 1080 screen. */
-	constexpr float CameraFOV = 90.f;
 	const FIntRect Screen(0, 0, 1920, 1080);
 
 	/** A click 1 m beside the hull. */
@@ -94,7 +94,7 @@ namespace RTSFootprintTests
 		FMinimalViewInfo View;
 		View.Rotation = FRotator(GetDefault<ARTSCameraPawn>()->GetPitchForZoom(ArmLength), Yaw, 0.f);
 		View.Location = Target - View.Rotation.Vector() * ArmLength;
-		View.FOV = CameraFOV;
+		View.FOV = GetDefault<ARTSCameraPawn>()->GetCameraComponent()->FieldOfView;
 		View.AspectRatio = static_cast<float>(Screen.Width()) / Screen.Height();
 		View.bConstrainAspectRatio = true;
 		FMatrix ViewMatrix;

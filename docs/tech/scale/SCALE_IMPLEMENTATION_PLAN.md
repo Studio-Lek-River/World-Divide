@@ -125,6 +125,24 @@ The work is split into seven issues, each built, tested and committed on its own
 - **Validation:** `rts.Debug.UnitShots` with `SetZoomNow` at the min, default and max zoom on the M20, a tank, infantry and a vehicle factory. A side-by-side sheet goes to the producer before the values are fixed.
 - **Tests:** `Maps.PreviewCameraAlignment` and any test that reads the camera defaults.
 
+**Chosen (producer, 2026-10-16, from the comparison sheet of `ue.ps1 -Task camerashots`):** the proposed values with the wider strategic zoom, zoom steps that are a share of the arm, and the vertical field of view kept on wider screens.
+
+| Setting | Before | Final | Why |
+|---|---:|---:|---|
+| `Camera->FieldOfView` | 90 | **60** | As proposed. Horizontal at 16:9. |
+| Aspect ratio constraint | keep horizontal (engine default) | **keep vertical** (`AspectRatio_MaintainYFOV`) | 16:9 is unchanged; 21:9 sees 235 m across instead of 175, with the same 126 m of depth instead of 92. |
+| `DefaultZoom` | 3000 | **15000** | 175 m across; a tank broadside 6.1 % of the width, an M20 4.2 %. |
+| `MinZoom` | 175 | **600** | The camera stands just outside a vehicle's hull; at 175 it was inside it. |
+| `MaxZoom` | 7000 | **45000** | 521 m across: a whole base, its approaches and the middle of a 600 m map, as asked after #136. |
+| `ZoomStep` (cm per notch) | 400 | **`ZoomStepFraction` 0.2** | A notch changes the arm by 20 % of its length, so it feels the same at every height: 24 notches from closest to farthest, about 6 from default to farthest. A fixed 1500 cm would jump 600 → 2100 at the closest zoom. |
+| `TiltStartZoom` | 3000 | **6000** | As proposed. The tilt now follows the arm's logarithm, so each notch below 60 m tilts the camera by at most about 5.6 degrees (up to 8.8 with a tilt along the arm itself). |
+| `PanSpeed` | 3000 | **8500** | 85 m/s at the default zoom, 255 m/s at the farthest: about 3 s across a 720 m map. |
+| `EdgeMargin` | 500 | **2000** | |
+| `FallbackMapArea` | ±15000 | **±50000** | |
+| `MinCameraHeight` | 200 | 200 | Unchanged. |
+
+The sheet (`Saved/CameraShots/Sheet_*.jpg`, `metrics.csv`) pictures a vehicle, a mixed formation, a base and the battlefield on L_TestMap at the closest, default and farthest zoom, and the base at 2560 x 1440 and 3440 x 1440. Infantry measures 7 px broadside at the default zoom and 2 px at the farthest: readable through the HUD (brackets, health bars), as planned.
+
 ### Step 6: vehicle movement
 - New `Units/RTSUnitMovement.h/.cpp` (`URTSUnitMovement : UFloatingPawnMovement`, overrides `ApplyControlInputToVelocity`).
 - `Units/RTSUnit.cpp`:
@@ -400,3 +418,11 @@ Weapons: tank and heavy cannon 1200 → 6500, tower 1500 → 8125, rifle 700 →
 **AI and gameplay distances:** `BuildingGap` 300 → `GetBuildingGap()` (widest agent diameter + 2 x 2 m, whole cells: 800); `ExitLaneLength` 600 → per building `RTSBuildPlacement::GetExitLaneLength`; the `+ 600` start margin → the headquarters' half diagonal; `RingStep` and candidate spacing → half the placed building's short side; `GatherDistance` 1500 from the centre → 3600 past the headquarters' edge; `DefenseRadius` 2500 → 8000; `BuildSearchDistance` and `DepotSourceDistance` 4000 → 12000; `ExitClearance` 80 → 200; the rally point → the end of the exit lane; `DockStandOff` 100 → 200; `MoveSnapDistance` 1000 → 3000; `AttackAlertRadius` 3000 → 8000; `SelectionRadius` (interaction) → half the longer side of the scaled mesh. `MoveAcceptanceRadius` (25) and `MoveSnapStep` (50) stay: they set how close a hull stops at an obstacle (#135's 50 cm), not the world scale.
 
 **Measurements:** the bench and unitshots figures are in [PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md#step-4-136-real-scale-data-units-buildings-weapons-maps-ai). Skirmish AI against AI on L_SkirmishDuel (`WorldDivide.Smoke.AIvsAI`): both build their order, harvest, send vehicles out of their factories and waves at each other, and team 0 won after 228 game seconds.
+
+### Step 5: camera retune (2026-10-16)
+
+| Stress 240, with trace | Step 4 | Step 5 |
+|---|---:|---:|
+| `DA_TestTank` frame | 6.10 ms (game 4.11 ms, GPU 4.51 ms) | 3.84 ms (game 3.84 ms, GPU 2.09 ms), 1471 draw calls, 1.71 M triangles |
+
+The `stress_240` view is the RTS camera at its farthest zoom, now 45000 instead of 7000 cm, so the 240 tanks are drawn far smaller and with the whole map's 38 units around them; the GPU time drops with the pixels they cover. Not comparable with step 4; the bench, whose camera is fixed, is the comparison ([PERFORMANCE_RESULTS.md](PERFORMANCE_RESULTS.md#step-5-137-camera-retune)).
