@@ -17,4 +17,8 @@ public:
 	ARTSUnitAIController(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	virtual void OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result) override;
+
+protected:
+	/** As the engine's, but a path that only ran out of search nodes is searched again with more (RTSPathSearch, #169). */
+	virtual void FindPathForMoveRequest(const FAIMoveRequest& MoveRequest, FPathFindingQuery& Query, FNavPathSharedPtr& OutPath) const override;
 };

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Pawn.h"
 #include "NavMesh/RecastNavMesh.h"
+#include "Navigation/RTSPathSearch.h"
 #include "NavigationSystem.h"
 
 namespace
@@ -98,13 +99,14 @@ namespace RTSMoveDestination
 			}
 		}
 
-		// A partial path would end on the near side of whatever cuts the candidate off: another island, an enclosure.
+		// A partial path would end on the near side of whatever cuts the candidate off: another island, an enclosure. One that
+		// only ran out of search nodes is searched again with more, so a far candidate is not taken for a cut-off one.
 		double Shortest = TNumericLimits<double>::Max();
 		for (const FCandidate& Candidate : Candidates)
 		{
 			FPathFindingQuery Query(&Agent, *NavMesh, From, Candidate.Location);
 			Query.SetAllowPartialPaths(false);
-			const FPathFindingResult Result = NavSystem->FindPathSync(Query);
+			const FPathFindingResult Result = RTSPathSearch::FindFullPath(*NavSystem, Query);
 			if (Result.IsSuccessful() && !Result.IsPartial() && Result.Path->GetLength() < Shortest)
 			{
 				Shortest = Result.Path->GetLength();

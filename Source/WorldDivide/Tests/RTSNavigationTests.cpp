@@ -17,6 +17,7 @@
 #include "Navigation/RTSHullClearance.h"
 #include "Navigation/RTSMoveDestination.h"
 #include "Navigation/RTSNavAgents.h"
+#include "Navigation/RTSPathSearch.h"
 #include "NavigationSystem.h"
 #include "Player/RTSPlayerController.h"
 #include "Tests/AutomationCommon.h"
@@ -239,6 +240,10 @@ namespace RTSNavigationTests
 		int32 ExpectedRefusals = 0;
 		/** Check that no unit keeps switching between driving forward and reversing. */
 		bool bCheckReversals = false;
+		/** With Queued: each unit must come within StopGap of an obstacle on the way, as one of the legs leads into it. */
+		bool bQueuedIntoObstacle = false;
+		/** Game seconds before the drive counts as stuck. */
+		double Timeout = DriveTimeout;
 	};
 
 	struct FNavState
@@ -555,7 +560,7 @@ bool FRTSNavRunDrives::Update()
 		{
 			State->SettleStart = Now;
 		}
-		const bool bTimedOut = Now - State->DriveStart > DriveTimeout;
+		const bool bTimedOut = Now - State->DriveStart > Drive.Timeout;
 		// After a refusal the next drive waits out the cooldown, so its own refusals reach the player.
 		const double Settle = Drive.ExpectedRefusals > 0 ? FMath::Max(SettleSeconds, double(ARTSPlayerController::OrderRefusalCooldown)) : SettleSeconds;
 		if (!bTimedOut && (State->SettleStart < 0.0 || Now - State->SettleStart < Settle))
@@ -595,7 +600,7 @@ bool FRTSNavRunDrives::Update()
 				Test->TestTrue(*FString::Printf(TEXT("%s stayed on its own side of the target"), *What),
 					FVector::DotProduct((Final - Target).GetSafeNormal2D(), (Start - Target).GetSafeNormal2D()) > 0.5f);
 			}
-			if (!Drive.Queued.IsEmpty())
+			if (Drive.bQueuedIntoObstacle)
 			{
 				Test->TestTrue(*FString::Printf(TEXT("%s drove up to the obstacle on its way (closest %.1f cm)"), *What, State->MinGaps[Index]),
 					State->MinGaps[Index] <= StopGap);
@@ -631,8 +636,8 @@ bool FRTSNavRunDrives::Update()
 			{
 				Test->TestTrue(*FString::Printf(TEXT("%s went around the gap (crossed at %s)"), *What, *Crossed), Crossing.IsSet() && !bInGate);
 			}
-			Test->AddInfo(FString::Printf(TEXT("%s: closest %.1f cm to %s, stopped %.1f cm from an obstacle, crossed x = 0 at %s, %.1f s"),
-				*What, State->MinGaps[Index], *State->MinGapObstacles[Index], FinalGap, *Crossed, Now - State->DriveStart));
+			Test->AddInfo(FString::Printf(TEXT("%s: closest %.1f cm to %s, stopped at %s %.1f cm from an obstacle, crossed x = 0 at %s, %.1f s"),
+				*What, State->MinGaps[Index], *State->MinGapObstacles[Index], *FVector2D(Final).ToString(), FinalGap, *Crossed, Now - State->DriveStart));
 			Unit->Destroy();
 		}
 		State->Units.Reset();
@@ -1691,6 +1696,7 @@ bool FRTSNavMoveIntoObstacleGroupTest::RunTest(const FString& Parameters)
 	Chain.Queued = { FVector(W, 0.f), GetRingCell(0, 0), FVector(W.X + WH.X + 2000.f * L, W.Y - 1000.f * L, 0.f) };
 	Chain.ExpectedRefusals = 1;
 	Chain.bCheckReversals = true;
+	Chain.bQueuedIntoObstacle = true;
 	Chain.Units.Add({ State->Tank, FVector(W.X + WH.X + 3000.f * L, W.Y + 2000.f * L, 0.f), 180.f });
 	State->Drives.Add(Chain);
 	QueueDrives(*this, State);
@@ -1766,6 +1772,422 @@ bool FRTSNavMoveIntoObstacleCostTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
 	QueuePlacements(*this, State);
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavMeasureMoveDestination(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+namespace RTSNavigationTests
+{
+	const TCHAR* LongPathMap = TEXT("/Game/Maps/L_LongPath");
+	const TCHAR* FlakTruckPath = TEXT("/Game/Data/Units/DA_TestFlakTruck.DA_TestFlakTruck");
+
+	/**
+	 * Where the long-path tests (#169) put things on L_LongPath, from its labelled walls: the start west of the pillar-filled
+	 * pocket, the goal east of the baffle that the long way round leads past, a short trip beside the start, the middles of
+	 * the walled enclosure and of the island in its moat, and the middle of Wall_Baffle.
+	 */
+	FVector LongPathStart = FVector::ZeroVector;
+	FVector LongPathGoal = FVector::ZeroVector;
+	FVector LongPathShort = FVector::ZeroVector;
+	FVector EnclosureCenter = FVector::ZeroVector;
+	FVector IslandCenter = FVector::ZeroVector;
+	FVector BaffleCenter = FVector::ZeroVector;
+
+	/** Game seconds a drive across L_LongPath may take: infantry walks the long way round in under two minutes. */
+	constexpr double LongDriveTimeout = 240.0;
+
+	/** The ground the labelled actors whose labels start with Prefix cover together, seen from above. */
+	FBox2D GetLabelledUnion(const UWorld& World, const TCHAR* Prefix)
+	{
+		FBox2D Union(ForceInit);
+		for (TActorIterator<AStaticMeshActor> It(&World); It; ++It)
+		{
+			if (It->GetActorLabel().StartsWith(Prefix))
+			{
+				const FBox Box = It->GetComponentsBoundingBox();
+				Union += FBox2D(FVector2D(Box.Min), FVector2D(Box.Max));
+			}
+		}
+		return Union;
+	}
+
+	bool InitLongPathLayout(FAutomationTestBase& Test)
+	{
+		const UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+		if (!World)
+		{
+			Test.AddError(TEXT("No editor world"));
+			return false;
+		}
+		const float HalfSize = RTSTests::GetMapHalfSize(*World);
+		const FBox2D Pocket = GetLabelledUnion(*World, TEXT("Wall_Pocket"));
+		const FBox2D Baffle = RTSTests::GetLabelledBox(*World, TEXT("Wall_Baffle"));
+		const FBox2D Enclosure = GetLabelledUnion(*World, TEXT("Wall_Enclosure"));
+		const FBox2D Moat = GetLabelledUnion(*World, TEXT("Block_Moat"));
+		LongVehicleSize = GetLongVehicleSize();
+		if (HalfSize <= 0.f || !Pocket.bIsValid || !Baffle.bIsValid || !Enclosure.bIsValid || !Moat.bIsValid || LongVehicleSize.X <= 0.f)
+		{
+			Test.AddError(TEXT("Missing test data, or L_LongPath lacks its NavMeshBoundsVolume, pocket, baffle, enclosure or moat"));
+			return false;
+		}
+		LongPathStart = FVector(0.5f * (-HalfSize + Pocket.Min.X), Pocket.GetCenter().Y, 0.f);
+		LongPathGoal = FVector(0.5f * (Baffle.Max.X + HalfSize), Pocket.GetCenter().Y, 0.f);
+		LongPathShort = LongPathStart - FVector(0.f, 0.25f * HalfSize, 0.f);
+		EnclosureCenter = FVector(Enclosure.GetCenter(), 0.f);
+		IslandCenter = FVector(Moat.GetCenter(), 0.f);
+		BaffleCenter = FVector(Baffle.GetCenter(), 0.f);
+		ArrivalRadius = LongVehicleSize.X;
+		return true;
+	}
+
+	bool OpenLongPathMap(FAutomationTestBase& Test, const TSharedRef<FNavState>& State)
+	{
+		if (!AutomationOpenMap(LongPathMap))
+		{
+			Test.AddError(FString::Printf(TEXT("Could not open %s"), LongPathMap));
+			return false;
+		}
+		return InitLongPathLayout(Test) && State->LoadUnits(Test)
+			&& Test.TestNotNull(TEXT("Flak truck data"), LoadObject<URTSUnitData>(nullptr, FlakTruckPath));
+	}
+
+	/** A path query for Unit from where it stands to End on its own navmesh, with the navmesh's default filter. */
+	TOptional<FPathFindingQuery> MakeQuery(const ARTSUnit& Unit, const FVector& End)
+	{
+		UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(Unit.GetWorld());
+		const ANavigationData* NavData = NavSystem ? NavSystem->GetNavDataForProps(Unit.GetNavAgentPropertiesRef(), Unit.GetNavAgentLocation()) : nullptr;
+		if (!NavData)
+		{
+			return {};
+		}
+		FPathFindingQuery Query(&Unit, *NavData, Unit.GetNavAgentLocation(), End);
+		Query.SetAllowPartialPaths(false);
+		return Query;
+	}
+
+	/** The nodes A* visits from Query's start to its end with a node limit of Limit (TestPath counts them). */
+	int32 CountSearchNodes(UNavigationSystemV1& NavSystem, const FPathFindingQuery& Query, uint32 Limit)
+	{
+		FPathFindingQuery Limited(Query);
+		FSharedNavQueryFilter Filter = Query.QueryFilter->GetCopy();
+		Filter->SetMaxSearchNodes(Limit);
+		Limited.QueryFilter = Filter;
+		int32 Visited = 0;
+		NavSystem.TestPathSync(Limited, EPathFindingMode::Regular, &Visited);
+		return Visited;
+	}
+
+	const TCHAR* DescribeOutcome(RTSPathSearch::EOutcome Outcome)
+	{
+		switch (Outcome)
+		{
+		case RTSPathSearch::EOutcome::Full: return TEXT("full");
+		case RTSPathSearch::EOutcome::Unreachable: return TEXT("unreachable");
+		case RTSPathSearch::EOutcome::Inconclusive: return TEXT("inconclusive");
+		default: return TEXT("error");
+		}
+	}
+
+	/** The hulls of the long-path drives: infantry, the tracked placeholder tank and M20, and the wheeled flak truck. */
+	TArray<URTSUnitData*> GetLongPathHulls(const FNavState& State)
+	{
+		return { State.Infantry, State.Tank, State.M20, LoadObject<URTSUnitData>(nullptr, FlakTruckPath) };
+	}
+
+	struct FNamedSpot
+	{
+		const TCHAR* Name;
+		FVector Location;
+	};
+}
+
+/**
+ * The searches of the long-path tests (#169) on L_LongPath, for each agent's navmesh: the route round the pocket runs the
+ * engine's default search out of its 2048 nodes (so the map still tests what it should), RTSPathSearch finds it on its
+ * second search, a short trip needs one search, and the enclosure and the island come back unreachable, proven. With the
+ * raised limit cut to the default the long route is reported inconclusive, never unreachable. A move order into the middle
+ * of Wall_Baffle, which only the long route reaches, finds a spot.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavCheckLongPathSearch, FAutomationTestBase*, Test, TSharedRef<RTSNavigationTests::FNavState>, State);
+bool FRTSNavCheckLongPathSearch::Update()
+{
+	using namespace RTSNavigationTests;
+	ARTSPlayerController* Controller = GetController(*Test);
+	UNavigationSystemV1* NavSystem = Controller ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(Controller->GetWorld()) : nullptr;
+	if (!NavSystem)
+	{
+		return true;
+	}
+	UWorld& World = *Controller->GetWorld();
+	IConsoleVariable* MaxNodes = IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Nav.MaxSearchNodes"));
+	if (!Test->TestNotNull(TEXT("rts.Nav.MaxSearchNodes"), MaxNodes))
+	{
+		return true;
+	}
+	// One hull per navmesh.
+	for (URTSUnitData* Data : { State->Infantry, State->Tank })
+	{
+		ARTSUnit* Unit = SpawnUnit(World, Data, Controller->GetTeamId(), LongPathStart, 0.f);
+		const FString Name = DescribeUnit(*Data);
+		auto Search = [&](const FVector& End, RTSPathSearch::FStats& Stats)
+		{
+			const TOptional<FPathFindingQuery> Query = MakeQuery(*Unit, End);
+			return Query ? RTSPathSearch::FindFullPath(*NavSystem, *Query, &Stats) : FPathFindingResult();
+		};
+
+		const TOptional<FPathFindingQuery> LongQuery = MakeQuery(*Unit, LongPathGoal);
+		if (!Test->TestTrue(*FString::Printf(TEXT("%s stands on its navmesh"), *Name), LongQuery.IsSet()))
+		{
+			Unit->Destroy();
+			continue;
+		}
+		const FPathFindingResult Default = NavSystem->FindPathSync(*LongQuery);
+		Test->TestTrue(*FString::Printf(TEXT("%s: the default search runs out of its %d nodes on the long route"), *Name, RECAST_MAX_SEARCH_NODES),
+			Default.Path.IsValid() && Default.Path->IsPartial() && Default.Path->DidSearchReachedLimit());
+		const int32 Nodes = CountSearchNodes(*NavSystem, *LongQuery, RTSPathSearch::GetMaxSearchNodes());
+
+		RTSPathSearch::FStats Stats;
+		FPathFindingResult Result = Search(LongPathGoal, Stats);
+		Test->TestEqual(*FString::Printf(TEXT("%s: the long route"), *Name), FString(DescribeOutcome(Stats.Outcome)), FString(TEXT("full")));
+		Test->TestEqual(*FString::Printf(TEXT("%s: searches for the long route"), *Name), Stats.Searches, 2);
+		Test->TestTrue(*FString::Printf(TEXT("%s: the long route needs more than %d nodes (%d)"), *Name, RECAST_MAX_SEARCH_NODES, Nodes),
+			Nodes > RECAST_MAX_SEARCH_NODES);
+		const bool bEndsAtGoal = Result.Path.IsValid() && !Result.Path->GetPathPoints().IsEmpty()
+			&& FVector::Dist2D(Result.Path->GetPathPoints().Last().Location, LongPathGoal) < 100.f;
+		Test->TestTrue(*FString::Printf(TEXT("%s: the long route ends at the goal"), *Name), bEndsAtGoal);
+		Test->AddInfo(FString::Printf(TEXT("%s: long route %.0f m, %d points, %d search nodes"), *Name,
+			Result.Path.IsValid() ? Result.Path->GetLength() / 100.f : 0.f, Result.Path.IsValid() ? Result.Path->GetPathPoints().Num() : 0, Nodes));
+
+		Search(LongPathShort, Stats);
+		Test->TestEqual(*FString::Printf(TEXT("%s: the short trip"), *Name), FString(DescribeOutcome(Stats.Outcome)), FString(TEXT("full")));
+		Test->TestEqual(*FString::Printf(TEXT("%s: searches for the short trip"), *Name), Stats.Searches, 1);
+
+		for (const FNamedSpot& CutOff : { FNamedSpot{ TEXT("the enclosure"), EnclosureCenter }, FNamedSpot{ TEXT("the island"), IslandCenter } })
+		{
+			Result = Search(CutOff.Location, Stats);
+			Test->TestEqual(*FString::Printf(TEXT("%s: %s"), *Name, CutOff.Name), FString(DescribeOutcome(Stats.Outcome)), FString(TEXT("unreachable")));
+			Test->TestFalse(*FString::Printf(TEXT("%s: no path into %s"), *Name, CutOff.Name), Result.IsSuccessful());
+		}
+
+		// The limit cut to the default: the search that ran out is reported as such, with a warning, and not as unreachable.
+		const int32 Configured = MaxNodes->GetInt();
+		MaxNodes->Set(RECAST_MAX_SEARCH_NODES, ECVF_SetByCode);
+		Test->AddExpectedMessage(TEXT("reachability unknown"), ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 1);
+		Search(LongPathGoal, Stats);
+		MaxNodes->Set(Configured, ECVF_SetByCode);
+		Test->TestEqual(*FString::Printf(TEXT("%s: the long route within the default limit"), *Name), FString(DescribeOutcome(Stats.Outcome)),
+			FString(TEXT("inconclusive")));
+
+		FVector Destination;
+		Test->TestTrue(*FString::Printf(TEXT("%s: a move into Wall_Baffle's middle finds a spot"), *Name),
+			RTSMoveDestination::FindReachable(*Unit, BaffleCenter, Destination));
+		Unit->Destroy();
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavLongPathSearchTest, "WorldDivide.Navigation.LongPath.Search", RTSTests::TestFlags)
+
+bool FRTSNavLongPathSearchTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!OpenLongPathMap(*this, State))
+	{
+		return false;
+	}
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavCheckLongPathSearch(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+/**
+ * Orders across L_LongPath (#169), whose route runs the default search out of nodes: infantry, the tracked tank and M20 and
+ * the wheeled flak truck side by side, each on its own move and then its own attack-move, all arrive at the far side; a
+ * group of six closes in on it; a tank's Shift-queued chain, a short trip, the long route, the island and on, drives every
+ * reachable leg and skips the island with one refusal. Groups sent into the enclosure and onto the island are refused: the
+ * units stay put and the player hears of it once. The drive checks hulls against walls and pillars all the way.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavLongPathDriveTest, "WorldDivide.Navigation.LongPath.Drive", RTSTests::TestFlags)
+
+bool FRTSNavLongPathDriveTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!OpenLongPathMap(*this, State))
+	{
+		return false;
+	}
+	const TArray<URTSUnitData*> Hulls = GetLongPathHulls(*State);
+	const float Pitch = 1.2f * LongVehicleSize.X;
+	auto SideBySide = [&](int32 Index) { return FVector(0.f, (Index - 0.5f * (Hulls.Num() - 1)) * Pitch, 0.f); };
+	for (const ERTSCommandType Order : { ERTSCommandType::Move, ERTSCommandType::AttackMove })
+	{
+		FDrive Drive;
+		Drive.Name = FString::Printf(TEXT("Each profile %s across the pocket"), Order == ERTSCommandType::Move ? TEXT("moved") : TEXT("attack-moved"));
+		Drive.Order = Order;
+		Drive.Target = LongPathGoal;
+		Drive.bCheckReversals = true;
+		Drive.Timeout = LongDriveTimeout;
+		for (int32 Index = 0; Index < Hulls.Num(); ++Index)
+		{
+			FUnitStart Start{ Hulls[Index], LongPathStart + SideBySide(Index), 0.f };
+			Start.TargetOffset = SideBySide(Index);
+			Drive.Units.Add(Start);
+		}
+		State->Drives.Add(Drive);
+	}
+
+	FDrive Group;
+	Group.Name = TEXT("A group of six moved across the pocket");
+	Group.Target = LongPathGoal;
+	Group.bGroupOrder = true;
+	Group.Timeout = LongDriveTimeout;
+	for (int32 Index = 0; Index < 6; ++Index)
+	{
+		Group.Units.Add({ Hulls[Index % Hulls.Num()], LongPathStart + FVector(-(Index / 3) * Pitch, (Index % 3 - 1) * Pitch, 0.f), 0.f });
+	}
+	State->Drives.Add(Group);
+
+	FDrive Chain;
+	Chain.Name = TEXT("A queued chain: a short trip, the long route, the island and on");
+	Chain.Target = LongPathShort;
+	Chain.Queued = { LongPathGoal, IslandCenter, LongPathGoal + FVector(0.f, Pitch, 0.f) };
+	Chain.ExpectedRefusals = 1;
+	Chain.bCheckReversals = true;
+	Chain.Timeout = LongDriveTimeout;
+	Chain.Units.Add({ State->Tank, LongPathStart, 0.f });
+	State->Drives.Add(Chain);
+
+	for (const FNamedSpot& CutOff : { FNamedSpot{ TEXT("the enclosure"), EnclosureCenter }, FNamedSpot{ TEXT("the island"), IslandCenter } })
+	{
+		FDrive Refused;
+		Refused.Name = FString::Printf(TEXT("A group into %s"), CutOff.Name);
+		Refused.Target = CutOff.Location;
+		Refused.bGroupOrder = true;
+		Refused.bRefused = true;
+		Refused.ExpectedRefusals = 1;
+		for (int32 Index = 0; Index < Hulls.Num(); ++Index)
+		{
+			Refused.Units.Add({ Hulls[Index], LongPathStart + SideBySide(Index), 0.f });
+		}
+		State->Drives.Add(Refused);
+	}
+
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavRunDrives(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+namespace RTSNavigationTests
+{
+	/** Searches each long-path cost run makes per route and hull. */
+	constexpr int32 LongCostSearches = 20;
+	/** Units ordered across at once for the peak: a large selection. */
+	constexpr int32 LongCostGroup = 12;
+	/** No single search, long or unreachable, may take longer than this, in ms: MoveIntoObstacle.Cost's budget. */
+	constexpr double LongCostWorstMs = 5.0;
+	/** Nor the order that sends the whole group across, in ms: two frames' share at 60 fps. */
+	constexpr double LongCostPeakMs = 30.0;
+}
+
+/**
+ * Times RTSPathSearch (#169) on L_LongPath for infantry and the tank: the short trip, the long route that needs the second
+ * search, and the island that only a search of everything reachable proves cut off, with the nodes each visits; then the
+ * order that sends a group of twelve on the short trip, and the one that sends it across, every unit searching twice.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavMeasureLongPath, FAutomationTestBase*, Test, TSharedRef<RTSNavigationTests::FNavState>, State);
+bool FRTSNavMeasureLongPath::Update()
+{
+	using namespace RTSNavigationTests;
+	ARTSPlayerController* Controller = GetController(*Test);
+	UNavigationSystemV1* NavSystem = Controller ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(Controller->GetWorld()) : nullptr;
+	if (!NavSystem)
+	{
+		return true;
+	}
+	UWorld& World = *Controller->GetWorld();
+	const uint32 Limit = RTSPathSearch::GetMaxSearchNodes();
+	for (URTSUnitData* Data : { State->Infantry, State->Tank })
+	{
+		ARTSUnit* Unit = SpawnUnit(World, Data, Controller->GetTeamId(), LongPathStart, 0.f);
+		const FString Name = DescribeUnit(*Data);
+		for (const FNamedSpot& Route : { FNamedSpot{ TEXT("short trip"), LongPathShort }, FNamedSpot{ TEXT("long route"), LongPathGoal },
+			FNamedSpot{ TEXT("island"), IslandCenter } })
+		{
+			const TOptional<FPathFindingQuery> Query = MakeQuery(*Unit, Route.Location);
+			if (!Test->TestTrue(*FString::Printf(TEXT("%s stands on its navmesh"), *Name), Query.IsSet()))
+			{
+				break;
+			}
+			double Worst = 0.0;
+			double Total = 0.0;
+			RTSPathSearch::FStats Stats;
+			for (int32 Search = 0; Search < LongCostSearches; ++Search)
+			{
+				const double Begin = FPlatformTime::Seconds();
+				RTSPathSearch::FindFullPath(*NavSystem, *Query, &Stats);
+				const double Ms = (FPlatformTime::Seconds() - Begin) * 1000.0;
+				Worst = FMath::Max(Worst, Ms);
+				Total += Ms;
+			}
+			const int32 Nodes = CountSearchNodes(*NavSystem, *Query, Limit);
+			Test->AddInfo(FString::Printf(TEXT("%s, %s: %s after %d search(es), limit %u, %d nodes; worst %.3f ms, mean %.3f ms"), *Name,
+				Route.Name, DescribeOutcome(Stats.Outcome), Stats.Searches, Stats.MaxSearchNodes, Nodes, Worst, Total / LongCostSearches));
+			Test->TestTrue(*FString::Printf(TEXT("%s, %s: worst search %.3f ms within %.1f ms"), *Name, Route.Name, Worst, LongCostWorstMs),
+				Worst <= LongCostWorstMs);
+		}
+		Unit->Destroy();
+	}
+
+	TArray<ARTSUnit*> Group;
+	const float Pitch = 1.2f * LongVehicleSize.X;
+	for (int32 Index = 0; Index < LongCostGroup; ++Index)
+	{
+		URTSUnitData* Data = Index % 2 ? State->Tank : State->Infantry;
+		Group.Add(SpawnUnit(World, Data, Controller->GetTeamId(), LongPathStart + FVector(-(Index / 4) * Pitch, (Index % 4 - 1.5f) * Pitch, 0.f), 0.f));
+	}
+	auto TimeOrder = [&](const FVector& Target)
+	{
+		FRTSCommand Move;
+		Move.Type = ERTSCommandType::Move;
+		Move.TargetLocation = Target;
+		const double Begin = FPlatformTime::Seconds();
+		Controller->Server_IssueCommand(Group, Move);
+		return (FPlatformTime::Seconds() - Begin) * 1000.0;
+	};
+	const double ShortMs = TimeOrder(LongPathShort);
+	const double Ms = TimeOrder(LongPathGoal);
+	int32 Moving = 0;
+	for (ARTSUnit* Unit : Group)
+	{
+		Moving += Unit->GetQueuedCommandCount() > 0 ? 1 : 0;
+		Unit->Destroy();
+	}
+	Test->AddInfo(FString::Printf(TEXT("A group of %d ordered on the short trip: %.3f ms; across: %.3f ms, %d moving"), LongCostGroup,
+		ShortMs, Ms, Moving));
+	Test->TestEqual(TEXT("Units of the group that took the order"), Moving, LongCostGroup);
+	Test->TestTrue(*FString::Printf(TEXT("The group's order %.3f ms within %.1f ms"), Ms, LongCostPeakMs), Ms <= LongCostPeakMs);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavLongPathCostTest, "WorldDivide.Navigation.LongPath.Cost", RTSTests::TestFlags)
+
+bool FRTSNavLongPathCostTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!OpenLongPathMap(*this, State))
+	{
+		return false;
+	}
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavMeasureLongPath(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

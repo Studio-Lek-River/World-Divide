@@ -14,7 +14,8 @@ namespace RTSMoveDestination
 	 * area or on another navmesh island, and the order is refused instead of sending the unit round the outside.
 	 *
 	 * Bounded: box queries doubling up to the navmesh bounds, each capped by Recast at 256 polygons, then at most a handful
-	 * of path searches. Meant for once per order, never per frame.
+	 * of path searches, each searched once more with a raised node limit when it runs out of nodes (RTSPathSearch). Meant for
+	 * once per order, never per frame.
 	 */
 	WORLDDIVIDE_API bool FindReachable(const APawn& Agent, const FVector& Target, FVector& OutDestination);
 }

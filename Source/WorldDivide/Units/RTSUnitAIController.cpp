@@ -1,6 +1,8 @@
 #include "Units/RTSUnitAIController.h"
 
 #include "Navigation/RTSPathFollowingComponent.h"
+#include "Navigation/RTSPathSearch.h"
+#include "NavigationSystem.h"
 #include "Units/RTSUnit.h"
 
 ARTSUnitAIController::ARTSUnitAIController(const FObjectInitializer& ObjectInitializer)
@@ -18,5 +20,25 @@ void ARTSUnitAIController::OnMoveCompleted(FAIRequestID RequestID, const FPathFo
 	if (ARTSUnit* Unit = GetPawn<ARTSUnit>())
 	{
 		Unit->NotifyMoveFinished(Result);
+	}
+}
+
+void ARTSUnitAIController::FindPathForMoveRequest(const FAIMoveRequest& MoveRequest, FPathFindingQuery& Query, FNavPathSharedPtr& OutPath) const
+{
+	UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+	if (!NavSystem)
+	{
+		return;
+	}
+	const FPathFindingResult Result = RTSPathSearch::FindFullPath(*NavSystem, Query);
+	if (Result.IsSuccessful() && Result.Path.IsValid())
+	{
+		if (MoveRequest.IsMoveToActorRequest())
+		{
+			Result.Path->SetGoalActorObservation(*MoveRequest.GetGoalActor(), 100.0f);
+		}
+		Result.Path->EnableRecalculationOnInvalidation(true);
+		RTSPathSearch::KeepLimitOnRepath(*Result.Path);
+		OutPath = Result.Path;
 	}
 }

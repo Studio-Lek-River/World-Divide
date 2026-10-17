@@ -660,3 +660,66 @@ A broad overlap costs about 7 µs. L_Bench has no solids that navigation leaves 
 - **Narrow-phase cost is not measured at scale:** L_Bench has no such solids. A bench scene with props that navigation leaves out would measure it.
 - **No Insights capture for #168.** The bench counters time the broad and narrow phases directly; the trace scopes `FRTSSolidNeighbourhood::Update` and `::IsClear` are in place for one.
 - **A nav-relevant prop placed at runtime** relies on the navmesh rebuild, as before: up to the existing 1 s cache expiry.
+
+## #169 (long paths over the search node limit)
+
+Same machine and build configuration as #168, on 2026-10-17. Measurements come from `WorldDivide.Navigation.LongPath.Cost` (L_LongPath, fixed 30 Hz step, `-nullrhi`), and the gate from `ue.ps1 -Task bench -Long -Unit DA_TestM20Guardian,DA_TestTank -Compare -Baseline a4e8364`. That is #168's "before" baseline, marked OUTDATED because it is one commit behind HEAD.
+
+### Root cause and what changed
+
+- **Why long orders were refused.** Recast's A* stops at the query filter's node limit, `RECAST_MAX_SEARCH_NODES` (2048). A path that runs out of nodes comes back partial with `DidSearchReachedLimit()` set. `RequestMove` and `RTSMoveDestination::FindReachable` disallow partial paths, so the order was refused as if the goal were cut off.
+- **Telling the two apart.** A partial path *without* that flag means the search ran out of navmesh before it met the goal, which proves the goal unreachable (another island, an enclosure). A partial path *with* the flag only means the search ran out of nodes.
+- **Strategy: one bounded retry** (`RTSPathSearch::FindFullPath`). The first search is unchanged, so ordinary routes cost what they cost before. Only a search that ran out of nodes runs once more, with a copy of its filter raised to `rts.Nav.MaxSearchNodes` (default 16384; Detour's ceiling is 65534). The result is one of:
+  - **Full**: the path is used.
+  - **Unreachable**: proven; the order is refused as in #164.
+  - **Inconclusive**: even the raised limit ran out. The order is refused with a Warning naming the CVar, never reported as a proven dead end.
+- **Where it applies.** It covers every move of an `ARTSUnitAIController` (`FindPathForMoveRequest`): move, attack-move, queued legs, builders and harvesters. It also covers each candidate of `RTSMoveDestination::FindReachable` and of `RTSApproach::FindReachableSpot`. A move's path keeps the raised limit for the repaths the navigation system runs when a building changes the navmesh (`KeepLimitOnRepath`), so a long repath does not end partial for lack of nodes.
+- **Diagnostics** (`LogWorldDivide` Verbose): the first search running out of nodes, the retry, a full path found by it, and a proven unreachable goal. A search that exhausts the maximum limit logs a Warning. Ordinary searches log nothing.
+- **Memory.** Each navmesh's game-thread query grows its Detour node pool to the raised limit on its first retry and keeps it: about 0.9 MB of nodes plus 0.13 MB of open list at 16384 nodes, per agent navmesh.
+
+### Search costs (`WorldDivide.Navigation.LongPath.Cost`, 20 searches each)
+
+| Agent | Route | Outcome | Searches | Nodes visited | Worst ms | Mean ms |
+|---|---|---|---:|---:|---:|---:|
+| Infantry | short trip (50 m) | full | 1 | 5 | 0.028 | 0.003 |
+| Infantry | long route (503 m) | full | 2 | 3,579 | 0.781 | 0.501 |
+| Infantry | island (proven unreachable) | unreachable | 2 | 3,616 | 0.553 | 0.441 |
+| Vehicle (tank) | short trip | full | 1 | 5 | 0.009 | 0.002 |
+| Vehicle (tank) | long route (510 m) | full | 2 | 5,693 | 1.092 | 0.788 |
+| Vehicle (tank) | island (proven unreachable) | unreachable | 2 | 5,739 | 0.940 | 0.697 |
+
+- **Peak for simultaneous orders.** One group order sends 12 units (6 infantry, 6 tanks) across: 11.1 ms on the server, against 0.16 ms for the same group on the short trip. Each unit searches twice.
+- **Search budget.** The maximum limit reached is 16384, and L_LongPath's whole connected navmesh fits under it (5,739 nodes for the vehicle agent), so every answer there is conclusive.
+- **#164's budget holds.** `WorldDivide.Navigation.MoveIntoObstacle.Cost` worst search is 0.055–0.064 ms per hull, within its 5 ms budget; L_TestMap never reaches the limit.
+
+### Movement bench, 240 units, long method (three 60 s samples, a4e8364 → #169)
+
+| Unit | Scenario | Game ms (p95) before → after | Locomotion ms before → after: mean (p95) |
+|---|---|---|---|
+| M20 Guardian | move | 4.17 (7.85) → 4.12 (7.65) | 0.44 (1.15) → 0.44 (1.13) |
+| M20 Guardian | idle | 1.94 (2.33) → 1.93 (2.27) | 0.05 (0.07) → 0.05 (0.07) |
+| `DA_TestTank` | move | 2.92 (4.12) → 2.99 (4.27) | 0.44 (0.97) → 0.45 (1.00) |
+
+Every row is inside the run-to-run spread of about 0.6 ms. L_Bench's short moves never reach the node limit, so they run one search as before. The locomotion budget (mean ≤ 1.0 ms, p95 ≤ 2.0 ms) is still met.
+
+### Test coverage
+
+- **`WorldDivide.Navigation.LongPath.Search`**, for each agent's navmesh:
+  - The engine's default search on the long route runs out of nodes, so the map still tests what it should.
+  - `FindFullPath` finds the route on its second search, and the short trip needs one search.
+  - The enclosure and the island come back unreachable.
+  - With the limit cut to the default, the long route is reported inconclusive (with its Warning).
+  - A move into the middle of `Wall_Baffle` finds a spot.
+- **`WorldDivide.Navigation.LongPath.Drive`**, with the existing obstacle, reversal, arrival and refusal checks:
+  - Infantry, the tracked tank and M20, and the wheeled flak truck each move, and then attack-move, across. All arrive, and none enters a wall or pillar.
+  - A group of six closes in on the goal.
+  - A tank's queued chain (a short trip, the long route, the island, a final leg) drives every reachable leg and skips the island with one refusal.
+  - Groups sent into the enclosure and onto the island stay put with one refusal each.
+- **`WorldDivide.Navigation.LongPath.Cost`**: the table above, with a 5 ms budget per search and 30 ms for the group order.
+
+### Remaining limitations
+
+- **The retry is synchronous on the game thread.** About 0.5–1 ms per unit on a long route here, so a group order of 12 costs about 11 ms in that frame and a much larger selection costs proportionally more. A shared path per group, or time-slicing the retries over frames, would bound that if real maps show it.
+- **A connected navmesh larger than `rts.Nav.MaxSearchNodes` polygons** can still give an inconclusive answer for a far or cut-off goal. It is logged as a Warning and the order is refused; raise the CVar (at most 65534).
+- **Vehicles get stuck rounding the ends of thin (2 m) walls**, at the corner of an L of thin walls, or beside a thin wall end with navmesh on both sides. This is found while building L_LongPath and reproduced on short single-search drives, so it is independent of this change. L_LongPath uses 8 m thick walls, which the vehicles round as they round buildings.
+- **A repath that comes back partial because the goal really became unreachable** is still accepted by the engine and ends the move short; reporting that belongs to #170.

@@ -2,6 +2,7 @@
 
 #include "Buildings/RTSBuildPlacement.h"
 #include "GameFramework/Pawn.h"
+#include "Navigation/RTSPathSearch.h"
 #include "NavigationData.h"
 #include "NavigationSystem.h"
 
@@ -67,10 +68,11 @@ namespace RTSApproach
 			{
 				continue;
 			}
-			// A partial path would end short, on the near side of whatever is in the way.
+			// A partial path would end short, on the near side of whatever is in the way; one that only ran out of search
+			// nodes is searched again with more.
 			FPathFindingQuery Query(&Agent, *NavData, From, NavPoint.Location);
 			Query.SetAllowPartialPaths(false);
-			const FPathFindingResult Result = NavSystem->FindPathSync(Query);
+			const FPathFindingResult Result = RTSPathSearch::FindFullPath(*NavSystem, Query);
 			if (Result.IsSuccessful() && !Result.IsPartial())
 			{
 				OutSpot = NavPoint.Location;

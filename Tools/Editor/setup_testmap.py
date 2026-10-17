@@ -2,7 +2,7 @@
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the ground and water materials, the L_TestMap level
 with a supply source and two builders by each base, the L_Skirmish and L_SkirmishDuel levels, the same ground without the
 armies and with four and two start spots, the skirmish maps L_RiverFord, L_QuarryCross and L_SixPeaks with two, four and
-six, all where the lobby's seats play, the map data assets that offer them in the lobby with a top-down preview of each
+six, all where the lobby's seats play, the L_LongPath level of the long-path tests, the map data assets that offer them in the lobby with a top-down preview of each
 (rendered when the run has a renderer, drawn otherwise), and the
 empty L_MainMenu and L_Lobby levels for the menu screens, a placeholder icon for every entity without painted art (see
 placeholder_icons.py) and the Common UI styles of UI/ and Mods/*/UI/ (see make_ui_styles). L_TestMap and the skirmish maps are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
@@ -846,6 +846,83 @@ def make_bench_map(ground):
                            BENCH_MAP_PATH, BENCH_HALF_SIZE, BENCH_CORNER, CUBE, ground, material_hashes[ground], ENGINE_VERSION, NAV_CONFIG))
 
 
+# The long-path level of WorldDivide.Navigation.LongPath (#169), 400 x 400 m. A unit west of a pocket sent to a goal east
+# of it heads straight in: the pocket, open to the west and full of pillars that cut the navmesh into many polygons, holds
+# more than Recast's 2048 search nodes before A* turns round. The way out runs north round the pocket, through a 12 m gap
+# in a wall and south round a baffle. A walled enclosure and an island in a moat are the goals nothing reaches.
+LONG_PATH_MAP_PATH = "/Game/Maps/L_LongPath"
+LONG_PATH_HALF_SIZE = 20000.0
+LONG_PATH_WALL_HEIGHT = 300.0
+# The pocket's inside: centre and x and y half sizes, and the pillar grid in it: pitch and side, in cm. The gaps between
+# pillars stay wide enough for the vehicle navmesh, so both agents' navmeshes are cut up.
+LONG_PATH_POCKET = ((0.0, 0.0), 6000.0, 12000.0)
+LONG_PATH_PILLARS = (550.0, 60.0)
+# Walls as (label, centre, size along x and y), 8 m thick: blocks, whose corners the vehicles round as they round a
+# building's. Wall_NorthLow and Wall_NorthHigh leave the 12 m gap between y = 15600 and 16800.
+LONG_PATH_WALLS = (
+    ("Wall_PocketNorth", (400.0, 12400.0), (12800.0, 800.0)),
+    ("Wall_PocketSouth", (400.0, -12400.0), (12800.0, 800.0)),
+    ("Wall_PocketBack", (6400.0, 0.0), (800.0, 25600.0)),
+    ("Wall_SouthClosure", (0.0, -16400.0), (800.0, 7200.0)),
+    ("Wall_NorthLow", (0.0, 14200.0), (800.0, 2800.0)),
+    ("Wall_NorthHigh", (0.0, 18400.0), (800.0, 3200.0)),
+    ("Wall_Baffle", (9400.0, 9000.0), (800.0, 22000.0)),
+)
+# The enclosure (walls round a square) and the island (a moat round a square): centre, inner half size, wall or moat width.
+LONG_PATH_ENCLOSURE = ((15000.0, 15000.0), 2000.0, 200.0)
+LONG_PATH_ISLAND = ((-14000.0, -15000.0), 2000.0, 600.0)
+LONG_PATH_SPOTS = ((0, -17000.0, 17000.0, 0.0), (1, 17000.0, -17000.0, 180.0))
+
+
+def ring_walls(prefix, center, inner, width):
+    """Four strips closing a square of inner half size round center: (label, centre, size along x and y)."""
+    x, y = center
+    offset = inner + width / 2.0
+    span = 2.0 * (inner + width)
+    return ((f"{prefix}North", (x, y + offset), (span, width)), (f"{prefix}South", (x, y - offset), (span, width)),
+            (f"{prefix}East", (x + offset, y), (width, span)), (f"{prefix}West", (x - offset, y), (width, span)))
+
+
+def build_long_path_map(ground, water, digest):
+    new_level(LONG_PATH_MAP_PATH)
+    spawn_ground(LONG_PATH_HALF_SIZE, ground)
+    height = LONG_PATH_WALL_HEIGHT
+    for label, (x, y), (size_x, size_y) in LONG_PATH_WALLS + ring_walls("Wall_Enclosure", *LONG_PATH_ENCLOSURE):
+        spawn_obstacle(label, (x, y, height / 2.0), (size_x / 100.0, size_y / 100.0, height / 100.0))
+    for label, (x, y), (size_x, size_y) in ring_walls("Block_Moat", *LONG_PATH_ISLAND):
+        spawn_water(label, (x, y, 1.0), (size_x / 100.0, size_y / 100.0, 0.1), water)
+    (center_x, center_y), half_x, half_y = LONG_PATH_POCKET
+    pitch, side = LONG_PATH_PILLARS
+    columns = int((half_x - pitch / 2.0) // pitch)
+    rows = int((half_y - pitch / 2.0) // pitch)
+    for column in range(-columns, columns + 1):
+        for row in range(-rows, rows + 1):
+            spawn_obstacle(f"Block_Pillar_{column}_{row}", (center_x + column * pitch, center_y + row * pitch, height / 2.0),
+                           (side / 100.0, side / 100.0, height / 100.0))
+    spawn_lighting()
+
+    nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
+    nav.set_actor_scale3d(unreal.Vector(LONG_PATH_HALF_SIZE / 100.0, LONG_PATH_HALF_SIZE / 100.0, 10.0))
+    for team_id, x, y, yaw in LONG_PATH_SPOTS:
+        start = spawn(unreal.PlayerStart, (x, y, 100.0), yaw, label=f"PlayerStart_Team{team_id}")
+        start.set_editor_property("player_start_tag", f"Team{team_id}")
+
+    world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    build_navigation(world, LONG_PATH_MAP_PATH)
+    assets.set_metadata_tag(world, HASH_TAG, digest)
+    if not levels.save_current_level():
+        raise RuntimeError(f"Could not save {LONG_PATH_MAP_PATH}")
+
+
+def make_long_path_map(ground, water):
+    plan_rebuild(LONG_PATH_MAP_PATH, ".umap", lambda digest: build_long_path_map(ground, water, digest),
+                 spec_hash([build_long_path_map, ring_walls, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_water,
+                            spawn_ground, spawn_lighting], LONG_PATH_MAP_PATH, LONG_PATH_HALF_SIZE, LONG_PATH_WALL_HEIGHT,
+                           LONG_PATH_POCKET, LONG_PATH_PILLARS, LONG_PATH_WALLS, LONG_PATH_ENCLOSURE, LONG_PATH_ISLAND,
+                           LONG_PATH_SPOTS, CUBE, ground, water, material_hashes[ground], material_hashes[water], ENGINE_VERSION,
+                           NAV_CONFIG))
+
+
 def ring(radius, angle):
     """The point at radius from the middle, angle degrees from world +X towards +Y, rounded to the centimetre."""
     return round(radius * math.cos(math.radians(angle)), 1), round(radius * math.sin(math.radians(angle)), 1)
@@ -1685,6 +1762,7 @@ ground = make_surface_material("M_Ground", (0.06, 0.075, 0.04), 0.9)
 water = make_surface_material("M_Water", (0.015, 0.04, 0.08), 0.1)
 make_map(tank, infantry, builder, m20, wall_mesh, crate_mesh, ground)
 make_bench_map(ground)
+make_long_path_map(ground, water)
 for spec in (SKIRMISH_MAP, DUEL_MAP, RIVER_FORD_MAP, QUARRY_CROSS_MAP, SIX_PEAKS_MAP):
     make_skirmish_map(spec, builder, wall_mesh, crate_mesh, ground, water)
 # The lobby's maps, listed in Config/DefaultGame.ini: by default a player against an AI opponent; the other seats are open.
