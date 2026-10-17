@@ -347,8 +347,9 @@ public:
 	void Client_SuperweaponAlert(ERTSSuperweaponAlert Kind, bool bOwn);
 
 	/**
-	 * Server only. A move order Issuer gave cannot be carried out: no spot near Location is reachable. Tells Issuer's
-	 * controller through Client_OrderRefused, at most once per OrderRefusalCooldown, so a refused group gives one message.
+	 * Server only. A move order Issuer gave cannot be carried out: no spot near Location is reachable, or a unit stuck at
+	 * Location gave the move up (ARTSUnit::UpdateBlockedMove). Tells Issuer's controller through Client_OrderRefused, at
+	 * most once per OrderRefusalCooldown, so a refused group gives one message.
 	 * Nothing for an AI player or a null Issuer.
 	 */
 	static void NotifyOrderRefused(const ARTSPlayerState* Issuer, const FVector& Location);

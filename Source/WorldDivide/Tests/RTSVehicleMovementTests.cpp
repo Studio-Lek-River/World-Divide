@@ -6,6 +6,7 @@
 #include "Commands/RTSCommand.h"
 #include "Components/StaticMeshComponent.h"
 #include "Data/RTSUnitData.h"
+#include "Economy/RTSSupplySource.h"
 #include "Editor.h"
 #include "Engine/CollisionProfile.h"
 #include "Engine/StaticMesh.h"
@@ -550,6 +551,371 @@ bool FRTSVehicleBlockedTest::RunTest(const FString& Parameters)
 		Test.TestTrue(*FString::Printf(TEXT("Over %.0f s it backs off at most once, never rocking back and forth (%d changes of direction)"), RestSeconds,
 			Data->SignChanges), Data->SignChanges <= 2);
 	};
+
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleWaitForPlay(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleRunScenarios(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+namespace RTSVehicleMovementTests
+{
+	const TCHAR* HarvesterPath = TEXT("/Game/Data/Units/DA_TestHarvester.DA_TestHarvester");
+
+	/** #170: where the drives into a blockage start, facing east, and their target 80 m on, behind the blockage. */
+	const FVector FeedbackStart(-6000.f, 20000.f, 0.f);
+	const FVector FeedbackTarget(2000.f, 20000.f, 0.f);
+
+	/** A wall the navmesh leaves out (#168) across the way, 15 m ahead of FeedbackStart and 40 m wide. */
+	const FBox FeedbackWall(FVector(-4500.f, 18000.f, 0.f), FVector(-4300.f, 22000.f, 300.f));
+
+	/**
+	 * Once every unit stands, a drive runs on this long: past the refusal cooldown and the span in which a stuck unit gives
+	 * up, so a second refusal would arrive within it.
+	 */
+	constexpr double FeedbackQuietSeconds = 4.0;
+
+	/** The drives that keep their order run this long against the blockage. */
+	constexpr double KeptOrderSeconds = 15.0;
+
+	/** What a drive into the blockage saw of the player's refusals. */
+	struct FFeedback
+	{
+		TWeakObjectPtr<ARTSPlayerController> Controller;
+		int32 RefusalsAtStart = 0;
+		/** The drive's units, the scenario's own first. */
+		TArray<TWeakObjectPtr<ARTSUnit>> Group;
+		/** Spawned for the drive and destroyed after it: the wall, the group's other units, targets. */
+		TArray<TWeakObjectPtr<AActor>> Spawned;
+		TWeakObjectPtr<AActor> Wall;
+		/** Refusals the player had when the unit first backed off. */
+		TOptional<int32> RefusalsAtBackOff;
+		/** Where the unit stood when the first refusal arrived. */
+		TOptional<FVector> RefusedAt;
+		TOptional<double> AllStopped;
+
+		int32 GetRefusals() const { return Controller.IsValid() ? Controller->GetOrderRefusalCount() - RefusalsAtStart : 0; }
+	};
+
+	void BeginFeedback(FFeedback& Data, ARTSUnit& Unit, ARTSPlayerController& Controller, bool bWall)
+	{
+		Data.Controller = &Controller;
+		Data.RefusalsAtStart = Controller.GetOrderRefusalCount();
+		Data.Group.Add(&Unit);
+		if (bWall)
+		{
+			Data.Wall = SpawnSolid(*Unit.GetWorld(), FeedbackWall);
+			Data.Spawned.Add(Data.Wall);
+		}
+	}
+
+	ARTSUnit* SpawnForFeedback(FFeedback& Data, UWorld& World, const TCHAR* Path, int32 TeamId, const FVector& Location, float Yaw)
+	{
+		ARTSUnit* Unit = SpawnUnit(World, LoadObject<URTSUnitData>(nullptr, Path), TeamId, Location, Yaw);
+		Data.Spawned.Add(Unit);
+		return Unit;
+	}
+
+	void Issue(ARTSPlayerController& Controller, const FFeedback& Data, ERTSCommandType Type, const FVector& Target, bool bQueue = false)
+	{
+		TArray<ARTSUnit*> Units;
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : Data.Group)
+		{
+			Units.Add(Unit.Get());
+		}
+		FRTSCommand Command;
+		Command.Type = Type;
+		Command.TargetLocation = Target;
+		Command.bQueue = bQueue;
+		Controller.Server_IssueCommand(Units, Command);
+	}
+
+	/** Follows the drive every frame; true once every unit of the group has stood for FeedbackQuietSeconds. */
+	bool TickFeedback(FFeedback& Data, const ARTSUnit& Unit, double Elapsed)
+	{
+		if (!Data.RefusalsAtBackOff && Unit.GetRealizedMotion().Status == ERTSLocomotionStatus::Reversing)
+		{
+			Data.RefusalsAtBackOff = Data.GetRefusals();
+		}
+		if (!Data.RefusedAt && Data.GetRefusals() > 0)
+		{
+			Data.RefusedAt = Unit.GetActorLocation();
+		}
+		const bool bMoving = Data.Group.ContainsByPredicate([](const TWeakObjectPtr<ARTSUnit>& Member) { return Member.IsValid() && IsMoving(*Member); });
+		if (bMoving || Elapsed < 1.0)
+		{
+			Data.AllStopped.Reset();
+			return false;
+		}
+		if (!Data.AllStopped)
+		{
+			Data.AllStopped = Elapsed;
+		}
+		return Elapsed - *Data.AllStopped >= FeedbackQuietSeconds;
+	}
+
+	void EndFeedback(FFeedback& Data)
+	{
+		for (const TWeakObjectPtr<AActor>& Actor : Data.Spawned)
+		{
+			if (Actor.IsValid())
+			{
+				Actor->Destroy();
+			}
+		}
+	}
+}
+
+/**
+ * The player hears of a move a stuck vehicle gives up (#170), through the refusal of #164. An M20 the player sends by move or
+ * attack-move into a blockage no path knows about backs off once without a word, then gives the order up: its queue empties
+ * and the player gets exactly one refusal, marked where the M20 stands, and no second one after. A queued move after it
+ * starts once it gives up. A move whose guidance finds its goal out of reach gives one refusal too. Three M20s sent into it
+ * together give one refusal. A blockage that clears while the M20 backs off gives none, and it arrives. An attack on an enemy
+ * behind the blockage and a harvest of a source behind it keep their orders and give none; nor does a unit the player did
+ * not order.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSVehicleBlockedFeedbackTest, "WorldDivide.Navigation.VehicleBlockedFeedback", RTSTests::TestFlags)
+
+bool FRTSVehicleBlockedFeedbackTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSVehicleMovementTests;
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+	TSharedRef<FState> State = MakeShared<FState>();
+	auto AddScenario = [&State](const TCHAR* Name, double Timeout) -> FScenario&
+	{
+		FScenario& Scenario = State->Scenarios.AddDefaulted_GetRef();
+		Scenario.Name = Name;
+		Scenario.Start = FeedbackStart;
+		Scenario.Yaw = 0.f;
+		Scenario.Timeout = Timeout;
+		Scenario.bPlayerTeam = true;
+		return Scenario;
+	};
+
+	// A move, then an attack-move, into the blockage.
+	for (const ERTSCommandType Order : { ERTSCommandType::Move, ERTSCommandType::AttackMove })
+	{
+		const FString Name = Order == ERTSCommandType::Move ? TEXT("A move into the blockage") : TEXT("An attack-move into the blockage");
+		FScenario& Scenario = AddScenario(*Name, 40.0);
+		TSharedRef<FFeedback> Data = MakeShared<FFeedback>();
+		Scenario.Begin = [Data, Order](ARTSUnit& Unit, ARTSPlayerController& Controller)
+		{
+			BeginFeedback(*Data, Unit, Controller, true);
+			Issue(Controller, *Data, Order, FeedbackTarget);
+		};
+		Scenario.Tick = [Data](ARTSUnit& Unit, double Elapsed) { return TickFeedback(*Data, Unit, Elapsed); };
+		Scenario.End = [Data, Name](ARTSUnit& Unit, FAutomationTestBase& Test)
+		{
+			EndFeedback(*Data);
+			Test.TestTrue(*FString::Printf(TEXT("%s: the M20 backs off first"), *Name), Data->RefusalsAtBackOff.IsSet());
+			Test.TestEqual(*FString::Printf(TEXT("%s: backing off is no refusal"), *Name), Data->RefusalsAtBackOff.Get(-1), 0);
+			Test.TestEqual(*FString::Printf(TEXT("%s: stuck again, it gives the order up"), *Name), Unit.GetQueuedCommandCount(), 0);
+			Test.TestTrue(*FString::Printf(TEXT("%s: without arriving (%.0f cm short)"), *Name, FVector::Dist2D(Unit.GetActorLocation(), FeedbackTarget)),
+				FVector::Dist2D(Unit.GetActorLocation(), FeedbackTarget) > 1000.f);
+			Test.TestEqual(*FString::Printf(TEXT("%s: the player gets one refusal, and no more after"), *Name), Data->GetRefusals(), 1);
+			FVector Marked;
+			float Age = 0.f;
+			if (Data->Controller.IsValid() && Data->RefusedAt && Data->Controller->GetLastOrderRefusal(Marked, Age))
+			{
+				Test.TestTrue(*FString::Printf(TEXT("%s: marked where the M20 stands (%.0f cm off)"), *Name, FVector::Dist2D(Marked, *Data->RefusedAt)),
+					FVector::Dist2D(Marked, *Data->RefusedAt) <= 100.f);
+			}
+		};
+	}
+
+	// A move into the blockage with a second move queued behind it, back west.
+	{
+		FScenario& Scenario = AddScenario(TEXT("A queued move after the blockage"), 50.0);
+		const FVector Back(-8000.f, 20000.f, 0.f);
+		TSharedRef<FFeedback> Data = MakeShared<FFeedback>();
+		Scenario.Begin = [Data, Back](ARTSUnit& Unit, ARTSPlayerController& Controller)
+		{
+			BeginFeedback(*Data, Unit, Controller, true);
+			Issue(Controller, *Data, ERTSCommandType::Move, FeedbackTarget);
+			Issue(Controller, *Data, ERTSCommandType::Move, Back, true);
+		};
+		Scenario.Tick = [Data](ARTSUnit& Unit, double Elapsed) { return TickFeedback(*Data, Unit, Elapsed); };
+		Scenario.End = [Data, Back](ARTSUnit& Unit, FAutomationTestBase& Test)
+		{
+			EndFeedback(*Data);
+			Test.TestEqual(TEXT("A queued move after the blockage: one refusal"), Data->GetRefusals(), 1);
+			Test.TestEqual(TEXT("both orders are over"), Unit.GetQueuedCommandCount(), 0);
+			Test.TestTrue(*FString::Printf(TEXT("and the queued one was carried out (%.0f cm from its target)"), FVector::Dist2D(Unit.GetActorLocation(), Back)),
+				FVector::Dist2D(Unit.GetActorLocation(), Back) <= 100.f);
+		};
+	}
+
+	// A move whose guidance gives the goal up as out of reach, two seconds in, on open ground.
+	{
+		FScenario& Scenario = AddScenario(TEXT("A move out of reach"), 30.0);
+		TSharedRef<FFeedback> Data = MakeShared<FFeedback>();
+		TSharedRef<bool> bFailed = MakeShared<bool>(false);
+		Scenario.Begin = [Data](ARTSUnit& Unit, ARTSPlayerController& Controller)
+		{
+			BeginFeedback(*Data, Unit, Controller, false);
+			Issue(Controller, *Data, ERTSCommandType::Move, FeedbackTarget);
+		};
+		Scenario.Tick = [Data, bFailed](ARTSUnit& Unit, double Elapsed)
+		{
+			if (!*bFailed && Elapsed >= 2.0 && IsMoving(Unit))
+			{
+				Unit.GetUnitMovement()->FailGuidance();
+				*bFailed = true;
+			}
+			return TickFeedback(*Data, Unit, Elapsed);
+		};
+		Scenario.End = [Data, bFailed](ARTSUnit& Unit, FAutomationTestBase& Test)
+		{
+			EndFeedback(*Data);
+			Test.TestTrue(TEXT("A move out of reach: guidance fails under way"), *bFailed);
+			Test.TestEqual(TEXT("the order is given up"), Unit.GetQueuedCommandCount(), 0);
+			Test.TestTrue(*FString::Printf(TEXT("short of its target (%.0f cm)"), FVector::Dist2D(Unit.GetActorLocation(), FeedbackTarget)),
+				FVector::Dist2D(Unit.GetActorLocation(), FeedbackTarget) > 1000.f);
+			Test.TestEqual(TEXT("and the player gets one refusal"), Data->GetRefusals(), 1);
+		};
+	}
+
+	// Three M20s abreast sent into the blockage by one order.
+	{
+		FScenario& Scenario = AddScenario(TEXT("A group into the blockage"), 50.0);
+		TSharedRef<FFeedback> Data = MakeShared<FFeedback>();
+		Scenario.Begin = [Data](ARTSUnit& Unit, ARTSPlayerController& Controller)
+		{
+			BeginFeedback(*Data, Unit, Controller, true);
+			for (const float Side : { -700.f, 700.f })
+			{
+				Data->Group.Add(SpawnForFeedback(*Data, *Unit.GetWorld(), M20Path, Controller.GetTeamId(), FeedbackStart + FVector(0.f, Side, 0.f), 0.f));
+			}
+			Issue(Controller, *Data, ERTSCommandType::Move, FeedbackTarget);
+		};
+		Scenario.Tick = [Data](ARTSUnit& Unit, double Elapsed) { return TickFeedback(*Data, Unit, Elapsed); };
+		Scenario.End = [Data](ARTSUnit& Unit, FAutomationTestBase& Test)
+		{
+			for (int32 Index = 0; Index < Data->Group.Num(); ++Index)
+			{
+				const ARTSUnit* Member = Data->Group[Index].Get();
+				Test.TestTrue(*FString::Printf(TEXT("A group into the blockage: M20 %d gives its move up"), Index + 1),
+					Member && Member->GetQueuedCommandCount() == 0 && FVector::Dist2D(Member->GetActorLocation(), FeedbackTarget) > 1000.f);
+			}
+			EndFeedback(*Data);
+			Test.TestEqual(TEXT("A group into the blockage: one refusal for the group"), Data->GetRefusals(), 1);
+		};
+	}
+
+	// The blockage clears while the M20 backs off from it.
+	{
+		FScenario& Scenario = AddScenario(TEXT("A blockage that clears"), 40.0);
+		const FVector Target(-2000.f, 20000.f, 0.f);
+		TSharedRef<FFeedback> Data = MakeShared<FFeedback>();
+		Scenario.Begin = [Data, Target](ARTSUnit& Unit, ARTSPlayerController& Controller)
+		{
+			BeginFeedback(*Data, Unit, Controller, true);
+			Issue(Controller, *Data, ERTSCommandType::Move, Target);
+		};
+		Scenario.Tick = [Data](ARTSUnit& Unit, double Elapsed)
+		{
+			const bool bOver = TickFeedback(*Data, Unit, Elapsed);
+			if (Data->RefusalsAtBackOff && Data->Wall.IsValid())
+			{
+				Data->Wall->Destroy();
+			}
+			return bOver;
+		};
+		Scenario.End = [Data, Target](ARTSUnit& Unit, FAutomationTestBase& Test)
+		{
+			EndFeedback(*Data);
+			Test.TestTrue(TEXT("A blockage that clears: the M20 backs off"), Data->RefusalsAtBackOff.IsSet());
+			Test.TestTrue(*FString::Printf(TEXT("then arrives (%.0f cm from its target)"), FVector::Dist2D(Unit.GetActorLocation(), Target)),
+				FVector::Dist2D(Unit.GetActorLocation(), Target) <= 100.f);
+			Test.TestEqual(TEXT("its order is over"), Unit.GetQueuedCommandCount(), 0);
+			Test.TestEqual(TEXT("and the player gets no refusal"), Data->GetRefusals(), 0);
+		};
+	}
+
+	// An attack on an enemy M20 behind the blockage, out of range of it.
+	{
+		FScenario& Scenario = AddScenario(TEXT("An attack across the blockage"), KeptOrderSeconds + 5.0);
+		TSharedRef<FFeedback> Data = MakeShared<FFeedback>();
+		Scenario.Begin = [Data](ARTSUnit& Unit, ARTSPlayerController& Controller)
+		{
+			BeginFeedback(*Data, Unit, Controller, true);
+			FRTSCommand Attack;
+			Attack.Type = ERTSCommandType::Attack;
+			Attack.TargetActor = SpawnForFeedback(*Data, *Unit.GetWorld(), M20Path, DriveTeam, FeedbackStart + FVector(10000.f, 0.f, 0.f), 180.f);
+			Controller.Server_IssueCommand({ &Unit }, Attack);
+		};
+		Scenario.Tick = [Data](ARTSUnit& Unit, double Elapsed)
+		{
+			TickFeedback(*Data, Unit, Elapsed);
+			return Elapsed >= KeptOrderSeconds;
+		};
+		Scenario.End = [Data](ARTSUnit& Unit, FAutomationTestBase& Test)
+		{
+			EndFeedback(*Data);
+			Test.TestTrue(*FString::Printf(TEXT("An attack across the blockage: the M20 stays on its side (x %.0f)"), Unit.GetActorLocation().X),
+				Unit.GetActorLocation().X < FeedbackWall.Min.X);
+			Test.TestEqual(TEXT("keeps its attack"), Unit.GetQueuedCommandCount(), 1);
+			Test.TestEqual(TEXT("and the player gets no refusal"), Data->GetRefusals(), 0);
+		};
+	}
+
+	// A harvest of a source behind the blockage.
+	{
+		FScenario& Scenario = AddScenario(TEXT("A harvest across the blockage"), KeptOrderSeconds + 5.0);
+		Scenario.DataPath = HarvesterPath;
+		TSharedRef<FFeedback> Data = MakeShared<FFeedback>();
+		Scenario.Begin = [Data](ARTSUnit& Unit, ARTSPlayerController& Controller)
+		{
+			BeginFeedback(*Data, Unit, Controller, true);
+			const FTransform Transform(FeedbackStart + FVector(6000.f, 0.f, 0.f));
+			ARTSSupplySource* Source = Unit.GetWorld()->SpawnActorDeferred<ARTSSupplySource>(ARTSSupplySource::StaticClass(), Transform);
+			Source->Amount = 5000;
+			Source->FinishSpawning(Transform);
+			Data->Spawned.Add(Source);
+			FRTSCommand Harvest;
+			Harvest.Type = ERTSCommandType::Harvest;
+			Harvest.TargetActor = Source;
+			Controller.Server_IssueCommand({ &Unit }, Harvest);
+		};
+		Scenario.Tick = [Data](ARTSUnit& Unit, double Elapsed)
+		{
+			TickFeedback(*Data, Unit, Elapsed);
+			return Elapsed >= KeptOrderSeconds;
+		};
+		Scenario.End = [Data](ARTSUnit& Unit, FAutomationTestBase& Test)
+		{
+			EndFeedback(*Data);
+			Test.TestTrue(*FString::Printf(TEXT("A harvest across the blockage: the harvester stays on its side (x %.0f)"), Unit.GetActorLocation().X),
+				Unit.GetActorLocation().X < FeedbackWall.Min.X);
+			Test.TestEqual(TEXT("keeps its harvest"), Unit.GetQueuedCommandCount(), 1);
+			Test.TestEqual(TEXT("and the player gets no refusal"), Data->GetRefusals(), 0);
+		};
+	}
+
+	// The enemy's M20, ordered on the server with no player behind the order.
+	{
+		FScenario& Scenario = AddScenario(TEXT("An order no player gave"), 40.0);
+		Scenario.bPlayerTeam = false;
+		TSharedRef<FFeedback> Data = MakeShared<FFeedback>();
+		Scenario.Begin = [Data](ARTSUnit& Unit, ARTSPlayerController& Controller)
+		{
+			BeginFeedback(*Data, Unit, Controller, true);
+			IssueMove(Controller, Unit, FeedbackTarget);
+		};
+		Scenario.Tick = [Data](ARTSUnit& Unit, double Elapsed) { return TickFeedback(*Data, Unit, Elapsed); };
+		Scenario.End = [Data](ARTSUnit& Unit, FAutomationTestBase& Test)
+		{
+			EndFeedback(*Data);
+			Test.TestEqual(TEXT("An order no player gave: the enemy's M20 gives its move up"), Unit.GetQueuedCommandCount(), 0);
+			Test.TestEqual(TEXT("and the player hears nothing of it"), Data->GetRefusals(), 0);
+		};
+	}
 
 	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleWaitForPlay(this, State));

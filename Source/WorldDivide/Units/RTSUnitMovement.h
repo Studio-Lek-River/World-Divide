@@ -55,6 +55,9 @@ public:
 	/** Server only. True when guidance found the goal out of reach of the profile (a wheeled vehicle that cannot turn to it). */
 	bool HasGuidanceFailed() const { return Guidance.bFailed; }
 
+	/** Server only. Guidance gives the goal up as out of reach, for tests; a new path starts it over. */
+	void FailGuidance() { Guidance.bFailed = true; }
+
 	/** Server only. The path point guidance heads for: path following counts the points before it as reached. */
 	int32 GetGuidanceTarget() const { return Guidance.Target; }
 

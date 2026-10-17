@@ -1051,9 +1051,14 @@ void ARTSUnit::UpdateBlockedMove()
 		return;
 	}
 	// Stuck again, or a goal its steering cannot reach: the move ends where the unit stands. Attacks, harvests and builds
-	// start their own moves again.
+	// start their own moves again. A given-up move is a refused order: its issuer hears of it, before the stop pops it, and
+	// the order after it may back off once of its own.
 	UE_LOG(LogWorldDivide, Verbose, TEXT("%s gives up its move: %s"), *GetName(), bOutOfReach ? TEXT("out of reach") : TEXT("stuck"));
-	BlockedReplanTime = Now;
+	BlockedReplanTime = bMoveOrder ? -1.0e9 : Now;
+	if (bMoveOrder)
+	{
+		ARTSPlayerController::NotifyOrderRefused(CommandQueue[0].Issuer, GetActorLocation());
+	}
 	AI->StopMovement();
 }
 

@@ -3,9 +3,13 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Commands/RTSCommand.h"
+#include "Components/StaticMeshComponent.h"
 #include "Data/RTSUnitData.h"
 #include "Editor.h"
+#include "Engine/CollisionProfile.h"
 #include "Engine/NetDriver.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
 #include "EngineUtils.h"
 #include "HAL/IConsoleManager.h"
 #include "PlayInEditorDataTypes.h"
@@ -634,10 +638,152 @@ namespace RTSVehicleNetTests
 	}
 }
 
+namespace RTSVehicleNetTests
+{
+	/** A solid engine cube filling Box on the server that navigation leaves out (#168): the navmesh runs on under it. */
+	AActor* SpawnSolid(UWorld& World, const FBox& Box)
+	{
+		const FTransform Transform(FRotator::ZeroRotator, Box.GetCenter(), Box.GetSize() / 100.f);
+		AStaticMeshActor* Actor = World.SpawnActorDeferred<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Transform);
+		UStaticMeshComponent* Component = Actor->GetStaticMeshComponent();
+		Component->SetMobility(EComponentMobility::Movable);
+		Component->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube")));
+		Component->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+		Component->SetCanEverAffectNavigation(false);
+		Actor->FinishSpawning(Transform);
+		return Actor;
+	}
+
+	/** The local player's controller of each team, on whichever machine plays it: the host's on a listen server, else a client's. */
+	TMap<int32, ARTSPlayerController*> GetPlayers(const FSession& Session)
+	{
+		TMap<int32, ARTSPlayerController*> Players;
+		TArray<UWorld*> Worlds = Session.ClientWorlds;
+		if (!Session.bDedicated)
+		{
+			Worlds.Add(Session.ServerWorld);
+		}
+		for (UWorld* World : Worlds)
+		{
+			ARTSPlayerController* Controller = Cast<ARTSPlayerController>(World->GetFirstPlayerController());
+			if (Controller && Controller->IsLocalController() && Controller->GetTeamId() != INDEX_NONE)
+			{
+				Players.Add(Controller->GetTeamId(), Controller);
+			}
+		}
+		return Players;
+	}
+
+	/**
+	 * #170: each player sends two M20s of their own into a blockage at the same time, through the server, and each group gives
+	 * its move up there. Each player, on the machine that plays them, hears of it once: not of the other player's group, and
+	 * not once per M20.
+	 */
+	void AddStuckFeedback(FAutomationTestBase& Test, const TSharedRef<FSession>& Session)
+	{
+		struct FStuck
+		{
+			TArray<TWeakObjectPtr<AActor>> Spawned;
+			TArray<TWeakObjectPtr<ARTSUnit>> Units;
+			TMap<int32, int32> RefusalsAtStart;
+			TOptional<double> AllStopped;
+		};
+		TSharedRef<FStuck> Stuck = MakeShared<FStuck>();
+		// Team 0 west, team 1 120 m east of it, each with a wall 15 m ahead and a target 40 m ahead, behind it.
+		const FVector Starts[] = { DriveStart, DriveStart + FVector(12000.f, 0.f, 0.f) };
+		Session->Phases.Add({ TEXT("Stuck groups"), [&Test, Session, Stuck, Starts](double)
+		{
+			UWorld& World = *Session->ServerWorld;
+			// The drives before leave their vehicles in this strip, within range of the groups.
+			for (TActorIterator<ARTSUnit> It(&World); It; ++It)
+			{
+				if (It->GetActorLocation().Y > DriveStart.Y - 8000.f)
+				{
+					It->Destroy();
+				}
+			}
+			for (const TPair<int32, ARTSPlayerController*>& Player : GetPlayers(*Session))
+			{
+				Stuck->RefusalsAtStart.Add(Player.Key, Player.Value->GetOrderRefusalCount());
+			}
+			Test.TestEqual(TEXT("Stuck groups: both players are found on the machines that play them"), Stuck->RefusalsAtStart.Num(), 2);
+			for (int32 Team = 0; Team < 2; ++Team)
+			{
+				const FVector& Start = Starts[Team];
+				Stuck->Spawned.Add(SpawnSolid(World, FBox(Start + FVector(1500.f, -2000.f, 0.f), Start + FVector(1700.f, 2000.f, 300.f))));
+				TArray<ARTSUnit*> Group;
+				for (const float Side : { -700.f, 700.f })
+				{
+					ARTSUnit* Unit = SpawnUnit(World, M20Path, Team, Start + FVector(0.f, Side, 0.f), 0.f);
+					Group.Add(Unit);
+					Stuck->Units.Add(Unit);
+				}
+				ARTSPlayerController* Controller = nullptr;
+				for (TActorIterator<ARTSPlayerController> It(&World); It; ++It)
+				{
+					Controller = It->GetTeamId() == Team ? *It : Controller;
+				}
+				if (Test.TestNotNull(*FString::Printf(TEXT("Stuck groups: the server has team %d's controller"), Team), Controller))
+				{
+					FRTSCommand Move;
+					Move.Type = ERTSCommandType::Move;
+					Move.TargetLocation = Start + FVector(4000.f, 0.f, 0.f);
+					Controller->Server_IssueCommand(Group, Move);
+				}
+			}
+			return true;
+		} });
+		Session->Phases.Add({ TEXT("Stuck groups give up"), [&Test, Session, Stuck](double Elapsed)
+		{
+			const bool bOrdered = Stuck->Units.ContainsByPredicate([](const TWeakObjectPtr<ARTSUnit>& Unit)
+			{
+				return Unit.IsValid() && Unit->GetQueuedCommandCount() > 0;
+			});
+			if (bOrdered || Elapsed < 1.0)
+			{
+				Stuck->AllStopped.Reset();
+				return false;
+			}
+			if (!Stuck->AllStopped)
+			{
+				Stuck->AllStopped = Elapsed;
+			}
+			// Long enough for the refusals to cross the network, and for a second one to show past the cooldown.
+			if (Elapsed - *Stuck->AllStopped < 3.0)
+			{
+				return false;
+			}
+			for (const TPair<int32, ARTSPlayerController*>& Player : GetPlayers(*Session))
+			{
+				Test.TestEqual(*FString::Printf(TEXT("Stuck groups: the player of team %d hears once of their own group giving up"), Player.Key),
+					Player.Value->GetOrderRefusalCount() - Stuck->RefusalsAtStart.FindRef(Player.Key), 1);
+			}
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Stuck->Units)
+			{
+				if (Unit.IsValid())
+				{
+					Test.TestTrue(*FString::Printf(TEXT("Stuck groups: team %d's M20 stays behind its wall"), Unit->GetTeamId()),
+						FVector::Dist2D(Unit->GetActorLocation(), DriveStart) < 2000.f || FVector::Dist2D(Unit->GetActorLocation(), DriveStart + FVector(12000.f, 0.f, 0.f)) < 2000.f);
+					Unit->Destroy();
+				}
+			}
+			for (const TWeakObjectPtr<AActor>& Actor : Stuck->Spawned)
+			{
+				if (Actor.IsValid())
+				{
+					Actor->Destroy();
+				}
+			}
+			return true;
+		} });
+	}
+}
+
 /**
  * Listen server and one client on L_TestMap: the M20's stop, reverse, pivot and drive into a block converge on the client,
  * the pivot runs the client's tracks opposite ways, a correction of the client's copy is no travel, a vehicle first seen
- * under way starts its travel from nothing; and 240 moving tanks cost at most 10 % more traffic with the gear state.
+ * under way starts its travel from nothing; and 240 moving tanks cost at most 10 % more traffic with the gear state. Host and
+ * client each hear once of their own stuck group giving up its move (#170).
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSVehicleNetListenTest, "WorldDivide.Net.Vehicle.ListenServer", RTSTests::TestFlags)
 
@@ -652,6 +798,7 @@ bool FRTSVehicleNetListenTest::RunTest(const FString& Parameters)
 	TSharedRef<FSession> Session = MakeShared<FSession>();
 	AddTraffic(*this, Session);
 	AddDrives(*this, Session);
+	AddStuckFeedback(*this, Session);
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSStartNetSession(false));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetWaitForSession(this, Session));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetRunPhases(this, Session));
@@ -661,7 +808,7 @@ bool FRTSVehicleNetListenTest::RunTest(const FString& Parameters)
 
 /**
  * A dedicated server and two clients on L_TestMap, under 100 ms of round trip and about 2 % packet loss, at real time:
- * the same drives converge on both clients.
+ * the same drives converge on both clients, and each client hears once of its own stuck group giving up its move (#170).
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSVehicleNetDedicatedTest, "WorldDivide.Net.Vehicle.Dedicated", RTSTests::TestFlags)
 
@@ -677,6 +824,7 @@ bool FRTSVehicleNetDedicatedTest::RunTest(const FString& Parameters)
 	Session->bDedicated = true;
 	Session->ClientCount = 2;
 	AddDrives(*this, Session);
+	AddStuckFeedback(*this, Session);
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSStartNetSession(true));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetWaitForSession(this, Session));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetRunPhases(this, Session));
