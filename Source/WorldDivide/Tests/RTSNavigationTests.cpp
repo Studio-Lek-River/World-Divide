@@ -5,7 +5,9 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSWeaponComponent.h"
+#include "AIController.h"
 #include "Commands/RTSCommand.h"
+#include "Commands/RTSCommandDispatch.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Editor.h"
@@ -16,6 +18,8 @@
 #include "NavMesh/RecastNavMesh.h"
 #include "Navigation/RTSHullClearance.h"
 #include "Navigation/RTSMoveDestination.h"
+#include "Navigation/RTSMoveRequestSubsystem.h"
+#include "Navigation/PathFollowingComponent.h"
 #include "Navigation/RTSNavAgents.h"
 #include "Navigation/RTSPathSearch.h"
 #include "NavigationSystem.h"
@@ -2087,18 +2091,21 @@ namespace RTSNavigationTests
 {
 	/** Searches each long-path cost run makes per route and hull. */
 	constexpr int32 LongCostSearches = 20;
-	/** Units ordered across at once for the peak: a large selection. */
-	constexpr int32 LongCostGroup = 12;
 	/** No single search, long or unreachable, may take longer than this, in ms: MoveIntoObstacle.Cost's budget. */
 	constexpr double LongCostWorstMs = 5.0;
-	/** Nor the order that sends the whole group across, in ms: two frames' share at 60 fps. */
-	constexpr double LongCostPeakMs = 30.0;
+	/**
+	 * What queuing a group's requests may add to its order's call beyond the budget and one request's overrun, in ms: the
+	 * formation and a hundred queue entries.
+	 */
+	constexpr double LongCostQueueMs = 1.0;
+	/** Game seconds a group order may take until every unit has its path. */
+	constexpr double GroupResolveTimeout = 20.0;
 }
 
 /**
  * Times RTSPathSearch (#169) on L_LongPath for infantry and the tank: the short trip, the long route that needs the second
- * search, and the island that only a search of everything reachable proves cut off, with the nodes each visits; then the
- * order that sends a group of twelve on the short trip, and the one that sends it across, every unit searching twice.
+ * search, and the island that only a search of everything reachable proves cut off, with the nodes each visits. The group
+ * orders follow in FRTSNavMeasureGroupOrders (#174).
  */
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavMeasureLongPath, FAutomationTestBase*, Test, TSharedRef<RTSNavigationTests::FNavState>, State);
 bool FRTSNavMeasureLongPath::Update()
@@ -2144,35 +2151,223 @@ bool FRTSNavMeasureLongPath::Update()
 		Unit->Destroy();
 	}
 
-	TArray<ARTSUnit*> Group;
-	const float Pitch = 1.2f * LongVehicleSize.X;
-	for (int32 Index = 0; Index < LongCostGroup; ++Index)
-	{
-		URTSUnitData* Data = Index % 2 ? State->Tank : State->Infantry;
-		Group.Add(SpawnUnit(World, Data, Controller->GetTeamId(), LongPathStart + FVector(-(Index / 4) * Pitch, (Index % 4 - 1.5f) * Pitch, 0.f), 0.f));
-	}
-	auto TimeOrder = [&](const FVector& Target)
-	{
-		FRTSCommand Move;
-		Move.Type = ERTSCommandType::Move;
-		Move.TargetLocation = Target;
-		const double Begin = FPlatformTime::Seconds();
-		Controller->Server_IssueCommand(Group, Move);
-		return (FPlatformTime::Seconds() - Begin) * 1000.0;
-	};
-	const double ShortMs = TimeOrder(LongPathShort);
-	const double Ms = TimeOrder(LongPathGoal);
-	int32 Moving = 0;
-	for (ARTSUnit* Unit : Group)
-	{
-		Moving += Unit->GetQueuedCommandCount() > 0 ? 1 : 0;
-		Unit->Destroy();
-	}
-	Test->AddInfo(FString::Printf(TEXT("A group of %d ordered on the short trip: %.3f ms; across: %.3f ms, %d moving"), LongCostGroup,
-		ShortMs, Ms, Moving));
-	Test->TestEqual(TEXT("Units of the group that took the order"), Moving, LongCostGroup);
-	Test->TestTrue(*FString::Printf(TEXT("The group's order %.3f ms within %.1f ms"), Ms, LongCostPeakMs), Ms <= LongCostPeakMs);
 	return true;
+}
+
+namespace RTSNavigationTests
+{
+	URTSMoveRequestSubsystem* GetMoveRequests(UWorld& World)
+	{
+		return World.GetSubsystem<URTSMoveRequestSubsystem>();
+	}
+
+	/** Count units of Hulls in turn on a square grid around Center, a long hull and a bit apart. */
+	TArray<ARTSUnit*> SpawnGroup(UWorld& World, int32 TeamId, TConstArrayView<URTSUnitData*> Hulls, int32 Count, const FVector& Center)
+	{
+		TArray<ARTSUnit*> Group;
+		const float Pitch = 1.2f * LongVehicleSize.X;
+		const int32 Side = FMath::CeilToInt(FMath::Sqrt(static_cast<float>(Count)));
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			const FVector Offset(((Index / Side) - 0.5f * (Side - 1)) * Pitch, ((Index % Side) - 0.5f * (Side - 1)) * Pitch, 0.f);
+			Group.Add(SpawnUnit(World, Hulls[Index % Hulls.Num()], TeamId, Center + Offset, 0.f));
+		}
+		return Group;
+	}
+
+	/** Whether any of Units still waits for its move's path search (URTSMoveRequestSubsystem). */
+	bool AnyMoveRequestPending(TConstArrayView<TWeakObjectPtr<ARTSUnit>> Units)
+	{
+		return Units.ContainsByPredicate([](const TWeakObjectPtr<ARTSUnit>& Unit) { return Unit.IsValid() && Unit->IsMoveRequestPending(); });
+	}
+
+	/**
+	 * Empty when Unit drives a usable path: a full one, on the navmesh of its own agent, ending at the goal its order gave
+	 * it; else what is wrong.
+	 */
+	FString CheckUsablePath(const ARTSUnit& Unit)
+	{
+		const AAIController* AI = Unit.GetController<AAIController>();
+		const UPathFollowingComponent* PathFollowing = AI ? AI->GetPathFollowingComponent() : nullptr;
+		const FNavPathSharedPtr Path = PathFollowing ? PathFollowing->GetPath() : nullptr;
+		if (!Path.IsValid() || !Path->IsValid() || Path->GetPathPoints().IsEmpty() || PathFollowing->GetStatus() != EPathFollowingStatus::Moving)
+		{
+			return TEXT("no path under way");
+		}
+		if (Path->IsPartial())
+		{
+			return TEXT("a partial path");
+		}
+		if (Path->GetNavigationDataUsed() != RTSNavAgents::GetNavMesh(*Unit.GetWorld(), Unit.GetNavAgentPropertiesRef()))
+		{
+			return TEXT("a path on another agent's navmesh");
+		}
+		const TOptional<FVector> Goal = Unit.GetMoveGoal();
+		if (!Goal || FVector::Dist2D(Path->GetPathPoints().Last().Location, *Goal) > ArrivalRadius)
+		{
+			return TEXT("a path that ends away from its goal");
+		}
+		return FString();
+	}
+
+	/** One group order LongPath.Cost times over the frames it takes: Count units of the long-path hulls sent to Target. */
+	struct FGroupCost
+	{
+		const TCHAR* Route = TEXT("");
+		FVector Target = FVector::ZeroVector;
+		int32 Count = 0;
+		/** Every request has to run in the order's own frame. */
+		bool bAtOnce = false;
+	};
+
+	struct FGroupCostState
+	{
+		TArray<FGroupCost> Orders;
+		int32 Index = -1;
+		TArray<TWeakObjectPtr<ARTSUnit>> Units;
+		TArray<FVector> Slots;
+		double OrderMs = 0.0;
+		double OrderTime = 0.0;
+		uint64 OrderFrame = 0;
+		int64 SearchesAtStart = 0;
+		int64 RaisedAtStart = 0;
+		int32 RefusalsAtStart = 0;
+		/** Set once an order is checked: the next one waits a frame, so its own frame starts with the whole budget. */
+		bool bWaitFrame = false;
+		/** Real ms of the slowest frame since the order, whole frames; for the record. */
+		double LastFrameSeconds = 0.0;
+		double SlowestFrameMs = 0.0;
+	};
+}
+
+/**
+ * Group orders on L_LongPath under the move request budget (#174): 12, 50 and 100 units of the four long-path hulls
+ * (infantry, the tracked tank and M20, the wheeled flak truck) sent across, and 100 on the short trip. Each order is timed
+ * in its own call and then frame by frame until every unit has its path: no frame may spend more than
+ * rts.Nav.MoveRequestBudgetMs before its last request, nor the order's call more than that and one request; every unit
+ * ends up driving a full path on its own agent's navmesh to its own formation slot; one search per unit on the long route
+ * runs out of nodes at most once per navmesh; and the short trip runs every request in the order's frame.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_THREE_PARAMETER(FRTSNavMeasureGroupOrders, FAutomationTestBase*, Test, TSharedRef<RTSNavigationTests::FGroupCostState>, Cost,
+	TSharedRef<RTSNavigationTests::FNavState>, State);
+bool FRTSNavMeasureGroupOrders::Update()
+{
+	using namespace RTSNavigationTests;
+	ARTSPlayerController* Controller = GetController(*Test);
+	URTSMoveRequestSubsystem* Requests = Controller ? GetMoveRequests(*Controller->GetWorld()) : nullptr;
+	if (!Test->TestNotNull(TEXT("The move request subsystem"), Requests))
+	{
+		return true;
+	}
+	UWorld& World = *Controller->GetWorld();
+	const double Budget = URTSMoveRequestSubsystem::GetBudgetMs();
+
+	if (Cost->Index >= 0 && !Cost->bWaitFrame)
+	{
+		const double Now = FPlatformTime::Seconds();
+		Cost->SlowestFrameMs = FMath::Max(Cost->SlowestFrameMs, (Now - Cost->LastFrameSeconds) * 1000.0);
+		Cost->LastFrameSeconds = Now;
+		const FGroupCost& Order = Cost->Orders[Cost->Index];
+		const double Elapsed = World.GetTimeSeconds() - Cost->OrderTime;
+		if (AnyMoveRequestPending(Cost->Units) && Elapsed < GroupResolveTimeout)
+		{
+			return false;
+		}
+
+		const URTSMoveRequestSubsystem::FStats& Stats = Requests->GetStats();
+		const int64 Searches = RTSPathSearch::GetCounters().Searches - Cost->SearchesAtStart;
+		const int64 Raised = RTSPathSearch::GetCounters().RaisedStarts - Cost->RaisedAtStart;
+		const FString What = FString::Printf(TEXT("%d units on the %s"), Order.Count, Order.Route);
+		Test->TestFalse(*FString::Printf(TEXT("%s: every unit got its path within %.0f s"), *What, GroupResolveTimeout), AnyMoveRequestPending(Cost->Units));
+		int32 Usable = 0;
+		for (int32 Index = 0; Index < Cost->Units.Num(); ++Index)
+		{
+			const ARTSUnit* Unit = Cost->Units[Index].Get();
+			if (!Test->TestNotNull(*FString::Printf(TEXT("%s: unit %d is alive"), *What, Index), Unit))
+			{
+				continue;
+			}
+			const FString Problem = CheckUsablePath(*Unit);
+			const TOptional<FVector> Target = Unit->GetMoveTarget();
+			if (!Problem.IsEmpty())
+			{
+				Test->AddError(FString::Printf(TEXT("%s: %s drives %s"), *What, *DescribeUnit(*Unit->GetUnitData()), *Problem));
+			}
+			else if (!Target || FVector::Dist2D(*Target, Cost->Slots[Index]) > 1.f)
+			{
+				Test->AddError(FString::Printf(TEXT("%s: %s heads somewhere else than its formation slot"), *What, *DescribeUnit(*Unit->GetUnitData())));
+			}
+			else
+			{
+				++Usable;
+			}
+		}
+		Test->TestEqual(*FString::Printf(TEXT("%s: units driving a usable path to their own slot"), *What), Usable, Order.Count);
+		Test->TestEqual(*FString::Printf(TEXT("%s: refusals"), *What), Controller->GetOrderRefusalCount() - Cost->RefusalsAtStart, 0);
+		Test->AddInfo(FString::Printf(TEXT("%s: order call %.3f ms; path work %.2f ms in all over %d frames, peak frame %.3f ms (%.3f before its last ")
+			TEXT("request), worst request %.3f ms; %d run in the order's frame, %d later, %d stale; longest wait %d frames, %.2f s; %lld searches, ")
+			TEXT("%lld started raised; slowest whole frame %.2f ms"), *What, Cost->OrderMs, Stats.TotalMs, Stats.Frames, Stats.PeakFrameMs,
+			Stats.MaxSpentBeforeLastMs, Stats.WorstRequestMs, Stats.RunAtOnce, Stats.RunLater, Stats.Stale, Stats.MaxFramesWaited,
+			Stats.MaxSecondsWaited, Searches, Raised, Cost->SlowestFrameMs));
+		Test->TestTrue(*FString::Printf(TEXT("%s: no frame spent more than the %.1f ms budget before its last request (%.3f ms)"), *What, Budget,
+			Stats.MaxSpentBeforeLastMs), Stats.MaxSpentBeforeLastMs <= Budget);
+		Test->TestTrue(*FString::Printf(TEXT("%s: worst request %.3f ms within %.1f ms"), *What, Stats.WorstRequestMs, LongCostWorstMs),
+			Stats.WorstRequestMs <= LongCostWorstMs);
+		Test->TestTrue(*FString::Printf(TEXT("%s: peak frame %.3f ms within the budget and one request"), *What, Stats.PeakFrameMs),
+			Stats.PeakFrameMs <= Budget + Stats.WorstRequestMs);
+		Test->TestTrue(*FString::Printf(TEXT("%s: the order's call %.3f ms within the budget, one request and %.1f ms of queuing"), *What,
+			Cost->OrderMs, LongCostQueueMs), Cost->OrderMs <= Budget + Stats.WorstRequestMs + LongCostQueueMs);
+		Test->TestTrue(*FString::Printf(TEXT("%s: the first unit started in the order's frame"), *What), Stats.RunAtOnce >= 1);
+		if (Order.bAtOnce)
+		{
+			Test->TestEqual(*FString::Printf(TEXT("%s: requests left for later frames"), *What), Stats.RunLater, 0);
+		}
+		else
+		{
+			// One search per unit, and a second only for the first unit on each navmesh: the hint starts the rest raised.
+			const int32 Navmeshes = RTSNavAgents::GetAgents().Num();
+			Test->TestTrue(*FString::Printf(TEXT("%s: %lld searches for %d units"), *What, Searches, Order.Count), Searches <= Order.Count + Navmeshes);
+			Test->TestTrue(*FString::Printf(TEXT("%s: %lld searches started raised"), *What, Raised), Raised >= Order.Count - Navmeshes);
+		}
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : Cost->Units)
+		{
+			if (Unit.IsValid())
+			{
+				Unit->Destroy();
+			}
+		}
+		Cost->Units.Reset();
+		Cost->bWaitFrame = true;
+		return false;
+	}
+	if (Cost->bWaitFrame)
+	{
+		Cost->bWaitFrame = false;
+	}
+
+	++Cost->Index;
+	if (!Cost->Orders.IsValidIndex(Cost->Index))
+	{
+		return true;
+	}
+	const FGroupCost& Next = Cost->Orders[Cost->Index];
+	const TArray<ARTSUnit*> Group = SpawnGroup(World, Controller->GetTeamId(), GetLongPathHulls(*State), Next.Count, LongPathStart);
+	Cost->Units = TArray<TWeakObjectPtr<ARTSUnit>>(Group);
+	Cost->Slots = RTSCommands::PlanFormation(Group, Next.Target);
+	Requests->ResetStats();
+	Cost->SearchesAtStart = RTSPathSearch::GetCounters().Searches;
+	Cost->RaisedAtStart = RTSPathSearch::GetCounters().RaisedStarts;
+	Cost->RefusalsAtStart = Controller->GetOrderRefusalCount();
+	FRTSCommand Move;
+	Move.Type = ERTSCommandType::Move;
+	Move.TargetLocation = Next.Target;
+	const double Begin = FPlatformTime::Seconds();
+	Controller->Server_IssueCommand(Group, Move);
+	Cost->LastFrameSeconds = FPlatformTime::Seconds();
+	Cost->OrderMs = (Cost->LastFrameSeconds - Begin) * 1000.0;
+	Cost->OrderTime = World.GetTimeSeconds();
+	Cost->SlowestFrameMs = 0.0;
+	return false;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavLongPathCostTest, "WorldDivide.Navigation.LongPath.Cost", RTSTests::TestFlags)
@@ -2188,6 +2383,485 @@ bool FRTSNavLongPathCostTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavMeasureLongPath(this, State));
+	const TSharedRef<FGroupCostState> Cost = MakeShared<FGroupCostState>();
+	for (const int32 Count : { 12, 50, 100 })
+	{
+		Cost->Orders.Add({ TEXT("long route"), LongPathGoal, Count, false });
+	}
+	Cost->Orders.Add({ TEXT("short trip"), LongPathShort, 100, true });
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavMeasureGroupOrders(this, Cost, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+/**
+ * Group orders across L_LongPath under the move request budget (#174), with the drives' obstacle, arrival and refusal
+ * checks: a group of 100 infantry closes in on the far side; a group of twelve of the four long-path hulls attack-moves on
+ * the short trip and, Shift-queued, across.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavLongPathGroupDriveTest, "WorldDivide.Navigation.LongPath.GroupDrive", RTSTests::TestFlags)
+
+bool FRTSNavLongPathGroupDriveTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!OpenLongPathMap(*this, State))
+	{
+		return false;
+	}
+	const TArray<URTSUnitData*> Hulls = GetLongPathHulls(*State);
+	const float Pitch = 1.2f * LongVehicleSize.X;
+	auto AddGroup = [&](FDrive& Drive, TConstArrayView<URTSUnitData*> Datas, int32 Count)
+	{
+		const int32 Side = FMath::CeilToInt(FMath::Sqrt(static_cast<float>(Count)));
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			const FVector Offset(((Index / Side) - 0.5f * (Side - 1)) * Pitch, ((Index % Side) - 0.5f * (Side - 1)) * Pitch, 0.f);
+			Drive.Units.Add({ Datas[Index % Datas.Num()], LongPathStart + Offset, 0.f });
+		}
+	};
+
+	// Infantry: a hundred vehicles jam the pocket's mouth and the 12 m gap, budget or none (see PERFORMANCE_RESULTS.md, #174).
+	FDrive Hundred;
+	Hundred.Name = TEXT("A group of 100 infantry moved across the pocket");
+	Hundred.Target = LongPathGoal;
+	Hundred.bGroupOrder = true;
+	Hundred.Timeout = LongDriveTimeout;
+	AddGroup(Hundred, { State->Infantry }, 100);
+	State->Drives.Add(Hundred);
+
+	FDrive Queued;
+	Queued.Name = TEXT("A group of twelve attack-moved on the short trip, then queued across");
+	Queued.Order = ERTSCommandType::AttackMove;
+	Queued.Target = LongPathShort;
+	Queued.Queued = { LongPathGoal };
+	Queued.bGroupOrder = true;
+	Queued.Timeout = LongDriveTimeout;
+	AddGroup(Queued, Hulls, 12);
+	State->Drives.Add(Queued);
+
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavRunDrives(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+namespace RTSNavigationTests
+{
+	/** A budget so small that every frame runs one request: whatever a group orders waits for many frames. */
+	constexpr float OneRequestPerFrameMs = 0.001f;
+	/** Game seconds a pending-request phase may take. */
+	constexpr double PendingPhaseTimeout = 30.0;
+
+	/** The steps of LongPath.Pending, each called every frame until it returns true, with the seconds since it began. */
+	struct FPendingState
+	{
+		TSharedPtr<FNavState> Nav;
+		TArray<TPair<FString, TFunction<bool(double)>>> Phases;
+		int32 Index = 0;
+		double PhaseStart = -1.0;
+		/** The units of the phase at hand, and what it measures. */
+		TArray<TWeakObjectPtr<ARTSUnit>> Units;
+		TArray<TWeakObjectPtr<ARTSUnit>> Others;
+		TArray<FVector> Starts;
+		TArray<FVector> Slots;
+		TArray<int32> Resolved;
+		int32 RefusalsAtStart = 0;
+		float SavedBudget = 0.f;
+	};
+
+	IConsoleVariable* GetBudgetVariable()
+	{
+		return IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Nav.MoveRequestBudgetMs"));
+	}
+
+	void DestroyAll(TArray<TWeakObjectPtr<ARTSUnit>>& Units)
+	{
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : Units)
+		{
+			if (Unit.IsValid())
+			{
+				Unit->Destroy();
+			}
+		}
+		Units.Reset();
+	}
+
+	void Order(ARTSPlayerController& Controller, TConstArrayView<TWeakObjectPtr<ARTSUnit>> Units, ERTSCommandType Type, const FVector& Target,
+		bool bQueue = false)
+	{
+		TArray<ARTSUnit*> Group;
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : Units)
+		{
+			if (Unit.IsValid())
+			{
+				Group.Add(Unit.Get());
+			}
+		}
+		FRTSCommand Command;
+		Command.Type = Type;
+		Command.TargetLocation = Target;
+		Command.bQueue = bQueue;
+		Controller.Server_IssueCommand(Group, Command);
+	}
+
+	TArray<TWeakObjectPtr<ARTSUnit>> SpawnWeakGroup(UWorld& World, int32 TeamId, TConstArrayView<URTSUnitData*> Hulls, int32 Count, const FVector& Center)
+	{
+		return TArray<TWeakObjectPtr<ARTSUnit>>(SpawnGroup(World, TeamId, Hulls, Count, Center));
+	}
+
+	TArray<FVector> PlanSlots(TConstArrayView<TWeakObjectPtr<ARTSUnit>> Units, const FVector& Target)
+	{
+		TArray<ARTSUnit*> Group;
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : Units)
+		{
+			Group.Add(Unit.Get());
+		}
+		return RTSCommands::PlanFormation(Group, Target);
+	}
+
+	void AddPendingPhases(FAutomationTestBase& Test, const TSharedRef<FPendingState>& Pending)
+	{
+		auto World = []() -> UWorld& { return *AutomationCommon::GetAnyGameWorld(); };
+		auto Controller = [&Test]() { return GetController(Test); };
+		auto Requests = [World]() { return GetMoveRequests(World()); };
+		auto Hulls = [Pending]() { return GetLongPathHulls(*Pending->Nav); };
+
+		Pending->Phases.Add({ TEXT("Cut the budget to one request a frame"), [Pending](double)
+		{
+			IConsoleVariable* Budget = GetBudgetVariable();
+			Pending->SavedBudget = Budget ? Budget->GetFloat() : 2.f;
+			if (Budget)
+			{
+				Budget->Set(OneRequestPerFrameMs, ECVF_SetByCode);
+			}
+			return true;
+		} });
+
+		// 1. Unreachable: every unit refused, the player told once though the refusals take longer than the cooldown.
+		Pending->Phases.Add({ TEXT("Order 50 infantry onto the island"), [=, &Test](double)
+		{
+			Pending->Units = SpawnWeakGroup(World(), Controller()->GetTeamId(), { Pending->Nav->Infantry }, 50, LongPathStart);
+			Pending->Starts.Reset();
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Pending->Units)
+			{
+				Pending->Starts.Add(Unit->GetActorLocation());
+			}
+			Pending->RefusalsAtStart = Controller()->GetOrderRefusalCount();
+			Requests()->ResetStats();
+			Order(*Controller(), Pending->Units, ERTSCommandType::Move, IslandCenter);
+			return true;
+		} });
+		Pending->Phases.Add({ TEXT("The island group is refused"), [=, &Test](double Elapsed)
+		{
+			if (AnyMoveRequestPending(Pending->Units) || Elapsed < 0.5)
+			{
+				return false;
+			}
+			const URTSMoveRequestSubsystem::FStats& Stats = Requests()->GetStats();
+			Test.TestTrue(*FString::Printf(TEXT("Island group: its requests ran over %d frames, %.2f s, longer than the refusal cooldown"), Stats.Frames,
+				Stats.MaxSecondsWaited), Stats.MaxSecondsWaited > ARTSPlayerController::OrderRefusalCooldown);
+			for (int32 Index = 0; Index < Pending->Units.Num(); ++Index)
+			{
+				const ARTSUnit* Unit = Pending->Units[Index].Get();
+				if (Test.TestNotNull(TEXT("Island group: a unit is alive"), Unit))
+				{
+					Test.TestEqual(TEXT("Island group: a unit dropped its order"), Unit->GetQueuedCommandCount(), 0);
+					Test.TestTrue(TEXT("Island group: a unit stayed put"), FVector::Dist2D(Unit->GetActorLocation(), Pending->Starts[Index]) <= RefusedDrift);
+				}
+			}
+			Test.TestEqual(TEXT("Island group: refusals the player received"), Controller()->GetOrderRefusalCount() - Pending->RefusalsAtStart, 1);
+			DestroyAll(Pending->Units);
+			return true;
+		} });
+
+		// 2. Stop while the paths wait: every waiting request goes stale, nobody moves off.
+		Pending->Phases.Add({ TEXT("Order 30 across, then stop them"), [=, &Test](double Elapsed)
+		{
+			if (Pending->Units.IsEmpty())
+			{
+				Pending->Units = SpawnWeakGroup(World(), Controller()->GetTeamId(), Hulls(), 30, LongPathStart);
+				Requests()->ResetStats();
+				Order(*Controller(), Pending->Units, ERTSCommandType::Move, LongPathGoal);
+				return false;
+			}
+			Test.TestTrue(TEXT("Stop: requests still wait when the stop comes"), AnyMoveRequestPending(Pending->Units));
+			Order(*Controller(), Pending->Units, ERTSCommandType::Stop, FVector::ZeroVector);
+			Test.TestFalse(TEXT("Stop: no request waits after it"), AnyMoveRequestPending(Pending->Units));
+			return true;
+		} });
+		Pending->Phases.Add({ TEXT("The stopped group stands"), [=, &Test](double Elapsed)
+		{
+			if (Elapsed < 1.0)
+			{
+				return false;
+			}
+			const URTSMoveRequestSubsystem::FStats& Stats = Requests()->GetStats();
+			Test.TestTrue(*FString::Printf(TEXT("Stop: %d requests skipped as stale"), Stats.Stale), Stats.Stale >= 25);
+			Test.TestEqual(TEXT("Stop: requests waiting"), Requests()->GetPendingCount(), 0);
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Pending->Units)
+			{
+				const AAIController* AI = Unit.IsValid() ? Unit->GetController<AAIController>() : nullptr;
+				if (Test.TestNotNull(TEXT("Stop: a unit is alive"), AI))
+				{
+					Test.TestEqual(TEXT("Stop: a unit's orders"), Unit->GetQueuedCommandCount(), 0);
+					Test.TestTrue(TEXT("Stop: a unit is not moving"), AI->GetMoveStatus() == EPathFollowingStatus::Idle);
+				}
+			}
+			DestroyAll(Pending->Units);
+			return true;
+		} });
+
+		// 3. Orders replaced frame after frame: only the last one's paths are used.
+		Pending->Phases.Add({ TEXT("Order 30 across, onto the island, then on the short trip"), [=, &Test](double Elapsed)
+		{
+			if (Pending->Units.IsEmpty())
+			{
+				Pending->Units = SpawnWeakGroup(World(), Controller()->GetTeamId(), Hulls(), 30, LongPathStart);
+				Pending->RefusalsAtStart = Controller()->GetOrderRefusalCount();
+				Pending->Resolved.Reset();
+				Order(*Controller(), Pending->Units, ERTSCommandType::Move, LongPathGoal);
+				return false;
+			}
+			Pending->Resolved.Add(0);
+			if (Pending->Resolved.Num() == 1)
+			{
+				Order(*Controller(), Pending->Units, ERTSCommandType::Move, IslandCenter);
+				return false;
+			}
+			Pending->Slots = PlanSlots(Pending->Units, LongPathShort);
+			Order(*Controller(), Pending->Units, ERTSCommandType::Move, LongPathShort);
+			return true;
+		} });
+		Pending->Phases.Add({ TEXT("The replaced group drives the last order"), [=, &Test](double)
+		{
+			if (AnyMoveRequestPending(Pending->Units))
+			{
+				return false;
+			}
+			for (int32 Index = 0; Index < Pending->Units.Num(); ++Index)
+			{
+				const ARTSUnit* Unit = Pending->Units[Index].Get();
+				if (!Test.TestNotNull(TEXT("Replaced orders: a unit is alive"), Unit))
+				{
+					continue;
+				}
+				const FString Problem = CheckUsablePath(*Unit);
+				Test.TestTrue(*FString::Printf(TEXT("Replaced orders: %s drives a usable path (%s)"), *DescribeUnit(*Unit->GetUnitData()), *Problem),
+					Problem.IsEmpty());
+				const TOptional<FVector> Target = Unit->GetMoveTarget();
+				Test.TestTrue(TEXT("Replaced orders: a unit heads for its slot of the last order"), Target && FVector::Dist2D(*Target, Pending->Slots[Index]) <= 1.f);
+			}
+			// At most the island order's one request that ran in its own frame, before the short trip replaced it.
+			Test.TestTrue(TEXT("Replaced orders: at most one refusal"), Controller()->GetOrderRefusalCount() - Pending->RefusalsAtStart <= 1);
+			DestroyAll(Pending->Units);
+			return true;
+		} });
+
+		// 4. Units destroyed while their requests wait.
+		Pending->Phases.Add({ TEXT("Order 20 across, then destroy half of them"), [=, &Test](double)
+		{
+			if (Pending->Units.IsEmpty())
+			{
+				Pending->Units = SpawnWeakGroup(World(), Controller()->GetTeamId(), Hulls(), 20, LongPathStart);
+				Order(*Controller(), Pending->Units, ERTSCommandType::Move, LongPathGoal);
+				return false;
+			}
+			for (int32 Index = 0; Index < Pending->Units.Num(); Index += 2)
+			{
+				Pending->Units[Index]->Destroy();
+			}
+			return true;
+		} });
+		Pending->Phases.Add({ TEXT("The survivors get their paths"), [=, &Test](double)
+		{
+			if (AnyMoveRequestPending(Pending->Units))
+			{
+				return false;
+			}
+			int32 Alive = 0;
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Pending->Units)
+			{
+				if (IsValid(Unit.Get()))
+				{
+					++Alive;
+					const FString Problem = CheckUsablePath(*Unit);
+					Test.TestTrue(*FString::Printf(TEXT("Destroyed units: a survivor drives a usable path (%s)"), *Problem), Problem.IsEmpty());
+				}
+			}
+			Test.TestEqual(TEXT("Destroyed units: survivors"), Alive, 10);
+			Test.TestEqual(TEXT("Destroyed units: requests waiting"), Requests()->GetPendingCount(), 0);
+			DestroyAll(Pending->Units);
+			return true;
+		} });
+
+		// 5. A Shift-queued leg behind a waiting move: the move starts once its path comes, the leg stays queued.
+		Pending->Phases.Add({ TEXT("Order 12 across and queue the short trip"), [=, &Test](double)
+		{
+			Pending->Units = SpawnWeakGroup(World(), Controller()->GetTeamId(), Hulls(), 12, LongPathStart);
+			Pending->Slots = PlanSlots(Pending->Units, LongPathGoal);
+			Order(*Controller(), Pending->Units, ERTSCommandType::Move, LongPathGoal);
+			Order(*Controller(), Pending->Units, ERTSCommandType::Move, LongPathShort, /*bQueue*/ true);
+			return true;
+		} });
+		Pending->Phases.Add({ TEXT("The queued group starts its first leg"), [=, &Test](double)
+		{
+			if (AnyMoveRequestPending(Pending->Units))
+			{
+				return false;
+			}
+			for (int32 Index = 0; Index < Pending->Units.Num(); ++Index)
+			{
+				const ARTSUnit* Unit = Pending->Units[Index].Get();
+				if (Test.TestNotNull(TEXT("Queued: a unit is alive"), Unit))
+				{
+					const FString Problem = CheckUsablePath(*Unit);
+					Test.TestTrue(*FString::Printf(TEXT("Queued: a unit drives a usable path (%s)"), *Problem), Problem.IsEmpty());
+					const TOptional<FVector> Target = Unit->GetMoveTarget();
+					Test.TestTrue(TEXT("Queued: a unit heads for its slot of the first leg"), Target && FVector::Dist2D(*Target, Pending->Slots[Index]) <= 1.f);
+					Test.TestEqual(TEXT("Queued: a unit's orders"), Unit->GetQueuedCommandCount(), 2);
+				}
+			}
+			DestroyAll(Pending->Units);
+			return true;
+		} });
+
+		// 6. Two issuers ordering at once take turns: neither waits for the other's whole group.
+		Pending->Phases.Add({ TEXT("A player and an AI each order 20 across"), [=, &Test](double)
+		{
+			Pending->Units = SpawnWeakGroup(World(), Controller()->GetTeamId(), Hulls(), 20, LongPathStart + FVector(0.f, 3000.f, 0.f));
+			Pending->Others = SpawnWeakGroup(World(), Controller()->GetTeamId(), Hulls(), 20, LongPathStart - FVector(0.f, 3000.f, 0.f));
+			Pending->Resolved.Reset();
+			Order(*Controller(), Pending->Units, ERTSCommandType::Move, LongPathGoal);
+			// As an AI player orders: through Dispatch, with no player to tell of a refusal.
+			TArray<ARTSUnit*> Group;
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Pending->Others)
+			{
+				Group.Add(Unit.Get());
+			}
+			FRTSCommand Move;
+			Move.Type = ERTSCommandType::Move;
+			Move.TargetLocation = LongPathGoal + FVector(0.f, -2000.f, 0.f);
+			RTSCommands::Dispatch(Group, Move);
+			return true;
+		} });
+		Pending->Phases.Add({ TEXT("Both groups get their paths in turn"), [=, &Test](double)
+		{
+			// Resolved records, in order, which group each newly started unit belongs to: 0 the player's, 1 the AI's.
+			for (int32 Group = 0; Group < 2; ++Group)
+			{
+				for (const TWeakObjectPtr<ARTSUnit>& Unit : Group == 0 ? Pending->Units : Pending->Others)
+				{
+					if (Unit.IsValid() && !Unit->IsMoveRequestPending() && !Unit->Tags.Contains(TEXT("Resolved")))
+					{
+						Unit->Tags.Add(TEXT("Resolved"));
+						Pending->Resolved.Add(Group);
+					}
+				}
+			}
+			if (AnyMoveRequestPending(Pending->Units) || AnyMoveRequestPending(Pending->Others))
+			{
+				return false;
+			}
+			int32 PlayerFirst = 0;
+			for (int32 Index = 0; Index < 20 && Pending->Resolved.IsValidIndex(Index); ++Index)
+			{
+				PlayerFirst += Pending->Resolved[Index] == 0 ? 1 : 0;
+			}
+			Test.TestTrue(*FString::Printf(TEXT("Two issuers: of the first 20 units to start, %d are the player's and %d the AI's"), PlayerFirst, 20 - PlayerFirst),
+				PlayerFirst >= 8 && PlayerFirst <= 12);
+			for (TArray<TWeakObjectPtr<ARTSUnit>>* Units : { &Pending->Units, &Pending->Others })
+			{
+				for (const TWeakObjectPtr<ARTSUnit>& Unit : *Units)
+				{
+					if (Test.TestNotNull(TEXT("Two issuers: a unit is alive"), Unit.Get()))
+					{
+						const FString Problem = CheckUsablePath(*Unit);
+						Test.TestTrue(*FString::Printf(TEXT("Two issuers: a unit drives a usable path (%s)"), *Problem), Problem.IsEmpty());
+					}
+				}
+				DestroyAll(*Units);
+			}
+			return true;
+		} });
+
+		Pending->Phases.Add({ TEXT("Restore the budget"), [Pending](double)
+		{
+			if (IConsoleVariable* Budget = GetBudgetVariable())
+			{
+				Budget->Set(Pending->SavedBudget, ECVF_SetByCode);
+			}
+			return true;
+		} });
+	}
+}
+
+/** Gives rts.Nav.MoveRequestBudgetMs its default back, whatever a phase that cut it left behind. */
+DEFINE_LATENT_AUTOMATION_COMMAND(FRTSNavRestoreBudget);
+bool FRTSNavRestoreBudget::Update()
+{
+	if (IConsoleVariable* Budget = RTSNavigationTests::GetBudgetVariable())
+	{
+		Budget->Set(URTSMoveRequestSubsystem::DefaultBudgetMs, ECVF_SetByCode);
+	}
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavRunPendingPhases, FAutomationTestBase*, Test, TSharedRef<RTSNavigationTests::FPendingState>, Pending);
+bool FRTSNavRunPendingPhases::Update()
+{
+	using namespace RTSNavigationTests;
+	UWorld* World = AutomationCommon::GetAnyGameWorld();
+	if (!World || !GetController(*Test) || !Test->TestNotNull(TEXT("The move request subsystem"), GetMoveRequests(*World))
+		|| !Pending->Phases.IsValidIndex(Pending->Index))
+	{
+		return true;
+	}
+	const double Now = World->GetTimeSeconds();
+	if (Pending->PhaseStart < 0.0)
+	{
+		Pending->PhaseStart = Now;
+	}
+	TPair<FString, TFunction<bool(double)>>& Phase = Pending->Phases[Pending->Index];
+	if (Phase.Value(Now - Pending->PhaseStart))
+	{
+		++Pending->Index;
+		Pending->PhaseStart = -1.0;
+		return !Pending->Phases.IsValidIndex(Pending->Index);
+	}
+	if (Now - Pending->PhaseStart > PendingPhaseTimeout)
+	{
+		Test->AddError(FString::Printf(TEXT("%s did not finish in %.0f s"), *Phase.Key, PendingPhaseTimeout));
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Move requests that wait for their turn (#174), with the budget cut to one request a frame so every group waits:
+ * 50 infantry sent onto the island are all refused, stay put, and the player hears of it once, though the refusals take
+ * longer than the cooldown; a Stop makes 30 waiting requests stale and nobody moves; orders replaced on the next frames
+ * leave only the last one's paths; units destroyed while they wait are skipped and the rest get their paths; a Shift-queued
+ * leg waits behind its group's first leg; and a player's and an AI's groups ordered at once start in turn.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavLongPathPendingTest, "WorldDivide.Navigation.LongPath.Pending", RTSTests::TestFlags)
+
+bool FRTSNavLongPathPendingTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!OpenLongPathMap(*this, State))
+	{
+		return false;
+	}
+	const TSharedRef<FPendingState> Pending = MakeShared<FPendingState>();
+	Pending->Nav = State;
+	AddPendingPhases(*this, Pending);
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavRunPendingPhases(this, Pending));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavRestoreBudget());
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

@@ -257,12 +257,13 @@ RTSLocomotion::FCommand URTSUnitMovement::MakeCommand(float DeltaTime)
 		Guidance = RTSLocomotion::FGuidanceState();
 	}
 	// Backed off from what stopped it, a track faces its new path on the spot before it drives: from a standstill both
-	// tracks speed up alike, so it would set off straight on its old heading, back into the same corner (#173).
+	// tracks speed up alike, so it would set off straight on its old heading, back into the same corner (#173). The new path
+	// may come frames after the back-off, once its search had its turn (URTSMoveRequestSubsystem, #174).
 	if (bMoving && bFaceAfterBackOff)
 	{
 		Guidance.bPivoting = true;
+		bFaceAfterBackOff = false;
 	}
-	bFaceAfterBackOff = false;
 
 	RTSLocomotion::FGuidanceInput Input;
 	const FTransform& Pose = UpdatedComponent->GetComponentTransform();

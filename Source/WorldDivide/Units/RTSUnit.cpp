@@ -24,6 +24,7 @@
 #include "NavigationSystem.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "Navigation/RTSMoveDestination.h"
+#include "Navigation/RTSMoveRequestSubsystem.h"
 #include "Navigation/RTSNavAgents.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/RTSPlayerController.h"
@@ -1268,6 +1269,7 @@ void ARTSUnit::StartNextCommand()
 
 void ARTSUnit::ClearCommands()
 {
+	CancelMoveRequest();
 	for (FRTSCommand& Command : CommandQueue)
 	{
 		BuilderComponent->RefundOrder(Command);
@@ -1278,6 +1280,7 @@ void ARTSUnit::ClearCommands()
 
 void ARTSUnit::PopCommand()
 {
+	CancelMoveRequest();
 	BuilderComponent->RefundOrder(CommandQueue[0]);
 	CommandQueue.RemoveAt(0);
 	BuilderComponent->UpdatePlannedSites(CommandQueue);
@@ -1323,17 +1326,84 @@ ERTSMoveRequest ARTSUnit::RequestMove(AAIController& AI, const FVector& Location
 		? ERTSMoveRequest::Moving : ERTSMoveRequest::AtGoal;
 }
 
+bool ARTSUnit::StartMoveRequest(AAIController& AI, bool bTellRefusal)
+{
+	URTSMoveRequestSubsystem* Requests = GetWorld()->GetSubsystem<URTSMoveRequestSubsystem>();
+	const FRTSCommand& Command = CommandQueue[0];
+	if (!Requests)
+	{
+		const ERTSMoveRequest Request = RequestMove(AI, Command.TargetLocation);
+		if (Request == ERTSMoveRequest::Refused && bTellRefusal)
+		{
+			ARTSPlayerController::NotifyOrderRefused(Command.Issuer, Command.TargetLocation, Command.OrderId);
+		}
+		return Request == ERTSMoveRequest::Moving;
+	}
+
+	// Copied before the request runs: it may drop this order and start the next.
+	const int32 OrderId = Command.OrderId;
+	const ARTSPlayerState* Issuer = Command.Issuer;
+	MoveGoal.Reset();
+	MoveTarget.Reset();
+	MoveRequestTicket = MoveRequestTicket == MAX_uint32 ? 1 : MoveRequestTicket + 1;
+	const uint32 Ticket = MoveRequestTicket;
+	bMoveRequestPending = true;
+	bMoveRequestTellsRefusal = bTellRefusal;
+	Requests->Request(*this, Ticket, OrderId, Issuer);
+	if (IsMoveRequestCurrent(Ticket) && AI.GetMoveStatus() != EPathFollowingStatus::Idle)
+	{
+		// Waiting for its turn: the replaced move ends here, and NotifyMoveFinished leaves the waiting order alone.
+		AI.StopMovement();
+	}
+	return true;
+}
+
+void ARTSUnit::CancelMoveRequest()
+{
+	if (bMoveRequestPending)
+	{
+		bMoveRequestPending = false;
+		MoveRequestTicket = MoveRequestTicket == MAX_uint32 ? 1 : MoveRequestTicket + 1;
+	}
+}
+
+void ARTSUnit::RunMoveRequest()
+{
+	check(HasAuthority());
+
+	bMoveRequestPending = false;
+	AAIController* AI = GetController<AAIController>();
+	// After the match nothing starts; the order stays, as every other does.
+	if (!AI || CommandQueue.IsEmpty() || ARTSGameState::IsMatchOver(*GetWorld()))
+	{
+		return;
+	}
+	const FRTSCommand& Command = CommandQueue[0];
+	if (Command.Type != ERTSCommandType::Move && Command.Type != ERTSCommandType::AttackMove)
+	{
+		return;
+	}
+	const FVector Target = Command.TargetLocation;
+	const ERTSMoveRequest Request = RequestMove(*AI, Target);
+	if (Request == ERTSMoveRequest::Refused && bMoveRequestTellsRefusal)
+	{
+		ARTSPlayerController::NotifyOrderRefused(CommandQueue[0].Issuer, Target, CommandQueue[0].OrderId);
+	}
+	if (Request != ERTSMoveRequest::Moving)
+	{
+		// Refused, or already standing at its goal.
+		PopCommand();
+		StartNextCommand();
+	}
+}
+
 bool ARTSUnit::StartCommand(AAIController& AI, FRTSCommand& Command)
 {
 	if (Command.Type == ERTSCommandType::Move || Command.Type == ERTSCommandType::AttackMove)
 	{
-		const ERTSMoveRequest Request = RequestMove(AI, Command.TargetLocation);
-		if (Request == ERTSMoveRequest::Refused)
-		{
-			ARTSPlayerController::NotifyOrderRefused(Command.Issuer, Command.TargetLocation);
-		}
-		return Request == ERTSMoveRequest::Moving;
+		return StartMoveRequest(AI, /*bTellRefusal*/ true);
 	}
+	CancelMoveRequest();
 	MoveGoal.Reset();
 	MoveTarget.Reset();
 
@@ -1464,8 +1534,8 @@ void ARTSUnit::UpdateAttackMoveOrder()
 		return;
 	}
 	AAIController* AI = GetController<AAIController>();
-	// A move held short of a new building waits for ReleaseHold, which paths it again.
-	if (!AI || IsMoveHeld())
+	// A move held short of a new building waits for ReleaseHold, which paths it again; a waiting one for its search.
+	if (!AI || IsMoveHeld() || bMoveRequestPending)
 	{
 		return;
 	}
@@ -1484,9 +1554,9 @@ void ARTSUnit::UpdateAttackMoveOrder()
 			bStoppingToFight = false;
 		}
 	}
-	else if (!bMoving && RequestMove(*AI, CommandQueue[0].TargetLocation) != ERTSMoveRequest::Moving)
+	else if (!bMoving && !StartMoveRequest(*AI, /*bTellRefusal*/ false))
 	{
-		// Already at the target, or no way left there.
+		// Already at the target, or no way left there; a request that waits ends the order the same way when it runs.
 		PopCommand();
 		StartNextCommand();
 	}
@@ -1511,6 +1581,11 @@ void ARTSUnit::NotifyMoveFinished(const FPathFollowingResult& Result)
 	if (bRequestingMove)
 	{
 		bMoveFinishedDuringRequest = true;
+		return;
+	}
+	// The move a waiting request replaced ended; the order waits for its own path (StartMoveRequest).
+	if (bMoveRequestPending)
+	{
 		return;
 	}
 	// Stopped by the end of the match: the order is neither finished nor dropped, so nothing is popped or refunded.

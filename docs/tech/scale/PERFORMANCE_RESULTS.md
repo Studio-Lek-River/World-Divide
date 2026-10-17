@@ -755,3 +755,96 @@ Every row is inside the run-to-run spread of about 0.6 ms, and the locomotion bu
 - **`WorldDivide.Navigation.ThinWalls.Drive`**, from a session's first hull fit, with the obstacle, reversal (at most two switches), arrival and refusal checks: the M20, the tank and the flak truck each round the free wall's end both ways, in a hairpin, and round the junction both ways; a group of six rounds the end on one order. All arrive, none comes more than 2 cm into a wall, and no move is given up.
 - `WorldDivide.Navigation.HullClearance.*`, `MoveIntoObstacle.*`, `LongPath.*`, the vehicle movement, avoidance and `WorldDivide.Net.Vehicle.*` tests, and the full run: 243 of 243 pass.
 
+## #174 (path-search cost of large group orders)
+
+Same machine and build configuration as #173, on 2026-10-17. Measurements come from `WorldDivide.Navigation.LongPath.Cost` (L_LongPath, fixed 30 Hz step, `-nullrhi`). The movement gate is `ue.ps1 -Task bench -Long -Unit DA_TestM20Guardian,DA_TestTank -Compare -Baseline a4e8364`, against the same OUTDATED baseline as #169 and #173.
+
+### Baseline (f4925cd, before)
+
+Each group order ran every unit's path search and hull fit in the frame of the order. These numbers come from timers added to `Server_IssueCommand`, `RTSPathSearch::FindFullPath`, `RTSHullClearance::AdjustPath` and the destination search for one measuring run. The timers were then taken out again. The mixed group takes infantry, the tracked tank and M20, and the wheeled flak truck in turn.
+
+| Group | Route | Order frame ms | Searches | Search ms (wasted 2048-node first pass) | Hull fit ms |
+|---|---|---:|---:|---:|---:|
+| 12 mixed | long | 10.9 | 24 | 9.3 (2.9) | 1.5 |
+| 50 mixed | long | 48.6 | 100 | 41.2 (12.3) | 6.7 |
+| 100 mixed | long | 109.3 | 200 | 85.0 (24.9) | 23.0 |
+| 100 infantry | long | 76.8 | 200 | 66.3 (24.9) | 9.4 |
+| 100 tanks | long | 121.7 | 200 | 85.7 (23.5) | 34.6 |
+| 100 flak trucks | long | 106.4 | 200 | 88.2 (24.0) | 16.9 |
+| 100 mixed | short trip | 0.7 | 100 | 0.23 | 0.08 |
+
+- Every unit had its path in the order's frame (0 frames of latency), so the whole cost landed in a single frame.
+- The worst single search was 1.28 ms. Nodes visited were 3,579 (infantry) and 5,693 (vehicle) on the long route.
+- **Root cause.** Each member searched alone across the pillar-filled pocket. Each search also ran twice, because the first 2048-node pass always ran out (about 28 % of the search time). On top of that came a per-unit hull fit, and all of it was synchronous inside `RTSCommands::Dispatch`.
+
+### What changed
+
+- **Budgeted move requests** (`URTSMoveRequestSubsystem`, server only, one tickable for the world):
+  - `ARTSUnit::StartCommand` queues the move or attack-move of its front order there instead of searching its path at once.
+  - A request runs straight away while the frame has budget left, so short orders start in their own frame as before. The rest run oldest first in the next frames, and the issuing players (an AI or a null issuer is a player of its own) take turns.
+  - **Budget.** `rts.Nav.MoveRequestBudgetMs` defaults to **2.0 ms** of path work (search plus hull fit) per frame. A request starts only while the frame's spend plus the costliest request it ran so far fits the budget. Every frame with requests waiting runs at least one, so each order gets its result.
+  - **A request is never split.** A frame therefore runs over by at most one request that alone costs more than the estimate. This is not a guarantee that no frame exceeds the budget: a single search or hull fit costs what it costs, and on a larger map one 16k-node search can cost several ms. Bounding that needs sliced Detour queries or the engine's asynchronous path finding, which is multithreaded work outside this issue. A request over the budget is logged (`LogWorldDivide` Verbose).
+  - **While a request waits.** The unit stops its old move (a vehicle brakes, and a back-off finishes). The order stays at the front of its queue, `NotifyMoveFinished` and `UpdateAttackMoveOrder` leave it alone, and a back-off's pivot onto the new path waits for that path.
+  - **Stale requests.** A new order, a Stop, a dropped order, a destroyed unit or the end of the match makes the waiting request stale through the unit's ticket, and it is skipped at no cost. A request runs its result exactly as before: moving, at the goal (the order is done), or refused.
+- **Node-limit hint** (`RTSPathSearch::FRaisedStart`). Requests of one group order share a set of navmeshes on which a search ran out of the default 2048 nodes. Later members on those navmeshes start at the raised limit, which gives the same path and outcome without the wasted first search. `FindFullPath` outside a hint behaves as in #169.
+- **One refusal per group** (`FRTSCommand::OrderId`, server only and `NotReplicated`). `Dispatch` gives a group's units one id, and `ARTSPlayerController::NotifyOrderRefused` tells each order once on top of the 1 s cooldown, so a refused group whose searches take longer than the cooldown still gives one message. Refusals of stuck vehicles (#170) are unchanged.
+- **No new replication, RPCs or per-unit ticks.** The decision stays on the server, and clients see the units start through movement replication.
+
+### After (`WorldDivide.Navigation.LongPath.Cost`)
+
+| Group | Route | Order call ms | Path work ms | Frames | Peak frame ms (spent before its last request) | Worst request ms | Longest wait | Searches (started raised) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| 12 mixed | long | 1.84 | 8.8 | 6 | 1.81 (0.81) | 1.00 | 5 frames, 0.17 s | 14 (10) |
+| 50 mixed | long | 2.11 | 36.5 | 23 | 2.06 (1.23) | 1.30 | 22 frames, 0.73 s | 52 (48) |
+| 100 mixed | long | 1.82 | 82.3 | 49 | 3.42 (1.25) | 3.32 | 48 frames, 1.60 s | 102 (98) |
+| 100 mixed | short trip | 0.72 | 0.63 | 1 | 0.63 | 0.04 | 0 frames | 100 (0) |
+
+- **Peak per frame.** Before, 100 units on the long route cost 109–122 ms in one frame. Now no frame starts a request past 1.25 ms of spend; frames end at about 2 ms, and the order's own call takes 1.8–2.1 ms. The peak frame of the 100-unit order is 3.4 ms, once in 49 frames: three vehicle requests at the back of the formation cost 2.1–3.2 ms each alone, reproducibly.
+- **Total work** dropped by about a quarter (82 against 109 ms for 100 mixed), because 98 of 102 searches start raised: one search per unit, plus one wasted pass per navmesh.
+- **Latency.** The first two units start in the order's frame. The whole group has its paths after 5 frames (12 units), 22 frames (50) and 48 frames (100) at the 30 Hz test step, which is 0.17 s, 0.73 s and 1.6 s. At 60 Hz the frame counts are the same and the times halve. Short orders of 100 units still start completely in their own frame.
+- **Whole frames** in the test, with every unit and the editor ticking, peak at 14–36 ms for 12–100 units under way. That is steady-state locomotion and avoidance of the moving group, not path work, which the table above separates.
+
+### Movement bench
+
+240 units, long method (three 60 s samples, a4e8364 → #174). L_Bench's orders are short moves, which all run in their order's frame.
+
+| Unit | Scenario | Game ms (p95) before → after | Game max | Locomotion ms before → after: mean (p95) | Avoidance ms |
+|---|---|---|---|---|---|
+| M20 Guardian | move | 4.17 (7.85) → 4.18 (7.84) | 17.6 → 18.5 | 0.44 (1.15) → 0.45 (1.17) | 0.38 → 0.39 |
+| M20 Guardian | idle | 1.94 (2.33) → 1.94 (2.29) | 17.5 → 17.6 | 0.05 (0.07) → 0.05 (0.07) | 0.24 → 0.23 |
+| `DA_TestTank` | move | 2.92 (4.12) → 2.88 (4.08) | 18.2 → 18.3 | 0.44 (0.97) → 0.44 (0.96) | 0.47 → 0.47 |
+
+Every row is inside the run-to-run spread of about 0.6 ms. The locomotion budget (mean ≤ 1.0 ms, p95 ≤ 2.0 ms) is still met, and the overall game-thread and locomotion budgets are unchanged.
+
+### Gameplay checks
+
+- A group of **100 vehicles** across L_LongPath jams at the pocket's mouth and in the 12 m gap. Some hulls come up to 60 cm into pillars, two or three units never finish, and one gives up its move. This happens the same with the budget turned off (`rts.Nav.MoveRequestBudgetMs 0`, the old synchronous behaviour). It is crowd collision at that density, not path search, and is left for a follow-up. The 100-unit drive test uses infantry.
+
+### Test coverage
+
+- **`WorldDivide.Navigation.LongPath.Cost`**: the searches of #169, and the table above. It asserts:
+  - no frame starts a request past the budget;
+  - the peak frame stays within the budget plus one request;
+  - the worst request is within 5 ms;
+  - the order's call is within the budget, one request and 1 ms of queuing;
+  - every unit drives a full path on its own agent's navmesh to its own formation slot;
+  - at most one wasted search per navmesh;
+  - a short group order runs completely in its own frame.
+- **`WorldDivide.Navigation.LongPath.GroupDrive`**: 100 infantry move across and close in on the far side; twelve mixed hulls attack-move on the short trip and, Shift-queued, across. Both carry the drives' obstacle, arrival and refusal checks.
+- **`WorldDivide.Navigation.LongPath.Pending`**, with the budget cut to one request a frame:
+  - 50 infantry sent onto the island are all refused and stay put, and the player hears of it once over 1.6 s of refusals;
+  - a Stop makes 30 waiting requests stale and nobody moves;
+  - orders replaced on consecutive frames leave only the last order's paths;
+  - units destroyed while waiting are skipped and the rest get their paths;
+  - a Shift-queued leg waits behind its group's first leg;
+  - a player's and an AI's groups ordered at once start in turn.
+- **`WorldDivide.Net.Vehicle.ListenServer` and `.Dedicated`** (100 ms round trip, about 2 % loss, two clients): both players order 30 vehicles at once with the budget cut to one request a frame, and team 0 re-orders on the next frame. Both groups start in turn, team 0 heads for its second order's slots, every unit drives a full path, no refusals, and every client sees all 60 under way.
+- **Robustness:** all 51 `WorldDivide.Smoke.*` tests also pass with the budget cut to one request a frame.
+- `LongPath.Search`, `LongPath.Drive` and `MoveIntoObstacle.*` are unchanged and pass. The full run passes 245 of 245.
+
+### Remaining limitations
+
+- **One request cannot be split.** A vehicle's request here costs up to 3.3 ms. A larger map, a 16k-node search or a long hull fit can exceed the budget in its frame, and bounding that needs sliced or asynchronous path finding.
+- **Other moves still search at once:** attack orders on a unit or a building (`UpdateAttackOrder`), harvesters, builders, and the engine's repaths when a building changes the navmesh. A 100-unit attack order on a far target would still spike.
+- **Latency grows with the group.** About 0.5 frames per long-route vehicle at 2 ms, so the back of 100 vehicles starts about 1.6 s after the front at 30 Hz. A shared route per group and agent (#174's option A) would shorten that.
+- **The budget is real time,** so on a slower machine more requests wait. The simulation's timing then depends on CPU speed, as with any real-time budget.

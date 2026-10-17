@@ -27,7 +27,7 @@ namespace RTSPathSearch
 	struct FStats
 	{
 		EOutcome Outcome = EOutcome::Error;
-		/** Searches run: 1 for an ordinary path, 2 when the first ran out of nodes. */
+		/** Searches run: 1 for an ordinary path, 2 when the first ran out of nodes; 1 when an FRaisedStart started it raised. */
 		int32 Searches = 0;
 		/** The node limit of the last search. */
 		uint32 MaxSearchNodes = 0;
@@ -48,4 +48,32 @@ namespace RTSPathSearch
 	 * so a long path a new building forces round does not come back partial for lack of nodes.
 	 */
 	WORLDDIVIDE_API void KeepLimitOnRepath(FNavigationPath& Path);
+
+	/**
+	 * The navigation data on which a search of one group order already ran out of the default node limit (#174). While an
+	 * FRaisedStart for it is alive, FindFullPath starts searches on that data at the raised limit, sparing the first search
+	 * that would run out again, and adds the data of any search that did run out. The outcome and the path are the ones the
+	 * two searches would have given: A* with more nodes ends where it would have, only it does not stop at 2048.
+	 */
+	using FRaisedNavData = TSet<TWeakObjectPtr<const ANavigationData>>;
+
+	class WORLDDIVIDE_API FRaisedStart
+	{
+	public:
+		explicit FRaisedStart(FRaisedNavData& NavData);
+		~FRaisedStart();
+		FRaisedStart(const FRaisedStart&) = delete;
+		FRaisedStart& operator=(const FRaisedStart&) = delete;
+
+	private:
+		FRaisedNavData* Previous = nullptr;
+	};
+
+	/** Since the process started, for tests and benches: every search FindFullPath ran, and those an FRaisedStart started raised. */
+	struct FCounters
+	{
+		int64 Searches = 0;
+		int64 RaisedStarts = 0;
+	};
+	WORLDDIVIDE_API const FCounters& GetCounters();
 }

@@ -1452,7 +1452,7 @@ bool ARTSPlayerController::GetLatestSuperweaponAlert(ERTSSuperweaponAlert& OutKi
 	return bFound;
 }
 
-void ARTSPlayerController::NotifyOrderRefused(const ARTSPlayerState* Issuer, const FVector& Location)
+void ARTSPlayerController::NotifyOrderRefused(const ARTSPlayerState* Issuer, const FVector& Location, int32 OrderId)
 {
 	ARTSPlayerController* Controller = Issuer ? Cast<ARTSPlayerController>(Issuer->GetPlayerController()) : nullptr;
 	if (!Controller)
@@ -1460,11 +1460,16 @@ void ARTSPlayerController::NotifyOrderRefused(const ARTSPlayerState* Issuer, con
 		return;
 	}
 	const float Now = Controller->GetWorld()->GetTimeSeconds();
+	if (OrderId != 0 && OrderId == Controller->LastOrderRefusalId)
+	{
+		return;
+	}
 	if (Controller->LastOrderRefusalSent && Now - *Controller->LastOrderRefusalSent < OrderRefusalCooldown)
 	{
 		return;
 	}
 	Controller->LastOrderRefusalSent = Now;
+	Controller->LastOrderRefusalId = OrderId;
 	Controller->Client_OrderRefused(Location);
 }
 

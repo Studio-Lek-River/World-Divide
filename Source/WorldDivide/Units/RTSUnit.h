@@ -80,6 +80,22 @@ public:
 	/** Server only. Called by the AI controller whenever a path-following request ends. */
 	void NotifyMoveFinished(const FPathFollowingResult& Result);
 
+	/**
+	 * Server only. True while the front order, a move or an attack-move, waits for URTSMoveRequestSubsystem to search its
+	 * path (#174). The unit stands meanwhile, or brakes and finishes a back-off; the order stays at the front of its queue.
+	 */
+	bool IsMoveRequestPending() const { return bMoveRequestPending; }
+
+	/** Server only. Whether Ticket is the move request the unit waits on, and not one a newer order or a dropped one made stale. */
+	bool IsMoveRequestCurrent(uint32 Ticket) const { return bMoveRequestPending && Ticket == MoveRequestTicket; }
+
+	/**
+	 * Server only, for URTSMoveRequestSubsystem. Searches the waiting move's path and starts it (RequestMove). A refused
+	 * first start tells the issuer, once for the whole group (FRTSCommand::OrderId); a refused or finished move drops the
+	 * order and starts the next. Nothing happens once the match is over.
+	 */
+	void RunMoveRequest();
+
 	/** Server only. Where the last move order sent the unit, unset once an order of another kind starts. */
 	TOptional<FVector> GetMoveGoal() const { return MoveGoal; }
 
@@ -310,6 +326,16 @@ private:
 	ERTSMoveRequest RequestMove(AAIController& AI, const FVector& Location);
 
 	/**
+	 * Starts the front order's move: queues it with URTSMoveRequestSubsystem, which runs RunMoveRequest now or in a later
+	 * frame, and stops the move under way when it has to wait. bTellRefusal tells the issuer if it is refused. In a world
+	 * without the subsystem it runs RequestMove at once. False when the order is over already: refused, or at its goal.
+	 */
+	bool StartMoveRequest(AAIController& AI, bool bTellRefusal);
+
+	/** Makes a waiting move request stale, for an order that ends or is replaced before it ran. */
+	void CancelMoveRequest();
+
+	/**
 	 * Each tick while an Attack is the current order: drop it once the target is gone, otherwise close in or hold.
 	 * Units are followed; buildings stand in their own navmesh hole, so the unit walks to a reachable spot outside the
 	 * footprint, facing side first, and drops the order when there is none in range.
@@ -480,6 +506,11 @@ private:
 
 	bool bRequestingMove = false;
 	bool bMoveFinishedDuringRequest = false;
+
+	/** Server only. See IsMoveRequestPending; the ticket tells the waiting request from older, stale ones. */
+	bool bMoveRequestPending = false;
+	bool bMoveRequestTellsRefusal = false;
+	uint32 MoveRequestTicket = 0;
 
 	/** Set while an attack-move stops to fight, so the aborted move does not end the order. */
 	bool bStoppingToFight = false;

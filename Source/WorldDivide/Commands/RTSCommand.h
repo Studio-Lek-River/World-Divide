@@ -84,4 +84,11 @@ struct WORLDDIVIDE_API FRTSCommand
 	/** Server only, never sent by clients: the player who gave the order, told when it is refused (RTSCommands::Issue sets it). */
 	UPROPERTY(NotReplicated)
 	TObjectPtr<ARTSPlayerState> Issuer = nullptr;
+
+	/**
+	 * Server only, never sent by clients: the group order this is one unit's share of, the same for every unit RTSCommands::Dispatch
+	 * gave it to; 0 for orders that come from no dispatch. A group's refusal is told once (ARTSPlayerController::NotifyOrderRefused).
+	 */
+	UPROPERTY(NotReplicated)
+	int32 OrderId = 0;
 };

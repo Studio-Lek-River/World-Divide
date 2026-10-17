@@ -32,6 +32,11 @@ namespace
 	{
 		return Result.Path.IsValid() && Result.Path->IsPartial() && Result.Path->DidSearchReachedLimit();
 	}
+
+	/** The innermost live FRaisedStart's navigation data; game thread only. */
+	RTSPathSearch::FRaisedNavData* ActiveRaised = nullptr;
+
+	RTSPathSearch::FCounters Counters;
 }
 
 namespace RTSPathSearch
@@ -45,24 +50,50 @@ namespace RTSPathSearch
 	{
 		FStats Stats;
 		Stats.MaxSearchNodes = Query.QueryFilter.IsValid() ? Query.QueryFilter->GetMaxSearchNodes() : 0;
-		FPathFindingResult Result = NavSystem.FindPathSync(Query);
-		Stats.Searches = 1;
-
 		const uint32 Limit = GetMaxSearchNodes();
-		if (RanOutOfNodes(Result) && Query.QueryFilter.IsValid() && Stats.MaxSearchNodes < Limit)
+		const TWeakObjectPtr<const ANavigationData> NavData = Query.NavData;
+		const bool bCanRaise = Query.QueryFilter.IsValid() && Stats.MaxSearchNodes < Limit;
+
+		FPathFindingResult Result;
+		bool bRaised = false;
+		if (bCanRaise && ActiveRaised && ActiveRaised->Contains(NavData))
 		{
-			UE_LOG(LogWorldDivide, Verbose, TEXT("Path search %s ran out of its %u nodes; searching again with up to %u"),
-				*DescribeQuery(Query), Stats.MaxSearchNodes, Limit);
+			// Another unit of the same order ran out of nodes on this navmesh: the default search would most likely too.
 			FPathFindingQuery Raised(Query);
 			Raised.QueryFilter = WithLimit(Query.QueryFilter, Limit);
 			Result = NavSystem.FindPathSync(Raised);
-			Stats.Searches = 2;
+			Stats.Searches = 1;
 			Stats.MaxSearchNodes = Limit;
-			if (Result.IsSuccessful() && !Result.IsPartial())
+			bRaised = true;
+			++Counters.Searches;
+			++Counters.RaisedStarts;
+		}
+		else
+		{
+			Result = NavSystem.FindPathSync(Query);
+			Stats.Searches = 1;
+			++Counters.Searches;
+			if (RanOutOfNodes(Result) && bCanRaise)
 			{
-				UE_LOG(LogWorldDivide, Verbose, TEXT("Path search %s found a full path of %d points within %u nodes"),
-					*DescribeQuery(Query), Result.Path->GetPathPoints().Num(), Limit);
+				UE_LOG(LogWorldDivide, Verbose, TEXT("Path search %s ran out of its %u nodes; searching again with up to %u"),
+					*DescribeQuery(Query), Stats.MaxSearchNodes, Limit);
+				if (ActiveRaised)
+				{
+					ActiveRaised->Add(NavData);
+				}
+				FPathFindingQuery Raised(Query);
+				Raised.QueryFilter = WithLimit(Query.QueryFilter, Limit);
+				Result = NavSystem.FindPathSync(Raised);
+				Stats.Searches = 2;
+				Stats.MaxSearchNodes = Limit;
+				bRaised = true;
+				++Counters.Searches;
 			}
+		}
+		if (bRaised && Result.IsSuccessful() && !Result.IsPartial())
+		{
+			UE_LOG(LogWorldDivide, Verbose, TEXT("Path search %s found a full path of %d points within %u nodes"),
+				*DescribeQuery(Query), Result.Path->GetPathPoints().Num(), Limit);
 		}
 
 		if (Result.Path.IsValid() && !Result.IsPartial() && Result.IsSuccessful())
@@ -102,5 +133,22 @@ namespace RTSPathSearch
 		{
 			Path.SetFilter(WithLimit(Filter, Limit));
 		}
+	}
+
+	FRaisedStart::FRaisedStart(FRaisedNavData& NavData)
+		: Previous(ActiveRaised)
+	{
+		check(IsInGameThread());
+		ActiveRaised = &NavData;
+	}
+
+	FRaisedStart::~FRaisedStart()
+	{
+		ActiveRaised = Previous;
+	}
+
+	const FCounters& GetCounters()
+	{
+		return Counters;
 	}
 }

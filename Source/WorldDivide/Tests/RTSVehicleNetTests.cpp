@@ -2,7 +2,9 @@
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
+#include "AIController.h"
 #include "Commands/RTSCommand.h"
+#include "Commands/RTSCommandDispatch.h"
 #include "Components/StaticMeshComponent.h"
 #include "Data/RTSUnitData.h"
 #include "Editor.h"
@@ -12,6 +14,8 @@
 #include "Engine/StaticMeshActor.h"
 #include "EngineUtils.h"
 #include "HAL/IConsoleManager.h"
+#include "Navigation/PathFollowingComponent.h"
+#include "Navigation/RTSMoveRequestSubsystem.h"
 #include "PlayInEditorDataTypes.h"
 #include "Player/RTSPlayerController.h"
 #include "Settings/LevelEditorPlaySettings.h"
@@ -777,13 +781,214 @@ namespace RTSVehicleNetTests
 			return true;
 		} });
 	}
+
+	/**
+	 * #174: both players order a group of 30 vehicles at once, through the server, with the move request budget cut to one
+	 * request a frame so the groups wait; the next frame team 0 sends its group elsewhere. The two groups start in turn,
+	 * team 0's units head for the slots of its second order, every unit drives a full path, nobody hears of a refusal, and
+	 * each client sees both groups drive off.
+	 */
+	void AddGroupOrders(FAutomationTestBase& Test, const TSharedRef<FSession>& Session)
+	{
+		constexpr int32 GroupSize = 30;
+		struct FGroups
+		{
+			TArray<TWeakObjectPtr<ARTSUnit>> Units;
+			TArray<FVector> Starts;
+			TArray<FVector> Slots;
+			TArray<int32> StartOrder;
+			TSet<TWeakObjectPtr<ARTSUnit>> Started;
+			TMap<int32, int32> RefusalsAtStart;
+			float SavedBudget = 2.f;
+			int32 Frame = 0;
+			TOptional<double> Resolved;
+		};
+		TSharedRef<FGroups> Groups = MakeShared<FGroups>();
+		const FVector Starts[] = { DriveStart, DriveStart + FVector(12000.f, 0.f, 0.f) };
+		auto GetServerControllerOf = [Session](int32 Team)
+		{
+			ARTSPlayerController* Controller = nullptr;
+			for (TActorIterator<ARTSPlayerController> It(Session->ServerWorld); It; ++It)
+			{
+				Controller = It->GetTeamId() == Team ? *It : Controller;
+			}
+			return Controller;
+		};
+		auto OrderTeam = [Groups, GetServerControllerOf](int32 Team, const FVector& Target)
+		{
+			TArray<ARTSUnit*> Group;
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Groups->Units)
+			{
+				if (Unit.IsValid() && Unit->GetTeamId() == Team)
+				{
+					Group.Add(Unit.Get());
+				}
+			}
+			FRTSCommand Move;
+			Move.Type = ERTSCommandType::Move;
+			Move.TargetLocation = Target;
+			if (ARTSPlayerController* Controller = GetServerControllerOf(Team))
+			{
+				Controller->Server_IssueCommand(Group, Move);
+			}
+			return Group;
+		};
+
+		Session->Phases.Add({ TEXT("Group orders"), [&Test, Session, Groups, Starts, OrderTeam](double)
+		{
+			UWorld& World = *Session->ServerWorld;
+			if (Groups->Frame++ == 0)
+			{
+				for (TActorIterator<ARTSUnit> It(&World); It; ++It)
+				{
+					if (It->GetActorLocation().Y > DriveStart.Y - 8000.f)
+					{
+						It->Destroy();
+					}
+				}
+				for (const TPair<int32, ARTSPlayerController*>& Player : GetPlayers(*Session))
+				{
+					Groups->RefusalsAtStart.Add(Player.Key, Player.Value->GetOrderRefusalCount());
+				}
+				if (IConsoleVariable* Budget = IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Nav.MoveRequestBudgetMs")))
+				{
+					Groups->SavedBudget = Budget->GetFloat();
+					Budget->Set(0.001f, ECVF_SetByCode);
+				}
+				const float Pitch = 1000.f;
+				for (int32 Team = 0; Team < 2; ++Team)
+				{
+					for (int32 Index = 0; Index < GroupSize; ++Index)
+					{
+						const FVector Location = Starts[Team] + FVector(-(Index / 6) * Pitch, (Index % 6 - 2.5f) * Pitch, 0.f);
+						ARTSUnit* Unit = SpawnUnit(World, Index % 2 ? TankPath : M20Path, Team, Location, 0.f);
+						Groups->Units.Add(Unit);
+						Groups->Starts.Add(Location);
+					}
+				}
+				for (int32 Team = 0; Team < 2; ++Team)
+				{
+					OrderTeam(Team, Starts[Team] + FVector(6000.f, 0.f, 0.f));
+				}
+				return false;
+			}
+			// The next frame, while most paths still wait: team 0 is sent elsewhere.
+			const TArray<ARTSUnit*> Group = OrderTeam(0, Starts[0] + FVector(6000.f, 2500.f, 0.f));
+			Groups->Slots = RTSCommands::PlanFormation(Group, Starts[0] + FVector(6000.f, 2500.f, 0.f));
+			Test.TestTrue(TEXT("Group orders: requests still wait after the second order"), Groups->Units.ContainsByPredicate(
+				[](const TWeakObjectPtr<ARTSUnit>& Unit) { return Unit.IsValid() && Unit->IsMoveRequestPending(); }));
+			return true;
+		} });
+		Session->Phases.Add({ TEXT("Group orders start in turn"), [&Test, Session, Groups](double Elapsed)
+		{
+			bool bPending = false;
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Groups->Units)
+			{
+				if (!Unit.IsValid())
+				{
+					continue;
+				}
+				if (Unit->IsMoveRequestPending())
+				{
+					bPending = true;
+				}
+				else if (!Groups->Started.Contains(Unit))
+				{
+					Groups->Started.Add(Unit);
+					Groups->StartOrder.Add(Unit->GetTeamId());
+				}
+			}
+			if (bPending)
+			{
+				return false;
+			}
+			if (!Groups->Resolved)
+			{
+				Groups->Resolved = Elapsed;
+				int32 TeamZero = 0;
+				for (int32 Index = 0; Index < 20 && Groups->StartOrder.IsValidIndex(Index); ++Index)
+				{
+					TeamZero += Groups->StartOrder[Index] == 0 ? 1 : 0;
+				}
+				Test.TestTrue(*FString::Printf(TEXT("Group orders: of the first 20 units to start, %d are team 0's and %d team 1's"), TeamZero, 20 - TeamZero),
+					TeamZero >= 6 && TeamZero <= 14);
+				Test.AddInfo(FString::Printf(TEXT("Group orders: %d units of two players got their paths over %.2f s, one request a frame"),
+					Groups->StartOrder.Num(), Elapsed));
+				int32 Team0 = 0;
+				for (const TWeakObjectPtr<ARTSUnit>& Unit : Groups->Units)
+				{
+					if (!Test.TestTrue(TEXT("Group orders: a unit is alive"), Unit.IsValid()))
+					{
+						continue;
+					}
+					const AAIController* AI = Unit->GetController<AAIController>();
+					const UPathFollowingComponent* PathFollowing = AI ? AI->GetPathFollowingComponent() : nullptr;
+					const FNavPathSharedPtr Path = PathFollowing ? PathFollowing->GetPath() : nullptr;
+					Test.TestTrue(*FString::Printf(TEXT("Group orders: team %d's unit drives a full path"), Unit->GetTeamId()),
+						Path.IsValid() && Path->IsValid() && !Path->IsPartial() && PathFollowing->GetStatus() == EPathFollowingStatus::Moving);
+					if (Unit->GetTeamId() == 0 && Groups->Slots.IsValidIndex(Team0))
+					{
+						const TOptional<FVector> Target = Unit->GetMoveTarget();
+						Test.TestTrue(TEXT("Group orders: team 0's unit heads for its slot of the second order"),
+							Target && FVector::Dist2D(*Target, Groups->Slots[Team0]) <= 1.f);
+						++Team0;
+					}
+				}
+			}
+			// Long enough for the clients to see the groups under way.
+			if (Elapsed - *Groups->Resolved < 3.0)
+			{
+				return false;
+			}
+			for (int32 Client = 0; Client < Session->ClientWorlds.Num(); ++Client)
+			{
+				int32 Seen = 0;
+				for (int32 Index = 0; Index < Groups->Units.Num(); ++Index)
+				{
+					const ARTSUnit* Unit = Groups->Units[Index].Get();
+					const ARTSUnit* Copy = Unit ? FindCopy(*Session->ClientWorlds[Client], *Unit) : nullptr;
+					Seen += Copy && FVector::Dist2D(Copy->GetActorLocation(), Groups->Starts[Index]) > 200.f ? 1 : 0;
+				}
+				Test.TestEqual(*FString::Printf(TEXT("Group orders: units client %d sees under way"), Client + 1), Seen, Groups->Units.Num());
+			}
+			for (const TPair<int32, ARTSPlayerController*>& Player : GetPlayers(*Session))
+			{
+				Test.TestEqual(*FString::Printf(TEXT("Group orders: refusals the player of team %d heard"), Player.Key),
+					Player.Value->GetOrderRefusalCount() - Groups->RefusalsAtStart.FindRef(Player.Key), 0);
+			}
+			if (IConsoleVariable* Budget = IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Nav.MoveRequestBudgetMs")))
+			{
+				Budget->Set(Groups->SavedBudget, ECVF_SetByCode);
+			}
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Groups->Units)
+			{
+				if (Unit.IsValid())
+				{
+					Unit->Destroy();
+				}
+			}
+			return true;
+		} });
+	}
+}
+
+/** Gives rts.Nav.MoveRequestBudgetMs its default back, whatever a phase that cut it left behind. */
+DEFINE_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetRestoreBudget);
+bool FRTSVehicleNetRestoreBudget::Update()
+{
+	if (IConsoleVariable* Budget = IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Nav.MoveRequestBudgetMs")))
+	{
+		Budget->Set(URTSMoveRequestSubsystem::DefaultBudgetMs, ECVF_SetByCode);
+	}
+	return true;
 }
 
 /**
  * Listen server and one client on L_TestMap: the M20's stop, reverse, pivot and drive into a block converge on the client,
  * the pivot runs the client's tracks opposite ways, a correction of the client's copy is no travel, a vehicle first seen
  * under way starts its travel from nothing; and 240 moving tanks cost at most 10 % more traffic with the gear state. Host and
- * client each hear once of their own stuck group giving up its move (#170).
+ * client each hear once of their own stuck group giving up its move (#170). Both players' groups ordered at once, their
+ * paths spread over frames, start in turn and drive off on the client (#174).
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSVehicleNetListenTest, "WorldDivide.Net.Vehicle.ListenServer", RTSTests::TestFlags)
 
@@ -799,9 +1004,11 @@ bool FRTSVehicleNetListenTest::RunTest(const FString& Parameters)
 	AddTraffic(*this, Session);
 	AddDrives(*this, Session);
 	AddStuckFeedback(*this, Session);
+	AddGroupOrders(*this, Session);
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSStartNetSession(false));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetWaitForSession(this, Session));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetRunPhases(this, Session));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetRestoreBudget());
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }
@@ -809,6 +1016,7 @@ bool FRTSVehicleNetListenTest::RunTest(const FString& Parameters)
 /**
  * A dedicated server and two clients on L_TestMap, under 100 ms of round trip and about 2 % packet loss, at real time:
  * the same drives converge on both clients, and each client hears once of its own stuck group giving up its move (#170).
+ * Both players' groups ordered at once, their paths spread over frames, start in turn and drive off on both clients (#174).
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSVehicleNetDedicatedTest, "WorldDivide.Net.Vehicle.Dedicated", RTSTests::TestFlags)
 
@@ -825,9 +1033,11 @@ bool FRTSVehicleNetDedicatedTest::RunTest(const FString& Parameters)
 	Session->ClientCount = 2;
 	AddDrives(*this, Session);
 	AddStuckFeedback(*this, Session);
+	AddGroupOrders(*this, Session);
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSStartNetSession(true));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetWaitForSession(this, Session));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetRunPhases(this, Session));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetRestoreBudget());
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

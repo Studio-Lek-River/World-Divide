@@ -349,10 +349,11 @@ public:
 	/**
 	 * Server only. A move order Issuer gave cannot be carried out: no spot near Location is reachable, or a unit stuck at
 	 * Location gave the move up (ARTSUnit::UpdateBlockedMove). Tells Issuer's controller through Client_OrderRefused, at
-	 * most once per OrderRefusalCooldown, so a refused group gives one message.
+	 * most once per OrderRefusalCooldown, and once per OrderId (FRTSCommand::OrderId, 0 for none), so a refused group gives
+	 * one message even when its units' paths are searched over more than the cooldown (#174).
 	 * Nothing for an AI player or a null Issuer.
 	 */
-	static void NotifyOrderRefused(const ARTSPlayerState* Issuer, const FVector& Location);
+	static void NotifyOrderRefused(const ARTSPlayerState* Issuer, const FVector& Location, int32 OrderId = 0);
 
 	static constexpr float OrderRefusalCooldown = 1.f;
 
@@ -545,6 +546,9 @@ private:
 
 	/** Server only. When the last refusal went out; within OrderRefusalCooldown of it further ones are held back. */
 	TOptional<float> LastOrderRefusalSent;
+
+	/** Server only. The OrderId of the last refusal told; that order's other units are not told again. */
+	int32 LastOrderRefusalId = 0;
 
 	struct FReceivedOrderRefusal
 	{

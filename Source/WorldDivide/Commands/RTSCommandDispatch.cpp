@@ -21,6 +21,9 @@ namespace
 		TEXT("rts.DebugBuild"), false,
 		TEXT("Lets the 1-9 menu place the faction's buildings without a builder, and the server accept them."),
 		ECVF_Cheat);
+
+	/** The last FRTSCommand::OrderId Dispatch handed out. */
+	int32 LastOrderId = 0;
 }
 
 namespace RTSCommands
@@ -51,12 +54,17 @@ namespace RTSCommands
 			return;
 		}
 
+		// One id for the whole group, so its refusal is told once however many frames its units' paths take (#174).
+		FRTSCommand Order = Command;
+		LastOrderId = LastOrderId == MAX_int32 ? 1 : LastOrderId + 1;
+		Order.OrderId = LastOrderId;
+
 		const bool bFormation = Command.Type == ERTSCommandType::Move || Command.Type == ERTSCommandType::AttackMove;
 		if (!bFormation || Units.Num() == 1)
 		{
 			for (ARTSUnit* Unit : Units)
 			{
-				Unit->ExecuteCommand(Command);
+				Unit->ExecuteCommand(Order);
 			}
 			return;
 		}
@@ -64,7 +72,7 @@ namespace RTSCommands
 		const TArray<FVector> Slots = PlanFormation(Units, Command.TargetLocation);
 		for (int32 Index = 0; Index < Units.Num(); ++Index)
 		{
-			FRTSCommand UnitCommand = Command;
+			FRTSCommand UnitCommand = Order;
 			UnitCommand.TargetLocation = Slots[Index];
 			Units[Index]->ExecuteCommand(UnitCommand);
 		}
