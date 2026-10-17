@@ -2,7 +2,7 @@
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the ground and water materials, the L_TestMap level
 with a supply source and two builders by each base, the L_Skirmish and L_SkirmishDuel levels, the same ground without the
 armies and with four and two start spots, the skirmish maps L_RiverFord, L_QuarryCross and L_SixPeaks with two, four and
-six, all where the lobby's seats play, the L_LongPath level of the long-path tests, the map data assets that offer them in the lobby with a top-down preview of each
+six, all where the lobby's seats play, the L_LongPath level of the long-path tests, the L_ThinWalls level of the thin-wall tests, the map data assets that offer them in the lobby with a top-down preview of each
 (rendered when the run has a renderer, drawn otherwise), and the
 empty L_MainMenu and L_Lobby levels for the menu screens, a placeholder icon for every entity without painted art (see
 placeholder_icons.py) and the Common UI styles of UI/ and Mods/*/UI/ (see make_ui_styles). L_TestMap and the skirmish maps are saved with their navmesh built. Safe to re-run: only assets that differ from this script are saved, so a run without script changes
@@ -923,6 +923,49 @@ def make_long_path_map(ground, water):
                            NAV_CONFIG))
 
 
+# The thin-wall level of WorldDivide.Navigation.ThinWalls (#173), 200 x 200 m: walls 2 m thick, with navmesh on every side.
+# A free-standing wall whose ends the vehicles round, and two walls meeting at an L, the horizontal one running on 3 m
+# past the vertical one and the vertical one 3 m past it, as L_LongPath's first layout had them.
+THIN_WALLS_MAP_PATH = "/Game/Maps/L_ThinWalls"
+THIN_WALLS_HALF_SIZE = 10000.0
+THIN_WALLS_HEIGHT = 300.0
+# Walls as (label, centre, size along x and y).
+THIN_WALLS = (
+    ("Wall_Free", (-5000.0, 0.0), (200.0, 6000.0)),
+    ("Wall_JunctionNorth", (2750.0, 2400.0), (5500.0, 200.0)),
+    ("Wall_JunctionEast", (5100.0, -100.0), (200.0, 5800.0)),
+)
+THIN_WALLS_SPOTS = ((0, -7000.0, -7000.0, 0.0), (1, 7000.0, -7000.0, 180.0))
+
+
+def build_thin_walls_map(ground, digest):
+    new_level(THIN_WALLS_MAP_PATH)
+    spawn_ground(THIN_WALLS_HALF_SIZE, ground)
+    height = THIN_WALLS_HEIGHT
+    for label, (x, y), (size_x, size_y) in THIN_WALLS:
+        spawn_obstacle(label, (x, y, height / 2.0), (size_x / 100.0, size_y / 100.0, height / 100.0))
+    spawn_lighting()
+
+    nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
+    nav.set_actor_scale3d(unreal.Vector(THIN_WALLS_HALF_SIZE / 100.0, THIN_WALLS_HALF_SIZE / 100.0, 10.0))
+    for team_id, x, y, yaw in THIN_WALLS_SPOTS:
+        start = spawn(unreal.PlayerStart, (x, y, 100.0), yaw, label=f"PlayerStart_Team{team_id}")
+        start.set_editor_property("player_start_tag", f"Team{team_id}")
+
+    world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    build_navigation(world, THIN_WALLS_MAP_PATH)
+    assets.set_metadata_tag(world, HASH_TAG, digest)
+    if not levels.save_current_level():
+        raise RuntimeError(f"Could not save {THIN_WALLS_MAP_PATH}")
+
+
+def make_thin_walls_map(ground):
+    plan_rebuild(THIN_WALLS_MAP_PATH, ".umap", lambda digest: build_thin_walls_map(ground, digest),
+                 spec_hash([build_thin_walls_map, build_navigation, spawn, spawn_block, spawn_obstacle, spawn_ground,
+                            spawn_lighting], THIN_WALLS_MAP_PATH, THIN_WALLS_HALF_SIZE, THIN_WALLS_HEIGHT, THIN_WALLS,
+                           THIN_WALLS_SPOTS, CUBE, ground, material_hashes[ground], ENGINE_VERSION, NAV_CONFIG))
+
+
 def ring(radius, angle):
     """The point at radius from the middle, angle degrees from world +X towards +Y, rounded to the centimetre."""
     return round(radius * math.cos(math.radians(angle)), 1), round(radius * math.sin(math.radians(angle)), 1)
@@ -1763,6 +1806,7 @@ water = make_surface_material("M_Water", (0.015, 0.04, 0.08), 0.1)
 make_map(tank, infantry, builder, m20, wall_mesh, crate_mesh, ground)
 make_bench_map(ground)
 make_long_path_map(ground, water)
+make_thin_walls_map(ground)
 for spec in (SKIRMISH_MAP, DUEL_MAP, RIVER_FORD_MAP, QUARRY_CROSS_MAP, SIX_PEAKS_MAP):
     make_skirmish_map(spec, builder, wall_mesh, crate_mesh, ground, water)
 # The lobby's maps, listed in Config/DefaultGame.ini: by default a player against an AI opponent; the other seats are open.

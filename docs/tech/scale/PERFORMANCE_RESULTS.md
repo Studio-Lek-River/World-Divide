@@ -721,5 +721,37 @@ Every row is inside the run-to-run spread of about 0.6 ms. L_Bench's short moves
 
 - **The retry is synchronous on the game thread.** About 0.5–1 ms per unit on a long route here, so a group order of 12 costs about 11 ms in that frame and a much larger selection costs proportionally more. A shared path per group, or time-slicing the retries over frames, would bound that if real maps show it.
 - **A connected navmesh larger than `rts.Nav.MaxSearchNodes` polygons** can still give an inconclusive answer for a far or cut-off goal. It is logged as a Warning and the order is refused; raise the CVar (at most 65534).
-- **Vehicles get stuck rounding the ends of thin (2 m) walls**, at the corner of an L of thin walls, or beside a thin wall end with navmesh on both sides. This is found while building L_LongPath and reproduced on short single-search drives, so it is independent of this change. L_LongPath uses 8 m thick walls, which the vehicles round as they round buildings.
+- **Vehicles got stuck rounding the ends of thin (2 m) walls**, at the corner of an L of thin walls, or beside a thin wall end with navmesh on both sides. This was found while building L_LongPath and is fixed by #173 (below). L_LongPath keeps its 8 m walls.
 - **A repath that comes back partial because the goal really became unreachable** is still accepted by the engine and ends the move short; reporting that belongs to #170.
+
+## #173 (vehicles rounding thin walls)
+
+Same machine and build configuration as #169, on 2026-10-17. The gate is `ue.ps1 -Task bench -Long -Unit DA_TestM20Guardian,DA_TestTank -Compare -Baseline a4e8364`, against the same OUTDATED baseline as #169.
+
+### Root cause and what changed
+
+Reproduced on L_ThinWalls (a free-standing 2 m wall and a 2 m L junction, `setup_testmap.py`), on a 2 m copy of L_LongPath's first layout, and on L_TestMap, whose `Wall_East` is 2 m thick.
+
+- **Clearance read inside out at the start of a session** (`RTSHullClearance`). Which side of a navmesh wall is the navmesh was learned from the first clearance query whose hull centre lay clear of the walls. Until then it was taken to be +1, while our navmeshes are -1. `AdjustPath` checks a corner with the hull centre on the navmesh's vertex, so it never learned it, and the first paths of a session were fitted inside out: the M20, about 1 m clear of the free wall's end, read 2 m deep, and its path corner moved 2 m toward the wall. The leg into it ran the hull's nose into the wall's end; the M20 backed off, paths again and switched between forward and reverse four times. The side is now found once, a cell to either side of the first wall long enough: two navmesh projections per process.
+- **Tracks arced through sharp corners** (`RTSLocomotion::Guide`). §4 of `VEHICLE_LOCOMOTION.md` has tracks stop and pivot at corners sharper than 30°; the pivot only started beyond `PivotAngle` (60°). A thin wall's end has two corners 6 m apart (2 m wall plus 2 m erosion each side), less than an M20 or tank is long: the arc from the first swung wide, and the hull cut toward the second across the wall's top. Tracks now pivot onto the way on after such a corner.
+- **A blocked arc had no way on** (`URTSUnitMovement::CommitStep`). Riding along the wall's top about 20 cm off it, the turn back onto the path swings the hull's rear into it, and every fallback kept that turn. A blocked step now tries its distance straight on before the smaller shares.
+- **Backed off, tracks drove back into the same corner** (`URTSUnitMovement`). From a standstill both tracks speed up alike, so after `UpdateBlockedMove`'s back-off a tank set off straight on its old heading. On L_TestMap a tank pushed by its group against `Wall_East`'s end gave its move up this way (`WorldDivide.Smoke.ListenServer`). Tracks now pivot to face their new path after a back-off.
+
+Not reproduced on HEAD before the change: the 17–22 cm group penetration and the 43–49 cm stops at the junction that #173 reports. The group drives below stay within the 2 cm tolerance.
+
+### Movement bench, 240 units, long method (three 60 s samples, a4e8364 → #173)
+
+| Unit | Scenario | Game ms (p95) before → after | Locomotion ms before → after: mean (p95) | Avoidance ms |
+|---|---|---|---|---|
+| M20 Guardian | move | 4.17 (7.85) → 4.18 (7.77) | 0.44 (1.15) → 0.45 (1.14) | 0.38 → 0.40 |
+| M20 Guardian | idle | 1.94 (2.33) → 1.91 (2.24) | 0.05 (0.07) → 0.05 (0.07) | 0.24 → 0.23 |
+| `DA_TestTank` | move | 2.92 (4.12) → 2.90 (4.08) | 0.44 (0.97) → 0.45 (0.96) | 0.47 → 0.47 |
+
+Every row is inside the run-to-run spread of about 0.6 ms, and the locomotion budget (mean ≤ 1.0 ms, p95 ≤ 2.0 ms) is met. The new checks run only on blocked steps, after a back-off or past a sharp corner; on L_Bench's open ground none of them runs, and the solid-collision counters are unchanged (broad overlaps 0.56–0.59 per frame at 240 moving tanks, 99.7 % reused).
+
+### Test coverage
+
+- **`WorldDivide.Navigation.ThinWalls.FirstFit`**: with the walls' side not yet known, as in a new session, the M20's path round the free wall's end keeps its corner, and the hull on it reads clear.
+- **`WorldDivide.Navigation.ThinWalls.Drive`**, from a session's first hull fit, with the obstacle, reversal (at most two switches), arrival and refusal checks: the M20, the tank and the flak truck each round the free wall's end both ways, in a hairpin, and round the junction both ways; a group of six rounds the end on one order. All arrive, none comes more than 2 cm into a wall, and no move is given up.
+- `WorldDivide.Navigation.HullClearance.*`, `MoveIntoObstacle.*`, `LongPath.*`, the vehicle movement, avoidance and `WorldDivide.Net.Vehicle.*` tests, and the full run: 243 of 243 pass.
+

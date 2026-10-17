@@ -279,6 +279,7 @@ namespace RTSLocomotion
 
 		// Past the points already reached.
 		State.Target = FMath::Clamp(State.Target, 1, Count - 1);
+		bool bPassedStopCorner = false;
 		while (State.Target < Count - 1)
 		{
 			const FVector2D& From = Path[State.Target - 1];
@@ -291,6 +292,7 @@ namespace RTSLocomotion
 			{
 				break;
 			}
+			bPassedStopCorner |= IsStopCorner(State.Target);
 			++State.Target;
 		}
 		const bool bFinal = State.Target == Count - 1;
@@ -371,10 +373,11 @@ namespace RTSLocomotion
 			return Command;
 		}
 
-		// Tracks pivot toward a way that lies far off their heading, once they have stopped.
+		// Tracks pivot toward a way that lies far off their heading, once they have stopped, and onto the way on from a sharp
+		// corner: an arc from there swings wide of it and may cut across what the next corner, close by, turns round (#173).
 		if (bPivots)
 		{
-			if (!State.bPivoting && FMath::Abs(Heading) > Limits.PivotAngle)
+			if (!State.bPivoting && (FMath::Abs(Heading) > Limits.PivotAngle || (bPassedStopCorner && FMath::Abs(Heading) > PivotExitAngle)))
 			{
 				State.bPivoting = true;
 			}

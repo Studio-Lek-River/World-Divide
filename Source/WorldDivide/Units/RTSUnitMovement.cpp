@@ -150,6 +150,7 @@ void URTSUnitMovement::BackOff(float Seconds)
 {
 	// Wheels back off longer, swinging their nose toward their way: they cannot turn on the spot afterwards.
 	BackOffSeconds = Limits.ReverseSpeed > 0.f ? (Limits.IsWheeled() ? FMath::Max(Seconds, WheeledBackOffSeconds) : Seconds) : 0.f;
+	bFaceAfterBackOff = true;
 	BlockedDirection = 0.f;
 }
 
@@ -255,6 +256,13 @@ RTSLocomotion::FCommand URTSUnitMovement::MakeCommand(float DeltaTime)
 	{
 		Guidance = RTSLocomotion::FGuidanceState();
 	}
+	// Backed off from what stopped it, a track faces its new path on the spot before it drives: from a standstill both
+	// tracks speed up alike, so it would set off straight on its old heading, back into the same corner (#173).
+	if (bMoving && bFaceAfterBackOff)
+	{
+		Guidance.bPivoting = true;
+	}
+	bFaceAfterBackOff = false;
 
 	RTSLocomotion::FGuidanceInput Input;
 	const FTransform& Pose = UpdatedComponent->GetComponentTransform();
@@ -310,12 +318,12 @@ void URTSUnitMovement::TickLocomotion(float DeltaTime)
 	RTSLocomotion::Step(Limits, Command, Drive, DeltaTime, Step);
 	const bool bStill = FMath::IsNearlyZero(Step.Distance) && FMath::IsNearlyZero(Step.Yaw);
 	const bool bPressing = BlockedDirection != 0.f && FMath::Sign(Step.Distance) == BlockedDirection && FMath::Abs(Step.Yaw) < BlockedTurn;
-	float AlignYaw = 0.f;
-	const float Share = bStill ? 1.f : bPressing ? 0.f : CommitStep(Step, DeltaTime, AlignYaw);
-	BlockedDirection = Share < 1.f && !bStill && AlignYaw == 0.f ? FMath::Sign(Step.Distance) : 0.f;
-	const float Driven = Step.Distance * Share;
+	float Turned = 0.f;
+	const float Share = bStill ? 1.f : bPressing ? 0.f : CommitStep(Step, DeltaTime, Turned);
 	// A turn along a wall (CommitStep) is driven too: the tracks pivot.
-	const float Turned = Step.Yaw * Share + AlignYaw;
+	const bool bTurnedInPlace = Share == 0.f && Turned != 0.f;
+	BlockedDirection = Share < 1.f && !bStill && !bTurnedInPlace ? FMath::Sign(Step.Distance) : 0.f;
+	const float Driven = Step.Distance * Share;
 	if (Share < 1.f)
 	{
 		// Up against something: the gear stops there, it does not keep turning in place.
@@ -350,7 +358,7 @@ void URTSUnitMovement::TickLocomotion(float DeltaTime)
 		Realized.Status = Realized.ForwardSpeed < 0.f ? ERTSLocomotionStatus::Reversing : ERTSLocomotionStatus::Driving;
 	}
 	// A turn on the spot against something neither counts as stuck nor as getting anywhere.
-	if (AlignYaw == 0.f)
+	if (!bTurnedInPlace)
 	{
 		BlockedSeconds = Share < 1.f && FMath::Abs(Driven) < BlockedProgress ? BlockedSeconds + DeltaTime : 0.f;
 	}
@@ -561,9 +569,9 @@ bool URTSUnitMovement::IsGroundUnder(const FRTSFootprint& Footprint, float Groun
 	return true;
 }
 
-float URTSUnitMovement::CommitStep(const RTSLocomotion::FStep& Step, float DeltaTime, float& OutAlignYaw)
+float URTSUnitMovement::CommitStep(const RTSLocomotion::FStep& Step, float DeltaTime, float& OutYaw)
 {
-	OutAlignYaw = 0.f;
+	OutYaw = 0.f;
 	ARTSUnit* Unit = GetUnit();
 	const FTransform Pose = UpdatedComponent->GetComponentTransform();
 	const FVector Location = Pose.GetLocation();
@@ -609,6 +617,7 @@ float URTSUnitMovement::CommitStep(const RTSLocomotion::FStep& Step, float Delta
 
 	if (TryArc(Step.Distance, Step.Yaw))
 	{
+		OutYaw = Step.Yaw;
 		return 1.f;
 	}
 
@@ -628,7 +637,7 @@ float URTSUnitMovement::CommitStep(const RTSLocomotion::FStep& Step, float Delta
 			const float AlignYaw = FMath::Clamp(Turn, -MaxTurn, MaxTurn);
 			if (FMath::Abs(Turn) > PathAlignAngle && TryArc(0.f, AlignYaw))
 			{
-				OutAlignYaw = AlignYaw;
+				OutYaw = AlignYaw;
 				return 0.f;
 			}
 		}
@@ -652,16 +661,24 @@ float URTSUnitMovement::CommitStep(const RTSLocomotion::FStep& Step, float Delta
 			const float AlignYaw = FMath::Clamp(Turn, -MaxTurn, MaxTurn);
 			if (FMath::Abs(Turn) < WallAlignAngle && FMath::Abs(AlignYaw) > UE_KINDA_SMALL_NUMBER && TryArc(0.f, AlignYaw))
 			{
-				OutAlignYaw = AlignYaw;
+				OutYaw = AlignYaw;
 				return 0.f;
 			}
 		}
+	}
+
+	// Then on along the heading without the turn: driving along a wall, the turn back onto the way swings the hull's far end
+	// into it, where driving on straight takes the hull past it (#173). Guidance steers again next update.
+	if (Step.Yaw != 0.f && FMath::Abs(Step.Distance) > UE_KINDA_SMALL_NUMBER && TryArc(Step.Distance, 0.f))
+	{
+		return 1.f;
 	}
 
 	for (const float Share : BlockedShares)
 	{
 		if (TryArc(Step.Distance * Share, Step.Yaw * Share))
 		{
+			OutYaw = Step.Yaw * Share;
 			return Share;
 		}
 	}

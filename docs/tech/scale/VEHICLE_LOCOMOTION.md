@@ -104,7 +104,7 @@ There is a series near `dθ = 0`. Results at 30, 60 and 120 updates a second agr
   - for every corner within reach, `√(v_c² + 2·b·d)`, with `v_c = √(a_lat·R)`.
 - **Tracks:**
   - They brake to a stop and pivot when the way lies more than `PivotAngle` off the heading. The pivot ends within 8° of the heading.
-  - They do the same at a path corner sharper than 30°: `AdjustPath` already clears the hull at every heading on those points.
+  - They do the same at a path corner sharper than 30°: `AdjustPath` already clears the hull at every heading on those points. Once past such a corner they pivot onto the way on until within 8° of it, whatever `PivotAngle` says. An arc from there would swing wide and, round a thin wall's end, whose two corners lie closer together than a hull is long, cut across the wall toward the next corner (#173).
   - Speed is scaled by `cos(heading error)` while the heading swings onto the way.
 - **Reverse.** A goal less than 1.5 hull lengths behind, on the last stretch, is reached in reverse when the profile reverses. A goal further behind is pivoted to (tracks) or swung round to on the turning circle (wheels).
 - **Wheels and a goal inside their turning circle.**
@@ -133,13 +133,14 @@ Every update the server checks the arc's end pose before it moves the hull (`URT
 4. **Barrel (#162).** A barrel near an obstacle that is clear now may not be swung or driven into it. A barrel already in one may only drive straight out. This replaces the hull-turn revert in `TickOrders` and the drive guard in avoidance for vehicles.
 5. **A step that is not clear.**
    - Tracks turn on the spot instead, if that is clear: first toward the path point they head for, else parallel to a wall they drive into at a slant (up to 30°). They drive on along it the next update and never slide sideways.
+   - Otherwise it drives the step's distance straight on, without its turn, if that is clear. Along a wall, the turn back onto the path swings the hull's far end into it, while driving straight on takes the hull past it; guidance steers again the next update (#173).
    - Otherwise the gear tries ½, ¼, ⅛, 1/16 and 1/32 of the step, so at top speed it stops within about a centimetre of the obstacle. Then it stops: its speeds are set to zero and it reports `Blocked`. It does not try the same way straight again until something else moved it or it is told to go another way, so driven travel stops in that update.
 
 A pose that is not clear may still be taken when it lies no deeper in an obstacle than the hull already is and does not move toward it. A straight move along or away from an obstacle never counts as deeper. So a vehicle can always back out of a tight spot.
 
 **Blocked moves** (`ARTSUnit::UpdateBlockedMove`):
 - A vehicle stuck for 0.6 s backs off and paths again:
-  - tracks back off straight for 0.4 s at 2 m/s;
+  - tracks back off straight for 0.4 s at 2 m/s, then pivot to face the new path before they drive it. From a standstill both tracks speed up alike, so without the pivot they would set off straight on the old heading, back into the same corner (#173);
   - wheels back off for 1.5 s, steering so their nose swings toward the way.
 - Stuck again within 3 s, or with guidance failed, it gives the move up where it stands.
 - It backs off at most once per move, so it does not rock back and forth (`WorldDivide.Navigation.VehicleBlocked`).

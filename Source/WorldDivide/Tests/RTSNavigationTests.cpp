@@ -2192,4 +2192,199 @@ bool FRTSNavLongPathCostTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+namespace RTSNavigationTests
+{
+	const TCHAR* ThinWallsMap = TEXT("/Game/Maps/L_ThinWalls");
+
+	/**
+	 * L_ThinWalls (#173), from its labelled walls: the north end of the free-standing Wall_Free and its north-east corner,
+	 * and the junction where Wall_JunctionNorth and Wall_JunctionEast cross, each running 3 m past the other.
+	 */
+	FVector2D ThinWallEnd = FVector2D::ZeroVector;
+	FVector2D ThinWallEndCorner = FVector2D::ZeroVector;
+	FVector2D ThinWallJunction = FVector2D::ZeroVector;
+
+	/** Where a route round a thin wall starts and ends. */
+	struct FThinWallRoute
+	{
+		const TCHAR* Name;
+		FVector2D Start;
+		FVector2D Goal;
+	};
+
+	/**
+	 * The routes: round the free wall's end the way L_LongPath's first layout had the M20 drive it and back, a hairpin from
+	 * one side of the wall to the other, and round the junction and back.
+	 */
+	TArray<FThinWallRoute> GetThinWallRoutes()
+	{
+		return {
+			{ TEXT("round the free wall's end"), ThinWallEnd + FVector2D(-3400.f, 3000.f), ThinWallEnd + FVector2D(2100.f, -3000.f) },
+			{ TEXT("back round the free wall's end"), ThinWallEnd + FVector2D(2100.f, -3000.f), ThinWallEnd + FVector2D(-3400.f, 3000.f) },
+			{ TEXT("in a hairpin round the free wall's end"), ThinWallEnd + FVector2D(-2000.f, -1500.f), ThinWallEnd + FVector2D(2000.f, -1500.f) },
+			{ TEXT("round the junction"), ThinWallJunction + FVector2D(-3400.f, 2100.f), ThinWallJunction + FVector2D(1100.f, -3400.f) },
+			{ TEXT("back round the junction"), ThinWallJunction + FVector2D(1100.f, -3400.f), ThinWallJunction + FVector2D(-3400.f, 2100.f) },
+		};
+	}
+
+	bool OpenThinWallsMap(FAutomationTestBase& Test, const TSharedRef<FNavState>& State)
+	{
+		if (!AutomationOpenMap(ThinWallsMap))
+		{
+			Test.AddError(FString::Printf(TEXT("Could not open %s"), ThinWallsMap));
+			return false;
+		}
+		const UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+		const FBox2D Free = World ? RTSTests::GetLabelledBox(*World, TEXT("Wall_Free")) : FBox2D(ForceInit);
+		const FBox2D North = World ? RTSTests::GetLabelledBox(*World, TEXT("Wall_JunctionNorth")) : FBox2D(ForceInit);
+		const FBox2D East = World ? RTSTests::GetLabelledBox(*World, TEXT("Wall_JunctionEast")) : FBox2D(ForceInit);
+		LongVehicleSize = GetLongVehicleSize();
+		if (!Free.bIsValid || !North.bIsValid || !East.bIsValid || LongVehicleSize.X <= 0.f)
+		{
+			Test.AddError(TEXT("Missing test data, or L_ThinWalls lacks its walls"));
+			return false;
+		}
+		ThinWallEnd = FVector2D(Free.GetCenter().X, Free.Max.Y);
+		ThinWallEndCorner = Free.Max;
+		ThinWallJunction = FVector2D(East.GetCenter().X, North.GetCenter().Y);
+		ArrivalRadius = LongVehicleSize.X;
+		return State->LoadUnits(Test) && Test.TestNotNull(TEXT("Flak truck data"), LoadObject<URTSUnitData>(nullptr, FlakTruckPath));
+	}
+
+	/** The hulls of the thin-wall drives: the tracked M20 and placeholder tank, and the wheeled flak truck. */
+	TArray<URTSUnitData*> GetThinWallHulls(const FNavState& State)
+	{
+		return { State.M20, State.Tank, LoadObject<URTSUnitData>(nullptr, FlakTruckPath) };
+	}
+}
+
+/**
+ * The first hull fit of a session (#173): before anything has found out which side of its walls the navmesh lies on, the
+ * M20's path round the free wall's end keeps its corner off the wall's north-east corner, where the hull clears the wall
+ * at every heading it turns through. Read inside out, the corner moved 2 m toward the wall, and the way to it ran the hull
+ * into the wall's end.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavCheckFirstHullFit, FAutomationTestBase*, Test, TSharedRef<RTSNavigationTests::FNavState>, State);
+bool FRTSNavCheckFirstHullFit::Update()
+{
+	using namespace RTSNavigationTests;
+	UWorld* World = AutomationCommon::GetAnyGameWorld();
+	const FRTSUnitShape Shape = RTSUnitShape::FromData(*State->M20);
+	const ARecastNavMesh* NavMesh = World ? RTSNavAgents::GetNavMesh(*World, RTSNavAgents::SelectAgent(Shape)) : nullptr;
+	if (!Test->TestNotNull(TEXT("The M20's navmesh"), NavMesh))
+	{
+		return true;
+	}
+	// The navmesh's corner off the wall's corner, where its edges meet.
+	const float Erosion = RTSHullClearance::GetErosion(*NavMesh);
+	const FVector Extent(50.f, 50.f, 250.f);
+	const FThinWallRoute& Route = GetThinWallRoutes()[0];
+	FNavLocation Corner;
+	FNavLocation Start;
+	FNavLocation Goal;
+	if (!Test->TestTrue(TEXT("The route and the corner off the wall's end lie on the navmesh"),
+		NavMesh->ProjectPoint(FVector(ThinWallEndCorner + FVector2D(Erosion), 0.f), Corner, Extent)
+		&& NavMesh->ProjectPoint(FVector(Route.Start, 0.f), Start, Extent) && NavMesh->ProjectPoint(FVector(Route.Goal, 0.f), Goal, Extent)))
+	{
+		return true;
+	}
+
+	RTSHullClearance::ForgetInsideSign();
+	TArray<FNavPathPoint> Points = { FNavPathPoint(Start.Location, Start.NodeRef), FNavPathPoint(Corner.Location, Corner.NodeRef),
+		FNavPathPoint(Goal.Location, Goal.NodeRef) };
+	RTSHullClearance::AdjustPath(*NavMesh, Shape, Points);
+	const float Moved = Points.Num() == 3 ? FVector::Dist2D(Points[1].Location, Corner.Location) : FLT_MAX;
+	Test->TestTrue(*FString::Printf(TEXT("The corner off the wall's end stays where the navmesh puts it (moved %.0f cm)"), Moved),
+		Moved <= RTSHullClearance::GetNavUncertainty(*NavMesh));
+
+	// The gear's and avoidance's first readings start the same way.
+	for (const float Yaw : { -40.f, -60.f })
+	{
+		RTSHullClearance::ForgetInsideSign();
+		const FVector2D Heading(FMath::Cos(FMath::DegreesToRadians(Yaw)), FMath::Sin(FMath::DegreesToRadians(Yaw)));
+		const float Clearance = RTSHullClearance::GetClearance(*NavMesh, RTSHullClearance::MakeFootprint(Shape, Corner.Location, Heading));
+		Test->TestTrue(*FString::Printf(TEXT("The M20 on that corner at %.0f degrees reads clear of the wall (%.1f cm)"), Yaw, Clearance),
+			Clearance >= 0.f);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavThinWallsFirstFitTest, "WorldDivide.Navigation.ThinWalls.FirstFit", RTSTests::TestFlags)
+
+bool FRTSNavThinWallsFirstFitTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!OpenThinWallsMap(*this, State))
+	{
+		return false;
+	}
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavCheckFirstHullFit(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+/** Forgets which side of its walls the navmesh lies on, so the next drive fits its path as the first of a session does. */
+DEFINE_LATENT_AUTOMATION_COMMAND(FRTSNavForgetInsideSign);
+bool FRTSNavForgetInsideSign::Update()
+{
+	RTSHullClearance::ForgetInsideSign();
+	return true;
+}
+
+/**
+ * Drives round 2 m walls on L_ThinWalls (#173), from a session's first hull fit on: the tracked M20 and placeholder tank
+ * and the wheeled flak truck, each alone on its own move, round the free wall's end both ways, in a hairpin round it and
+ * round the junction both ways; then a group of six, two of each, round the end on one order. Each arrives without its
+ * move given up (no refusal reaches the player), never comes more than 2 cm into a wall and does not keep switching
+ * between forward and reverse.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavThinWallsDriveTest, "WorldDivide.Navigation.ThinWalls.Drive", RTSTests::TestFlags)
+
+bool FRTSNavThinWallsDriveTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	const TSharedRef<FNavState> State = MakeShared<FNavState>();
+	if (!OpenThinWallsMap(*this, State))
+	{
+		return false;
+	}
+	const TArray<URTSUnitData*> Hulls = GetThinWallHulls(*State);
+	const TArray<FThinWallRoute> Routes = GetThinWallRoutes();
+	for (const FThinWallRoute& Route : Routes)
+	{
+		for (URTSUnitData* Data : Hulls)
+		{
+			FDrive Drive;
+			Drive.Name = FString::Printf(TEXT("%s %s"), *Data->GetName(), Route.Name);
+			Drive.Target = FVector(Route.Goal, 0.f);
+			Drive.bCheckReversals = true;
+			const FVector2D Way = Route.Goal - Route.Start;
+			Drive.Units.Add({ Data, FVector(Route.Start, 0.f), static_cast<float>(FMath::RadiansToDegrees(FMath::Atan2(Way.Y, Way.X))) });
+			State->Drives.Add(Drive);
+		}
+	}
+	FDrive Group;
+	Group.Name = TEXT("A group of six round the free wall's end");
+	Group.Target = FVector(Routes[0].Goal, 0.f);
+	Group.bGroupOrder = true;
+	Group.bCheckReversals = true;
+	const float Pitch = 1.2f * LongVehicleSize.X;
+	for (int32 Index = 0; Index < 6; ++Index)
+	{
+		const FVector2D Offset(-(Index / 3) * Pitch, (Index % 3 - 1) * 0.5f * Pitch);
+		Group.Units.Add({ Hulls[Index % Hulls.Num()], FVector(Routes[0].Start + Offset, 0.f), 0.f });
+	}
+	State->Drives.Add(Group);
+
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavForgetInsideSign());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavRunDrives(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
 #endif

@@ -112,10 +112,11 @@ private:
 
 	/**
 	 * Moves the hull along as much of Step as is clear of obstacles, of unsupported ground and, for a barrel near one, of
-	 * reaching it into one: all of it, or the largest of a few shares of it, or none. Returns the share it moved. Tracks stopped
-	 * at a slant against a wall they run along turn parallel to it instead, by OutAlignYaw radians.
+	 * reaching it into one: all of it, or all of its distance without its turn, or the largest of a few shares of it, or none.
+	 * Returns the share of its distance it moved, and the radians the hull turned in OutYaw. Tracks stopped at a slant against
+	 * a wall they run along turn parallel to it instead, on the spot.
 	 */
-	float CommitStep(const RTSLocomotion::FStep& Step, float DeltaTime, float& OutAlignYaw);
+	float CommitStep(const RTSLocomotion::FStep& Step, float DeltaTime, float& OutYaw);
 
 	/** The hull's clearance where it stands, found once per update when a move is not clear, and the way out of it. */
 	struct FCurrentClearance
@@ -157,6 +158,8 @@ private:
 	float BlockedSeconds = 0.f;
 	/** The way, forward (1) or back (-1), the gear was last stopped driving straight into something; 0 when it was not. */
 	float BlockedDirection = 0.f;
+	/** Set by BackOff: tracks face their new path on the spot before they drive it (#173). */
+	bool bFaceAfterBackOff = false;
 
 	/** Server only: where the gear left the hull, so anything else that moved it since counts as recovery. */
 	TOptional<FVector2D> CommittedLocation;

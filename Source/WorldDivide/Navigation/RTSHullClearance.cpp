@@ -58,7 +58,7 @@ namespace
 		float InsideSign = 1.f;
 	};
 
-	/** Set the first time a check finds out which side of its walls the navmesh lies on; Detour winds every polygon alike. */
+	/** +1 or -1 once FindInsideSign found which side of its walls the navmesh lies on; Detour winds every polygon alike. */
 	float GKnownInsideSign = 0.f;
 
 	/** The point of segment Start-End closest to Point, and where along it, 0 to 1. */
@@ -71,6 +71,11 @@ namespace
 	}
 
 	using RTSHullClearance::GetErosion;
+
+	FVector2D Perpendicular(const FVector2D& Direction)
+	{
+		return FVector2D(-Direction.Y, Direction.X);
+	}
 
 	float GetMargin(const ARecastNavMesh& NavMesh)
 	{
@@ -155,18 +160,38 @@ namespace
 		return Side >= 0.f ? Distance : -Distance;
 	}
 
-	/**
-	 * Finds out which side of the walls the navmesh lies on from Point, on the navmesh when bOnMesh and off it otherwise, as
-	 * long as it lies clear of the walls; otherwise keeps the side found before.
-	 */
-	void FindInsideSign(FWalls& Walls, const FVector2D& Point, bool bOnMesh)
+	/** True when Point lies on NavMesh: its spot on the navmesh is the point itself, seen from above. */
+	bool IsOnNavMesh(const ARecastNavMesh& NavMesh, const FVector& Point, float Extent)
 	{
-		Walls.InsideSign = 1.f;
-		FVector2D Inward;
-		const float Side = GetSignedDistance(Walls, Point, Inward);
-		if (FMath::Abs(Side) > 1.f)
+		FNavLocation Projected;
+		return NavMesh.ProjectPoint(Point, Projected, FVector(Extent, Extent, ProjectHeight)) && FVector::Dist2D(Projected.Location, Point) <= 1.f;
+	}
+
+	/**
+	 * Sets which side of the walls the navmesh lies on. Detour winds every polygon alike, so the first wall long enough to
+	 * look a cell to either side of it decides once for all: the side the navmesh is on (#173).
+	 */
+	void FindInsideSign(const ARecastNavMesh& NavMesh, FWalls& Walls)
+	{
+		if (GKnownInsideSign == 0.f)
 		{
-			GKnownInsideSign = (Side > 0.f) == bOnMesh ? 1.f : -1.f;
+			const float Cell = NavMesh.GetCellSize(ENavigationDataResolution::Default);
+			for (const FNavigationWallEdge& Edge : Walls.Edges)
+			{
+				const FVector2D Direction = FVector2D(Edge.End - Edge.Start);
+				if (Direction.Size() < 4.f * Cell)
+				{
+					continue;
+				}
+				const FVector Middle = 0.5f * (Edge.Start + Edge.End);
+				const FVector Left(Perpendicular(Direction.GetSafeNormal()) * Cell, 0.f);
+				const bool bLeft = IsOnNavMesh(NavMesh, Middle + Left, Cell);
+				if (bLeft != IsOnNavMesh(NavMesh, Middle - Left, Cell))
+				{
+					GKnownInsideSign = bLeft ? 1.f : -1.f;
+					break;
+				}
+			}
 		}
 		Walls.InsideSign = GKnownInsideSign != 0.f ? GKnownInsideSign : 1.f;
 	}
@@ -174,11 +199,6 @@ namespace
 	float GetHalfDiagonal(const FRTSFootprint& Footprint)
 	{
 		return FMath::Sqrt(FMath::Square(Footprint.HalfSegment + Footprint.Radius) + FMath::Square(Footprint.Radius));
-	}
-
-	FVector2D Perpendicular(const FVector2D& Direction)
-	{
-		return FVector2D(-Direction.Y, Direction.X);
 	}
 }
 
@@ -210,8 +230,7 @@ namespace RTSHullClearance
 		{
 			return Bound;
 		}
-		// The centre itself where it lies off the navmesh; its spot on the navmesh would sit right on a wall.
-		FindInsideSign(Walls, FVector2D(Footprint.Center), Offset <= 1.f);
+		FindInsideSign(NavMesh, Walls);
 
 		TArray<FSample, TInlineAllocator<64>> Samples;
 		GetSamples(Footprint, Samples);
@@ -236,6 +255,13 @@ namespace RTSHullClearance
 		}
 		return Clearance;
 	}
+
+#if WITH_DEV_AUTOMATION_TESTS
+	void ForgetInsideSign()
+	{
+		GKnownInsideSign = 0.f;
+	}
+#endif
 
 	float GetNavUncertainty(const ARecastNavMesh& NavMesh)
 	{

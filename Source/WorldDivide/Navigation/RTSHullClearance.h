@@ -17,7 +17,9 @@ struct FRTSUnitShape;
  * off it. The hull is the footprint's box (ARTSUnit::GetFootprint): the stadium along its long axis, sampled as discs, and
  * the box corners the stadium rounds off, sampled as points. Clearance is the smallest distance from any of them to an
  * obstacle: negative where the hull overlaps one. The class keeps a path wide enough for the hull's width; this keeps its
- * length, its corners and whatever width the class leaves over clear, so a new hull needs no navigation code.
+ * length, its corners and whatever width the class leaves over clear, so a new hull needs no navigation code. Which side of
+ * its walls the navmesh lies on is found once, a cell to either side of the first wall long enough, before any reading
+ * uses it: read the other way round, the first paths of a session were fitted inside out (#173).
  *
  * Accurate to the navmesh: a margin of half a cell covers its voxels and the simplification of its edges. Recast grows box
  * obstacles (buildings, null-area volumes) by the radius square rather than round, so beside such an obstacle's corner the
@@ -54,6 +56,11 @@ namespace RTSHullClearance
 	 */
 	WORLDDIVIDE_API void AdjustPath(const ARecastNavMesh& NavMesh, const FRTSUnitShape& Shape, TArray<FNavPathPoint>& Points,
 		const FVector* Beyond = nullptr);
+
+#if WITH_DEV_AUTOMATION_TESTS
+	/** Forgets which side of its walls the navmesh lies on, as in a new session, so a test sees it found again (#173). */
+	WORLDDIVIDE_API void ForgetInsideSign();
+#endif
 
 	/** How far NavMesh's edge lies from the obstacles around it: its agent radius rounded up to whole cells, as Recast rasterizes it. */
 	WORLDDIVIDE_API float GetErosion(const ARecastNavMesh& NavMesh);
