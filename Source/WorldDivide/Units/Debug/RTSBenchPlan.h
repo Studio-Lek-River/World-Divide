@@ -4,7 +4,7 @@
 
 #if !UE_BUILD_SHIPPING
 
-/** The methods of rts.Debug.Bench (#132, #138, #167). */
+/** The methods of rts.Debug.Bench (#132, #138, #167, #171). */
 enum class ERTSBenchMethod : uint8
 {
 	/** 3 s settle, 120 frames idle, then 120 frames 1 s after one move order. */
@@ -13,6 +13,11 @@ enum class ERTSBenchMethod : uint8
 	Long,
 	/** For iterating (#167): the long scene, moving only, a 10 s warm-up and one 30 s sample. Diagnostic, never gate evidence. */
 	Quick,
+	/**
+	 * The full-roster gate's first tier (#171): the quick scene with one 15 s sample. Five sessions spread 0.05 ms game
+	 * thread (PERFORMANCE_RESULTS.md); it escalates to the long method and is never gate evidence on its own.
+	 */
+	Screen,
 };
 
 /** What one bench method measures: its counts, scenarios, warm-ups and samples. */
@@ -52,15 +57,17 @@ struct FRTSBenchPlan
 			return TEXT("long");
 		case ERTSBenchMethod::Quick:
 			return TEXT("quick");
+		case ERTSBenchMethod::Screen:
+			return TEXT("screen");
 		default:
 			return TEXT("short");
 		}
 	}
 
-	/** "short", "long" or "quick"; false for anything else. */
+	/** "short", "long", "quick" or "screen"; false for anything else. */
 	static bool ParseMethod(const FString& Word, ERTSBenchMethod& OutMethod)
 	{
-		for (const ERTSBenchMethod Candidate : { ERTSBenchMethod::Short, ERTSBenchMethod::Long, ERTSBenchMethod::Quick })
+		for (const ERTSBenchMethod Candidate : { ERTSBenchMethod::Short, ERTSBenchMethod::Long, ERTSBenchMethod::Quick, ERTSBenchMethod::Screen })
 		{
 			if (Word == GetMethodName(Candidate))
 			{
@@ -107,13 +114,19 @@ struct FRTSBenchPlan
 			Plan.SampleSeconds = 30.0;
 			Plan.bLongScene = true;
 			break;
+		case ERTSBenchMethod::Screen:
+			Plan.bIdle = false;
+			Plan.MoveWarmupSeconds = 10.0;
+			Plan.SampleSeconds = 15.0;
+			Plan.bLongScene = true;
+			break;
 		default:
 			break;
 		}
 		Plan.Counts = InCounts;
 		if (Plan.Counts.IsEmpty())
 		{
-			Plan.Counts = InMethod == ERTSBenchMethod::Quick ? TArray<int32>{ 240 } : TArray<int32>{ 1, 30, 120, 240 };
+			Plan.Counts = InMethod == ERTSBenchMethod::Quick || InMethod == ERTSBenchMethod::Screen ? TArray<int32>{ 240 } : TArray<int32>{ 1, 30, 120, 240 };
 		}
 		return Plan;
 	}

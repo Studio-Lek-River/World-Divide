@@ -47,6 +47,14 @@ bool FRTSBenchPlanTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("quick: one sample"), Quick.GetSamples(240), 1);
 	TestTrue(TEXT("quick: long scene, so it compares with the gate's move rows"), Quick.bLongScene);
 
+	const FRTSBenchPlan Screen = FRTSBenchPlan::Make(ERTSBenchMethod::Screen, {});
+	TestTrue(TEXT("screen: counts"), Screen.Counts == TArray<int32>{ 240 });
+	TestFalse(TEXT("screen: moving only"), Screen.bIdle);
+	TestEqual(TEXT("screen: move warm-up"), Screen.MoveWarmupSeconds, 10.0);
+	TestEqual(TEXT("screen: sample length (#171)"), Screen.SampleSeconds, 15.0);
+	TestEqual(TEXT("screen: one sample"), Screen.GetSamples(240), 1);
+	TestTrue(TEXT("screen: the long scene"), Screen.bLongScene);
+
 	const FRTSBenchPlan QuickCounts = FRTSBenchPlan::Make(ERTSBenchMethod::Quick, { 30, 120 });
 	TestTrue(TEXT("quick: given counts"), QuickCounts.Counts == TArray<int32>{ 30, 120 });
 	TestEqual(TEXT("quick: one sample at the largest given count"), QuickCounts.GetSamples(120), 1);
@@ -63,7 +71,7 @@ bool FRTSBenchArgsTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("0 is no count"), FRTSBenchPlan::ParseCounts(TEXT("0")).IsEmpty());
 	TestTrue(TEXT("words are no counts"), FRTSBenchPlan::ParseCounts(TEXT("quick")).IsEmpty());
 
-	for (const ERTSBenchMethod Method : { ERTSBenchMethod::Short, ERTSBenchMethod::Long, ERTSBenchMethod::Quick })
+	for (const ERTSBenchMethod Method : { ERTSBenchMethod::Short, ERTSBenchMethod::Long, ERTSBenchMethod::Quick, ERTSBenchMethod::Screen })
 	{
 		ERTSBenchMethod Parsed = ERTSBenchMethod::Short;
 		TestTrue(FString::Printf(TEXT("%s parses"), FRTSBenchPlan::GetMethodName(Method)),

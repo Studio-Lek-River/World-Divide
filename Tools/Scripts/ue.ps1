@@ -19,6 +19,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task b
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian -Long
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestTank -Quick -Compare
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestTank -Long -SaveBaseline
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate -Scope broad -Baseline 4a2a706
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uibindings
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uicheck -Path Saved/UIIntake/HUD_2026-10-14/staging/UI
 
@@ -50,18 +52,29 @@ of #138: a 10 s warm-up, then 60 s samples (three at the largest count, one belo
 percentile, while the units keep driving back and forth every 15 s, to a point 30 m west of a grid that stands
 south-west of the middle, out of the enemy headquarters' range. -Long (alias -Full) is the performance gate. -Quick (#167) is
 for iterating and never gate evidence: the long scene at 240 units (or -Counts), moving only, a 10 s warm-up and one 30 s
-sample, the same columns. -Unit A,B runs several sets one after another in one game session, each with its own warm-up,
+sample, the same columns. -Screen (#171) is the gate's first tier: the same with one 15 s sample. -Unit A,B runs several
+sets one after another in one game session, each with its own warm-up,
 samples and folder. bench.json beside the table records the method, scene, machine, commit and content hashes.
 -SaveBaseline (clean worktree only) stores each set's run under Saved/Bench/Baselines/<commit>/<method>/<set>; -Compare reads
 the run against the baseline of HEAD, or of the ancestor -Baseline <commit> (marked OUTDATED), refuses one of another
 method, scene or machine, and writes compare.md. See docs/tech/scale/PERFORMANCE_RESULTS.md, "Bench workflow".
+Every bench run checks itself (#171): bench.json's run section marks a sample cut short, too few frames, stalls or samples that
+disagree, and ue.ps1 adds the CPU other processes used while each set ran (environment); -SaveBaseline refuses a run that is
+no valid measurement. -Frames writes every measured frame to frames.csv and -SampleSeconds N changes the timed samples' length,
+for method studies only (such a run never matches a baseline).
+Gate (#171) is the performance gate for the full roster: it lists the files changed since the baseline commit (-Baseline, or
+HEAD), plans with the RTSBenchGate commandlet which unit sets to screen (-Screen: the quick scene, one 15 s sample) and
+which representatives to bench with the long method (-Scope broad: every unit), runs both in one session each, escalates suspicious screens to the long
+method, and judges every set against Saved/Bench/Baselines/<commit> and the budgets: Saved/Bench/Gate/gate.md and gate.json,
+exit 0 PASS, 1 FAIL, 4 INCONCLUSIVE. With -SaveBaseline (clean worktree) it also stores every valid run as HEAD's baseline.
+See docs/tech/scale/PERFORMANCE_RESULTS.md, "Performance gate for a full roster".
 Uibindings writes every binding key, list and action with its panels, and the widgets, colours, fonts and sprites a layout
 may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck validates the layouts of the UI folder -Path
 (an unpacked delivery, for /ui-intake) and prints each problem. -Out and -Path are relative to the repository root.
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'camerashots', 'bench', 'uibindings', 'uicheck')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'camerashots', 'bench', 'gate', 'uibindings', 'uicheck')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -85,11 +98,20 @@ param(
 
 	[switch]$Quick,
 
+	[switch]$Screen,
+
 	[switch]$SaveBaseline,
 
 	[switch]$Compare,
 
 	[string]$Baseline = '',
+
+	[ValidateSet('auto', 'broad')]
+	[string]$Scope = 'auto',
+
+	[switch]$Frames,
+
+	[double]$SampleSeconds = 0,
 
 	[string]$Out = 'Saved/UIBriefs/bindings.json',
 
@@ -336,12 +358,27 @@ function Write-Json([string]$File, $Value) {
 	[IO.File]::WriteAllText($File, ($Value | ConvertTo-Json -Depth 8), (New-Object Text.UTF8Encoding $false))
 }
 
+# The content files a unit is made of (meshes, materials, textures, animations), from the gate's last plan.json (#171).
+function Get-UnitPackageFiles([string]$Name) {
+	$PlanFile = Join-Path $RepoRoot 'Saved\Bench\Gate\plan.json'
+	if (-not (Test-Path $PlanFile)) { return @() }
+	$Entry = (Read-Json $PlanFile).roster | Where-Object { $_.name -eq $Name }
+	if (-not $Entry) { return @() }
+	return @($Entry.packages | ForEach-Object {
+		$Base = 'Content/' + $_.Substring(6)
+		if (Test-Path (Join-Path $RepoRoot "$Base.umap")) { "$Base.umap" } else { "$Base.uasset" }
+	})
+}
+
 # What bench.json leaves to the repository: the commit, whether the tree had changes, and the hashes of the bench's code, its
-# map and the set's unit data, so a comparison names what differs from its baseline.
+# map, the set's unit data and, once a gate has planned, every content file the set's units are made of, so a comparison
+# names what differs from its baseline.
 function Get-BenchGitFacts([string]$Set) {
 	$Hashes = [ordered]@{}
+	$Units = @($Set -split '\+')
 	$Files = @('Source/WorldDivide/Units/Debug/RTSBenchCommand.cpp', 'Source/WorldDivide/Units/Debug/RTSBenchPlan.h',
-		'Content/Maps/L_Bench.umap') + ($Set -split '\+' | ForEach-Object { "Content/Data/Units/$_.uasset" })
+		'Content/Maps/L_Bench.umap') + ($Units | ForEach-Object { "Content/Data/Units/$_.uasset" })
+	$Files = @($Files + ($Units | ForEach-Object { Get-UnitPackageFiles $_ }) | Select-Object -Unique)
 	foreach ($File in $Files) {
 		$Full = Join-Path $RepoRoot $File
 		$Hashes[$File] = if (Test-Path $Full) { Invoke-Git hash-object $Full } else { 'missing' }
@@ -405,7 +442,7 @@ function Compare-BenchRun([string]$Set, [string]$OutDir, $Chosen, [string]$Metho
 	}
 
 	$Lines = @("# $Set, $Method method: baseline $Short against $($Now.git.sha.Substring(0, 7))$(if ($Now.git.dirty) { ' with uncommitted changes' })", '')
-	if ($Method -eq 'quick') { $Lines += '**Quick method: diagnostic, not gate evidence.** The gate is the long method (`-Long`).'; $Lines += '' }
+	if ($Method -in 'quick', 'screen') { $Lines += "**$Method method: diagnostic, not gate evidence.** The gate is the long method (``-Long``)."; $Lines += '' }
 	if ($Chosen.Behind -gt 0) {
 		$Lines += "**OUTDATED baseline:** $Short is $($Chosen.Behind) commits behind HEAD; the difference includes those commits."
 		$Lines += ''
@@ -414,7 +451,8 @@ function Compare-BenchRun([string]$Set, [string]$OutDir, $Chosen, [string]$Metho
 	$Soft = @()
 	if ($Before.git.dirty) { $Soft += 'the baseline had uncommitted changes' }
 	foreach ($File in $Now.git.hashes.PSObject.Properties.Name) {
-		if ($Before.git.hashes.$File -ne $Now.git.hashes.$File) { $Soft += "$File changed" }
+		# A file the baseline did not hash (an older baseline, before the gate named the set's content) is not a change.
+		if ($null -ne $Before.git.hashes.$File -and $Before.git.hashes.$File -ne $Now.git.hashes.$File) { $Soft += "$File changed" }
 	}
 	$Lines += "- Baseline: $($Before.date), now $($Now.date); $($Now.machine.cpu), $($Now.machine.gpu) $($Now.machine.driver), $($Now.machine.rhi), $($Now.machine.build)"
 	$Lines += "- Changed since the baseline: $(if ($Soft) { $Soft -join '; ' } else { 'nothing the bench reads' })"
@@ -443,10 +481,10 @@ function Compare-BenchRun([string]$Set, [string]$OutDir, $Chosen, [string]$Metho
 
 function Invoke-Bench {
 	Assert-EditorClosed 'the game run loads the same project.'
-	if ($Quick -and $Long) { Write-Host 'BENCH FAILED: -Quick and -Long are two methods; pick one.'; exit 1 }
+	if (@($Quick, $Long, $Screen | Where-Object { $_ }).Count -gt 1) { Write-Host 'BENCH FAILED: -Quick, -Screen and -Long are methods; pick one.'; exit 1 }
 	if ($SaveBaseline -and $Compare) { Write-Host 'BENCH FAILED: -SaveBaseline stores the run of a clean checkout; -Compare reads a change against it. Pick one.'; exit 1 }
 	if ($Baseline -and -not $Compare) { Write-Host 'BENCH FAILED: -Baseline selects the baseline of -Compare.'; exit 1 }
-	$Method = if ($Quick) { 'quick' } elseif ($Long) { 'long' } else { 'short' }
+	$Method = if ($Quick) { 'quick' } elseif ($Screen) { 'screen' } elseif ($Long) { 'long' } else { 'short' }
 	# Several unit sets are separated by ','; '+' joins the sizes of one mixed set.
 	$Sets = @($Unit -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\Bench.log'
@@ -468,7 +506,7 @@ function Invoke-Bench {
 				Get-ChildItem $Stored -Directory | ForEach-Object { Get-ChildItem $_.FullName -Directory | ForEach-Object { Get-ChildItem $_.FullName -Directory } } |
 					ForEach-Object { Write-Host "  $($_.FullName.Substring($Stored.Length + 1))" }
 			}
-			$MethodArg = if ($Quick) { ' -Quick' } elseif ($Long) { ' -Long' } else { '' }
+			$MethodArg = if ($Quick) { ' -Quick' } elseif ($Screen) { ' -Screen' } elseif ($Long) { ' -Long' } else { '' }
 			$CountsArg = if ($Counts) { " -Counts $Counts" } else { '' }
 			Write-Host "Make it on a clean checkout of $Short with: ue.ps1 -Task bench$MethodArg -Unit $($Missing -join ',')$CountsArg -SaveBaseline"
 			Write-Host 'or name an older one with -Baseline <commit> (it is marked OUTDATED).'
@@ -476,67 +514,294 @@ function Invoke-Bench {
 		}
 	}
 
-	foreach ($Set in $Sets) {
-		$OutDir = Join-Path $RepoRoot "Saved\Bench\$Set"
-		if (Test-Path $OutDir) { Remove-Item -Recurse -Force $OutDir }
-	}
-	$TraceArgs = @()
-	if ($Trace) {
-		$TraceFile = Join-Path $RepoRoot "Saved\Traces\Bench_$($Sets -join '_').utrace"
-		New-Item -ItemType Directory -Force (Split-Path $TraceFile) | Out-Null
-		if (Test-Path $TraceFile) { Remove-Item -Force $TraceFile }
-		$TraceArgs = @('-trace=cpu,frame,region,gpu', "`"-tracefile=$TraceFile`"")
-	}
+	if ($SaveBaseline -and $SampleSeconds -gt 0) { Write-Host 'BENCH FAILED: -SampleSeconds is for method studies; such a run is never a baseline.'; exit 1 }
 
 	# -ExecCmds splits its commands at commas: one rts.Debug.Bench per set, which the game queues, and the counts joined by '+'.
 	$BenchCounts = ($Counts -split '[,\s+]+' | Where-Object { $_ }) -join '+'
-	if (-not $BenchCounts) { $BenchCounts = if ($Quick) { '240' } else { '1+30+120+240' } }
-	$BenchMethod = if ($Method -eq 'short') { '' } else { " $Method" }
-	$ExecCmds = ($Sets | ForEach-Object { "rts.Debug.Bench $_ $BenchCounts$BenchMethod" }) -join ','
-	$Clock = [Diagnostics.Stopwatch]::StartNew()
-	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
-		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
-		"`"-ExecCmds=$ExecCmds`"", '-RTSBenchQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
-		'-unattended', '-nosplash', '-nosound') + $TraceArgs)
-	$Clock.Stop()
-	$GameExit = $Process.ExitCode
-	$Seconds = [Math]::Round($Clock.Elapsed.TotalSeconds)
-
-	$Failed = @($Sets | Where-Object { -not (Test-Path (Join-Path $RepoRoot "Saved\Bench\$_\bench.md")) })
-	if ($GameExit -ne 0 -or $Failed) {
-		if (Test-Path $LogFile) {
-			Select-String -Path $LogFile -Pattern 'rts.Debug|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line }
+	if (-not $BenchCounts) { $BenchCounts = if ($Quick -or $Screen) { '240' } else { '1+30+120+240' } }
+	$TraceName = "Bench_$($Sets -join '_')"
+	$Session = Invoke-BenchSession $Sets $Method $BenchCounts $TraceName
+	if ($Session.Exit -ne 0 -or $Session.Failed) {
+		if (Test-Path $Session.Log) {
+			Select-String -Path $Session.Log -Pattern 'rts.Debug|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line }
 		}
-		Write-Host "BENCH FAILED (game exit $GameExit$(if ($Failed) { "; no results for $($Failed -join ', ')" })). Log: $LogFile"
+		Write-Host "BENCH FAILED (game exit $($Session.Exit)$(if ($Session.Failed) { "; no results for $($Session.Failed -join ', ')" })). Log: $($Session.Log)"
 		exit 1
 	}
 
 	$Incompatible = $false
+	$Refused = @()
 	foreach ($Set in $Sets) {
 		$OutDir = Join-Path $RepoRoot "Saved\Bench\$Set"
-		$JsonFile = Join-Path $OutDir 'bench.json'
-		$Json = Read-Json $JsonFile
-		$Json | Add-Member -NotePropertyName git -NotePropertyValue (Get-BenchGitFacts $Set) -Force
-		$Json | Add-Member -NotePropertyName session -NotePropertyValue ([ordered]@{ sets = $Sets; wall_clock_s = $Seconds }) -Force
-		Write-Json $JsonFile $Json
 		Get-Content (Join-Path $OutDir 'bench.md') | ForEach-Object { Write-Host $_ }
 		Write-Host ''
-		if ($SaveBaseline) {
-			$BaseDir = Get-BaselineDir $Json.git.sha $Method $Set
-			if (Test-Path $BaseDir) { Remove-Item -Recurse -Force $BaseDir; Write-Host "Replacing the stored baseline $BaseDir" }
-			New-Item -ItemType Directory -Force $BaseDir | Out-Null
-			Copy-Item (Join-Path $OutDir 'bench.*') $BaseDir
-			Write-Host "BASELINE STORED: $BaseDir"
-		}
+		if ($SaveBaseline -and -not (Save-BenchBaseline $Set $Method)) { $Refused += $Set }
 		if ($Compare -and -not (Compare-BenchRun $Set $OutDir $Chosen $Method)) { $Incompatible = $true }
 	}
-	if ($Trace) { Write-Host "Trace: $TraceFile" }
-	Write-Host "Wall clock: $Seconds s for $($Sets.Count) set(s), $Method method$(if ($Method -eq 'quick') { ' (diagnostic, not gate evidence)' })"
+	if ($Session.Trace) { Write-Host "Trace: $($Session.Trace)" }
+	Write-Host "Wall clock: $($Session.Seconds) s for $($Sets.Count) set(s), $Method method$(if ($Method -in 'quick', 'screen') { ' (diagnostic, not gate evidence)' })"
+	if ($Refused) {
+		Write-Host "BENCH FAILED: no baseline stored for $($Refused -join ', '): the run is not a valid measurement (see above). Run it again on an idle machine."
+		exit 1
+	}
 	if ($Incompatible) {
 		Write-Host 'BENCH FAILED: a baseline is incompatible (see above); its results were not compared.'
 		exit 1
 	}
 	Write-Host "BENCH SUCCEEDED: $(($Sets | ForEach-Object { Join-Path $RepoRoot "Saved\Bench\$_" }) -join ', ')"
+}
+
+# Mean cores the other processes of the machine used, kept equal to RTSBenchGate::Validity::MaxOtherCores (#171).
+$MaxOtherCores = 1.0
+
+# The CPU seconds of every process but the game and this script, by id. Protected processes the user cannot read are left out.
+function Get-OtherCpuSeconds([int]$GameId) {
+	$Seconds = @{}
+	foreach ($Process in Get-Process) {
+		if ($Process.Id -in @(0, $GameId, $PID)) { continue }
+		$Time = $Process.TotalProcessorTime
+		if ($null -ne $Time) { $Seconds[$Process.Id] = $Time.TotalSeconds }
+	}
+	return $Seconds
+}
+
+function ConvertTo-UtcDate($Value) {
+	if ($Value -is [DateTime]) { return $Value.ToUniversalTime() }
+	return [DateTime]::Parse([string]$Value, [Globalization.CultureInfo]::InvariantCulture,
+		[Globalization.DateTimeStyles]::AssumeUniversal -bor [Globalization.DateTimeStyles]::AdjustToUniversal)
+}
+
+# The machine's other load while one set ran: the samples of the session's timeline that overlap the set's run, weighted by
+# the overlap. $null when no sample overlaps.
+function Get-SetEnvironment($Run, $Timeline) {
+	if (-not $Run -or -not $Run.start -or -not $Run.end) { return $null }
+	$Start = ConvertTo-UtcDate $Run.start
+	$End = ConvertTo-UtcDate $Run.end
+	$Weighted = 0.0; $Total = 0.0; $Max = 0.0; $Shader = $false; $Count = 0
+	foreach ($Sample in $Timeline) {
+		$From = if ($Sample.Start -gt $Start) { $Sample.Start } else { $Start }
+		$To = if ($Sample.End -lt $End) { $Sample.End } else { $End }
+		$Overlap = ($To - $From).TotalSeconds
+		if ($Overlap -le 0) { continue }
+		$Weighted += $Sample.Cores * $Overlap; $Total += $Overlap; $Count++
+		if ($Sample.Cores -gt $Max) { $Max = $Sample.Cores }
+		if ($Sample.Shader) { $Shader = $true }
+	}
+	if ($Count -eq 0) { return $null }
+	return [ordered]@{
+		other_cores     = [Math]::Round($Weighted / $Total, 3)
+		other_cores_max = [Math]::Round($Max, 3)
+		shader_workers  = $Shader
+		samples         = $Count
+	}
+}
+
+# One game session on L_Bench that benches Sets one after another with Method, while the other processes' CPU is sampled
+# every few seconds. Each set's bench.json gets the commit and hashes (git), the session, and the machine's other load while
+# it ran (environment). Returns the exit code, the sets without results, the wall clock, the log and the trace file.
+function Invoke-BenchSession([string[]]$Sets, [string]$Method, [string]$BenchCounts, [string]$TraceName) {
+	$LogFile = Join-Path $RepoRoot 'Saved\Logs\Bench.log'
+	foreach ($Set in $Sets) {
+		$OutDir = Join-Path $RepoRoot "Saved\Bench\$Set"
+		if (Test-Path $OutDir) { Remove-Item -Recurse -Force $OutDir }
+	}
+	$ExtraArgs = @()
+	$TraceFile = ''
+	if ($Trace) {
+		$TraceFile = Join-Path $RepoRoot "Saved\Traces\$TraceName.utrace"
+		New-Item -ItemType Directory -Force (Split-Path $TraceFile) | Out-Null
+		if (Test-Path $TraceFile) { Remove-Item -Force $TraceFile }
+		$ExtraArgs += @('-trace=cpu,frame,region,gpu', "`"-tracefile=$TraceFile`"")
+	}
+	if ($Frames) { $ExtraArgs += '-RTSBenchFrames' }
+	if ($SampleSeconds -gt 0) { $ExtraArgs += [string]::Format([Globalization.CultureInfo]::InvariantCulture, '-RTSBenchSampleSeconds={0}', $SampleSeconds) }
+
+	$BenchMethod = if ($Method -eq 'short') { '' } else { " $Method" }
+	$ExecCmds = ($Sets | ForEach-Object { "rts.Debug.Bench $_ $BenchCounts$BenchMethod" }) -join ','
+	$Clock = [Diagnostics.Stopwatch]::StartNew()
+	$Process = Start-Process -FilePath $EditorExe -PassThru -ArgumentList (@(
+		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
+		"`"-ExecCmds=$ExecCmds`"", '-RTSBenchQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		'-unattended', '-nosplash', '-nosound') + $ExtraArgs)
+	# Holding the handle keeps the exit code readable once the process has gone.
+	$null = $Process.Handle
+	$Timeline = @()
+	$Last = Get-OtherCpuSeconds $Process.Id
+	$LastTime = [DateTime]::UtcNow
+	while (-not $Process.WaitForExit(5000)) {
+		$Now = Get-OtherCpuSeconds $Process.Id
+		$NowTime = [DateTime]::UtcNow
+		$Busy = 0.0
+		foreach ($Id in $Now.Keys) {
+			$Before = if ($Last.ContainsKey($Id)) { $Last[$Id] } else { 0.0 }
+			$Busy += [Math]::Max(0.0, $Now[$Id] - $Before)
+		}
+		$Timeline += [pscustomobject]@{
+			Start  = $LastTime
+			End    = $NowTime
+			Cores  = $Busy / [Math]::Max(0.001, ($NowTime - $LastTime).TotalSeconds)
+			Shader = [bool](Get-Process -Name 'ShaderCompileWorker' -ErrorAction SilentlyContinue)
+		}
+		$Last = $Now
+		$LastTime = $NowTime
+	}
+	$Process.WaitForExit()
+	$Clock.Stop()
+	$Seconds = [Math]::Round($Clock.Elapsed.TotalSeconds)
+
+	$Failed = @($Sets | Where-Object { -not (Test-Path (Join-Path $RepoRoot "Saved\Bench\$_\bench.md")) })
+	foreach ($Set in $Sets) {
+		$JsonFile = Join-Path $RepoRoot "Saved\Bench\$Set\bench.json"
+		if (-not (Test-Path $JsonFile)) { continue }
+		$Json = Read-Json $JsonFile
+		$Json | Add-Member -NotePropertyName git -NotePropertyValue (Get-BenchGitFacts $Set) -Force
+		$Json | Add-Member -NotePropertyName session -NotePropertyValue ([ordered]@{ sets = $Sets; wall_clock_s = $Seconds }) -Force
+		$Environment = Get-SetEnvironment $Json.run $Timeline
+		if ($Environment) { $Json | Add-Member -NotePropertyName environment -NotePropertyValue $Environment -Force }
+		Write-Json $JsonFile $Json
+	}
+	return @{ Exit = $Process.ExitCode; Failed = $Failed; Seconds = $Seconds; Log = $LogFile; Trace = $TraceFile }
+}
+
+# Why the run of Set in Saved/Bench/<Set> is no valid measurement, from its own checks (run, #171) and the machine's other
+# load while it ran (environment); empty when it is valid.
+function Get-BenchInvalidity([string]$Set) {
+	$Json = Read-Json (Join-Path $RepoRoot "Saved\Bench\$Set\bench.json")
+	$Problems = @()
+	if (-not $Json.run) { return @('no validity record') }
+	if (-not $Json.run.valid) { $Problems += @($Json.run.flags) }
+	if ($Json.run.trace) { $Problems += 'an Unreal Insights trace was recording' }
+	if (-not $Json.environment) { $Problems += 'no record of the machine''s other load' }
+	elseif ($Json.environment.other_cores -gt $MaxOtherCores) { $Problems += "other processes used $($Json.environment.other_cores) cores while it ran (at most $MaxOtherCores)" }
+	if ($Json.environment.shader_workers) { $Problems += 'shaders were compiling while it ran' }
+	return $Problems
+}
+
+# Stores the run of Set as the baseline of its commit, unless it is no valid measurement; false when refused.
+function Save-BenchBaseline([string]$Set, [string]$Method) {
+	$OutDir = Join-Path $RepoRoot "Saved\Bench\$Set"
+	$Problems = @(Get-BenchInvalidity $Set)
+	if ($Problems) {
+		Write-Host "BASELINE REFUSED for ${Set}: not a valid measurement:"
+		$Problems | ForEach-Object { Write-Host "  $_" }
+		return $false
+	}
+	$Json = Read-Json (Join-Path $OutDir 'bench.json')
+	$BaseDir = Get-BaselineDir $Json.git.sha $Method $Set
+	if (Test-Path $BaseDir) { Remove-Item -Recurse -Force $BaseDir; Write-Host "Replacing the stored baseline $BaseDir" }
+	New-Item -ItemType Directory -Force $BaseDir | Out-Null
+	Copy-Item (Join-Path $OutDir 'bench.*') $BaseDir
+	Write-Host "BASELINE STORED: $BaseDir"
+	return $true
+}
+
+# The RTSBenchGate commandlet with Arguments; returns its exit code, its log in LogFile.
+function Invoke-GateCommandlet([string[]]$Arguments, [string]$LogFile) {
+	& $EditorCmd $Project -run=RTSBenchGate @Arguments "-abslog=$LogFile" $NoMCPPlugins -unattended -nullrhi -nosplash -nosound | Out-Null
+	return $LASTEXITCODE
+}
+
+# Copies each set's run to the gate folder of its method, where the judge reads it.
+function Copy-GateRuns([string[]]$Sets, [string]$Method, [string]$GateDir) {
+	foreach ($Set in $Sets) {
+		$Target = Join-Path $GateDir "$Method\$Set"
+		if (Test-Path $Target) { Remove-Item -Recurse -Force $Target }
+		New-Item -ItemType Directory -Force $Target | Out-Null
+		$Source = Join-Path $RepoRoot "Saved\Bench\$Set"
+		if (Test-Path $Source) { Copy-Item (Join-Path $Source '*') $Target }
+	}
+}
+
+function Invoke-GateSession([string[]]$Sets, [string]$Method, [string]$GateDir) {
+	if (-not $Sets) { return }
+	$Counts = if ($Method -eq 'screen') { '240' } else { '1+30+120+240' }
+	Write-Host "Gate: $Method method of $($Sets.Count) set(s): $($Sets -join ', ')"
+	$Session = Invoke-BenchSession $Sets $Method $Counts "Gate_$Method"
+	if ($Session.Exit -ne 0 -or $Session.Failed) {
+		Write-Host "  the session ended with exit $($Session.Exit)$(if ($Session.Failed) { "; no results for $($Session.Failed -join ', ')" }); the judge reads them as incomplete. Log: $($Session.Log)"
+	}
+	Write-Host "  wall clock $($Session.Seconds) s"
+	if ($SaveBaseline) {
+		foreach ($Set in $Sets) {
+			if (Test-Path (Join-Path $RepoRoot "Saved\Bench\$Set\bench.json")) { $null = Save-BenchBaseline $Set $Method }
+		}
+	}
+	Copy-GateRuns $Sets $Method $GateDir
+}
+
+function Invoke-Gate {
+	Assert-EditorClosed 'the game run loads the same project.'
+	if ($Quick -or $Screen -or $Long -or $Compare -or $Trace -or $Frames -or $SampleSeconds -gt 0) {
+		Write-Host 'GATE FAILED: the gate picks its own methods; -Quick, -Screen, -Long, -Compare, -Trace, -Frames and -SampleSeconds belong to -Task bench.'
+		exit 1
+	}
+	if ($SaveBaseline -and (Invoke-Git status --porcelain)) {
+		Write-Host 'GATE FAILED: -SaveBaseline needs a clean worktree, so each baseline is exactly its commit.'
+		exit 1
+	}
+	$Chosen = Resolve-BenchBaseline
+	$BaselineDir = Join-Path $RepoRoot "Saved\Bench\Baselines\$($Chosen.Sha)"
+	$GateDir = Join-Path $RepoRoot 'Saved\Bench\Gate'
+	$LogFile = Join-Path $RepoRoot 'Saved\Logs\BenchGate.log'
+	if (Test-Path $GateDir) { Remove-Item -Recurse -Force $GateDir }
+	New-Item -ItemType Directory -Force $GateDir | Out-Null
+	$Clock = [Diagnostics.Stopwatch]::StartNew()
+
+	# Everything that differs from the baseline commit: its descendants' commits and the uncommitted and new files.
+	$ErrorActionPreference = 'Continue'
+	$Changed = @(& git -C $RepoRoot diff --name-only $Chosen.Sha 2>$null) + @(& git -C $RepoRoot ls-files --others --exclude-standard 2>$null)
+	$ErrorActionPreference = 'Stop'
+	$ChangesFile = Join-Path $GateDir 'changes.txt'
+	[IO.File]::WriteAllLines($ChangesFile, [string[]]@($Changed | Where-Object { $_ } | Select-Object -Unique), (New-Object Text.UTF8Encoding $false))
+
+	$PlanArgs = @('-Plan', "-Gate=$GateDir", "-Changes=$ChangesFile", "-Screens=$(Join-Path $BaselineDir 'screen')")
+	if ($Scope -eq 'broad') { $PlanArgs += '-Broad' }
+	if ((Invoke-GateCommandlet $PlanArgs $LogFile) -ne 0) {
+		Select-String -Path $LogFile -Pattern 'RTSBenchGate|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line }
+		Write-Host "GATE FAILED: no plan. Log: $LogFile"
+		exit 1
+	}
+	$Plan = Read-Json (Join-Path $GateDir 'plan.json')
+	Write-Host "Gate against $($Chosen.Sha.Substring(0, 7))$(if ($Chosen.Behind -gt 0) { " (OUTDATED: $($Chosen.Behind) commits behind HEAD)" }), scope $(if ($Plan.broad) { 'broad' } else { 'the changed units' })"
+	Write-Host "  representatives: $($Plan.representatives -join ', '); mixed set: $($Plan.mixed)"
+	Write-Host "  screen: $(if ($Plan.screen) { $Plan.screen -join ', ' } else { 'none' })"
+	Write-Host "  long: $(if ($Plan.long) { $Plan.long -join ', ' } else { 'none' })"
+
+	$JudgeArgs = @('-Judge', "-Gate=$GateDir", "-Baselines=$BaselineDir")
+	$Screens = @($Plan.screen)
+	if ($Screens) {
+		Invoke-GateSession $Screens 'screen' $GateDir
+		$null = Invoke-GateCommandlet ($JudgeArgs + '-Stage=screen') $LogFile
+		# A screen that was no valid measurement runs once more, in a session of its own.
+		$Rerun = @((Read-Json (Join-Path $GateDir 'screen.json')).rerun)
+		if ($Rerun) {
+			Write-Host "Gate: running the screens that were no valid measurement once more: $($Rerun -join ', ')"
+			Invoke-GateSession $Rerun 'screen' $GateDir
+			$null = Invoke-GateCommandlet ($JudgeArgs + '-Stage=screen') $LogFile
+		}
+	}
+	$Escalated = if (Test-Path (Join-Path $GateDir 'screen.json')) { @((Read-Json (Join-Path $GateDir 'screen.json')).escalate) } else { @() }
+	if ($Escalated) { Write-Host "Gate: escalated to the long method: $($Escalated -join ', ')" }
+	$Longs = @(@($Plan.long) + $Escalated | Where-Object { $_ } | Select-Object -Unique)
+	Invoke-GateSession $Longs 'long' $GateDir
+
+	$Verdict = Invoke-GateCommandlet ($JudgeArgs + '-Stage=final') $LogFile
+	$Clock.Stop()
+	$Report = Join-Path $GateDir 'gate.md'
+	if (-not (Test-Path $Report)) {
+		Select-String -Path $LogFile -Pattern 'RTSBenchGate|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line }
+		Write-Host "GATE FAILED: no verdict. Log: $LogFile"
+		exit 1
+	}
+	Get-Content $Report | ForEach-Object { Write-Host $_ }
+	Write-Host ''
+	Write-Host "Wall clock: $([Math]::Round($Clock.Elapsed.TotalMinutes, 1)) min. Report: $Report and gate.json"
+	switch ($Verdict) {
+		0 { Write-Host 'GATE PASS' }
+		4 { Write-Host 'GATE INCONCLUSIVE: not a pass; see Next above.' }
+		default { Write-Host 'GATE FAIL' }
+	}
+	exit $Verdict
 }
 
 # The headless UI commandlet (URTSUICommandlet) with Argument; returns its exit code, its log in LogFile.
@@ -587,6 +852,7 @@ switch ($Task) {
 	'unitshots' { Invoke-UnitShots }
 	'camerashots' { Invoke-CameraShots }
 	'bench' { Invoke-Bench }
+	'gate' { Invoke-Gate }
 	'uibindings' { Invoke-UIBindings }
 	'uicheck' { Invoke-UICheck }
 }

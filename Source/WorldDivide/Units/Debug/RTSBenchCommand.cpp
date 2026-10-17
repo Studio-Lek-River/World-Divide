@@ -7,6 +7,7 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Containers/Ticker.h"
+#include "Data/RTSAircraftData.h"
 #include "Data/RTSUnitData.h"
 #include "DynamicRHI.h"
 #include "DynamicResolutionState.h"
@@ -18,6 +19,7 @@
 #include "HAL/PlatformMemory.h"
 #include "Misc/App.h"
 #include "Misc/CommandLine.h"
+#include "Misc/EngineVersion.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
@@ -31,6 +33,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "UnrealClient.h"
+#include "Units/Debug/RTSBenchGate.h"
 #include "Units/Debug/RTSBenchPlan.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
@@ -55,8 +58,15 @@
  *
  * The quick method (a third argument "quick", ue.ps1 -Quick; #167) is the long scene for iterating: 240 units by default,
  * moving only, a 10 s warm-up and one 30 s sample, the same columns. It is diagnostic and never the gate. The numbers of each
- * method are FRTSBenchPlan's. Beside bench.csv and bench.md, bench.json records the method, the scene and the machine, so a
+ * method are FRTSBenchPlan's. The screen method (a third argument "screen", ue.ps1 -Screen; #171) is the quick scene with one
+ * 15 s sample, the first tier of the full-roster gate (ue.ps1 -Task gate). Beside bench.csv and bench.md, bench.json records the method, the scene and the machine, so a
  * stored baseline is only compared with a run of the same kind (ue.ps1 -Compare).
+ *
+ * Every run checks its own rows (#171, RTSBenchGate::CheckRun): a sample cut short, too few frames, stalls, or samples of one
+ * scenario that disagree mark it invalid in bench.json's run section. That section also records when it ran, whether a trace
+ * was recording, the engine and what the set is made of, so a contaminated run is never stored or judged as a measurement.
+ * -RTSBenchFrames also writes every measured frame to frames.csv; -RTSBenchSampleSeconds=N changes the timed samples' length
+ * for the method studies of #171 (recorded in the method, so such a run never matches a baseline).
  *
  * The command given while a run is going is queued: ue.ps1 runs several unit sets one after another in one game session, each
  * its own run with its own camera, settings, warm-up, samples and output folder, its units cleared before the next starts.
@@ -78,6 +88,9 @@ namespace RTSBenchCommand
 	constexpr double LongMoveSeconds = 15.0;
 	/** Frames a timed sample keeps room for without growing: 60 s above 500 frames per second. */
 	constexpr int32 LongFrameCapacity = 32768;
+
+	const TCHAR* FramesParam = TEXT("RTSBenchFrames");
+	const TCHAR* SampleSecondsParam = TEXT("RTSBenchSampleSeconds=");
 
 	/**
 	 * The grid: units face +X in rows across Y, as a formation would stand: each unit's length plus RowGap apart along X and
@@ -142,6 +155,15 @@ namespace RTSBenchCommand
 		double P95LocomotionMs = 0.0;
 		/** The solids the navmesh leaves out (#168), summed over the frames: see FRTSSolidStats. */
 		FRTSSolidStats Solids;
+		/** Real seconds the sample lasted, its longest frame, and its frames over the stall and freeze limits (#171). */
+		double SampleSeconds = 0.0;
+		double MaxFrameMs = 0.0;
+		int32 StallFrames = 0;
+		int32 FreezeFrames = 0;
+		double LastFrameMs = 0.0;
+		double LastGameMs = 0.0;
+		/** With -RTSBenchFrames: each frame's real seconds into the sample, frame time and game thread time. */
+		TArray<FVector3f> KeptFrames;
 
 		void AddSolids(const FRTSSolidStats& Frame)
 		{
@@ -171,6 +193,11 @@ namespace RTSBenchCommand
 			}
 			++Frames;
 			FrameMs += InFrameMs;
+			MaxFrameMs = FMath::Max(MaxFrameMs, InFrameMs);
+			StallFrames += InFrameMs > RTSBenchGate::Validity::StallFrameMs ? 1 : 0;
+			FreezeFrames += InFrameMs > RTSBenchGate::Validity::FreezeFrameMs ? 1 : 0;
+			LastFrameMs = InFrameMs;
+			LastGameMs = InGameMs;
 			GameMs += InGameMs;
 			MaxGameMs = FMath::Max(MaxGameMs, InGameMs);
 			if (GameFrames.Num() < GameFrames.Max())
@@ -211,16 +238,44 @@ namespace RTSBenchCommand
 		{
 			return TEXT("count,scenario,sample,frames,units,frame_ms,game_ms,p95_game_ms,max_game_ms,render_ms,rhi_ms,gpu_ms,draw_calls,triangles,")
 				TEXT("avoidance_ms,max_avoidance_ms,search_ms,locomotion_ms,p95_locomotion_ms,max_locomotion_ms,used_memory_mb,peak_memory_mb,render_width,render_height,")
-				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms");
+				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms,")
+				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f"),
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d"),
 				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
 				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
 				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y, Mean(Solids.Updates), SolidReuseShare(),
-				Mean(Solids.Checks), Mean(Solids.ComponentQueries), Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0));
+				Mean(Solids.Checks), Mean(Solids.ComponentQueries), Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0),
+				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames);
+		}
+
+		/** The row as the gate reads it back from bench.csv. */
+		RTSBenchGate::FRow ToGateRow() const
+		{
+			RTSBenchGate::FRow Row;
+			Row.Count = Count;
+			Row.Scenario = Scenario;
+			Row.Sample = Sample;
+			Row.Frames = Frames;
+			Row.FrameMs = Mean(FrameMs);
+			Row.GameMs = Mean(GameMs);
+			Row.P95GameMs = P95GameMs;
+			Row.MaxGameMs = MaxGameMs;
+			Row.RenderMs = Mean(RenderMs);
+			Row.RHIMs = Mean(RHIMs);
+			Row.GPUMs = Mean(GPUMs);
+			Row.AvoidanceMs = Mean(AvoidanceMs);
+			Row.LocomotionMs = Mean(LocomotionMs);
+			Row.P95LocomotionMs = P95LocomotionMs;
+			Row.MaxLocomotionMs = MaxLocomotionMs;
+			Row.SampleSeconds = SampleSeconds;
+			Row.MaxFrameMs = MaxFrameMs;
+			Row.StallFrames = StallFrames;
+			Row.FreezeFrames = FreezeFrames;
+			return Row;
 		}
 
 		static FString MarkdownHeader()
@@ -275,6 +330,7 @@ namespace RTSBenchCommand
 			Active = Run;
 			Run->StartDelay = Delay;
 			Run->StepStart = FPlatformTime::Seconds();
+			Run->StartTime = FDateTime::UtcNow();
 			FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateSP(Run, &FBenchRun::Tick));
 		}
 
@@ -525,6 +581,8 @@ namespace RTSBenchCommand
 				}
 				const FBox Local = First->CalculateComponentsBoundingBoxInLocalSpace(/*bNonColliding*/ true);
 				Largest = FVector2D::Max(Largest, FVector2D(Local.GetSize().X, Local.GetSize().Y));
+				const TInlineComponentArray<UPrimitiveComponent*> Primitives(First);
+				KindComponents.FindOrAdd(Index) = Primitives.Num();
 			}
 			const FVector2D Spacing(Largest.X + RowGap, Largest.Y + ColumnGap);
 			const int32 Columns = FMath::Max(1, FMath::CeilToInt(FMath::Sqrt(Count * Spacing.X / Spacing.Y)));
@@ -613,6 +671,10 @@ namespace RTSBenchCommand
 			Current.Sample = Plan.IsTimed() ? 1 : 0;
 			Current.GameFrames.Reserve(Plan.IsTimed() ? LongFrameCapacity : Plan.SampleFrames);
 			Current.LocomotionFrames.Reserve(Plan.IsTimed() ? LongFrameCapacity : Plan.SampleFrames);
+			if (bKeepFrames)
+			{
+				Current.KeptFrames.Reserve(LongFrameCapacity);
+			}
 			// The move's slowest frame includes the order's own frame, before the measured ones.
 			Current.MaxGameMs = Next == EStep::MeasureMove ? Lead.MaxGameMs : 0.0;
 			URTSWeaponComponent::TakeSearchSeconds();
@@ -643,6 +705,10 @@ namespace RTSBenchCommand
 			Current.Sample = Sample;
 			Current.GameFrames.Reserve(LongFrameCapacity);
 			Current.LocomotionFrames.Reserve(LongFrameCapacity);
+			if (bKeepFrames)
+			{
+				Current.KeptFrames.Reserve(LongFrameCapacity);
+			}
 			TRACE_BEGIN_REGION(*RegionName());
 			GoTo(MeasureStep);
 			return true;
@@ -664,11 +730,17 @@ namespace RTSBenchCommand
 		bool Measure()
 		{
 			TakeFrame(Current);
-			if (Plan.IsTimed() ? FPlatformTime::Seconds() - StepStart < Plan.SampleSeconds : StepFrames < Plan.SampleFrames)
+			const double Elapsed = FPlatformTime::Seconds() - StepStart;
+			if (bKeepFrames && Current.KeptFrames.Num() < LongFrameCapacity)
+			{
+				Current.KeptFrames.Emplace(Elapsed, Current.LastFrameMs, Current.LastGameMs);
+			}
+			if (Plan.IsTimed() ? Elapsed < Plan.SampleSeconds : StepFrames < Plan.SampleFrames)
 			{
 				return false;
 			}
 			TRACE_END_REGION(*RegionName());
+			Current.SampleSeconds = Elapsed;
 			Current.TakePercentiles();
 			Current.Units = Units.Num();
 			const FPlatformMemoryStats Memory = FPlatformMemory::GetStats();
@@ -705,7 +777,7 @@ namespace RTSBenchCommand
 			FString Csv = FScenarioStats::CsvHeader() + TEXT("\n");
 			FString Markdown = FString::Printf(TEXT("%s on %s, %s, %s method%s\n\n- CPU: %s\n- GPU: %s, driver %s, %s\n- Build: %s\n\n"),
 				*UnitName, *World->GetMapName(), *FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M")), FRTSBenchPlan::GetMethodName(Plan.Method),
-				Plan.Method == ERTSBenchMethod::Quick ? TEXT(" (diagnostic, not gate evidence)") : TEXT(""),
+				Plan.Method == ERTSBenchMethod::Quick || Plan.Method == ERTSBenchMethod::Screen ? TEXT(" (diagnostic, not gate evidence)") : TEXT(""),
 				*GetCPUName(), *GRHIAdapterName, *GRHIAdapterUserDriverVersion, GetRHIName(), LexToString(FApp::GetBuildConfiguration()));
 			Markdown += FScenarioStats::MarkdownHeader();
 			for (const FScenarioStats& Result : Results)
@@ -713,6 +785,9 @@ namespace RTSBenchCommand
 				Csv += Result.ToCsv() + TEXT("\n");
 				Markdown += Result.ToMarkdown();
 			}
+			const TArray<FString> Flags = GetFlags();
+			Markdown += Flags.IsEmpty() ? FString(TEXT("\nValidity (#171): every sample complete, no stalls, the samples agree.\n"))
+				: TEXT("\n**Invalid (#171), not a measurement:** ") + FString::Join(Flags, TEXT("; ")) + TEXT("\n");
 			Markdown += TEXT("\nSolids the navmesh leaves out (#168), per frame:\n\n")
 				TEXT("| Units | Scenario | Sample | Broad overlaps | Reused | Hull checks | Component queries | Broad ms | Narrow ms |\n")
 				TEXT("|---:|---|---:|---:|---:|---:|---:|---:|---:|\n");
@@ -722,7 +797,40 @@ namespace RTSBenchCommand
 			}
 			return FFileHelper::SaveStringToFile(Csv, *FPaths::Combine(Dir, TEXT("bench.csv")))
 				&& FFileHelper::SaveStringToFile(Markdown, *FPaths::Combine(Dir, TEXT("bench.md")))
-				&& FFileHelper::SaveStringToFile(DescribeRun(), *FPaths::Combine(Dir, TEXT("bench.json")));
+				&& FFileHelper::SaveStringToFile(DescribeRun(), *FPaths::Combine(Dir, TEXT("bench.json")))
+				&& (!bKeepFrames || FFileHelper::SaveStringToFile(DescribeFrames(), *FPaths::Combine(Dir, TEXT("frames.csv"))));
+		}
+
+		/** What makes this run unfit to measure with (RTSBenchGate::CheckRun); empty when it is valid. */
+		TArray<FString> GetFlags() const
+		{
+			TArray<RTSBenchGate::FRow> Rows;
+			for (const FScenarioStats& Result : Results)
+			{
+				Rows.Add(Result.ToGateRow());
+			}
+			return RTSBenchGate::CheckRun(Rows, Plan.IsTimed() ? Plan.SampleSeconds : 0.0);
+		}
+
+		/** frames.csv: every measured frame of every sample, for the method studies of #171. */
+		FString DescribeFrames() const
+		{
+			FString Csv = TEXT("count,scenario,sample,t_s,frame_ms,game_ms\n");
+			for (const FScenarioStats& Result : Results)
+			{
+				for (const FVector3f& Frame : Result.KeptFrames)
+				{
+					Csv += FString::Printf(TEXT("%d,%s,%d,%.4f,%.3f,%.3f\n"), Result.Count, *Result.Scenario, Result.Sample, Frame.X, Frame.Y, Frame.Z);
+				}
+			}
+			return Csv;
+		}
+
+		/** Whether an Unreal Insights trace records into this run: its overhead is then in every number. */
+		static bool IsTracing()
+		{
+			FString Channels;
+			return FParse::Value(FCommandLine::Get(), TEXT("trace="), Channels) || FParse::Param(FCommandLine::Get(), TEXT("trace"));
 		}
 
 		static FString GetCPUName() { return FPlatformMisc::GetCPUBrand().TrimStartAndEnd(); }
@@ -788,11 +896,44 @@ namespace RTSBenchCommand
 			Machine->SetStringField(TEXT("rhi"), GetRHIName());
 			Machine->SetStringField(TEXT("build"), LexToString(FApp::GetBuildConfiguration()));
 
+			// The run itself (#171): when it ran, whether it is fit to measure with, and what the set is made of. A baseline need
+			// not match it, so the baselines stored before it stay comparable.
+			const TSharedRef<FJsonObject> Run = MakeShared<FJsonObject>();
+			Run->SetStringField(TEXT("start"), StartTime.ToIso8601());
+			Run->SetStringField(TEXT("end"), FDateTime::UtcNow().ToIso8601());
+			Run->SetStringField(TEXT("engine"), FEngineVersion::Current().ToString());
+			Run->SetBoolField(TEXT("trace"), IsTracing());
+			const TArray<FString> Flags = GetFlags();
+			Run->SetBoolField(TEXT("valid"), Flags.IsEmpty());
+			TArray<TSharedPtr<FJsonValue>> FlagValues;
+			for (const FString& Flag : Flags)
+			{
+				FlagValues.Add(MakeShared<FJsonValueString>(Flag));
+			}
+			Run->SetArrayField(TEXT("flags"), FlagValues);
+			TArray<TSharedPtr<FJsonValue>> Kinds;
+			bool bVehicles = false;
+			for (int32 Index = 0; Index < UnitData.Num(); ++Index)
+			{
+				const URTSUnitData* Data = UnitData[Index].Get();
+				const bool bAircraft = Data->IsA<URTSAircraftData>();
+				const TSharedRef<FJsonObject> Kind = MakeShared<FJsonObject>();
+				Kind->SetStringField(TEXT("name"), Data->GetName());
+				Kind->SetStringField(TEXT("locomotion"), StaticEnum<ERTSLocomotionType>()->GetNameStringByValue(static_cast<int64>(Data->Locomotion.Type)));
+				Kind->SetBoolField(TEXT("aircraft"), bAircraft);
+				Kind->SetNumberField(TEXT("primitive_components"), KindComponents.FindRef(Index));
+				Kinds.Add(MakeShared<FJsonValueObject>(Kind));
+				bVehicles |= Data->Locomotion.IsVehicle() && !bAircraft;
+			}
+			Run->SetArrayField(TEXT("units"), Kinds);
+			Run->SetBoolField(TEXT("vehicles"), bVehicles);
+
 			const TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
 			Root->SetStringField(TEXT("date"), FDateTime::Now().ToString(TEXT("%Y-%m-%d %H:%M")));
 			Root->SetObjectField(TEXT("method"), Method);
 			Root->SetObjectField(TEXT("scene"), Scene);
 			Root->SetObjectField(TEXT("machine"), Machine);
+			Root->SetObjectField(TEXT("run"), Run);
 			FString Json;
 			FJsonSerializer::Serialize(Root, TJsonWriterFactory<TCHAR, TPrettyJsonPrintPolicy<TCHAR>>::Create(&Json));
 			return Json;
@@ -857,6 +998,11 @@ namespace RTSBenchCommand
 		FRTSBenchPlan Plan;
 		/** Real seconds the run waits before it looks for the player: a queued run's clear time. */
 		double StartDelay = 0.0;
+		FDateTime StartTime;
+		/** -RTSBenchFrames: keep every measured frame for frames.csv. */
+		bool bKeepFrames = FParse::Param(FCommandLine::Get(), FramesParam);
+		/** Each kind's primitive components, from its first unit. */
+		TMap<int32, int32> KindComponents;
 		/** The mix, held through the garbage collection between counts, when no unit refers to it. */
 		TArray<TStrongObjectPtr<URTSUnitData>> UnitData;
 		int32 TeamId = 0;
@@ -886,17 +1032,22 @@ namespace RTSBenchCommand
 	{
 		if (!World || !World->IsGameWorld() || Args.IsEmpty())
 		{
-			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.Bench <UnitData> [Count,Count,...] [short|long|quick] needs a running game"));
+			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.Bench <UnitData> [Count,Count,...] [short|long|quick|screen] needs a running game"));
 			return;
 		}
 		ERTSBenchMethod Method = ERTSBenchMethod::Short;
 		if (Args.Num() > 2 && !FRTSBenchPlan::ParseMethod(Args[2], Method))
 		{
-			Output.Logf(ELogVerbosity::Error, TEXT("rts.Debug.Bench: no method named %s (short, long or quick)"), *Args[2]);
+			Output.Logf(ELogVerbosity::Error, TEXT("rts.Debug.Bench: no method named %s (short, long, quick or screen)"), *Args[2]);
 			return;
 		}
 		// A count of 0 (or none) takes the method's default counts, so "quick" can follow without them.
-		const FRTSBenchPlan Plan = FRTSBenchPlan::Make(Method, Args.Num() > 1 ? FRTSBenchPlan::ParseCounts(Args[1]) : TArray<int32>());
+		FRTSBenchPlan Plan = FRTSBenchPlan::Make(Method, Args.Num() > 1 ? FRTSBenchPlan::ParseCounts(Args[1]) : TArray<int32>());
+		// The method studies of #171 only: bench.json records the length, so such a run never matches a stored baseline.
+		if (double SampleSeconds = 0.0; Plan.IsTimed() && FParse::Value(FCommandLine::Get(), SampleSecondsParam, SampleSeconds) && SampleSeconds > 0.0)
+		{
+			Plan.SampleSeconds = SampleSeconds;
+		}
 		const int32 Place = FBenchRun::StartOrQueue(MakeShared<FBenchRun>(*World, Args[0], Plan));
 		Output.Logf(TEXT("rts.Debug.Bench: %s, %s method, to %s%s"), *Args[0], FRTSBenchPlan::GetMethodName(Method),
 			*FPaths::ConvertRelativePathToFull(FBenchRun::GetOutputDir(Args[0])),
@@ -905,8 +1056,8 @@ namespace RTSBenchCommand
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice BenchCommand(
 		TEXT("rts.Debug.Bench"),
-		TEXT("rts.Debug.Bench <UnitData>[+UnitData...] [Count,Count,...|0] [short|long|quick]: measures that many of the unit, or of the mix in turn (by default 1, 30, 120 and 240; ")
-		TEXT("quick: 240) standing in a grid and driving on a move order, from a fixed camera, to Saved/Bench/<UnitData>. Given while a run is going, it is queued."),
+		TEXT("rts.Debug.Bench <UnitData>[+UnitData...] [Count,Count,...|0] [short|long|quick|screen]: measures that many of the unit, or of the mix in turn (by default 1, 30, 120 and 240; ")
+		TEXT("quick, screen: 240) standing in a grid and driving on a move order, from a fixed camera, to Saved/Bench/<UnitData>. Given while a run is going, it is queued."),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunBenchCommand));
 }
 
