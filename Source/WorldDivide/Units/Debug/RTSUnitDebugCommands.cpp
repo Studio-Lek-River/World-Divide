@@ -35,6 +35,7 @@
 #include "Units/RTSBarrelClearance.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
+#include "Units/Debug/RTSUnitLOD.h"
 #include "WorldDivide.h"
 
 /**
@@ -56,7 +57,10 @@
  * for each of four teams side by side at the default and the closest zoom and under a low sun (#150). With
  * StressCount, that many more of the unit stand in a grid and a last picture
  * shows them with stat unit and stat rhi; the frame time, game thread time, avoidance pass, draw calls and triangles are
- * logged. The pictures go to
+ * logged. With a third argument "lods" (ue.ps1 -LODs; #149) it takes the LOD sheet instead: the unit at each LOD forced
+ * (r.ForceLOD) from the side, front, rear and front three-quarter, then the RTS camera at a zoom inside each LOD, then the
+ * RTS camera's lens just inside and just outside each switch distance, then the team row at each LOD; every shot logs the
+ * LOD each of the unit's meshes is drawn at (RTSUnitLOD), into the folder LODs. The pictures go to
  * Saved/UnitShots/<UnitData>/<shot>.png. With -RTSUnitShotsQuit on the command line (ue.ps1 -Task unitshots) the game
  * quits when done, with exit code 1 on failure.
  */
@@ -108,6 +112,27 @@ namespace RTSUnitDebugCommands
 	constexpr float TeamCloseUpHeight = 900.f;
 	/** The sun's pitch for the low-light team shot: evening light, long shadows. */
 	constexpr float LowSunPitch = -10.f;
+
+	/**
+	 * The LOD sheet (#149). The forced LODs: the inspection lens this far from the middle of the hull, from this far above
+	 * the horizontal, at each view (unit space). The switches: vehicle_art.LOD_DISTANCES, each shot this share inside and
+	 * outside it, through the RTS camera's lens (60 degrees across at 16:9, the vertical field of view kept), from the front
+	 * three-quarter. The RTS zooms: one inside each LOD, the default and the farthest included.
+	 */
+	constexpr int32 LODCount = 4;
+	constexpr float LODViewDistance = 1800.f;
+	constexpr float LODViewElevation = 20.f;
+	const TPair<const TCHAR*, FVector> LODViews[] = {
+		{ TEXT("side"), FVector(0.f, -1.f, 0.f) },
+		{ TEXT("front"), FVector(1.f, 0.f, 0.f) },
+		{ TEXT("rear"), FVector(-1.f, 0.f, 0.f) },
+		{ TEXT("three_quarter"), FVector(1.f, -0.7f, 0.f) },
+	};
+	const float LODSwitchDistances[] = { 3500.f, 11000.f, 26000.f };
+	constexpr float LODSwitchMargin = 0.04f;
+	constexpr float RTSLensFOV = 60.f;
+	constexpr float LODCloseZoom = 2500.f;
+	constexpr float LODTacticalZoom = 7000.f;
 
 	/** The obstacle shots: the unit starts this far out from the obstacle's edge and is ordered into its middle. */
 	const TCHAR* ObstacleBlockLabel = TEXT("Block_North");
@@ -262,8 +287,8 @@ namespace RTSUnitDebugCommands
 	class FUnitShotsRun : public TSharedFromThis<FUnitShotsRun>
 	{
 	public:
-		FUnitShotsRun(UWorld& InWorld, const FString& InUnitName, int32 InStressCount)
-			: World(&InWorld), UnitName(InUnitName), StressCount(InStressCount)
+		FUnitShotsRun(UWorld& InWorld, const FString& InUnitName, int32 InStressCount, bool bInLODs)
+			: World(&InWorld), UnitName(InUnitName), StressCount(InStressCount), bLODs(bInLODs)
 		{
 		}
 
@@ -424,6 +449,11 @@ namespace RTSUnitDebugCommands
 		/** The camera pawn looks along its own yaw; the unit is turned to show the camera its front three-quarter. */
 		void BuildShots()
 		{
+			if (bLODs)
+			{
+				AddLODShots();
+				return;
+			}
 			Shots.Add({ TEXT("rts_default"), [](FUnitShotsRun& Run)
 			{
 				Run.PoseUnit();
@@ -482,6 +512,120 @@ namespace RTSUnitDebugCommands
 					return true;
 				}, SettleSeconds, true });
 			}
+		}
+
+		/** The LOD sheet (#149): see the command's description. */
+		void AddLODShots()
+		{
+			for (int32 LOD = 0; LOD < LODCount; ++LOD)
+			{
+				for (const TPair<const TCHAR*, FVector>& View : LODViews)
+				{
+					Shots.Add({ FString::Printf(TEXT("lod%d_%s"), LOD, View.Key), [LOD, Direction = View.Value](FUnitShotsRun& Run)
+					{
+						Run.PoseUnit();
+						Run.SetForcedLOD(LOD);
+						return Run.UseLODCamera(Direction, LODViewDistance, false);
+					} });
+				}
+			}
+			const TPair<const TCHAR*, float> Zooms[] = {
+				{ TEXT("auto_close"), LODCloseZoom }, { TEXT("auto_tactical"), LODTacticalZoom },
+				{ TEXT("auto_default"), GetCameraPawn()->GetDefaultZoom() }, { TEXT("auto_max"), GetCameraPawn()->GetMaxZoom() },
+			};
+			for (const TPair<const TCHAR*, float>& Zoom : Zooms)
+			{
+				Shots.Add({ Zoom.Key, [Zoom = Zoom.Value](FUnitShotsRun& Run)
+				{
+					Run.SetForcedLOD(INDEX_NONE);
+					Run.UseRTSCamera(Zoom, 0.f);
+					return true;
+				} });
+			}
+			for (int32 Switch = 0; Switch < UE_ARRAY_COUNT(LODSwitchDistances); ++Switch)
+			{
+				for (const float Side : { -1.f, 1.f })
+				{
+					const FString Name = FString::Printf(TEXT("switch%d_%s"), Switch + 1, Side < 0.f ? TEXT("before") : TEXT("after"));
+					Shots.Add({ Name, [Distance = LODSwitchDistances[Switch] * (1.f + Side * LODSwitchMargin)](FUnitShotsRun& Run)
+					{
+						Run.SetForcedLOD(INDEX_NONE);
+						return Run.UseLODCamera(LODViews[3].Value, Distance, true);
+					} });
+				}
+			}
+			for (int32 LOD = 0; LOD < LODCount; ++LOD)
+			{
+				Shots.Add({ FString::Printf(TEXT("teams_lod%d"), LOD), [LOD](FUnitShotsRun& Run)
+				{
+					if (Run.TeamRow.IsEmpty())
+					{
+						Run.SpawnTeamRow();
+					}
+					Run.SetForcedLOD(LOD);
+					return Run.UseTeamRowCloseUp();
+				} });
+			}
+		}
+
+		/** r.ForceLOD at LOD, INDEX_NONE for the renderer's own choice; Finish puts it back. */
+		void SetForcedLOD(int32 LOD)
+		{
+			IConsoleVariable* ForceLOD = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ForceLOD"));
+			if (!ForceLOD)
+			{
+				return;
+			}
+			if (!SavedForceLOD)
+			{
+				SavedForceLOD = ForceLOD->GetInt();
+			}
+			ForcedLOD = LOD;
+			ForceLOD->Set(LOD, ECVF_SetByConsole);
+		}
+
+		/**
+		 * The inspection camera Distance from the middle of the hull toward Direction (unit space), LODViewElevation above the
+		 * horizontal; with bRTSLens through the RTS camera's lens, which the LOD switches are measured with, else the close-up's.
+		 */
+		bool UseLODCamera(const FVector& Direction, float Distance, bool bRTSLens)
+		{
+			const UStaticMeshComponent* Hull = RTSUnitLOD::FindHull(*Unit);
+			if (!Hull || !UseCloseUpCamera())
+			{
+				return false;
+			}
+			UCameraComponent* Lens = CloseUp->GetCameraComponent();
+			Lens->SetFieldOfView(bRTSLens ? RTSLensFOV : CloseUpFOV);
+			Lens->bOverrideAspectRatioAxisConstraint = bRTSLens;
+			Lens->SetAspectRatioAxisConstraint(EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV);
+			const FVector Centre = Hull->Bounds.Origin;
+			const FVector Across = Unit->GetActorTransform().TransformVectorNoScale(Direction).GetSafeNormal2D();
+			const float Elevation = FMath::DegreesToRadians(LODViewElevation);
+			const FVector Eye = Centre + (Across * FMath::Cos(Elevation) + FVector::UpVector * FMath::Sin(Elevation)) * Distance;
+			CloseUp->SetActorLocationAndRotation(Eye, (Centre - Eye).Rotation());
+			return true;
+		}
+
+		/**
+		 * For a LOD shot: the LOD the unit's meshes are drawn at from the player's view, and how far the hull is; for a team
+		 * shot, the first of the row's.
+		 */
+		void LogPartLODs() const
+		{
+			FVector Origin;
+			FMatrix Projection;
+			const ARTSUnit* Subject = TeamRow.IsEmpty() ? Unit.Get() : TeamRow[0].Get();
+			const UStaticMeshComponent* Hull = Subject ? RTSUnitLOD::FindHull(*Subject) : nullptr;
+			if (!Hull || !RTSUnitLOD::GetPlayerView(*GetController(), Origin, Projection))
+			{
+				return;
+			}
+			const RTSUnitLOD::FPartLODs LODs = RTSUnitLOD::GetPartLODs(*Subject, Origin, Projection);
+			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.UnitShots: %s: forced LOD %s; the renderer's own choice: %s (%s), hull %.1f m away"),
+				*Shots[ShotIndex].Name, ForcedLOD == INDEX_NONE ? TEXT("off") : *FString::FromInt(ForcedLOD), *LODs.ToString(),
+				LODs.IsCoherent() ? TEXT("every part at the hull's") : TEXT("NOT every part at the hull's"),
+				FVector::Dist(Hull->Bounds.Origin, Origin) / 100.f);
 		}
 
 		/**
@@ -894,6 +1038,10 @@ namespace RTSUnitDebugCommands
 						*Shots[ShotIndex].Name);
 				}
 			}
+			if (bLODs)
+			{
+				LogPartLODs();
+			}
 			const APlayerCameraManager* View = GetController()->PlayerCameraManager;
 			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.UnitShots: %s from %s looking %s at %s, unit at %s"), *Shots[ShotIndex].Name,
 				*View->GetCameraLocation().ToString(), *View->GetCameraRotation().ToString(), *GetNameSafe(GetController()->GetViewTarget()),
@@ -919,7 +1067,7 @@ namespace RTSUnitDebugCommands
 			{
 				return FPlatformTime::Seconds() - StepStart > CaptureTimeout ? Finish(TEXT("no screenshot arrived")) : true;
 			}
-			const FString Path = FPaths::Combine(GetShotDir(UnitName), Shots[ShotIndex].Name + TEXT(".png"));
+			const FString Path = FPaths::Combine(GetShotDir(UnitName), bLODs ? TEXT("LODs") : TEXT(""), Shots[ShotIndex].Name + TEXT(".png"));
 			for (FColor& Pixel : Pixels)
 			{
 				Pixel.A = 255;
@@ -943,6 +1091,10 @@ namespace RTSUnitDebugCommands
 				SetLowSun(false);
 				ClearTeamRow();
 				SetStats(false);
+				if (SavedForceLOD)
+				{
+					SetForcedLOD(*SavedForceLOD);
+				}
 				if (Unit.IsValid())
 				{
 					Unit->SetAimOverride({});
@@ -979,6 +1131,10 @@ namespace RTSUnitDebugCommands
 		TWeakObjectPtr<UWorld> World;
 		FString UnitName;
 		int32 StressCount = 0;
+		/** The LOD sheet instead of the usual shots, the LOD forced for the current shot, and r.ForceLOD before the run. */
+		bool bLODs = false;
+		int32 ForcedLOD = INDEX_NONE;
+		TOptional<int32> SavedForceLOD;
 		TWeakObjectPtr<ARTSUnit> Unit;
 		TWeakObjectPtr<ACameraActor> CloseUp;
 
@@ -1014,7 +1170,7 @@ namespace RTSUnitDebugCommands
 	{
 		if (!World || !World->IsGameWorld() || Args.IsEmpty())
 		{
-			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.UnitShots <UnitData> [StressCount] needs a running game"));
+			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.UnitShots <UnitData> [StressCount] [lods] needs a running game"));
 			return;
 		}
 		if (FUnitShotsRun::IsRunning())
@@ -1023,9 +1179,10 @@ namespace RTSUnitDebugCommands
 			return;
 		}
 		const int32 StressCount = Args.Num() > 1 ? FMath::Max(FCString::Atoi(*Args[1]), 0) : 0;
+		const bool bLODs = Args.Num() > 2 && Args[2] == TEXT("lods");
 		Output.Logf(TEXT("rts.Debug.UnitShots: %s to %s"), *Args[0],
 			*FPaths::ConvertRelativePathToFull(FUnitShotsRun::GetShotDir(Args[0])));
-		FUnitShotsRun::Start(MakeShared<FUnitShotsRun>(*World, Args[0], StressCount));
+		FUnitShotsRun::Start(MakeShared<FUnitShotsRun>(*World, Args[0], StressCount, bLODs));
 	}
 
 	void RunAimTurretCommand(const TArray<FString>& Args, UWorld* World, FOutputDevice& Output)
@@ -1074,9 +1231,9 @@ namespace RTSUnitDebugCommands
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice UnitShotsCommand(
 		TEXT("rts.Debug.UnitShots"),
-		TEXT("rts.Debug.UnitShots <UnitData> [StressCount]: saves views of the first unit with that data asset (RTS camera at its ")
-		TEXT("default, closest and farthest zoom, a close-up, its turret turned) to Saved/UnitShots, and with StressCount a ")
-		TEXT("grid of that many more with stat unit and stat rhi."),
+		TEXT("rts.Debug.UnitShots <UnitData> [StressCount] [lods]: saves views of the first unit with that data asset (RTS camera at ")
+		TEXT("its default, closest and farthest zoom, a close-up, its turret turned) to Saved/UnitShots, and with StressCount a ")
+		TEXT("grid of that many more with stat unit and stat rhi; with lods, its LOD sheet instead (#149)."),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunUnitShotsCommand));
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice AimTurretCommand(

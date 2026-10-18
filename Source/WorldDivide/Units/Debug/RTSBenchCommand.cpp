@@ -39,6 +39,7 @@
 #include "Units/Debug/RTSBenchGate.h"
 #include "Units/Debug/RTSBenchPlan.h"
 #include "Units/Debug/RTSBenchScene.h"
+#include "Units/Debug/RTSUnitLOD.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSRunningGearSubsystem.h"
@@ -91,6 +92,11 @@
  *
  * Every row also counts what the units draw with (#150): their primitive components, the material slots of those that
  * are dynamic instances, and the distinct materials over all of them.
+ *
+ * A set named with RTSBenchScene::ForceLOD0Suffix (DA_TestM20Guardian@LOD0; #149) draws every mesh at LOD0 (r.ForceLOD 0
+ * while it runs), against the LODs the set without it picks; RTSBenchScene::NearSuffix and FarSuffix move the camera to
+ * NearCameraDistance or FarCameraDistance. Every row also counts the units on screen at the sample's end by the LOD their
+ * hull is drawn at, and how many of them have a part at another LOD (RTSUnitLOD).
  */
 namespace RTSBenchCommand
 {
@@ -121,7 +127,7 @@ namespace RTSBenchCommand
 	const FVector CameraLookAt(MoveDistance / 2.f, 0.f, 0.f);
 
 	constexpr float CameraPitch = -55.f;
-	constexpr float CameraDistance = 17000.f;
+	constexpr float DefaultCameraDistance = 17000.f;
 	constexpr float CameraFOV = 60.f;
 
 	/** The settings every scenario runs with, restored afterwards. */
@@ -162,6 +168,9 @@ namespace RTSBenchCommand
 		int32 Primitives = 0;
 		int32 DynamicMaterials = 0;
 		int32 DistinctMaterials = 0;
+		/** The units on screen at the sample's end by their hull's LOD (#149), and those with a part at another LOD. */
+		TArray<int32, TInlineAllocator<4>> HullLODs;
+		int32 MixedLODUnits = 0;
 		/**
 		 * Each frame's game thread, locomotion, render thread, GPU and running gear time, kept for the percentiles; reserved
 		 * up front so measuring never allocates.
@@ -282,19 +291,21 @@ namespace RTSBenchCommand
 				TEXT("avoidance_ms,max_avoidance_ms,search_ms,locomotion_ms,p95_locomotion_ms,max_locomotion_ms,used_memory_mb,peak_memory_mb,render_width,render_height,")
 				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms,")
 				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames,p95_render_ms,p95_gpu_ms,running_gear_ms,p95_running_gear_ms,")
-				TEXT("primitives,dynamic_materials,distinct_materials");
+				TEXT("primitives,dynamic_materials,distinct_materials,lod0_units,lod1_units,lod2_units,lod3_units,mixed_lod_units");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d"),
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d"),
 				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
 				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
 				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y, Mean(Solids.Updates), SolidReuseShare(),
 				Mean(Solids.Checks), Mean(Solids.ComponentQueries), Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0),
 				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames, P95RenderMs, P95GPUMs, Mean(RunningGearMs), P95RunningGearMs,
-				Primitives, DynamicMaterials, DistinctMaterials);
+				Primitives, DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits);
 		}
+
+		int32 HullLOD(int32 LOD) const { return HullLODs.IsValidIndex(LOD) ? HullLODs[LOD] : 0; }
 
 		/** The row as the gate reads it back from bench.csv. */
 		RTSBenchGate::FRow ToGateRow() const
@@ -347,8 +358,8 @@ namespace RTSBenchCommand
 
 		FString ToMaterialsMarkdown() const
 		{
-			return FString::Printf(TEXT("| %d | %s | %d | %d | %d | %d |\n"), Count, *Scenario, Sample, Primitives, DynamicMaterials,
-				DistinctMaterials);
+			return FString::Printf(TEXT("| %d | %s | %d | %d | %d | %d | %d / %d / %d / %d | %d |\n"), Count, *Scenario, Sample, Primitives,
+				DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits);
 		}
 	};
 
@@ -360,6 +371,9 @@ namespace RTSBenchCommand
 			, bSolids(InUnitName.Contains(RTSBenchScene::SolidsSuffix))
 			, bRigidTracks(InUnitName.Contains(RTSBenchScene::RigidTracksSuffix))
 			, bMixedTeams(InUnitName.Contains(RTSBenchScene::MixedTeamsSuffix))
+			, bForceLOD0(InUnitName.Contains(RTSBenchScene::ForceLOD0Suffix))
+			, CameraDistance(InUnitName.Contains(RTSBenchScene::NearSuffix) ? RTSBenchScene::NearCameraDistance
+				: InUnitName.Contains(RTSBenchScene::FarSuffix) ? RTSBenchScene::FarCameraDistance : DefaultCameraDistance)
 		{
 		}
 
@@ -512,7 +526,8 @@ namespace RTSBenchCommand
 			// A mix of sizes is several names joined by '+'; the grid takes them in turn.
 			TArray<FString> Names;
 			FString Mix = UnitName.Replace(RTSBenchScene::SolidsSuffix, TEXT("")).Replace(RTSBenchScene::RigidTracksSuffix, TEXT(""))
-				.Replace(RTSBenchScene::MixedTeamsSuffix, TEXT(""));
+				.Replace(RTSBenchScene::MixedTeamsSuffix, TEXT("")).Replace(RTSBenchScene::ForceLOD0Suffix, TEXT(""))
+				.Replace(RTSBenchScene::NearSuffix, TEXT("")).Replace(RTSBenchScene::FarSuffix, TEXT(""));
 			Mix.ParseIntoArray(Names, TEXT("+"));
 			for (const FString& Name : Names)
 			{
@@ -569,6 +584,14 @@ namespace RTSBenchCommand
 				if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Vehicle.TrackAnimation")))
 				{
 					SavedCVars.Add(TEXT("rts.Vehicle.TrackAnimation"), CVar->GetString());
+					CVar->Set(TEXT("0"), ECVF_SetByConsole);
+				}
+			}
+			if (bForceLOD0)
+			{
+				if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ForceLOD")))
+				{
+					SavedCVars.Add(TEXT("r.ForceLOD"), CVar->GetString());
 					CVar->Set(TEXT("0"), ECVF_SetByConsole);
 				}
 			}
@@ -859,6 +882,7 @@ namespace RTSBenchCommand
 			Current.PeakMemoryMB = Memory.PeakUsedPhysical / (1024.0 * 1024.0);
 			Current.RenderSize = GetRenderSize();
 			CountMaterials(Current);
+			CountLODs(Current);
 			Results.Add(Current);
 			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.Bench: %s"), *Current.ToCsv());
 			return true;
@@ -889,6 +913,36 @@ namespace RTSBenchCommand
 				}
 			}
 			Stats.DistinctMaterials = Materials.Num();
+		}
+
+		/**
+		 * The units on screen by the LOD the renderer picks for their hull, and those with a part at another (#149). r.ForceLOD
+		 * is left out: an @LOD0 set counts what it would have drawn.
+		 */
+		void CountLODs(FScenarioStats& Stats) const
+		{
+			FVector Origin;
+			FMatrix Projection;
+			const APlayerController* Controller = GetController();
+			if (!Controller || !RTSUnitLOD::GetPlayerView(*Controller, Origin, Projection))
+			{
+				return;
+			}
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Units)
+			{
+				const UStaticMeshComponent* Hull = Unit.IsValid() ? RTSUnitLOD::FindHull(*Unit) : nullptr;
+				if (!Hull || !Hull->WasRecentlyRendered(0.2f))
+				{
+					continue;
+				}
+				const RTSUnitLOD::FPartLODs LODs = RTSUnitLOD::GetPartLODs(*Unit, Origin, Projection);
+				if (Stats.HullLODs.Num() <= LODs.RootLOD)
+				{
+					Stats.HullLODs.SetNumZeroed(LODs.RootLOD + 1);
+				}
+				++Stats.HullLODs[LODs.RootLOD];
+				Stats.MixedLODUnits += LODs.IsCoherent() ? 0 : 1;
+			}
 		}
 
 		/** The resolution the scene renders at before any upscale. */
@@ -935,8 +989,8 @@ namespace RTSBenchCommand
 				Markdown += Result.ToSolidsMarkdown();
 			}
 			Markdown += TEXT("\nWhat the units draw with (#150), at each sample's end:\n\n")
-				TEXT("| Units | Scenario | Sample | Primitive components | Dynamic material slots | Distinct materials |\n")
-				TEXT("|---:|---|---:|---:|---:|---:|\n");
+				TEXT("| Units | Scenario | Sample | Primitive components | Dynamic material slots | Distinct materials | On screen at LOD0 / 1 / 2 / 3 (#149) | With a part at another LOD |\n")
+				TEXT("|---:|---|---:|---:|---:|---:|---:|---:|\n");
 			for (const FScenarioStats& Result : Results)
 			{
 				Markdown += Result.ToMaterialsMarkdown();
@@ -1054,6 +1108,11 @@ namespace RTSBenchCommand
 			if (bMixedTeams)
 			{
 				Scene->SetNumberField(TEXT("teams"), RTSBenchScene::MixedTeams);
+			}
+			// And an "@LOD0" set that it drew every mesh at LOD0 (#149).
+			if (bForceLOD0)
+			{
+				Scene->SetNumberField(TEXT("forced_lod"), 0);
 			}
 
 			const TSharedRef<FJsonObject> Machine = MakeShared<FJsonObject>();
@@ -1181,6 +1240,9 @@ namespace RTSBenchCommand
 		bool bRigidTracks = false;
 		/** A "@MixedTeams" set. */
 		bool bMixedTeams = false;
+		/** A "@LOD0" set, and the camera's distance, which "@Near" and "@Far" change (#149). */
+		bool bForceLOD0 = false;
+		float CameraDistance = DefaultCameraDistance;
 		TArray<RTSBenchScene::FSolid> SolidLayout;
 		TArray<TWeakObjectPtr<AActor>> SolidActors;
 

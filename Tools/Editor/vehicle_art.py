@@ -6,6 +6,8 @@ lit by the mesh's vertex colour. Everything here builds in memory only; setup_te
 and saves it.
 """
 
+import math
+
 import unreal
 
 MATERIAL_DIR = "/Game/Materials"
@@ -321,4 +323,81 @@ def import_part(source, directory, name, slot_materials, expected_size):
         if slot_name not in slot_materials:
             raise RuntimeError(f"{source}: no material for slot {slot_name}")
         mesh.set_material(index, slot_materials[slot_name])
+    return mesh
+
+
+# The LODs (#149). Every part of a vehicle changes LOD at the same distances from the camera: LOD_DISTANCES in cm, for
+# LOD1, LOD2 and LOD3. A part's screen size for a distance is the engine's (ComputeBoundsScreenSize) for its own bounds
+# radius there, so a small part has a small threshold and switches with the hull. The projection is the RTS camera's:
+# 60 degrees across at 16:9 with the vertical field of view kept, so every aspect ratio and resolution gives the same LOD.
+LOD_DISTANCES = (3500.0, 11000.0, 26000.0)
+CAMERA_FOV = 60.0
+CAMERA_ASPECT = 16.0 / 9.0
+SCREEN_MULTIPLE = 0.5 / (math.tan(math.radians(CAMERA_FOV) / 2.0) / CAMERA_ASPECT)
+
+
+def _mesh_editing():
+    """The StaticMeshEditorSubsystem, after loading its module, which a commandlet leaves out."""
+    if not unreal.RTSEditorScripting.load_editor_module("StaticMeshEditor"):
+        raise RuntimeError("Could not load the StaticMeshEditor module")
+    subsystem = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+    if subsystem is None:
+        raise RuntimeError("The StaticMeshEditorSubsystem is not available")
+    return subsystem
+
+
+def lod_radius(mesh, instanced):
+    """The radius the renderer measures a part's LOD by: its bounds sphere, or for a part drawn by an instanced
+    component (wheels), the box's half diagonal, which GPU LOD selection uses per instance."""
+    bounds = mesh.get_bounds()
+    return bounds.box_extent.length() if instanced else bounds.sphere_radius
+
+
+def lod_screen_sizes(radius):
+    """The screen sizes for LOD0 (1, the engine ignores it) and each of LOD_DISTANCES for a part of this radius."""
+    return [1.0] + [2.0 * SCREEN_MULTIPLE * radius / distance for distance in LOD_DISTANCES]
+
+
+def build_lods(mesh, triangles, instanced=False, custom=None, custom_slot=None):
+    """Gives a part LOD1 to LOD3 after LOD0, which stays as imported. triangles: each LOD's triangle target, reduced
+    from LOD0 by the engine's quadric reduction with the imported normals kept; custom: {LOD index: FBX} imported in its
+    place instead (the tracks' belts, m20_guardian_blender.py --lods), whose sections go to custom_slot, (slot name,
+    material), a slot of their own. Then the screen sizes of lod_screen_sizes for the radius of LOD0's bounds, which the
+    mesh keeps."""
+    mesh_editing = _mesh_editing()
+    base = mesh.get_num_triangles(0)
+    screen_sizes = lod_screen_sizes(lod_radius(mesh, instanced))
+    options = unreal.StaticMeshReductionOptions()
+    options.set_editor_property("auto_compute_lod_screen_size", False)
+    settings = []
+    for target, screen_size in zip((base,) + tuple(triangles), screen_sizes):
+        setting = unreal.StaticMeshReductionSettings()
+        setting.set_editor_property("percent_triangles", min(1.0, target / base))
+        setting.set_editor_property("screen_size", screen_size)
+        settings.append(setting)
+    options.set_editor_property("reduction_settings", settings)
+    if mesh_editing.set_lods(mesh, options) != len(settings):
+        raise RuntimeError(f"{mesh.get_name()}: could not make its LODs")
+    for index, source in sorted((custom or {}).items()):
+        if mesh_editing.import_lod(mesh, index, source) != index:
+            raise RuntimeError(f"{mesh.get_name()}: could not import LOD{index} from {source}")
+    if custom:
+        name, material = custom_slot
+        names = [str(slot.material_slot_name) for slot in mesh.static_materials]
+        if name not in names:
+            mesh.add_material(material)
+            materials = mesh.static_materials
+            materials[-1].material_slot_name = name
+            mesh.static_materials = materials
+            names.append(name)
+        slot = names.index(name)
+        mesh.set_material(slot, material)
+        for index in sorted(custom):
+            for section in range(mesh.get_num_sections(index)):
+                mesh_editing.set_lod_material_slot(mesh, slot, index, section)
+    if not mesh_editing.set_lod_screen_sizes(mesh, screen_sizes):
+        raise RuntimeError(f"{mesh.get_name()}: could not set its LOD screen sizes")
+    unreal.log(f"vehicle_art: {mesh.get_name()} LODs " +
+               ", ".join(f"{mesh.get_num_triangles(i)}" for i in range(mesh.get_num_lods())) +
+               f" triangles, screen sizes {[round(s, 4) for s in mesh_editing.get_lod_screen_sizes(mesh)]}")
     return mesh

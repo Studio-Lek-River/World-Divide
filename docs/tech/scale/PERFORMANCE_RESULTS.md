@@ -112,6 +112,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task b
 # Among solids the navmesh leaves out (#172): the same set with the suffix @Solids, in its own folder
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Quick -Unit DA_TestM20Guardian@Solids
 
+# LODs (#149): every mesh at LOD0 (@LOD0) against the LODs, with the camera at 60 m (@Near), 170 m (none) or 450 m (@Far)
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestM20Guardian@LOD0,DA_TestM20Guardian@Near,DA_TestM20Guardian@Near@LOD0,DA_TestM20Guardian@Far,DA_TestM20Guardian@Far@LOD0
+
 # The gate for the result, against HEAD's long baseline (or an older one, marked OUTDATED)
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Long -Unit DA_TestM20Guardian,DA_TestTank -Compare
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Long -Unit DA_TestTank -Compare -Baseline c0d1387
@@ -1437,3 +1440,81 @@ Before → after stays within the variation between two identical runs (temporal
 - **Unset CPD reads as black.** A team-tinted mesh drawn by anything other than `ARTSUnit` or `ARTSBuilding` (a future portrait capture, a level prop) must set CPD 4 to 7 itself, or use an instance with `TeamStrength`/`TintStrength` 0.
 - **No long-method run** was made, as asked. The quick and short methods show the draw-call and GPU change at every count. The final M20 against placeholder gate stays with #149.
 - **Late join** is covered by the vehicle network test's tank that replicates only after it has driven. Joining a match already under way, in the lobby, was not tested by hand.
+
+## #149 (M20 LODs)
+
+The M20 has LOD1 to LOD3: about 28.9k, 7.9k and 2.4k triangles per tank, against 89.4k at LOD0. Every part switches at
+35, 110 and 260 m from the camera. Generation, the triangles per part and the switching rules are in
+`Art/USA/vehicles/m20_guardian/report_ue5.md`, "LODs (#149)".
+
+The bench additions:
+- **`@LOD0` draws every mesh at LOD0** (`r.ForceLOD 0` while it runs). The same scene with and without it is the LOD0-only
+  against automatic comparison.
+- **`@Near` and `@Far` move the bench camera** to 60 m and 450 m. Without them it stays at its usual 170 m.
+- **Every row counts the units on screen by their hull's LOD**, and those with a part at another LOD (`RTSUnitLOD`). The
+  counts are in bench.md's "What the units draw with" table and bench.csv's `lod*_units` and `mixed_lod_units`.
+
+All runs below are on the development PC (RTX 4090), 2026-10-18, 1920x1080, with dynamic resolution off.
+
+### Short method, 1 to 240 M20s, LOD0 only → LODs (one 120-frame sample each; mean, p95 in brackets)
+
+Camera at 170 m (the default view; every tank on screen at LOD2):
+
+| Units | Scenario | GPU ms | Render thread ms | Game thread ms | Draw calls | Triangles |
+|---:|---|---:|---:|---:|---:|---:|
+| 1 | move | 1.81 (1.85) → 1.80 (1.83) | 2.00 → 2.01 | 1.13 → 1.19 | 108 → 108 | 0.20 M → 0.08 M |
+| 30 | move | 2.08 (2.12) → 1.94 (1.98) | 2.26 → 2.14 | 1.84 → 1.71 | 369 → 402 | 5.93 M → 2.15 M |
+| 120 | move | 2.78 (2.98) → 2.23 (2.46) | 2.64 → 2.66 | 4.06 → 3.85 | 1,039 → 1,188 | 22.5 M → 6.2 M |
+| 240 | idle | 3.62 (3.86) → 2.49 (2.54) | 3.82 (4.13) → 2.60 (2.99) | 1.80 → 2.06 | 1,620 → 1,835 | 39.6 M → 9.8 M |
+| 240 | move | 3.72 (4.02) → 2.56 (2.60) | 4.10 (4.65) → 4.02 (4.68) | 6.58 → 6.80 | 1,689 → 1,961 | 40.1 M → 9.6 M |
+
+Camera at 60 m (`@Near`; every tank on screen at LOD1) and 450 m (`@Far`; LOD3), 240 units:
+
+| Camera | Scenario | GPU ms | Render thread ms | Draw calls | Triangles |
+|---|---|---:|---:|---:|---:|
+| 60 m | idle | 3.64 (3.85) → 2.83 (3.09) | 3.87 → 3.06 | 607 → 872 | 33.8 M → 14.3 M |
+| 60 m | move | 3.77 (3.80) → 2.94 (3.17) | 4.25 → 4.19 | 653 → 935 | 34.5 M → 14.8 M |
+| 450 m | idle | 3.25 (3.55) → 1.82 (1.86) | 3.44 → 2.34 | 2,256 → 2,254 | 33.3 M → 0.72 M |
+| 450 m | move | 3.26 (3.28) → 1.88 (1.90) | 3.90 → 3.96 | 2,260 → 2,257 | 33.3 M → 0.72 M |
+
+### Quick method, 240 moving M20s (one 30 s sample each, diagnostic)
+
+| | GPU ms | Render thread ms | Game thread ms | Frames in 30 s | Draw calls | Triangles |
+|---|---:|---:|---:|---:|---:|---:|
+| LOD0 only (`@LOD0`) | 4.18 (4.44) | 4.17 (4.65) | 3.89 (7.58) | 5,579 | 2,101 | 45.9 M |
+| LODs | 2.58 (2.75) | 3.05 (4.18) | 3.62 (7.34) | 7,427 | 2,494 | 8.6 M |
+
+In every 240-unit row: 2,160 primitive components, 6 distinct materials and 0 dynamic material slots, as with #150. Every
+tank on screen was at the LOD its distance gives, and no tank had a part at another LOD (`mixed_lod_units` 0).
+
+### What the numbers show
+
+- **The GPU time falls by 0.8 to 1.6 ms at 240 tanks**, the more the farther the camera: −22 % at 60 m, −31 to −38 % at
+  170 m, −44 % at 450 m.
+  - At 30 tanks it falls by about 0.1 ms, and at 1 tank not measurably.
+  - The p95 falls with the mean.
+- **The render thread falls by about 1 ms with standing tanks** at 170 m and 60 m. With moving tanks it stays about the
+  same in the short method: their render-state updates (#165) set it there.
+  - The quick method's 30 s sample shows −1.1 ms with moving tanks too.
+- **The game thread does not change.** The differences stay inside the run-to-run spread, as expected: the LODs add no
+  game-thread work.
+- **Draw calls rise by 13 to 44 % at 170 m and 60 m.**
+  - The cause is the GPU LOD selection of the instanced wheels (`r.InstancedStaticMeshes.GpuLod`). It submits the wheels'
+    instances per LOD, and per shadow view.
+  - With it off, `@Near` at 240 drew 631 calls instead of 872, but took 3.00 ms of GPU instead of 2.83 and 3.22 ms of
+    render thread instead of 3.06.
+  - So the extra calls are cheap GPU-driven instance draws, and the engine default stays.
+  - At 450 m the calls are unchanged, since every wheel is at the same LOD.
+- **The triangles fall 2.4× at 60 m, 4× at 170 m and 46× at 450 m.** This is the cause of the GPU change above, not the
+  claim: the GPU columns are the measurement.
+- **The 1-unit `@Near` rows are the same with and without LODs.** At 60 m the bench camera's frame leaves the single tank's
+  hull out, so only its shadow draws.
+
+### Remaining limitations
+
+- **No long-method run** was made: a set takes about 14 minutes and needs the producer's approval. The M20 against
+  placeholder target above stays open until one is run.
+- **Near the 35 m switch, parts switch up to about 10 % apart in distance.** Each part measures from its own middle (see
+  report_ue5.md). At 110 and 260 m they stay within ±4 %.
+- **Wheels stop at 64 triangles at LOD3.** The engine's reduction goes no lower, so LOD3 is 2,396 triangles, near the
+  2,500 budget.

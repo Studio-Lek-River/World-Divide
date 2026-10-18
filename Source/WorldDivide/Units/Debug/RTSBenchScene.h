@@ -51,6 +51,18 @@ namespace RTSBenchScene
 	const TCHAR* const MixedTeamsSuffix = TEXT("@MixedTeams");
 	constexpr int32 MixedTeams = 4;
 
+	/** The set name's suffix that draws every mesh at LOD0 (r.ForceLOD 0 while it runs; #149), against the LODs it has. */
+	const TCHAR* const ForceLOD0Suffix = TEXT("@LOD0");
+
+	/**
+	 * The set name's suffixes that put the bench camera nearer or farther than its usual 170 m (#149): about as near as the
+	 * RTS camera starts tilting, where the M20 draws LOD1, and as far as its farthest zoom, where it draws LOD3.
+	 */
+	const TCHAR* const NearSuffix = TEXT("@Near");
+	const TCHAR* const FarSuffix = TEXT("@Far");
+	constexpr float NearCameraDistance = 6000.f;
+	constexpr float FarCameraDistance = 45000.f;
+
 	/** Bumped whenever the solids' layout rules change; recorded in bench.json, so runs of another layout never compare. */
 	constexpr int32 SolidsVersion = 1;
 	constexpr int32 SolidsSeed = 172;

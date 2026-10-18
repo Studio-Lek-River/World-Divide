@@ -2,7 +2,7 @@
 Art/USA/vehicles/m20_guardian) from code, as a modular hero model for close-zoom review and the game:
 
   blender -b --python Tools/Art/m20_guardian_blender.py -- [--stage 1|2] [--no-bake] [--preview] [--verify] [--samples N]
-                                                          [--tracks-only]
+                                                          [--tracks-only] [--lods]
 
 --stage 1 builds the blockout (hull, running gear, turret, gun) and renders it. --stage 2 (the default) adds the detail,
 applies the bevels to the game meshes, lays out the UVs, bakes the texture sets from the high-poly twins, and writes the
@@ -10,7 +10,7 @@ applies the bevels to the game meshes, lays out the UVs, bakes the texture sets 
 Art/USA/vehicles/m20_guardian. --no-bake skips the UVs and bakes (the FBX then carry the procedural slots). --preview only
 builds and renders quick views to renders/preview_*.png. --verify re-imports every FBX into an empty scene and checks
 scale, origin and triangles. --tracks-only opens the saved .blend and only writes the tracks' animation UVs (#151) and
-re-exports the two track FBX.
+re-exports the two track FBX. --lods opens it and only writes the tracks' belt LODs to fbx/lods (#149).
 
 Every dimension is in metres in the block below: tune proportions there, not in the meshes. The tank faces +X, +Y is its
 left, its tracks sit on z = 0 and the origin is under the hull centre. Moving parts are separate objects with their pivot
@@ -1697,7 +1697,174 @@ def tracks_only():
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 
 
-EXPORTS = (("M20_Hull", "SM_M20_Hull"), ("M20_Turret", "SM_M20_Turret"), ("M20_Gun", "SM_M20_Gun"),
+# The tracks' far LODs (#149): a closed belt along the centre line instead of 85 separate links, which a mesh reduction
+# can only shrink into gaps. LOD2 has a segment per link, so the tread still shows links; LOD3 a segment per BELT_TURN of
+# the loop's bends and one per straight run.
+LOD_DIR = os.path.join(FBX_DIR, "lods")
+BELT_TURN = math.radians(30.0)
+BELT_MATERIAL = "M20_Track_Static"
+
+
+def belt_template(track, links, pitch):
+    """What a belt copies from one link of the bottom run of track (a game mesh): its extent out of the loop and across,
+    without the guide horn between the wheels, and for its outer, inner and two side faces the UVs of the link's largest
+    face that way, as an affine map from (along, across) or (along, out) in the link's frame to UV0, over that face's
+    extent."""
+    path, lengths, _, _ = track_loop()
+    mesh = track.data
+    uv = mesh.uv_layers["UVMap"].data
+    centres = []
+    for i in range(links):
+        point, direction = track_point(path, lengths, (i + 0.5) * pitch)
+        centres.append((point, direction))
+    centre, direction = min(centres, key=lambda c: (round(c[0].y, 3), abs(c[1].y)))
+    u = Vector((direction.x, 0.0, direction.y))
+    v = Vector((0.0, 1.0, 0.0))
+    w = Vector((direction.y, 0.0, -direction.x))
+    origin = Vector((centre.x, 0.0, centre.y))
+
+    def local(co):
+        d = co - origin
+        return d.dot(u), d.dot(v), d.dot(w)
+
+    faces = [f for f in mesh.polygons if abs(local(f.center)[0]) < pitch * 0.5 and abs(local(f.center)[2]) < 0.2]
+    outs = [local(mesh.vertices[i].co)[2] for f in faces for i in f.vertices if abs(local(mesh.vertices[i].co)[1]) > 0.06]
+    across = max(abs(local(mesh.vertices[i].co)[1]) for f in faces for i in f.vertices)
+
+    def face_map(axis, sign, coords):
+        candidates = [f for f in faces if f.normal.dot(axis) * sign > 0.7]
+        face = max(candidates, key=lambda f: f.area)
+        points = [coords(local(mesh.vertices[mesh.loops[l].vertex_index].co)) for l in face.loop_indices]
+        uvs = [tuple(uv[l].uv) for l in face.loop_indices]
+        # UV = a * x + b * y + c through the face's corners (least squares; the faces are rectangles).
+        rows = [(x, y, 1.0) for x, y in points]
+        solution = []
+        for k in range(2):
+            ata = [[sum(r[i] * r[j] for r in rows) for j in range(3)] for i in range(3)]
+            atb = [sum(r[i] * t[k] for r, t in zip(rows, uvs)) for i in range(3)]
+            solution.append(solve3(ata, atb))
+        xs, ys = [p[0] for p in points], [p[1] for p in points]
+        return solution, (min(xs), max(xs)), (min(ys), max(ys))
+
+    maps = {
+        "outer": face_map(w, 1, lambda c: (c[0], c[1])),
+        "inner": face_map(w, -1, lambda c: (c[0], c[1])),
+        "left": face_map(v, 1, lambda c: (c[0], c[2])),
+        "right": face_map(v, -1, lambda c: (c[0], c[2])),
+    }
+    return (min(outs), max(outs)), across, maps
+
+
+def solve3(a, b):
+    """x with a x = b for a 3x3 a (Cramer's rule)."""
+    def det(m):
+        return (m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+                + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]))
+    d = det(a)
+    return [det([[b[r] if c == k else a[r][c] for c in range(3)] for r in range(3)]) / d for k in range(3)]
+
+
+def belt_positions(lod, links, pitch):
+    """The arc lengths where a belt's segments meet: every link's end for LOD2; for LOD3 each place where the loop has
+    turned BELT_TURN since the last, and the ends of its straight runs."""
+    if lod == 2:
+        return [i * pitch for i in range(links)]
+    path, lengths, _, _ = track_loop()
+    count = len(path)
+    positions, turned, s = [0.0], 0.0, 0.0
+    for i in range(count):
+        a, b, c = path[i - 1], path[i], path[(i + 1) % count]
+        turn = abs(math.atan2((b - a).cross(c - b), (b - a).dot(c - b)))
+        straight = lengths[i] > 0.3 or lengths[i - 1] > 0.3
+        turned += turn
+        if i and (turned >= BELT_TURN or straight) and s - positions[-1] > 0.05:
+            positions.append(s)
+            turned = 0.0
+        s += lengths[i]
+    return positions
+
+
+def build_track_belt(name, track, lod):
+    """A track's LOD2 or LOD3 (#149) in the track's own frame: a closed band of four faces per segment, from the links'
+    outer to inner faces and across their ends, each segment's rings square to the centre line where they meet, so the
+    band has no gaps at the bends. Each face takes the matching face of a bottom-run link's UVs, spread over its
+    segment, in the material slot BELT_MATERIAL (MI_M20_Track_Static, without the link shift)."""
+    path, lengths, links, pitch = track_loop()
+    total = sum(lengths)
+    (inner, outer), across, maps = belt_template(track, links, pitch)
+    positions = belt_positions(lod, links, pitch)
+
+    def ring(s):
+        point, _ = track_point(path, lengths, s % total)
+        ahead, _ = track_point(path, lengths, (s + 0.01) % total)
+        behind, _ = track_point(path, lengths, (s - 0.01) % total)
+        t = (ahead - behind).normalized()
+        w = Vector((t.y, 0.0, -t.x))
+        centre = Vector((point.x, 0.0, point.y))
+        return {(o, a): centre + w * (outer if o else inner) + Vector((0.0, across if a else -across, 0.0))
+                for o in (0, 1) for a in (0, 1)}
+
+    def uv_at(face, x, y):
+        (cu, cv), (x0, x1), (y0, y1) = maps[face]
+        px, py = x0 + (x1 - x0) * x, y0 + (y1 - y0) * y
+        return (cu[0] * px + cu[1] * py + cu[2], cv[0] * px + cv[1] * py + cv[2])
+
+    bm = bmesh.new()
+    uv_layer = bm.loops.layers.uv.new("UVMap")
+    rings = [ring(s) for s in positions]
+    for i in range(len(rings)):
+        a, b = rings[i], rings[(i + 1) % len(rings)]
+        # Corners (ring, out, across) and their (along, across) on the face, wound outward.
+        quads = {
+            "outer": [(a, 1, 0, 0, 0), (b, 1, 0, 1, 0), (b, 1, 1, 1, 1), (a, 1, 1, 0, 1)],
+            "inner": [(a, 0, 0, 0, 0), (a, 0, 1, 0, 1), (b, 0, 1, 1, 1), (b, 0, 0, 1, 0)],
+            "left": [(a, 0, 1, 0, 0), (a, 1, 1, 0, 1), (b, 1, 1, 1, 1), (b, 0, 1, 1, 0)],
+            "right": [(a, 0, 0, 0, 0), (b, 0, 0, 1, 0), (b, 1, 0, 1, 1), (a, 1, 0, 0, 1)],
+        }
+        for face_name, corners in quads.items():
+            verts = [bm.verts.new(r[(o, s)]) for r, o, s, _, _ in corners]
+            face = bm.faces.new(verts)
+            for loop, (_, _, _, x, y) in zip(face.loops, corners):
+                loop[uv_layer].uv = uv_at(face_name, x, y)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    mesh = bpy.data.meshes.new(name)
+    bm.to_mesh(mesh)
+    bm.free()
+    material = bpy.data.materials.get(BELT_MATERIAL) or bpy.data.materials.new(BELT_MATERIAL)
+    mesh.materials.append(material)
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(obj)
+    return obj
+
+
+def lods():
+    """--lods: opens the saved .blend and writes only the tracks' belt LODs (build_track_belt) to fbx/lods, for the
+    setup to import as the tracks' LOD2 and LOD3 (#149). Every other LOD is reduced from LOD0 in Unreal; nothing else is
+    written, and the .blend is not saved."""
+    bpy.ops.wm.open_mainfile(filepath=BLEND)
+    os.makedirs(LOD_DIR, exist_ok=True)
+    for side in ("L", "R"):
+        track = bpy.data.objects[f"M20_Track_{side}"]
+        for lod in (2, 3):
+            name = f"SM_M20_Track_{side}_LOD{lod}"
+            obj = build_track_belt(name, track, lod)
+            bpy.ops.object.select_all(action="DESELECT")
+            obj.select_set(True)
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.export_scene.fbx(filepath=os.path.join(LOD_DIR, f"{name}.fbx"), use_selection=True,
+                                     object_types={"MESH"}, use_mesh_modifiers=True, mesh_smooth_type="FACE",
+                                     use_tspace=True, colors_type="SRGB", apply_unit_scale=True,
+                                     apply_scale_options="FBX_SCALE_UNITS", axis_forward="X", axis_up="Z",
+                                     bake_space_transform=False, add_leaf_bones=False, bake_anim=False,
+                                     use_custom_props=False, path_mode="AUTO")
+            low = Vector([min(v.co[i] for v in obj.data.vertices) for i in range(3)])
+            high = Vector([max(v.co[i] for v in obj.data.vertices) for i in range(3)])
+            print(f"lods: {name} {len(obj.data.polygons)} tris, bounds {tuple(round(c, 3) for c in low)} .. "
+                  f"{tuple(round(c, 3) for c in high)}")
+
+
+EXPORTS = (("M20_Hull", "SM_M20_Hull"),("M20_Turret", "SM_M20_Turret"), ("M20_Gun", "SM_M20_Gun"),
            ("M20_RWS", "SM_M20_RWS"), ("M20_Track_L", "SM_M20_Track_L"), ("M20_Track_R", "SM_M20_Track_R"),
            ("M20_RoadWheel_L1", "SM_M20_RoadWheel"), ("M20_Sprocket_L", "SM_M20_Sprocket"),
            ("M20_Idler_L", "SM_M20_Idler"))
@@ -1815,6 +1982,9 @@ def main():
         return
     if "--tracks-only" in ARGS:
         tracks_only()
+        return
+    if "--lods" in ARGS:
+        lods()
         return
     parts = build_tank()
     if PREVIEW or STAGE == 1:

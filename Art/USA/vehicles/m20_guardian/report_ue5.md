@@ -58,11 +58,89 @@ Import results:
 - The pivots are where the JSON puts them.
 - Interchange mirrors Y the way the JSON expects: the exported left wheel's outboard face lands on −Y.
 
-Mesh settings: Nanite off, no collision, LOD0 only, imported normals and tangents kept.
+Mesh settings: Nanite off, no collision, imported normals and tangents kept, and LOD1 to LOD3 since #149 (see LODs).
 
 **Components per tank: 9 meshes** (hull, turret, gun, RWS, 2 tracks, 3 instanced wheel sets) **and 10 material
 sections**. The hull has two sections, its paint and its lamps. The v2 report expected 22 components; instancing the
 wheels brings that down to 9.
+
+## LODs (#149)
+
+Every part has LOD1 to LOD3 after its LOD0, which is the import as before, triangle for triangle.
+
+| Part | LOD0 | LOD1 | LOD2 | LOD3 | Per tank |
+|---|---:|---:|---:|---:|---:|
+| Hull | 28,268 | 9,984 | 2,596 | 560 | 1 |
+| Turret | 19,168 | 6,998 | 1,600 | 380 | 1 |
+| Gun | 4,476 | 1,592 | 348 | 80 | 1 |
+| RWS | 2,520 | 698 | 120 | 64 | 1 |
+| Track L / R | 6,120 | 2,400 | 680 (belt) | 144 (belt) | 2 |
+| Road wheel | 1,456 | 300 | 120 | 64 | 12 |
+| Sprocket | 1,208 | 300 | 120 | 64 | 2 |
+| Idler | 1,396 | 300 | 120 | 64 | 2 |
+| **Tank** | **89,352** | **28,872** | **7,944** | **2,396** | |
+
+The hull's LOD2 and LOD3 lose the lamp section: the lamps reduce to nothing at that size, and the hull draws one section
+there instead of two.
+
+**How they are made.** `vehicle_art.build_lods` runs in setup after each part's import:
+- The engine's quadric reduction makes each LOD from LOD0 at the part's triangle target (`make_m20_guardian` in
+  `setup_testmap.py`). It keeps the imported normals and all UV channels, the tracks' animation channels included.
+- The tracks' LOD2 and LOD3 are not reduced. Their 85 links are separate boxes, and a reduction can only shrink them into
+  gaps. `blender -b --python Tools/Art/m20_guardian_blender.py -- --lods` writes a closed belt along the same centre line
+  instead, to `fbx/lods/SM_M20_Track_{L,R}_LOD{2,3}.fbx`: a segment per link at LOD2, a segment per 30 degrees of bend at
+  LOD3. Its faces take the UVs of a link's outer, inner and side faces. The script reads the saved .blend and writes nothing
+  else; LOD0's FBX are never re-exported.
+- A commandlet has no static mesh editor subsystem. `URTSEditorScripting::LoadEditorModule("StaticMeshEditor")` loads it.
+- The LODs are part of each mesh's setup hash. A second setup writes nothing.
+
+**Switching.** Every part changes LOD at the same distance from the camera: LOD1 at 35 m, LOD2 at 110 m and LOD3 at
+260 m (`vehicle_art.LOD_DISTANCES`):
+- Each part's screen size is the engine's own (`ComputeBoundsScreenSize`) for its own radius at that distance, so a small
+  part has a small threshold.
+- The radius is the bounds sphere. For the instanced wheels it is the box's half diagonal, which GPU LOD selection uses per
+  wheel.
+- The lens is the RTS camera's: 60 degrees across at 16:9 with the vertical field of view kept. 1080p, 1440p and
+  ultrawide therefore pick the same LOD in the same view.
+
+| Range | LOD | Tank length at 1080p | RTS camera |
+|---|---|---|---|
+| under 35 m | 0 | over about 340 px | close inspection |
+| 35–110 m | 1 | 340 to 107 px | zoomed in, up to about a 100 m arm |
+| 110–260 m | 2 | 107 to 45 px | the default zoom (tanks 128 to 204 m away) |
+| over 260 m | 3 | under 45 px | zoomed out to the farthest |
+
+The distance is measured from each part's own middle, so parts up to 3.5 m from the hull's middle switch up to that much
+earlier or later:
+- at 35 m that is about ±10 %: a few wheels and the gun switch in the next zoom step;
+- at 110 m and 260 m all 22 pieces switch within ±4 % of each other.
+
+`rts.Debug.UnitShots ... lods` logs the LOD of every piece per shot. There is no hysteresis and no dithered transition
+(the engine has none for static meshes). In the captures, the switches cannot be told apart from the 4 % change in size
+around them.
+
+**Materials and team colour.** The reduced LODs draw with the same `MI_M20_*` instances as LOD0. The team colour (CPD 4
+to 7) and the track phase (CPD 0 and 1) belong to the component, so every LOD has them, and there are no per-unit
+instances: the bench counts 0 dynamic material slots and 6 materials at 240 tanks. The tracks' extra slot
+`M20_Track_Static` (`MI_M20_Track_Static`) is the only new one.
+
+**Unchanged:** LOD0, the bounds (the hull is still 710.2 cm long), the collision box, the footprint, the navigation, the
+turret, gun and RWS articulation and the wheels' roll. LODs only change what is drawn.
+
+**Captures:** `ue.ps1 -Task unitshots -Unit DA_TestM20Guardian -LODs` writes to
+`Saved/UnitShots/DA_TestM20Guardian/LODs`:
+- every LOD forced from the side, front, rear and front three-quarter;
+- the RTS camera inside each LOD's range (close, tactical, default and farthest zoom);
+- the RTS lens 4 % inside and outside each switch;
+- the four team colours at each LOD.
+
+**For the next vehicles:**
+- Set budgets per tank, not per part.
+- Reduce the large shells (hull, turret) least by share and the small repeated parts (wheels) most.
+- Never reduce a mesh made of many separate small pieces (tracks, links, chains) below about half. Give it a hand-built
+  proxy instead.
+- Keep the switch distances in `vehicle_art.LOD_DISTANCES` the same for every vehicle, so mixed armies switch alike.
+- The engine's reduction stops at about 64 triangles for a wheel, so very small parts cannot go lower without a proxy.
 
 ## Materials
 
@@ -184,8 +262,7 @@ No target is claimed. These numbers come from one machine, one scene, no combat,
 1. **Scale.** At real size the M20 is about 2.5× the other test units (`DA_TestAbrams` fits 2.9 m). Its selection radius
    is 4 m, and capsules of that size cross the 2 m gaps between L_TestMap's obstacles poorly. The game's unit scale has to
    be decided before more real-size art comes in.
-2. **LODs and collision proxies** are not made yet: LOD0 only, and the unit collides with its capsule. LODs matter most
-   (see Performance).
+2. **Collision proxies** are not made: the unit collides with its box. The LODs came with #149 (see LODs).
 3. **The track does not scroll** (see Behaviour).
 4. **No suspension travel and no track sag.** The road wheels stay at their exported height.
 5. **The RWS does not traverse on its own** and has no weapon. It is a fixed part on the turret.

@@ -15,6 +15,7 @@
 #include "Misc/App.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
+#include "Modules/ModuleManager.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "Navigation/RTSNavAgents.h"
 #include "NavigationSystem.h"
@@ -204,4 +205,9 @@ UFontFace* URTSEditorScripting::ImportFontFace(const FString& FileName, const FS
 #else
 	return nullptr;
 #endif
+}
+
+bool URTSEditorScripting::LoadEditorModule(FName ModuleName)
+{
+	return FModuleManager::Get().LoadModule(ModuleName) != nullptr;
 }

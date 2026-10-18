@@ -9,13 +9,16 @@
 #include "Engine/StaticMesh.h"
 #include "StaticMeshAttributes.h"
 #include "Algo/AllOf.h"
+#include "Algo/AnyOf.h"
 #include "Engine/Texture2D.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstance.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "PhysicsEngine/BodySetup.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "StaticMeshResources.h"
 #include "Tests/RTSTestFlags.h"
 
 /**
@@ -39,6 +42,16 @@ namespace
 	constexpr int32 M20WheelCount = 16;
 	/** The hull's length as exported, in cm. */
 	constexpr double M20HullLength = 710.2;
+
+	/**
+	 * The M20's LODs (#149): each LOD's triangles per tank, and the distances in cm at which every part switches to LOD1, 2
+	 * and 3 (vehicle_art.LOD_DISTANCES) through the RTS camera's lens, 60 degrees across at 16:9 with the vertical field of
+	 * view kept.
+	 */
+	constexpr int32 M20LODCount = 4;
+	const FInt32Interval M20LODBudgets[] = { { 25000, 35000 }, { 6000, 10000 }, { 1000, 2500 } };
+	const double M20LODDistances[] = { 3500.0, 11000.0, 26000.0 };
+	const double RTSLensScreenMultiple = 0.5 / (FMath::Tan(FMath::DegreesToRadians(30.0)) / (16.0 / 9.0));
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSPlaceholderWithoutNaniteTest, "WorldDivide.Art.PlaceholderWithoutNanite", TestFlags)
@@ -120,7 +133,6 @@ bool FRTSM20GuardianArtTest::RunTest(const FString& Parameters)
 		TestTrue(*FString::Printf(TEXT("%s keeps its triangles (%d of %d)"), *Part.Key, Imported, Exported),
 			Imported <= Exported && Imported >= Exported - FMath::Max(Exported / 100, 1));
 		TestFalse(*FString::Printf(TEXT("%s has Nanite off"), *Part.Key), Mesh->IsNaniteEnabled());
-		TestEqual(*FString::Printf(TEXT("%s has no LODs yet"), *Part.Key), Mesh->GetNumLODs(), 1);
 		for (const FStaticMaterial& Slot : Mesh->GetStaticMaterials())
 		{
 			const UMaterialInstance* Instance = Cast<UMaterialInstance>(Slot.MaterialInterface);
@@ -204,8 +216,19 @@ bool FRTSM20TrackArtTest::RunTest(const FString& Parameters)
 		{
 			continue;
 		}
-		TestTrue(*FString::Printf(TEXT("%s is drawn with MI_M20_Track"), *Mesh->GetName()),
-			Mesh->GetStaticMaterials().Num() > 0 && Algo::AllOf(Mesh->GetStaticMaterials(), [Animated](const FStaticMaterial& Slot) { return Slot.MaterialInterface == Animated; }));
+		// Its near LODs move their links, its far ones (the belts, #149) are drawn rigid.
+		const FStaticMeshRenderData* RenderData = Mesh->GetRenderData();
+		for (int32 LOD = 0; RenderData && LOD < RenderData->LODResources.Num(); ++LOD)
+		{
+			const UMaterialInterface* Expected = LOD < 2 ? Animated : Rigid;
+			for (const FStaticMeshSection& Section : RenderData->LODResources[LOD].Sections)
+			{
+				TestTrue(*FString::Printf(TEXT("%s LOD%d is drawn with %s"), *Mesh->GetName(), LOD, *GetNameSafe(Expected)),
+					Mesh->GetStaticMaterials().IsValidIndex(Section.MaterialIndex) && Mesh->GetStaticMaterials()[Section.MaterialIndex].MaterialInterface == Expected);
+			}
+		}
+		TestTrue(*FString::Printf(TEXT("%s LOD1 keeps UV0 and the four animation channels"), *Mesh->GetName()),
+			RenderData && RenderData->LODResources.Num() > 1 && RenderData->LODResources[1].VertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords() == 5);
 		const FStaticMeshConstAttributes Attributes(*Description);
 		const TVertexInstanceAttributesConstRef<FVector2f> UVs = Attributes.GetVertexInstanceUVs();
 		if (!TestEqual(*FString::Printf(TEXT("%s has UV0 and four animation channels"), *Mesh->GetName()), UVs.GetNumChannels(), 5))
@@ -232,6 +255,92 @@ bool FRTSM20TrackArtTest::RunTest(const FString& Parameters)
 			MaxTurn > 0.f && MaxTurn < FMath::DegreesToRadians(35.f));
 	}
 	TestEqual(TEXT("Both tracks animate"), Tracks, 2);
+	return true;
+}
+
+/**
+ * The M20's LODs (#149), as vehicle_art.build_lods makes them: every part has LOD1 to LOD3 after its unchanged LOD0, the
+ * tank's triangles at each LOD stay within the budget, and every part switches at the same distances from the camera, its
+ * screen sizes scaled by its own radius (an instanced wheel's box, as the GPU measures it), descending. The reductions keep
+ * each part's material slots; only the tracks gain the rigid one for their belts. No part gains collision: the unit's box
+ * and the navmesh stay what they were.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSM20GuardianLODTest, "WorldDivide.Art.M20GuardianLODs", TestFlags)
+
+bool FRTSM20GuardianLODTest::RunTest(const FString& Parameters)
+{
+	const URTSUnitData* Data = LoadObject<URTSUnitData>(nullptr, M20DataPath);
+	if (!TestNotNull(TEXT("DA_TestM20Guardian loads"), Data))
+	{
+		return false;
+	}
+	// Each mesh the tank draws, once per time it is drawn, and whether it is drawn instanced (the wheels).
+	TArray<TPair<const UStaticMesh*, bool>> Drawn = { { Data->Mesh, false }, { Data->TurretMesh, false }, { Data->GunMesh, false } };
+	for (const FRTSVehiclePart& Part : Data->Parts)
+	{
+		Drawn.Emplace(Part.Mesh, Part.bWheel);
+	}
+
+	int32 Totals[M20LODCount] = {};
+	TSet<const UStaticMesh*> Checked;
+	for (const TPair<const UStaticMesh*, bool>& Piece : Drawn)
+	{
+		const UStaticMesh* Mesh = Piece.Key;
+		const FStaticMeshRenderData* RenderData = Mesh ? Mesh->GetRenderData() : nullptr;
+		if (!TestNotNull(TEXT("Every part has a built mesh"), RenderData)
+			|| !TestEqual(*FString::Printf(TEXT("%s has four LODs"), *Mesh->GetName()), Mesh->GetNumLODs(), M20LODCount))
+		{
+			continue;
+		}
+		for (int32 LOD = 0; LOD < M20LODCount; ++LOD)
+		{
+			Totals[LOD] += Mesh->GetNumTriangles(LOD);
+		}
+		if (Checked.Contains(Mesh))
+		{
+			continue;
+		}
+		Checked.Add(Mesh);
+
+		const FBoxSphereBounds Bounds = Mesh->GetBounds();
+		const double Radius = Piece.Value ? Bounds.BoxExtent.Size() : Bounds.SphereRadius;
+		for (int32 LOD = 1; LOD < M20LODCount; ++LOD)
+		{
+			const float ScreenSize = RenderData->ScreenSize[LOD].GetValue();
+			TestTrue(*FString::Printf(TEXT("%s: LOD%d's screen size is below LOD%d's"), *Mesh->GetName(), LOD, LOD - 1),
+				ScreenSize > 0.f && ScreenSize < RenderData->ScreenSize[LOD - 1].GetValue());
+			TestTrue(*FString::Printf(TEXT("%s: fewer triangles at LOD%d than at LOD%d"), *Mesh->GetName(), LOD, LOD - 1),
+				Mesh->GetNumTriangles(LOD) < Mesh->GetNumTriangles(LOD - 1));
+			// ComputeBoundsScreenSize turned round: where a part of this radius reaches its LOD's screen size.
+			const double Distance = ScreenSize > 0.f ? 2.0 * RTSLensScreenMultiple * Radius / ScreenSize : 0.0;
+			TestTrue(*FString::Printf(TEXT("%s switches to LOD%d at %.0f m, with the rest of the tank"), *Mesh->GetName(), LOD, Distance / 100.0),
+				FMath::IsNearlyEqual(Distance, M20LODDistances[LOD - 1], M20LODDistances[LOD - 1] * 0.01));
+		}
+
+		const TArray<FStaticMaterial>& Slots = Mesh->GetStaticMaterials();
+		const bool bTrack = Algo::AnyOf(Data->Parts, [Mesh](const FRTSVehiclePart& Part) { return Part.Mesh == Mesh && Part.TrackPitch > 0.f; });
+		TestEqual(*FString::Printf(TEXT("%s keeps its material slots"), *Mesh->GetName()), Slots.Num(),
+			Mesh == Data->Mesh ? 2 : bTrack ? 2 : 1);
+		for (int32 LOD = 0; LOD < M20LODCount; ++LOD)
+		{
+			for (const FStaticMeshSection& Section : RenderData->LODResources[LOD].Sections)
+			{
+				TestTrue(*FString::Printf(TEXT("%s LOD%d draws with one of its slots' materials"), *Mesh->GetName(), LOD),
+					Slots.IsValidIndex(Section.MaterialIndex) && Slots[Section.MaterialIndex].MaterialInterface != nullptr);
+			}
+		}
+		const UBodySetup* Body = Mesh->GetBodySetup();
+		TestTrue(*FString::Printf(TEXT("%s has no collision of its own"), *Mesh->GetName()),
+			!Body || Body->AggGeom.GetElementCount() == 0);
+	}
+
+	TestTrue(*FString::Printf(TEXT("LOD0 is the exported tank (%d triangles)"), Totals[0]), Totals[0] > 89000 && Totals[0] <= 89396);
+	for (int32 LOD = 1; LOD < M20LODCount; ++LOD)
+	{
+		const FInt32Interval& Budget = M20LODBudgets[LOD - 1];
+		TestTrue(*FString::Printf(TEXT("LOD%d is %d triangles per tank, within %d to %d"), LOD, Totals[LOD], Budget.Min, Budget.Max),
+			Totals[LOD] >= Budget.Min && Totals[LOD] <= Budget.Max);
+	}
 	return true;
 }
 

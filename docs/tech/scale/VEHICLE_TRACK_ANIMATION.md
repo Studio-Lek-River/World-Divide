@@ -86,7 +86,8 @@ A straight linear shift would have pulled the links up to about 1 cm inward on t
 - **The CPU keeps counting the phase** at every distance. It only sends the phase to a track within 1.25 × the distance + 10 m of a local player's camera (`FRTSTrackViews`), and sends it again on the first frame the track comes back within range. The links therefore come back where they should be, not where they were left.
 - **The engine's switch of the shift itself happens at its own distance.** At that moment the tread can shift by part of a link. At 60 m a link is about 2 px high at 1080p.
 - **The RTS camera's default zoom is 150 m.** At that zoom no track animates. The close zooms and the inspection views do.
-- **LODs (#149):** `MI_M20_Track_Static` is the material for the tracks' LOD2 and LOD3 once they exist. This change does not add LODs.
+- **LODs (#149).** LOD0 and LOD1 (the links reduced to 2,400 triangles, with all five UV channels kept) animate with `MI_M20_Track`. LOD2 and LOD3 are the belts of `m20_guardian_blender.py --lods`, in their own slot with `MI_M20_Track_Static`, so they never run the shift. LOD1 starts at 35 m and LOD2 at 110 m. Past 60 m the shift is already off, so the switch to the belt at 110 m has no phase to lose; the one tread jump stays at the 60 m cut-off, as before.
+- **Is that jump visible in play?** At the default zoom every tank is 128 to 204 m from the camera, so no track animates and nothing jumps. It only happens while zooming through about 60 m with a tank driving: half a link on average, about 2 px at 1080p, in the frame the zoom passes it. #149 leaves the distance at 6000 cm.
 - **Bounds and shadows.** A link moves at most one pitch along the closed loop, so the loop's outline, and with it the bounds, stays where it is, within 0.6 cm. Shadow depth passes run the same World Position Offset, so the shadows move with the links.
 
 ## 7. Tests and captures

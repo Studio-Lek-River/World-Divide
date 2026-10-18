@@ -298,7 +298,7 @@ def make_m20_guardian():
                     spec_hash([vehicle_art.build_lamp_material]))
     slot_materials = {"M20_Emissive": lamp}
     # The tracks' instance moves their links (#151); MI_M20_Track_Static is the same without, for a track that does not
-    # animate (rts.Vehicle.TrackAnimation 0) and for its far LODs once it has them (#149).
+    # animate (rts.Vehicle.TrackAnimation 0) and for its far LODs (#149).
     instances = {}
     for texture_set, name, animated in (("Hull", "MI_M20_Hull", False), ("Turret", "MI_M20_Turret", False),
                                         ("Running", "MI_M20_Running", False), ("Track", "MI_M20_Track", True),
@@ -312,17 +312,33 @@ def make_m20_guardian():
     for texture_set in ("Hull", "Turret", "Running", "Track"):
         slot_materials[f"M20_{texture_set}"] = instances[f"MI_M20_{texture_set}"]
 
-    # Each part's length along X as exported (m20_guardian_blender.py --verify), to catch a unit mix-up on import.
+    # Each part's length along X as exported (m20_guardian_blender.py --verify), to catch a unit mix-up on import, and
+    # its LOD1-3 triangles (#149), from about 29k, 8k and 2k per tank. The tracks' LOD2 and LOD3 are the belts of
+    # m20_guardian_blender.py --lods, without the link shift; the wheels are instanced, so they switch by their box.
     meshes = {}
-    for part, length in (("Hull", 710.2), ("Turret", 424.2), ("Gun", 322.0), ("RWS", 165.0), ("Track_L", 647.3),
-                         ("Track_R", 647.3), ("RoadWheel", 68.0), ("Sprocket", 68.4), ("Idler", 54.0)):
+    for part, length, triangles in (("Hull", 710.2, (10000, 2600, 560)), ("Turret", 424.2, (7000, 1600, 380)),
+                                    ("Gun", 322.0, (1600, 350, 80)), ("RWS", 165.0, (700, 120, 40)),
+                                    ("Track_L", 647.3, (2400,)), ("Track_R", 647.3, (2400,)),
+                                    ("RoadWheel", 68.0, (300, 120, 20)), ("Sprocket", 68.4, (300, 120, 20)),
+                                    ("Idler", 54.0, (300, 120, 20))):
         name = f"SM_M20_{part}"
         source = os.path.join(M20_SOURCE_DIR, "fbx", f"{name}.fbx")
+        instanced = part in ("RoadWheel", "Sprocket", "Idler")
+        custom = {lod: os.path.join(M20_SOURCE_DIR, "fbx", "lods", f"{name}_LOD{lod}.fbx")
+                  for lod in (2, 3)} if part.startswith("Track") else None
+        custom_slot = ("M20_Track_Static", instances["MI_M20_Track_Static"]) if custom else None
+
+        def build(s=source, n=name, l=length, t=triangles, i=instanced, c=custom, cs=custom_slot):
+            return vehicle_art.build_lods(vehicle_art.import_part(s, mesh_dir, n, slot_materials, l), t, i, c, cs)
+
         meshes[part] = plan_now(
-            f"{mesh_dir}/{name}",
-            lambda s=source, n=name, l=length: vehicle_art.import_part(s, mesh_dir, n, slot_materials, l),
-            spec_hash([vehicle_art.import_part], mesh_dir, name, length, file_hash(source),
-                      sorted((slot, object_path(material)) for slot, material in slot_materials.items())))
+            f"{mesh_dir}/{name}", build,
+            spec_hash([vehicle_art.import_part, vehicle_art.build_lods, vehicle_art.lod_radius,
+                       vehicle_art.lod_screen_sizes], mesh_dir, name, length, file_hash(source),
+                      sorted((slot, object_path(material)) for slot, material in slot_materials.items()),
+                      triangles, instanced, vehicle_art.LOD_DISTANCES, vehicle_art.SCREEN_MULTIPLE,
+                      sorted((lod, file_hash(path)) for lod, path in (custom or {}).items()),
+                      custom_slot and (custom_slot[0], object_path(custom_slot[1]))))
 
     def part(mesh, mount, offset, yaw=0.0, wheel=False, roll_radius=0.0, track_pitch=0.0, rigid_material=None):
         value = unreal.RTSVehiclePart()

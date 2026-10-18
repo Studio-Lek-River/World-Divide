@@ -56,4 +56,11 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
 	static UFontFace* ImportFontFace(const FString& FileName, const FString& AssetPath);
+
+	/**
+	 * Loads the editor module ModuleName, which a commandlet leaves out, so that its editor subsystems exist: the
+	 * StaticMeshEditor module's StaticMeshEditorSubsystem makes vehicle_art.py's LODs (#149). Returns whether it is loaded.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
+	static bool LoadEditorModule(FName ModuleName);
 };

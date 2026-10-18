@@ -15,6 +15,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task u
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots -Panel ResourceBar
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestM20Guardian -Stress 240
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestTank -Stress 240 -Trace
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestM20Guardian -LODs
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task trackshots -Unit DA_TestM20Guardian
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task camerashots
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian
@@ -45,7 +46,9 @@ the unit picked, selected and driving on a move order, driving into, along and r
 and barrel's overlap printed), and the default view with stat unit and stat rhi, to Saved/UnitShots/<Unit>; with -Stress N also N more of the unit in a
 grid with the stats on. The frame time, game thread time, avoidance pass, draw calls and triangles of the stat views are
 printed. -Trace also records an Unreal Insights capture (cpu, frame and region channels; each stat view is a region) to
-Saved/Traces/UnitShots_<Unit>_<Stress>.utrace.
+Saved/Traces/UnitShots_<Unit>_<Stress>.utrace. -LODs takes the unit's LOD sheet instead (#149): each LOD forced from four sides,
+the RTS camera at a zoom inside each LOD, the RTS lens just inside and outside each switch distance and the team row at each
+LOD, with the LOD of every mesh of the unit printed per shot.
 Camerashots plays L_TestMap with a renderer (a GPU is needed), stages a base and a mixed formation by Team0's start spot and
 saves the camera comparison (rts.Debug.CameraShots): the camera before the real-scale retune and the camera now
 at the closest, default and farthest zoom on a vehicle, the formation, the base and the battlefield, plus the base at
@@ -114,6 +117,8 @@ param(
 	[switch]$Quick,
 
 	[switch]$Screen,
+
+	[switch]$LODs,
 
 	[switch]$SaveBaseline,
 
@@ -346,6 +351,7 @@ function Invoke-UIShots {
 function Invoke-UnitShots {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$ShotDir = Join-Path $RepoRoot "Saved\UnitShots\$Unit"
+	if ($LODs) { $ShotDir = Join-Path $ShotDir 'LODs' }
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\UnitShots.log'
 	if (Test-Path $ShotDir) { Remove-Item -Recurse -Force $ShotDir }
 	$TraceArgs = @()
@@ -358,16 +364,22 @@ function Invoke-UnitShots {
 
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
 		"`"$Project`"", '/Game/Maps/L_TestMap', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
-		"`"-ExecCmds=rts.Debug.UnitShots $Unit $Stress`"", '-RTSUnitShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		"`"-ExecCmds=rts.Debug.UnitShots $Unit $Stress$(if ($LODs) { ' lods' })`"", '-RTSUnitShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
 		'-unattended', '-nosplash', '-nosound') + $TraceArgs)
 	$GameExit = $Process.ExitCode
 
 	$Shots = @('rts_default', 'zoom_in_max', 'zoom_out_max', 'closeup', 'turret_rotated', 'driving', 'obstacle_block',
 		'obstacle_along', 'obstacle_corner', 'obstacle_building', 'stats_one')
 	if ($Stress -gt 0) { $Shots += "stress_$Stress" }
+	if ($LODs) {
+		$Shots = @(foreach ($Lod in 0..3) { foreach ($View in 'side', 'front', 'rear', 'three_quarter') { "lod$($Lod)_$View" } }) +
+			@('auto_close', 'auto_tactical', 'auto_default', 'auto_max') +
+			@(foreach ($Switch in 1..3) { "switch$($Switch)_before"; "switch$($Switch)_after" }) +
+			@(foreach ($Lod in 0..3) { "teams_lod$Lod" })
+	}
 	$Problems = @($Shots | Where-Object { -not (Test-Path (Join-Path $ShotDir "$_.png")) } | ForEach-Object { "missing $_.png" })
 	if (Test-Path $LogFile) {
-		Select-String -Path $LogFile -Pattern 'rts.Debug.UnitShots: (\S+ over|picked|drove|\S+: the (hull|barrel) overlaps|\S+: no separate barrel)' | ForEach-Object { $_.Line -replace '^.*rts.Debug.UnitShots: ', '  ' }
+		Select-String -Path $LogFile -Pattern 'rts.Debug.UnitShots: (\S+ over|picked|drove|\S+: the (hull|barrel) overlaps|\S+: no separate barrel|\S+: forced LOD)' | ForEach-Object { $_.Line -replace '^.*rts.Debug.UnitShots: ', '  ' }
 	}
 	if ($GameExit -ne 0 -or $Problems.Count -gt 0) {
 		$Problems | ForEach-Object { Write-Host "  $_" }
