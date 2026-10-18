@@ -124,6 +124,8 @@ def build_vehicle_material(defaults):
     editing.connect_material_property(samples["ORM"], "G", unreal.MaterialProperty.MP_ROUGHNESS)
     editing.connect_material_property(samples["ORM"], "B", unreal.MaterialProperty.MP_METALLIC)
 
+    # The wheels are drawn as instanced sets (#165); without the usage a standalone game draws them in the default material.
+    material.set_editor_property("used_with_instanced_static_meshes", True)
     editing.recompile_material(material)
     return material
 

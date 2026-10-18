@@ -86,8 +86,9 @@ bool FRTSPlaceholderWithoutNaniteTest::RunTest(const FString& Parameters)
 
 /**
  * The M20 Guardian as setup_testmap.py imports it from its Blender export: every part at the triangle count it was exported
- * with, at real size, without Nanite (the parts move), each slot on the vehicle materials, and the texture maps compressed as
- * their kind needs (sRGB colour with the team mask in alpha, BC5 normals, linear masks).
+ * with, at real size, without Nanite (the parts move), each slot on the vehicle materials, the wheels' materials flagged for
+ * the instanced sets ARTSUnit draws them in (#215), and the texture maps compressed as their kind needs (sRGB colour with the
+ * team mask in alpha, BC5 normals, linear masks).
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSM20GuardianArtTest, "WorldDivide.Art.M20Guardian", TestFlags)
 
@@ -103,6 +104,19 @@ bool FRTSM20GuardianArtTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Its wheels roll"), Data->Parts.FilterByPredicate([](const FRTSVehiclePart& Part) { return Part.bWheel; }).Num(),
 		M20WheelCount);
 	TestTrue(TEXT("It is at real size"), Data->MeshScale.Equals(FVector::OneVector));
+	for (const FRTSVehiclePart& Part : Data->Parts)
+	{
+		if (!Part.bWheel || Part.MountedOn != ERTSVehiclePartMount::Hull || !Part.Mesh)
+		{
+			continue;
+		}
+		for (const FStaticMaterial& Slot : Part.Mesh->GetStaticMaterials())
+		{
+			const UMaterial* Master = Slot.MaterialInterface ? Slot.MaterialInterface->GetMaterial() : nullptr;
+			TestTrue(*FString::Printf(TEXT("%s slot %s may be drawn instanced"), *Part.Mesh->GetName(), *Slot.MaterialSlotName.ToString()),
+				Master && Master->GetUsageByFlag(MATUSAGE_InstancedStaticMeshes));
+		}
+	}
 	if (Data->Mesh)
 	{
 		const FBox Box = Data->Mesh->GetBoundingBox();
