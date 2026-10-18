@@ -60,7 +60,9 @@ south-west of the middle, out of the enemy headquarters' range. -Long (alias -Fu
 for iterating and never gate evidence: the long scene at 240 units (or -Counts), moving only, a 10 s warm-up and one 30 s
 sample, the same columns. -Screen (#171) is the gate's first tier: the same with one 15 s sample. -Unit A,B runs several
 sets one after another in one game session, each with its own warm-up,
-samples and folder. bench.json beside the table records the method, scene, machine, commit and content hashes.
+samples and folder. A set named with the suffix @Solids (#172; -Unit DA_TestM20Guardian@Solids) benches among solids the
+navmesh leaves out (trunks, boulders, low walls; RTSBenchScene), in its own folder Saved/Bench/<Unit>@Solids. bench.json
+beside the table records the method, scene, machine, commit and content hashes.
 -SaveBaseline (clean worktree only) stores each set's run under Saved/Bench/Baselines/<commit>/<method>/<set>; -Compare reads
 the run against the baseline of HEAD, or of the ancestor -Baseline <commit> (marked OUTDATED), refuses one of another
 method, scene or machine, and writes compare.md. See docs/tech/scale/PERFORMANCE_RESULTS.md, "Bench workflow".
@@ -431,9 +433,10 @@ function Get-UnitPackageFiles([string]$Name) {
 # names what differs from its baseline.
 function Get-BenchGitFacts([string]$Set) {
 	$Hashes = [ordered]@{}
-	$Units = @($Set -split '\+')
+	$Units = @(($Set -replace '@Solids$', '') -split '\+')
 	$Files = @('Source/WorldDivide/Units/Debug/RTSBenchCommand.cpp', 'Source/WorldDivide/Units/Debug/RTSBenchPlan.h',
-		'Content/Maps/L_Bench.umap') + ($Units | ForEach-Object { "Content/Data/Units/$_.uasset" })
+		'Source/WorldDivide/Units/Debug/RTSBenchScene.cpp', 'Content/Maps/L_Bench.umap') +
+		($Units | ForEach-Object { "Content/Data/Units/$_.uasset" })
 	$Files = @($Files + ($Units | ForEach-Object { Get-UnitPackageFiles $_ }) | Select-Object -Unique)
 	foreach ($File in $Files) {
 		$Full = Join-Path $RepoRoot $File

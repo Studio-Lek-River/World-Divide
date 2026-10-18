@@ -2,6 +2,7 @@
 
 #if !UE_BUILD_SHIPPING
 
+#include "Algo/Count.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Combat/RTSWeaponComponent.h"
@@ -35,6 +36,7 @@
 #include "UnrealClient.h"
 #include "Units/Debug/RTSBenchGate.h"
 #include "Units/Debug/RTSBenchPlan.h"
+#include "Units/Debug/RTSBenchScene.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitMovement.h"
@@ -71,6 +73,10 @@
  * The command given while a run is going is queued: ue.ps1 runs several unit sets one after another in one game session, each
  * its own run with its own camera, settings, warm-up, samples and output folder, its units cleared before the next starts.
  * -RTSBenchQuit quits after the last.
+ *
+ * A set named with RTSBenchScene::SolidsSuffix (DA_TestM20Guardian@Solids; #172) benches among solids the navmesh leaves
+ * out, which RTSBenchScene lays out over the ground each count's grid covers and drives over. The suffix is part of the set's
+ * name, so its output and baselines have their own folder, and bench.json's scene names the layout.
  */
 namespace RTSBenchCommand
 {
@@ -92,26 +98,14 @@ namespace RTSBenchCommand
 	const TCHAR* FramesParam = TEXT("RTSBenchFrames");
 	const TCHAR* SampleSecondsParam = TEXT("RTSBenchSampleSeconds=");
 
-	/**
-	 * The grid: units face +X in rows across Y, as a formation would stand: each unit's length plus RowGap apart along X and
-	 * its width plus ColumnGap apart along Y, about square overall, centred on GridCentre. The move order sends them MoveDistance
-	 * along +X.
-	 */
-	const FVector GridCentre(0.f, 0.f, 0.f);
-	constexpr float RowGap = 300.f;
-	constexpr float ColumnGap = 250.f;
-	constexpr float MoveDistance = 6000.f;
+	using RTSBenchScene::GridCentre;
+	using RTSBenchScene::LongGridCentre;
+	using RTSBenchScene::LongMoveDistance;
+	using RTSBenchScene::MoveDistance;
 
 	/** The fixed camera: looking down at the RTS pitch over the middle of the grid and the move, far enough to see both. */
 	const FVector CameraLookAt(MoveDistance / 2.f, 0.f, 0.f);
 
-	/**
-	 * The long method's grid and drive: its units shoot at whatever comes into range while they stand, and over minutes 240
-	 * of them would destroy the enemy's headquarters and end the match. So the grid stands south-west of the middle, every
-	 * unit out of range of the headquarters in the north-east corner, and drives the other way: half as far, to the west.
-	 */
-	const FVector LongGridCentre(-3000.f, -1000.f, 0.f);
-	constexpr float LongMoveDistance = -3000.f;
 	constexpr float CameraPitch = -55.f;
 	constexpr float CameraDistance = 17000.f;
 	constexpr float CameraFOV = 60.f;
@@ -307,6 +301,7 @@ namespace RTSBenchCommand
 	public:
 		FBenchRun(UWorld& InWorld, const FString& InUnitName, const FRTSBenchPlan& InPlan)
 			: World(&InWorld), UnitName(InUnitName), Counts(InPlan.Counts), Plan(InPlan)
+			, bSolids(InUnitName.EndsWith(RTSBenchScene::SolidsSuffix))
 		{
 		}
 
@@ -458,7 +453,7 @@ namespace RTSBenchCommand
 			}
 			// A mix of sizes is several names joined by '+'; the grid takes them in turn.
 			TArray<FString> Names;
-			UnitName.ParseIntoArray(Names, TEXT("+"));
+			UnitName.LeftChop(bSolids ? FCString::Strlen(RTSBenchScene::SolidsSuffix) : 0).ParseIntoArray(Names, TEXT("+"));
 			for (const FString& Name : Names)
 			{
 				const FString Path = FString::Printf(TEXT("%s/%s.%s"), UnitDataPath, *Name, *Name);
@@ -584,14 +579,13 @@ namespace RTSBenchCommand
 				const TInlineComponentArray<UPrimitiveComponent*> Primitives(First);
 				KindComponents.FindOrAdd(Index) = Primitives.Num();
 			}
-			const FVector2D Spacing(Largest.X + RowGap, Largest.Y + ColumnGap);
-			const int32 Columns = FMath::Max(1, FMath::CeilToInt(FMath::Sqrt(Count * Spacing.X / Spacing.Y)));
-			const int32 Rows = FMath::DivideAndRoundUp(Count, Columns);
-			const FVector2D Size((Rows - 1) * Spacing.X, (Columns - 1) * Spacing.Y);
+			const FVector2D Spacing(Largest.X + RTSBenchScene::RowGap, Largest.Y + RTSBenchScene::ColumnGap);
+			int32 Rows = 0;
+			int32 Columns = 0;
+			const TArray<FVector> Places = RTSBenchScene::MakeGrid(Count, Spacing, GetGridCentre(), Rows, Columns);
 			for (int32 Index = 0; Index < Count; ++Index)
 			{
-				const FVector Location = GetGridCentre() + FVector(Index / Columns * Spacing.X - Size.X / 2.f,
-					Index % Columns * Spacing.Y - Size.Y / 2.f, 0.f);
+				const FVector& Location = Places[Index];
 				if (Index < Kinds)
 				{
 					ARTSUnit* First = Units[Units.Num() - Kinds + Index].Get();
@@ -608,7 +602,37 @@ namespace RTSBenchCommand
 			}
 			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.Bench: %d x %s in %d rows of %d, %.0f x %.0f cm apart"),
 				Count, *UnitName, Rows, Columns, Spacing.X, Spacing.Y);
+			if (bSolids)
+			{
+				SpawnSolids();
+			}
 			return true;
+		}
+
+		/** The solids of an "@Solids" set over the ground the grid stands on and drives over, clear of its hulls. */
+		void SpawnSolids()
+		{
+			TArray<FBox2D> Hulls;
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Units)
+			{
+				Hulls.Add(RTSBenchScene::GetHullBox(Unit->GetFootprint()));
+			}
+			const FBox2D Area = RTSBenchScene::GetSolidsArea(Hulls, Plan.bLongScene ? LongMoveDistance : MoveDistance);
+			SolidLayout = RTSBenchScene::MakeSolids(Area, Hulls);
+			SolidActors = RTSBenchScene::SpawnSolids(*World, SolidLayout, GetGridCentre().Z);
+			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.Bench: %d solids over %.0f x %.0f m: %s"), SolidActors.Num(),
+				Area.GetSize().X / 100.f, Area.GetSize().Y / 100.f, *DescribeSolids());
+		}
+
+		int32 CountSolids(RTSBenchScene::ESolidKind Kind) const
+		{
+			return Algo::CountIf(SolidLayout, [Kind](const RTSBenchScene::FSolid& Solid) { return Solid.Kind == Kind; });
+		}
+
+		FString DescribeSolids() const
+		{
+			return FString::Printf(TEXT("%d trunks, %d boulders, %d walls"), CountSolids(RTSBenchScene::ESolidKind::Trunk),
+				CountSolids(RTSBenchScene::ESolidKind::Boulder), CountSolids(RTSBenchScene::ESolidKind::Wall));
 		}
 
 		FVector GetGridCentre() const { return Plan.bLongScene ? LongGridCentre : GridCentre; }
@@ -659,6 +683,14 @@ namespace RTSBenchCommand
 				}
 			}
 			Units.Reset();
+			for (const TWeakObjectPtr<AActor>& Solid : SolidActors)
+			{
+				if (Solid.IsValid())
+				{
+					Solid->Destroy();
+				}
+			}
+			SolidActors.Reset();
 			bMoveBack = false;
 			GEngine->ForceGarbageCollection(true);
 		}
@@ -888,6 +920,17 @@ namespace RTSBenchCommand
 			Scene->SetNumberField(TEXT("camera_pitch"), CameraPitch);
 			Scene->SetNumberField(TEXT("camera_distance"), CameraDistance);
 			Scene->SetNumberField(TEXT("camera_fov"), CameraFOV);
+			// Only an "@Solids" set has the field, so the baselines of the open scene stay comparable as they are.
+			if (bSolids)
+			{
+				const TSharedRef<FJsonObject> Solids = MakeShared<FJsonObject>();
+				Solids->SetNumberField(TEXT("version"), RTSBenchScene::SolidsVersion);
+				Solids->SetNumberField(TEXT("seed"), RTSBenchScene::SolidsSeed);
+				Solids->SetNumberField(TEXT("trunks"), CountSolids(RTSBenchScene::ESolidKind::Trunk));
+				Solids->SetNumberField(TEXT("boulders"), CountSolids(RTSBenchScene::ESolidKind::Boulder));
+				Solids->SetNumberField(TEXT("walls"), CountSolids(RTSBenchScene::ESolidKind::Wall));
+				Scene->SetObjectField(TEXT("solids"), Solids);
+			}
 
 			const TSharedRef<FJsonObject> Machine = MakeShared<FJsonObject>();
 			Machine->SetStringField(TEXT("cpu"), GetCPUName());
@@ -1008,6 +1051,10 @@ namespace RTSBenchCommand
 		int32 TeamId = 0;
 		TWeakObjectPtr<ACameraActor> Camera;
 		TArray<TWeakObjectPtr<ARTSUnit>> Units;
+		/** An "@Solids" set: the solids of the current count, and their actors. */
+		bool bSolids = false;
+		TArray<RTSBenchScene::FSolid> SolidLayout;
+		TArray<TWeakObjectPtr<AActor>> SolidActors;
 
 		EStep Step = EStep::WaitForPlayer;
 		int32 StepFrames = 0;

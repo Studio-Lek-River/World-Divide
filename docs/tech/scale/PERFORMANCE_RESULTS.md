@@ -109,6 +109,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task b
 # While working: bench only "after" against HEAD's baseline
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Quick -Unit DA_TestM20Guardian,DA_TestTank -Compare
 
+# Among solids the navmesh leaves out (#172): the same set with the suffix @Solids, in its own folder
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Quick -Unit DA_TestM20Guardian@Solids
+
 # The gate for the result, against HEAD's long baseline (or an older one, marked OUTDATED)
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Long -Unit DA_TestM20Guardian,DA_TestTank -Compare
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Long -Unit DA_TestTank -Compare -Baseline c0d1387
@@ -872,8 +875,8 @@ A broad overlap costs about 7 µs. L_Bench has no solids that navigation leaves 
 ### Remaining limitations
 
 - **A gun over the front stops a hull at the barrel's reach** when the turret cannot turn aside, as #162 designed. The 0–50 cm gap applies to the hull itself.
-- **Narrow-phase cost is not measured at scale:** L_Bench has no such solids. A bench scene with props that navigation leaves out would measure it.
-- **No Insights capture for #168.** The bench counters time the broad and narrow phases directly; the trace scopes `FRTSSolidNeighbourhood::Update` and `::IsClear` are in place for one.
+- **Narrow-phase cost is not measured at scale:** L_Bench has no such solids. Measured since in #172's obstacle scene (below).
+- **No Insights capture for #168.** The bench counters time the broad and narrow phases directly; the trace scopes `FRTSSolidNeighbourhood::Update` and `::IsClear` are in place for one; #172 captured them.
 - **A nav-relevant prop placed at runtime** relies on the navmesh rebuild, as before: up to the existing 1 s cache expiry.
 
 ## #169 (long paths over the search node limit)
@@ -1163,3 +1166,99 @@ L_SkirmishDuel has one 5000 supply source per base and 10000 starting credits pe
 - **The estimate is a model.** It ignores enemy units defending around the defence, terrain, and a defence's habit of keeping its current target. A wave can still lose a fight the estimate called. It then falls back once the fight turns.
 - **No flanking:** a wave does not look for a firing position outside a defence's range, such as tanks shooting a building the tower covers only on its near side.
 - **A far source on the way through the enemy army** is still used if no defence covers it. A harvester that cannot reach it is re-ordered each think.
+
+## #172 (hull checks against solids off the navmesh, at scale)
+
+Same machine and build configuration as #168, on 2026-10-18, code at `186e43f` plus the #172 change. L_Bench and the open scene are unchanged. The measurement is one long session, `ue.ps1 -Task bench -Long -Counts 240 -Unit DA_TestM20Guardian,DA_TestM20Guardian@Solids` (773 s wall clock). It runs the open scene and the obstacle scene back to back in one game session, so the two are the same build and the same machine state. Both runs are valid (#171), with 0.72 cores of other load. `-Compare` refuses to pair the two scenes (`scene.solids` differs), so they are compared in the tables below rather than in `compare.md`.
+
+### The obstacle scene
+
+- **Reproduce:** add the suffix `@Solids` to a set's name: `ue.ps1 -Task bench -Quick -Unit DA_TestM20Guardian@Solids`. The set gets its own folder (`Saved/Bench/DA_TestM20Guardian@Solids/`) and its own baselines. Without the suffix the bench is exactly as before; `FRTSBenchPlan::Version` is unchanged and the stored baselines stay valid.
+- **Generated, not edited.** `RTSBenchScene::MakeSolids` lays the solids out at a fixed seed (172) when each count's grid stands, and they are cleared with its units. L_Bench and `setup_testmap.py` are untouched. `bench.json`'s `scene.solids` records the layout version, the seed and the count of each kind. Only an `@Solids` run has that field, so its runs never match an open-scene baseline.
+- **The area** is the ground the grid stands on and drives over, both legs, plus 10 m: 178 × 144 m for 240 M20s. The layout scales with the grid, so smaller counts get the same density.
+- **The solids** are engine shapes that block pawns, with navigation off (`SetCanEverAffectNavigation(false)`), as the River Crossing plan sets tree trunks ([03_TECHNICAL_PLAN.md](../../world/maps/WD_RiverCrossing_01/03_TECHNICAL_PLAN.md), §6):
+
+| Kind | Size | Density | At 240 M20s |
+|---|---|---|---:|
+| Tree trunks (cylinders) in a copse, the area's west 40% by its north 60% | 50–80 cm across, 8 m tall | one per 200 m² of copse | 31 |
+| Boulders (boxes) over the whole area | 1.2–2.5 m sides, 1–1.5 m tall | one per 1200 m² | 21 |
+| Low walls, alternately along and across the drive | 6–12 m long, 0.4 m thick, 1.2 m tall | one per 4000 m² | 6 |
+
+- **Overall** that is 58 solids, one per 443 m²: an open field with a sparse copse and field-edge walls. No solid stands within 50 cm of a hull where it spawns, or within 3 m of another solid. Trunks and walls along the drive fit the 2.5 m gaps between the grid's columns, and are passed. Walls across the drive, and solids where the formation's slots land, are met.
+- **Density was tuned once.** A first layout twice as dense (100 solids: trunks one per 100 m², boulders one per 800 m²) stopped 23–32% of the units short of 20 m per leg, and 109 of 240 met a solid: a collision pile rather than a map. The layout above keeps 84–86% of the units driving each leg.
+
+### Collision correctness (`WorldDivide.Debug.Bench.Solids`, L_Bench, fixed 30 Hz, headless)
+
+The bench's own grid of 240 M20s, among the same solids, drives the long scene's two 15 s legs, west and back:
+
+| Check | Result |
+|---|---|
+| Units that drove 20 m or more, leg 1 / leg 2 | 206 / 201 of 240 (at least 75% required) |
+| Units with solids in their neighbourhood, leg 1 / leg 2 | 199 / 197 |
+| Units that met a solid (within 10 cm) / passed one without meeting it | 75 / 161 |
+| Deepest any hull went into a solid | **0.86 cm** (at most 1 cm, as #168) |
+| Narrow phase per frame | 97 hull checks, 188 component queries |
+
+`WorldDivide.Debug.Bench.SolidLayout` checks the layout itself: the same grid gives the same solids, every kind is there with walls both ways, no solid stands on a hull or beside another, and none is denser than planned.
+
+### 240 M20s, long method (mean of three 60 s samples; p95 is the mean of the samples' 95th percentiles)
+
+| Scenario | Scene | Game ms (p95) | Slowest game frame ms | Locomotion ms (p95, max) | Avoidance ms |
+|---|---|---|---:|---|---:|
+| move | open | 4.13 (7.76) | 19.49 | 0.444 (1.153, 2.95) | 0.376 |
+| move | **solids** | **4.76 (8.03)** | 19.53 | **0.743 (1.683, 2.89)** | 0.545 |
+| idle | open | 1.92 (2.27) | 19.84 | 0.050 (0.070) | 0.228 |
+| idle | solids | 1.95 (2.30) | 18.03 | 0.051 (0.070) | 0.229 |
+
+- **Moving among the solids costs 0.63 ms more game thread** (p95 +0.27 ms): locomotion +0.30 ms and avoidance +0.17 ms. The rest is spread over the frame.
+- **The worst frame does not change** (19.5 ms in both, under the 33 ms budget). It is the M20's render-state cost while it drives (#151 → #150 → #149), not collision.
+- **Standing units cost the same:** an idle hull makes no solid query at all.
+- **The open scene matches #168:** game 4.13 against 4.21 ms, locomotion 0.44 (1.15) against 0.45 (1.16) ms.
+
+### Solid queries (the bench's "Solids" table, 240 moving units, per frame, mean of three samples)
+
+| Scene | Broad overlaps | Reused | Hull checks | Component queries | Broad ms | Narrow ms | Solids total ms |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| open | 0.83 | 99.4% | 0 | 0 | 0.0053 | 0 | 0.005 |
+| solids | 0.93 | 99.5% | 90.4 | 186.1 | 0.0064 | 0.1293 | 0.136 |
+
+- **A hull check costs about 1.4 µs** for 2.1 component queries on average. A broad overlap costs about 7 µs, as in #168.
+- **The broad phase barely moves:** neighbourhoods are reused 99.5% of the time, and an overlap that finds solids costs about the same as one that finds none.
+
+### Unreal Insights (`ue.ps1 -Task bench -Quick -Trace`, region `<set>_240_move_1`, game thread)
+
+Captured in separate quick runs of both scenes, never in the measured long session. Exported with `UnrealInsights -ExecOnAnalysisCompleteCmd="TimingInsights.ExportTimerStatistics <csv> -threads=GameThread -timers=* -region=<region>"`. The trace's own overhead is in these numbers, so read them as a split, not against the budget:
+
+| Scope (ms per frame, calls per frame) | Open | Solids |
+|---|---|---|
+| `URTSUnitMovement::TickLocomotion` (inclusive) | 0.443 | 0.749 |
+| `FRTSSolidNeighbourhood::IsClear` | — | 0.124 (87.6 calls) |
+| `FRTSSolidNeighbourhood::Update` | 0.005 (0.8 calls) | 0.007 (0.9 calls) |
+| `RTSBarrelClearance::IsClear` (the gear's barrel watch, #162) | — | 0.178 (98.7 calls) |
+| `URTSUnitMovement::IsPoseClear` (inclusive) | 0.021 | 0.100 |
+| `URTSAvoidanceSubsystem::Separate` (inclusive) | 0.322 | 0.539 |
+
+- **The narrow hull check is not the largest new cost in locomotion.** The barrel sweeps of #162 are larger: 0.18 ms against 0.12 ms. A gun over the front sweeps against a solid near the hull while the gear turns. Together they are the 0.30 ms locomotion rise.
+- **Avoidance rises by 0.22 ms.** Each vehicle push is checked against the pushed hull's solids (`IsClearOfSolids`), and, probably, hulls held at a solid stay close to their neighbours for longer.
+
+### Against the budget (#138, 240 moving M20s, long method)
+
+| Budget | Open | Among solids |
+|---|---|---|
+| Locomotion mean ≤ 1.0 ms | Met (0.44) | **Met (0.72–0.76)** |
+| Locomotion p95 ≤ 2.0 ms | Met (1.15) | **Met (1.68–1.69)** |
+| Non-zero narrow-phase work | none (no such solids) | **90 hull checks and 186 component queries per frame** |
+
+The budget holds, so no optimization is proposed. The p95 has 0.31 ms of headroom left. If a denser map ever closes that gap, the first place to look is the barrel watch, not the hull check: its sweep could reuse the solid neighbourhood's few components, as the hull check does, instead of a world sweep. That is a suggestion for a later issue, not part of this change.
+
+### Test runtime
+
+- `WorldDivide.Debug.Bench.SolidLayout` and `WorldDivide.Debug.Bench.Solids`: 28 s together, PIE start included.
+- The full run: 259 of 259 pass in 7 min 19 s, under the 10-minute target.
+
+### Remaining limitations
+
+- **One machine, one unit:** the M20 is the representative with a barrel over its front. A hull without a barrel would see less locomotion cost here.
+- **Paths do not know the solids** (by design, #168). A hull that meets one stops until its next order, so 14–16% of the units stand each leg. That lowers the locomotion cost a little against a scene where every unit keeps driving.
+- **Formation slots** that land on a solid make the units there stop short; that is counted as meeting it.
+- **The gate does not bench `@Solids`.** `-Task gate` plans open-scene sets only. A change to collision or locomotion should add a quick `@Solids` run by hand.
