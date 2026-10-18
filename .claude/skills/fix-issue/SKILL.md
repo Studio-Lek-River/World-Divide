@@ -95,13 +95,15 @@ If the setup is blocked by an LFS-locked asset, check `git lfs locks`: nobody ho
 
 ## 8. Follow-ups and work order
 
-The work order lives in the descriptions of the open milestones, worked in order: `M1 Design alignment` → `M2 HUD vertical slice` → `M3 Living roster` → `M4 Gameplay foundations` → `M5 Generals & powers` (list them with `gh api "repos/Studio-Lek-River/World-Divide/milestones?state=all"`). The old `Roadmap` milestone is closed; never add to it.
+The work order lives in the descriptions of the open milestones (list them with `gh api "repos/Studio-Lek-River/World-Divide/milestones?state=all"`). Goal: one working general (Ward) on one map. Order: `M1 First slice` (M20, River Crossing, USA HQ), with `M2 Performance & data scalability`, `M3 HUD` and `M4 Ward roster design` alongside; then `M5 Gameplay core`, `M6 Vision & detection`, `M7.xx` Ward buildings, `M8.00 Infantry pipeline` → `M8.xx` infantry, `M9.xx` vehicles, `M10.00 Air pipeline` → `M10.xx` aircraft and helicopters, `M11 Skirmish AI`, `M12 Ward rank, powers & superweapon`. M4 creates one milestone per building/unit (`M7.02 Ward Barracks`, ...). `Later` is not worked until the slice is done. Closed milestones (Roadmap, M1b, M1d, M1e, USA Default HQ, Performance Backlog) are history; never add to them.
+
+Follow-ups go to the milestone of the issue just closed only if that unit, map or building needs them; otherwise to `M3 HUD` (UI) or `M2 Performance & data scalability` (performance, data).
 
 After the push, always, without asking again:
 
 - Create every follow-up from the report as an issue in the milestone it belongs to (usually the one of the issue just closed): body with **Context** (start with `Follow-up to #<n>.`, name the classes involved), **What** and **Acceptance**, no labels, title at most 70 characters. If an open issue already covers it, add a bullet to that issue's **What** instead of creating a duplicate.
-- Title prefix: the slot it belongs in, the next free letter or suffix in its series (`[19j]`, `[06b]`, ...), checked against all existing titles. Never renumber existing issues.
-- Update that milestone's description (`gh api -X PATCH repos/Studio-Lek-River/World-Divide/milestones/<id> -f description=...`): drop the line of the issue just closed, insert the new ones in order, and renumber the `N. #<n> <short title>` lines under `Work top to bottom:`.
+- Title prefix: `[<milestone>-<section><nn>]`, the next free number in its section (`[M1-U14]`, `[M2-P12]`, `[M7.02-16]`, `[L-32]`), checked against all existing titles. Sections: U unit, M map, B building, D data, S scale, P performance, H HUD, G gameplay, V vision, A AI, R rank & powers; per-unit milestones and Later number without a letter. Never renumber existing issues; closed issues keep their old codes.
+- Update that milestone's description (`gh api -X PATCH repos/Studio-Lek-River/World-Divide/milestones/<id> -f description=...`): drop the line of the issue just closed and insert the new ones in order under `Work top to bottom:`, as `- [<code>] #<n> <title>` lines in their section.
 - Report the new issue URLs and the new order.
 
 ## 9. What's next

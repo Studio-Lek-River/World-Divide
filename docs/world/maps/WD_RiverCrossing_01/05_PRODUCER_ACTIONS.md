@@ -60,4 +60,4 @@ Nothing from your Fab library is on this machine yet: the launcher's vault cache
 |---|---|---|
 | Unreal MCP server was not running during this audit | Asset types and Nanite flags were read from file headers, not the Asset Registry | Open the editor before phase 1 |
 | Fab account library | Can't tell which of your packs exist or fit | Your list of pack names, or add them as in §2 |
-| GitHub milestone work orders (M1–M5) | Can't place this map in the milestone order from repository files alone | Tell me the milestone, or I'll propose one when I open the issues |
+| GitHub milestone work orders | Resolved 2026-10-19: the map is the Map track of `M1 First slice` (M1-M01 to M1-M09) | — |
