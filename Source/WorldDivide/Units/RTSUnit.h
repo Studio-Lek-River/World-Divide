@@ -9,6 +9,19 @@
 #include "Units/RTSUnitShape.h"
 #include "RTSUnit.generated.h"
 
+/**
+ * Where a machine draws from, for ARTSUnit::UpdateRunningGear: a track's phase goes to its material only on a machine that
+ * draws, and only within Range of one of its players' cameras (beyond it the material does not move the links; #151). The
+ * phase keeps counting either way, so the links come back where they should be.
+ */
+struct FRTSTrackViews
+{
+	bool bDraws = true;
+	TArray<FVector, TInlineAllocator<4>> Locations;
+	/** cm; zero is no limit. */
+	float Range = 0.f;
+};
+
 class AAIController;
 class UBoxComponent;
 class UInstancedStaticMeshComponent;
@@ -238,11 +251,19 @@ public:
 	bool GetPartTransform(int32 PartIndex, FTransform& OutTransform) const;
 
 	/**
-	 * Every machine. Rolls the wheels by how far the unit drove and turned since the last call, each by the ground speed on
-	 * its own side, and places them on the hull where it stands now; nothing to do while the unit stands. Runs once a frame
-	 * after every hull move (URTSRunningGearSubsystem); public so tests can step it.
+	 * Every machine. Rolls the wheels and moves the tracks' links by how far the unit drove and turned since the last call,
+	 * each by the travel of its own side (for a tracked vehicle the realized side travel, FRTSRealizedMotion), and places
+	 * the wheels on the hull where it stands now; nothing to do while the unit stands. Runs once a frame after every hull
+	 * move (URTSRunningGearSubsystem); public so tests can step it. Views says where this machine draws from; without it,
+	 * every track's phase goes to its material.
 	 */
-	void UpdateRunningGear();
+	void UpdateRunningGear(const FRTSTrackViews* Views = nullptr);
+
+	/** Every machine. The phase through one link of the track URTSUnitData::Parts[PartIndex] is; false when it is none. */
+	bool GetTrackPhase(int32 PartIndex, float& OutPhase) const;
+
+	/** Every machine. The roll in radians, [0, 2 pi), of the wheel URTSUnitData::Parts[PartIndex] is; false when it is none. */
+	bool GetWheelAngle(int32 PartIndex, float& OutRadians) const;
 
 	static FLinearColor GetTeamColor(int32 InTeamId);
 
@@ -440,9 +461,11 @@ private:
 	/** Server only. World seconds of the last time UpdateBlockedMove paths a stuck vehicle again. */
 	double BlockedReplanTime = -1.0e9;
 
-	/** The realized travel UpdateRunningGear last rolled the wheels to. */
+	/** The realized travel UpdateRunningGear last rolled the wheels to: forward and turned, and each side's. */
 	double GearDriven = 0.0;
 	double GearTurned = 0.0;
+	double GearLeft = 0.0;
+	double GearRight = 0.0;
 
 	/** Server only. See SetAimOverride. */
 	TOptional<FVector2D> AimOverride;
@@ -459,13 +482,43 @@ private:
 	FVector2D ClearAim = FVector2D::ZeroVector;
 	bool bClearAimFound = false;
 
-	/** Where each of URTSUnitData::Parts is drawn: its component, and its instance and wheel when that is instanced. */
+	/** Where each of URTSUnitData::Parts is drawn: its component, its instance and wheel when that is instanced, its track. */
 	struct FPartSlot
 	{
 		UStaticMeshComponent* Component = nullptr;
 		int32 Instance = INDEX_NONE;
 		int32 Wheel = INDEX_NONE;
+		int32 Track = INDEX_NONE;
 	};
+
+	/**
+	 * A track whose links move (FRTSVehiclePart::TrackPitch, #151): its material shifts every link part of the way to the
+	 * next one's place by the phase, so one link of travel looks the same as none and the phase only counts through one.
+	 */
+	struct FTrack
+	{
+		UStaticMeshComponent* Component = nullptr;
+		/** One link's length in world cm. */
+		float Pitch = 1.f;
+		/** In world cm, from the hull's middle, negative on the left: whose travel moves it. */
+		float Side = 0.f;
+		/**
+		 * [0, 1): how far each link is on its way toward the next one's place, which lies ahead of it along the loop's
+		 * bottom run. Driving forward runs the bottom of the track backward under the hull, so forward travel lowers it.
+		 */
+		float Phase = 0.f;
+		/** Last frame's phase, unwrapped against Phase, for the material's motion vectors. */
+		float PreviousPhase = 0.f;
+		/** The material has Phase and PreviousPhase as they are. */
+		bool bSent = true;
+	};
+	TArray<FTrack> Tracks;
+
+	/** Makes the part in Slot a track, or for a unit whose tracks do not animate draws it with its rigid material. */
+	void AddTrack(FPartSlot& Slot, const FRTSVehiclePart& Part);
+
+	/** True when Track's phase should go to its material now; see FRTSTrackViews. */
+	bool IsTrackDrawn(const FTrack& Track, const FRTSTrackViews* Views) const;
 	TArray<FPartSlot> PartSlots;
 
 	/** A wheel's roll, kept per instance of its instanced component. */
@@ -476,7 +529,7 @@ private:
 		int32 Instance = 0;
 		/** Its rest place on the hull, before the roll. */
 		FTransform Rest;
-		/** In world cm; with Side, how far it rolls for a distance driven and an angle turned. */
+		/** In world cm (FRTSVehiclePart::RollRadius); with Side, how far it rolls for a distance driven and an angle turned. */
 		float Radius = 1.f;
 		float Side = 0.f;
 		float Angle = 0.f;

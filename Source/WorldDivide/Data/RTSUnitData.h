@@ -13,6 +13,8 @@ enum class ERTSVehiclePartMount : uint8
 	Gun,
 };
 
+class UMaterialInterface;
+
 /** A part beyond the hull, turret and gun: an add-on such as a weapon station, or a road wheel. */
 USTRUCT(BlueprintType)
 struct FRTSVehiclePart
@@ -39,6 +41,28 @@ struct FRTSVehiclePart
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part")
 	bool bWheel = false;
+
+	/**
+	 * A wheel's rolling radius in cm, before the unit's MeshScale: where its rim meets the ground, or for a sprocket or an
+	 * idler the track's centre line wrapped round it. Zero takes half the mesh's height.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part", meta = (ClampMin = "0", EditCondition = "bWheel"))
+	float RollRadius = 0.f;
+
+	/**
+	 * Non-zero makes a hull part a track: the length in cm of one of its links, before the unit's MeshScale. Its material
+	 * (M_Vehicle with TrackAnimation, #151) moves the links round their loop by the travel of the track's side, from the
+	 * part's Offset.Y, which the unit gives it as a phase through one link in custom primitive data.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part", meta = (ClampMin = "0"))
+	float TrackPitch = 0.f;
+
+	/**
+	 * A track's material without the link animation, for every slot: drawn instead while rts.Vehicle.TrackAnimation is 0,
+	 * and the one a track's far LODs take once it has them (#149). None keeps the mesh's own.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part")
+	TObjectPtr<UMaterialInterface> RigidMaterial;
 };
 
 /** What moves a ground unit: legs walk anywhere they face, tracks and wheels drive the hull (RTSLocomotion). */

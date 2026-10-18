@@ -41,6 +41,9 @@ namespace RTSBenchScene
 	/** The set name's suffix that benches among solids. */
 	const TCHAR* const SolidsSuffix = TEXT("@Solids");
 
+	/** The set name's suffix that benches with rigid tracks (#151). */
+	const TCHAR* const RigidTracksSuffix = TEXT("@RigidTracks");
+
 	/** Bumped whenever the solids' layout rules change; recorded in bench.json, so runs of another layout never compare. */
 	constexpr int32 SolidsVersion = 1;
 	constexpr int32 SolidsSeed = 172;

@@ -39,6 +39,7 @@
 #include "Units/Debug/RTSBenchScene.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSRunningGearSubsystem.h"
 #include "Units/RTSUnitMovement.h"
 #include "WorldDivide.h"
 
@@ -77,6 +78,10 @@
  * A set named with RTSBenchScene::SolidsSuffix (DA_TestM20Guardian@Solids; #172) benches among solids the navmesh leaves
  * out, which RTSBenchScene lays out over the ground each count's grid covers and drives over. The suffix is part of the set's
  * name, so its output and baselines have their own folder, and bench.json's scene names the layout.
+ *
+ * A set named with RTSBenchScene::RigidTracksSuffix (DA_TestM20Guardian@RigidTracks; #151) benches its units with tracks that
+ * do not move their links (rts.Vehicle.TrackAnimation 0 while it runs), against the animated set without the suffix. The two
+ * suffixes combine in either order.
  */
 namespace RTSBenchCommand
 {
@@ -142,11 +147,30 @@ namespace RTSBenchCommand
 		FIntPoint RenderSize = FIntPoint::ZeroValue;
 		double LocomotionMs = 0.0;
 		double MaxLocomotionMs = 0.0;
-		/** Each frame's game thread and locomotion time, kept for the percentiles; reserved up front so measuring never allocates. */
+		/** The running gear pass: wheels and tracks (URTSRunningGearSubsystem, #151). */
+		double RunningGearMs = 0.0;
+		/**
+		 * Each frame's game thread, locomotion, render thread, GPU and running gear time, kept for the percentiles; reserved
+		 * up front so measuring never allocates.
+		 */
 		TArray<float> GameFrames;
 		TArray<float> LocomotionFrames;
+		TArray<float> RenderFrames;
+		TArray<float> GPUFrames;
+		TArray<float> RunningGearFrames;
 		double P95GameMs = 0.0;
 		double P95LocomotionMs = 0.0;
+		double P95RenderMs = 0.0;
+		double P95GPUMs = 0.0;
+		double P95RunningGearMs = 0.0;
+
+		void Reserve(int32 Capacity)
+		{
+			for (TArray<float>* Kept : { &GameFrames, &LocomotionFrames, &RenderFrames, &GPUFrames, &RunningGearFrames })
+			{
+				Kept->Reserve(Capacity);
+			}
+		}
 		/** The solids the navmesh leaves out (#168), summed over the frames: see FRTSSolidStats. */
 		FRTSSolidStats Solids;
 		/** Real seconds the sample lasted, its longest frame, and its frames over the stall and freeze limits (#171). */
@@ -177,14 +201,22 @@ namespace RTSBenchCommand
 		}
 
 		void Add(double InFrameMs, double InGameMs, double InRenderMs, double InRHIMs, double InGPUMs, double InDrawCalls,
-			double InTriangles, double InAvoidanceMs, double InSearchMs, double InLocomotionMs)
+			double InTriangles, double InAvoidanceMs, double InSearchMs, double InLocomotionMs, double InRunningGearMs)
 		{
+			auto Keep = [](TArray<float>& Kept, double Value)
+			{
+				if (Kept.Num() < Kept.Max())
+				{
+					Kept.Add(Value);
+				}
+			};
 			LocomotionMs += InLocomotionMs;
 			MaxLocomotionMs = FMath::Max(MaxLocomotionMs, InLocomotionMs);
-			if (LocomotionFrames.Num() < LocomotionFrames.Max())
-			{
-				LocomotionFrames.Add(InLocomotionMs);
-			}
+			Keep(LocomotionFrames, InLocomotionMs);
+			RunningGearMs += InRunningGearMs;
+			Keep(RunningGearFrames, InRunningGearMs);
+			Keep(RenderFrames, InRenderMs);
+			Keep(GPUFrames, InGPUMs);
 			++Frames;
 			FrameMs += InFrameMs;
 			MaxFrameMs = FMath::Max(MaxFrameMs, InFrameMs);
@@ -226,6 +258,9 @@ namespace RTSBenchCommand
 			};
 			P95GameMs = P95(GameFrames);
 			P95LocomotionMs = P95(LocomotionFrames);
+			P95RenderMs = P95(RenderFrames);
+			P95GPUMs = P95(GPUFrames);
+			P95RunningGearMs = P95(RunningGearFrames);
 		}
 
 		static FString CsvHeader()
@@ -233,17 +268,17 @@ namespace RTSBenchCommand
 			return TEXT("count,scenario,sample,frames,units,frame_ms,game_ms,p95_game_ms,max_game_ms,render_ms,rhi_ms,gpu_ms,draw_calls,triangles,")
 				TEXT("avoidance_ms,max_avoidance_ms,search_ms,locomotion_ms,p95_locomotion_ms,max_locomotion_ms,used_memory_mb,peak_memory_mb,render_width,render_height,")
 				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms,")
-				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames");
+				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames,p95_render_ms,p95_gpu_ms,running_gear_ms,p95_running_gear_ms");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d"),
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f"),
 				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
 				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
 				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y, Mean(Solids.Updates), SolidReuseShare(),
 				Mean(Solids.Checks), Mean(Solids.ComponentQueries), Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0),
-				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames);
+				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames, P95RenderMs, P95GPUMs, Mean(RunningGearMs), P95RunningGearMs);
 		}
 
 		/** The row as the gate reads it back from bench.csv. */
@@ -274,18 +309,18 @@ namespace RTSBenchCommand
 
 		static FString MarkdownHeader()
 		{
-			return TEXT("| Units | Scenario | Sample | Frame ms | Game ms (p95, max) | Render ms | RHI ms | GPU ms | Draw calls | Triangles | ")
-				TEXT("Avoidance ms (max) | Target search ms | Locomotion ms (p95, max) | Memory MB (peak) | Render res |\n")
-				TEXT("|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|\n");
+			return TEXT("| Units | Scenario | Sample | Frame ms | Game ms (p95, max) | Render ms (p95) | RHI ms | GPU ms (p95) | Draw calls | Triangles | ")
+				TEXT("Avoidance ms (max) | Target search ms | Locomotion ms (p95, max) | Running gear ms (p95) | Memory MB (peak) | Render res |\n")
+				TEXT("|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|\n");
 		}
 
 		FString ToMarkdown() const
 		{
-			return FString::Printf(TEXT("| %d | %s | %s | %.2f | %.2f (%.2f, %.2f) | %.2f | %.2f | %.2f | %.0f | %.2f M | %.3f (%.3f) | %.3f | %.3f (%.3f, %.3f) | %.0f (%.0f) | %dx%d |\n"),
+			return FString::Printf(TEXT("| %d | %s | %s | %.2f | %.2f (%.2f, %.2f) | %.2f (%.2f) | %.2f | %.2f (%.2f) | %.0f | %.2f M | %.3f (%.3f) | %.3f | %.3f (%.3f, %.3f) | %.3f (%.3f) | %.0f (%.0f) | %dx%d |\n"),
 				Count, *Scenario, Sample > 0 ? *FString::Printf(TEXT("%d (%d frames)"), Sample, Frames) : TEXT("-"), Mean(FrameMs),
-				Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs), Mean(DrawCalls), Mean(Triangles) / 1.0e6,
-				Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs, MaxLocomotionMs, UsedMemoryMB,
-				PeakMemoryMB, RenderSize.X, RenderSize.Y);
+				Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), P95RenderMs, Mean(RHIMs), Mean(GPUMs), P95GPUMs, Mean(DrawCalls),
+				Mean(Triangles) / 1.0e6, Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
+				MaxLocomotionMs, Mean(RunningGearMs), P95RunningGearMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y);
 		}
 
 		FString ToSolidsMarkdown() const
@@ -301,7 +336,8 @@ namespace RTSBenchCommand
 	public:
 		FBenchRun(UWorld& InWorld, const FString& InUnitName, const FRTSBenchPlan& InPlan)
 			: World(&InWorld), UnitName(InUnitName), Counts(InPlan.Counts), Plan(InPlan)
-			, bSolids(InUnitName.EndsWith(RTSBenchScene::SolidsSuffix))
+			, bSolids(InUnitName.Contains(RTSBenchScene::SolidsSuffix))
+			, bRigidTracks(InUnitName.Contains(RTSBenchScene::RigidTracksSuffix))
 		{
 		}
 
@@ -453,7 +489,8 @@ namespace RTSBenchCommand
 			}
 			// A mix of sizes is several names joined by '+'; the grid takes them in turn.
 			TArray<FString> Names;
-			UnitName.LeftChop(bSolids ? FCString::Strlen(RTSBenchScene::SolidsSuffix) : 0).ParseIntoArray(Names, TEXT("+"));
+			FString Mix = UnitName.Replace(RTSBenchScene::SolidsSuffix, TEXT("")).Replace(RTSBenchScene::RigidTracksSuffix, TEXT(""));
+			Mix.ParseIntoArray(Names, TEXT("+"));
 			for (const FString& Name : Names)
 			{
 				const FString Path = FString::Printf(TEXT("%s/%s.%s"), UnitDataPath, *Name, *Name);
@@ -501,6 +538,15 @@ namespace RTSBenchCommand
 				{
 					SavedCVars.Add(Setting.Key, CVar->GetString());
 					CVar->Set(Setting.Value, ECVF_SetByConsole);
+				}
+			}
+			if (bRigidTracks)
+			{
+				// Read when the units make their parts, so set before the first count spawns.
+				if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Vehicle.TrackAnimation")))
+				{
+					SavedCVars.Add(TEXT("rts.Vehicle.TrackAnimation"), CVar->GetString());
+					CVar->Set(TEXT("0"), ECVF_SetByConsole);
 				}
 			}
 			bSavedSmoothFrameRate = GEngine->bSmoothFrameRate;
@@ -701,8 +747,7 @@ namespace RTSBenchCommand
 			Current.Scenario = Scenario;
 			Current.Count = Counts[CountIndex];
 			Current.Sample = Plan.IsTimed() ? 1 : 0;
-			Current.GameFrames.Reserve(Plan.IsTimed() ? LongFrameCapacity : Plan.SampleFrames);
-			Current.LocomotionFrames.Reserve(Plan.IsTimed() ? LongFrameCapacity : Plan.SampleFrames);
+			Current.Reserve(Plan.IsTimed() ? LongFrameCapacity : Plan.SampleFrames);
 			if (bKeepFrames)
 			{
 				Current.KeptFrames.Reserve(LongFrameCapacity);
@@ -711,6 +756,7 @@ namespace RTSBenchCommand
 			Current.MaxGameMs = Next == EStep::MeasureMove ? Lead.MaxGameMs : 0.0;
 			URTSWeaponComponent::TakeSearchSeconds();
 			URTSUnitMovement::TakeLocomotionSeconds();
+			URTSRunningGearSubsystem::TakeSeconds();
 			FRTSSolidStats::Take();
 			TRACE_BEGIN_REGION(*RegionName());
 			GoTo(Next);
@@ -735,8 +781,7 @@ namespace RTSBenchCommand
 			Current.Scenario = Scenario;
 			Current.Count = Counts[CountIndex];
 			Current.Sample = Sample;
-			Current.GameFrames.Reserve(LongFrameCapacity);
-			Current.LocomotionFrames.Reserve(LongFrameCapacity);
+			Current.Reserve(LongFrameCapacity);
 			if (bKeepFrames)
 			{
 				Current.KeptFrames.Reserve(LongFrameCapacity);
@@ -754,7 +799,7 @@ namespace RTSBenchCommand
 				FPlatformTime::ToMilliseconds(GRenderThreadTime), FPlatformTime::ToMilliseconds(GRHIThreadTime),
 				FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0)), GNumDrawCallsRHI[0], GNumPrimitivesDrawnRHI[0],
 				Avoidance ? Avoidance->GetLastSeparateSeconds() * 1000.0 : 0.0, URTSWeaponComponent::TakeSearchSeconds() * 1000.0,
-				URTSUnitMovement::TakeLocomotionSeconds() * 1000.0);
+				URTSUnitMovement::TakeLocomotionSeconds() * 1000.0, URTSRunningGearSubsystem::TakeSeconds() * 1000.0);
 			Stats.AddSolids(FRTSSolidStats::Take());
 		}
 
@@ -931,6 +976,11 @@ namespace RTSBenchCommand
 				Solids->SetNumberField(TEXT("walls"), CountSolids(RTSBenchScene::ESolidKind::Wall));
 				Scene->SetObjectField(TEXT("solids"), Solids);
 			}
+			// Likewise only a "@RigidTracks" set says its tracks stood still.
+			if (bRigidTracks)
+			{
+				Scene->SetStringField(TEXT("tracks"), TEXT("rigid"));
+			}
 
 			const TSharedRef<FJsonObject> Machine = MakeShared<FJsonObject>();
 			Machine->SetStringField(TEXT("cpu"), GetCPUName());
@@ -1053,6 +1103,8 @@ namespace RTSBenchCommand
 		TArray<TWeakObjectPtr<ARTSUnit>> Units;
 		/** An "@Solids" set: the solids of the current count, and their actors. */
 		bool bSolids = false;
+		/** A "@RigidTracks" set. */
+		bool bRigidTracks = false;
 		TArray<RTSBenchScene::FSolid> SolidLayout;
 		TArray<TWeakObjectPtr<AActor>> SolidActors;
 

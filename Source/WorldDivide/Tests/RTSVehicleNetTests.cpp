@@ -48,6 +48,42 @@ namespace RTSVehicleNetTests
 	constexpr float ConvergeYaw = 2.f;
 	constexpr double ConvergeSeconds = 1.0;
 
+	/** #151: a track's phase follows its side's travel within 1 % of a link; a correction moves it at most this much. */
+	constexpr float TrackPhaseTolerance = 0.01f;
+	constexpr float TrackStillPhase = 0.001f;
+
+	/** The phases of a unit's two tracks, left first, and their links' length (#151); bValid false for a unit without. */
+	struct FTrackPhases
+	{
+		float Phase[2] = { 0.f, 0.f };
+		float Pitch = 1.f;
+		bool bValid = false;
+	};
+
+	FTrackPhases GetTrackPhases(const ARTSUnit& Unit)
+	{
+		FTrackPhases Out;
+		const URTSUnitData* Data = Unit.GetUnitData();
+		int32 Found = 0;
+		for (int32 Index = 0; Data && Index < Data->Parts.Num(); ++Index)
+		{
+			const FRTSVehiclePart& Part = Data->Parts[Index];
+			if (Part.TrackPitch > 0.f && Unit.GetTrackPhase(Index, Out.Phase[Part.Offset.Y < 0.f ? 0 : 1]))
+			{
+				Out.Pitch = Part.TrackPitch * Data->MeshScale.X;
+				++Found;
+			}
+		}
+		Out.bValid = Found == 2;
+		return Out;
+	}
+
+	/** Phase A less phase B, wrapped to [-0.5, 0.5) of a link. */
+	float PhaseDelta(float A, float B)
+	{
+		return FMath::Frac(A - B + 0.5f) - 0.5f;
+	}
+
 	/** The empty strip north of Block_North, where the test drives. */
 	const FVector DriveStart(-8000.f, 20000.f, 0.f);
 
@@ -377,7 +413,7 @@ namespace RTSVehicleNetTests
 		Session->Phases.Add({ TEXT("Reverse converges"), MakeConvergeCheck(Test, Session, TEXT("Reverse")) });
 
 		// Far behind: a pivot, whose tracks the clients must see run opposite ways.
-		struct FPivot { TArray<double> Left; TArray<double> Right; bool bChecked = false; };
+		struct FPivot { TArray<double> Left; TArray<double> Right; TArray<FTrackPhases> Tracks; bool bChecked = false; };
 		TSharedRef<FPivot> Pivot = MakeShared<FPivot>();
 		Session->Phases.Add({ TEXT("Pivot"), [Session, Pivot](double)
 		{
@@ -402,6 +438,7 @@ namespace RTSVehicleNetTests
 				{
 					Pivot->Left.Add(Copy ? Copy->GetRealizedMotion().LeftTravel : 0.0);
 					Pivot->Right.Add(Copy ? Copy->GetRealizedMotion().RightTravel : 0.0);
+					Pivot->Tracks.Add(Copy ? GetTrackPhases(*Copy) : FTrackPhases());
 				}
 			}
 			if (!bPivoting && Elapsed < 1.0)
@@ -423,6 +460,20 @@ namespace RTSVehicleNetTests
 				const double Right = Copy->GetRealizedMotion().RightTravel - Pivot->Right[Index];
 				Test.TestTrue(FString::Printf(TEXT("Client %d sees the pivot's tracks run opposite ways (left %.1f, right %.1f cm)"), Index + 1, Left, Right),
 					Left * Right < 0.0 && FMath::Abs(Left + Right) < 0.25 * (FMath::Abs(Left) + FMath::Abs(Right)));
+				// And draws them so (#151): each track's links move by its own side's travel, the two opposite ways.
+				const FTrackPhases Before = Pivot->Tracks[Index];
+				const FTrackPhases Now = GetTrackPhases(*Copy);
+				if (Test.TestTrue(FString::Printf(TEXT("Client %d's M20 has both tracks"), Index + 1), Before.bValid && Now.bValid))
+				{
+					const double Travel[2] = { Left, Right };
+					for (int32 Side = 0; Side < 2; ++Side)
+					{
+						const float Expected = FMath::Frac(static_cast<float>(-Travel[Side] / Now.Pitch));
+						const float Error = FMath::Abs(PhaseDelta(PhaseDelta(Now.Phase[Side], Before.Phase[Side]), Expected));
+						Test.TestTrue(FString::Printf(TEXT("Client %d's %s track moves with its travel (off by %.4f of a link)"), Index + 1,
+							Side == 0 ? TEXT("left") : TEXT("right"), Error), Error <= TrackPhaseTolerance);
+					}
+				}
 			}
 			return true;
 		} });
@@ -469,11 +520,18 @@ namespace RTSVehicleNetTests
 			}
 			const FVector ServerLocation = Unit->GetActorLocation();
 			const double Driven = Copy->GetRealizedMotion().DrivenDistance;
+			Copy->UpdateRunningGear();
+			const FTrackPhases Before = GetTrackPhases(*Copy);
 			Copy->SetActorLocation(Copy->GetActorLocation() + Copy->GetActorForwardVector() * 300.f);
 			Copy->GetUnitMovement()->TickComponent(0.1f, LEVELTICK_All, nullptr);
 			Copy->UpdateRunningGear();
 			Test.TestTrue(FString::Printf(TEXT("A correction of the client's copy is no travel (%.2f cm)"), Copy->GetRealizedMotion().DrivenDistance - Driven),
 				FMath::Abs(Copy->GetRealizedMotion().DrivenDistance - Driven) < 0.1);
+			const FTrackPhases After = GetTrackPhases(*Copy);
+			Test.TestTrue(FString::Printf(TEXT("and spins neither track (%.4f, %.4f of a link)"), PhaseDelta(After.Phase[0], Before.Phase[0]),
+				PhaseDelta(After.Phase[1], Before.Phase[1])), Before.bValid && After.bValid
+				&& FMath::Abs(PhaseDelta(After.Phase[0], Before.Phase[0])) <= TrackStillPhase
+				&& FMath::Abs(PhaseDelta(After.Phase[1], Before.Phase[1])) <= TrackStillPhase);
 			Test.TestTrue(TEXT("and moves nothing on the server"), Unit->GetActorLocation().Equals(ServerLocation, 0.01));
 			Copy->SetActorLocation(Copy->GetActorLocation() - Copy->GetActorForwardVector() * 300.f);
 			return true;

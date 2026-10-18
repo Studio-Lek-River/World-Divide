@@ -133,6 +133,127 @@ def copy_uvs_tiled(template, target):
     layer.data.foreach_set("uv", np.tile(values, links))
 
 
+# The track's animation channels after UVMap (UV0), as Unreal reads them (#151): per vertex, in Unreal cm in the track's
+# X-Z plane, the offset to the same vertex in the previous link (UV1), the next (UV2) and the one after (UV3), and in UV4.x
+# the turn in radians from this link to the next, counter-clockwise from +X toward +Z. The material moves every vertex
+# part of the way to its place in the next link (a Catmull-Rom curve through those four places) and turns its normal by
+# as much of that turn. Unreal flips V on import (v -> 1 - v), so V is written flipped and arrives as it is meant.
+TRACK_ANIMATION_UVS = ("TrackPrev", "TrackNext", "TrackNext2", "TrackTurn")
+
+
+def link_frames(co):
+    """Each link's direction in X-Z, from two vertices far apart in the first link (the same two in every link), and
+    the turn from each link to the next, wrapped to (-pi, pi]."""
+    first = co[0][:, (0, 2)]
+    distances = np.linalg.norm(first[:, None, :] - first[None, :, :], axis=2)
+    rear, front = np.unravel_index(np.argmax(distances), distances.shape)
+    direction = co[:, front, :] - co[:, rear, :]
+    angles = np.arctan2(direction[:, 2], direction[:, 0])
+    turns = np.angle(np.exp(1j * (np.roll(angles, -1) - angles)))
+    return rear, front, angles, turns
+
+
+def rotate_xz(vectors, angles):
+    """Turns vectors (..., 3) by angles (broadcast over the leading axes) in X-Z, from +X toward +Z."""
+    c, s = np.cos(angles), np.sin(angles)
+    out = vectors.copy()
+    out[..., 0] = vectors[..., 0] * c - vectors[..., 2] * s
+    out[..., 2] = vectors[..., 0] * s + vectors[..., 2] * c
+    return out
+
+
+def track_vertices(track, links):
+    mesh = track.data
+    count = len(mesh.vertices)
+    per_link = count // links
+    assert per_link * links == count, f"{track.name}: {count} vertices are not {links} links"
+    co = np.empty(count * 3, np.float32)
+    mesh.vertices.foreach_get("co", co)
+    return co.reshape(links, per_link, 3).astype(np.float64)
+
+
+def add_track_animation_uvs(track, links):
+    """Writes TRACK_ANIMATION_UVS on a finished track (see there): the track is the same link repeated in build order,
+    so vertex k of link i becomes vertex k of link i + 1. Asserts that every link is the one before it moved rigidly,
+    which is what lets one link's place stand for the next."""
+    co = track_vertices(track, links)
+    _, _, _, turns = link_frames(co)
+    centres = co.mean(axis=1)
+    moved = rotate_xz(co - centres[:, None, :], turns[:, None])
+    residual = np.abs(np.roll(co - centres[:, None, :], -1, axis=0) - moved).max()
+    assert residual < 1e-4, f"{track.name}: links are not rigid copies of each other ({residual * 100:.3f} cm)"
+
+    def offset(step):
+        return np.roll(co, -step, axis=0) - co
+
+    mesh = track.data
+    corner_verts = np.empty(len(mesh.loops), np.int32)
+    mesh.loops.foreach_get("vertex_index", corner_verts)
+    channels = []
+    for step in (-1, 1, 2):
+        delta = offset(step).reshape(-1, 3)
+        assert np.abs(delta[:, 1]).max() < 1e-5, f"{track.name}: links do not stay in their plane"
+        channels.append(np.stack((delta[:, 0] * 100.0, 1.0 - delta[:, 2] * 100.0), axis=1))
+    per_vertex_turn = np.repeat(turns, co.shape[1])
+    channels.append(np.stack((per_vertex_turn, np.ones_like(per_vertex_turn)), axis=1))
+
+    render = mesh.uv_layers.get("UVMap") or mesh.uv_layers[0]
+    for name, values in zip(TRACK_ANIMATION_UVS, channels):
+        layer = mesh.uv_layers.get(name) or mesh.uv_layers.new(name=name)
+        layer.data.foreach_set("uv", values[corner_verts].astype(np.float32).ravel())
+    mesh.uv_layers.active = render
+    render.active_render = True
+    assert [layer.name for layer in mesh.uv_layers] == [render.name, *TRACK_ANIMATION_UVS]
+    return residual
+
+
+def catmull_rom(prev, nxt, nxt2, t):
+    """The material's curve from a vertex's place (0) to its place in the next link, through the offsets to the
+    previous (prev), next (nxt) and next-but-one (nxt2) links' places, at t in [0, 1]."""
+    return 0.5 * ((nxt - prev) * t + (2.0 * prev + 4.0 * nxt - nxt2) * t * t + (-prev - 3.0 * nxt + nxt2) * t ** 3)
+
+
+def check_track_animation(track, links, path_at, steps=32):
+    """The material's link shift (catmull_rom, the turn) against a rigid one, at steps phases through one link pitch:
+    every link carried as a rigid body, its centre along the track's centre line and its direction turning evenly toward
+    the next link's. Returns, in cm, cm, cm and degrees: the largest distance of a vertex from its rigid place, the
+    largest difference from the rigid shift in the gap between one link's front and the next one's rear (the rigid
+    track's own gaps already open where it bends round a wheel), the largest jump where the phase wraps
+    (a link at the end of the shift against the next link at its start), and the largest error of the turned normal.
+    path_at(s) gives the centre line's point (x, z) and direction angle at arc length s, path_at(None) its length."""
+    co = track_vertices(track, links)
+    rear, front, angles, turns = link_frames(co)
+    total = path_at(None)
+    pitch = total / links
+    centres = np.array([(path_at((i + 0.5) * pitch)[0][0], co[i, 0, 1], path_at((i + 0.5) * pitch)[0][1])
+                        for i in range(links)])
+    local = co - centres[:, None, :]
+    prev, nxt, nxt2 = (np.roll(co, -step, axis=0) - co for step in (-1, 1, 2))
+
+    def gaps(places):
+        return np.linalg.norm(np.roll(places[:, rear], -1, axis=0) - places[:, front], axis=1)
+
+    wrap = np.linalg.norm(co + catmull_rom(prev, nxt, nxt2, 1.0) - np.roll(co, -1, axis=0), axis=2).max()
+    worst_place = worst_gap = 0.0
+    for t in np.linspace(0.0, 1.0, steps + 1):
+        shifted = co + catmull_rom(prev, nxt, nxt2, t)
+        rigid = rotate_xz(local, (turns * t)[:, None])
+        for i in range(links):
+            point, _ = path_at(((i + 0.5 + t) * pitch) % total)
+            rigid[i] += (point[0], co[i, 0, 1], point[1])
+        worst_place = max(worst_place, np.linalg.norm(shifted - rigid, axis=2).max())
+        worst_gap = max(worst_gap, np.abs(gaps(shifted) - gaps(rigid)).max())
+    # The normal turns by the share of the turn the phase is through, so it meets the next link's at the wrap: its
+    # error is how far the link's own direction strays from that even turn along the shifted places.
+    worst_turn = 0.0
+    for t in np.linspace(0.0, 1.0, steps + 1):
+        shifted = co + catmull_rom(prev, nxt, nxt2, t)
+        direction = shifted[:, front] - shifted[:, rear]
+        actual = np.arctan2(direction[:, 2], direction[:, 0])
+        worst_turn = max(worst_turn, np.abs(np.angle(np.exp(1j * (actual - angles - turns * t)))).max())
+    return worst_place * 100.0, worst_gap * 100.0, wrap * 100.0, np.degrees(worst_turn)
+
+
 def float_image(name, size):
     image = bpy.data.images.get(name) or bpy.data.images.new(name, size, size, alpha=True, float_buffer=True)
     image.colorspace_settings.name = "Non-Color"

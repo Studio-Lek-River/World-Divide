@@ -40,7 +40,7 @@ public class WorldDivide : ModuleRules
 		// PIE-driven smoke tests (ApplicationCore: their simulated key presses), the placeholder art test and the map preview capture only.
 		if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "AssetRegistry", "RenderCore", "ApplicationCore" });
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "AssetRegistry", "RenderCore", "ApplicationCore", "MeshDescription", "StaticMeshDescription" });
 		}
 	}
 }

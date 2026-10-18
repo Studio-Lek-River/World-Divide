@@ -15,6 +15,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task u
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots -Panel ResourceBar
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestM20Guardian -Stress 240
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestTank -Stress 240 -Trace
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task trackshots -Unit DA_TestM20Guardian
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task camerashots
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestTank -Counts 240 -Trace
@@ -82,7 +83,7 @@ may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck 
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'camerashots', 'bench', 'gate', 'uibindings', 'uicheck')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'bench', 'gate', 'uibindings', 'uicheck')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -379,6 +380,28 @@ function Invoke-UnitShots {
 	Write-Host "UNITSHOTS SUCCEEDED: $ShotDir"
 }
 
+# Close-up frame sequences of a tracked unit's running gear (#151; rts.Debug.TrackShots) to Saved\TrackShots\<Unit>, with
+# the gear's travel and each track's phase logged per frame.
+function Invoke-TrackShots {
+	Assert-EditorClosed 'the game run loads the same project.'
+	$ShotDir = Join-Path $RepoRoot "Saved\TrackShots\$Unit"
+	$LogFile = Join-Path $RepoRoot 'Saved\Logs\TrackShots.log'
+	if (Test-Path $ShotDir) { Remove-Item -Recurse -Force $ShotDir }
+	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
+		"`"$Project`"", '/Game/Maps/L_TestMap', '-game', '-windowed', '-RenderOffscreen', '-ResX=1280', '-ResY=720',
+		"`"-ExecCmds=rts.Debug.TrackShots $Unit`"", '-RTSTrackShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		'-unattended', '-nosplash', '-nosound') + @(if ($Cvars) { "-dpcvars=$Cvars" }))
+	if (Test-Path $LogFile) {
+		Select-String -Path $LogFile -Pattern 'rts.Debug.TrackShots: \S+ \d\d:' | ForEach-Object { $_.Line -replace '^.*rts.Debug.TrackShots: ', '  ' }
+	}
+	if ($Process.ExitCode -ne 0) {
+		if (Test-Path $LogFile) { Select-String -Path $LogFile -Pattern 'rts.Debug|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line } }
+		Write-Host "TRACKSHOTS FAILED (game exit $($Process.ExitCode)). Log: $LogFile"
+		exit 1
+	}
+	Write-Host "TRACKSHOTS SUCCEEDED: $ShotDir"
+}
+
 function Invoke-CameraShots {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$ShotDir = Join-Path $RepoRoot 'Saved\CameraShots'
@@ -543,6 +566,7 @@ function Invoke-Bench {
 	if (@($Quick, $Long, $Screen | Where-Object { $_ }).Count -gt 1) { Write-Host 'BENCH FAILED: -Quick, -Screen and -Long are methods; pick one.'; exit 1 }
 	if ($SaveBaseline -and $Compare) { Write-Host 'BENCH FAILED: -SaveBaseline stores the run of a clean checkout; -Compare reads a change against it. Pick one.'; exit 1 }
 	if ($Baseline -and -not $Compare) { Write-Host 'BENCH FAILED: -Baseline selects the baseline of -Compare.'; exit 1 }
+	if ($Cvars -and $SaveBaseline) { Write-Host 'BENCH FAILED: -Cvars changes what is measured; such a run is never a baseline.'; exit 1 }
 	$Method = if ($Quick) { 'quick' } elseif ($Screen) { 'screen' } elseif ($Long) { 'long' } else { 'short' }
 	# Several unit sets are separated by ','; '+' joins the sizes of one mixed set.
 	$Sets = @($Unit -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
@@ -672,6 +696,8 @@ function Invoke-BenchSession([string[]]$Sets, [string]$Method, [string]$BenchCou
 		if (Test-Path $TraceFile) { Remove-Item -Force $TraceFile }
 		$ExtraArgs += @('-trace=cpu,frame,region,gpu', "`"-tracefile=$TraceFile`"")
 	}
+	# Console variables for a diagnostic run, such as rts.Vehicle.TrackAnimationDistance=0 (#151); never stored as a baseline.
+	if ($Cvars) { $ExtraArgs += "-dpcvars=$Cvars" }
 	if ($Frames) { $ExtraArgs += '-RTSBenchFrames' }
 	if ($SampleSeconds -gt 0) { $ExtraArgs += [string]::Format([Globalization.CultureInfo]::InvariantCulture, '-RTSBenchSampleSeconds={0}', $SampleSeconds) }
 
@@ -909,6 +935,7 @@ switch ($Task) {
 	'editor' { Invoke-Editor }
 	'uishots' { Invoke-UIShots }
 	'unitshots' { Invoke-UnitShots }
+	'trackshots' { Invoke-TrackShots }
 	'camerashots' { Invoke-CameraShots }
 	'bench' { Invoke-Bench }
 	'gate' { Invoke-Gate }

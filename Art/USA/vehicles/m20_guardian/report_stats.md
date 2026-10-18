@@ -123,3 +123,10 @@ Unreal memory: BaseColor BC3 (team mask in alpha), Normal BC5, ORM BC1, full mip
 - Exported triangles (one of each FBX): 70,776
 
 **Result: PASS**
+
+## Track animation (#151)
+
+| Track | Links | Rigid copies (cm) | Worst vertex place (cm) | Worst link gap vs rigid (cm) | Wrap jump (cm) | Worst normal turn (deg) |
+|---|---|---|---|---|---|---|
+| M20_Track_L | 85 | 0.0000 | 0.567 | 0.590 | 0.0000 | 1.73 |
+| M20_Track_R | 85 | 0.0000 | 0.567 | 0.590 | 0.0000 | 1.73 |

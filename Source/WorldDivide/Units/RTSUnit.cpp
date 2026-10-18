@@ -323,10 +323,14 @@ void ARTSUnit::CreateParts()
 	PartSlots.Reset();
 	Wheels.Reset();
 	WheelSets.Reset();
+	Tracks.Reset();
 	LastGearPose.Reset();
 	GearHull.Reset();
-	GearDriven = Movement->GetRealizedMotion().DrivenDistance;
-	GearTurned = Movement->GetRealizedMotion().TurnedRadians;
+	const FRTSRealizedMotion& Motion = Movement->GetRealizedMotion();
+	GearDriven = Motion.DrivenDistance;
+	GearTurned = Motion.TurnedRadians;
+	GearLeft = Motion.LeftTravel;
+	GearRight = Motion.RightTravel;
 	if (Gun)
 	{
 		Gun->DestroyComponent();
@@ -356,6 +360,10 @@ void ARTSUnit::CreateParts()
 			Slot.Component = MakePartComponent<UStaticMeshComponent>(*this, *Parent, Part.Mesh);
 			Slot.Component->SetRelativeTransform(Rest);
 			PartComponents.Add(Slot.Component);
+			if (Part.TrackPitch > 0.f && Part.MountedOn == ERTSVehiclePartMount::Hull)
+			{
+				AddTrack(Slot, Part);
+			}
 			continue;
 		}
 
@@ -380,13 +388,14 @@ void ARTSUnit::CreateParts()
 		Wheel.Set = *SetIndex;
 		Wheel.Instance = Slot.Instance;
 		Wheel.Rest = Rest;
-		Wheel.Radius = FMath::Max(Part.Mesh->GetBoundingBox().GetExtent().Z * UnitData->MeshScale.Z, 1.f);
+		const float Radius = Part.RollRadius > 0.f ? Part.RollRadius : Part.Mesh->GetBoundingBox().GetExtent().Z;
+		Wheel.Radius = FMath::Max(Radius * UnitData->MeshScale.Z, 1.f);
 		Wheel.Side = Part.Offset.Y * UnitData->MeshScale.Y;
 	}
 
 	if (URTSRunningGearSubsystem* Gear = GetWorld() ? GetWorld()->GetSubsystem<URTSRunningGearSubsystem>() : nullptr)
 	{
-		if (Wheels.IsEmpty())
+		if (Wheels.IsEmpty() && Tracks.IsEmpty())
 		{
 			Gear->Unregister(*this);
 		}
@@ -395,6 +404,51 @@ void ARTSUnit::CreateParts()
 			Gear->Register(*this);
 		}
 	}
+}
+
+void ARTSUnit::AddTrack(FPartSlot& Slot, const FRTSVehiclePart& Part)
+{
+	UStaticMeshComponent& Component = *Slot.Component;
+	if (!URTSRunningGearSubsystem::AnimatesTracks())
+	{
+		// Rigid: the same mesh in the material without the link shift, and no phase to keep.
+		if (Part.RigidMaterial)
+		{
+			for (int32 Index = 0; Index < Component.GetNumMaterials(); ++Index)
+			{
+				Component.SetMaterial(Index, Part.RigidMaterial);
+			}
+		}
+		return;
+	}
+	// The links' shift is too fine to see from afar: the renderer leaves it out past this distance, while UpdateRunningGear
+	// keeps the phase counting.
+	Component.SetWorldPositionOffsetDisableDistance(FMath::RoundToInt(URTSRunningGearSubsystem::GetTrackAnimationDistance()));
+	Slot.Track = Tracks.Num();
+	FTrack& Track = Tracks.AddDefaulted_GetRef();
+	Track.Component = &Component;
+	Track.Pitch = FMath::Max(Part.TrackPitch * UnitData->MeshScale.X, 0.1f);
+	Track.Side = Part.Offset.Y * UnitData->MeshScale.Y;
+}
+
+bool ARTSUnit::GetTrackPhase(int32 PartIndex, float& OutPhase) const
+{
+	if (!PartSlots.IsValidIndex(PartIndex) || PartSlots[PartIndex].Track == INDEX_NONE)
+	{
+		return false;
+	}
+	OutPhase = Tracks[PartSlots[PartIndex].Track].Phase;
+	return true;
+}
+
+bool ARTSUnit::GetWheelAngle(int32 PartIndex, float& OutRadians) const
+{
+	if (!PartSlots.IsValidIndex(PartIndex) || PartSlots[PartIndex].Wheel == INDEX_NONE)
+	{
+		return false;
+	}
+	OutRadians = Wheels[PartSlots[PartIndex].Wheel].Angle;
+	return true;
 }
 
 FTransform ARTSUnit::GetWheelTransform(const FWheel& Wheel) const
@@ -417,24 +471,33 @@ bool ARTSUnit::GetPartTransform(int32 PartIndex, FTransform& OutTransform) const
 	return true;
 }
 
-void ARTSUnit::UpdateRunningGear()
+void ARTSUnit::UpdateRunningGear(const FRTSTrackViews* Views)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(ARTSUnit::UpdateRunningGear);
 
-	if (Wheels.IsEmpty())
+	if (Wheels.IsEmpty() && Tracks.IsEmpty())
 	{
 		return;
 	}
 	float Driven = 0.f;
 	float TurnedRadians = 0.f;
+	// A tracked vehicle's wheels and tracks go by the realized travel of their side, the same numbers for both, so the
+	// links, the road wheels on them and the sprocket and idler they wrap move as one.
+	TOptional<FVector2f> SideTravel;
 	if (Movement->UsesLocomotion())
 	{
 		// A vehicle's wheels roll with what its gear drove, never with a push, a correction or a teleport.
 		const FRTSRealizedMotion& Motion = Movement->GetRealizedMotion();
 		Driven = static_cast<float>(Motion.DrivenDistance - GearDriven);
 		TurnedRadians = static_cast<float>(Motion.TurnedRadians - GearTurned);
+		if (Movement->GetLimits().IsTracked())
+		{
+			SideTravel = FVector2f(static_cast<float>(Motion.LeftTravel - GearLeft), static_cast<float>(Motion.RightTravel - GearRight));
+		}
 		GearDriven = Motion.DrivenDistance;
 		GearTurned = Motion.TurnedRadians;
+		GearLeft = Motion.LeftTravel;
+		GearRight = Motion.RightTravel;
 	}
 	else
 	{
@@ -448,21 +511,55 @@ void ARTSUnit::UpdateRunningGear()
 		LastGearPose = Pose;
 	}
 	const bool bRolls = FMath::Abs(Driven) >= GearMinDistance || FMath::Abs(FMath::RadiansToDegrees(TurnedRadians)) >= GearMinTurn;
+	// Turning right (positive yaw) drives the left side (negative Y) forward and the right side back.
+	auto TravelOf = [&SideTravel, Driven, TurnedRadians](float Side)
+	{
+		return SideTravel ? (Side < 0.f ? SideTravel->X : SideTravel->Y) : Driven - Side * TurnedRadians;
+	};
+
+	for (FTrack& Track : Tracks)
+	{
+		if (bRolls)
+		{
+			// Links of travel along the ground. The phase counts through one link only, and goes down driving forward.
+			const float Links = TravelOf(Track.Side) / Track.Pitch;
+			Track.Phase = FMath::Frac(Track.Phase - FMath::Frac(Links));
+			Track.PreviousPhase = Track.Phase + Links;
+			Track.bSent = false;
+		}
+		else if (Track.PreviousPhase != Track.Phase)
+		{
+			// Stopped: once more without motion, so the links do not smear as if still running.
+			Track.PreviousPhase = Track.Phase;
+			Track.bSent = false;
+		}
+		if (!Track.bSent && IsTrackDrawn(Track, Views))
+		{
+			// Custom primitive data reaches the renderer as an update of the primitive's data: no render state rebuild and
+			// no move (#165).
+			Track.Component->SetCustomPrimitiveDataVector2(0, FVector2D(Track.Phase, Track.PreviousPhase));
+			Track.bSent = true;
+		}
+	}
+
 	// The wheels are placed in world space, so they follow every move of the hull, rolled or not: a push, a tilt, a kick, a
 	// correction from the server.
 	const FTransform& Hull = Mesh->GetComponentTransform();
-	if (!bRolls && GearHull.IsSet() && GearHull->Equals(Hull))
+	if (Wheels.IsEmpty() || (!bRolls && GearHull.IsSet() && GearHull->Equals(Hull)))
 	{
 		return;
 	}
 	GearHull = Hull;
 
-	// Turning right (positive yaw) drives the left side (negative Y) forward and the right side back.
 	for (FWheel& Wheel : Wheels)
 	{
 		if (bRolls)
 		{
-			Wheel.Angle = FMath::Fmod(Wheel.Angle + (Driven - Wheel.Side * TurnedRadians) / Wheel.Radius, UE_TWO_PI);
+			Wheel.Angle = FMath::Fmod(Wheel.Angle + TravelOf(Wheel.Side) / Wheel.Radius, UE_TWO_PI);
+			if (Wheel.Angle < 0.f)
+			{
+				Wheel.Angle += UE_TWO_PI;
+			}
 		}
 		WheelSets[Wheel.Set].Transforms[Wheel.Instance] = GetWheelTransform(Wheel);
 	}
@@ -474,6 +571,31 @@ void ARTSUnit::UpdateRunningGear()
 		Set.Component->UpdateBounds();
 		Set.Component->MarkRenderTransformDirty();
 	}
+}
+
+bool ARTSUnit::IsTrackDrawn(const FTrack& Track, const FRTSTrackViews* Views) const
+{
+	if (!Views)
+	{
+		return true;
+	}
+	if (!Views->bDraws)
+	{
+		return false;
+	}
+	if (Views->Range <= 0.f || Views->Locations.IsEmpty())
+	{
+		return true;
+	}
+	const FVector Location = Track.Component->GetComponentLocation();
+	for (const FVector& View : Views->Locations)
+	{
+		if (FVector::DistSquared(View, Location) <= FMath::Square(Views->Range))
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 void ARTSUnit::ApplyTeamColor()

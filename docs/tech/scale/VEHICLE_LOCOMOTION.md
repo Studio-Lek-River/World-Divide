@@ -184,7 +184,7 @@ dRight = ds − spacing · dθ / 2
 - Pushes, back-outs, teleports and network corrections never count.
 - A late joiner starts its totals at zero.
 
-`ARTSUnit::UpdateRunningGear` already rolls the M20's wheels this way.
+`ARTSUnit::UpdateRunningGear` rolls the M20's wheels and moves its tracks' links this way, each by its own side's travel: see [VEHICLE_TRACK_ANIMATION.md](VEHICLE_TRACK_ANIMATION.md) (#151).
 
 ## 7. Replication
 

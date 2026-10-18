@@ -1,13 +1,19 @@
+#include "Algo/Count.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
+#include "Engine/CollisionProfile.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
+#include "HAL/IConsoleManager.h"
+#include "Materials/MaterialInstance.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
 #include "Units/RTSRunningGearSubsystem.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitMovement.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -165,6 +171,376 @@ bool FRTSVehiclePartsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+namespace
+{
+	/** A 7 x 3 m hull of engine cube, tracked like the M20, with its tracks and a sprocket each side (#151). */
+	constexpr float TrackedGauge = 264.f;
+	constexpr float TrackedPitch = 16.f;
+	constexpr float SprocketRadius = 36.f;
+	const FVector TrackedScale(7.f, 3.f, 2.f);
+
+	/** Parts in the order MakeTrackedData lists them. */
+	enum ETrackedPart : int32 { LeftTrack, RightTrack, LeftSprocket, RightSprocket };
+
+	/** #151's acceptance: the phase within 1 % of a link of the travel, the wheel within 1 degree, a stopped phase still. */
+	constexpr float PhaseTolerance = 0.01f;
+	constexpr float WheelTolerance = 1.f;
+	constexpr float StillPhase = 0.001f;
+	constexpr double Rate = 60.0;
+	/** The M20's loop, in links: what a blocked track's drift is measured against. */
+	constexpr float LoopLinks = 85.f;
+	/** Below half a link a frame, so the links' steps are told apart from their wrap. */
+	constexpr float CruiseSpeed = 300.f;
+
+	/** A solid engine cube filling Box, as RTSVehicleMovementTests spawns them. */
+	AActor* SpawnTestSolid(UWorld& World, const FBox& Box)
+	{
+		const FTransform Transform(FRotator::ZeroRotator, Box.GetCenter(), Box.GetSize() / 100.f);
+		AStaticMeshActor* Actor = World.SpawnActorDeferred<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Transform);
+		UStaticMeshComponent* Component = Actor->GetStaticMeshComponent();
+		Component->SetMobility(EComponentMobility::Movable);
+		Component->SetStaticMesh(LoadShape(TEXT("Cube")));
+		Component->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+		Component->SetCanEverAffectNavigation(false);
+		Actor->FinishSpawning(Transform);
+		return Actor;
+	}
+
+	URTSUnitData* MakeTrackedData()
+	{
+		URTSUnitData* Data = NewObject<URTSUnitData>();
+		Data->MaxHealth = 100.f;
+		Data->Mesh = LoadShape(TEXT("Cube"));
+		Data->MeshScale = TrackedScale;
+		Data->MoveSpeed = 1250.f;
+		Data->TurnRate = 100.f;
+		FRTSLocomotionProfile& Profile = Data->Locomotion;
+		Profile.Type = ERTSLocomotionType::Tracked;
+		Profile.ReverseSpeed = 400.f;
+		Profile.Acceleration = 400.f;
+		Profile.Braking = 1000.f;
+		Profile.TrackGauge = TrackedGauge;
+		// Lengths in the mesh's space: the hull's scale makes them world cm.
+		for (const float Side : { -1.f, 1.f })
+		{
+			FRTSVehiclePart& Track = Data->Parts.AddDefaulted_GetRef();
+			Track.Mesh = LoadShape(TEXT("Cube"));
+			Track.Offset = FVector(0.f, Side * 0.5f * TrackedGauge / TrackedScale.Y, 0.f);
+			Track.TrackPitch = TrackedPitch / TrackedScale.X;
+			Track.RigidMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+		}
+		for (const float Side : { -1.f, 1.f })
+		{
+			FRTSVehiclePart& Sprocket = Data->Parts.AddDefaulted_GetRef();
+			Sprocket.Mesh = LoadShape(TEXT("Cylinder"));
+			Sprocket.Offset = FVector(-40.f, Side * 0.5f * TrackedGauge / TrackedScale.Y, 0.f);
+			Sprocket.Rotation = FRotator(0.f, Side > 0.f ? 180.f : 0.f, 0.f);
+			Sprocket.bWheel = true;
+			Sprocket.RollRadius = SprocketRadius / TrackedScale.Z;
+		}
+		return Data;
+	}
+
+	/** Runs the unit's gear on Command for Seconds at Rate, the running gear after every update as the frame does it. */
+	void RunGear(ARTSUnit& Unit, const RTSLocomotion::FCommand& Command, double Seconds, TFunctionRef<void()> Each = [] {},
+		const FRTSTrackViews* Views = nullptr)
+	{
+		Unit.GetUnitMovement()->SetCommandOverride(Command);
+		const int32 Steps = FMath::RoundToInt32(Seconds * Rate);
+		for (int32 Index = 0; Index < Steps; ++Index)
+		{
+			Unit.GetWorld()->TimeSeconds += 1.0 / Rate;
+			Unit.GetUnitMovement()->TickComponent(1.f / Rate, LEVELTICK_All, nullptr);
+			Unit.UpdateRunningGear(Views);
+			Each();
+		}
+	}
+
+	/** Phase A less phase B, wrapped to [-0.5, 0.5) of a link. */
+	float PhaseDelta(float A, float B)
+	{
+		return FMath::Frac(A - B + 0.5f) - 0.5f;
+	}
+
+	/** Radians A less B, wrapped to [-pi, pi). */
+	float AngleDelta(float A, float B)
+	{
+		return FMath::UnwindRadians(A - B);
+	}
+
+	/** What each side's track and sprocket stood at, and the realized travel then, to check them against later. */
+	struct FGearMark
+	{
+		float Phase[2] = { 0.f, 0.f };
+		float Angle[2] = { 0.f, 0.f };
+		double Travel[2] = { 0.0, 0.0 };
+
+		explicit FGearMark(const ARTSUnit& Unit)
+		{
+			const FRTSRealizedMotion& Motion = Unit.GetRealizedMotion();
+			Travel[0] = Motion.LeftTravel;
+			Travel[1] = Motion.RightTravel;
+			for (int32 Side = 0; Side < 2; ++Side)
+			{
+				Unit.GetTrackPhase(LeftTrack + Side, Phase[Side]);
+				Unit.GetWheelAngle(LeftSprocket + Side, Angle[Side]);
+			}
+		}
+	};
+
+	/**
+	 * Since Mark: each track's phase moved by its side's realized travel over the pitch, backward driving forward (the
+	 * bottom of the loop runs back under the hull), and each sprocket turned by that travel over its radius; true when both
+	 * hold. Returns each side's travel.
+	 */
+	bool FollowsTravel(FAutomationTestBase& Test, const TCHAR* What, const ARTSUnit& Unit, const FGearMark& Mark, double OutTravel[2])
+	{
+		const FGearMark Now(Unit);
+		bool bFollows = true;
+		for (int32 Side = 0; Side < 2; ++Side)
+		{
+			OutTravel[Side] = Now.Travel[Side] - Mark.Travel[Side];
+			const float Expected = FMath::Frac(static_cast<float>(-OutTravel[Side] / TrackedPitch));
+			const float PhaseError = FMath::Abs(PhaseDelta(PhaseDelta(Now.Phase[Side], Mark.Phase[Side]), Expected));
+			const float WheelError = FMath::RadiansToDegrees(FMath::Abs(AngleDelta(AngleDelta(Now.Angle[Side], Mark.Angle[Side]),
+				static_cast<float>(FMath::Fmod(OutTravel[Side] / SprocketRadius, UE_DOUBLE_TWO_PI)))));
+			bFollows &= Test.TestTrue(FString::Printf(TEXT("%s: the %s track's phase follows its %.1f cm of travel (off by %.4f of a link)"),
+				What, Side == 0 ? TEXT("left") : TEXT("right"), OutTravel[Side], PhaseError), PhaseError <= PhaseTolerance);
+			bFollows &= Test.TestTrue(FString::Printf(TEXT("%s: and its sprocket turns with it (off by %.3f degrees)"), What, WheelError),
+				WheelError <= WheelTolerance);
+		}
+		return bFollows;
+	}
+
+	/** The largest change of either track's phase from one frame to the next while Run goes, in links. */
+	float LargestStep(ARTSUnit& Unit, TFunctionRef<void(TFunctionRef<void()>)> Run, TArray<float>* Steps = nullptr)
+	{
+		float Before[2];
+		Unit.GetTrackPhase(LeftTrack, Before[0]);
+		Unit.GetTrackPhase(RightTrack, Before[1]);
+		float Largest = 0.f;
+		Run([&]
+		{
+			for (int32 Side = 0; Side < 2; ++Side)
+			{
+				float Now = 0.f;
+				Unit.GetTrackPhase(LeftTrack + Side, Now);
+				const float Step = FMath::Abs(PhaseDelta(Now, Before[Side]));
+				Largest = FMath::Max(Largest, Step);
+				if (Steps && Side == 0)
+				{
+					Steps->Add(Step);
+				}
+				Before[Side] = Now;
+			}
+		});
+		return Largest;
+	}
+
+	/**
+	 * The tracks and wheels of a tracked hull driven by its gear (#151): each side moves by the realized travel of its own side,
+	 * forward, back, on an arc, pivoting either way, ramping up and down, and not at all standing, blocked, teleported or
+	 * pushed out of a solid. The material is given the phase only where it is drawn, and resumes where the phase has got to.
+	 */
+	void TestTrackedGear(FAutomationTestBase& Test)
+	{
+		const FRTSTestWorld TestWorld;
+		ARTSUnit* Unit = TestWorld.SpawnUnit(MakeTrackedData(), 0, FVector::ZeroVector);
+		const RTSLocomotion::FLimits& Limits = Unit->GetUnitMovement()->GetLimits();
+		float Unused = 0.f;
+		if (!Test.TestTrue(TEXT("Both tracks keep a phase"), Unit->GetTrackPhase(LeftTrack, Unused) && Unit->GetTrackPhase(RightTrack, Unused))
+			|| !Test.TestFalse(TEXT("A sprocket is no track"), Unit->GetTrackPhase(LeftSprocket, Unused)))
+		{
+			return;
+		}
+		double Travel[2];
+
+		RTSLocomotion::FCommand Ahead;
+		Ahead.Speed = 600.f;
+		{
+			const FGearMark Mark(*Unit);
+			RunGear(*Unit, Ahead, 2.0);
+			FollowsTravel(Test, TEXT("Forward"), *Unit, Mark, Travel);
+			Test.TestTrue(FString::Printf(TEXT("Forward: both sides travel alike (%.2f, %.2f cm)"), Travel[0], Travel[1]),
+				Travel[0] > 100.0 && FMath::IsNearlyEqual(Travel[0], Travel[1], 0.01 * Travel[0]));
+		}
+		RunGear(*Unit, RTSLocomotion::FCommand(), 2.0);
+		{
+			RTSLocomotion::FCommand Back;
+			Back.Speed = -300.f;
+			const FGearMark Mark(*Unit);
+			RunGear(*Unit, Back, 2.0);
+			FollowsTravel(Test, TEXT("Reverse"), *Unit, Mark, Travel);
+			Test.TestTrue(FString::Printf(TEXT("Reverse: both sides travel back alike (%.2f, %.2f cm)"), Travel[0], Travel[1]),
+				Travel[0] < -100.0 && FMath::IsNearlyEqual(Travel[0], Travel[1], 0.01 * FMath::Abs(Travel[0])));
+		}
+		RunGear(*Unit, RTSLocomotion::FCommand(), 2.0);
+		{
+			const FGearMark Mark(*Unit);
+			RunGear(*Unit, RTSLocomotion::FCommand::FromTracks(Limits, 500.f, 250.f), 3.0);
+			FollowsTravel(Test, TEXT("Right turn"), *Unit, Mark, Travel);
+			Test.TestTrue(FString::Printf(TEXT("A right turn runs the outer, left track faster (%.1f against %.1f cm)"), Travel[0], Travel[1]),
+				Travel[0] > 1.5 * Travel[1] && Travel[1] > 100.0);
+		}
+		RunGear(*Unit, RTSLocomotion::FCommand(), 2.0);
+		{
+			const FGearMark Mark(*Unit);
+			RunGear(*Unit, RTSLocomotion::FCommand::FromTracks(Limits, 100.f, 450.f), 3.0);
+			FollowsTravel(Test, TEXT("Sharp left turn"), *Unit, Mark, Travel);
+			Test.TestTrue(FString::Printf(TEXT("A sharp left turn runs the outer, right track faster (%.1f against %.1f cm)"), Travel[1], Travel[0]),
+				Travel[1] > 3.0 * Travel[0] && Travel[0] > 10.0);
+		}
+		RunGear(*Unit, RTSLocomotion::FCommand(), 2.0);
+		for (const float Way : { -1.f, 1.f })
+		{
+			const TCHAR* What = Way < 0.f ? TEXT("Pivot left") : TEXT("Pivot right");
+			const FGearMark Mark(*Unit);
+			RunGear(*Unit, RTSLocomotion::FCommand::FromTracks(Limits, Way * 200.f, -Way * 200.f), 2.0);
+			FollowsTravel(Test, What, *Unit, Mark, Travel);
+			Test.TestTrue(FString::Printf(TEXT("%s: the tracks run opposite ways, as far each (%.2f, %.2f cm)"), What, Travel[0], Travel[1]),
+				Way * Travel[0] > 50.0 && FMath::IsNearlyEqual(Travel[0], -Travel[1], 0.01 * FMath::Abs(Travel[0])));
+			RunGear(*Unit, RTSLocomotion::FCommand(), 1.0);
+		}
+
+		// From a standstill to cruising and back: the links speed up and slow down frame by frame, never by a jump.
+		{
+			RTSLocomotion::FCommand Cruise;
+			Cruise.Speed = CruiseSpeed;
+			TArray<float> Up;
+			const FGearMark Mark(*Unit);
+			const float Largest = LargestStep(*Unit, [Unit, &Cruise](TFunctionRef<void()> Each) { RunGear(*Unit, Cruise, 1.5, Each); }, &Up);
+			TArray<float> Down;
+			LargestStep(*Unit, [Unit](TFunctionRef<void()> Each) { RunGear(*Unit, RTSLocomotion::FCommand(), 1.5, Each); }, &Down);
+			FollowsTravel(Test, TEXT("Accelerating and braking"), *Unit, Mark, Travel);
+			// 400 cm/s2 adds 6.7 cm/s a frame: 0.007 of a link a frame at 60 frames a second.
+			auto Smooth = [](const TArray<float>& Steps, float Sign)
+			{
+				float Worst = 0.f;
+				for (int32 Index = 1; Index < Steps.Num(); ++Index)
+				{
+					Worst = FMath::Max(Worst, Sign * (Steps[Index - 1] - Steps[Index]));
+				}
+				return Worst;
+			};
+			Test.TestTrue(FString::Printf(TEXT("Accelerating, the links speed up every frame (worst slowdown %.5f of a link a frame)"), Smooth(Up, 1.f)),
+				Smooth(Up, 1.f) < 1.e-4f && Up.Last() > Up[0]);
+			Test.TestTrue(FString::Printf(TEXT("Braking, they slow down every frame (worst speed-up %.5f) to a stop"), Smooth(Down, -1.f)),
+				Smooth(Down, -1.f) < 1.e-4f && Down.Last() < 1.e-5f);
+			Test.TestTrue(FString::Printf(TEXT("Never by more than the speed allows (%.4f of a link a frame)"), Largest),
+				Largest <= CruiseSpeed / Rate / TrackedPitch + 0.01f);
+		}
+
+		// Standing for 5 s: still.
+		{
+			const FGearMark Mark(*Unit);
+			RunGear(*Unit, RTSLocomotion::FCommand(), 5.0);
+			const FGearMark Now(*Unit);
+			Test.TestTrue(FString::Printf(TEXT("Standing 5 s, the tracks do not move (%.5f, %.5f of a link)"), PhaseDelta(Now.Phase[0], Mark.Phase[0]),
+				PhaseDelta(Now.Phase[1], Mark.Phase[1])), FMath::Abs(PhaseDelta(Now.Phase[0], Mark.Phase[0])) <= StillPhase
+				&& FMath::Abs(PhaseDelta(Now.Phase[1], Mark.Phase[1])) <= StillPhase);
+		}
+
+		// The material has the phase, and last frame's: equal once standing, so the links do not smear.
+		const UStaticMeshComponent* LeftComponent = nullptr;
+		{
+			TArray<UStaticMeshComponent*> Meshes;
+			Unit->GetComponents(Meshes);
+			float Phase = 0.f;
+			Unit->GetTrackPhase(LeftTrack, Phase);
+			for (const UStaticMeshComponent* Mesh : Meshes)
+			{
+				const TArray<float>& Data = Mesh->GetCustomPrimitiveData().Data;
+				if (Data.Num() >= 2 && Mesh->GetStaticMesh() == LoadShape(TEXT("Cube")) && FMath::IsNearlyEqual(Data[0], Phase))
+				{
+					LeftComponent = Mesh;
+				}
+			}
+			Test.TestTrue(TEXT("The left track's material has its phase, with last frame's equal to it while it stands"),
+				LeftComponent && LeftComponent->GetCustomPrimitiveData().Data[1] == LeftComponent->GetCustomPrimitiveData().Data[0]);
+		}
+
+		// Teleported, and put in a solid that pushes it out: the hull may move, the tracks and wheels do not.
+		{
+			const FGearMark Mark(*Unit);
+			Unit->SetActorLocation(Unit->GetActorLocation() + FVector(3000.f, 1000.f, 0.f));
+			RunGear(*Unit, RTSLocomotion::FCommand(), 0.5);
+			FBox Solid = Unit->GetComponentsBoundingBox();
+			AActor* Overlap = SpawnTestSolid(*TestWorld.World, FBox(Solid.GetCenter() + FVector(250.f, -400.f, -100.f), Solid.GetCenter() + FVector(450.f, 400.f, 300.f)));
+			RunGear(*Unit, RTSLocomotion::FCommand(), 1.0);
+			Overlap->Destroy();
+			const FGearMark Now(*Unit);
+			Test.TestTrue(FString::Printf(TEXT("A teleport and a solid it was put in move no track (%.5f, %.5f of a link; %d recoveries)"),
+				PhaseDelta(Now.Phase[0], Mark.Phase[0]), PhaseDelta(Now.Phase[1], Mark.Phase[1]), Unit->GetRealizedMotion().RecoveryCount),
+				FMath::Abs(PhaseDelta(Now.Phase[0], Mark.Phase[0])) <= StillPhase && FMath::Abs(PhaseDelta(Now.Phase[1], Mark.Phase[1])) <= StillPhase
+				&& FMath::Abs(AngleDelta(Now.Angle[0], Mark.Angle[0])) <= FMath::DegreesToRadians(WheelTolerance));
+		}
+
+		// Flat out into a solid: once blocked, for 5 s, the tracks stand.
+		{
+			const FVector Front = Unit->GetActorLocation() + Unit->GetActorForwardVector() * 800.f;
+			AActor* Wall = SpawnTestSolid(*TestWorld.World, FBox(Front + FVector(0.f, -600.f, -100.f), Front + FVector(200.f, 600.f, 300.f)));
+			RTSLocomotion::FCommand Flat;
+			Flat.Speed = 1.e5f;
+			bool bBlocked = false;
+			RunGear(*Unit, Flat, 4.0, [Unit, &bBlocked] { bBlocked |= Unit->GetRealizedMotion().Status == ERTSLocomotionStatus::Blocked; });
+			const FGearMark Mark(*Unit);
+			RunGear(*Unit, Flat, 5.0);
+			const FGearMark Now(*Unit);
+			Test.TestTrue(TEXT("The wall blocks the hull"), bBlocked);
+			Test.TestTrue(FString::Printf(TEXT("Blocked 5 s, the tracks stand within 0.1 %% of a loop (%.5f, %.5f of a link)"),
+				PhaseDelta(Now.Phase[0], Mark.Phase[0]), PhaseDelta(Now.Phase[1], Mark.Phase[1])),
+				FMath::Abs(PhaseDelta(Now.Phase[0], Mark.Phase[0])) <= 0.001f * LoopLinks && FMath::Abs(PhaseDelta(Now.Phase[1], Mark.Phase[1])) <= 0.001f * LoopLinks);
+			FollowsTravel(Test, TEXT("Blocked"), *Unit, Mark, Travel);
+			Wall->Destroy();
+			RunGear(*Unit, RTSLocomotion::FCommand(), 2.0);
+		}
+
+		// Not drawn here: the phase counts on, the material keeps the last it had; drawn again, it has the phase as it is.
+		if (LeftComponent)
+		{
+			const float Sent = LeftComponent->GetCustomPrimitiveData().Data[0];
+			FRTSTrackViews Far;
+			Far.Locations.Add(Unit->GetActorLocation() + FVector(0.f, 0.f, 1.e6f));
+			Far.Range = 5000.f;
+			const FGearMark Mark(*Unit);
+			RunGear(*Unit, Ahead, 1.0, [] {}, &Far);
+			float Phase = 0.f;
+			Unit->GetTrackPhase(LeftTrack, Phase);
+			Test.TestTrue(FString::Printf(TEXT("Out of sight the phase counts on (%.3f) while the material keeps its own (%.3f)"), Phase, Sent),
+				FMath::Abs(PhaseDelta(Phase, Mark.Phase[0])) > 0.01f && LeftComponent->GetCustomPrimitiveData().Data[0] == Sent);
+			FRTSTrackViews Near = Far;
+			Near.Locations[0] = Unit->GetActorLocation();
+			RunGear(*Unit, RTSLocomotion::FCommand(), 2.0, [] {}, &Near);
+			Unit->GetTrackPhase(LeftTrack, Phase);
+			Test.TestTrue(TEXT("In sight again, the material has the phase it got to, not a restart"),
+				LeftComponent->GetCustomPrimitiveData().Data[0] == Phase);
+			FRTSTrackViews Server;
+			Server.bDraws = false;
+			RunGear(*Unit, Ahead, 0.5, [] {}, &Server);
+			Test.TestTrue(TEXT("A machine that draws nothing never sends it"), LeftComponent->GetCustomPrimitiveData().Data[0] == Phase);
+		}
+
+		// Rigid tracks, as the bench's comparison draws them: no phase, the rigid material.
+		{
+			IConsoleVariable* Animation = IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Vehicle.TrackAnimation"));
+			Animation->Set(false, ECVF_SetByCode);
+			ARTSUnit* Rigid = TestWorld.SpawnUnit(MakeTrackedData(), 0, FVector(0.f, 5000.f, 0.f));
+			Animation->Set(true, ECVF_SetByCode);
+			TArray<UStaticMeshComponent*> Meshes;
+			Rigid->GetComponents(Meshes);
+			const UMaterialInterface* RigidMaterial = Rigid->GetUnitData()->Parts[LeftTrack].RigidMaterial;
+			// Under the team colour's dynamic instance.
+			const int32 Drawn = Algo::CountIf(Meshes, [RigidMaterial](const UStaticMeshComponent* Mesh)
+			{
+				const UMaterialInstance* Instance = Cast<UMaterialInstance>(Mesh->GetMaterial(0));
+				return Mesh->GetMaterial(0) == RigidMaterial || (Instance && Instance->Parent == RigidMaterial);
+			});
+			Test.TestFalse(TEXT("With rts.Vehicle.TrackAnimation 0 a track keeps no phase"), Rigid->GetTrackPhase(LeftTrack, Unused));
+			Test.TestEqual(TEXT("and both are drawn with the rigid material"), Drawn, 2);
+		}
+	}
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRunningGearTest, "WorldDivide.Units.RunningGear.Spin", TestFlags)
 
 bool FRTSRunningGearTest::RunTest(const FString& Parameters)
@@ -206,6 +582,8 @@ bool FRTSRunningGearTest::RunTest(const FString& Parameters)
 	const FTransform Turned = GetPart(*Unit, LeftWheel);
 	Unit->UpdateRunningGear();
 	TestTrue(TEXT("Once the unit stops, the wheels stop"), GetPart(*Unit, LeftWheel).Equals(Turned));
+
+	TestTrackedGear(*this);
 	return true;
 }
 

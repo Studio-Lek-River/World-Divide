@@ -7,6 +7,8 @@
 #include "Data/RTSUnitData.h"
 #include "Dom/JsonObject.h"
 #include "Engine/StaticMesh.h"
+#include "StaticMeshAttributes.h"
+#include "Algo/AllOf.h"
 #include "Engine/Texture2D.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstance.h"
@@ -148,6 +150,88 @@ bool FRTSM20GuardianArtTest::RunTest(const FString& Parameters)
 			!Normal->SRGB && Normal->CompressionSettings == TC_Normalmap && !Normal->bFlipGreenChannel);
 		TestTrue(*FString::Printf(TEXT("%s masks are linear"), Set), !Masks->SRGB && Masks->CompressionSettings == TC_Masks);
 	}
+	return true;
+}
+
+/**
+ * The M20's tracks carry their link shift (#151): UV0 as before and the four animation channels m20_guardian_bake.py writes,
+ * read here as the material reads them, so a V flip or a lost channel on import shows. On a straight run a vertex's place in
+ * the previous link is the opposite of its place in the next, one pitch along the run, and the next-but-one is twice as far; the turn to the next link is at most a sprocket tooth's. Their parts are tracks of that pitch, with the rigid material,
+ * and the wheels roll by where they meet the track.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSM20TrackArtTest, "WorldDivide.Art.M20Tracks", TestFlags)
+
+bool FRTSM20TrackArtTest::RunTest(const FString& Parameters)
+{
+	const URTSUnitData* Data = LoadObject<URTSUnitData>(nullptr, M20DataPath);
+	if (!TestNotNull(TEXT("DA_TestM20Guardian loads"), Data))
+	{
+		return false;
+	}
+	const UMaterialInterface* Animated = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s/Materials/MI_M20_Track.MI_M20_Track"), M20Dir));
+	const UMaterialInterface* Rigid = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s/Materials/MI_M20_Track_Static.MI_M20_Track_Static"), M20Dir));
+	auto Switch = [](const UMaterialInterface* Material)
+	{
+		bool bValue = false;
+		FGuid Unused;
+		return Material && Material->GetStaticSwitchParameterValue(FHashedMaterialParameterInfo(TEXT("TrackAnimation")), bValue, Unused) && bValue;
+	};
+	TestTrue(TEXT("MI_M20_Track moves the links"), Switch(Animated));
+	TestTrue(TEXT("MI_M20_Track_Static does not"), Rigid && !Switch(Rigid));
+	for (const TCHAR* Other : { TEXT("Hull"), TEXT("Turret"), TEXT("Running") })
+	{
+		const UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s/Materials/MI_M20_%s.MI_M20_%s"), M20Dir, Other, Other));
+		TestTrue(*FString::Printf(TEXT("MI_M20_%s keeps the plain material"), Other), Material && !Switch(Material));
+	}
+
+	int32 Tracks = 0;
+	for (const FRTSVehiclePart& Part : Data->Parts)
+	{
+		if (Part.bWheel)
+		{
+			TestTrue(*FString::Printf(TEXT("%s rolls by where it meets the track"), *GetNameSafe(Part.Mesh)), Part.RollRadius > 30.f && Part.RollRadius < 40.f);
+		}
+		if (Part.TrackPitch <= 0.f)
+		{
+			continue;
+		}
+		++Tracks;
+		TestTrue(*FString::Printf(TEXT("%s's links are %.2f cm long"), *GetNameSafe(Part.Mesh), Part.TrackPitch), FMath::IsNearlyEqual(Part.TrackPitch, 16.f, 0.1f));
+		TestTrue(*FString::Printf(TEXT("%s has the rigid material for when it does not animate"), *GetNameSafe(Part.Mesh)), Part.RigidMaterial == Rigid);
+		const UStaticMesh* Mesh = Part.Mesh;
+		const FMeshDescription* Description = Mesh ? Mesh->GetMeshDescription(0) : nullptr;
+		if (!TestNotNull(TEXT("The track has its mesh description"), Description))
+		{
+			continue;
+		}
+		TestTrue(*FString::Printf(TEXT("%s is drawn with MI_M20_Track"), *Mesh->GetName()),
+			Mesh->GetStaticMaterials().Num() > 0 && Algo::AllOf(Mesh->GetStaticMaterials(), [Animated](const FStaticMaterial& Slot) { return Slot.MaterialInterface == Animated; }));
+		const FStaticMeshConstAttributes Attributes(*Description);
+		const TVertexInstanceAttributesConstRef<FVector2f> UVs = Attributes.GetVertexInstanceUVs();
+		if (!TestEqual(*FString::Printf(TEXT("%s has UV0 and four animation channels"), *Mesh->GetName()), UVs.GetNumChannels(), 5))
+		{
+			continue;
+		}
+		int32 Straight = 0;
+		int32 Count = 0;
+		float MaxTurn = 0.f;
+		for (const FVertexInstanceID Instance : Description->VertexInstances().GetElementIDs())
+		{
+			const FVector2f Prev = UVs.Get(Instance, 1);
+			const FVector2f Next = UVs.Get(Instance, 2);
+			const FVector2f Next2 = UVs.Get(Instance, 3);
+			MaxTurn = FMath::Max(MaxTurn, FMath::Abs(UVs.Get(Instance, 4).X));
+			++Count;
+			// On a straight run, level or sloped: a link either way, in line, and the next-but-one twice as far.
+			Straight += FMath::IsNearlyEqual(Next.Size(), Part.TrackPitch, 0.1f) && (Prev + Next).Size() < 0.05f
+				&& (Next2 - 2.f * Next).Size() < 0.05f ? 1 : 0;
+		}
+		TestTrue(*FString::Printf(TEXT("%s: most vertices lie on straight runs, one link apart each way (%d of %d)"), *Mesh->GetName(), Straight, Count),
+			Straight > Count / 2);
+		TestTrue(*FString::Printf(TEXT("%s: no link turns more than 35 degrees to the next (%.1f)"), *Mesh->GetName(), FMath::RadiansToDegrees(MaxTurn)),
+			MaxTurn > 0.f && MaxTurn < FMath::DegreesToRadians(35.f));
+	}
+	TestEqual(TEXT("Both tracks animate"), Tracks, 2);
 	return true;
 }
 

@@ -111,13 +111,123 @@ def build_vehicle_material(defaults):
     editing.connect_material_expressions(mask, "", blend, "Alpha")
     editing.connect_material_property(blend, "", unreal.MaterialProperty.MP_BASE_COLOR)
 
-    editing.connect_material_property(samples["N"], "RGB", unreal.MaterialProperty.MP_NORMAL)
+    build_track_animation(material, samples["N"])
     editing.connect_material_property(samples["ORM"], "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
     editing.connect_material_property(samples["ORM"], "G", unreal.MaterialProperty.MP_ROUGHNESS)
     editing.connect_material_property(samples["ORM"], "B", unreal.MaterialProperty.MP_METALLIC)
 
     editing.recompile_material(material)
     return material
+
+
+# The track's link shift (#151), from the channels m20_guardian_bake.add_track_animation_uvs writes: UV1, UV2 and UV3 the
+# offsets in local cm (X, Z) to the vertex's place in the previous, next and next-but-one link, UV4.x the turn in radians
+# to the next link. The phase through one link comes as custom primitive data from ARTSUnit::UpdateRunningGear: the
+# current one, and last frame's unwrapped, for the motion vectors.
+TRACK_ANIMATION = "TrackAnimation"
+TRACK_PHASE = ("TrackPhase", 0)
+TRACK_PREVIOUS_PHASE = ("TrackPreviousPhase", 1)
+# A Catmull-Rom curve through the four places, from this link's (0) at T = 0 to the next one's at T = 1.
+TRACK_SHIFT_HLSL = """float2 O = 0.5 * ((Next - Prev) * T + (2.0 * Prev + 4.0 * Next - Next2) * T * T + (-Prev - 3.0 * Next + Next2) * T * T * T);
+return float3(O.x, 0.0, O.y);"""
+# The vertex's normal in local space turned by the share T of the turn to the next link, in X-Z from +X toward +Z.
+TRACK_TURN_HLSL = """float A = T * Turn;
+float C = cos(A);
+float S = sin(A);
+return float3(N.x * C - N.z * S, N.y, N.x * S + N.z * C);"""
+
+
+def _connect(source, output, target, pin):
+    if not editing.connect_material_expressions(source, output, target, pin):
+        raise RuntimeError(f"Could not connect {source.get_name()}.{output!r} to {target.get_name()}.{pin!r}")
+
+
+def _custom(material, x, y, code, inputs, output=unreal.CustomMaterialOutputType.CMOT_FLOAT3):
+    custom = editing.create_material_expression(material, unreal.MaterialExpressionCustom, x, y)
+    custom.set_editor_property("code", code)
+    custom.set_editor_property("output_type", output)
+    pins = []
+    for name in inputs:
+        pin = unreal.CustomInput()
+        pin.set_editor_property("input_name", name)
+        pins.append(pin)
+    custom.set_editor_property("inputs", pins)
+    return custom
+
+
+def _scalar(material, x, y, name, default=0.0, primitive_index=None):
+    scalar = editing.create_material_expression(material, unreal.MaterialExpressionScalarParameter, x, y)
+    scalar.set_editor_property("parameter_name", name)
+    scalar.set_editor_property("default_value", default)
+    if primitive_index is not None:
+        scalar.set_editor_property("use_custom_primitive_data", True)
+        scalar.set_editor_property("primitive_data_index", primitive_index)
+    return scalar
+
+
+def _uv(material, x, y, index):
+    uv = editing.create_material_expression(material, unreal.MaterialExpressionTextureCoordinate, x, y)
+    uv.set_editor_property("coordinate_index", index)
+    return uv
+
+
+def _transform(material, x, y, source, destination):
+    transform = editing.create_material_expression(material, unreal.MaterialExpressionTransform, x, y)
+    transform.set_editor_property("transform_source_type", source)
+    transform.set_editor_property("transform_type", destination)
+    return transform
+
+
+def build_track_animation(material, normal_sample):
+    """The TrackAnimation static switch (off by default, on in a track's instance): World Position Offset moves every
+    vertex along TRACK_SHIFT_HLSL by the phase, last frame's phase for the previous frame's place, and the normal map's
+    normal turns with the link (TRACK_TURN_HLSL), so it meets the next link's at the wrap. Off, the material is the
+    plain one: no offset, the normal map as it is."""
+    phase = _scalar(material, -2200, 900, TRACK_PHASE[0], primitive_index=TRACK_PHASE[1])
+    previous = _scalar(material, -2200, 1050, TRACK_PREVIOUS_PHASE[0], primitive_index=TRACK_PREVIOUS_PHASE[1])
+    offsets = [_uv(material, -2200, 1200 + 120 * i, i + 1) for i in range(3)]
+    shifts = []
+    for row, t in enumerate((phase, previous)):
+        shift = _custom(material, -1900, 900 + 300 * row, TRACK_SHIFT_HLSL, ("Prev", "Next", "Next2", "T"))
+        for offset, pin in zip(offsets, ("Prev", "Next", "Next2")):
+            _connect(offset, "", shift, pin)
+        _connect(t, "", shift, "T")
+        world = _transform(material, -1600, 900 + 300 * row, unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL,
+                           unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+        _connect(shift, "", world, "")
+        shifts.append(world)
+    frames = editing.create_material_expression(material, unreal.MaterialExpressionPreviousFrameSwitch, -1300, 1000)
+    _connect(shifts[0], "", frames, "Current Frame")
+    _connect(shifts[1], "", frames, "Previous Frame")
+    none = editing.create_material_expression(material, unreal.MaterialExpressionConstant3Vector, -1300, 1200)
+    offset_switch = editing.create_material_expression(material, unreal.MaterialExpressionStaticSwitchParameter, -1000, 1000)
+    offset_switch.set_editor_property("parameter_name", TRACK_ANIMATION)
+    offset_switch.set_editor_property("default_value", False)
+    _connect(frames, "", offset_switch, "True")
+    _connect(none, "", offset_switch, "False")
+    editing.connect_material_property(offset_switch, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
+
+    to_local = _transform(material, -1100, 500, unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_TANGENT,
+                          unreal.MaterialVectorCoordTransform.TRANSFORM_LOCAL)
+    _connect(normal_sample, "RGB", to_local, "")
+    turn_uv = _uv(material, -1100, 650, 4)
+    turn = editing.create_material_expression(material, unreal.MaterialExpressionComponentMask, -900, 650)
+    turn.set_editor_property("r", True)
+    turn.set_editor_property("g", False)
+    _connect(turn_uv, "", turn, "")
+    turned = _custom(material, -800, 500, TRACK_TURN_HLSL, ("N", "T", "Turn"))
+    _connect(to_local, "", turned, "N")
+    _connect(phase, "", turned, "T")
+    _connect(turn, "", turned, "Turn")
+    to_tangent = _transform(material, -500, 500, unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL,
+                            unreal.MaterialVectorCoordTransform.TRANSFORM_TANGENT)
+    _connect(turned, "", to_tangent, "")
+    normal_switch = editing.create_material_expression(material, unreal.MaterialExpressionStaticSwitchParameter, -250, 400)
+    normal_switch.set_editor_property("parameter_name", TRACK_ANIMATION)
+    normal_switch.set_editor_property("default_value", False)
+    _connect(to_tangent, "", normal_switch, "True")
+    _connect(normal_sample, "RGB", normal_switch, "False")
+    editing.connect_material_property(normal_switch, "", unreal.MaterialProperty.MP_NORMAL)
 
 
 def build_lamp_material():
@@ -140,8 +250,9 @@ def build_lamp_material():
     return material
 
 
-def build_material_instance(directory, name, parent, textures):
-    """An instance of M_Vehicle reading one texture set, textures: {kind: texture}."""
+def build_material_instance(directory, name, parent, textures, track_animation=False):
+    """An instance of M_Vehicle reading one texture set, textures: {kind: texture}; track_animation turns the
+    TrackAnimation switch on (build_track_animation)."""
     path = f"{directory}/{name}"
     if assets.does_asset_exist(path):
         instance = assets.load_asset(path)
@@ -151,6 +262,8 @@ def build_material_instance(directory, name, parent, textures):
     editing.set_material_instance_parent(instance, parent)
     for kind, parameter in (("BC", "BaseColor"), ("N", "Normal"), ("ORM", "ORM")):
         editing.set_material_instance_texture_parameter_value(instance, parameter, textures[kind])
+    if track_animation:
+        editing.set_material_instance_static_switch_parameter_value(instance, TRACK_ANIMATION, True)
     editing.update_material_instance(instance)
     return instance
 

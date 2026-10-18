@@ -2,13 +2,15 @@
 Art/USA/vehicles/m20_guardian) from code, as a modular hero model for close-zoom review and the game:
 
   blender -b --python Tools/Art/m20_guardian_blender.py -- [--stage 1|2] [--no-bake] [--preview] [--verify] [--samples N]
+                                                          [--tracks-only]
 
 --stage 1 builds the blockout (hull, running gear, turret, gun) and renders it. --stage 2 (the default) adds the detail,
 applies the bevels to the game meshes, lays out the UVs, bakes the texture sets from the high-poly twins, and writes the
 .blend, one FBX per moving part, the textures, the renders, m20_guardian.json and report_stats.md, all under
 Art/USA/vehicles/m20_guardian. --no-bake skips the UVs and bakes (the FBX then carry the procedural slots). --preview only
 builds and renders quick views to renders/preview_*.png. --verify re-imports every FBX into an empty scene and checks
-scale, origin and triangles.
+scale, origin and triangles. --tracks-only opens the saved .blend and only writes the tracks' animation UVs (#151) and
+re-exports the two track FBX.
 
 Every dimension is in metres in the block below: tune proportions there, not in the meshes. The tank faces +X, +Y is its
 left, its tracks sit on z = 0 and the origin is under the hull centre. Moving parts are separate objects with their pivot
@@ -1400,31 +1402,52 @@ def track_link(part, centre, u, v, w, pitch):
                  high=True)
 
 
-def build_track(name, side):
-    track = Part(name)
-    track.zone("Tracks")
+def track_loop():
+    """The track's centre line (track_path), each segment's length, and the link count and pitch that fill it."""
     path = track_path()
     count = len(path)
     lengths = [(path[(i + 1) % count] - path[i]).length for i in range(count)]
     total = sum(lengths)
     links = round(total / TRACK_PITCH)
-    pitch = total / links
+    return path, lengths, links, total / links
+
+
+def track_point(path, lengths, s):
+    """Where arc length s (0 <= s < the loop's length) falls on the centre line: the point (x, z) and the direction of
+    its segment."""
+    segment, start = 0, 0.0
+    while s > start + lengths[segment]:
+        start += lengths[segment]
+        segment += 1
+    a, b = path[segment], path[(segment + 1) % len(path)]
+    direction = (b - a).normalized()
+    return a + direction * (s - start), direction
+
+
+def track_path_at(s):
+    """For bake.check_track_animation: the centre line's point and direction angle at arc length s, or with None its
+    length."""
+    path, lengths, _, _ = track_loop()
+    if s is None:
+        return sum(lengths)
+    point, direction = track_point(path, lengths, s)
+    return (point.x, point.y), math.atan2(direction.y, direction.x)
+
+
+def build_track(name, side):
+    track = Part(name)
+    track.zone("Tracks")
+    path, lengths, links, pitch = track_loop()
     y = side * TRACK_Y
     v = Vector((0.0, 1.0, 0.0))
-    segment, start = 0, 0.0
     for i in range(links):
-        s = (i + 0.5) * pitch
-        while s > start + lengths[segment]:
-            start += lengths[segment]
-            segment += 1
-        a, b = path[segment], path[(segment + 1) % count]
-        direction = (b - a).normalized()
-        point = a + direction * (s - start)
+        point, direction = track_point(path, lengths, (i + 0.5) * pitch)
         u = Vector((direction.x, 0.0, direction.y))
         w = Vector((direction.y, 0.0, -direction.x))  # outward of a counter-clockwise loop
         track_link(track, Vector((point.x, y, point.y)), u, v, w, pitch)
     obj = track.build((0.0, y, 0.0))
     obj["pitch"] = pitch
+    obj["links"] = links
     return obj
 
 
@@ -1566,6 +1589,8 @@ def finish_game_meshes(parts):
     for track in tracks:
         bake.copy_uvs_tiled(template, track)
     bake.finalize(linked, list(MATERIALS))
+    for track in tracks:
+        bake.add_track_animation_uvs(track, track["links"])
     if not BAKE:
         return {}
     bake.use_gpu(bpy.context.scene)
@@ -1609,8 +1634,67 @@ def write_layout(parts):
         "track_offsets": {f"M20_Track_{s}": unreal_cm(parts[f"track_{s}"].location) for s in ("L", "R")},
         "blender_ring": list(TURRET_RING),
     }
+    layout.update(running_layout())
     with open(os.path.join(OUT_DIR, "m20_guardian.json"), "w") as file:
         json.dump(layout, file, indent=2)
+
+
+def running_layout():
+    """What the game rolls the running gear and the tracks by (#151): the links' pitch, and each wheel's rolling radius
+    in cm, where its rim meets the track. A road wheel rolls on the track's inner face; the sprocket and the idler carry
+    the track wrapped round them, so they turn with its centre line."""
+    _, _, _, pitch = track_loop()
+    half = TRACK_THICKNESS / 2.0
+    return {
+        "track_pitch": round(pitch * 100.0, 4),
+        "roll_radii": {"RoadWheel": round(ROAD_WHEEL_RADIUS * 100.0, 2),
+                       "Sprocket": round((SPROCKET[2] + 0.03 + half) * 100.0, 2),
+                       "Idler": round((IDLER[2] + half) * 100.0, 2)},
+    }
+
+
+def track_animation_report(tracks, links):
+    """The tracks' animation UVs against the exact link shift (bake.check_track_animation), as report lines."""
+    lines = ["", "## Track animation (#151)", "",
+             "| Track | Links | Rigid copies (cm) | Worst vertex place (cm) | Worst link gap vs rigid (cm) | Wrap jump (cm) | Worst normal turn (deg) |",
+             "|---|---|---|---|---|---|---|"]
+    for track in tracks:
+        residual = bake.add_track_animation_uvs(track, links)
+        place, gap, wrap, turn = bake.check_track_animation(track, links, track_path_at)
+        lines.append(f"| {track.name} | {links} | {residual * 100.0:.4f} | {place:.3f} | {gap:.3f} | {wrap:.4f} | "
+                     f"{turn:.2f} |")
+        assert max(place, gap, wrap) <= 1.0, f"{track.name}: the link shift is off by {max(place, gap, wrap):.2f} cm"
+    return lines
+
+
+def write_track_report(lines):
+    """Puts the track animation section of report_stats.md in place of the one there, or after it."""
+    path = os.path.join(OUT_DIR, "report_stats.md")
+    text = open(path).read() if os.path.exists(path) else ""
+    start = text.find("\n## Track animation (#151)")
+    if start >= 0:
+        end = text.find("\n## ", start + 1)
+        text = text[:start] + (text[end:] if end >= 0 else "")
+    with open(path, "w") as file:
+        file.write(text.rstrip("\n") + "\n" + "\n".join(lines) + "\n")
+    print("\n".join(lines))
+
+
+def tracks_only():
+    """--tracks-only: opens the saved .blend, writes the tracks' animation UVs (bake.add_track_animation_uvs) and checks
+    them, and exports just the two track FBX, so the textures, renders and every other part stay as they are; adds the
+    running layout to m20_guardian.json."""
+    bpy.ops.wm.open_mainfile(filepath=BLEND)
+    _, _, links, _ = track_loop()
+    tracks = [bpy.data.objects[f"M20_Track_{s}"] for s in ("L", "R")]
+    write_track_report(track_animation_report(tracks, links))
+    export_fbx({"SM_M20_Track_L", "SM_M20_Track_R"})
+    path = os.path.join(OUT_DIR, "m20_guardian.json")
+    layout = json.load(open(path))
+    layout.update(running_layout())
+    with open(path, "w") as file:
+        json.dump(layout, file, indent=2)
+    bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 
 
 EXPORTS = (("M20_Hull", "SM_M20_Hull"), ("M20_Turret", "SM_M20_Turret"), ("M20_Gun", "SM_M20_Gun"),
@@ -1619,10 +1703,13 @@ EXPORTS = (("M20_Hull", "SM_M20_Hull"), ("M20_Turret", "SM_M20_Turret"), ("M20_G
            ("M20_Idler_L", "SM_M20_Idler"))
 
 
-def export_fbx():
-    """Each part on its own, at its pivot: it leaves its parent and goes to the origin for the export, then goes back."""
+def export_fbx(only=None):
+    """Each part on its own, at its pivot: it leaves its parent and goes to the origin for the export, then goes back.
+    only: the file names to export, all of them by default."""
     os.makedirs(FBX_DIR, exist_ok=True)
     for object_name, file_name in EXPORTS:
+        if only and file_name not in only:
+            continue
         obj = bpy.data.objects[object_name]
         saved = (obj.parent, obj.location.copy(), obj.rotation_euler.copy())
         obj.parent = None
@@ -1726,6 +1813,9 @@ def main():
     if "--verify" in ARGS:
         verify()
         return
+    if "--tracks-only" in ARGS:
+        tracks_only()
+        return
     parts = build_tank()
     if PREVIEW or STAGE == 1:
         low, high, triangles, components = evaluated_stats()
@@ -1747,6 +1837,7 @@ def main():
         lines, _ = validation.validate()
         with open(os.path.join(OUT_DIR, "report_stats.md"), "a") as file:
             file.write("\n".join(lines))
+    write_track_report(track_animation_report([parts["track_L"], parts["track_R"]], parts["track_L"]["links"]))
     os.makedirs(os.path.dirname(BLEND), exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
     presentation.render_all(RENDER_DIR, parts, previous_front34=PREVIOUS_FRONT34, concept=CONCEPT, samples=SAMPLES)

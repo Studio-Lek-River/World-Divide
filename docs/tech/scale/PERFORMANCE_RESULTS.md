@@ -1262,3 +1262,62 @@ The budget holds, so no optimization is proposed. The p95 has 0.31 ms of headroo
 - **Paths do not know the solids** (by design, #168). A hull that meets one stops until its next order, so 14–16% of the units stand each leg. That lowers the locomotion cost a little against a scene where every unit keeps driving.
 - **Formation slots** that land on a solid make the units there stop short; that is counted as meeting it.
 - **The gate does not bench `@Solids`.** `-Task gate` plans open-scene sets only. A change to collision or locomotion should add a quick `@Solids` run by hand.
+
+## #151 (M20 track animation)
+
+Same machine (Ryzen 7 7800X3D, RTX 4090), on 2026-10-18. Both variants ran in one session of one build, scene, camera and settings: `ue.ps1 -Task bench -Long -Unit DA_TestM20Guardian,DA_TestM20Guardian@RigidTracks`. The `@RigidTracks` set runs with `rts.Vehicle.TrackAnimation 0`: no phase, and the tracks drawn with `MI_M20_Track_Static`, the material without the link shift. The long method is 10 s of warm-up per count; three 60 s samples at 240 units, one at the other counts.
+
+The bench camera stands 170 m from the grid, past the 60 m animation distance (`rts.Vehicle.TrackAnimationDistance`). This is how tracks are seen at the RTS camera's default zoom of 150 m. A quick run with the distance at 0 measures the worst case, every track animated.
+
+The bench has new columns for this measurement: render-thread and GPU p95, and the running-gear pass (`URTSRunningGearSubsystem::PlaceAll`), mean and p95.
+
+### 240 moving M20s, long method (mean of three samples; p95 is the mean of the samples' 95th percentiles)
+
+| | Rigid | Animated | Difference |
+|---|---|---|---|
+| Game thread, mean (p95) | 4.15 (7.91) ms | 4.21 (7.87) ms | +0.06 (−0.04), within the 0.6 ms spread |
+| Render thread, mean (p95) | 4.24 (4.84) ms | 4.24 (4.84) ms | 0 |
+| GPU, mean (p95) | 4.32 (4.50) ms | 4.34 (4.50) ms | +0.01 (0) |
+| Draw calls | 3,638 | 3,639 | +1, sampling noise (both 3,932 when standing) |
+| Triangles drawn | 45.72 M | 45.77 M | +0.1 %, sampling noise |
+| Running gear, mean (p95) | 0.403 (1.105) ms | 0.418 (1.095) ms | **+0.015 (−0.010)** |
+| Locomotion, mean (p95) | 0.44 (1.16) ms | 0.44 (1.16) ms | 0; #165 had 0.44 (1.18) |
+
+### 1, 30 and 120 moving M20s (one sample each), rigid → animated
+
+| Units | Game ms, mean (p95) | Render ms, mean (p95) | GPU ms, mean (p95) | Running gear ms, mean (p95) |
+|---:|---|---|---|---|
+| 1 | 1.11 (1.70) → 1.10 (1.68) | 1.98 (2.25) → 1.99 (2.26) | 1.78 (1.83) → 1.79 (1.83) | 0.005 (0.009) → 0.004 (0.009) |
+| 30 | 1.51 (2.27) → 1.51 (2.55) | 2.36 (2.60) → 2.35 (2.58) | 2.16 (2.21) → 2.16 (2.20) | 0.053 (0.135) → 0.055 (0.139) |
+| 120 | 2.54 (4.72) → 2.50 (4.62) | 3.04 (3.62) → 3.04 (3.61) | 3.15 (3.22) → 3.15 (3.23) | 0.214 (0.656) → 0.215 (0.630) |
+
+Draw calls and triangles match at every count (108, 573/574 and 2,016 moving).
+
+### Worst case: every track animated (quick method, one 30 s sample at 240, diagnostic)
+
+`ue.ps1 -Task bench -Quick -Unit DA_TestM20Guardian,DA_TestM20Guardian@RigidTracks -Cvars rts.Vehicle.TrackAnimationDistance=0` (bench `-Cvars` is new; such a run is never stored as a baseline):
+
+| | Rigid | Animated | Difference |
+|---|---|---|---|
+| Game thread, mean (p95) | 4.05 (7.89) ms | 4.07 (8.07) ms | +0.02 (+0.18) |
+| Render thread, mean (p95) | 4.26 (4.82) ms | 4.36 (4.84) ms | +0.10 (+0.02) |
+| GPU, mean (p95) | 4.32 (4.58) ms | 4.31 (4.57) ms | 0 |
+| Draw calls | 3,646 | 3,645 | 0 |
+| Running gear, mean (p95) | 0.395 (1.117) ms | 0.518 (1.536) ms | +0.12 (+0.42) |
+
+Here all 480 tracks get their phase every frame they move: about 0.25 µs per track. The p95 is 0.02 ms over the 0.4 ms budget in this single sample. On a real screen the 60 m distance keeps that to the tracks near a close camera, a few dozen at most.
+
+### Against #151's budget (240 visible moving M20s)
+
+| Budget | At the 60 m distance (long method) | Every track animated (quick, diagnostic) |
+|---|---|---|
+| Running-gear CPU ≤ +0.2 ms mean / ≤ +0.4 ms p95 | **Met** (+0.015 / −0.010) | Mean met (+0.12); p95 +0.42, just over |
+| GPU ≤ +0.5 ms mean / ≤ +1.0 ms p95 | **Met** (+0.01 / 0) | **Met** (0 / 0) |
+| Zero additional draw calls | **Met** | **Met** |
+| Distance-disabled shift costs no GPU beyond noise | **Met**: +0.01 ms against a sample spread of 0.03 ms | — |
+
+### Remaining limitations
+
+- **The GPU cost of the shift is measured from 170 m.** There every track is a few pixels high, and the vertex work does not show against the frame. A close camera over many tracks has not been benched: the bench's scene has a single fixed camera.
+- **The worst-case CPU is the primitive-data update**, one render command per moving track and frame. If close views of large armies become common, the phase could go to the material less often, every other frame for example, before anything else.
+- **The full-roster gate was not run** (#171), as asked. #150 and #149 change the M20's rendering next; the final M20-against-placeholder gate stays theirs.

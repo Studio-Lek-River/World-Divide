@@ -296,14 +296,20 @@ def make_m20_guardian():
     lamp = plan_now(f"{vehicle_art.MATERIAL_DIR}/{vehicle_art.LAMP_MATERIAL}", vehicle_art.build_lamp_material,
                     spec_hash([vehicle_art.build_lamp_material]))
     slot_materials = {"M20_Emissive": lamp}
-    for texture_set in ("Hull", "Turret", "Running", "Track"):
-        name = f"MI_M20_{texture_set}"
+    # The tracks' instance moves their links (#151); MI_M20_Track_Static is the same without, for a track that does not
+    # animate (rts.Vehicle.TrackAnimation 0) and for its far LODs once it has them (#149).
+    instances = {}
+    for texture_set, name, animated in (("Hull", "MI_M20_Hull", False), ("Turret", "MI_M20_Turret", False),
+                                        ("Running", "MI_M20_Running", False), ("Track", "MI_M20_Track", True),
+                                        ("Track", "MI_M20_Track_Static", False)):
         set_textures = {kind: textures[texture_set, kind] for kind in vehicle_art.TEXTURE_KINDS}
-        slot_materials[f"M20_{texture_set}"] = plan_now(
+        instances[name] = plan_now(
             f"{material_dir}/{name}",
-            lambda n=name, t=set_textures: vehicle_art.build_material_instance(material_dir, n, master, t),
+            lambda n=name, t=set_textures, a=animated: vehicle_art.build_material_instance(material_dir, n, master, t, a),
             spec_hash([vehicle_art.build_material_instance], material_dir, name, master,
-                      sorted(map(object_path, set_textures.values()))))
+                      sorted(map(object_path, set_textures.values())), animated))
+    for texture_set in ("Hull", "Turret", "Running", "Track"):
+        slot_materials[f"M20_{texture_set}"] = instances[f"MI_M20_{texture_set}"]
 
     # Each part's length along X as exported (m20_guardian_blender.py --verify), to catch a unit mix-up on import.
     meshes = {}
@@ -317,22 +323,28 @@ def make_m20_guardian():
             spec_hash([vehicle_art.import_part], mesh_dir, name, length, file_hash(source),
                       sorted((slot, object_path(material)) for slot, material in slot_materials.items())))
 
-    def part(mesh, mount, offset, yaw=0.0, wheel=False):
+    def part(mesh, mount, offset, yaw=0.0, wheel=False, roll_radius=0.0, track_pitch=0.0, rigid_material=None):
         value = unreal.RTSVehiclePart()
         value.set_editor_property("mesh", mesh)
         value.set_editor_property("mounted_on", mount)
         value.set_editor_property("offset", unreal.Vector(*offset))
         value.set_editor_property("rotation", unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw))
         value.set_editor_property("wheel", wheel)
+        value.set_editor_property("roll_radius", roll_radius)
+        value.set_editor_property("track_pitch", track_pitch)
+        value.set_editor_property("rigid_material", rigid_material)
         return value
 
+    # The tracks move their links by their pitch, and the wheels roll by where they meet the track (#151).
     parts = [part(meshes["RWS"], unreal.RTSVehiclePartMount.TURRET, layout["rws_offset"])]
-    parts += [part(meshes[name[len("M20_"):]], unreal.RTSVehiclePartMount.HULL, offset)
+    parts += [part(meshes[name[len("M20_"):]], unreal.RTSVehiclePartMount.HULL, offset, track_pitch=layout["track_pitch"],
+                   rigid_material=instances["MI_M20_Track_Static"])
               for name, offset in sorted(layout["track_offsets"].items())]
     for name, offset in sorted(layout["wheels"].items()):
         kind = next(kind for kind in ("RoadWheel", "Sprocket", "Idler") if name.startswith(f"M20_{kind}"))
         right = name.rstrip("0123456789").endswith("R")
-        parts.append(part(meshes[kind], unreal.RTSVehiclePartMount.HULL, offset, 180.0 if right else 0.0, True))
+        parts.append(part(meshes[kind], unreal.RTSVehiclePartMount.HULL, offset, 180.0 if right else 0.0, True,
+                          roll_radius=layout["roll_radii"][kind]))
 
     return meshes["Hull"], {
         "turret_mesh": meshes["Turret"],

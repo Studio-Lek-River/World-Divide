@@ -1,9 +1,32 @@
 #include "Units/RTSRunningGearSubsystem.h"
 
+#include "Camera/PlayerCameraManager.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
+#include "HAL/IConsoleManager.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Units/RTSUnit.h"
+
+namespace
+{
+	TAutoConsoleVariable<bool> CVarTrackAnimation(
+		TEXT("rts.Vehicle.TrackAnimation"), true,
+		TEXT("Tracks move their links with their side's travel (#151); off, they are drawn rigid. Read when a unit makes its parts."));
+
+	TAutoConsoleVariable<float> CVarTrackAnimationDistance(
+		TEXT("rts.Vehicle.TrackAnimationDistance"), 6000.f,
+		TEXT("cm from the camera past which the renderer leaves the tracks' link shift out; 0 never. Read when a unit makes its parts."));
+
+	/**
+	 * A track's phase goes to its material within the animation distance times this, plus TrackSendMargin cm, of a camera:
+	 * the renderer measures from the camera to the track's bounds, and the camera moves between frames.
+	 */
+	constexpr float TrackSendScale = 1.25f;
+	constexpr float TrackSendMargin = 1000.f;
+
+	uint64 GearCycles = 0;
+}
 
 void FRTSRunningGearTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 {
@@ -28,21 +51,59 @@ void URTSRunningGearSubsystem::Unregister(ARTSUnit& Unit)
 	Units.RemoveSwap(&Unit);
 }
 
+bool URTSRunningGearSubsystem::AnimatesTracks()
+{
+	return CVarTrackAnimation.GetValueOnGameThread();
+}
+
+float URTSRunningGearSubsystem::GetTrackAnimationDistance()
+{
+	return FMath::Max(CVarTrackAnimationDistance.GetValueOnGameThread(), 0.f);
+}
+
+double URTSRunningGearSubsystem::TakeSeconds()
+{
+	const double Seconds = FPlatformTime::ToSeconds64(GearCycles);
+	GearCycles = 0;
+	return Seconds;
+}
+
 void URTSRunningGearSubsystem::PlaceAll()
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(URTSRunningGearSubsystem::PlaceAll);
+	const uint64 StartCycles = FPlatformTime::Cycles64();
+
+	// Where this machine draws from: a dedicated server draws nothing, and a track far from every camera keeps its phase
+	// to itself until one comes near.
+	FRTSTrackViews Views;
+	const UWorld* World = GetWorld();
+	Views.bDraws = World && World->GetNetMode() != NM_DedicatedServer;
+	const float Distance = GetTrackAnimationDistance();
+	Views.Range = Distance > 0.f ? Distance * TrackSendScale + TrackSendMargin : 0.f;
+	if (Views.bDraws && Views.Range > 0.f)
+	{
+		for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+		{
+			const APlayerController* Controller = It->Get();
+			if (Controller && Controller->IsLocalController() && Controller->PlayerCameraManager)
+			{
+				Views.Locations.Add(Controller->PlayerCameraManager->GetCameraLocation());
+			}
+		}
+	}
 
 	for (int32 Index = Units.Num() - 1; Index >= 0; --Index)
 	{
 		if (ARTSUnit* Unit = Units[Index].Get())
 		{
-			Unit->UpdateRunningGear();
+			Unit->UpdateRunningGear(&Views);
 		}
 		else
 		{
 			Units.RemoveAtSwap(Index);
 		}
 	}
+	GearCycles += FPlatformTime::Cycles64() - StartCycles;
 }
 
 void URTSRunningGearSubsystem::OnWorldBeginPlay(UWorld& InWorld)
