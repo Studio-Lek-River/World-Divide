@@ -100,7 +100,14 @@ namespace
 		return Row ? Row->GameMs : -1.0;
 	}
 
-	TArray<FUnitInfo> ReadRoster(const FString& ScreenDir)
+	/** Whether Dir holds a valid long baseline of Name. */
+	bool HasBaseline(const FString& Name, const FString& Dir)
+	{
+		const FRun Run = LoadRun(Name, FPaths::Combine(Dir, Name));
+		return Run.bComplete && Run.bHasValidity && Run.Flags.IsEmpty();
+	}
+
+	TArray<FUnitInfo> ReadRoster(const FString& ScreenDir, const FString& LongDir)
 	{
 		IAssetRegistry& Registry = IAssetRegistry::GetChecked();
 		Registry.SearchAllAssets(/*bSynchronousSearch*/ true);
@@ -143,6 +150,7 @@ namespace
 			}
 			Unit.Packages = GetPackages(Registry, Asset.PackageName);
 			Unit.ScreenGameMs = ScreenDir.IsEmpty() ? -1.0 : ReadScreen(Unit.Name, ScreenDir);
+			Unit.bHasLongBaseline = !LongDir.IsEmpty() && HasBaseline(Unit.Name, LongDir);
 			Roster.Add(MoveTemp(Unit));
 		}
 		return Roster;
@@ -152,8 +160,10 @@ namespace
 	{
 		FString ChangesFile;
 		FString ScreenDir;
+		FString LongDir;
 		FParse::Value(*Params, TEXT("Changes="), ChangesFile);
 		FParse::Value(*Params, TEXT("Screens="), ScreenDir);
+		FParse::Value(*Params, TEXT("Longs="), LongDir);
 		const bool bBroad = FParse::Param(*Params, TEXT("Broad"));
 		TArray<FString> Changed;
 		if (!ChangesFile.IsEmpty() && !FFileHelper::LoadFileToStringArray(Changed, *ToProjectPath(ChangesFile)))
@@ -163,7 +173,8 @@ namespace
 		}
 		Changed.RemoveAll([](const FString& Line) { return Line.TrimStartAndEnd().IsEmpty(); });
 
-		const TArray<FUnitInfo> Roster = ReadRoster(ScreenDir.IsEmpty() ? FString() : ToProjectPath(ScreenDir));
+		const TArray<FUnitInfo> Roster = ReadRoster(ScreenDir.IsEmpty() ? FString() : ToProjectPath(ScreenDir),
+			LongDir.IsEmpty() ? FString() : ToProjectPath(LongDir));
 		if (Roster.IsEmpty())
 		{
 			UE_LOG(LogWorldDivide, Error, TEXT("RTSBenchGate: no unit data under %s"), UnitDataPath);
@@ -196,6 +207,7 @@ namespace
 			Object->SetNumberField(TEXT("triangles"), static_cast<double>(Unit.Triangles));
 			Object->SetNumberField(TEXT("footprint_m2"), FMath::RoundToDouble(Unit.FootprintM2 * 10.0) / 10.0);
 			Object->SetNumberField(TEXT("screen_game_ms"), Unit.ScreenGameMs);
+			Object->SetBoolField(TEXT("long_baseline"), Unit.bHasLongBaseline);
 			TArray<FString> Packages = Unit.Packages.Array();
 			Packages.Sort();
 			Object->SetArrayField(TEXT("packages"), ToJson(Packages));

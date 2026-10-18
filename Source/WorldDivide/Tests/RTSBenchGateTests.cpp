@@ -362,6 +362,21 @@ bool FRTSBenchGateRepresentativesTest::RunTest(const FString& Parameters)
 	}
 	TestTrue(TEXT("the screen's costliest wheeled unit is in"), SelectRepresentatives(Roster).Contains(TEXT("DA_TestBuilder")));
 
+	// A near tie keeps the unit with a long baseline, so the gate does not swap representatives on noise.
+	TArray<FUnitInfo> Tie = MakeRoster();
+	for (FUnitInfo& Unit : Tie)
+	{
+		Unit.ScreenGameMs = Unit.Name == TEXT("DA_TestFlakTruck") ? 2.58 : Unit.Name == TEXT("DA_TestBuilder") ? 2.43 : 2.0;
+		Unit.bHasLongBaseline = Unit.Name == TEXT("DA_TestBuilder");
+	}
+	TMap<FString, FString> TieReasons;
+	const TArray<FString> Kept = SelectRepresentatives(Tie, &TieReasons);
+	TestTrue(TEXT("0.15 ms behind, the builder with a long baseline stays"), Kept.Contains(TEXT("DA_TestBuilder")));
+	TestTrue(TEXT("and says why"), TieReasons.FindRef(TEXT("DA_TestBuilder")).Contains(TEXT("kept for its long baseline")));
+	TestTrue(TEXT("the mixed set keeps the unit with the baseline"), MakeMixedSet(Tie, Kept).Contains(TEXT("DA_TestBuilder")));
+	Tie[2].ScreenGameMs = 3.0;
+	TestTrue(TEXT("0.57 ms behind, the costlier truck takes over"), SelectRepresentatives(Tie).Contains(TEXT("DA_TestFlakTruck")));
+
 	const FString Mixed = MakeMixedSet(Roster, Representatives);
 	TArray<FString> Members;
 	Mixed.ParseIntoArray(Members, TEXT("+"));

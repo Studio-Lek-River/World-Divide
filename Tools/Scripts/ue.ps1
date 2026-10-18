@@ -754,7 +754,7 @@ function Invoke-Gate {
 	$ChangesFile = Join-Path $GateDir 'changes.txt'
 	[IO.File]::WriteAllLines($ChangesFile, [string[]]@($Changed | Where-Object { $_ } | Select-Object -Unique), (New-Object Text.UTF8Encoding $false))
 
-	$PlanArgs = @('-Plan', "-Gate=$GateDir", "-Changes=$ChangesFile", "-Screens=$(Join-Path $BaselineDir 'screen')")
+	$PlanArgs = @('-Plan', "-Gate=$GateDir", "-Changes=$ChangesFile", "-Screens=$(Join-Path $BaselineDir 'screen')", "-Longs=$(Join-Path $BaselineDir 'long')")
 	if ($Scope -eq 'broad') { $PlanArgs += '-Broad' }
 	if ((Invoke-GateCommandlet $PlanArgs $LogFile) -ne 0) {
 		Select-String -Path $LogFile -Pattern 'RTSBenchGate|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line }

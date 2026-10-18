@@ -6,7 +6,7 @@
 
 /**
  * The full-roster performance gate's planning and judging (#171, ue.ps1 -Task gate; the logic is RTSBenchGate's):
- * -run=RTSBenchGate -Plan -Gate=<dir> -Changes=<file> [-Broad] [-Screens=<dir>] reads the roster (every URTSUnitData under
+ * -run=RTSBenchGate -Plan -Gate=<dir> -Changes=<file> [-Broad] [-Screens=<dir>] [-Longs=<dir>] reads the roster (every URTSUnitData under
  * /Game/Data/Units with its packages and make-up) and the changed files, and writes plan.json: the sets to screen with the
  * screen method (#171: the long scene, 240 moving units, one 15 s sample) and to bench with the long method, and why.
  * -run=RTSBenchGate -Judge -Gate=<dir> -Baselines=<dir> -Stage=screen|final judges the runs ue.ps1 copied to

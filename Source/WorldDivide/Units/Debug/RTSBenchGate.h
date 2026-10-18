@@ -220,7 +220,15 @@ namespace RTSBenchGate
 		TSet<FString> Packages;
 		/** The game thread of its last valid screen, or a negative value without one. */
 		double ScreenGameMs = -1.0;
+		/** Whether it has a valid long baseline at the baseline commit, which keeps it a representative in a near tie. */
+		bool bHasLongBaseline = false;
 	};
+
+	/**
+	 * A unit with a long baseline stays a class's or size's representative while it costs no less than the costliest minus
+	 * ScreenThresholdMs by the screen, or minus this share of its triangles times parts without one.
+	 */
+	constexpr double RepresentativeMarginShare = 0.1;
 
 	/** The units benched with the long method so history stays comparable. */
 	const TArray<FString>& GetPinned();
@@ -230,8 +238,8 @@ namespace RTSBenchGate
 
 	/**
 	 * The representatives benched with the long method, in roster order: for each class its pinned units, its costliest by
-	 * the screen (by LOD0 triangles times parts without one), and the costliest of each
-	 * size bucket. A heuristic cover of the kinds of cost, not a guarantee for any single unit. OutReasons says why each is in.
+	 * the screen (by LOD0 triangles times parts without one), and the costliest of each size bucket; in a near tie, the one
+	 * with a long baseline (RepresentativeMarginShare). A heuristic cover of the kinds of cost, not a guarantee for any single unit. OutReasons says why each is in.
 	 */
 	TArray<FString> SelectRepresentatives(const TArray<FUnitInfo>& Roster, TMap<FString, FString>* OutReasons = nullptr);
 

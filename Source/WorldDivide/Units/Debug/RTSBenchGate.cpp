@@ -729,13 +729,35 @@ namespace RTSBenchGate
 				const FUnitInfo*& InBucket = BySize.FindOrAdd(GetSizeBucket(Unit->FootprintM2), Unit);
 				InBucket = Cost(Unit) > Cost(InBucket) ? Unit : InBucket;
 			}
-			Choose(*Costliest, FString::Printf(TEXT("costliest %s unit %s"), *ClassName, *Measure));
+			// A unit with a long baseline stays the pick while it is within the margin of the costliest, so a near tie in
+			// the screen does not swap a representative for one without a baseline on every run.
+			auto Keep = [&Members, &Cost, bScreened](const FUnitInfo* Pick, TFunctionRef<bool(const FUnitInfo*)> InGroup)
+			{
+				const double Margin = bScreened ? ScreenThresholdMs : Cost(Pick) * RepresentativeMarginShare;
+				const FUnitInfo* Kept = Pick;
+				for (const FUnitInfo* Unit : Members)
+				{
+					if (!Kept->bHasLongBaseline && Unit->bHasLongBaseline && InGroup(Unit) && Cost(Unit) >= Cost(Pick) - Margin)
+					{
+						Kept = Unit;
+					}
+				}
+				return Kept;
+			};
+			auto Describe = [](const FUnitInfo* Kept, const FUnitInfo* Pick, const FString& What)
+			{
+				return Kept == Pick ? What : FString::Printf(TEXT("%s within the margin of %s, kept for its long baseline"), *What, *Pick->Name);
+			};
+			const FUnitInfo* Kept = Keep(Costliest, [](const FUnitInfo*) { return true; });
+			Choose(*Kept, Describe(Kept, Costliest, FString::Printf(TEXT("costliest %s unit %s"), *ClassName, *Measure)));
 			if (BySize.Num() > 1)
 			{
 				static const TCHAR* Sizes[] = { TEXT("under 4 m2"), TEXT("4 to 20 m2"), TEXT("over 20 m2") };
 				for (const TPair<int32, const FUnitInfo*>& Bucket : BySize)
 				{
-					Choose(*Bucket.Value, FString::Printf(TEXT("costliest %s unit %s"), *ClassName, Sizes[Bucket.Key]));
+					const int32 Size = Bucket.Key;
+					const FUnitInfo* InSize = Keep(Bucket.Value, [Size](const FUnitInfo* Unit) { return GetSizeBucket(Unit->FootprintM2) == Size; });
+					Choose(*InSize, Describe(InSize, Bucket.Value, FString::Printf(TEXT("costliest %s unit %s"), *ClassName, Sizes[Size])));
 				}
 			}
 		}
@@ -758,7 +780,9 @@ namespace RTSBenchGate
 			const FUnitInfo* Pick = nullptr;
 			for (const FUnitInfo& Unit : Roster)
 			{
-				if (Unit.Class == Class && Representatives.Contains(Unit.Name) && (!Pick || (GetPinned().Contains(Unit.Name) && !GetPinned().Contains(Pick->Name))))
+				// A pinned unit first, then one with a long baseline, so the mixed set keeps its name and its baseline.
+				auto Rank = [](const FUnitInfo& Candidate) { return GetPinned().Contains(Candidate.Name) ? 2 : Candidate.bHasLongBaseline ? 1 : 0; };
+				if (Unit.Class == Class && Representatives.Contains(Unit.Name) && (!Pick || Rank(Unit) > Rank(*Pick)))
 				{
 					Pick = &Unit;
 				}
