@@ -12,14 +12,20 @@
 /**
  * Where a machine draws from, for ARTSUnit::UpdateRunningGear: a track's phase goes to its material only on a machine that
  * draws, and only within Range of one of its players' cameras (beyond it the material does not move the links; #151). The
- * phase keeps counting either way, so the links come back where they should be.
+ * phase keeps counting either way, so the links come back where they should be. A camera with a direction also sends it only
+ * to tracks within its view's cone, widened by Margin (#212).
  */
 struct FRTSTrackViews
 {
 	bool bDraws = true;
 	TArray<FVector, TInlineAllocator<4>> Locations;
+	/** Each camera's unit forward vector and half the angle across its view's diagonal, in radians; a camera without one sees all round. */
+	TArray<FVector, TInlineAllocator<4>> Directions;
+	TArray<float, TInlineAllocator<4>> HalfAngles;
 	/** cm; zero is no limit. */
 	float Range = 0.f;
+	/** cm the view's cone is widened by round a track's bounds, for its shadow and the camera's next move. */
+	float Margin = 0.f;
 };
 
 class AAIController;
@@ -255,12 +261,15 @@ public:
 	 * each by the travel of its own side (for a tracked vehicle the realized side travel, FRTSRealizedMotion), and places
 	 * the wheels on the hull where it stands now; nothing to do while the unit stands. Runs once a frame after every hull
 	 * move (URTSRunningGearSubsystem); public so tests can step it. Views says where this machine draws from; without it,
-	 * every track's phase goes to its material.
+	 * every track's phase goes to its material. Returns how many tracks' phases went to their materials (#212).
 	 */
-	void UpdateRunningGear(const FRTSTrackViews* Views = nullptr);
+	int32 UpdateRunningGear(const FRTSTrackViews* Views = nullptr);
 
 	/** Every machine. The phase through one link of the track URTSUnitData::Parts[PartIndex] is; false when it is none. */
 	bool GetTrackPhase(int32 PartIndex, float& OutPhase) const;
+
+	/** Every machine. The components of the unit's tracks, animated or rigid (#212). */
+	void GetTrackComponents(TArray<const UStaticMeshComponent*, TInlineAllocator<2>>& OutComponents) const;
 
 	/** Every machine. The roll in radians, [0, 2 pi), of the wheel URTSUnitData::Parts[PartIndex] is; false when it is none. */
 	bool GetWheelAngle(int32 PartIndex, float& OutRadians) const;

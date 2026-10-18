@@ -206,7 +206,7 @@ bool FRTSBenchOcclusionScenesTest::RunTest(const FString& Parameters)
 	TestTrue(FString::Printf(TEXT("most of the grid stands under the roof, not all of it (%d of %d)"), Covered, Hulls.Num()),
 		Covered > Hulls.Num() / 2 && Covered < Hulls.Num());
 
-	const TArray<const TCHAR*> OtherSuffixes = { SolidsSuffix, RigidTracksSuffix, MixedTeamsSuffix, ForceLOD0Suffix, NearSuffix,
+	const TArray<const TCHAR*> OtherSuffixes = { SolidsSuffix, RigidTracksSuffix, AllTracksSuffix, MixedTeamsSuffix, ForceLOD0Suffix, NearSuffix,
 		FarSuffix, ExactOcclusionSuffix, NoOcclusionSuffix, HZBOcclusionSuffix, OccludedSuffix, CloseSuffix };
 	TestEqual(TEXT("L_TestMap has three viewpoints"), GetTestMapViewpoints().Num(), 3);
 	for (const FViewpoint& Viewpoint : GetTestMapViewpoints())

@@ -534,6 +534,19 @@ namespace
 				FMath::Abs(PhaseDelta(Phase, Mark.Phase[0])) > 0.01f && LeftComponent->GetCustomPrimitiveData().Data[0] == Sent);
 			FRTSTrackViews Near = Far;
 			Near.Locations[0] = Unit->GetActorLocation();
+			// The count the bench reads (#212): one primitive data update per track whose phase goes to its material.
+			Test.TestEqual(TEXT("Out of sight no track sends its phase"), Unit->UpdateRunningGear(&Far), 0);
+			Test.TestEqual(TEXT("In sight both tracks send the phase they kept"), Unit->UpdateRunningGear(&Near), 2);
+			Test.TestEqual(TEXT("Standing, a sent phase is not sent again"), Unit->UpdateRunningGear(&Near), 0);
+			// Off screen: a camera looking away keeps the phase from the material until it turns to the tracks (#212).
+			RunGear(*Unit, Ahead, 0.25, [] {}, &Far);
+			FRTSTrackViews Away;
+			Away.Locations.Add(Unit->GetActorLocation() - FVector(5000.f, 0.f, 0.f));
+			Away.Directions.Add(FVector(-1.f, 0.f, 0.f));
+			Away.HalfAngles.Add(0.5f);
+			Test.TestEqual(TEXT("A camera looking away gets no phase"), Unit->UpdateRunningGear(&Away), 0);
+			Away.Directions[0] = FVector(1.f, 0.f, 0.f);
+			Test.TestEqual(TEXT("Turned to the tracks, the camera gets both phases"), Unit->UpdateRunningGear(&Away), 2);
 			RunGear(*Unit, RTSLocomotion::FCommand(), 2.0, [] {}, &Near);
 			Unit->GetTrackPhase(LeftTrack, Phase);
 			Test.TestTrue(TEXT("In sight again, the material has the phase it got to, not a restart"),

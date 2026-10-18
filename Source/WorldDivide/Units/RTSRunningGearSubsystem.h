@@ -45,6 +45,9 @@ public:
 	/** The game thread seconds PlaceAll took since the last call, for the bench. */
 	static double TakeSeconds();
 
+	/** The tracks' phases PlaceAll sent to their materials since the last call, each one primitive data update (#212). */
+	static int64 TakeTrackUpdates();
+
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	virtual void Deinitialize() override;
 

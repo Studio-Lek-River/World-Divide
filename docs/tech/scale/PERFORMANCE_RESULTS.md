@@ -1739,3 +1739,116 @@ measurement moves to its performance pass (#160) with this plan:
   *Used with Instanced Static Meshes* usage. Every `-game` run logs "missing usage flag InstancedStaticMeshes! Default
   Material will be used in game", and the road wheels look plain light grey in `teams_low_sun`. It is the same before and after this change,
   and it predates it → follow-up.
+
+## #212 (animated tracks from a close camera)
+
+Same machine (Ryzen 7 7800X3D, RTX 4090), on 2026-10-18, one build. Every number is from the quick method: the long scene's
+drive back and forth, a 10 s warm-up and one 30 s sample per row. That makes it diagnostic, never gate evidence. Each 240-unit
+pair ran in two sessions in opposite orders; the tables give the mean of the sessions.
+
+### Method
+
+- **Close camera:** the existing `@Close` suffix (#214). It is a 30 m arm at the RTS camera's pitch for that arm (−44.8°) and a
+  60° FOV, at 1920×1080, looking at the middle of the long scene's grid and drive (−45 m, −10 m). Grouped occlusion and the
+  M20's LODs are as shipped.
+- **Variants:** `@RigidTracks` (`rts.Vehicle.TrackAnimation 0`, `MI_M20_Track_Static`) against the animated tracks.
+  The new `@AllTracks` suffix sets `rts.Vehicle.TrackAnimationDistance 0` while a set runs: the renderer never leaves the link shift
+  out, and every moving track sends its phase. It replaces #151's session-wide `-Cvars`, so rigid and animated run in one session.
+- **All-animated stress:** `@LOD0@AllTracks` against `@LOD0@RigidTracks` at the default 170 m camera. Every M20 is on screen there, and
+  `r.ForceLOD 0` keeps every track on its animated LOD0 material (LOD2 and LOD3 use `MI_M20_Track_Static`).
+- **New columns** (bench.csv, and a tracks table in bench.md):
+  - `track_updates`: the phases sent per frame, each one custom-primitive-data update. `UpdateRunningGear` now returns its count.
+  - At the sample's end, `tracks`, `drawn_tracks` (on screen) and `animated_tracks`. A track counts as animated when it is drawn, within
+    its WPO disable distance of the view and at an LOD whose material is not the rigid one. This is RTSUnitLOD's game-thread estimate
+    of the renderer's choice.
+
+### What animates
+
+| Scene | Tracks | Drawn on screen | Animated on screen | Phase updates per frame |
+|---|---:|---:|---:|---:|
+| `@Close`, 240 (60 m cutoff) | 480 | 51–55 | all drawn | 117–133 |
+| `@Close@AllTracks`, 240 | 480 | 52–53 | all drawn | 138–149 |
+| `@LOD0@AllTracks`, 240, 170 m | 480 | 396 | 396 | 159–171 |
+
+84 of the 480 tracks are hidden by occlusion even at 170 m (the skirts and the neighbours in front). At the close camera, 200 M20s
+are at LOD1 and 40 at LOD0. **The phase updates are about a third of the tracks, not all of them**, because the long scene's
+formation drives 30 m and then stands until the next order. The p95 frames are the ones where the whole formation drives.
+No scene sends every track's phase in every frame; the "all-animated" label here means every *drawn* track is animated on the GPU.
+
+### 240 moving M20s (before the frustum gate below; machine idle, all runs valid)
+
+| | Close, 60 m cutoff | Close, `@AllTracks` | 170 m, `@LOD0@AllTracks` |
+|---|---|---|---|
+| Running gear, rigid → animated, mean (p95) | 0.376 (1.27) → 0.503 (1.92) ms | 0.377 (1.29) → 0.511 (1.86) ms | 0.411 (1.30) → 0.549 (1.77) ms |
+| **Difference** | **+0.13 (+0.64)** | **+0.13 (+0.57)** | **+0.14 (+0.47)** |
+| GPU, mean (p95) | 3.56 (4.51) → 3.49 (4.17) | 3.58 (4.64) → 3.58 (4.64) | 4.27 (4.94) → 4.24 (4.75) |
+| Game thread, mean (p95) | 4.49 (9.57) → 4.63 (10.77) | 4.52 (9.71) → 4.66 (10.57) | 4.53 (9.67) → 4.54 (9.61) |
+| Render thread, mean (p95) | 4.21 (5.68) → 4.25 (6.30) | 4.26 (5.82) → 4.37 (6.44) | 4.57 (5.69) → 4.65 (5.64) |
+| Draw calls | 419 → 418 | 422 → 421 | 331 → 329 |
+| Triangles | 23.25 M → 23.24 M | 23.27 M → 23.25 M | 45.9 M → 45.9 M |
+| Locomotion, mean (p95) | 0.45 (1.45) → 0.44 (1.54) | 0.45 (1.46) → 0.45 (1.52) | 0.48 (1.48) → 0.46 (1.35) |
+
+The close-camera 60 m column is three samples each (the 1-to-240 run and both orders); the others are two.
+
+### 1, 30 and 120 moving M20s at the close camera (60 m cutoff, one sample each), rigid → animated
+
+| Units | Running gear ms, mean (p95) | GPU ms, mean (p95) | Game ms, mean (p95) | Draw calls | Phase updates / drawn tracks |
+|---:|---|---|---|---|---|
+| 1 | 0.005 (0.009) → 0.006 (0.012) | 1.94 (2.32) → 2.02 (2.71) | 1.38 (2.22) → 1.37 (2.24) | 115 → 115 | 0.9 / 0 of 2 |
+| 30 | 0.066 (0.155) → 0.075 (0.179) | 2.44 (3.11) → 2.52 (3.27) | 1.80 (2.65) → 1.82 (2.79) | 175 → 177 | 27.8 / 21 of 60 |
+| 120 | 0.221 (0.669) → 0.277 (0.925) | 3.18 (3.90) → 3.16 (3.92) | 2.96 (5.49) → 3.03 (5.82) | 307 → 302 | 86.4 / 53 of 240 |
+
+The single M20 stands outside the 30 m view at the end of its drive, so none of its tracks are drawn at the sample's end.
+
+### Against the budget (240 moving M20s, relative to rigid)
+
+| Budget | Close, 60 m cutoff | All-animated stress (`@LOD0@AllTracks`) |
+|---|---|---|
+| Running gear ≤ +0.2 ms mean | **Met** (+0.13) | **Met** (+0.14) |
+| Running gear ≤ +0.4 ms p95 | **Not met** (+0.64) | **Not met** (+0.47) |
+| GPU ≤ +0.5 ms mean / ≤ +1.0 ms p95 | **Met** (−0.07 / −0.34, noise) | **Met** (−0.03 / −0.19, noise) |
+| No additional draw calls | **Met** | **Met** |
+| Locomotion unchanged | **Met** | **Met** |
+
+The link shift costs no measurable GPU time, close up or with 396 tracks animated on screen. The CPU cost is the phase updates.
+Each costs about 0.8 to 1.1 µs (the mean difference over the mean count), not the 0.25 µs #151 worked out: #151 assumed all 480
+tracks sent their phase in every frame. In UE 5.8, `SetCustomPrimitiveDataInternal` copies the component's whole custom
+data array into a scene update for each call. A frame where the whole formation drives sends about 480 of them, about 0.5 ms,
+and that matches the p95 excess.
+
+### The change: phases only for tracks in a camera's view
+
+On the producer's choice, `IsTrackDrawn` now also skips a track outside every local camera's view cone.
+- **The cone:** `URTSRunningGearSubsystem::PlaceAll` takes each camera's location, direction and half diagonal angle (from its FOV and the
+  viewport's aspect ratio, whichever axis is kept). The cone is widened by the track's bounds plus `TrackSendMargin` (10 m), for the
+  track's shadow at the edge of the view and the camera's next move.
+- **Fresh cameras:** the cameras are updated before `TG_PostUpdateWork`, so the cone is the one this frame draws.
+- **Nothing visible changes:** the phase keeps counting off screen, as it already did beyond the distance, and a track coming into view
+  sends the phase it reached.
+- **Still the same:** no new tick, no replication, no render-state rebuild.
+- **Checked:** `trackshots` before → after differ by a median of 1.18 (0.36 to 3.14, 168 frames), within the spread between two
+  identical runs (#214: 1.45 against 1.50). The material phase matches the gear's in every frame except the deliberate `far`
+  sequence, as before.
+
+At the close camera it cuts the phase updates from about 133 to about 92 per frame at 240 M20s, and from 138–149 to 104–106 with
+`@AllTracks`. The 170 m stress view has every M20 in view, so it gains nothing there (172–180).
+
+**Its effect on the time is not measured.** Another game ran on the machine during the rerun. It pushed the rigid GPU p95
+from 4.3 to 7 to 9 ms and the rigid running gear from 0.38 to 0.44–0.55 ms, and the 1-to-240 rerun failed the validity check
+(#171). In those contaminated runs the running gear difference read +0.14 to +0.16 (+0.50 to +0.51) at the close camera and
++0.22 to +0.26 (+0.85 to +0.99) at 170 m. None of these numbers are used for a verdict.
+
+### Remaining limitations and recommendations
+
+- **The running gear p95 budget is not met at 240 moving M20s,** in the close view or the stress view. The mean is within the budget
+  everywhere, and the GPU and draw calls are well within theirs.
+- **Rerun the four 240-unit pairs on an idle machine** to measure the frustum gate (about 10 minutes, two sessions):
+  `ue.ps1 -Task bench -Quick -Counts 240 -Unit DA_TestM20Guardian@Close@RigidTracks,DA_TestM20Guardian@Close,DA_TestM20Guardian@Close@AllTracks,DA_TestM20Guardian@LOD0@RigidTracks,DA_TestM20Guardian@LOD0@AllTracks`,
+  then once more in reverse order.
+- **To meet the p95 at 240 visible M20s, the update count has to drop, not the cost of the call:**
+  - The material could take a link rate and a start time, and work the phase out itself. The phase would then be sent only when a
+    track's speed changes, or to correct drift against the realized travel.
+  - This changes how the animation is driven, so it needs its own issue and the producer's approval. The other option, sending the
+    phase every other frame for mid-distance tracks, smears their motion vectors.
+- **The quick method's single samples spread by about ±0.2 ms at the running gear's p95.** A verdict that close to the budget needs
+  long-method rows, which were not run here (#171).

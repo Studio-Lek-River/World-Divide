@@ -16,6 +16,7 @@
 #include "DynamicResolutionState.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "HAL/IConsoleManager.h"
@@ -31,6 +32,7 @@
 #include "Player/RTSPlayerController.h"
 #include "ProfilingDebugging/MiscTrace.h"
 #include "RHI.h"
+#include "StaticMeshResources.h"
 #include "RenderTimer.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Dom/JsonObject.h"
@@ -86,6 +88,9 @@
  *
  * A set named with RTSBenchScene::RigidTracksSuffix (DA_TestM20Guardian@RigidTracks; #151) benches its units with tracks that
  * do not move their links (rts.Vehicle.TrackAnimation 0 while it runs), against the animated set without the suffix.
+ * RTSBenchScene::AllTracksSuffix (@AllTracks; #212) animates every track instead, however far from the camera
+ * (rts.Vehicle.TrackAnimationDistance 0 while it runs). Every row counts the tracks' phases sent to their materials per
+ * frame, and at the sample's end the units' tracks, those drawn on screen and those of them the renderer moves the links of.
  *
  * A set named with RTSBenchScene::MixedTeamsSuffix (DA_TestM20Guardian@MixedTeams; #150) spreads its units over
  * RTSBenchScene::MixedTeams teams in turn, with their weapons idled, and orders them straight through RTSCommands::Dispatch,
@@ -154,6 +159,7 @@ namespace RTSBenchCommand
 	/** The settings a set's suffix changes while it runs, restored afterwards; set before its first count spawns. */
 	const TArray<TTuple<const TCHAR*, const TCHAR*, const TCHAR*>> SuffixCVars = {
 		{ RTSBenchScene::RigidTracksSuffix, TEXT("rts.Vehicle.TrackAnimation"), TEXT("0") },
+		{ RTSBenchScene::AllTracksSuffix, TEXT("rts.Vehicle.TrackAnimationDistance"), TEXT("0") },
 		{ RTSBenchScene::ForceLOD0Suffix, TEXT("r.ForceLOD"), TEXT("0") },
 		{ RTSBenchScene::ExactOcclusionSuffix, TEXT("rts.Render.GroupPartOcclusion"), TEXT("0") },
 		{ RTSBenchScene::NoOcclusionSuffix, TEXT("r.AllowOcclusionQueries"), TEXT("0") },
@@ -195,6 +201,15 @@ namespace RTSBenchCommand
 		int32 MixedLODUnits = 0;
 		/** The units' primitive components drawn on screen at the sample's end (#214): hidden ones only when nothing culls them. */
 		int32 DrawnPrimitives = 0;
+		/** The tracks' phases sent to their materials over the sample (#212), each one primitive data update. */
+		int64 TrackUpdates = 0;
+		/**
+		 * At the sample's end (#212): the units' tracks, those drawn on screen, and those of them whose links the renderer
+		 * moves: within their link shift's distance of the view and at an LOD drawn with the animated material.
+		 */
+		int32 Tracks = 0;
+		int32 DrawnTracks = 0;
+		int32 AnimatedTracks = 0;
 		/**
 		 * Each frame's game thread, locomotion, render thread, GPU and running gear time, kept for the percentiles; reserved
 		 * up front so measuring never allocates.
@@ -319,18 +334,20 @@ namespace RTSBenchCommand
 				TEXT("avoidance_ms,max_avoidance_ms,search_ms,locomotion_ms,p95_locomotion_ms,max_locomotion_ms,used_memory_mb,peak_memory_mb,render_width,render_height,")
 				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms,")
 				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames,p95_render_ms,p95_gpu_ms,running_gear_ms,p95_running_gear_ms,")
-				TEXT("primitives,dynamic_materials,distinct_materials,lod0_units,lod1_units,lod2_units,lod3_units,mixed_lod_units,p95_rhi_ms,drawn_primitives");
+				TEXT("primitives,dynamic_materials,distinct_materials,lod0_units,lod1_units,lod2_units,lod3_units,mixed_lod_units,p95_rhi_ms,drawn_primitives,")
+				TEXT("track_updates,tracks,drawn_tracks,animated_tracks");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d"),
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d,%.1f,%d,%d,%d"),
 				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
 				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
 				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y, Mean(Solids.Updates), SolidReuseShare(),
 				Mean(Solids.Checks), Mean(Solids.ComponentQueries), Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0),
 				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames, P95RenderMs, P95GPUMs, Mean(RunningGearMs), P95RunningGearMs,
-				Primitives, DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits, P95RHIMs, DrawnPrimitives);
+				Primitives, DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits, P95RHIMs, DrawnPrimitives,
+				Mean(TrackUpdates), Tracks, DrawnTracks, AnimatedTracks);
 		}
 
 		int32 HullLOD(int32 LOD) const { return HullLODs.IsValidIndex(LOD) ? HullLODs[LOD] : 0; }
@@ -382,6 +399,12 @@ namespace RTSBenchCommand
 			return FString::Printf(TEXT("| %d | %s | %d | %.2f | %.1f%% | %.2f | %.2f | %.4f | %.4f |\n"), Count, *Scenario, Sample,
 				Mean(Solids.Updates), SolidReuseShare() * 100.0, Mean(Solids.Checks), Mean(Solids.ComponentQueries),
 				Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0));
+		}
+
+		FString ToTracksMarkdown() const
+		{
+			return FString::Printf(TEXT("| %d | %s | %d | %.1f | %d | %d | %d |\n"), Count, *Scenario, Sample, Mean(TrackUpdates), Tracks,
+				DrawnTracks, AnimatedTracks);
 		}
 
 		FString ToMaterialsMarkdown() const
@@ -923,6 +946,7 @@ namespace RTSBenchCommand
 			URTSWeaponComponent::TakeSearchSeconds();
 			URTSUnitMovement::TakeLocomotionSeconds();
 			URTSRunningGearSubsystem::TakeSeconds();
+			URTSRunningGearSubsystem::TakeTrackUpdates();
 			FRTSSolidStats::Take();
 			TRACE_BEGIN_REGION(*RegionName());
 			GoTo(Next);
@@ -967,6 +991,7 @@ namespace RTSBenchCommand
 				Avoidance ? Avoidance->GetLastSeparateSeconds() * 1000.0 : 0.0, URTSWeaponComponent::TakeSearchSeconds() * 1000.0,
 				URTSUnitMovement::TakeLocomotionSeconds() * 1000.0, URTSRunningGearSubsystem::TakeSeconds() * 1000.0);
 			Stats.AddSolids(FRTSSolidStats::Take());
+			Stats.TrackUpdates += URTSRunningGearSubsystem::TakeTrackUpdates();
 		}
 
 		/** Takes one frame of the scenario; true once it has all of them, logged and kept. */
@@ -992,6 +1017,7 @@ namespace RTSBenchCommand
 			Current.RenderSize = GetRenderSize();
 			CountMaterials(Current);
 			CountLODs(Current);
+			CountTracks(Current);
 			Results.Add(Current);
 			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.Bench: %s"), *Current.ToCsv());
 			return true;
@@ -1060,6 +1086,62 @@ namespace RTSBenchCommand
 			}
 		}
 
+		/**
+		 * The units' tracks, those drawn on screen, and those of them whose links the renderer moves (#212): within the link
+		 * shift's distance of the view (UStaticMeshComponent::GetWorldPositionOffsetDisableDistance, 0 always; measured to the
+		 * track's bounds) and at an LOD whose first section is drawn with a material other than the track's rigid one. The
+		 * LOD is RTSUnitLOD's, or r.ForceLOD's when an @LOD0 set forces it.
+		 */
+		void CountTracks(FScenarioStats& Stats) const
+		{
+			FVector Origin;
+			FMatrix Projection;
+			const APlayerController* Controller = GetController();
+			if (!Controller || !RTSUnitLOD::GetPlayerView(*Controller, Origin, Projection))
+			{
+				return;
+			}
+			static const IConsoleVariable* ForceLOD = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ForceLOD"));
+			const int32 ForcedLOD = ForceLOD ? ForceLOD->GetInt() : -1;
+			const float DrawnSince = World->GetTimeSeconds() - DrawnSeconds;
+			TArray<const UStaticMeshComponent*, TInlineAllocator<2>> TrackComponents;
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Units)
+			{
+				if (!Unit.IsValid())
+				{
+					continue;
+				}
+				TArray<const UMaterialInterface*, TInlineAllocator<2>> Rigid;
+				for (const FRTSVehiclePart& Part : Unit->GetUnitData()->Parts)
+				{
+					if (Part.TrackPitch > 0.f && Part.RigidMaterial)
+					{
+						Rigid.AddUnique(Part.RigidMaterial);
+					}
+				}
+				Unit->GetTrackComponents(TrackComponents);
+				for (const UStaticMeshComponent* Track : TrackComponents)
+				{
+					++Stats.Tracks;
+					const UStaticMesh* Mesh = Track->GetStaticMesh();
+					if (!Mesh || !Mesh->GetRenderData() || Track->GetLastRenderTimeOnScreen() < DrawnSince)
+					{
+						continue;
+					}
+					++Stats.DrawnTracks;
+					const FBoxSphereBounds& Bounds = Track->Bounds;
+					const int32 LODs = Mesh->GetRenderData()->LODResources.Num();
+					const int32 LOD = FMath::Clamp(ForcedLOD >= 0 ? ForcedLOD
+						: RTSUnitLOD::ChooseLOD(*Mesh, Bounds.SphereRadius, FVector::Dist(Bounds.Origin, Origin), Projection), 0, LODs - 1);
+					const FStaticMeshLODResources& Resources = Mesh->GetRenderData()->LODResources[LOD];
+					const UMaterialInterface* Material = Resources.Sections.IsEmpty() ? nullptr : Track->GetMaterial(Resources.Sections[0].MaterialIndex);
+					const int32 Disable = Track->GetWorldPositionOffsetDisableDistance();
+					const bool bNear = Disable <= 0 || Bounds.GetBox().ComputeSquaredDistanceToPoint(Origin) <= FMath::Square(static_cast<double>(Disable));
+					Stats.AnimatedTracks += Material && !Rigid.Contains(Material) && bNear ? 1 : 0;
+				}
+			}
+		}
+
 		/** The resolution the scene renders at before any upscale. */
 		FIntPoint GetRenderSize() const
 		{
@@ -1109,6 +1191,13 @@ namespace RTSBenchCommand
 			for (const FScenarioStats& Result : Results)
 			{
 				Markdown += Result.ToMaterialsMarkdown();
+			}
+			Markdown += TEXT("\nThe tracks (#212): phases sent per frame, and at each sample's end the tracks, those drawn on screen and those animated there:\n\n")
+				TEXT("| Units | Scenario | Sample | Phase updates per frame | Tracks | Drawn on screen | Animated on screen |\n")
+				TEXT("|---:|---|---:|---:|---:|---:|---:|\n");
+			for (const FScenarioStats& Result : Results)
+			{
+				Markdown += Result.ToTracksMarkdown();
 			}
 			return FFileHelper::SaveStringToFile(Csv, *FPaths::Combine(Dir, TEXT("bench.csv")))
 				&& FFileHelper::SaveStringToFile(Markdown, *FPaths::Combine(Dir, TEXT("bench.md")))
@@ -1218,6 +1307,11 @@ namespace RTSBenchCommand
 			if (bRigidTracks)
 			{
 				Scene->SetStringField(TEXT("tracks"), TEXT("rigid"));
+			}
+			// And an "@AllTracks" set that its tracks animate at any distance (#212).
+			if (UnitName.Contains(RTSBenchScene::AllTracksSuffix))
+			{
+				Scene->SetNumberField(TEXT("track_animation_distance"), 0);
 			}
 			// And a "@MixedTeams" set how many teams its units are spread over.
 			if (bMixedTeams)

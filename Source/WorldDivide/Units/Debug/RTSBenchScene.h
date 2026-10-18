@@ -45,6 +45,12 @@ namespace RTSBenchScene
 	const TCHAR* const RigidTracksSuffix = TEXT("@RigidTracks");
 
 	/**
+	 * The set name's suffix that animates every track (#212): rts.Vehicle.TrackAnimationDistance 0 while it runs, so the
+	 * renderer never leaves the links' shift out and every moving track sends its phase, however far from the camera.
+	 */
+	const TCHAR* const AllTracksSuffix = TEXT("@AllTracks");
+
+	/**
 	 * The set name's suffix that spreads its units over MixedTeams teams in turn (#150), so units of one kind carry
 	 * different team colours. Their weapons are idled, since neighbours of other teams would otherwise fight.
 	 */

@@ -450,6 +450,19 @@ bool ARTSUnit::GetTrackPhase(int32 PartIndex, float& OutPhase) const
 	return true;
 }
 
+void ARTSUnit::GetTrackComponents(TArray<const UStaticMeshComponent*, TInlineAllocator<2>>& OutComponents) const
+{
+	OutComponents.Reset();
+	for (int32 Index = 0; UnitData && Index < PartSlots.Num() && Index < UnitData->Parts.Num(); ++Index)
+	{
+		const FRTSVehiclePart& Part = UnitData->Parts[Index];
+		if (Part.TrackPitch > 0.f && Part.MountedOn == ERTSVehiclePartMount::Hull && PartSlots[Index].Component)
+		{
+			OutComponents.Add(PartSlots[Index].Component);
+		}
+	}
+}
+
 bool ARTSUnit::GetWheelAngle(int32 PartIndex, float& OutRadians) const
 {
 	if (!PartSlots.IsValidIndex(PartIndex) || PartSlots[PartIndex].Wheel == INDEX_NONE)
@@ -480,13 +493,13 @@ bool ARTSUnit::GetPartTransform(int32 PartIndex, FTransform& OutTransform) const
 	return true;
 }
 
-void ARTSUnit::UpdateRunningGear(const FRTSTrackViews* Views)
+int32 ARTSUnit::UpdateRunningGear(const FRTSTrackViews* Views)
 {
 	TRACE_CPUPROFILER_EVENT_SCOPE(ARTSUnit::UpdateRunningGear);
 
 	if (Wheels.IsEmpty() && Tracks.IsEmpty())
 	{
-		return;
+		return 0;
 	}
 	float Driven = 0.f;
 	float TurnedRadians = 0.f;
@@ -526,6 +539,7 @@ void ARTSUnit::UpdateRunningGear(const FRTSTrackViews* Views)
 		return SideTravel ? (Side < 0.f ? SideTravel->X : SideTravel->Y) : Driven - Side * TurnedRadians;
 	};
 
+	int32 Sent = 0;
 	for (FTrack& Track : Tracks)
 	{
 		if (bRolls)
@@ -549,6 +563,7 @@ void ARTSUnit::UpdateRunningGear(const FRTSTrackViews* Views)
 			static_assert(RTSPrimitiveData::TrackPreviousPhase == RTSPrimitiveData::TrackPhase + 1);
 			Track.Component->SetCustomPrimitiveDataVector2(RTSPrimitiveData::TrackPhase, FVector2D(Track.Phase, Track.PreviousPhase));
 			Track.bSent = true;
+			++Sent;
 		}
 	}
 
@@ -557,7 +572,7 @@ void ARTSUnit::UpdateRunningGear(const FRTSTrackViews* Views)
 	const FTransform& Hull = Mesh->GetComponentTransform();
 	if (Wheels.IsEmpty() || (!bRolls && GearHull.IsSet() && GearHull->Equals(Hull)))
 	{
-		return;
+		return Sent;
 	}
 	GearHull = Hull;
 
@@ -581,6 +596,7 @@ void ARTSUnit::UpdateRunningGear(const FRTSTrackViews* Views)
 		Set.Component->UpdateBounds();
 		Set.Component->MarkRenderTransformDirty();
 	}
+	return Sent;
 }
 
 bool ARTSUnit::IsTrackDrawn(const FTrack& Track, const FRTSTrackViews* Views) const
@@ -593,14 +609,33 @@ bool ARTSUnit::IsTrackDrawn(const FTrack& Track, const FRTSTrackViews* Views) co
 	{
 		return false;
 	}
-	if (Views->Range <= 0.f || Views->Locations.IsEmpty())
+	if (Views->Locations.IsEmpty())
 	{
 		return true;
 	}
 	const FVector Location = Track.Component->GetComponentLocation();
-	for (const FVector& View : Views->Locations)
+	const FBoxSphereBounds& Bounds = Track.Component->Bounds;
+	for (int32 Index = 0; Index < Views->Locations.Num(); ++Index)
 	{
-		if (FVector::DistSquared(View, Location) <= FMath::Square(Views->Range))
+		const FVector& View = Views->Locations[Index];
+		if (Views->Range > 0.f && FVector::DistSquared(View, Location) > FMath::Square(Views->Range))
+		{
+			continue;
+		}
+		if (!Views->Directions.IsValidIndex(Index) || !Views->HalfAngles.IsValidIndex(Index))
+		{
+			return true;
+		}
+		// Within the view's cone, widened by the bounds and the margin: a track off screen keeps its phase to itself (#212).
+		const FVector ToTrack = Bounds.Origin - View;
+		const double Distance = ToTrack.Size();
+		const double Radius = Bounds.SphereRadius + Views->Margin;
+		if (Distance <= Radius)
+		{
+			return true;
+		}
+		const double Angle = FMath::Acos(FMath::Clamp(ToTrack.Dot(Views->Directions[Index]) / Distance, -1.0, 1.0));
+		if (Angle <= Views->HalfAngles[Index] + FMath::Asin(Radius / Distance))
 		{
 			return true;
 		}

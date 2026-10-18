@@ -79,12 +79,12 @@ namespace RTSPartOcclusionTests
 	};
 }
 
-using namespace RTSPartOcclusionTests;
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSPartOcclusionTest, "WorldDivide.Units.PartOcclusion", TestFlags)
+// Scoped to the test: RTSTeamColorTests has helpers of the same names, and a unity build can put both files in one unit.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSPartOcclusionTest, "WorldDivide.Units.PartOcclusion", RTSPartOcclusionTests::TestFlags)
 
 bool FRTSPartOcclusionTest::RunTest(const FString& Parameters)
 {
+	using namespace RTSPartOcclusionTests;
 	URTSUnitData* M20 = LoadObject<URTSUnitData>(nullptr, M20DataPath);
 	URTSUnitData* Tank = LoadObject<URTSUnitData>(nullptr, TankDataPath);
 	URTSBuildingData* Factory = LoadObject<URTSBuildingData>(nullptr, FactoryDataPath);

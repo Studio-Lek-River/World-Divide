@@ -67,7 +67,8 @@ sample, the same columns. -Screen (#171) is the gate's first tier: the same with
 sets one after another in one game session, each with its own warm-up,
 samples and folder. A set named with the suffix @Solids (#172; -Unit DA_TestM20Guardian@Solids) benches among solids the
 navmesh leaves out (trunks, boulders, low walls; RTSBenchScene), in its own folder Saved/Bench/<Unit>@Solids; @MixedTeams
-(#150) spreads the units over four teams. Every row also counts the units' primitives, those drawn on screen, dynamic material
+(#150) spreads the units over four teams; @RigidTracks (#151) draws the tracks without the link shift and @AllTracks (#212)
+animates every track at any distance, and every row counts the tracks' phase updates and the tracks animated on screen. Every row also counts the units' primitives, those drawn on screen, dynamic material
 slots and materials. @ExactOcclusion, @NoOcclusion and @HZB (#214) change the occlusion queries, @Occluded roofs most of the
 grid and @Close takes the camera to the RTS close zoom; -Map L_TestMap plays L_TestMap instead, for the sets with its viewpoints
 (@TestMapOpen, @TestMapBase, @TestMapWall; RTSBenchScene). bench.json
