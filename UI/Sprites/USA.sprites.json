@@ -48,6 +48,7 @@
                          "Disabled": "Textures/USA/T_UI_USA_QueueSlot_Disabled.png",
                          "Selected": "Textures/USA/T_UI_USA_QueueSlot_Selected.png" },
                        "size": [128, 128], "margin": [32, 32, 32, 24] },
-    "USA.SelectionEmpty": { "texture": "Textures/USA/T_UI_USA_SelectionPanel_Empty.png", "size": [920, 560] }
+    "USA.SelectionEmpty": { "texture": "Textures/USA/T_UI_USA_SelectionPanel_Empty.png", "size": [920, 560] },
+    "USA.Icon.M20Guardian": { "texture": "Textures/USA/Icons/T_Icon_USA_M20Guardian.png", "size": [256, 256] }
   }
 }

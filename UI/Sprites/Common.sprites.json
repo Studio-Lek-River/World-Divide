@@ -23,7 +23,6 @@
     "Common.Icon.Headquarters": { "texture": "Textures/Common/Icons/T_Icon_Common_Headquarters.png", "size": [256, 256] },
     "Common.Icon.Infantry": { "texture": "Textures/Common/Icons/T_Icon_Common_Infantry.png", "size": [256, 256] },
     "Common.Icon.Jet": { "texture": "Textures/Common/Icons/T_Icon_Common_Jet.png", "size": [256, 256] },
-    "Common.Icon.M20Guardian": { "texture": "Textures/Common/Icons/T_Icon_Common_M20Guardian.png", "size": [256, 256] },
     "Common.Icon.PowerPlant": { "texture": "Textures/Common/Icons/T_Icon_Common_PowerPlant.png", "size": [256, 256] },
     "Common.Icon.RifleTraining": { "texture": "Textures/Common/Icons/T_Icon_Common_RifleTraining.png", "size": [256, 256] },
     "Common.Icon.Superweapon": { "texture": "Textures/Common/Icons/T_Icon_Common_Superweapon.png", "size": [256, 256] },
