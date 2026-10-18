@@ -62,4 +62,11 @@ public:
 	/** The neutral theme, tried after Common; generated from UI/Themes/Neutral.theme.json. */
 	UPROPERTY(Config, EditAnywhere, Category = "HUD")
 	TSoftObjectPtr<URTSUIStyleSet> NeutralUIStyle;
+
+	/**
+	 * How many installed-upgrade icons the selection panel shows before the rest go behind its "+N" overflow. Six fits the
+	 * compact bottom frame; a wider HUD may raise it.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "HUD", meta = (ClampMin = "1"))
+	int32 SelectionUpgradeSlots = 6;
 };

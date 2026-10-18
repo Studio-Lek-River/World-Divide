@@ -356,6 +356,20 @@ namespace RTSListenServerTest
 		return nullptr;
 	}
 
+	/** One of the client's infantry, as the client's world has it, or null. */
+	ARTSUnit* FindClientInfantry(UWorld& ClientWorld)
+	{
+		const URTSUnitData* Infantry = LoadObject<URTSUnitData>(nullptr, InfantryPath);
+		for (TActorIterator<ARTSUnit> It(&ClientWorld); It; ++It)
+		{
+			if (It->GetTeamId() == ClientTeam && It->GetUnitData() == Infantry && !It->IsActorBeingDestroyed())
+			{
+				return *It;
+			}
+		}
+		return nullptr;
+	}
+
 	void CollectUnits(UWorld& World, TArray<TWeakObjectPtr<ARTSUnit>> (&OutUnits)[2], TArray<FVector>& OutHostStarts)
 	{
 		for (TActorIterator<ARTSUnit> It(&World); It; ++It)
@@ -1124,6 +1138,11 @@ namespace RTSListenServerTest
 		Test->TestFalse(TEXT("So the client's menu refuses the grenadier"), ClientController->RequestProduce(Barracks, Grenadier));
 		State->ClientResearchCredits = ClientController->GetCredits();
 		Test->TestTrue(TEXT("The client researches rifle training"), ClientController->RequestProduce(Barracks, RifleTraining));
+		// The client watches one of its infantry in the selection panel while the research runs (#241).
+		ARTSUnit* Infantry = FindClientInfantry(*ClientWorld);
+		Test->TestNotNull(TEXT("The client has infantry for the selection panel"), Infantry);
+		ClientController->SelectUnits({ Infantry });
+		Test->TestTrue(TEXT("No upgrade installed on it yet"), ClientController->GetSelectionInstalledUpgrades().IsEmpty());
 		State->PhaseStart = FPlatformTime::Seconds();
 		return true;
 	}
@@ -1188,6 +1207,11 @@ namespace RTSListenServerTest
 		Test->TestFalse(TEXT("The host's controller does not have the client's upgrade"), HostController->HasUpgrade(*RifleTraining));
 		Test->TestTrue(TEXT("The host's player state lists no upgrades"), ServerHostState && ServerHostState->GetCompletedUpgrades().IsEmpty());
 		Test->TestTrue(TEXT("The client's copy of the host's state lists none"), ClientHostState && ClientHostState->GetCompletedUpgrades().IsEmpty());
+
+		// The replicated upgrade reaches the selected infantry's panel without selecting it again.
+		Test->TestTrue(TEXT("The client's selected infantry shows the upgrade installed"),
+			ClientController->GetSelectionInstalledUpgrades() == TArray<const URTSUpgradeData*>{ RifleTraining });
+		ClientController->SelectUnits({});
 
 		Test->TestFalse(TEXT("The client's menu refuses it once researched"), ClientController->RequestProduce(Barracks, RifleTraining));
 		Test->TestNull(TEXT("The client's grenadier has its prerequisite"), ClientController->GetMissingPrerequisite(*Grenadier));

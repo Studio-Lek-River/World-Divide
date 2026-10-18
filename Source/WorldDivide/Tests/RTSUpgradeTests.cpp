@@ -350,6 +350,32 @@ namespace RTSUpgradeTests
 		TestFalse(TEXT("So the enemy is still refused"), EnemyBarracks->GetProductionComponent()->Enqueue(*Enemy, Grenadier));
 		return true;
 	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSUpgradeInstalledTest, "WorldDivide.Upgrades.Installed", TestFlags)
+
+	bool FRTSUpgradeInstalledTest::RunTest(const FString& Parameters)
+	{
+		URTSUnitData* Tank = MakeUnit(100, 1.f);
+		URTSUnitData* Infantry = MakeUnit(100, 1.f);
+		URTSUpgradeData* Armor = MakeUpgrade(100, 1.f, ERTSUpgradeStat::MaxHealth, 1.5f, { Tank });
+		URTSUpgradeData* Drill = MakeUpgrade(100, 1.f, ERTSUpgradeStat::WeaponDamage, 1.5f, { Infantry });
+		URTSUpgradeData* Both = MakeUpgrade(100, 1.f, ERTSUpgradeStat::MaxHealth, 1.25f, { Tank, Infantry });
+
+		// The same upgrade twice, as a stale list might hold it, still shows once.
+		const TArray<TObjectPtr<URTSUpgradeData>> Completed = { Both, Drill, Armor, Both };
+		const TArray<const URTSUpgradeData*> OnTank = URTSUpgradeData::GetInstalled(Completed, *Tank);
+		TestEqual(TEXT("The tank has the two that target it"), OnTank.Num(), 2);
+		TestTrue(TEXT("in the order they completed, each once"), OnTank == TArray<const URTSUpgradeData*>{ Both, Armor });
+		TestTrue(TEXT("The infantry has its own two"),
+			URTSUpgradeData::GetInstalled(Completed, *Infantry) == TArray<const URTSUpgradeData*>{ Both, Drill });
+		TestEqual(TEXT("Something no upgrade targets has none"), URTSUpgradeData::GetInstalled(Completed, *MakeUnit(1, 1.f)).Num(), 0);
+		// The factor in the culture's own digits.
+		TestEqual(TEXT("The effect names the stat and the factor"), Both->GetEffectText().ToString(),
+			TEXT("Maximum health x") + FText::AsNumber(1.25f).ToString());
+		TestEqual(TEXT("A whole factor has no decimals"),
+			MakeUpgrade(100, 1.f, ERTSUpgradeStat::WeaponDamage, 2.f)->GetEffectText().ToString(), FString(TEXT("Weapon damage x2")));
+		return true;
+	}
 }
 
 #endif

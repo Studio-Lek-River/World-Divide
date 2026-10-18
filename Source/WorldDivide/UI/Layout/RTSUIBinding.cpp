@@ -6,6 +6,7 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
+#include "Core/RTSSettings.h"
 #include "Data/RTSAircraftData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
@@ -181,9 +182,11 @@ namespace
 	const FName SelectionIconKey(TEXT("selection.icon"));
 	const FName SelectionNameKey(TEXT("selection.name"));
 	const FName SelectionDescriptionKey(TEXT("selection.description"));
-	const FName SelectionHealthKey(TEXT("selection.health"));
-	const FName SelectionHealthTextKey(TEXT("selection.healthText"));
-	const FName SelectionHealthColorKey(TEXT("selection.healthColor"));
+	const FName SelectionHeroArtKey(TEXT("selection.heroArt"));
+	const FName SelectionHasHeroArtKey(TEXT("selection.hasHeroArt"));
+	const FName SelectionRoleKey(TEXT("selection.role"));
+	const FName SelectionDetailKey(TEXT("selection.detail"));
+	const FName SelectionHasUpgradesKey(TEXT("selection.hasUpgrades"));
 	const FName SelectionTeamColorKey(TEXT("selection.teamColor"));
 	const FName SelectionConstructingKey(TEXT("selection.isConstructing"));
 	const FName SelectionConstructionProgressKey(TEXT("selection.constructionProgress"));
@@ -193,6 +196,7 @@ namespace
 	const FName SelectionRearmingKey(TEXT("selection.isRearming"));
 	const FName SelectionCanCancelKey(TEXT("selection.canCancelConstruction"));
 	const FName SelectionUpgradesList(TEXT("selection.upgrades"));
+	const FName SelectionUpgradeMoreList(TEXT("selection.upgradeMore"));
 	const FName SelectionGroupsList(TEXT("selection.groups"));
 	const FName SelectionAmmoPipsList(TEXT("selection.ammoPips"));
 	const FName ItemIconKey(TEXT("icon"));
@@ -201,11 +205,18 @@ namespace
 	const FName ItemHealthKey(TEXT("health"));
 	const FName ItemHealthColorKey(TEXT("healthColor"));
 	const FName ItemFullKey(TEXT("full"));
+	const FName ItemLabelKey(TEXT("label"));
+	const FName ItemStatusKey(TEXT("status"));
 	const FName SelectGroupAction(TEXT("SelectGroup"));
 	const FName CancelConstructionAction(TEXT("CancelConstruction"));
 	const TCHAR* const SelectionModeNone = TEXT("None");
 	const TCHAR* const SelectionModeSingle = TEXT("Single");
 	const TCHAR* const SelectionModeMulti = TEXT("Multi");
+	const TCHAR* const SelectionDetailNone = TEXT("None");
+	const TCHAR* const SelectionDetailConstruction = TEXT("Construction");
+	const TCHAR* const SelectionDetailAircraft = TEXT("Aircraft");
+	const TCHAR* const SelectionDetailQueue = TEXT("Queue");
+	const TCHAR* const InstalledStatus = TEXT("Installed");
 	/** Two rows of twelve; a bigger load shows only its number. */
 	constexpr int32 MaxAmmoPips = 24;
 
@@ -226,6 +237,24 @@ namespace
 	FName GetIconSprite(const URTSEntityData* Data)
 	{
 		return Data && !Data->IconSprite.IsNone() ? Data->IconSprite : RTSUI::PlaceholderIcon;
+	}
+
+	/** The selection panel's large picture: the hero art, else the icon, else the placeholder; None without data. */
+	FName GetHeroArtSprite(const URTSEntityData* Data)
+	{
+		return !Data ? NAME_None : !Data->HeroArtSprite.IsNone() ? Data->HeroArtSprite : GetIconSprite(Data);
+	}
+
+	/** RoleText, or else the kind of entity. */
+	FText GetRoleText(const URTSEntityData& Data)
+	{
+		if (!Data.RoleText.IsEmpty())
+		{
+			return Data.RoleText;
+		}
+		return Data.IsA<URTSAircraftData>() ? NSLOCTEXT("RTSSelection", "Aircraft", "Aircraft")
+			: Data.IsA<URTSBuildingData>() ? NSLOCTEXT("RTSSelection", "Building", "Building")
+			: NSLOCTEXT("RTSSelection", "Unit", "Unit");
 	}
 
 	/** The local player's resources, for the resource bar. */
@@ -502,11 +531,12 @@ namespace
 	public:
 		virtual void Declare(FRTSUIDeclarations& Out) const override
 		{
-			Out.Keys.Append({ SelectionModeKey, SelectionIconKey, SelectionNameKey, SelectionDescriptionKey, SelectionHealthKey,
-				SelectionHealthTextKey, SelectionHealthColorKey, SelectionTeamColorKey, SelectionConstructingKey,
-				SelectionConstructionProgressKey, SelectionAircraftKey, SelectionAmmoKey, SelectionAmmoMaxKey, SelectionRearmingKey,
-				SelectionCanCancelKey });
-			Out.Lists.Add(SelectionUpgradesList, { ItemIconKey, ItemNameKey });
+			Out.Keys.Append({ SelectionModeKey, SelectionIconKey, SelectionNameKey, SelectionDescriptionKey, SelectionHeroArtKey,
+				SelectionHasHeroArtKey, SelectionRoleKey, SelectionDetailKey, SelectionHasUpgradesKey, SelectionTeamColorKey,
+				SelectionConstructingKey, SelectionConstructionProgressKey, SelectionAircraftKey, SelectionAmmoKey, SelectionAmmoMaxKey,
+				SelectionRearmingKey, SelectionCanCancelKey });
+			Out.Lists.Add(SelectionUpgradesList, { ItemIconKey, ItemNameKey, CommandDescriptionKey, ItemStatusKey, CommandDisabledTextKey });
+			Out.Lists.Add(SelectionUpgradeMoreList, { ItemLabelKey, ItemNameKey, CommandDescriptionKey, ItemStatusKey, CommandDisabledTextKey });
 			Out.Lists.Add(SelectionGroupsList, { ItemIconKey, ItemNameKey, ItemCountKey, ItemHealthKey, ItemHealthColorKey });
 			Out.Lists.Add(SelectionAmmoPipsList, { ItemFullKey });
 			Out.Actions.Append({ SelectGroupAction, CancelConstructionAction });
@@ -524,9 +554,7 @@ namespace
 			const ARTSUnit* Unit = GetSingleUnit(Controller);
 			const URTSEntityData* Data = Building ? static_cast<const URTSEntityData*>(Building->GetBuildingData())
 				: Unit ? static_cast<const URTSEntityData*>(Unit->GetUnitData()) : nullptr;
-			const URTSHealthComponent* Health = Building ? Building->GetHealthComponent() : Unit ? Unit->GetHealthComponent() : nullptr;
 			const URTSAircraftData* Aircraft = Unit ? Cast<URTSAircraftData>(Unit->GetUnitData()) : nullptr;
-			const float HealthFraction = Health ? Health->GetHealthFraction() : 0.f;
 
 			if (Key == SelectionModeKey)
 			{
@@ -545,17 +573,25 @@ namespace
 			{
 				OutValue = FRTSUIValue::MakeText(Data ? Data->Description.ToString() : FString());
 			}
-			else if (Key == SelectionHealthKey)
+			else if (Key == SelectionHeroArtKey)
 			{
-				OutValue = FRTSUIValue::MakeProgress(HealthFraction);
+				OutValue = FRTSUIValue::MakeSprite(GetHeroArtSprite(Data));
 			}
-			else if (Key == SelectionHealthTextKey)
+			else if (Key == SelectionHasHeroArtKey)
 			{
-				OutValue = FRTSUIValue::MakeText(Health ? FormatHealth(*Health) : FString());
+				OutValue = FRTSUIValue::MakeBool(Data && !Data->HeroArtSprite.IsNone());
 			}
-			else if (Key == SelectionHealthColorKey)
+			else if (Key == SelectionRoleKey)
 			{
-				OutValue = FRTSUIValue::MakeColor(GetHealthColor(HealthFraction));
+				OutValue = FRTSUIValue::MakeText(Data ? GetRoleText(*Data).ToString() : FString());
+			}
+			else if (Key == SelectionDetailKey)
+			{
+				OutValue = FRTSUIValue::MakeText(GetDetail(Controller, Building, Aircraft));
+			}
+			else if (Key == SelectionHasUpgradesKey)
+			{
+				OutValue = FRTSUIValue::MakeBool(Controller && !Controller->GetSelectionInstalledUpgrades().IsEmpty());
 			}
 			else if (Key == SelectionTeamColorKey)
 			{
@@ -612,7 +648,12 @@ namespace
 			}
 			if (List == SelectionUpgradesList)
 			{
-				return GetCompletedUpgrades(*Controller).Num();
+				return FMath::Min(Controller->GetSelectionInstalledUpgrades().Num(), GetUpgradeSlots());
+			}
+			if (List == SelectionUpgradeMoreList)
+			{
+				// One "+N" entry when the installed upgrades do not all fit.
+				return Controller->GetSelectionInstalledUpgrades().Num() > GetUpgradeSlots() ? 1 : 0;
 			}
 			if (List == SelectionAmmoPipsList)
 			{
@@ -633,8 +674,9 @@ namespace
 			}
 			if (Context.List == SelectionUpgradesList)
 			{
-				const TArray<const URTSUpgradeData*> Upgrades = GetCompletedUpgrades(*Controller);
-				const URTSUpgradeData* Upgrade = Upgrades.IsValidIndex(Context.Index) ? Upgrades[Context.Index] : nullptr;
+				const TArray<const URTSUpgradeData*>& Upgrades = Controller->GetSelectionInstalledUpgrades();
+				const URTSUpgradeData* Upgrade = Context.Index < GetUpgradeSlots() && Upgrades.IsValidIndex(Context.Index)
+					? Upgrades[Context.Index] : nullptr;
 				if (Key == ItemIconKey)
 				{
 					OutValue = FRTSUIValue::MakeSprite(Upgrade ? GetIconSprite(Upgrade) : NAME_None);
@@ -642,6 +684,56 @@ namespace
 				else if (Key == ItemNameKey)
 				{
 					OutValue = FRTSUIValue::MakeText(Upgrade ? Upgrade->DisplayName.ToString() : FString());
+				}
+				else if (Key == CommandDescriptionKey)
+				{
+					OutValue = FRTSUIValue::MakeText(Upgrade ? DescribeUpgrade(*Upgrade) : FString());
+				}
+				else if (Key == ItemStatusKey)
+				{
+					OutValue = FRTSUIValue::MakeText(Upgrade ? InstalledStatus : TEXT(""));
+				}
+				else if (Key == CommandDisabledTextKey)
+				{
+					// An installed upgrade cannot be lost or switched off yet; this fills once gameplay can.
+					OutValue = FRTSUIValue::MakeText(FString());
+				}
+				else
+				{
+					return false;
+				}
+				return true;
+			}
+			if (Context.List == SelectionUpgradeMoreList)
+			{
+				const TArray<const URTSUpgradeData*>& Upgrades = Controller->GetSelectionInstalledUpgrades();
+				const int32 Hidden = Context.Index == 0 ? FMath::Max(Upgrades.Num() - GetUpgradeSlots(), 0) : 0;
+				if (Key == ItemLabelKey)
+				{
+					OutValue = FRTSUIValue::MakeText(Hidden > 0 ? FString::Printf(TEXT("+%d"), Hidden) : FString());
+				}
+				else if (Key == ItemNameKey)
+				{
+					OutValue = FRTSUIValue::MakeText(Hidden > 0 ? FString::Printf(TEXT("%d more upgrades"), Hidden) : FString());
+				}
+				else if (Key == CommandDescriptionKey)
+				{
+					// Every upgrade that does not fit, so none is lost behind the overflow.
+					TArray<FString> Lines;
+					for (int32 Index = Upgrades.Num() - Hidden; Index < Upgrades.Num(); ++Index)
+					{
+						Lines.Add(FString::Printf(TEXT("%s: %s"), *Upgrades[Index]->DisplayName.ToString(),
+							*Upgrades[Index]->GetEffectText().ToString()));
+					}
+					OutValue = FRTSUIValue::MakeText(FString::Join(Lines, TEXT("\n")));
+				}
+				else if (Key == ItemStatusKey)
+				{
+					OutValue = FRTSUIValue::MakeText(Hidden > 0 ? InstalledStatus : TEXT(""));
+				}
+				else if (Key == CommandDisabledTextKey)
+				{
+					OutValue = FRTSUIValue::MakeText(FString());
 				}
 				else
 				{
@@ -730,33 +822,36 @@ namespace
 			return Controller->GetSelectedUnits()[0].Get();
 		}
 
-		/** "350 / 500". */
-		static FString FormatHealth(const URTSHealthComponent& Health)
+		/** How many installed upgrades show as icons before the "+N" entry takes the rest. */
+		static int32 GetUpgradeSlots()
 		{
-			return FString::Printf(TEXT("%s / %s"), *FormatNumber(FMath::CeilToInt(Health.GetHealth())),
-				*FormatNumber(FMath::CeilToInt(Health.GetMaxHealth())));
+			return FMath::Max(GetDefault<URTSSettings>()->SelectionUpgradeSlots, 1);
 		}
 
-		/**
-		 * What the selected building researches that the player has completed. Upgrades belong to the player, so this is
-		 * the building type's list, not what this very building researched.
-		 */
-		static TArray<const URTSUpgradeData*> GetCompletedUpgrades(const ARTSPlayerController& Controller)
+		/** The upgrade's description and what it does, one per line. */
+		static FString DescribeUpgrade(const URTSUpgradeData& Upgrade)
 		{
-			TArray<const URTSUpgradeData*> Completed;
-			const ARTSBuilding* Building = Controller.GetSelectedBuilding();
-			const URTSBuildingData* Data = Building ? Building->GetBuildingData() : nullptr;
-			if (Data)
+			const FString Effect = Upgrade.GetEffectText().ToString();
+			return Upgrade.Description.IsEmpty() ? Effect : FString::Printf(TEXT("%s\n%s"), *Upgrade.Description.ToString(), *Effect);
+		}
+
+		/** What takes the lower half of the panel, so the hero art makes room for it. */
+		static const TCHAR* GetDetail(const ARTSPlayerController* Controller, const ARTSBuilding* Building, const URTSAircraftData* Aircraft)
+		{
+			if (Building && !Building->IsConstructed())
 			{
-				for (const URTSUpgradeData* Upgrade : Data->Upgrades)
-				{
-					if (Upgrade && Controller.HasUpgrade(*Upgrade))
-					{
-						Completed.Add(Upgrade);
-					}
-				}
+				return SelectionDetailConstruction;
 			}
-			return Completed;
+			if (Aircraft)
+			{
+				return SelectionDetailAircraft;
+			}
+			// As queue.visible decides for ProductionQueue.layout.json.
+			if (Controller && Controller->GetMatchResult() == ERTSMatchResult::InProgress && Controller->GetProductionBuilding())
+			{
+				return SelectionDetailQueue;
+			}
+			return SelectionDetailNone;
 		}
 
 		static int32 CountLiving(const FRTSSelectionGroup& Group)

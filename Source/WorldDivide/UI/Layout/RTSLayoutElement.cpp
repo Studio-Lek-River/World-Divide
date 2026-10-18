@@ -19,11 +19,11 @@ namespace
 	const TArray<FTypeInfo>& GetTypes()
 	{
 		static const TArray<FTypeInfo> Types = {
-			{ TEXT("Panel"), ERTSLayoutType::Panel, true, { TEXT("sprite") } },
+			{ TEXT("Panel"), ERTSLayoutType::Panel, true, { TEXT("sprite"), TEXT("tooltip") } },
 			{ TEXT("HBox"), ERTSLayoutType::HBox, true, { TEXT("spacing"), TEXT("align") } },
 			{ TEXT("VBox"), ERTSLayoutType::VBox, true, { TEXT("spacing"), TEXT("align") } },
 			{ TEXT("Grid"), ERTSLayoutType::Grid, true, { TEXT("columns"), TEXT("rows"), TEXT("cellSize"), TEXT("spacing") } },
-			{ TEXT("Image"), ERTSLayoutType::Image, false, { TEXT("sprite"), TEXT("tile") } },
+			{ TEXT("Image"), ERTSLayoutType::Image, false, { TEXT("sprite"), TEXT("tile"), TEXT("tooltip") } },
 			{ TEXT("Text"), ERTSLayoutType::Text, false,
 				{ TEXT("text"), TEXT("font"), TEXT("fontSize"), TEXT("align"), TEXT("wrap"), TEXT("maxLines") } },
 			{ TEXT("Button"), ERTSLayoutType::Button, false, { TEXT("sprite"), TEXT("action"), TEXT("tooltip") } },
@@ -509,7 +509,8 @@ bool FRTSLayoutElement::CatchesMouse() const
 	{
 		return HitTest.GetValue();
 	}
-	return Type == ERTSLayoutType::Button || (Type == ERTSLayoutType::Panel && !Sprite.IsNone());
+	// A tooltip needs the hover.
+	return Type == ERTSLayoutType::Button || bTooltip || (Type == ERTSLayoutType::Panel && !Sprite.IsNone());
 }
 
 void FRTSLayoutElement::GetKeys(TArray<FName>& OutKeys) const

@@ -24,246 +24,386 @@
       "children": [
         {
           "type": "Panel",
-          "name": "SelectionPortraitFrame",
-          "sprite": "PanelInset",
-          "position": [
-            4,
-            0
-          ],
-          "size": [
-            96,
-            96
-          ],
+          "name": "FullView",
+          "anchor": "Fill",
           "hitTest": false,
+          "visibleWhen": "selection.detail=None",
           "children": [
             {
-              "type": "Image",
-              "name": "SelectionPortrait",
-              "anchor": "Fill",
-              "sprite": "Icon.Placeholder",
-              "bind": {
-                "sprite": "selection.icon"
-              },
-              "padding": [
-                8,
-                8,
-                8,
-                14
-              ]
-            },
-            {
-              "type": "Image",
-              "name": "ConstructionOverlay",
-              "anchor": "Fill",
-              "sprite": "ConstructionOverlay",
-              "tile": [
-                128,
-                128
-              ],
-              "visibleWhen": "selection.isConstructing"
-            },
-            {
-              "type": "Image",
-              "name": "PortraitFrame",
-              "anchor": "Fill",
-              "sprite": "PortraitFrame"
-            },
-            {
-              "type": "Image",
-              "name": "TeamStripe",
-              "sprite": "HealthFill",
-              "anchor": "BottomStretch",
+              "type": "Panel",
+              "name": "HeroFull",
               "position": [
                 0,
                 0
               ],
               "size": [
-                0,
-                12
+                272,
+                136
               ],
-              "bind": {
-                "color": "selection.teamColor"
-              }
+              "hitTest": false,
+              "children": [
+                {
+                  "type": "Image",
+                  "name": "HeroBackdropFull",
+                  "sprite": "HeroBackdrop",
+                  "anchor": "Fill"
+                },
+                {
+                  "type": "Image",
+                  "name": "HeroArtFull",
+                  "sprite": "Icon.Placeholder",
+                  "anchor": "Fill",
+                  "visibleWhen": "selection.hasHeroArt",
+                  "bind": {
+                    "sprite": "selection.heroArt"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "name": "HeroIconFull",
+                  "sprite": "Icon.Placeholder",
+                  "anchor": "Center",
+                  "size": [
+                    112,
+                    112
+                  ],
+                  "visibleWhen": "!selection.hasHeroArt",
+                  "bind": {
+                    "sprite": "selection.heroArt"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Text",
+              "name": "SelectionName",
+              "text": "{selection.name}",
+              "font": "Title",
+              "fontSize": 18,
+              "position": [
+                274,
+                6
+              ],
+              "size": [
+                170,
+                24
+              ],
+              "wrap": true,
+              "maxLines": 1
+            },
+            {
+              "type": "Text",
+              "name": "SelectionRole",
+              "text": "{selection.role}",
+              "font": "Body",
+              "fontSize": 14,
+              "color": "Accent",
+              "position": [
+                274,
+                32
+              ],
+              "size": [
+                170,
+                20
+              ],
+              "wrap": true,
+              "maxLines": 1
+            },
+            {
+              "type": "Panel",
+              "name": "NameRule",
+              "color": "Accent",
+              "position": [
+                274,
+                58
+              ],
+              "size": [
+                32,
+                2
+              ],
+              "hitTest": false
+            },
+            {
+              "type": "Text",
+              "name": "SelectionDescription",
+              "text": "{selection.description}",
+              "font": "Body",
+              "fontSize": 13,
+              "color": "MutedText",
+              "position": [
+                274,
+                66
+              ],
+              "size": [
+                170,
+                62
+              ],
+              "wrap": true,
+              "maxLines": 3
+            },
+            {
+              "type": "HBox",
+              "name": "UpgradesFull",
+              "position": [
+                8,
+                144
+              ],
+              "size": [
+                436,
+                32
+              ],
+              "spacing": 6,
+              "visibleWhen": "selection.hasUpgrades",
+              "children": [
+                {
+                  "type": "HBox",
+                  "name": "UpgradeSlotsFull",
+                  "spacing": 6,
+                  "repeat": "selection.upgrades",
+                  "template": {
+                    "type": "Panel",
+                    "name": "UpgradeSlotFull",
+                    "sprite": "PanelInset",
+                    "size": [
+                      32,
+                      32
+                    ],
+                    "tooltip": true,
+                    "children": [
+                      {
+                        "type": "Image",
+                        "name": "UpgradeIconFull",
+                        "sprite": "Icon.Placeholder",
+                        "anchor": "Fill",
+                        "padding": [
+                          3,
+                          3,
+                          3,
+                          3
+                        ],
+                        "bind": {
+                          "sprite": "item.icon"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "HBox",
+                  "name": "UpgradeOverflowFull",
+                  "repeat": "selection.upgradeMore",
+                  "template": {
+                    "type": "Panel",
+                    "name": "UpgradeMoreFull",
+                    "sprite": "PanelInset",
+                    "size": [
+                      40,
+                      32
+                    ],
+                    "tooltip": true,
+                    "children": [
+                      {
+                        "type": "Text",
+                        "name": "UpgradeMoreTextFull",
+                        "text": "{item.label}",
+                        "font": "Number",
+                        "fontSize": 14,
+                        "anchor": "Fill",
+                        "align": "Center",
+                        "maxLines": 1
+                      }
+                    ]
+                  }
+                }
+              ]
             }
           ]
         },
         {
-          "type": "Text",
-          "name": "SelectionName",
-          "text": "{selection.name}",
-          "font": "Title",
-          "fontSize": 18,
-          "position": [
-            108,
-            0
-          ],
-          "size": [
-            252,
-            24
-          ],
-          "wrap": true,
-          "maxLines": 1
-        },
-        {
-          "type": "HBox",
-          "name": "FutureStatus",
-          "position": [
-            372,
-            2
-          ],
-          "size": [
-            68,
-            20
-          ],
-          "spacing": 4,
+          "type": "Panel",
+          "name": "CompactView",
+          "anchor": "Fill",
+          "hitTest": false,
+          "visibleWhen": "selection.detail!=None",
           "children": [
             {
-              "type": "Image",
-              "name": "StatusSlot1",
-              "sprite": "StatusSlot",
+              "type": "Panel",
+              "name": "HeroCompact",
+              "position": [
+                0,
+                0
+              ],
               "size": [
-                20,
-                20
+                176,
+                88
+              ],
+              "hitTest": false,
+              "children": [
+                {
+                  "type": "Image",
+                  "name": "HeroBackdropCompact",
+                  "sprite": "HeroBackdrop",
+                  "anchor": "Fill"
+                },
+                {
+                  "type": "Image",
+                  "name": "HeroArtCompact",
+                  "sprite": "Icon.Placeholder",
+                  "anchor": "Fill",
+                  "visibleWhen": "selection.hasHeroArt",
+                  "bind": {
+                    "sprite": "selection.heroArt"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "name": "HeroIconCompact",
+                  "sprite": "Icon.Placeholder",
+                  "anchor": "Center",
+                  "size": [
+                    80,
+                    80
+                  ],
+                  "visibleWhen": "!selection.hasHeroArt",
+                  "bind": {
+                    "sprite": "selection.heroArt"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "name": "ConstructionOverlay",
+                  "anchor": "Fill",
+                  "sprite": "ConstructionOverlay",
+                  "tile": [
+                    128,
+                    128
+                  ],
+                  "visibleWhen": "selection.isConstructing"
+                }
               ]
             },
             {
-              "type": "Image",
-              "name": "StatusSlot2",
-              "sprite": "StatusSlot",
+              "type": "Text",
+              "name": "SelectionNameCompact",
+              "text": "{selection.name}",
+              "font": "Title",
+              "fontSize": 18,
+              "position": [
+                184,
+                2
+              ],
               "size": [
-                20,
-                20
-              ]
+                260,
+                24
+              ],
+              "wrap": true,
+              "maxLines": 1
             },
             {
-              "type": "Image",
-              "name": "StatusSlot3",
-              "sprite": "StatusSlot",
+              "type": "Text",
+              "name": "SelectionRoleCompact",
+              "text": "{selection.role}",
+              "font": "Body",
+              "fontSize": 14,
+              "color": "Accent",
+              "position": [
+                184,
+                28
+              ],
               "size": [
-                20,
+                260,
                 20
+              ],
+              "wrap": true,
+              "maxLines": 1
+            },
+            {
+              "type": "HBox",
+              "name": "UpgradesCompact",
+              "position": [
+                184,
+                56
+              ],
+              "size": [
+                260,
+                26
+              ],
+              "spacing": 4,
+              "visibleWhen": "selection.hasUpgrades",
+              "children": [
+                {
+                  "type": "HBox",
+                  "name": "UpgradeSlotsCompact",
+                  "spacing": 4,
+                  "repeat": "selection.upgrades",
+                  "template": {
+                    "type": "Panel",
+                    "name": "UpgradeSlotCompact",
+                    "sprite": "PanelInset",
+                    "size": [
+                      24,
+                      24
+                    ],
+                    "tooltip": true,
+                    "children": [
+                      {
+                        "type": "Image",
+                        "name": "UpgradeIconCompact",
+                        "sprite": "Icon.Placeholder",
+                        "anchor": "Fill",
+                        "padding": [
+                          3,
+                          3,
+                          3,
+                          3
+                        ],
+                        "bind": {
+                          "sprite": "item.icon"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "HBox",
+                  "name": "UpgradeOverflowCompact",
+                  "repeat": "selection.upgradeMore",
+                  "template": {
+                    "type": "Panel",
+                    "name": "UpgradeMoreCompact",
+                    "sprite": "PanelInset",
+                    "size": [
+                      32,
+                      24
+                    ],
+                    "tooltip": true,
+                    "children": [
+                      {
+                        "type": "Text",
+                        "name": "UpgradeMoreTextCompact",
+                        "text": "{item.label}",
+                        "font": "Number",
+                        "fontSize": 12,
+                        "anchor": "Fill",
+                        "align": "Center",
+                        "maxLines": 1
+                      }
+                    ]
+                  }
+                }
               ]
             }
           ]
-        },
-        {
-          "type": "Text",
-          "name": "SelectionDescription",
-          "text": "{selection.description}",
-          "font": "Body",
-          "fontSize": 14,
-          "color": "MutedText",
-          "position": [
-            108,
-            28
-          ],
-          "size": [
-            332,
-            20
-          ],
-          "wrap": true,
-          "maxLines": 1
-        },
-        {
-          "type": "ProgressBar",
-          "name": "HealthBar",
-          "sprite": "HealthBar",
-          "fillSprite": "HealthFill",
-          "position": [
-            108,
-            56
-          ],
-          "size": [
-            332,
-            10
-          ],
-          "bind": {
-            "progress": "selection.health",
-            "color": "selection.healthColor"
-          }
-        },
-        {
-          "type": "Panel",
-          "name": "HealthTick30",
-          "color": "#FFFFFF80",
-          "position": [
-            208,
-            56
-          ],
-          "size": [
-            1,
-            10
-          ],
-          "hitTest": false
-        },
-        {
-          "type": "Panel",
-          "name": "HealthTick60",
-          "color": "#FFFFFF80",
-          "position": [
-            307,
-            56
-          ],
-          "size": [
-            1,
-            10
-          ],
-          "hitTest": false
-        },
-        {
-          "type": "Text",
-          "name": "HealthText",
-          "text": "{selection.healthText}",
-          "font": "Number",
-          "fontSize": 16,
-          "position": [
-            108,
-            68
-          ],
-          "size": [
-            124,
-            22
-          ],
-          "maxLines": 1
-        },
-        {
-          "type": "HBox",
-          "name": "UpgradeIcons",
-          "position": [
-            236,
-            67
-          ],
-          "size": [
-            204,
-            24
-          ],
-          "spacing": 4,
-          "align": "Center",
-          "repeat": "selection.upgrades",
-          "count": 7,
-          "template": {
-            "type": "Image",
-            "name": "UpgradeIcon",
-            "sprite": "Icon.Placeholder",
-            "size": [
-              24,
-              24
-            ],
-            "visibleWhen": "!item.empty",
-            "bind": {
-              "sprite": "item.icon"
-            }
-          }
         },
         {
           "type": "Panel",
           "name": "ConstructionStatus",
           "position": [
-            108,
+            4,
             96
           ],
           "size": [
-            332,
+            436,
             76
           ],
           "hitTest": false,
@@ -280,7 +420,7 @@
                 0
               ],
               "size": [
-                332,
+                436,
                 20
               ],
               "maxLines": 1
@@ -296,7 +436,7 @@
                 22
               ],
               "size": [
-                332,
+                436,
                 10
               ],
               "bind": {
@@ -338,11 +478,11 @@
           "type": "Panel",
           "name": "AircraftStatus",
           "position": [
-            108,
+            4,
             96
           ],
           "size": [
-            332,
+            436,
             78
           ],
           "hitTest": false,
@@ -433,11 +573,11 @@
           "layout": "ProductionQueue",
           "position": [
             4,
-            100
+            96
           ],
           "size": [
             436,
-            80
+            84
           ],
           "hitTest": false
         }

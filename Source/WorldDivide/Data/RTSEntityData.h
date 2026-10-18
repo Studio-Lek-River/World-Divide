@@ -33,6 +33,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FName IconSprite;
 
+	/**
+	 * The large cut-out illustration of the selection panel, without the set prefix (for example Art.M20Guardian); it resolves
+	 * like IconSprite. None shows IconSprite large instead.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+	FName HeroArtSprite;
+
+	/** Type or role under the name in the selection panel (for example "Main battle tank"); empty shows the entity's kind. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+	FText RoleText;
+
 	/** The key that orders this from its command panel; none gives it its position key 1-9 there. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FKey Hotkey;

@@ -112,10 +112,10 @@ A layout file holds one root element. Elements nest through `children`.
 
 | Type | What it is | Extra properties |
 |---|---|---|
-| `Panel` | a container with an optional background sprite; without a sprite, `color` fills it flat (such as a dimmed backdrop); children are placed freely by anchor and position | `sprite` |
+| `Panel` | a container with an optional background sprite; without a sprite, `color` fills it flat (such as a dimmed backdrop); children are placed freely by anchor and position | `sprite`, `tooltip` (true in a repeat's template: hovering shows the item's name, description, status and disabled reason) |
 | `HBox` / `VBox` | a row / column; children are placed one after another; a child stretched along the row or column (`Fill`, or `TopStretch`/`BottomStretch` in an `HBox`, `LeftStretch`/`RightStretch` in a `VBox`) takes the room the others leave | `spacing`, `align` across the row or column (`Start`, `Center`, `End`, `Fill`; default `Center`) |
 | `Grid` | fixed cells: a hidden cell keeps its place | `columns`, `rows`, `cellSize` [w,h], `spacing` |
-| `Image` | a sprite, stretched to the element, or repeated with `tile` | `sprite`, `color` (tint, for `tint` sprites), `tile` ([w,h] in HUD units: the sprite repeats at that size instead of stretching, so a pattern such as a hazard hatch keeps its scale whatever the element's size; art painted at 2x tiles at half its texture size; not for sprite sheets) |
+| `Image` | a sprite, stretched to the element, or repeated with `tile` | `sprite`, `color` (tint, for `tint` sprites), `tile` ([w,h] in HUD units: the sprite repeats at that size instead of stretching, so a pattern such as a hazard hatch keeps its scale whatever the element's size; art painted at 2x tiles at half its texture size; not for sprite sheets), `tooltip` (as for `Panel`) |
 | `Text` | a label | `text`, `font` (`Title`, `Body`, `Number`), `fontSize` (pixels of the em in HUD units), `align` (`Left`, `Center`, `Right`), `wrap` (true/false), `maxLines` (cuts the text after that many lines, with an ellipsis). The text sits vertically centred in the height its box gives it; give a one-line box at least 1.3 times the font size. |
 | `Button` | clickable; draws the state of its sprite (Normal, Hover, Pressed, Disabled, Selected) and can hold children (icon, hotkey plate, cost) | `sprite`, `action`, `tooltip` (true: hovering fills the tooltip with this item) |
 | `ProgressBar` | a 0–1 fill | `sprite` (background), `fillSprite`, `fillColor`, `bind.progress` |
@@ -229,6 +229,8 @@ Layouts refer to sprites **without** the set prefix: `"sprite": "Button"`. The e
 - a faction may override a `Common` piece by giving its own entry under the same name.
 
 Unit, building and upgrade icons are `Icon.<Entity>` (for example `USA.Icon.Tank`). They resolve by the faction of **the entity**, not of the player: `<Faction>.Icon.<Entity>`, then `Common.Icon.<Entity>`, then `Common.Icon.Placeholder`, then the grey placeholder. Until an entity has painted art, setup draws a placeholder for it (`UI/Textures/Common/Icons/T_Icon_Common_<Entity>.png`, 256x256, with a hatched corner mark) and its `Common.Icon.<Entity>` entry; do not edit those entries by hand. Deliver the painted `<Faction>.Icon.<Entity>` and the placeholder goes away on the next setup. To make one from a source picture, `python Tools/Scripts/unit_icon.py <picture> <Faction> <Entity> [--crop x,y,size]` cuts a square, scales it to 256x256, saves it as the entity icon and adds its entry to the faction's sprite file.
+
+The selection panel's hero art is `Art.<Entity>` in the entity's `HeroArtSprite` (`USA.Art.M20Guardian`): a 512x256 cut-out, transparent around the subject, its left and bottom edges faded out, no text (docs/ui/specs/Selection.md section 3). Without one the panel shows the entity's icon large. `unit_icon.py <cut-out> <Faction> <Entity> --art` makes it from a transparent render.
 
 ---
 

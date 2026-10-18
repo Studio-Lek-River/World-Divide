@@ -950,14 +950,14 @@ void URTSLayoutWidget::UpdateElement(FBoundElement& Entry)
 		}
 	}
 
-	// Until the rich tooltip (#69): a template's element with "tooltip" shows its item's name, description and why it is
-	// disabled, as far as its list has them.
+	// Until the rich tooltip (#69): a template's element with "tooltip" shows its item's name, description, status and why
+	// it is disabled, as far as its list has them.
 	if (Element.bTooltip && !Entry.Context.List.IsNone())
 	{
 		FString Tooltip;
 		const IRTSUIBindingSource* Source = ListSources.FindRef(Entry.Context.List);
 		const bool bItem = Source && Entry.Context.Index < GetListCount(Entry.Context.List, Entry.Context);
-		for (const TCHAR* Key : { TEXT("name"), TEXT("description"), TEXT("disabledText") })
+		for (const TCHAR* Key : { TEXT("name"), TEXT("description"), TEXT("status"), TEXT("disabledText") })
 		{
 			FRTSUIValue Value;
 			if (bItem && Source->GetListValue(Key, Entry.Context, Value) && !Value.ToString().IsEmpty())

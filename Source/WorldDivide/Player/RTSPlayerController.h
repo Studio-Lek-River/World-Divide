@@ -111,6 +111,16 @@ public:
 	/** Narrows the selection to the units of GetSelectionGroups()[Index]; false, changing nothing, when there is no such group. */
 	bool SelectGroup(int32 Index);
 
+	/** The data of the one selected building or unit; null when nothing or several units are selected. */
+	const URTSEntityData* GetSingleSelectionData() const;
+
+	/**
+	 * The upgrades installed on the one selected building or unit (URTSUpgradeData::GetInstalled of the player's completed
+	 * upgrades); empty when nothing or several units are selected. Worked out again only when the selected data or the
+	 * completed upgrades change, not per call.
+	 */
+	const TArray<const URTSUpgradeData*>& GetSelectionInstalledUpgrades() const;
+
 	/** Building is one of the player's own construction sites. The server checks again before it cancels. */
 	bool CanCancelConstruction(const ARTSBuilding* Building) const;
 
@@ -472,6 +482,12 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<FRTSSelectionGroup> SelectionGroups;
+
+	/** GetSelectionInstalledUpgrades and what it was worked out from. Upgrades are only ever added, so a count tells a change. */
+	mutable TArray<const URTSUpgradeData*> InstalledUpgrades;
+	mutable FObjectKey InstalledForData;
+	mutable FObjectKey InstalledForState;
+	mutable int32 InstalledFromCount = INDEX_NONE;
 
 	/** The selection as OnSelectionChanged last announced it. Keys, since two stale weak pointers compare equal. */
 	TArray<FObjectKey> AnnouncedUnits;

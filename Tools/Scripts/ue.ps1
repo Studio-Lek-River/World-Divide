@@ -49,7 +49,8 @@ editor's own output goes to Saved/Logs/AutomationRun*.log.stdout; the run prints
 Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
 Editor opens the editor with the Unreal MCP server at http://127.0.0.1:8000/mcp (docs/ui/AI_TEAM.md); test and setup run without it.
 Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in the UI test state for each faction look at
-1920x1080, 2560x1440 and 3440x1440 to Saved/UIShots/HUD, or with -Panel to Saved/UIShots/<Panel> with a crop of that panel.
+1920x1080, 2560x1440, 3440x1440 and 1680x1050 to Saved/UIShots/HUD, or with -Panel to Saved/UIShots/<Panel> with a crop of that panel;
+-Panel <Panel>@<Scene> first selects a scene of RTSUITestState::ApplyScene (Selection@Hero3, Selection@Building, ...).
 Unitshots plays L_TestMap with a renderer (a GPU is needed) at 1920x1080 and saves views of the first unit with the data
 asset -Unit (rts.Debug.UnitShots): the RTS camera at its default, closest and farthest zoom, a close-up, the turret turned,
 the unit picked, selected and driving on a move order, driving into, along and round obstacles with its shapes drawn (the hull's
@@ -442,7 +443,7 @@ function Invoke-UIShots {
 	# One shot per faction look and resolution, and with a panel a crop of each.
 	$Themes = @(Get-ChildItem (Join-Path $RepoRoot 'UI\Themes') -Filter '*.theme.json' |
 		ForEach-Object { $_.Name -replace '\.theme\.json$', '' } | Where-Object { $_ -ne 'Neutral' })
-	$Resolutions = @(@(1920, 1080), @(2560, 1440), @(3440, 1440))
+	$Resolutions = @(@(1920, 1080), @(2560, 1440), @(3440, 1440), @(1680, 1050))
 	Add-Type -AssemblyName System.Drawing
 	$Problems = @()
 	foreach ($Theme in $Themes) {

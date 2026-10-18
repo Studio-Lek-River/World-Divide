@@ -11,12 +11,14 @@
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Data/RTSHarvesterData.h"
+#include "Data/RTSUpgradeData.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSPlayerController.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
+#include "UObject/UObjectIterator.h"
 
 const FVector RTSUITestState::Center(0.f, 21000.f, 0.f);
 const FName RTSUITestState::SpawnedTag(TEXT("RTSUITestState"));
@@ -232,6 +234,147 @@ bool RTSUITestState::Apply(ARTSPlayerController& Controller, FString& OutError)
 	{
 		Camera->JumpTo(Center);
 	}
+	return true;
+}
+
+namespace
+{
+	/** Where ApplyScene puts the one unit it selects: in front of Apply's row, in the camera's view. */
+	const FVector SceneUnitSpot(0.f, -2200.f, 0.f);
+
+	/** Sprites every faction resolves (Common), so the fixture upgrades look apart. */
+	const TCHAR* FixtureIcons[] = {
+		TEXT("Icon.RifleTraining"), TEXT("Icon.Tank"), TEXT("Icon.Power"), TEXT("Icon.RankStar"), TEXT("Icon.Overlays"),
+		TEXT("Icon.Objectives"), TEXT("Icon.GeneralPowers"), TEXT("Icon.Credits"), TEXT("Icon.Lock"),
+	};
+
+	/** Completes Count new upgrades for Player that target Data, made at run time. */
+	void InstallFixtureUpgrades(ARTSPlayerState& Player, URTSEntityData& Data, int32 Count)
+	{
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			URTSUpgradeData* Upgrade = NewObject<URTSUpgradeData>(GetTransientPackage());
+			Upgrade->DisplayName = FText::FromString(FString::Printf(TEXT("Fixture Upgrade %d"), Index + 1));
+			Upgrade->Description = FText::FromString(TEXT("A screenshot fixture: an installed upgrade."));
+			Upgrade->IconSprite = FixtureIcons[Index % UE_ARRAY_COUNT(FixtureIcons)];
+			Upgrade->Stat = Index % 2 ? ERTSUpgradeStat::MaxHealth : ERTSUpgradeStat::WeaponDamage;
+			Upgrade->Multiplier = 1.f + 0.05f * (Index + 1);
+			Upgrade->Targets.Add(&Data);
+			Player.CompleteUpgrade(*Upgrade);
+		}
+	}
+
+	URTSUnitData* FindHeroUnitData()
+	{
+		for (TObjectIterator<URTSUnitData> It; It; ++It)
+		{
+			if (!It->HeroArtSprite.IsNone() && !It->HasAnyFlags(RF_ClassDefaultObject | RF_Transient))
+			{
+				return *It;
+			}
+		}
+		return nullptr;
+	}
+
+	URTSAircraftData* FindAircraftData(const URTSFactionData& Faction)
+	{
+		for (const URTSBuildingData* Building : Faction.Buildings)
+		{
+			if (!Building)
+			{
+				continue;
+			}
+			for (URTSUnitData* Unit : Building->Units)
+			{
+				if (URTSAircraftData* Aircraft = Cast<URTSAircraftData>(Unit))
+				{
+					return Aircraft;
+				}
+			}
+		}
+		return nullptr;
+	}
+}
+
+bool RTSUITestState::ApplyScene(ARTSPlayerController& Controller, const FString& Scene, FString& OutError)
+{
+	UWorld* World = Controller.GetWorld();
+	ARTSPlayerState* Player = Controller.GetPlayerState<ARTSPlayerState>();
+	const URTSFactionData* Faction = Player ? Player->GetFaction() : nullptr;
+	if (!World || !Faction)
+	{
+		OutError = TEXT("The UI test state needs the host's or a standalone game's player");
+		return false;
+	}
+	const FStateData Data = FindStateData(*Faction);
+
+	if (Scene.Equals(TEXT("Building"), ESearchCase::IgnoreCase))
+	{
+		ARTSBuilding* Barracks = FindQueueBuilding(*World);
+		if (!Barracks || !Controller.SelectBuilding(Barracks))
+		{
+			OutError = TEXT("Scene Building needs Apply's barracks");
+			return false;
+		}
+		InstallFixtureUpgrades(*Player, *Barracks->GetBuildingData(), 2);
+		return true;
+	}
+
+	URTSUnitData* UnitData = nullptr;
+	int32 Upgrades = 0;
+	if (Scene.StartsWith(TEXT("Hero"), ESearchCase::IgnoreCase) && Scene.Len() > 4 && Scene.Mid(4).IsNumeric())
+	{
+		UnitData = FindHeroUnitData();
+		Upgrades = FCString::Atoi(*Scene.Mid(4));
+	}
+	else if (Scene.Equals(TEXT("LongLabel"), ESearchCase::IgnoreCase))
+	{
+		// A copy, so the long texts never reach the shared data.
+		const URTSUnitData* Hero = FindHeroUnitData();
+		UnitData = Hero ? DuplicateObject<URTSUnitData>(Hero, GetTransientPackage()) : nullptr;
+		if (UnitData)
+		{
+			UnitData->DisplayName = FText::FromString(TEXT("Schwerer Kampfpanzer M20 Guardian Ausführung A2"));
+			UnitData->RoleText = FText::FromString(TEXT("Hauptkampfpanzer der Panzergrenadierbrigade"));
+			UnitData->Description = FText::FromString(
+				TEXT("A deliberately long localised description that has to end in an ellipsis instead of pushing the upgrades away."));
+		}
+		Upgrades = 6;
+	}
+	else if (Scene.Equals(TEXT("Infantry"), ESearchCase::IgnoreCase))
+	{
+		UnitData = Data.Units.IsEmpty() ? nullptr : Data.Units[0];
+		Upgrades = 2;
+	}
+	else if (Scene.Equals(TEXT("Vehicle"), ESearchCase::IgnoreCase))
+	{
+		UnitData = Data.Units.Num() < 2 ? nullptr : Data.Units.Last();
+		Upgrades = 3;
+	}
+	else if (Scene.Equals(TEXT("Aircraft"), ESearchCase::IgnoreCase))
+	{
+		UnitData = FindAircraftData(*Faction);
+		Upgrades = 1;
+	}
+	else
+	{
+		OutError = FString::Printf(TEXT("Unknown scene %s: Hero<N>, LongLabel, Infantry, Vehicle, Aircraft or Building"), *Scene);
+		return false;
+	}
+	if (!UnitData)
+	{
+		OutError = FString::Printf(TEXT("Scene %s finds no unit for it in faction %s or the loaded data"), *Scene, *Faction->GetName());
+		return false;
+	}
+
+	ARTSUnit* Unit = SpawnUnit(*World, *UnitData, Player->GetTeamId(), OnGround(*World, SceneUnitSpot));
+	if (!Unit)
+	{
+		OutError = FString::Printf(TEXT("Scene %s could not spawn %s"), *Scene, *UnitData->GetName());
+		return false;
+	}
+	InstallFixtureUpgrades(*Player, *UnitData, Upgrades);
+	Controller.SelectUnits({ Unit });
 	return true;
 }
 

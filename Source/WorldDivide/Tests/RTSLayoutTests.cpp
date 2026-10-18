@@ -8,6 +8,7 @@
 #include "Components/Image.h"
 #include "Components/PanelWidget.h"
 #include "Components/ProgressBar.h"
+#include "Components/SizeBox.h"
 #include "Dom/JsonObject.h"
 #include "Editor.h"
 #include "HAL/FileManager.h"
@@ -289,6 +290,55 @@ bool FRTSLayoutGeometryTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("A cell with an item shows"), IsShown(Cells[13]));
 		TestFalse(TEXT("The cell past the items is item.empty, and hidden"), IsShown(Cells[14]));
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSLayoutTooltipTest, "WorldDivide.UI.Layout.Tooltip", TestFlags)
+
+bool FRTSLayoutTooltipTest::RunTest(const FString& Parameters)
+{
+	// Panels and images take a tooltip too, and a repeat without count makes one copy per item.
+	const TCHAR* TooltipLayout = TEXT(R"({
+		"name": "Root", "type": "Panel", "anchor": "Fill",
+		"children": [
+			{ "name": "Row", "type": "HBox", "anchor": "TopLeft", "position": [100, 100], "spacing": 4, "repeat": "test.items",
+				"template": { "name": "Slot", "type": "Panel", "size": [24, 24], "tooltip": true,
+					"children": [ { "name": "SlotIcon", "type": "Image", "anchor": "Fill", "tooltip": true } ] } }
+		]
+	})");
+	FTestBindings Bindings;
+	Bindings.Items = { TEXT("Armor"), TEXT("Optics") };
+	URTSLayoutWidget* Layout = BuildLayout(*this, TooltipLayout, TEXT("Tooltip.layout.json"), Bindings);
+	if (!Layout)
+	{
+		return false;
+	}
+	const TSharedRef<SWidget> Slate = Layout->TakeWidget();
+	Layout->UpdateBindings();
+	// A sized copy in a box sits in a size box; the tooltip is on the panel inside.
+	auto Inner = [](UWidget* Copy) {
+		const USizeBox* Box = Cast<USizeBox>(Copy);
+		return Box ? Box->GetContent() : Copy;
+	};
+	TArray<UWidget*> Slots = Layout->GetRepeatItems(TEXT("Row"));
+	if (!TestEqual(TEXT("One copy per item"), Slots.Num(), 2))
+	{
+		return false;
+	}
+	TestEqual(TEXT("A panel's tooltip is its item's name"), Inner(Slots[1])->GetToolTipText().ToString(), FString(TEXT("Optics")));
+	TestEqual(TEXT("A panel with a tooltip takes the hover"), Inner(Slots[1])->GetVisibility(), ESlateVisibility::Visible);
+
+	// Fewer items: fewer copies, and no stale tooltip on what is left.
+	Bindings.Items = { TEXT("Smoke") };
+	Layout->UpdateBindings();
+	Slots = Layout->GetRepeatItems(TEXT("Row"));
+	if (TestEqual(TEXT("One item, one copy"), Slots.Num(), 1))
+	{
+		TestEqual(TEXT("showing the new item"), Inner(Slots[0])->GetToolTipText().ToString(), FString(TEXT("Smoke")));
+	}
+	Bindings.Items.Reset();
+	Layout->UpdateBindings();
+	TestEqual(TEXT("No items, no empty copies"), Layout->GetRepeatItems(TEXT("Row")).Num(), 0);
 	return true;
 }
 

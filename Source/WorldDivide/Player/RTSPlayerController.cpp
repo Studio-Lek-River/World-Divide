@@ -326,6 +326,31 @@ bool ARTSPlayerController::SelectGroup(int32 Index)
 	return true;
 }
 
+const URTSEntityData* ARTSPlayerController::GetSingleSelectionData() const
+{
+	if (const ARTSBuilding* Building = SelectedBuilding.Get())
+	{
+		return Building->GetBuildingData();
+	}
+	const ARTSUnit* Unit = SelectedUnits.Num() == 1 ? SelectedUnits[0].Get() : nullptr;
+	return Unit ? Unit->GetUnitData() : nullptr;
+}
+
+const TArray<const URTSUpgradeData*>& ARTSPlayerController::GetSelectionInstalledUpgrades() const
+{
+	const URTSEntityData* Data = GetSingleSelectionData();
+	const ARTSPlayerState* State = GetPlayerState<ARTSPlayerState>();
+	const int32 Count = State ? State->GetCompletedUpgrades().Num() : INDEX_NONE;
+	if (FObjectKey(Data) != InstalledForData || FObjectKey(State) != InstalledForState || Count != InstalledFromCount)
+	{
+		InstalledForData = FObjectKey(Data);
+		InstalledForState = FObjectKey(State);
+		InstalledFromCount = Count;
+		InstalledUpgrades = Data && State ? URTSUpgradeData::GetInstalled(State->GetCompletedUpgrades(), *Data) : TArray<const URTSUpgradeData*>();
+	}
+	return InstalledUpgrades;
+}
+
 void ARTSPlayerController::UpdateSelection()
 {
 	TArray<FObjectKey> Units;

@@ -31,6 +31,18 @@ namespace RTSUITestState
 	 */
 	bool Apply(ARTSPlayerController& Controller, FString& OutError);
 
+	/**
+	 * Server only, after Apply. Selects one thing in place of Apply's group for the selection panel's screenshots (#241),
+	 * with fixture upgrades made at run time that target it, so no content holds them:
+	 * - Hero<N>: a unit whose data has hero art (the M20 Guardian on L_TestMap) with N installed upgrades, 0 or more;
+	 * - LongLabel: the same with a long name, role and description, and six upgrades;
+	 * - Infantry, Vehicle: a unit of the faction without hero art (its icon shows large), with two and three upgrades;
+	 * - Aircraft: an aircraft of the faction, with one upgrade;
+	 * - Building: Apply's barracks with its queue, with two upgrades.
+	 * False, with OutError, for an unknown scene or one the faction or map cannot fill.
+	 */
+	bool ApplyScene(ARTSPlayerController& Controller, const FString& Scene, FString& OutError);
+
 	/** The barracks Apply queued the units at, or null before Apply. */
 	ARTSBuilding* FindQueueBuilding(const UWorld& World);
 }

@@ -35,6 +35,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrade", meta = (ClampMin = "0"))
 	float Multiplier = 1.f;
 
+	/** Whether Data is one of the Targets. */
+	bool AppliesTo(const URTSEntityData& Data) const { return Targets.Contains(&Data); }
+
+	/** What the upgrade does, for its tooltip: for example "Weapon damage x1.25". */
+	FText GetEffectText() const;
+
+	/**
+	 * Those of Upgrades that apply to Data, each once, in the order of Upgrades: the upgrades installed on a unit or building of
+	 * a player whose completed upgrades are Upgrades.
+	 */
+	static TArray<const URTSUpgradeData*> GetInstalled(const TArray<TObjectPtr<URTSUpgradeData>>& Upgrades, const URTSEntityData& Data);
+
 	/** The product of the Multipliers of those Upgrades that change Stat and list Data; 1 when none does. */
 	static float GetMultiplier(const TArray<TObjectPtr<URTSUpgradeData>>& Upgrades, const URTSEntityData& Data, ERTSUpgradeStat Stat);
 };

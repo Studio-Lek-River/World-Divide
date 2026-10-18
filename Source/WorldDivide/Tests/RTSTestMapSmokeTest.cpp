@@ -3673,7 +3673,7 @@ bool FRTSCheckSelectionPanel::Update()
 	const URTSHUDWidget* Widget = HUD ? HUD->GetHUDWidget() : nullptr;
 	const URTSLayoutWidget* Layout = Widget ? Widget->GetLayout() : nullptr;
 	Test->TestNotNull(TEXT("The HUD builds the selection panel from Selection.layout.json"),
-		Layout ? Layout->FindElement(TEXT("SelectionPortrait")) : nullptr);
+		Layout ? Layout->FindElement(TEXT("HeroArtFull")) : nullptr);
 
 	Controller->SelectUnits({});
 	State->Changes = 0;
@@ -3684,8 +3684,11 @@ bool FRTSCheckSelectionPanel::Update()
 	Test->TestEqual(TEXT("One unit: mode Single"), GetSelectionValue(*Controller, TEXT("selection.mode")).String, FString(TEXT("Single")));
 	Test->TestEqual(TEXT("with its name"), GetSelectionValue(*Controller, TEXT("selection.name")).String, Tank->GetUnitData()->DisplayName.ToString());
 	Test->TestEqual(TEXT("its icon"), GetSelectionValue(*Controller, TEXT("selection.icon")).String, Tank->GetUnitData()->IconSprite.ToString());
-	Test->TestEqual(TEXT("and full health"), GetSelectionValue(*Controller, TEXT("selection.health")).Number, 1.0);
-	Test->TestEqual(TEXT("shown as Positive"), GetSelectionValue(*Controller, TEXT("selection.healthColor")).String, FString(TEXT("Positive")));
+	Test->TestFalse(TEXT("The test tank has no hero art"), GetSelectionValue(*Controller, TEXT("selection.hasHeroArt")).bBool);
+	Test->TestEqual(TEXT("so its icon shows large"), GetSelectionValue(*Controller, TEXT("selection.heroArt")).String,
+		Tank->GetUnitData()->IconSprite.ToString());
+	Test->TestEqual(TEXT("Without a role its kind shows"), GetSelectionValue(*Controller, TEXT("selection.role")).String, FString(TEXT("Unit")));
+	Test->TestEqual(TEXT("Nothing below: the full view"), GetSelectionValue(*Controller, TEXT("selection.detail")).String, FString(TEXT("None")));
 	Test->TestFalse(TEXT("A tank is no aircraft"), GetSelectionValue(*Controller, TEXT("selection.isAircraft")).bBool);
 	Controller->SelectUnits({ Tank });
 	Test->TestEqual(TEXT("Selecting the same again announces nothing"), State->Changes, 1);
@@ -3697,18 +3700,36 @@ bool FRTSCheckSelectionPanel::Update()
 	Test->TestEqual(TEXT("with its name"), GetSelectionValue(*Controller, TEXT("selection.name")).String, BarracksData->DisplayName.ToString());
 	Test->TestTrue(TEXT("A site is under construction"), GetSelectionValue(*Controller, TEXT("selection.isConstructing")).bBool);
 	Test->TestTrue(TEXT("and can be cancelled"), GetSelectionValue(*Controller, TEXT("selection.canCancelConstruction")).bBool);
+	Test->TestEqual(TEXT("A site shows its progress below"), GetSelectionValue(*Controller, TEXT("selection.detail")).String,
+		FString(TEXT("Construction")));
+	Test->TestEqual(TEXT("A building's kind"), GetSelectionValue(*Controller, TEXT("selection.role")).String, FString(TEXT("Building")));
 
-	// A finished building lists the completed upgrades it researches.
+	// A finished building lists only the upgrades installed on it, not what it researches.
 	Site->UpdateConstruction(BarracksData->BuildTime);
 	Test->TestFalse(TEXT("A finished building is not under construction"), GetSelectionValue(*Controller, TEXT("selection.isConstructing")).bBool);
 	Test->TestFalse(TEXT("and cannot be cancelled"), GetSelectionValue(*Controller, TEXT("selection.canCancelConstruction")).bBool);
-	Test->TestEqual(TEXT("No upgrade researched yet"), GetSelectionListCount(*Controller, TEXT("selection.upgrades")), 0);
+	Test->TestEqual(TEXT("A barracks shows its queue below"), GetSelectionValue(*Controller, TEXT("selection.detail")).String, FString(TEXT("Queue")));
 	if (Test->TestFalse(TEXT("The test barracks researches an upgrade"), BarracksData->Upgrades.IsEmpty()) && BarracksData->Upgrades[0])
 	{
-		Player->CompleteUpgrade(*BarracksData->Upgrades[0]);
-		Test->TestEqual(TEXT("A researched upgrade is listed"), GetSelectionListCount(*Controller, TEXT("selection.upgrades")), 1);
+		URTSUpgradeData* Upgrade = BarracksData->Upgrades[0];
+		Player->CompleteUpgrade(*Upgrade);
+		Test->TestEqual(TEXT("The barracks' own research is not installed on it"), GetSelectionListCount(*Controller, TEXT("selection.upgrades")), 0);
+		Test->TestFalse(TEXT("so the upgrade row is gone"), GetSelectionValue(*Controller, TEXT("selection.hasUpgrades")).bBool);
+
+		// The infantry it targets shows it, and the tank it does not target does not.
+		Controller->SelectUnits({ Infantry });
+		Test->TestEqual(TEXT("The infantry has the upgrade installed"), GetSelectionListCount(*Controller, TEXT("selection.upgrades")), 1);
 		Test->TestEqual(TEXT("by name"), GetSelectionListValue(*Controller, TEXT("selection.upgrades"), 0, TEXT("name")).String,
-			BarracksData->Upgrades[0]->DisplayName.ToString());
+			Upgrade->DisplayName.ToString());
+		Test->TestTrue(TEXT("its tooltip says what it does"), GetSelectionListValue(*Controller, TEXT("selection.upgrades"), 0,
+			TEXT("description")).String.Contains(Upgrade->GetEffectText().ToString()));
+		Test->TestEqual(TEXT("and that it is installed"), GetSelectionListValue(*Controller, TEXT("selection.upgrades"), 0, TEXT("status")).String,
+			FString(TEXT("Installed")));
+		Test->TestEqual(TEXT("No overflow for one"), GetSelectionListCount(*Controller, TEXT("selection.upgradeMore")), 0);
+		Controller->SelectUnits({ Tank });
+		Test->TestEqual(TEXT("The tank has none installed"), GetSelectionListCount(*Controller, TEXT("selection.upgrades")), 0);
+		// Those two selections are not among the announcements counted below.
+		State->Changes -= 2;
 	}
 
 	// A box of mixed units: tank, infantry, tank.

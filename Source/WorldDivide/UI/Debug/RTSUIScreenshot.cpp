@@ -47,6 +47,11 @@ namespace
 		FScreenshotRun(UWorld& InWorld, const FString& InPanel, TArray<FString> InFactions)
 			: World(&InWorld), Panel(InPanel), Factions(MoveTemp(InFactions))
 		{
+			// <Element>@<Scene>: the crop of Element in RTSUITestState::ApplyScene's Scene, saved under the whole name.
+			if (!Panel.Split(TEXT("@"), &Element, &Scene))
+			{
+				Element = Panel;
+			}
 		}
 
 		static bool IsRunning() { return Active.IsValid(); }
@@ -147,13 +152,13 @@ namespace
 			{
 				return TimedOut(ReadyTimeout) ? Finish(TEXT("the player got no faction or HUD in time")) : true;
 			}
-			if (Panel != FullScreenPanel && (!HUD->GetLayout() || !HUD->GetLayout()->FindElement(*Panel)))
+			if (Element != FullScreenPanel && (!HUD->GetLayout() || !HUD->GetLayout()->FindElement(*Element)))
 			{
-				return Finish(FString::Printf(TEXT("the HUD layout has no element named %s"), *Panel));
+				return Finish(FString::Printf(TEXT("the HUD layout has no element named %s"), *Element));
 			}
 
 			FString Error;
-			if (!RTSUITestState::Apply(*Controller, Error))
+			if (!RTSUITestState::Apply(*Controller, Error) || (!Scene.IsEmpty() && !RTSUITestState::ApplyScene(*Controller, Scene, Error)))
 			{
 				return Finish(Error);
 			}
@@ -220,9 +225,9 @@ namespace
 			const FIntPoint Size = Resolutions[ResolutionIndex];
 			CropRect = FIntRect();
 			const URTSHUDWidget* HUD = GetHUDWidget();
-			if (Panel != FullScreenPanel && (!HUD || !RTSUIScreenshot::GetPanelRect(*HUD, *Panel, Size, CropRect)))
+			if (Element != FullScreenPanel && (!HUD || !RTSUIScreenshot::GetPanelRect(*HUD, *Element, Size, CropRect)))
 			{
-				UE_LOG(LogWorldDivide, Warning, TEXT("rts.UI.Screenshot: %s covers no pixel at %dx%d, so it has no crop"), *Panel, Size.X, Size.Y);
+				UE_LOG(LogWorldDivide, Warning, TEXT("rts.UI.Screenshot: %s covers no pixel at %dx%d, so it has no crop"), *Element, Size.X, Size.Y);
 			}
 			Pixels.Reset();
 			FScreenshotRequest::RequestScreenshot(/*bInShowUI*/ true, /*bInRestrictToGameViewport*/ true);
@@ -337,6 +342,8 @@ namespace
 
 		TWeakObjectPtr<UWorld> World;
 		FString Panel;
+		FString Element;
+		FString Scene;
 		TArray<FString> Factions;
 		TArray<FIntPoint> Resolutions;
 		FIntPoint OriginalSize = FIntPoint::ZeroValue;
@@ -402,14 +409,15 @@ namespace
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice ScreenshotCommand(
 		TEXT("rts.UI.Screenshot"),
-		TEXT("rts.UI.Screenshot [Panel] [Faction]: puts the match in the UI test state and saves the HUD of each faction at ")
-		TEXT("1920x1080, 2560x1440 and 3440x1440 (in PIE at the viewport's size) to Saved/UIShots, with a crop of the layout element Panel."),
+		TEXT("rts.UI.Screenshot [Panel[@Scene]] [Faction]: puts the match in the UI test state (and Scene, see RTSUITestState::ApplyScene) ")
+		TEXT("and saves the HUD of each faction at 1920x1080, 2560x1440, 3440x1440 and 1680x1050 (in PIE at the viewport's size) to ")
+		TEXT("Saved/UIShots, with a crop of the layout element Panel."),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunScreenshotCommand));
 }
 
 TConstArrayView<FIntPoint> RTSUIScreenshot::GetResolutions()
 {
-	static const FIntPoint Resolutions[] = { FIntPoint(1920, 1080), FIntPoint(2560, 1440), FIntPoint(3440, 1440) };
+	static const FIntPoint Resolutions[] = { FIntPoint(1920, 1080), FIntPoint(2560, 1440), FIntPoint(3440, 1440), FIntPoint(1680, 1050) };
 	return Resolutions;
 }
 

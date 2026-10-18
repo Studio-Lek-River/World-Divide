@@ -1835,6 +1835,8 @@ for entity, icon, hotkey, description in (
     (superweapon, "Icon.Superweapon", "K", "Charges a strike that lands anywhere on the map. One per team."),
 ):
     present(entity, USA_TAG, icon, hotkey, description)
+# The selection panel's hero art (Tools/Art/m20_hero_render.py, then unit_icon.py --art); the others show their icon large.
+add_properties(m20, {"hero_art_sprite": unreal.Name("Art.M20Guardian"), "role_text": unreal.Text("Main battle tank")})
 make_ghost_material("M_PlacementGhost")
 make_shot_material("M_ShotFx")
 ground = make_surface_material("M_Ground", (0.06, 0.075, 0.04), 0.9)

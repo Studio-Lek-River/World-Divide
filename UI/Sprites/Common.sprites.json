@@ -47,6 +47,7 @@
     "Common.ConstructionOverlay": { "texture": "Textures/Common/T_UI_Common_ConstructionOverlay.png", "size": [256, 256] },
     "Common.StatusSlot": { "texture": "Textures/Common/T_UI_Common_StatusSlot.png", "size": [48, 48] },
     "Common.AmmoPip": { "texture": "Textures/Common/T_UI_Common_AmmoPip.png", "size": [16, 16], "tint": true },
-    "Common.Icon.LowPowerSlow": { "texture": "Textures/Common/T_UI_Common_Icon_LowPowerSlow.png", "size": [48, 48], "tint": true }
+    "Common.Icon.LowPowerSlow": { "texture": "Textures/Common/T_UI_Common_Icon_LowPowerSlow.png", "size": [48, 48], "tint": true },
+    "Common.HeroBackdrop": { "texture": "Textures/Common/T_UI_Common_HeroBackdrop.png", "size": [512, 256] }
   }
 }

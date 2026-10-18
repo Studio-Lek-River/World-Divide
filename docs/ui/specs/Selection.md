@@ -1,50 +1,71 @@
-# Selection — USA / Common
+# Selection — Clean Minimal (#241)
+
+Mockup: [`../mockups/Mockup_Selection_CleanMinimal_USA.png`](../mockups/Mockup_Selection_CleanMinimal_USA.png), made from the game's own screenshots (`ue.ps1 -Task uishots -Panel Selection@<Scene>`, then `python Tools/Scripts/selection_sheet.py`). The earlier framed-portrait design (#94) is replaced for the single selection; the Multi view, the production queue, construction and aircraft ammo keep their behaviour.
 
 ## 1. Purpose
-Identify the current selection, its condition and relevant capabilities. Keep a production building's queue inside the bottom-left selection panel, below its portrait and details.
+Say what the one selected unit or building is, at a glance: large hero art, its name and its type or role, and the upgrades installed on it. No health in this panel: world-space health bars stay as they are, and the group tiles of the Multi view keep theirs.
 
-## 2. Anatomy / placement
-Local 1080p HUD units, 460×280 maximum. Reuse BottomPanel, PanelInset, Button, ProgressBar/ProgressFill. New sprites: PortraitFrame, UnitTile, SelectionEmpty; Common.CountBadge, Common.HealthBar, Common.HealthFill, Common.ConstructionOverlay, Common.StatusSlot, Common.AmmoPip, Common.Icon.LowPowerSlow.
+## 2. Composition
+Local HUD units at 1080p. The Selection area is 444 × 180 inside the 460-wide `SelectionFrame` of the compact bottom frame (#126 owns the frame and the HUD scale; this panel does not grow it).
 
-| Element | Local rectangle x,y,w,h | Content |
+`selection.detail` decides between two views, so the hero never covers what sits below it:
+
+| `selection.detail` | When | View |
 |---|---|---|
-| SelectionPortrait | 12,12,128,128 | selection.icon, PanelInset, then transparent PortraitFrame |
-| TeamStripe | bottom 6 pixels of portrait | flat Panel bound to selection.teamColor; cover ONLY the white frame band, never tint the whole frame |
-| SelectionName | 152,12,296,24 | selection.name, Title 18, one line/ellipsis |
-| SelectionDescription | 152,40,296,20 | selection.description, Body 14, one line/ellipsis |
-| HealthBar | 152,72,296,10 | selection.health, selection.healthColor, Common.HealthBar/HealthFill |
-| HealthText | 152,88,296,22 | selection.healthText, Number 16, e.g. 3500 / 3500 |
-| FutureStatus | 152,116,104,20 | four empty 20×20 StatusSlot frames, 6 gaps; no fake bindings or interactions |
-| UpgradeIcons | x 152, natural row below details | repeat selection.upgrades: item.icon and item.name; 24-square icons/4 gaps |
-| QueueSlot | 12,164,436,116 | ProductionQueue layout inside this panel; bottom row, not a side column |
+| `None` | a unit or a finished building without a queue | **Full view** |
+| `Construction` | a construction site | **Compact view** + construction progress and cancel |
+| `Aircraft` | an aircraft | **Compact view** + ammo and REARMING |
+| `Queue` | a building that produces (as `queue.visible`) | **Compact view** + `ProductionQueue` in `QueueSlot` |
 
-PortraitFrame replaces its previous same-name entry with 320×320. Lower 12 source rows are white: 6 fixed HUD units at 2x. Overlay only that band with a colour-bound Panel, avoiding white fringes/whole-frame tint. Keep future slots reserved. Upgrade overflow wraps/scrolls in reclaimed space without overlapping queue or inventing counts.
+**Full view** (`FullView`)
 
-## 3. States
-The existing source confirms selection.mode has exactly None, Single, Multi.
+| Element | x, y, w, h | Content |
+|---|---|---|
+| `HeroFull` | 0, 0, 272, 136 | `HeroBackdrop` (Common: a soft light glow, faction-neutral), then the art |
+| `HeroArtFull` | fills `HeroFull` | `selection.heroArt` when `selection.hasHeroArt`: a 2:1 cut-out, no frame |
+| `HeroIconFull` | 112 × 112, centred | `selection.heroArt` when the data has no hero art: its icon, large |
+| `SelectionName` | 274, 6, 170, 24 | `selection.name`, Title 18, one line, ellipsis |
+| `SelectionRole` | 274, 32, 170, 20 | `selection.role`, Body 14, Accent |
+| `NameRule` | 274, 58, 32, 2 | a short Accent rule, the one blue accent |
+| `SelectionDescription` | 274, 66, 170, 62 | `selection.description`, Body 13, MutedText, three lines, ellipsis |
+| `UpgradesFull` | 8, 144, 436, 32 | installed upgrades: 32-square slots, 6 apart, then the `+N` entry |
 
-| State | Presentation |
-|---|---|
-| None | SelectionEmpty background, faint ~8% star roundel; no stale portrait, numbers or queue |
-| Single unit | portrait/name/description/health; no production queue unless its own source says visible |
-| Single production building | common header plus QueueSlot below it; completed upgrades may appear in UpgradeIcons |
-| Building with upgrades | repeat actual selection.upgrades, no fabricated research actions; queue remains independent |
-| Construction site | selection.isConstructing: tile ConstructionOverlay over icon at its baked 40% opacity; label Under construction, ProgressBar bound to selection.constructionProgress at 152,164,296,10; CancelButton at 152,188,160,32 sends CancelConstruction, enabled by selection.canCancelConstruction |
-| Aircraft | selection.isAircraft: AmmoText from selection.ammo / selection.ammoMax at 152,140,296,22; pips below; selection.isRearming adds REARMING wording, never a guessed countdown |
-| Multi | generic Selected groups heading; 6×2 grid, origin 12,44, cells 68×84, gap 4; repeat selection.groups, up to 12 actual type groups |
-| Group hover / selected | brighter UnitTile edge / double frame; selected is local activation feedback, not a new data binding |
-| Disabled cancel | keep readable Disabled-colour label, no action; no unsupported reason binding |
+**Compact view** (`CompactView`)
 
-Each group has 64-square UnitTile, item.icon, 32-square CountBadge with item.count (Number 14, 28-wide inner text), item.name below (Body 14/ellipsis), and 52×5 health using item.health/item.healthColor. Multiple units of one type are Multi with one tile; exactly one unit becomes Single. Two hundred units remain grouped, not 200 tiles. A badge fits 200; show exact counts. No list name is a visibleWhen condition.
+| Element | x, y, w, h | Content |
+|---|---|---|
+| `HeroCompact` | 0, 0, 176, 88 | backdrop, art or an 80-square icon, `ConstructionOverlay` on a site |
+| `SelectionNameCompact` | 184, 2, 260, 24 | Title 18 |
+| `SelectionRoleCompact` | 184, 28, 260, 20 | Body 14, Accent |
+| `UpgradesCompact` | 184, 56, 260, 26 | 24-square slots, 4 apart, then `+N` |
+| `ConstructionStatus`, `AircraftStatus`, `QueueSlot` | 4, 96, 436, ≤ 84 | unchanged content, now full width below the hero |
 
-## 4. Interaction
-Left Group click sends SelectGroup: replaces selection with that type's living units, without camera movement. Right click is consumed. Tooltips show full item.name/count or upgrade name. CancelConstruction retains server validation/refunds. Proposed hover 100 ms/tooltip 350 ms; no new hotkeys/pulses. Pressed uses Normal fallback. Full name/description tooltips need the existing tooltip host, not an unsupported Text.tooltip property.
+## 3. Hero art
+- `URTSEntityData::HeroArtSprite`, for example `Art.M20Guardian`, resolving like a layout sprite: `<Faction>.Art.<Entity>`. File `UI/Textures/<Faction>/Art/T_Art_<Faction>_<Entity>.png`, **512 × 256** (2× of the 256 × 128 it shows at), transparent around the subject, left and bottom edges faded out so it sits in the panel without a frame. No text in the art.
+- The M20 Guardian's: `Tools/Art/m20_hero_render.py` renders the saved Blender scene on a transparent film (studio light, low three-quarter front view, gun leading towards the text, a shadow-catcher contact shadow, team-mask panels greyed so no team colour is baked in); `python Tools/Scripts/unit_icon.py <render> USA M20Guardian --art` crops it 2:1, fades the edges and adds the sprite entry. Any unit gets art the same way, with no code change.
+- **Fallback:** no `HeroArtSprite` shows the entity's icon at 112 (80 compact) on the same backdrop; no icon shows `Icon.Placeholder`. Nothing selected shows nothing: `selection.heroArt` is empty.
+- **Role:** `URTSEntityData::RoleText`; empty shows the kind: Aircraft, Building or Unit. (Infantry / vehicle / naval wording follows the entity tags of #237.)
 
-## 5. Edge cases
-Hidden queue space reflows (ProductionQueue.md). Existing 196-high compact Single profile: portrait 96 at 12,8; details x 116, name 252×24/y 8, description 332×20/y 36, health/y 64, health text/y 76; three 20-square future slots at 380,8; upgrade icons 152,100; QueueSlot 12,116,436×80 with 48-square frames. Compact Multi: grid 12,28, 6×2 cells 68×76/gap 4; tile 56, badge 32, health 44×4, name below in 19-high box. This ends at 184, leaving 12 bottom. Do not enlarge the whole HUD automatically. At 16:10–21:9 keep width 460/height scaling. Body ≥14; 30% longer strings ellipsize with full tooltip. Ammo: one bullet per remaining round, empty StatusSlot per spent round, 12 per row/two rows; larger capacity uses exact numeric fallback. Zero shows 0 / 0, no pips.
+## 4. Installed upgrades
+- **What counts:** the player's completed upgrades whose `Targets` include the selected unit's or building's data, each once, in the order completed (`URTSUpgradeData::GetInstalled`). A building no longer lists what it researches; that stays the upgrade panel's `done`. Unresearched, locked or queued research never appears here, and the slots have no action, so they cannot start research.
+- **Counts:** one slot per installed upgrade. 0 collapses the row (`selection.hasUpgrades`), with no empty sockets. 1–6 sit left-aligned from the hero's edge at a fixed gap. No tiers, stages or pips; an upgrade with several effects is still one slot.
+- **Capacity and overflow:** `URTSSettings::SelectionUpgradeSlots` (`DefaultGame.ini`, default 6) icons show; the rest go behind one `+N` entry (`selection.upgradeMore`), whose tooltip lists every hidden upgrade with its effect. Nothing is ever cut off silently. Raise the setting for a wider HUD: no layout or code change.
+- **Lists:** `selection.upgrades` (`item.icon`, `item.name`, `item.description`, `item.status`, `item.disabledText`) and `selection.upgradeMore` (`item.label` "+3", `item.name` "3 more upgrades", `item.description` the hidden ones, one per line).
+- **Tooltip:** hover shows name, description and effect ("Weapon damage x1.5"), and status "Installed". `item.disabledText` is empty: installed upgrades cannot be lost or switched off in the game yet; when they can, it carries the reason and the slot gets a hatch, never a colour alone. The tooltip is the plain one until the rich tooltip of #69/#97.
 
-## 6. Accessibility
-Length, health numbers and monochrome 30%/60% ticks supplement Positive/Warning/Danger (source thresholds ≥60%, ≥30%, below 30%). No invented health-state string. Group bars also use ticks. CountBadge is Text on dark plate. Labels retain full-opacity AA theme colours; Validation.md. Empty status frames imply no bonuses.
+## 5. Refresh
+- The installed list is worked out again only when the selected data or the number of completed upgrades changes (`ARTSPlayerController::GetSelectionInstalledUpgrades`), never per frame. Upgrades are only ever added, so the count tells a change, on the server and on a client when `CompletedUpgrades` replicates.
+- The upgrade rows are repeats without a fixed count: the HUD builds their copies anew when the count changes, and only then.
+- Switching to another unit, deselecting or the selection dying clears the art, the icons and their tooltips on the same frame.
 
-## 7. Requests for code
-Presentation helpers: scalar ammo→pips, non-button tooltips, stripe-only tint. Collapse hidden child QueueSlot/reflow without binding queue.visible in Selection scope. Agree scrolling beyond 12 groups. No invented key/action. Replace old 13-pixel labels during assembly; no layouts delivered.
+## 6. Responsive and long labels
+- The HUD scales with the screen height (DPI scale), as the rest of the bottom frame: shots at 1920 × 1080, 2560 × 1440, 3440 × 1440 and a 1680 × 1050 16:10 window. HUD scale settings (min / default / max) come with #126; check this panel there.
+- Name and role are one line each and end in an ellipsis; the description three lines. A 30 % longer localised string (scene `LongLabel`) never pushes the upgrade row.
+- Nothing overlaps the command panel, the minimap, the queue or the tooltip band: the panel stays inside its 444 × 180.
+
+## 7. Screenshot scenes
+`ue.ps1 -Task uishots -Panel Selection@<Scene>` puts the UI test state in a scene of `RTSUITestState::ApplyScene`, with fixture upgrades made at run time: `Hero0` … `Hero9` (the M20 with that many upgrades), `LongLabel`, `Infantry`, `Vehicle`, `Aircraft`, `Building`. `BottomFrame@Hero6` and `BottomFrame@Building` show the whole bottom frame for the space budget.
+
+## 8. Requests for design
+- Paint a hero cut-out per unit in the house style when the roster art comes (#93); the render pipeline stays the fallback.
+- A hatch and an icon for an unavailable upgrade once gameplay has the state.

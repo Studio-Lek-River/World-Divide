@@ -63,7 +63,7 @@ bool FRTSUIScreenshotThemesTest::RunTest(const FString& Parameters)
 	}
 	TestTrue(TEXT("A shot goes to Saved/UIShots/<Panel>"), RTSUIScreenshot::GetShotPath(TEXT("ResourceBar"), TEXT("USA"), FIntPoint(1920, 1080), true)
 		.EndsWith(TEXT("UIShots/ResourceBar/USA_1920x1080_crop.png")));
-	TestEqual(TEXT("Three resolutions"), RTSUIScreenshot::GetResolutions().Num(), 3);
+	TestEqual(TEXT("Four resolutions"), RTSUIScreenshot::GetResolutions().Num(), 4);
 	return true;
 }
 
