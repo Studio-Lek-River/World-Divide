@@ -543,16 +543,22 @@ private:
 	};
 	TArray<FWheel> Wheels;
 
-	/** The instanced component for every wheel of one mesh, with the world transforms UpdateRunningGear writes to it. */
+	/**
+	 * The instanced component for every wheel of one mesh, with the world transforms UpdateRunningGear writes to it and
+	 * those it wrote the frame before, for the renderer's motion vectors.
+	 */
 	struct FWheelSet
 	{
 		UInstancedStaticMeshComponent* Component = nullptr;
 		TArray<FTransform> Transforms;
+		TArray<FTransform> PrevTransforms;
 	};
 	TArray<FWheelSet> WheelSets;
 
 	/** The hull's world transform UpdateRunningGear last placed the wheels on. */
 	TOptional<FTransform> GearHull;
+	/** The wheels' previous transforms are their current ones: standing, they show no motion. */
+	bool bWheelsSettled = true;
 
 	/** Where Wheel is drawn in world space with its roll, on the hull as it stands now. */
 	FTransform GetWheelTransform(const FWheel& Wheel) const;

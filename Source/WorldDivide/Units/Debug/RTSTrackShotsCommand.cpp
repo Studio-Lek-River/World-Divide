@@ -30,7 +30,8 @@
  * rts.Debug.TrackShots <UnitData>: close-up frame sequences of a tracked unit's running gear (#151), from a camera carried with
  * the hull beside its left track, or at its sprocket or idler: driving forward and in reverse, turning either way, pivoting
  * either way, accelerating, braking, stopped, driven into Block_North, and coming back into the animation distance from
- * far away. Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
+ * far away; then driving past a still camera at full speed, beside it and from the RTS angle, plain and with the previous
+ * frame's reprojection shown (motion_*, #243). Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
  * Saved/TrackShots/<UnitData>/<scenario>_<n>.png, and logs with each the realized side travel, each track's phase and what
  * its material has. With -RTSTrackShotsQuit on the command line (ue.ps1 -Task trackshots) the game quits when done.
  */
@@ -60,6 +61,9 @@ namespace RTSTrackShots
 	const FView IdlerView{ FVector(170.f, -390.f, 30.f), FVector(285.f, -132.f, 50.f), 50.f };
 	/** Far enough that the renderer leaves the links' shift out. */
 	const FView FarView{ FVector(0.f, -9000.f, 2500.f), FVector(0.f, -132.f, 40.f), 10.f };
+	/** Fixed views for the motion scenarios, from the start place: the hull passes their middle a second after it sets off. */
+	const FView MotionSideView{ FVector(300.f, -900.f, 60.f), FVector(300.f, -132.f, 40.f), 60.f };
+	const FView MotionRTSView{ FVector(-900.f, -1200.f, 1700.f), FVector(300.f, 0.f, 0.f), 30.f };
 
 	struct FScenario
 	{
@@ -79,6 +83,13 @@ namespace RTSTrackShots
 		 * a link rather than several, which a sequence could not tell from going backward.
 		 */
 		float TimeDilation = 0.1f;
+		/**
+		 * The camera stays where the view puts it from the unit's place at the start, so the unit drives through the picture
+		 * at full speed: what the temporal upscaler makes of moving parts shows only so, never with a camera riding along (#243).
+		 */
+		bool bFixedCamera = false;
+		/** Shows the previous frame reprojected onto this one: a part whose motion vectors are wrong is drawn twice. */
+		bool bReprojection = false;
 	};
 
 	RTSLocomotion::FCommand Ahead(float Speed)
@@ -233,6 +244,18 @@ namespace RTSTrackShots
 			Scenarios.Add({ TEXT("wrap_idler"), IdlerView, Drive(Ahead(150.f)) });
 			Scenarios.Add({ TEXT("far"), FarView, Drive(Ahead(300.f)), 2.0, nullptr, nullptr, 0.1, 1.f });
 			Scenarios.Add({ TEXT("back_near"), SideView, [](ARTSUnit&) { return true; }, 0.0 });
+			// Driving past a still camera at full speed, pictures as fast as they come, without letting a frame settle (#243).
+			for (const bool bReprojection : { false, true })
+			{
+				for (const TPair<const TCHAR*, FView>& View : { TPair<const TCHAR*, FView>(TEXT("motion_side"), MotionSideView),
+					TPair<const TCHAR*, FView>(TEXT("motion_rts"), MotionRTSView) })
+				{
+					FScenario& Motion = Scenarios.Add_GetRef({ FString(View.Key) + (bReprojection ? TEXT("_reprojection") : TEXT("")),
+						View.Value, Drive(Ahead(300.f)), 0.5, nullptr, nullptr, 0.0, 1.f });
+					Motion.bFixedCamera = true;
+					Motion.bReprojection = bReprojection;
+				}
+			}
 		}
 
 		bool StartScenario()
@@ -252,8 +275,21 @@ namespace RTSTrackShots
 				++Index;
 				return StartScenario();
 			}
-			Camera->SetActorRelativeLocation(Scenario.View.Eye - FVector(0.f, 0.f, GroundOffset));
-			Camera->SetActorRelativeRotation((Scenario.View.LookAt - Scenario.View.Eye).Rotation());
+			const FVector Eye = Scenario.View.Eye - FVector(0.f, 0.f, GroundOffset);
+			const FRotator Look = (Scenario.View.LookAt - Scenario.View.Eye).Rotation();
+			if (Scenario.bFixedCamera)
+			{
+				Camera->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+				const FTransform& Start = Unit->GetActorTransform();
+				Camera->SetActorLocationAndRotation(Start.TransformPosition(Eye), Start.TransformRotation(Look.Quaternion()));
+			}
+			else
+			{
+				Camera->AttachToActor(Unit.Get(), FAttachmentTransformRules::KeepRelativeTransform);
+				Camera->SetActorRelativeLocation(Eye);
+				Camera->SetActorRelativeRotation(Look);
+			}
+			GEngine->Exec(World.Get(), Scenario.bReprojection ? TEXT("ShowFlag.VisualizeReprojection 1") : TEXT("ShowFlag.VisualizeReprojection 0"));
 			Camera->GetCameraComponent()->SetFieldOfView(Scenario.View.FOV);
 			Step = EStep::Warm;
 			StepStart = FPlatformTime::Seconds();
@@ -363,6 +399,7 @@ namespace RTSTrackShots
 			if (World.IsValid())
 			{
 				World->GetWorldSettings()->SetTimeDilation(1.f);
+				GEngine->Exec(World.Get(), TEXT("ShowFlag.VisualizeReprojection 0"));
 			}
 			if (Camera.IsValid())
 			{

@@ -689,6 +689,75 @@ bool FRTSRunningGearPlacementTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRunningGearMotionTest, "WorldDivide.Units.RunningGear.PreviousTransforms", TestFlags)
+
+bool FRTSRunningGearMotionTest::RunTest(const FString& Parameters)
+{
+	const FRTSTestWorld TestWorld;
+	ARTSUnit* Unit = TestWorld.SpawnUnit(MakeVehicleData(), 0, FVector(100.f, 200.f, 0.f));
+	URTSRunningGearSubsystem* Gear = TestWorld.World->GetSubsystem<URTSRunningGearSubsystem>();
+	TArray<UInstancedStaticMeshComponent*> Sets;
+	Unit->GetComponents(Sets);
+	if (!TestNotNull(TEXT("The world places running gear"), Gear) || !TestEqual(TEXT("The three wheels share one set"), Sets.Num(), 1))
+	{
+		return false;
+	}
+	UInstancedStaticMeshComponent& Set = *Sets[0];
+	// Instances in the order MakeVehicleData lists the wheels.
+	const int32 WheelParts[] = { LeftWheel, RightWheel, LeftRearWheel };
+
+	// The motion vectors the renderer draws the wheels with go from each instance's previous place to its current one (#243).
+	auto Places = [&Set, &WheelParts](bool bPrevious)
+	{
+		TArray<FTransform> Out;
+		for (int32 Instance = 0; Instance < UE_ARRAY_COUNT(WheelParts); ++Instance)
+		{
+			FTransform Place;
+			if (bPrevious ? Set.GetInstancePrevTransform(Instance, Place, /*bWorldSpace*/ true)
+				: Set.GetInstanceTransform(Instance, Place, /*bWorldSpace*/ true))
+			{
+				Out.Add(Place);
+			}
+		}
+		return Out;
+	};
+	auto Same = [](const TArray<FTransform>& A, const TArray<FTransform>& B)
+	{
+		bool bSame = A.Num() == B.Num();
+		for (int32 Index = 0; bSame && Index < A.Num(); ++Index)
+		{
+			bSame = A[Index].Equals(B[Index], 0.01f);
+		}
+		return bSame;
+	};
+
+	TestEqual(TEXT("Every wheel has a previous place from the start"), Places(true).Num(), static_cast<int32>(UE_ARRAY_COUNT(WheelParts)));
+	TestTrue(TEXT("and a new unit's wheels show no motion"), Same(Places(true), Places(false)));
+
+	Gear->PlaceAll();
+	Gear->PlaceAll();
+	const TArray<FTransform> Before = Places(false);
+	Drive(*Unit, 40.f);
+	TestTrue(TEXT("Driven, each wheel's previous place is where it was drawn the frame before"), Same(Places(true), Before));
+	TestFalse(TEXT("and its current one is not: the wheels show their drive and roll"), Same(Places(false), Before));
+	TArray<FTransform> Rolled = Places(false);
+	Drive(*Unit, 40.f);
+	TestTrue(TEXT("Driving on, the previous place follows one frame behind"), Same(Places(true), Rolled));
+
+	// A push sideways, as avoidance gives: moved without a roll, still a motion to draw.
+	Rolled = Places(false);
+	Unit->SetActorLocation(Unit->GetActorLocation() + FVector(0.f, 30.f, 0.f));
+	Gear->PlaceAll();
+	TestTrue(TEXT("Pushed, the previous place is the one before the push"), Same(Places(true), Rolled));
+	TestFalse(TEXT("and the wheels moved with the hull"), Same(Places(false), Rolled));
+
+	const TArray<FTransform> Stopped = Places(false);
+	Gear->PlaceAll();
+	TestTrue(TEXT("Stopped, the wheels stay where they are"), Same(Places(false), Stopped));
+	TestTrue(TEXT("and the next pass makes their previous place their current one, so they show no motion"), Same(Places(true), Stopped));
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSGunElevationTest, "WorldDivide.Combat.Turret.GunElevation", TestFlags)
 
 bool FRTSGunElevationTest::RunTest(const FString& Parameters)

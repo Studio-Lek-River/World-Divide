@@ -335,6 +335,7 @@ void ARTSUnit::CreateParts()
 	Tracks.Reset();
 	LastGearPose.Reset();
 	GearHull.Reset();
+	bWheelsSettled = true;
 	const FRTSRealizedMotion& Motion = Movement->GetRealizedMotion();
 	GearDriven = Motion.DrivenDistance;
 	GearTurned = Motion.TurnedRadians;
@@ -384,6 +385,9 @@ void ARTSUnit::CreateParts()
 		{
 			FWheelSet& NewSet = WheelSets.AddDefaulted_GetRef();
 			NewSet.Component = MakePartComponent<UInstancedStaticMeshComponent>(*this, *Parent, Part.Mesh, /*bWorldPlaced*/ true);
+			// The set itself never moves, so without each instance's last place the renderer sees the wheels stand still while
+			// they drive and roll, and the temporal upscaler smears them (#243). Set before the instances, which it then keeps.
+			NewSet.Component->SetHasPerInstancePrevTransforms(true);
 			PartComponents.Add(NewSet.Component);
 			SetIndex = &SetOfMesh.Add(Part.Mesh.Get(), WheelSets.Num() - 1);
 		}
@@ -392,6 +396,7 @@ void ARTSUnit::CreateParts()
 		Slot.Instance = Set.Component->AddInstance(Rest * Hull, /*bWorldSpace*/ false);
 		Slot.Wheel = Wheels.Num();
 		Set.Transforms.Add(Rest * Hull);
+		Set.PrevTransforms.Add(Rest * Hull);
 
 		FWheel& Wheel = Wheels.AddDefaulted_GetRef();
 		Wheel.Set = *SetIndex;
@@ -570,29 +575,41 @@ int32 ARTSUnit::UpdateRunningGear(const FRTSTrackViews* Views)
 	// The wheels are placed in world space, so they follow every move of the hull, rolled or not: a push, a tilt, a kick, a
 	// correction from the server.
 	const FTransform& Hull = Mesh->GetComponentTransform();
-	if (Wheels.IsEmpty() || (!bRolls && GearHull.IsSet() && GearHull->Equals(Hull)))
+	const bool bMoved = bRolls || !GearHull.IsSet() || !GearHull->Equals(Hull);
+	if (Wheels.IsEmpty() || (!bMoved && bWheelsSettled))
 	{
 		return Sent;
 	}
-	GearHull = Hull;
-
-	for (FWheel& Wheel : Wheels)
+	// Last frame's places, for the motion vectors. Stopped, once more with the places as they are, so the wheels do not smear
+	// as if still running.
+	for (FWheelSet& Set : WheelSets)
 	{
-		if (bRolls)
+		Set.PrevTransforms = Set.Transforms;
+	}
+	bWheelsSettled = !bMoved;
+
+	if (bMoved)
+	{
+		GearHull = Hull;
+		for (FWheel& Wheel : Wheels)
 		{
-			Wheel.Angle = FMath::Fmod(Wheel.Angle + TravelOf(Wheel.Side) / Wheel.Radius, UE_TWO_PI);
-			if (Wheel.Angle < 0.f)
+			if (bRolls)
 			{
-				Wheel.Angle += UE_TWO_PI;
+				Wheel.Angle = FMath::Fmod(Wheel.Angle + TravelOf(Wheel.Side) / Wheel.Radius, UE_TWO_PI);
+				if (Wheel.Angle < 0.f)
+				{
+					Wheel.Angle += UE_TWO_PI;
+				}
 			}
+			WheelSets[Wheel.Set].Transforms[Wheel.Instance] = GetWheelTransform(Wheel);
 		}
-		WheelSets[Wheel.Set].Transforms[Wheel.Instance] = GetWheelTransform(Wheel);
 	}
 	for (const FWheelSet& Set : WheelSets)
 	{
 		// Without a render state rebuild: the set's instance data goes to the renderer as a change of transforms, where
 		// rebuilding the proxy of every set of every vehicle each frame cost more than the move itself (#165).
-		Set.Component->BatchUpdateInstancesTransforms(0, Set.Transforms, /*bWorldSpace*/ false, /*bMarkRenderStateDirty*/ false);
+		Set.Component->BatchUpdateInstancesTransforms(0, Set.Transforms, Set.PrevTransforms, /*bWorldSpace*/ false,
+			/*bMarkRenderStateDirty*/ false);
 		Set.Component->UpdateBounds();
 		Set.Component->MarkRenderTransformDirty();
 	}

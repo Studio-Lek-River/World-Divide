@@ -522,7 +522,8 @@ function Invoke-UnitShots {
 }
 
 # Close-up frame sequences of a tracked unit's running gear (#151; rts.Debug.TrackShots) to Saved\TrackShots\<Unit>, with
-# the gear's travel and each track's phase logged per frame.
+# the gear's travel and each track's phase logged per frame. The motion_* sequences drive past a still camera at full speed,
+# motion_*_reprojection with the previous frame's reprojection shown, for smearing under the temporal upscaler (#243).
 function Invoke-TrackShots {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$ShotDir = Join-Path $RepoRoot "Saved\TrackShots\$Unit"
