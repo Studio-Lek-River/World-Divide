@@ -12,7 +12,7 @@ class ARTSUnit;
  * Server only. Spreads the path searches of move and attack-move orders over frames (#174), so a large group sent far does
  * not stall the frame of its order. ARTSUnit queues its move here instead of searching its path at once; each frame the
  * requests waiting run, oldest first and the players' in turn, until rts.Nav.MoveRequestBudgetMs of path work (the search
- * and the hull fit) is spent. A request runs at once when none waits and the frame has budget left, so short orders start
+ * and the hull fit) is spent, or, while rts.Nav.MoveRequestsPerFrame is set, until that many have run. A request runs at once when none waits and the frame has budget left, so short orders start
  * in their own frame as before.
  * Every frame that has requests waiting runs at least one, so each gets its result; a single request is never split, so a
  * frame runs over the budget by up to one request that alone costs more. Requests of one order share an FRaisedStart:
@@ -63,6 +63,15 @@ public:
 	/** rts.Nav.MoveRequestBudgetMs's default, agreed for #174 from L_LongPath's group orders. */
 	static constexpr float DefaultBudgetMs = 2.0f;
 
+	/**
+	 * Requests per frame from rts.Nav.MoveRequestsPerFrame, in place of the ms budget while above zero; 0, the default, keeps
+	 * the budget. The fixed-step automation tests set it, so their schedule does not depend on the machine's speed (#179).
+	 */
+	static int32 GetRequestsPerFrame();
+
+	/** The requests per frame the fixed-step automation tests run with: about the 2 ms budget's on L_LongPath's long routes. */
+	static constexpr int32 TestRequestsPerFrame = 4;
+
 	const FStats& GetStats() const { return Stats; }
 	void ResetStats() { Stats = FStats(); }
 
@@ -110,6 +119,7 @@ private:
 	uint64 BudgetFrame = MAX_uint64;
 	double FrameSpentMs = 0.0;
 	double FrameWorstMs = 0.0;
+	int32 FrameRuns = 0;
 
 	/** Set while Process runs, so requests queued by the ones it runs wait for it instead of starting another pass. */
 	bool bProcessing = false;

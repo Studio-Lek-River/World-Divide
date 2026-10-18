@@ -128,6 +128,18 @@ namespace RTSAITests
 		TestEqual(TEXT("Every step met"), RTSAI::FindCurrentStep(Steps, Count), INDEX_NONE);
 		Owned.Add(Plant, 0);
 		TestEqual(TEXT("A lost building comes first again"), RTSAI::FindCurrentStep(Steps, Count), 0);
+
+		// Steps nothing left could work on are passed over (#179), the rest still in order.
+		TSet<const URTSEntityData*> OutOfReach;
+		const auto CanWorkOn = [&OutOfReach](const URTSEntityData& Entry) { return !OutOfReach.Contains(&Entry); };
+		Owned.Add(Infantry, 0);
+		TestEqual(TEXT("Every step in reach: the lost building first"), RTSAI::FindCurrentStep(Steps, Count, CanWorkOn), 0);
+		OutOfReach.Add(Plant);
+		TestEqual(TEXT("A building nothing can build is passed over for the next unmet step"), RTSAI::FindCurrentStep(Steps, Count, CanWorkOn), 3);
+		OutOfReach.Add(Infantry);
+		TestEqual(TEXT("Every unmet step out of reach"), RTSAI::FindCurrentStep(Steps, Count, CanWorkOn), INDEX_NONE);
+		OutOfReach.Reset();
+		TestEqual(TEXT("Back in reach, it comes first again"), RTSAI::FindCurrentStep(Steps, Count, CanWorkOn), 0);
 		return true;
 	}
 
@@ -174,6 +186,9 @@ namespace RTSAITests
 		TestFalse(TEXT("The interval needs the minimum"), RTSAI::ShouldLaunchWave(Normal, 3, 100.f));
 		TestTrue(TEXT("After the interval the minimum goes"), RTSAI::ShouldLaunchWave(Normal, 4, 90.f));
 		TestFalse(TEXT("No army, no wave"), RTSAI::ShouldLaunchWave(Tiny, 0, 1000.f));
+		TestFalse(TEXT("An army that cannot grow still waits for the interval"), RTSAI::ShouldLaunchWave(Normal, 2, 10.f, false));
+		TestTrue(TEXT("After the interval it goes short of the minimum"), RTSAI::ShouldLaunchWave(Normal, 2, 90.f, false));
+		TestFalse(TEXT("No army, no wave, grown or not"), RTSAI::ShouldLaunchWave(Normal, 0, 1000.f, false));
 		return true;
 	}
 
@@ -224,6 +239,41 @@ namespace RTSAITests
 		Kill(*Barracks);
 		TestEqual(TEXT("A destroyed building no longer counts"), AI->CountOwned(*BarracksData), 0);
 		TestEqual(TEXT("Its queue goes with it"), AI->CountOwned(*Infantry), 0);
+		return true;
+	}
+
+	/**
+	 * A build order whose next step nothing left can make (#179): builders come only from the headquarters, which is gone, so
+	 * the AI passes over them and queues the infantry its barracks offers, instead of waiting for builders forever.
+	 */
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIBuildOrderOutOfReachTest, "WorldDivide.AI.BuildOrderOutOfReach", TestFlags)
+
+	bool FRTSAIBuildOrderOutOfReachTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		TestWorld.SpawnGameState();
+		URTSUnitData* Builder = MakeUnit(100);
+		URTSUnitData* Infantry = MakeUnit(100);
+		URTSBuildingData* HeadquartersData = MakeBuilding({ Builder });
+		URTSBuildingData* BarracksData = MakeBuilding({ Infantry });
+		URTSAIBuildOrderData* BuildOrder = NewObject<URTSAIBuildOrderData>();
+		BuildOrder->Steps = { MakeStep(Builder, 2), MakeStep(Infantry, 1) };
+
+		ARTSAIPlayer* AI = SpawnAI(TestWorld, BuildOrder, 500);
+		SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-3000.f, 0.f, 0.f));
+		ARTSBuilding* Headquarters = SpawnCompleted(TestWorld, HeadquartersData, AITeam, FVector(3000.f, 0.f, 0.f));
+		ARTSBuilding* Barracks = SpawnCompleted(TestWorld, BarracksData, AITeam, FVector(3000.f, 2000.f, 0.f));
+		const TArray<TObjectPtr<URTSEntityData>>& Queue = Barracks->GetProductionComponent()->GetQueue();
+
+		AI->Think(ARTSAIPlayer::ThinkInterval);
+		TestEqual(TEXT("With its headquarters standing the AI works on the builders first"),
+			Headquarters->GetProductionComponent()->GetQueue().Num(), 1);
+		TestEqual(TEXT("The barracks waits its turn"), Queue.Num(), 0);
+
+		Kill(*Headquarters);
+		AI->Think(ARTSAIPlayer::ThinkInterval);
+		TestEqual(TEXT("Without a headquarters the builders are out of reach: the barracks queues the infantry"), Queue.Num(), 1);
+		TestEqual(TEXT("The infantry is paid"), AI->GetRTSPlayerState()->GetCredits(), 300);
 		return true;
 	}
 
@@ -278,6 +328,52 @@ namespace RTSAITests
 		AI->Think(20.f);
 		TestEqual(TEXT("Once it has passed, the minimum goes"), AI->GetWaveCount(), 2);
 		TestEqual(TEXT("Both waves are tracked"), AI->GetWaveUnits().Num(), 5);
+		return true;
+	}
+
+	/**
+	 * An army short of the minimum goes once the interval has passed if it cannot grow any more (#179): no credits for an
+	 * army unit, none queued and no harvester at work. With the credits for another tank it keeps waiting.
+	 */
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIWavesOutOfCreditsTest, "WorldDivide.AI.WavesOutOfCredits", TestFlags)
+
+	bool FRTSAIWavesOutOfCreditsTest::RunTest(const FString& Parameters)
+	{
+		for (const int32 Credits : { 700, 0 })
+		{
+			const FRTSTestWorld TestWorld;
+			TestWorld.SpawnGameState();
+			const float R = ARTSAIPlayer::DefenseRadius;
+			URTSUnitData* Tank = MakeUnit(700, MakeWeapon());
+			URTSAIBuildOrderData* BuildOrder = NewObject<URTSAIBuildOrderData>();
+			BuildOrder->ArmyUnits = { Tank };
+			ARTSAIPlayer* AI = SpawnAI(TestWorld, BuildOrder, Credits);
+			SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-1.2f * R, 0.f, 0.f));
+			ARTSBuilding* Factory = SpawnCompleted(TestWorld, MakeBuilding({ Tank }), AITeam, FVector(1.2f * R, 0.f, 0.f));
+			TestWorld.SpawnUnit(Tank, AITeam, FVector(0.8f * R, 0.f, 0.f));
+			TestWorld.SpawnUnit(Tank, AITeam, FVector(0.8f * R, 300.f, 0.f));
+
+			FRTSAIWaveSettings Settings;
+			Settings.Size = 8;
+			Settings.MinSize = 4;
+			Settings.Interval = 30.f;
+			AI->SetWaveSettings(Settings);
+
+			AI->Think(10.f);
+			const FString With = FString::Printf(TEXT("With %d credits"), Credits);
+			TestEqual(*FString::Printf(TEXT("%s, two tanks wait before the interval"), *With), AI->GetWaveCount(), 0);
+			AI->Think(20.f);
+			if (Credits > 0)
+			{
+				TestEqual(*FString::Printf(TEXT("%s, a third tank is queued"), *With), Factory->GetProductionComponent()->GetQueue().Num(), 1);
+				TestEqual(*FString::Printf(TEXT("%s, the army can grow and keeps waiting for the minimum"), *With), AI->GetWaveCount(), 0);
+			}
+			else
+			{
+				TestEqual(*FString::Printf(TEXT("%s, the army cannot grow and goes after the interval"), *With), AI->GetWaveCount(), 1);
+				TestEqual(*FString::Printf(TEXT("%s, both tanks go"), *With), AI->GetWaveUnits().Num(), 2);
+			}
+		}
 		return true;
 	}
 

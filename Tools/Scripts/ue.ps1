@@ -6,6 +6,7 @@ Builds, tests, regenerates test content for or opens World Divide from the comma
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task build
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Commands
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -TimeDilation 1
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Smoke.AIvsAI -Repeat 10
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup -Render
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task editor
@@ -28,6 +29,8 @@ The engine is taken from $env:UE_ROOT, falling back to D:\Program Files\Epic Gam
 Exits nonzero on any failure: 2 when the editor is running (build, editor), 3 when setup must rewrite read-only LFS assets.
 The PIE smoke tests tick a fixed 1/30 game second per frame as fast as the CPU allows (-RTSTestFixedStep=30); -TimeDilation N
 instead runs them in step with real time at N game seconds per real second, -TimeDilation 1 at real time.
+-Repeat N runs the tests N times, each in a fresh editor, and passes only when every run does; it prints each run's result,
+its wall-clock time and the tests' info lines that differ between runs, then the total (#179).
 Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
 Editor opens the editor with the Unreal MCP server at http://127.0.0.1:8000/mcp (docs/ui/AI_TEAM.md); test and setup run without it.
 Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in the UI test state for each faction look at
@@ -80,6 +83,9 @@ param(
 	[string]$Filter = 'WorldDivide',
 
 	[double]$TimeDilation = 0,
+
+	[ValidateRange(1, 100)]
+	[int]$Repeat = 1,
 
 	[switch]$Render,
 
@@ -180,7 +186,7 @@ function Invoke-Setup {
 	Write-Host 'SETUP SUCCEEDED'
 }
 
-function Invoke-Test {
+function Invoke-TestRun {
 	$ReportDir = Join-Path $RepoRoot 'Saved\Automation\Reports'
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\AutomationRun.log'
 	if (Test-Path $ReportDir) { Remove-Item -Recurse -Force $ReportDir }
@@ -188,16 +194,16 @@ function Invoke-Test {
 	# A fixed time step unless -TimeDilation asks for real-time ticking (RTSTests::ApplyTestTimeDilation).
 	$TimeArg = if ($TimeDilation -gt 0) { "-RTSTestTimeDilation=$TimeDilation" } else { '-RTSTestFixedStep=30' }
 	& $EditorCmd $Project "-ExecCmds=Automation RunTests $Filter;Quit" '-TestExit=Automation Test Queue Empty' `
-		"-ReportExportPath=$ReportDir" "-abslog=$LogFile" $TimeArg $NoMCPPlugins -unattended -nullrhi -nosplash -nosound
+		"-ReportExportPath=$ReportDir" "-abslog=$LogFile" $TimeArg $NoMCPPlugins -unattended -nullrhi -nosplash -nosound | Out-Host
 	$EditorExit = $LASTEXITCODE
 
 	$Index = Join-Path $ReportDir 'index.json'
 	if (-not (Test-Path $Index)) {
 		Write-Host "No test report written (editor exit $EditorExit). Log: $LogFile"
 		if (Test-Path $LogFile) {
-			Select-String -Path $LogFile -Pattern 'Error:|Fatal|TEST COMPLETE' | Select-Object -Last 20 | ForEach-Object { $_.Line }
+			Select-String -Path $LogFile -Pattern 'Error:|Fatal|TEST COMPLETE' | Select-Object -Last 20 | ForEach-Object { Write-Host $_.Line }
 		}
-		exit 1
+		return $null
 	}
 
 	# The report may carry a UTF-8 BOM; strip it before parsing.
@@ -218,12 +224,56 @@ function Invoke-Test {
 	Write-Host ''
 	Write-Host ("Succeeded: {0}  With warnings: {1}  Failed: {2}  Not run: {3}" -f $Report.succeeded, $Report.succeededWithWarnings, $Report.failed, $Report.notRun)
 	Write-Host "Log: $LogFile"
+	return $Report
+}
 
-	if ($Report.tests.Count -eq 0) {
-		Write-Host "No tests matched filter '$Filter'."
-		exit 1
+function Invoke-Test {
+	if ($Repeat -le 1) {
+		$Report = Invoke-TestRun
+		if (-not $Report) { exit 1 }
+		if ($Report.tests.Count -eq 0) {
+			Write-Host "No tests matched filter '$Filter'."
+			exit 1
+		}
+		if ($Report.failed -gt 0 -or @($Report.tests | Where-Object { $_.state -eq 'Fail' }).Count -gt 0) { exit 1 }
+		Write-Host 'TESTS PASSED'
+		return
 	}
-	if ($Failed.Count -gt 0 -or $Report.failed -gt 0) { exit 1 }
+
+	# Each run in its own editor, as a developer runs it; a run passes when it ran tests and none failed.
+	$Runs = @()
+	$Total = [Diagnostics.Stopwatch]::StartNew()
+	for ($Run = 1; $Run -le $Repeat; $Run++) {
+		Write-Host ''
+		Write-Host "=== Run $Run of $Repeat ==="
+		$Clock = [Diagnostics.Stopwatch]::StartNew()
+		$Report = Invoke-TestRun
+		$Seconds = $Clock.Elapsed.TotalSeconds
+		$Passed = $Report -and $Report.tests.Count -gt 0 -and $Report.failed -eq 0 `
+			-and @($Report.tests | Where-Object { $_.state -eq 'Fail' }).Count -eq 0
+		$Info = if ($Report) {
+			@($Report.tests | ForEach-Object { $_.entries } | Where-Object { $_.event.type -eq 'Info' } | ForEach-Object { $_.event.message })
+		} else { @() }
+		$Runs += [pscustomobject]@{ Run = $Run; Passed = $Passed; Seconds = $Seconds; Info = $Info }
+	}
+
+	Write-Host ''
+	Write-Host "=== $Filter, $Repeat runs ==="
+	foreach ($Entry in $Runs) {
+		Write-Host ("Run {0,3}: {1}  {2,6:N0} s" -f $Entry.Run, $(if ($Entry.Passed) { 'PASS' } else { 'FAIL' }), $Entry.Seconds)
+	}
+	# Info lines that are not the same in every run: under the fixed step a deterministic test has none.
+	$Varying = @($Runs | ForEach-Object { $_.Info } | Group-Object | Where-Object { $_.Count -ne $Repeat } | ForEach-Object { $_.Name })
+	if ($Varying.Count -gt 0) {
+		Write-Host 'Info lines that differ between runs:'
+		$Varying | Select-Object -Unique | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" }
+	}
+	else {
+		Write-Host 'Every run reported the same info lines.'
+	}
+	$PassCount = @($Runs | Where-Object { $_.Passed }).Count
+	Write-Host ("Passed {0} of {1} runs in {2:N0} s wall-clock" -f $PassCount, $Repeat, $Total.Elapsed.TotalSeconds)
+	if ($PassCount -ne $Repeat) { exit 1 }
 	Write-Host 'TESTS PASSED'
 }
 

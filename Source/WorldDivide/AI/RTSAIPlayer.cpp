@@ -81,10 +81,16 @@ namespace RTSAI
 {
 	int32 FindCurrentStep(TConstArrayView<FRTSBuildOrderStep> Steps, TFunctionRef<int32(const URTSEntityData&)> CountOwned)
 	{
+		return FindCurrentStep(Steps, CountOwned, [](const URTSEntityData&) { return true; });
+	}
+
+	int32 FindCurrentStep(TConstArrayView<FRTSBuildOrderStep> Steps, TFunctionRef<int32(const URTSEntityData&)> CountOwned,
+		TFunctionRef<bool(const URTSEntityData&)> CanWorkOn)
+	{
 		for (int32 Index = 0; Index < Steps.Num(); ++Index)
 		{
 			const URTSEntityData* Entry = Steps[Index].Entry;
-			if (Entry && CountOwned(*Entry) < Steps[Index].Count)
+			if (Entry && CountOwned(*Entry) < Steps[Index].Count && CanWorkOn(*Entry))
 			{
 				return Index;
 			}
@@ -105,13 +111,14 @@ namespace RTSAI
 		return Settings;
 	}
 
-	bool ShouldLaunchWave(const FRTSAIWaveSettings& Settings, int32 ArmySize, float SecondsSinceLastWave)
+	bool ShouldLaunchWave(const FRTSAIWaveSettings& Settings, int32 ArmySize, float SecondsSinceLastWave, bool bCanGrow)
 	{
 		if (ArmySize <= 0)
 		{
 			return false;
 		}
-		return ArmySize >= Settings.Size || (SecondsSinceLastWave >= Settings.Interval && ArmySize >= Settings.MinSize);
+		return ArmySize >= Settings.Size
+			|| (SecondsSinceLastWave >= Settings.Interval && (ArmySize >= Settings.MinSize || !bCanGrow));
 	}
 
 	int32 FindThreat(TConstArrayView<FVector> Enemies, TConstArrayView<FVector> Buildings, float Radius, TConstArrayView<bool> Attacked)
@@ -438,7 +445,8 @@ void ARTSAIPlayer::FollowBuildOrder()
 	{
 		return;
 	}
-	const int32 Step = RTSAI::FindCurrentStep(BuildOrder->Steps, [this](const URTSEntityData& Entry) { return CountOwned(Entry); });
+	const int32 Step = RTSAI::FindCurrentStep(BuildOrder->Steps, [this](const URTSEntityData& Entry) { return CountOwned(Entry); },
+		[this](const URTSEntityData& Entry) { return CanWorkOn(Entry); });
 	if (Step == INDEX_NONE)
 	{
 		ProduceArmy(*BuildOrder);
@@ -455,6 +463,37 @@ void ARTSAIPlayer::FollowBuildOrder()
 	{
 		TryProduce(*Entry);
 	}
+}
+
+bool ARTSAIPlayer::CanWorkOn(const URTSEntityData& Entry) const
+{
+	const int32 TeamId = GetRTSPlayerState()->GetTeamId();
+	if (const URTSBuildingData* Building = Cast<URTSBuildingData>(&Entry))
+	{
+		for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
+		{
+			if (It->GetTeamId() == TeamId && IsStanding(*It) && It->GetBuilderComponent()->CanBuild(Building))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+	const URTSUnitData* Unit = Cast<URTSUnitData>(&Entry);
+	const URTSUpgradeData* Upgrade = Cast<URTSUpgradeData>(&Entry);
+	const auto Offers = [Unit, Upgrade](const URTSBuildingData* Data)
+	{
+		return Data && ((Unit && Data->Units.Contains(Unit)) || (Upgrade && Data->Upgrades.Contains(Upgrade)));
+	};
+	for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
+	{
+		if (It->GetTeamId() == TeamId && IsStanding(*It) && Offers(It->GetBuildingData()))
+		{
+			return true;
+		}
+	}
+	// A building a builder is on its way to place counts as it does for the build order: its units wait for it.
+	return PendingBuilds.ContainsByPredicate([&Offers](const FPendingBuild& Pending) { return Offers(Pending.Data.Get()); });
 }
 
 bool ARTSAIPlayer::TryBuild(URTSBuildingData& Data)
@@ -559,6 +598,39 @@ void ARTSAIPlayer::ProduceArmy(const URTSAIBuildOrderData& BuildOrder)
 	}
 }
 
+bool ARTSAIPlayer::CanArmyGrow(const URTSAIBuildOrderData& BuildOrder) const
+{
+	const UWorld* World = GetWorld();
+	const ARTSPlayerState* Player = GetRTSPlayerState();
+	for (TActorIterator<ARTSUnit> It(World); It; ++It)
+	{
+		// Credits on their way.
+		if (It->GetTeamId() == Player->GetTeamId() && IsStanding(*It) && It->GetHarvesterComponent()->CanHarvest()
+			&& It->GetQueuedCommandCount() > 0)
+		{
+			return true;
+		}
+	}
+	for (TActorIterator<ARTSBuilding> It(World); It; ++It)
+	{
+		const URTSProductionComponent* Production = It->GetProductionComponent();
+		if (It->GetTeamId() != Player->GetTeamId() || !Production->CanProduce())
+		{
+			continue;
+		}
+		for (const URTSUnitData* Unit : BuildOrder.ArmyUnits)
+		{
+			const bool bAffordable = Unit && Production->CanProduce(Unit) && Player->GetCredits() >= Unit->Cost
+				&& !RTSProduction::FindMissingPrerequisite(*World, Player->GetTeamId(), *Unit);
+			if (bAffordable || (Unit && Production->GetQueue().Contains(Unit)))
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 void ARTSAIPlayer::KeepHarvesting()
 {
 	const UWorld* World = GetWorld();
@@ -643,7 +715,13 @@ void ARTSAIPlayer::UpdateWaves(float DeltaSeconds)
 	// The army stays home while it fights off an enemy in the base; responders stay on their own fight.
 	TArray<ARTSUnit*> Army = GatherArmy();
 	Army.RemoveAll([this](const ARTSUnit* Unit) { return Responders.Contains(Unit); });
-	if (bDefending || !RTSAI::ShouldLaunchWave(GetWaveSettings(), Army.Num(), SecondsSinceWave))
+	if (bDefending || Army.IsEmpty())
+	{
+		return;
+	}
+	const URTSAIBuildOrderData* BuildOrder = GetBuildOrder();
+	const bool bCanGrow = !BuildOrder || CanArmyGrow(*BuildOrder);
+	if (!RTSAI::ShouldLaunchWave(GetWaveSettings(), Army.Num(), SecondsSinceWave, bCanGrow))
 	{
 		return;
 	}

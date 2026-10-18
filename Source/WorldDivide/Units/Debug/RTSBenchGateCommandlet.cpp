@@ -23,12 +23,12 @@ namespace
 
 	const TCHAR* UnitDataPath = TEXT("/Game/Data/Units");
 
-	FString ToProjectPath(const FString& Path)
+	FString ToGatePath(const FString& Path)
 	{
 		return FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), Path);
 	}
 
-	TArray<TSharedPtr<FJsonValue>> ToJson(const TArray<FString>& Values)
+	TArray<TSharedPtr<FJsonValue>> ToGateJson(const TArray<FString>& Values)
 	{
 		TArray<TSharedPtr<FJsonValue>> Array;
 		for (const FString& Value : Values)
@@ -45,7 +45,7 @@ namespace
 		return FFileHelper::SaveStringToFile(Text, *File, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
 	}
 
-	TSharedPtr<FJsonObject> ReadJson(const FString& File)
+	TSharedPtr<FJsonObject> ReadGateJson(const FString& File)
 	{
 		FString Text;
 		TSharedPtr<FJsonObject> Root;
@@ -166,15 +166,15 @@ namespace
 		FParse::Value(*Params, TEXT("Longs="), LongDir);
 		const bool bBroad = FParse::Param(*Params, TEXT("Broad"));
 		TArray<FString> Changed;
-		if (!ChangesFile.IsEmpty() && !FFileHelper::LoadFileToStringArray(Changed, *ToProjectPath(ChangesFile)))
+		if (!ChangesFile.IsEmpty() && !FFileHelper::LoadFileToStringArray(Changed, *ToGatePath(ChangesFile)))
 		{
 			UE_LOG(LogWorldDivide, Error, TEXT("RTSBenchGate: cannot read %s"), *ChangesFile);
 			return URTSBenchGateCommandlet::ExitFail;
 		}
 		Changed.RemoveAll([](const FString& Line) { return Line.TrimStartAndEnd().IsEmpty(); });
 
-		const TArray<FUnitInfo> Roster = ReadRoster(ScreenDir.IsEmpty() ? FString() : ToProjectPath(ScreenDir),
-			LongDir.IsEmpty() ? FString() : ToProjectPath(LongDir));
+		const TArray<FUnitInfo> Roster = ReadRoster(ScreenDir.IsEmpty() ? FString() : ToGatePath(ScreenDir),
+			LongDir.IsEmpty() ? FString() : ToGatePath(LongDir));
 		if (Roster.IsEmpty())
 		{
 			UE_LOG(LogWorldDivide, Error, TEXT("RTSBenchGate: no unit data under %s"), UnitDataPath);
@@ -185,17 +185,17 @@ namespace
 		const TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
 		Root->SetBoolField(TEXT("broad"), Plan.bBroad);
 		Root->SetBoolField(TEXT("bench_method"), Plan.bBenchMethod);
-		Root->SetArrayField(TEXT("representatives"), ToJson(Plan.Representatives));
+		Root->SetArrayField(TEXT("representatives"), ToGateJson(Plan.Representatives));
 		Root->SetStringField(TEXT("mixed"), Plan.Mixed);
-		Root->SetArrayField(TEXT("screen"), ToJson(Plan.Screen));
-		Root->SetArrayField(TEXT("long"), ToJson(Plan.Long));
+		Root->SetArrayField(TEXT("screen"), ToGateJson(Plan.Screen));
+		Root->SetArrayField(TEXT("long"), ToGateJson(Plan.Long));
 		const TSharedRef<FJsonObject> Reasons = MakeShared<FJsonObject>();
 		for (const TPair<FString, FString>& Reason : Plan.Reasons)
 		{
 			Reasons->SetStringField(Reason.Key, Reason.Value);
 		}
 		Root->SetObjectField(TEXT("reasons"), Reasons);
-		Root->SetArrayField(TEXT("changes"), ToJson(Plan.Changes));
+		Root->SetArrayField(TEXT("changes"), ToGateJson(Plan.Changes));
 		TArray<TSharedPtr<FJsonValue>> Units;
 		for (const FUnitInfo& Unit : Roster)
 		{
@@ -210,7 +210,7 @@ namespace
 			Object->SetBoolField(TEXT("long_baseline"), Unit.bHasLongBaseline);
 			TArray<FString> Packages = Unit.Packages.Array();
 			Packages.Sort();
-			Object->SetArrayField(TEXT("packages"), ToJson(Packages));
+			Object->SetArrayField(TEXT("packages"), ToGateJson(Packages));
 			Units.Add(MakeShared<FJsonValueObject>(Object));
 		}
 		Root->SetArrayField(TEXT("roster"), Units);
@@ -226,15 +226,15 @@ namespace
 		return URTSBenchGateCommandlet::ExitPass;
 	}
 
-	TSharedRef<FJsonObject> ToJson(const FSetVerdict& Verdict)
+	TSharedRef<FJsonObject> ToGateJson(const FSetVerdict& Verdict)
 	{
 		const TSharedRef<FJsonObject> Object = MakeShared<FJsonObject>();
 		Object->SetStringField(TEXT("set"), Verdict.Set);
 		Object->SetStringField(TEXT("method"), Verdict.Method);
 		Object->SetStringField(TEXT("verdict"), LexVerdict(Verdict.Verdict));
 		Object->SetBoolField(TEXT("escalate"), Verdict.bEscalate);
-		Object->SetArrayField(TEXT("reasons"), ToJson(Verdict.Reasons));
-		Object->SetArrayField(TEXT("notes"), ToJson(Verdict.Notes));
+		Object->SetArrayField(TEXT("reasons"), ToGateJson(Verdict.Reasons));
+		Object->SetArrayField(TEXT("notes"), ToGateJson(Verdict.Notes));
 		Object->SetStringField(TEXT("next"), Verdict.Next);
 		return Object;
 	}
@@ -315,8 +315,8 @@ namespace
 		FString Stage;
 		FParse::Value(*Params, TEXT("Baselines="), BaselineDir);
 		FParse::Value(*Params, TEXT("Stage="), Stage);
-		BaselineDir = ToProjectPath(BaselineDir);
-		const TSharedPtr<FJsonObject> Plan = ReadJson(FPaths::Combine(GateDir, TEXT("plan.json")));
+		BaselineDir = ToGatePath(BaselineDir);
+		const TSharedPtr<FJsonObject> Plan = ReadGateJson(FPaths::Combine(GateDir, TEXT("plan.json")));
 		if (!Plan.IsValid() || BaselineDir.IsEmpty() || (Stage != TEXT("screen") && Stage != TEXT("final")))
 		{
 			UE_LOG(LogWorldDivide, Error, TEXT("RTSBenchGate: -Judge needs plan.json in -Gate, -Baselines=<dir> and -Stage=screen|final"));
@@ -343,20 +343,20 @@ namespace
 				{
 					Rerun.Add(Verdict.Set);
 				}
-				Sets.Add(MakeShared<FJsonValueObject>(ToJson(Verdict)));
+				Sets.Add(MakeShared<FJsonValueObject>(ToGateJson(Verdict)));
 				UE_LOG(LogWorldDivide, Display, TEXT("RTSBenchGate: screen %s %s%s%s"), *Verdict.Set, LexVerdict(Verdict.Verdict),
 					Verdict.bEscalate ? TEXT(", escalated: ") : Verdict.Reasons.IsEmpty() ? TEXT("") : TEXT(": "), *FString::Join(Verdict.Reasons, TEXT("; ")));
 			}
 			const TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
 			Root->SetArrayField(TEXT("sets"), Sets);
-			Root->SetArrayField(TEXT("escalate"), ToJson(Escalate));
-			Root->SetArrayField(TEXT("rerun"), ToJson(Rerun));
+			Root->SetArrayField(TEXT("escalate"), ToGateJson(Escalate));
+			Root->SetArrayField(TEXT("rerun"), ToGateJson(Rerun));
 			return WriteJson(Root, FPaths::Combine(GateDir, TEXT("screen.json"))) ? URTSBenchGateCommandlet::ExitPass : URTSBenchGateCommandlet::ExitFail;
 		}
 
 		// The final stage: every long set the plan and the screen asked for, and the screens no long run answers.
 		TArray<FString> LongSets = ReadStrings(Plan, TEXT("long"));
-		for (const FString& Set : ReadStrings(ReadJson(FPaths::Combine(GateDir, TEXT("screen.json"))), TEXT("escalate")))
+		for (const FString& Set : ReadStrings(ReadGateJson(FPaths::Combine(GateDir, TEXT("screen.json"))), TEXT("escalate")))
 		{
 			LongSets.AddUnique(Set);
 		}
@@ -395,15 +395,15 @@ namespace
 		Root->SetStringField(TEXT("baselines"), FPaths::ConvertRelativePathToFull(BaselineDir));
 		Root->SetBoolField(TEXT("broad"), Plan->GetBoolField(TEXT("broad")));
 		Root->SetBoolField(TEXT("bench_method"), Plan->GetBoolField(TEXT("bench_method")));
-		Root->SetArrayField(TEXT("representatives"), ToJson(ReadStrings(Plan, TEXT("representatives"))));
-		Root->SetArrayField(TEXT("changes"), ToJson(ReadStrings(Plan, TEXT("changes"))));
+		Root->SetArrayField(TEXT("representatives"), ToGateJson(ReadStrings(Plan, TEXT("representatives"))));
+		Root->SetArrayField(TEXT("changes"), ToGateJson(ReadStrings(Plan, TEXT("changes"))));
 		TArray<TSharedPtr<FJsonValue>> Sets;
 		for (const FSetVerdict& Verdict : Verdicts)
 		{
-			Sets.Add(MakeShared<FJsonValueObject>(ToJson(Verdict)));
+			Sets.Add(MakeShared<FJsonValueObject>(ToGateJson(Verdict)));
 		}
 		Root->SetArrayField(TEXT("sets"), Sets);
-		Root->SetArrayField(TEXT("next"), ToJson(Next));
+		Root->SetArrayField(TEXT("next"), ToGateJson(Next));
 		const FString Markdown = ToMarkdown(Overall, BaselineDir, Plan, Verdicts, Next);
 		if (!WriteJson(Root, FPaths::Combine(GateDir, TEXT("gate.json")))
 			|| !FFileHelper::SaveStringToFile(Markdown, *FPaths::Combine(GateDir, TEXT("gate.md")), FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
@@ -441,7 +441,7 @@ int32 URTSBenchGateCommandlet::Main(const FString& Params)
 		UE_LOG(LogWorldDivide, Error, TEXT("RTSBenchGate: give -Gate=<dir> and either -Plan or -Judge"));
 		return ExitFail;
 	}
-	GateDir = ToProjectPath(GateDir);
+	GateDir = ToGatePath(GateDir);
 	return bPlan ? RunPlan(Params, GateDir) : RunJudge(Params, GateDir);
 #endif
 }

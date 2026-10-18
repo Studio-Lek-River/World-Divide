@@ -13,6 +13,11 @@ namespace
 		TEXT("rts.Nav.MoveRequestBudgetMs"), URTSMoveRequestSubsystem::DefaultBudgetMs,
 		TEXT("Server ms of path work (search and hull fit) that move and attack-move orders may take per frame (#174); the ")
 		TEXT("rest wait for the next frames. Every frame with requests waiting runs at least one. 0 runs every request at once."));
+
+	TAutoConsoleVariable<int32> CVarMoveRequestsPerFrame(
+		TEXT("rts.Nav.MoveRequestsPerFrame"), 0,
+		TEXT("Move and attack-move requests run per frame instead of rts.Nav.MoveRequestBudgetMs, so the schedule does not ")
+		TEXT("depend on the machine's speed (#179). The fixed-step automation tests set it; 0, the default, keeps the ms budget."));
 }
 
 void URTSMoveRequestSubsystem::Request(ARTSUnit& Unit, uint32 Ticket, int32 OrderId, const ARTSPlayerState* Issuer)
@@ -48,6 +53,11 @@ double URTSMoveRequestSubsystem::GetBudgetMs()
 	return CVarMoveRequestBudgetMs.GetValueOnGameThread();
 }
 
+int32 URTSMoveRequestSubsystem::GetRequestsPerFrame()
+{
+	return FMath::Max(CVarMoveRequestsPerFrame.GetValueOnGameThread(), 0);
+}
+
 bool URTSMoveRequestSubsystem::HasBudget()
 {
 	if (BudgetFrame != GFrameCounter)
@@ -55,6 +65,12 @@ bool URTSMoveRequestSubsystem::HasBudget()
 		BudgetFrame = GFrameCounter;
 		FrameSpentMs = 0.0;
 		FrameWorstMs = 0.0;
+		FrameRuns = 0;
+	}
+	// A count of requests instead of real time: the same requests run in the same frames on any machine.
+	if (const int32 PerFrame = GetRequestsPerFrame(); PerFrame > 0)
+	{
+		return FrameRuns < PerFrame;
 	}
 	const double Budget = GetBudgetMs();
 	// The costliest request of the frame so far stands for the next: one that would not fit waits for the next frame.
@@ -84,17 +100,18 @@ bool URTSMoveRequestSubsystem::Run(const FEntry& Entry)
 		Unit->RunMoveRequest();
 	}
 	const double Ms = (FPlatformTime::Seconds() - Begin) * 1000.0;
-	if (Ms > GetBudgetMs() && GetBudgetMs() > 0.0)
+	if (Ms > GetBudgetMs() && GetBudgetMs() > 0.0 && GetRequestsPerFrame() == 0)
 	{
 		// One request alone over the budget: a frame it cannot be split across (#174). The log names it.
 		UE_LOG(LogWorldDivide, Verbose, TEXT("Move request of %s to %s took %.3f ms, more than the %.1f ms budget"), *Unit->GetName(),
 			Unit->GetMoveTarget() ? *Unit->GetMoveTarget()->ToCompactString() : TEXT("nowhere"), Ms, GetBudgetMs());
 	}
 
-	if (FrameSpentMs <= 0.0)
+	if (FrameRuns == 0)
 	{
 		++Stats.Frames;
 	}
+	++FrameRuns;
 	FrameSpentMs += Ms;
 	FrameWorstMs = FMath::Max(FrameWorstMs, Ms);
 	Stats.TotalMs += Ms;

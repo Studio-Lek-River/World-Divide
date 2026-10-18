@@ -18,11 +18,21 @@ namespace RTSAI
 	/** The first step of which CountOwned reports fewer than its Count, or INDEX_NONE once every step is met. */
 	WORLDDIVIDE_API int32 FindCurrentStep(TConstArrayView<FRTSBuildOrderStep> Steps, TFunctionRef<int32(const URTSEntityData&)> CountOwned);
 
+	/**
+	 * The same, passing over the steps CanWorkOn rules out because nothing left could produce or build them, such as builders
+	 * once the headquarters that made them is gone (#179). INDEX_NONE once every step is met or out of reach.
+	 */
+	WORLDDIVIDE_API int32 FindCurrentStep(TConstArrayView<FRTSBuildOrderStep> Steps, TFunctionRef<int32(const URTSEntityData&)> CountOwned,
+		TFunctionRef<bool(const URTSEntityData&)> CanWorkOn);
+
 	/** BuildOrder's waves scaled for Difficulty: sizes rounded, at least 1, MinSize never above Size. */
 	WORLDDIVIDE_API FRTSAIWaveSettings GetWaveSettings(const URTSAIBuildOrderData& BuildOrder, ERTSAIDifficulty Difficulty);
 
-	/** An army of ArmySize goes now: it reached Size, or Interval has passed and it is at least MinSize. */
-	WORLDDIVIDE_API bool ShouldLaunchWave(const FRTSAIWaveSettings& Settings, int32 ArmySize, float SecondsSinceLastWave);
+	/**
+	 * An army of ArmySize goes now: it reached Size, or Interval has passed and it is at least MinSize, or of any size once
+	 * Interval has passed if it cannot grow any more (bCanGrow false, #179), so a side out of credits still fights on.
+	 */
+	WORLDDIVIDE_API bool ShouldLaunchWave(const FRTSAIWaveSettings& Settings, int32 ArmySize, float SecondsSinceLastWave, bool bCanGrow = true);
 
 	/**
 	 * Of Enemies within Radius of any of Buildings (2D), or flagged in Attacked (one per enemy, or empty) for a recent hit on
@@ -38,8 +48,9 @@ namespace RTSAI
 /**
  * An AI opponent on the server: a player without a connection, with its own ARTSPlayerState (team, faction, credits) that the
  * game mode sets up like a player's. Every ThinkInterval it follows its faction's URTSAIBuildOrderData: idle builders place
- * the next building near its headquarters, production buildings queue the next unit or upgrade, idle harvesters go back to
- * work and the army gathers ahead of the base until a wave goes at the nearest enemy building, unless an enemy unit comes
+ * the next building near its headquarters, production buildings queue the next unit or upgrade (passing over a step nothing
+ * it has left could work on), idle harvesters go back to work and the army gathers ahead of the base until a wave goes at the
+ * nearest enemy building, unless an enemy unit comes
  * near its buildings, or an enemy unit or building fires on them from further out: then the army, and wave units still near
  * the base, fight it off first. An enemy that hits one of its builders or harvesters elsewhere draws part of the army. Its
  * orders take the same path as a player's (RTSCommands::Issue), paid from its own credits, and it sees what every player
@@ -166,8 +177,20 @@ private:
 	/** Sends idle builders to construction sites no builder is working on, such as one whose builder died. */
 	void ResumeSites();
 
-	/** Works on the current step of the build order, or on the army once every step is met. */
+	/** Works on the current step of the build order, or on the army once every step is met or out of reach. */
 	void FollowBuildOrder();
+
+	/**
+	 * Something of the AI's could still produce or build Entry: an own builder that can build it, or an own building that
+	 * offers the unit or upgrade, a construction site or one a builder is on its way to place included.
+	 */
+	bool CanWorkOn(const URTSEntityData& Entry) const;
+
+	/**
+	 * The army can still grow: an army unit is queued, a harvester is at work, or the credits buy an army unit an own
+	 * building can produce now.
+	 */
+	bool CanArmyGrow(const URTSAIBuildOrderData& BuildOrder) const;
 
 	/** Sends an idle builder to place Data near the base. False when it cannot yet: no credits, builder or spot. */
 	bool TryBuild(URTSBuildingData& Data);

@@ -850,6 +850,8 @@ namespace RTSVehicleNetTests
 				{
 					Groups->RefusalsAtStart.Add(Player.Key, Player.Value->GetOrderRefusalCount());
 				}
+				// The real-time budget, cut: a fixed-step run's request count would otherwise stand in for it.
+				RTSTests::UseRealTimeMoveBudget();
 				if (IConsoleVariable* Budget = IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Nav.MoveRequestBudgetMs")))
 				{
 					Groups->SavedBudget = Budget->GetFloat();

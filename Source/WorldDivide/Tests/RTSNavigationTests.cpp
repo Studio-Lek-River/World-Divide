@@ -2260,6 +2260,8 @@ bool FRTSNavMeasureGroupOrders::Update()
 		return true;
 	}
 	UWorld& World = *Controller->GetWorld();
+	// This test measures the real-time budget itself, which a fixed-step run replaces with a request count.
+	RTSTests::UseRealTimeMoveBudget();
 	const double Budget = URTSMoveRequestSubsystem::GetBudgetMs();
 
 	if (Cost->Index >= 0 && !Cost->bWaitFrame)
@@ -2471,6 +2473,9 @@ namespace RTSNavigationTests
 		float SavedBudget = 0.f;
 	};
 
+	/** Requests a frame the counted phase of WorldDivide.Navigation.LongPath.Pending runs, in place of the ms budget. */
+	constexpr int32 CountedRequestsPerFrame = 3;
+
 	IConsoleVariable* GetBudgetVariable()
 	{
 		return IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Nav.MoveRequestBudgetMs"));
@@ -2530,6 +2535,8 @@ namespace RTSNavigationTests
 
 		Pending->Phases.Add({ TEXT("Cut the budget to one request a frame"), [Pending](double)
 		{
+			// The real-time budget, cut: a fixed-step run's request count would otherwise stand in for it.
+			RTSTests::UseRealTimeMoveBudget();
 			IConsoleVariable* Budget = GetBudgetVariable();
 			Pending->SavedBudget = Budget ? Budget->GetFloat() : 2.f;
 			if (Budget)
@@ -2786,6 +2793,56 @@ namespace RTSNavigationTests
 			return true;
 		} });
 
+		// 7. A count of requests per frame instead of the ms budget (#179): the same frames on any machine, the issuers in turn.
+		Pending->Phases.Add({ TEXT("Three requests a frame: a player and an AI each order 12 across"), [=, &Test](double)
+		{
+			if (IConsoleVariable* PerFrame = RTSTests::GetMoveRequestsPerFrameVariable())
+			{
+				PerFrame->Set(CountedRequestsPerFrame, ECVF_SetByCode);
+			}
+			Pending->Units = SpawnWeakGroup(World(), Controller()->GetTeamId(), Hulls(), 12, LongPathStart + FVector(0.f, 3000.f, 0.f));
+			Pending->Others = SpawnWeakGroup(World(), Controller()->GetTeamId(), Hulls(), 12, LongPathStart - FVector(0.f, 3000.f, 0.f));
+			Requests()->ResetStats();
+			Order(*Controller(), Pending->Units, ERTSCommandType::Move, LongPathGoal);
+			TArray<ARTSUnit*> Group;
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Pending->Others)
+			{
+				Group.Add(Unit.Get());
+			}
+			FRTSCommand Move;
+			Move.Type = ERTSCommandType::Move;
+			Move.TargetLocation = LongPathGoal + FVector(0.f, -2000.f, 0.f);
+			RTSCommands::Dispatch(Group, Move);
+			return true;
+		} });
+		Pending->Phases.Add({ TEXT("Both groups get their paths, three a frame"), [=, &Test](double)
+		{
+			if (AnyMoveRequestPending(Pending->Units) || AnyMoveRequestPending(Pending->Others))
+			{
+				return false;
+			}
+			const URTSMoveRequestSubsystem::FStats& Stats = Requests()->GetStats();
+			Test.TestEqual(TEXT("Counted: frames that ran requests"), Stats.Frames, 24 / CountedRequestsPerFrame);
+			Test.TestEqual(TEXT("Counted: requests run in the order's frame"), Stats.RunAtOnce, CountedRequestsPerFrame);
+			Test.TestEqual(TEXT("Counted: requests run later"), Stats.RunLater, 24 - CountedRequestsPerFrame);
+			Test.TestEqual(TEXT("Counted: the longest wait in frames"), Stats.MaxFramesWaited, 24 / CountedRequestsPerFrame - 1);
+			Test.TestEqual(TEXT("Counted: stale requests"), Stats.Stale, 0);
+			for (TArray<TWeakObjectPtr<ARTSUnit>>* Units : { &Pending->Units, &Pending->Others })
+			{
+				for (const TWeakObjectPtr<ARTSUnit>& Unit : *Units)
+				{
+					if (Test.TestNotNull(TEXT("Counted: a unit is alive"), Unit.Get()))
+					{
+						const FString Problem = CheckUsablePath(*Unit);
+						Test.TestTrue(*FString::Printf(TEXT("Counted: a unit drives a usable path (%s)"), *Problem), Problem.IsEmpty());
+					}
+				}
+				DestroyAll(*Units);
+			}
+			RTSTests::UseRealTimeMoveBudget();
+			return true;
+		} });
+
 		Pending->Phases.Add({ TEXT("Restore the budget"), [Pending](double)
 		{
 			if (IConsoleVariable* Budget = GetBudgetVariable())
@@ -2843,7 +2900,8 @@ bool FRTSNavRunPendingPhases::Update()
  * 50 infantry sent onto the island are all refused, stay put, and the player hears of it once, though the refusals take
  * longer than the cooldown; a Stop makes 30 waiting requests stale and nobody moves; orders replaced on the next frames
  * leave only the last one's paths; units destroyed while they wait are skipped and the rest get their paths; a Shift-queued
- * leg waits behind its group's first leg; and a player's and an AI's groups ordered at once start in turn.
+ * leg waits behind its group's first leg; a player's and an AI's groups ordered at once start in turn; and with
+ * rts.Nav.MoveRequestsPerFrame at 3, as fixed-step test runs count requests (#179), 24 requests run three a frame.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavLongPathPendingTest, "WorldDivide.Navigation.LongPath.Pending", RTSTests::TestFlags)
 

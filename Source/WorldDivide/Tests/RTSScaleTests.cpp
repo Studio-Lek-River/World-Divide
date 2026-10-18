@@ -782,6 +782,22 @@ namespace RTSScaleTests
 		return true;
 	}
 
+	/** A checksum of where every unit stands, to the centimetre, and of every building's health, in actor order. */
+	uint32 GetEndStateDigest(UWorld& World)
+	{
+		TArray<int64> Values;
+		for (TActorIterator<ARTSUnit> It(&World); It; ++It)
+		{
+			Values.Add(FMath::RoundToInt64(It->GetActorLocation().X));
+			Values.Add(FMath::RoundToInt64(It->GetActorLocation().Y));
+		}
+		for (TActorIterator<ARTSBuilding> It(&World); It; ++It)
+		{
+			Values.Add(FMath::RoundToInt64(It->GetHealthComponent()->GetHealth()));
+		}
+		return FCrc::MemCrc32(Values.GetData(), Values.Num() * Values.GetTypeSize());
+	}
+
 	/** Watches both AIs until the match ends, recording that each ran a working base and fought. */
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyAIvsAI, FAutomationTestBase*, Test, TSharedRef<FAIvsAIState>, State);
 	bool FRTSVerifyAIvsAI::Update()
@@ -852,9 +868,11 @@ namespace RTSScaleTests
 			return false;
 		}
 		Test->AddInfo(FString::Printf(TEXT("Match ran %.0f game seconds"), World->GetTimeSeconds() - State->PhaseWorldStart));
+		// Under -RTSTestFixedStep every run of a build plays the same match (#179): the same digest each time.
+		Test->AddInfo(FString::Printf(TEXT("End state digest %08x"), GetEndStateDigest(*World)));
 		for (int32 Team = 0; Team < 2; ++Team)
 		{
-			Test->AddInfo(FString::Printf(TEXT("Team %d: build order %d, harvested %d, a vehicle left its factory %d, waves %d, lowest enemy building %.0f%%"),
+			Test->AddInfo(FString::Printf(TEXT("Team %d: build order %d, harvested %d, a vehicle left its factory %d, waves %d, lowest an enemy building fell to %.0f%%"),
 				Team, State->bBuildOrderDone[Team], State->bEarned[Team], State->bVehicleLeft[Team], State->Waves[Team], 100.f * State->LowestEnemyHealth[Team]));
 			Test->TestTrue(*FString::Printf(TEXT("Team %d's AI completed its build order"), Team), State->bBuildOrderDone[Team]);
 			Test->TestTrue(*FString::Printf(TEXT("Team %d's harvester delivered"), Team), State->bEarned[Team]);
