@@ -59,12 +59,19 @@ All through `Tools/Scripts/ue.ps1` (engine from `UE_ROOT`, default `D:\Program F
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task build
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup    # only if setup_testmap.py or data-asset properties changed
-powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test     # optional: -Filter WorldDivide.<Area>
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.<Area>,WorldDivide.<Area2>
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Tier fast
 ```
 
 - `build` exits 2 when `UnrealEditor` is running: ask the user to close the editor, then retry. Never kill the process yourself.
 - Run `setup` after `build`, since the script uses the new C++ classes.
-- The full `WorldDivide` test run must pass, including the new tests. Fix failures and rerun; do not commit red.
+- **Tests, cheapest first; never the full suite by default.** Each editor start costs about 15 s, so put every filter in one comma-separated `-Filter`.
+  1. While working: `-Filter` with the areas the change touches and the new tests, their `[Slow]` tests included. After a failure, fix it and run `-Rerun` (only the tests that failed last time), not the whole filter again.
+  2. Before the commit: `-Tier fast`, the whole suite without the `[Slow]` tests of `Config/Tests/Tags.ini`, about 2 min. It catches regressions elsewhere. Skip it when step 1 already ran the areas that could break, such as a docs-only change or one confined to a single area.
+  3. The full suite, a bare `-Task test` (two editors in parallel, about 5 min), only when the change touches shared foundations (navigation, movement, avoidance, networking, commands, the test helpers, `Build.cs` or config), for a scale step, or at a milestone gate. Say why in the report.
+- Do not commit red. Exit 5 means the watchdog killed a hung run; the test it names is the one to look at.
+- If the run names a test over 8 s without a `[Slow]` tag, add it to `Config/Tests/Tags.ini` in the same commit.
+- The report names the filters and tier that ran, with the counts and wall clock.
 - `git status` afterwards: include regenerated assets under `Content/` in the commit; anything unexpected (e.g. untouched maps rewritten) → investigate before committing.
 - Inspect `git diff` for leftovers, debug logging and out-of-scope edits.
 

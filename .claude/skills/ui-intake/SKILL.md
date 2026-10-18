@@ -1,6 +1,6 @@
 ---
 name: ui-intake
-description: Take a World-Divide UI design delivery ZIP from ChatGPT in - check it before copying anything (places, names, JSON, PNG sizes, binding keys, actions, sprites), copy it into the repository and merge the sprite entries, run the setup only when art changed, run WorldDivide.UI.Validate and the full test run, turn "Requests for code" into issues, then stop and propose the commit that closes the design issue. Use with /ui-intake <zip> [design issue number].
+description: Take a World-Divide UI design delivery ZIP from ChatGPT in - check it before copying anything (places, names, JSON, PNG sizes, binding keys, actions, sprites), copy it into the repository and merge the sprite entries, run the setup only when art changed, run the UI tests (WorldDivide.UI.Validate included), turn "Requests for code" into issues, then stop and propose the commit that closes the design issue. Use with /ui-intake <zip> [design issue number].
 user-invocable: true
 argument-hint: "<zip> [design issue number]"
 ---
@@ -34,7 +34,7 @@ The designer delivers assets, mockup and spec only; `UI/Layouts/` is Claude's (a
 ## 3. Import and test
 
 - Only on `SETUP NEEDED`: `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup`. Exit 3 → report the LFS lock instructions it prints and stop.
-- Always: `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test` (the full `WorldDivide` run, `WorldDivide.UI.Validate` included). A failure that is technical (a path, a merge) → fix it in the delivered files and rerun; a failure in the design itself → report it and stop.
+- Always: `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.UI,WorldDivide.HUD` (every UI test, `WorldDivide.UI.Validate` included, in one editor). When the intake also changed code or ran setup, add `-Tier fast` as a second run. Never the full suite. A failure that is technical (a path, a merge) → fix it in the delivered files and rerun with `-Rerun`; a failure in the design itself → report it and stop.
 - `git status --short`: the delivery's files and, after setup, the regenerated assets under `Content/UI/`. Anything else changed → investigate before going on.
 
 ## 4. Requests for code

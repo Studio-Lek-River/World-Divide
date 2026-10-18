@@ -1098,6 +1098,7 @@ Same machine, on 2026-10-18. The code is in 498df5f. The measurements below were
   
   #181 later weighs those waves against the enemy's defences.
 - **`ue.ps1 -Task test -Repeat N`** runs a filter N times, each in a fresh editor. It prints each run's result and wall-clock time, plus the tests' info lines that differ between runs. `WorldDivide.Smoke.AIvsAI` reports the match length and an end-state digest (every unit's position to the centimetre and every building's health), so identical runs show as identical lines.
+- **Test tiers.** `-Tier fast` leaves out the `[Slow]` tests of `Config/Tests/Tags.ini`: 253 tests in 126 s, against 267 in about 8 min for the full run. The full suite runs in two editors at once by default (268 tests in 276–304 s over four runs), and `-Rerun` runs only the tests that failed last time. The help block at the top of `ue.ps1` covers the watchdog and the timings each run prints.
 
 ### Determinism
 

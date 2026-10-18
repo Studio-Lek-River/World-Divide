@@ -5,6 +5,10 @@ Builds, tests, regenerates test content for or opens World Divide from the comma
 .EXAMPLE
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task build
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Commands
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Commands,WorldDivide.UI
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Tier fast
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Rerun
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Shards 1
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -TimeDilation 1
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Smoke.AIvsAI -Repeat 10
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Smoke.AIvsAI -Cvars rts.Nav.MoveRequestsPerFrame=6
@@ -36,6 +40,12 @@ instead runs them in step with real time at N game seconds per real second, -Tim
 its wall-clock time and the tests' info lines that differ between runs, then the total (#179). -Cvars sets console variables
 for the test run (-dpcvars, comma-separated name=value), such as another rts.Nav.MoveRequestsPerFrame to try a different
 fixed-step trajectory (#181).
+-Filter takes several comma-separated filters and runs them in one editor. -Tier fast leaves out the tests tagged [Slow] in
+Config/Tests/Tags.ini (the whole suite in about 2 min instead of 8). -Rerun runs only the tests that failed in the last run
+(Saved/Automation/LastFailed.txt). The whole suite at the full tier runs in two editors at once (about 5 min), the navigation
+tests in one and the rest in the other; -Shards 1 keeps it in one editor. A watchdog kills the test editor after
+-TimeoutMinutes (default 6 for fast, 15 for full), names the test it hung in and exits 5. Every run prints its slowest tests and names any test over 8 s without a [Slow] tag. The
+editor's own output goes to Saved/Logs/AutomationRun*.log.stdout; the run prints only its result.
 Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
 Editor opens the editor with the Unreal MCP server at http://127.0.0.1:8000/mcp (docs/ui/AI_TEAM.md); test and setup run without it.
 Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in the UI test state for each faction look at
@@ -96,6 +106,17 @@ param(
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
+
+	[ValidateSet('full', 'fast')]
+	[string]$Tier = 'full',
+
+	[switch]$Rerun,
+
+	[ValidateRange(0, 600)]
+	[int]$TimeoutMinutes = 0,
+
+	[ValidateRange(0, 2)]
+	[int]$Shards = 0,
 
 	[double]$TimeDilation = 0,
 
@@ -208,32 +229,110 @@ function Invoke-Setup {
 	Write-Host 'SETUP SUCCEEDED'
 }
 
-function Invoke-TestRun {
-	$ReportDir = Join-Path $RepoRoot 'Saved\Automation\Reports'
-	$LogFile = Join-Path $RepoRoot 'Saved\Logs\AutomationRun.log'
-	if (Test-Path $ReportDir) { Remove-Item -Recurse -Force $ReportDir }
+# The tests -Tier fast leaves out: Config/Tests/Tags.ini, which the automation framework reads itself.
+$TagsFile = Join-Path $RepoRoot 'Config\Tests\Tags.ini'
+$LastFailedFile = Join-Path $RepoRoot 'Saved\Automation\LastFailed.txt'
+# A test this long in a run that has no [Slow] tag is named after the run, so Tags.ini keeps up.
+$SlowSeconds = 8.0
 
+function Get-SlowTests {
+	if (-not (Test-Path $TagsFile)) { return @() }
+	return @(Get-Content $TagsFile | Where-Object { $_ -match '^([^;=\s][^=]*)=.*\[Slow\]' } | ForEach-Object { $Matches[1].Trim() })
+}
+
+# The RunTests argument: the failed tests of the last run with -Rerun, else -Filter, whose comma-separated entries become
+# the '+' union of Automation RunTests (-ExecCmds splits its commands at commas).
+function Get-TestExpression {
+	if ($Rerun) {
+		$Names = @(if (Test-Path $LastFailedFile) { Get-Content $LastFailedFile | Where-Object { $_ } })
+		if ($Names.Count -eq 0) {
+			Write-Host "Nothing to rerun: the last run left no failed tests ($LastFailedFile)."
+			exit 1
+		}
+		Write-Host "Rerunning the $($Names.Count) failed test(s) of the last run."
+		return ($Names | ForEach-Object { "^$_$" }) -join '+'
+	}
+	return (@($Filter -split '[,+]' | ForEach-Object { $_.Trim() } | Where-Object { $_ })) -join '+'
+}
+
+# Two shards split the whole suite: the navigation tests, about half its time, in one editor and every other area in a second.
+function Get-TestShards([string]$Expression) {
+	# By default the whole suite at the full tier runs in two shards (three parallel full runs green, 2026-10-18).
+	$Count = if ($Shards -gt 0) { $Shards } elseif (-not $Rerun -and $Tier -eq 'full' -and $Expression -eq 'WorldDivide') { 2 } else { 1 }
+	if ($Count -le 1) { return @(@{ Name = ''; Expression = $Expression }) }
+	if ($Rerun -or $Expression -ne 'WorldDivide') {
+		Write-Host 'TESTS FAILED: -Shards splits the whole WorldDivide suite; leave out -Filter and -Rerun.'
+		exit 1
+	}
+	$Sources = Get-ChildItem (Join-Path $RepoRoot 'Source') -Recurse -Include '*.cpp', '*.h'
+	$Areas = @($Sources | Select-String -Pattern '"WorldDivide\.(\w+)\.' -AllMatches | ForEach-Object { $_.Matches } |
+		ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+	$Rest = @($Areas | Where-Object { $_ -ne 'Navigation' } | ForEach-Object { "^WorldDivide.$_." })
+	return @(
+		@{ Name = 'Navigation'; Expression = '^WorldDivide.Navigation.' },
+		@{ Name = 'Rest'; Expression = $Rest -join '+' })
+}
+
+# One editor per shard, all at once; each is killed once the run has taken -TimeoutMinutes. Returns the merged report:
+# tests, the failed and timed-out shards' names, and the wall clock.
+function Invoke-TestRun {
+	$Expression = Get-TestExpression
+	$TagFilter = if ($Tier -eq 'fast') { 'SetTagFilter !Slow;' } else { '' }
+	$Minutes = if ($TimeoutMinutes -gt 0) { $TimeoutMinutes } elseif ($Tier -eq 'fast') { 6 } else { 15 }
 	# A fixed time step unless -TimeDilation asks for real-time ticking (RTSTests::ApplyTestTimeDilation).
 	$TimeArg = if ($TimeDilation -gt 0) { "-RTSTestTimeDilation=$TimeDilation" } else { '-RTSTestFixedStep=30' }
 	$CvarArgs = @(if ($Cvars) { "-dpcvars=$Cvars" })
-	& $EditorCmd $Project "-ExecCmds=Automation RunTests $Filter;Quit" '-TestExit=Automation Test Queue Empty' `
-		"-ReportExportPath=$ReportDir" "-abslog=$LogFile" $TimeArg @CvarArgs $NoMCPPlugins -unattended -nullrhi -nosplash -nosound | Out-Host
-	$EditorExit = $LASTEXITCODE
 
-	$Index = Join-Path $ReportDir 'index.json'
-	if (-not (Test-Path $Index)) {
-		Write-Host "No test report written (editor exit $EditorExit). Log: $LogFile"
-		if (Test-Path $LogFile) {
-			Select-String -Path $LogFile -Pattern 'Error:|Fatal|TEST COMPLETE' | Select-Object -Last 20 | ForEach-Object { Write-Host $_.Line }
-		}
-		return $null
+	$Runs = @()
+	$Clock = [Diagnostics.Stopwatch]::StartNew()
+	foreach ($Shard in Get-TestShards $Expression) {
+		$Suffix = if ($Shard.Name) { "-$($Shard.Name)" } else { '' }
+		$ReportDir = Join-Path $RepoRoot "Saved\Automation\Reports$Suffix"
+		$LogFile = Join-Path $RepoRoot "Saved\Logs\AutomationRun$Suffix.log"
+		if (Test-Path $ReportDir) { Remove-Item -Recurse -Force $ReportDir }
+		# The editor's own output repeats the log; it goes to a file so a run prints only its result.
+		$Process = Start-Process -FilePath $EditorCmd -NoNewWindow -PassThru -RedirectStandardOutput "$LogFile.stdout" -ArgumentList (@(
+			"`"$Project`"", "`"-ExecCmds=Automation $($TagFilter)RunTests $($Shard.Expression);Quit`"", '"-TestExit=Automation Test Queue Empty"',
+			"`"-ReportExportPath=$ReportDir`"", "`"-abslog=$LogFile`"", $TimeArg) + $CvarArgs + @($NoMCPPlugins,
+			'-unattended', '-nullrhi', '-nosplash', '-nosound'))
+		# Holding the handle keeps the exit code readable once the process has gone.
+		$null = $Process.Handle
+		$Runs += @{ Name = $Shard.Name; Process = $Process; ReportDir = $ReportDir; LogFile = $LogFile }
+		Write-Host "Running $(if ($Shard.Name) { "shard $($Shard.Name): " })$($Shard.Expression)$(if ($TagFilter) { ', without [Slow]' }); at most $Minutes min. Log: $LogFile"
 	}
 
-	# The report may carry a UTF-8 BOM; strip it before parsing.
-	$Report = (Get-Content -Raw -Encoding UTF8 $Index).TrimStart([char]0xFEFF) | ConvertFrom-Json
-	$Failed = @($Report.tests | Where-Object { $_.state -eq 'Fail' })
+	$Deadline = [DateTime]::UtcNow.AddMinutes($Minutes)
+	$Tests = @()
+	$Broken = @()
+	foreach ($Run in $Runs) {
+		$Left = [Math]::Max(0, ($Deadline - [DateTime]::UtcNow).TotalMilliseconds)
+		if (-not $Run.Process.WaitForExit([int]$Left)) {
+			# Only the editor this run started, with its shader workers.
+			& taskkill /PID $Run.Process.Id /T /F 2>&1 | Out-Null
+			$null = $Run.Process.WaitForExit(30000)
+			$Hung = Select-String -Path $Run.LogFile -Pattern 'Test Started\. .*Path=\{([^}]+)\}' | Select-Object -Last 1
+			$Name = if ($Hung) { $Hung.Matches[0].Groups[1].Value } else { 'before the first test' }
+			Write-Host "TIMED OUT after $Minutes min$(if ($Run.Name) { " in shard $($Run.Name)" }), in $Name. Log: $($Run.LogFile)"
+			$Broken += "timeout:$Name"
+			continue
+		}
+		$Index = Join-Path $Run.ReportDir 'index.json'
+		if (-not (Test-Path $Index)) {
+			Write-Host "No test report written$(if ($Run.Name) { " by shard $($Run.Name)" }) (editor exit $($Run.Process.ExitCode)). Log: $($Run.LogFile)"
+			if (Test-Path $Run.LogFile) {
+				Select-String -Path $Run.LogFile -Pattern 'Error:|Fatal|TEST COMPLETE' | Select-Object -Last 20 | ForEach-Object { Write-Host $_.Line }
+			}
+			$Broken += "noreport:$($Run.Name)"
+			continue
+		}
+		# The report may carry a UTF-8 BOM; strip it before parsing.
+		$Report = (Get-Content -Raw -Encoding UTF8 $Index).TrimStart([char]0xFEFF) | ConvertFrom-Json
+		$Tests += @($Report.tests)
+	}
+	$Seconds = $Clock.Elapsed.TotalSeconds
 
-	foreach ($Test in $Report.tests) {
+	$Failed = @($Tests | Where-Object { $_.state -eq 'Fail' })
+	foreach ($Test in $Tests) {
 		Write-Host ("[{0}] {1}" -f $Test.state, $Test.fullTestPath)
 	}
 	foreach ($Test in $Failed) {
@@ -243,22 +342,45 @@ function Invoke-TestRun {
 			if ($Entry.event.type -eq 'Error') { Write-Host "  $($Entry.event.message)" }
 		}
 	}
+	# What -Rerun runs next: the failed tests, and a test a timeout cut off.
+	New-Item -ItemType Directory -Force (Split-Path $LastFailedFile) | Out-Null
+	$Again = @($Failed | ForEach-Object { $_.fullTestPath }) + @($Broken | Where-Object { $_ -like 'timeout:WorldDivide.*' } | ForEach-Object { $_.Substring(8) })
+	[IO.File]::WriteAllLines($LastFailedFile, [string[]]$Again)
 
+	$Slow = Get-SlowTests
+	$Timed = @($Tests | Where-Object { $null -ne $_.duration } | Sort-Object { [double]$_.duration } -Descending)
+	if ($Timed.Count -gt 0) {
+		Write-Host ''
+		Write-Host 'Slowest tests:'
+		$Timed | Select-Object -First 5 | ForEach-Object { Write-Host ("  {0,6:N1} s  {1}" -f [double]$_.duration, $_.fullTestPath) }
+		$Untagged = @($Timed | Where-Object { [double]$_.duration -gt $SlowSeconds -and $_.fullTestPath -notin $Slow })
+		if ($Untagged.Count -gt 0) {
+			Write-Host "Over $SlowSeconds s without a [Slow] tag in Config/Tests/Tags.ini (add them so -Tier fast stays fast):"
+			$Untagged | ForEach-Object { Write-Host ("  {0}=[Slow]   ; {1:N1} s" -f $_.fullTestPath, [double]$_.duration) }
+		}
+	}
+
+	$Count = { param($State) @($Tests | Where-Object { $_.state -eq $State }).Count }
 	Write-Host ''
-	Write-Host ("Succeeded: {0}  With warnings: {1}  Failed: {2}  Not run: {3}" -f $Report.succeeded, $Report.succeededWithWarnings, $Report.failed, $Report.notRun)
-	Write-Host "Log: $LogFile"
-	return $Report
+	Write-Host ("Succeeded: {0}  Failed: {1}  Not run: {2}  in {3:N0} s wall-clock ({4} tier{5})" -f (& $Count 'Success'), $Failed.Count,
+		(& $Count 'NotRun'), $Seconds, $Tier, $(if ($Runs.Count -gt 1) { ", $($Runs.Count) shards" } else { '' }))
+	return [pscustomobject]@{ Tests = $Tests; Failed = $Failed.Count; Broken = $Broken; Seconds = $Seconds }
+}
+
+function Test-RunPassed($Result) {
+	return $Result.Broken.Count -eq 0 -and $Result.Tests.Count -gt 0 -and $Result.Failed -eq 0
 }
 
 function Invoke-Test {
 	if ($Repeat -le 1) {
-		$Report = Invoke-TestRun
-		if (-not $Report) { exit 1 }
-		if ($Report.tests.Count -eq 0) {
-			Write-Host "No tests matched filter '$Filter'."
+		$Result = Invoke-TestRun
+		if (@($Result.Broken | Where-Object { $_ -like 'timeout:*' }).Count -gt 0) { exit 5 }
+		if ($Result.Broken.Count -gt 0) { exit 1 }
+		if ($Result.Tests.Count -eq 0) {
+			Write-Host "No tests matched filter '$Filter'$(if ($Tier -eq 'fast') { ' outside the [Slow] tests' })."
 			exit 1
 		}
-		if ($Report.failed -gt 0 -or @($Report.tests | Where-Object { $_.state -eq 'Fail' }).Count -gt 0) { exit 1 }
+		if (-not (Test-RunPassed $Result)) { exit 1 }
 		Write-Host 'TESTS PASSED'
 		return
 	}
@@ -270,13 +392,10 @@ function Invoke-Test {
 		Write-Host ''
 		Write-Host "=== Run $Run of $Repeat ==="
 		$Clock = [Diagnostics.Stopwatch]::StartNew()
-		$Report = Invoke-TestRun
+		$Result = Invoke-TestRun
 		$Seconds = $Clock.Elapsed.TotalSeconds
-		$Passed = $Report -and $Report.tests.Count -gt 0 -and $Report.failed -eq 0 `
-			-and @($Report.tests | Where-Object { $_.state -eq 'Fail' }).Count -eq 0
-		$Info = if ($Report) {
-			@($Report.tests | ForEach-Object { $_.entries } | Where-Object { $_.event.type -eq 'Info' } | ForEach-Object { $_.event.message })
-		} else { @() }
+		$Passed = Test-RunPassed $Result
+		$Info = @($Result.Tests | ForEach-Object { $_.entries } | Where-Object { $_.event.type -eq 'Info' } | ForEach-Object { $_.event.message })
 		$Runs += [pscustomobject]@{ Run = $Run; Passed = $Passed; Seconds = $Seconds; Info = $Info }
 	}
 
