@@ -37,10 +37,11 @@ public class WorldDivide : ModuleRules
 		// The HUD reads its layout files at runtime (URTSLayoutWidget), so they ship with the game.
 		RuntimeDependencies.Add("$(ProjectDir)/UI/Layouts/...", StagedFileType.UFS);
 
-		// PIE-driven smoke tests (ApplicationCore: their simulated key presses), the placeholder art test and the map preview capture only.
+		// PIE-driven smoke tests (ApplicationCore: their simulated key presses), the placeholder art test, the cook rules test
+		// (DeveloperToolSettings: the packaging settings) and the map preview capture only.
 		if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "AssetRegistry", "RenderCore", "ApplicationCore", "MeshDescription", "StaticMeshDescription" });
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "AssetRegistry", "RenderCore", "ApplicationCore", "MeshDescription", "StaticMeshDescription", "DeveloperToolSettings" });
 		}
 	}
 }

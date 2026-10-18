@@ -79,4 +79,4 @@ Test: `WorldDivide.Perf.Replication` (*planned*).
 31. **Every map has one unbound post-process volume** with manual exposure and no motion blur.
 32. **Only the project's maps are cooked**; marketplace packs under `Content/` are never cooked unless the game references them.
 
-Tests: `WorldDivide.Config.Renderer`, `WorldDivide.Config.Cook`, `WorldDivide.Maps.PostProcess` (*planned*).
+Tests: `WorldDivide.Config.Cook`; `WorldDivide.Config.Renderer`, `WorldDivide.Maps.PostProcess` (*planned*).
