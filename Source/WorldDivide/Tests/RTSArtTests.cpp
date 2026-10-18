@@ -348,7 +348,7 @@ bool FRTSM20GuardianLODTest::RunTest(const FString& Parameters)
 			!Body || Body->AggGeom.GetElementCount() == 0);
 	}
 
-	TestTrue(*FString::Printf(TEXT("LOD0 is the exported tank (%d triangles)"), Totals[0]), Totals[0] > 89000 && Totals[0] <= 89396);
+	TestTrue(*FString::Printf(TEXT("LOD0 is the exported tank (%d triangles)"), Totals[0]), Totals[0] > 89000 && Totals[0] <= 89684);
 	for (int32 LOD = 1; LOD < M20LODCount; ++LOD)
 	{
 		const FInt32Interval& Budget = M20LODBudgets[LOD - 1];

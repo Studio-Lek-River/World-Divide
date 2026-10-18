@@ -131,7 +131,7 @@
   "track_pitch": 15.9889,
   "roll_radii": {
     "RoadWheel": 34.0,
-    "Sprocket": 36.0,
+    "Sprocket": 35.63,
     "Idler": 32.0
   }
 }

@@ -65,6 +65,7 @@ ROAD_WHEEL_X = [-2.0 + 0.80 * i for i in range(6)]
 ROAD_WHEEL_Z = ROAD_WHEEL_RADIUS + TRACK_THICKNESS
 ROAD_ARM = (0.32, 0.62)  # the road arm's hull pivot: x ahead of the axle, z
 SPROCKET = (-2.85, 0.62, 0.28)  # x, z, radius at the teeth roots
+SPROCKET_TEETH = 14  # about one per link of the track wrapped round it (#213)
 IDLER = (2.85, 0.58, 0.27)
 RETURN_ROLLER_X = (-1.56, 0.0, 1.56)
 RETURN_ROLLER_Z = 0.88
@@ -380,12 +381,13 @@ def rounded(points, radius, steps=3):
 
 
 def gear(centre, axis, root, tip, teeth, length):
-    """A sprocket ring: each tooth a rounded root, two flanks and a flat tip."""
+    """A sprocket ring: each tooth a rounded root, two flanks and a flat tip, the first tooth centred on the axis
+    frame's u."""
     a, u, v = axis_frame(axis)
     shape = (root, root * 0.995, (root + tip) / 2.0, tip, tip, (root + tip) / 2.0)
     points = []
     for i in range(teeth * len(shape)):
-        t = 2.0 * math.pi * i / (teeth * len(shape))
+        t = 2.0 * math.pi * (i - 3.5) / (teeth * len(shape))
         points.append((u * math.cos(t) + v * math.sin(t)) * shape[i % len(shape)])
     c = Vector(centre)
     return round_part(loft([c - a * length / 2.0 + p for p in points], [c + a * length / 2.0 + p for p in points]))
@@ -1317,10 +1319,12 @@ def build_road_wheel(name):
 
 
 def build_sprocket(name):
+    """The drive sprocket. A tooth points straight back (+u is +X, and an even count puts one at -X too), where the
+    track loop starts with the gap between two links, so its teeth sit between the links (#213)."""
     sprocket = Part(name)
     root = SPROCKET[2]
     for y in (-0.13, 0.13):
-        sprocket.add("Metal", gear((0.0, y, 0.0), (0, 1, 0), root, root + 0.065, 11, 0.06), SMALL)
+        sprocket.add("Metal", gear((0.0, y, 0.0), (0, 1, 0), root, root + 0.065, SPROCKET_TEETH, 0.06), SMALL)
     sprocket.add("Olive", lathe((0, 0, 0), (0, 1, 0), [(-0.17, 0.10), (-0.17, 0.24), (-0.10, 0.26), (0.10, 0.26),
                                                        (0.17, 0.24), (0.17, 0.16), (0.22, 0.14), (0.22, 0.10)],
                                 segments=24), bevel=False)
@@ -1642,13 +1646,15 @@ def write_layout(parts):
 def running_layout():
     """What the game rolls the running gear and the tracks by (#151): the links' pitch, and each wheel's rolling radius
     in cm, where its rim meets the track. A road wheel rolls on the track's inner face; the sprocket and the idler carry
-    the track wrapped round them, so they turn with its centre line."""
+    the track wrapped round them, so they turn with its centre line. The sprocket turns one tooth per link instead
+    (#213): its teeth then stay between the links however far the tank drives, where its centre line's 36 cm would
+    let them fall behind by a seventh of a tooth every turn."""
     _, _, _, pitch = track_loop()
     half = TRACK_THICKNESS / 2.0
     return {
         "track_pitch": round(pitch * 100.0, 4),
         "roll_radii": {"RoadWheel": round(ROAD_WHEEL_RADIUS * 100.0, 2),
-                       "Sprocket": round((SPROCKET[2] + 0.03 + half) * 100.0, 2),
+                       "Sprocket": round(SPROCKET_TEETH * pitch / (2.0 * math.pi) * 100.0, 2),
                        "Idler": round((IDLER[2] + half) * 100.0, 2)},
     }
 

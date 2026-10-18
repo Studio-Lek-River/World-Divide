@@ -45,9 +45,9 @@ confirms. The additions are:
 | RWS | 2,540 | 2,540 |
 | Track L / R | 6,120 | 12,240 |
 | Road wheel (×12) | 1,456 | 17,472 |
-| Sprocket (×2) | 1,208 | 2,416 |
+| Sprocket (×2) | 1,352 | 2,704 |
 | Idler (×2) | 1,396 | 2,792 |
-| **Total** | | **89,396** |
+| **Total** | | **89,684** |
 
 Import results:
 - Every mesh keeps its exported triangle count except the gun and the RWS. `WorldDivide.Art.M20Guardian` checks this
