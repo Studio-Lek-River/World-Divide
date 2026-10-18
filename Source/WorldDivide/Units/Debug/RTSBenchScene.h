@@ -63,6 +63,69 @@ namespace RTSBenchScene
 	constexpr float NearCameraDistance = 6000.f;
 	constexpr float FarCameraDistance = 45000.f;
 
+	/**
+	 * The set name's suffixes that change the occlusion queries of the units' parts (#214). Without them the parts take
+	 * ARTSUnit's grouped occlusion (rts.Render.GroupPartOcclusion). "@ExactOcclusion" gives each part its own query in every
+	 * frame, as before #214; "@NoOcclusion" turns hardware occlusion off (r.AllowOcclusionQueries 0) and "@HZB" tests the
+	 * hierarchical Z-buffer instead (r.HZBOcclusion 1), both for the whole scene.
+	 */
+	const TCHAR* const ExactOcclusionSuffix = TEXT("@ExactOcclusion");
+	const TCHAR* const NoOcclusionSuffix = TEXT("@NoOcclusion");
+	const TCHAR* const HZBOcclusionSuffix = TEXT("@HZB");
+
+	/**
+	 * The set name's suffix that roofs most of the ground the grid stands on and drives over (#214): a slab
+	 * CoverHeight above the ground over the grid's southern CoverShare across Y and the whole drive, so the units under it
+	 * are hidden from the camera and only occlusion culling leaves them out. It neither collides nor changes navigation.
+	 */
+	const TCHAR* const OccludedSuffix = TEXT("@Occluded");
+	constexpr float CoverShare = 2.f / 3.f;
+	constexpr float CoverHeight = 1200.f;
+	constexpr float CoverThickness = 100.f;
+	constexpr float CoverMargin = 1000.f;
+
+	/** The roof of an "@Occluded" set over Hulls and where Drive along X takes them, on ground at GroundZ. */
+	WORLDDIVIDE_API FBox MakeCover(TConstArrayView<FBox2D> Hulls, float Drive, float GroundZ);
+
+	/** Spawns Cover into World: a box that blocks nothing. */
+	WORLDDIVIDE_API AActor* SpawnCover(UWorld& World, const FBox& Cover);
+
+	/**
+	 * The set name's suffix that puts the bench camera at the RTS camera's close zoom (#214): CloseCameraDistance from the
+	 * grid's middle, at the pitch ARTSCameraPawn tilts to for that arm, flatter than the top-down -55.
+	 */
+	const TCHAR* const CloseSuffix = TEXT("@Close");
+	constexpr float CloseCameraDistance = 3000.f;
+
+	/** The level the viewpoints below belong to; ue.ps1 -Task bench -Map L_TestMap plays it instead of L_Bench. */
+	const TCHAR* const TestMapName = TEXT("L_TestMap");
+
+	/**
+	 * A fixed view of L_TestMap (#214), named by its set suffix. The grid stands with the side Align points to on Anchor
+	 * (-1 to 1 per axis, 0 centres it there), or, with bBehindHeadquarters, with that side 3 m from team 0's headquarters,
+	 * and the camera looks at its middle along Yaw. The map's own units are cleared first, so only the grid is measured.
+	 */
+	struct FViewpoint
+	{
+		const TCHAR* Suffix = nullptr;
+		const TCHAR* Description = nullptr;
+		FVector2D Anchor = FVector2D::ZeroVector;
+		FVector2D Align = FVector2D::ZeroVector;
+		float Yaw = 0.f;
+		bool bBehindHeadquarters = false;
+	};
+
+	/** How far the grid of a viewpoint with bBehindHeadquarters keeps from the headquarters. */
+	constexpr float HeadquartersGap = 300.f;
+
+	WORLDDIVIDE_API TConstArrayView<FViewpoint> GetTestMapViewpoints();
+
+	/** The viewpoint whose suffix SetName carries, or null. */
+	WORLDDIVIDE_API const FViewpoint* FindViewpoint(const FString& SetName);
+
+	/** The middle of a grid whose hulls cover Size, with its Align side on Anchor. */
+	WORLDDIVIDE_API FVector2D PlaceGrid(const FVector2D& Anchor, const FVector2D& Align, const FVector2D& Size);
+
 	/** Bumped whenever the solids' layout rules change; recorded in bench.json, so runs of another layout never compare. */
 	constexpr int32 SolidsVersion = 1;
 	constexpr int32 SolidsSeed = 172;

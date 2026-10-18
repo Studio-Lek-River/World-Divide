@@ -149,6 +149,69 @@ namespace RTSBenchScene
 		}
 		return Spawned;
 	}
+
+	FBox MakeCover(TConstArrayView<FBox2D> Hulls, float Drive, float GroundZ)
+	{
+		FBox2D Ground(ForceInit);
+		for (const FBox2D& Hull : Hulls)
+		{
+			Ground += Hull;
+			Ground += Hull.ShiftBy(FVector2D(Drive, 0.f));
+		}
+		Ground = Ground.ExpandBy(CoverMargin);
+		const float North = Ground.Min.Y + Ground.GetSize().Y * CoverShare;
+		return FBox(FVector(Ground.Min.X, Ground.Min.Y, GroundZ + CoverHeight),
+			FVector(Ground.Max.X, North, GroundZ + CoverHeight + CoverThickness));
+	}
+
+	AActor* SpawnCover(UWorld& World, const FBox& Cover)
+	{
+		// The cube is 1 m across, centred on its pivot.
+		const FTransform Transform(FRotator::ZeroRotator, Cover.GetCenter(), Cover.GetSize() / 100.f);
+		AStaticMeshActor* Actor = World.SpawnActorDeferred<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Transform);
+		if (!Actor)
+		{
+			return nullptr;
+		}
+		UStaticMeshComponent* Component = Actor->GetStaticMeshComponent();
+		// A static component refuses a new mesh; movable, as the solids are. It only hides: its own queries do not matter.
+		Component->SetMobility(EComponentMobility::Movable);
+		Component->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, CubePath));
+		Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Component->SetCanEverAffectNavigation(false);
+		Actor->FinishSpawning(Transform);
+		return Actor;
+	}
+
+	TConstArrayView<FViewpoint> GetTestMapViewpoints()
+	{
+		// L_TestMap (setup_testmap.py, TEST_OBSTACLES): team 0's 28 m headquarters at (-180, 0) m facing east, Wall_West
+		// 2 m thick and 3 m high along y at x = -75 m, Block_North and Block_South at (30, ±75) m, the north strip empty.
+		static const FViewpoint Viewpoints[] = {
+			{ TEXT("@TestMapOpen"), TEXT("the empty north strip, nothing in front"), FVector2D(0.f, 18600.f), FVector2D(0.f, 0.f), 0.f, false },
+			{ TEXT("@TestMapBase"), TEXT("south of team 0's headquarters, seen over it from the north"), FVector2D::ZeroVector,
+				FVector2D(0.f, 1.f), -90.f, true },
+			{ TEXT("@TestMapWall"), TEXT("east of Wall_West, seen over it from the west"), FVector2D(-7300.f, 0.f), FVector2D(-1.f, 0.f), 0.f, false },
+		};
+		return Viewpoints;
+	}
+
+	const FViewpoint* FindViewpoint(const FString& SetName)
+	{
+		for (const FViewpoint& Viewpoint : GetTestMapViewpoints())
+		{
+			if (SetName.Contains(Viewpoint.Suffix))
+			{
+				return &Viewpoint;
+			}
+		}
+		return nullptr;
+	}
+
+	FVector2D PlaceGrid(const FVector2D& Anchor, const FVector2D& Align, const FVector2D& Size)
+	{
+		return Anchor - Align * Size / 2.f;
+	}
 }
 
 #endif

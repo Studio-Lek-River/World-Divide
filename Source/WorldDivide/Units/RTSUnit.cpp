@@ -129,6 +129,16 @@ namespace
 	constexpr float GearMinDistance = 0.01f;
 	constexpr float GearMinTurn = 0.001f;
 
+	/**
+	 * Every part of a unit is movable, and the renderer gives a movable primitive its own hardware occlusion query in every
+	 * frame it is on screen: about 1,500 at 240 M20s (#214). Lit as a group under the collision box, the parts take the
+	 * occlusion that static scenery has: a part seen last frame is queried again in about one frame in ten, and parts hidden
+	 * last frame share batched queries, so units behind buildings are still culled. Read when a unit is made.
+	 */
+	TAutoConsoleVariable<bool> CVarGroupPartOcclusion(
+		TEXT("rts.Render.GroupPartOcclusion"), true,
+		TEXT("Gives the parts of units made from now on the approximate occlusion queries of static scenery (#214)."));
+
 	/** A cosmetic part on Parent, like Mesh and Turret: the hull box alone collides and is picked. */
 	template <typename T>
 	T* MakePartComponent(AActor& Owner, USceneComponent& Parent, UStaticMesh* PartMesh, bool bWorldPlaced = false)
@@ -166,6 +176,8 @@ ARTSUnit::ARTSUnit()
 	Collision->SetGenerateOverlapEvents(false);
 	// Otherwise the navmesh grows on top of units and paths start on their roofs.
 	Collision->SetCanEverAffectNavigation(false);
+	// The box draws nothing; it only groups the parts' occlusion (see CVarGroupPartOcclusion).
+	Collision->bLightAttachmentsAsGroup = CVarGroupPartOcclusion.GetValueOnAnyThread();
 	RootComponent = Collision;
 
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));

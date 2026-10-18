@@ -115,6 +115,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task b
 # LODs (#149): every mesh at LOD0 (@LOD0) against the LODs, with the camera at 60 m (@Near), 170 m (none) or 450 m (@Far)
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestM20Guardian@LOD0,DA_TestM20Guardian@Near,DA_TestM20Guardian@Near@LOD0,DA_TestM20Guardian@Far,DA_TestM20Guardian@Far@LOD0
 
+# Occlusion (#214): each part queried every frame (@ExactOcclusion), no hardware occlusion (@NoOcclusion) or the HZB test (@HZB)
+# against the grouped part queries (none), in the open and under a roof over two thirds of the grid (@Occluded)
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Counts 30,240 -Unit DA_TestM20Guardian@ExactOcclusion,DA_TestM20Guardian,DA_TestM20Guardian@NoOcclusion,DA_TestM20Guardian@HZB,DA_TestM20Guardian@Occluded@ExactOcclusion,DA_TestM20Guardian@Occluded
+
+# L_TestMap's viewpoints (#214): the open north strip, behind team 0's headquarters and behind Wall_West; @Close for the close zoom
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Map L_TestMap -Counts 240 -Unit DA_TestM20Guardian@TestMapOpen,DA_TestM20Guardian@TestMapBase,DA_TestM20Guardian@TestMapBase@Close,DA_TestM20Guardian@TestMapWall@Close
+
 # The gate for the result, against HEAD's long baseline (or an older one, marked OUTDATED)
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Long -Unit DA_TestM20Guardian,DA_TestTank -Compare
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Long -Unit DA_TestTank -Compare -Baseline c0d1387
@@ -1518,3 +1525,217 @@ tank on screen was at the LOD its distance gives, and no tank had a part at anot
   report_ue5.md). At 110 and 260 m they stay within ±4 %.
 - **Wheels stop at 64 triangles at LOD3.** The engine's reduction goes no lower, so LOD3 is 2,396 triangles, near the
   2,500 budget.
+
+## #214 (occlusion queries of unit parts)
+
+All runs were made on the development PC (Ryzen 7 7800X3D, RTX 4090) on 2026-10-18, at 1920x1080 with dynamic resolution
+off, on `0ba0dc1` plus this change. "Before" means each part is queried in every frame (`@ExactOcclusion`, which is
+`rts.Render.GroupPartOcclusion 0`). It was benched in the same session as "after", on the same build.
+
+### Root cause
+
+- **Every unit part is movable**, and the renderer gives every movable primitive on screen its own hardware occlusion query
+  in every frame. UE 5.8 allows approximate occlusion only for static and stationary primitives:
+  `bAllowApproximateOcclusion = Mobility != Movable` in `PrimitiveSceneProxy.cpp`.
+- **An M20 is 9 such primitives:** hull, turret, gun, weapon station, two tracks and three wheel ISMs. At 240 M20s about
+  1,300 of the 1,835 draw calls were query boxes.
+- **Buildings, walls and props are static**, so they already used approximate, grouped queries. They are not part of the
+  cost.
+- **The LODs of #149 did not change the count.** They cut triangles, not primitives.
+
+### Options in UE 5.8 without engine changes
+
+| | How | Scope | Hidden units culled |
+|---|---|---|---|
+| **Grouped part queries (kept)** | `bLightAttachmentsAsGroup` on the unit's collision box | every `ARTSUnit` | yes, as before |
+| No queries for unit parts | a proxy subclass with `CanBeOccluded() = false`, including one for the ISM wheels | every `ARTSUnit` | no |
+| HZB occlusion | `r.HZBOcclusion 1` | project | yes, less tightly |
+| No hardware occlusion | `r.AllowOcclusionQueries 0` | project | no, nothing is culled |
+
+**How the kept option works.** Every part attached under a primitive with `bLightAttachmentsAsGroup` gets a lighting
+attachment root. The engine then gives that part approximate occlusion, as static scenery has:
+- A part seen last frame is queried again in about one frame in ten (`MaxOcclusionPixelsFraction`).
+- A part hidden last frame shares batched, grouped queries, and gets its own query again as soon as one finds it visible.
+
+The box itself draws nothing. The group otherwise only affects inset (per-object) shadows, which units do not use.
+
+`@NoOcclusion` stands in for the "no queries for unit parts" row: it culls no hidden unit either, and a proxy subclass
+would not be cheaper than turning queries off.
+
+### The bench additions
+
+- **Occlusion suffixes:** `@ExactOcclusion`, `@NoOcclusion` and `@HZB` set the cvars above while a set runs.
+- **`@Occluded`:** puts a slab 12 m above the ground over the southern two thirds of the grid and its whole drive. The
+  units under it are hidden, so only occlusion culling can leave them out.
+- **`@Close`:** puts the camera at a 30 m arm, at the RTS camera's pitch for that arm (−45°).
+- **L_TestMap viewpoints:** `ue.ps1 -Task bench -Map L_TestMap` plays L_TestMap with its three viewpoints. The map's own
+  units are cleared first.
+  - `@TestMapOpen`: the empty north strip.
+  - `@TestMapBase`: the grid south of team 0's 28 m headquarters, seen over it from the north.
+  - `@TestMapWall`: the grid east of `Wall_West`, seen over it from the west.
+- **New columns:** every row now counts the units' parts drawn on screen at the sample's end (`drawn_primitives`). That is
+  how hidden units drawn without culling show up. Every row also has the RHI thread's p95.
+- **`unitshots -Cvars`** takes console variables, as `trackshots` already did.
+
+All tables below use the short method: one 120-frame sample per row, mean with p95 in brackets. Times are in ms. "Parts
+drawn" counts parts on screen; frustum culling leaves the others out. The occlusion-query count is the difference in draw
+calls to `@NoOcclusion`, which submits none.
+
+### L_Bench, open ground, camera at 170 m (every M20 at LOD2)
+
+| Units | Variant | Render thread | RHI thread | GPU | Game thread | Draw calls | Parts drawn |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 1 | before | 1.99 (2.29) | 0.71 (1.07) | 1.79 (1.83) | 1.04 (1.37) | 107 | 7 of 9 |
+| 1 | **grouped** | 1.99 (2.27) | 0.70 (0.81) | 1.77 (1.82) | 1.11 (1.63) | 101 | 7 |
+| 30 | before | 2.12 (2.31) | 0.69 (0.91) | 1.92 (1.96) | 1.21 (1.89) | 387 | 223 of 270 |
+| 30 | **grouped** | 2.11 (2.33) | 0.73 (1.04) | 1.91 (1.95) | 1.12 (1.48) | 161 | 221 |
+| 120 | before | 2.45 (2.75) | 0.70 (0.83) | 2.24 (2.50) | 1.69 (2.64) | 1,109 | 700 of 1,080 |
+| 120 | **grouped** | 2.38 (2.62) | 0.71 (0.97) | 2.19 (2.22) | 1.75 (2.65) | 343 | 696 |
+| 240 | before | 2.67 (2.97) | 0.71 (0.81) | 2.51 (2.53) | 2.10 (3.03) | 1,835 | 1,250 of 2,160 |
+| 240 | **grouped** | 2.56 (2.97) | 0.76 (0.86) | 2.47 (2.74) | 2.20 (3.42) | 543 | 1,235 |
+| 240 | no occlusion | 1.78 (2.45) | 1.86 (1.25) | 2.48 (2.52) | 2.00 (2.38) | 460 | 1,509 |
+| 240 | HZB | 1.69 (1.87) | 0.89 (1.03) | 2.53 (2.57) | 1.87 (2.16) | 456 | 1,509 |
+| 240 moving | before | 4.00 (4.69) | 0.85 (0.98) | 2.54 (2.57) | 6.82 (7.92) | 1,961 | 1,405 |
+| 240 moving | **grouped** | 4.02 (4.48) | 0.84 (0.95) | 2.50 (2.53) | 6.67 (7.51) | 633 | 1,384 |
+| 240 moving | no occlusion | 4.00 (4.37) | 0.82 (0.93) | 2.50 (2.52) | 6.71 (7.82) | 504 | 1,593 |
+| 240 moving | HZB | 4.10 (4.58) | 1.08 (1.23) | 2.60 (2.85) | 6.88 (7.81) | 504 | 1,593 |
+
+A second session ran the 240-unit rows in reverse order. The render thread read before 2.70, grouped 2.57, no
+occlusion 1.80 and HZB 1.73. The draw calls and drawn parts were the same to within ±15. The "no occlusion" RHI means sit
+above their p95: they hold a few long frames.
+
+### L_Bench under a roof (`@Occluded`, 240 units, about 1,160 parts hidden under it)
+
+| Variant | Render thread | RHI thread | GPU | Draw calls | Parts drawn | Triangles |
+|---|---:|---:|---:|---:|---:|---:|
+| before | 2.49 (2.85) | 0.79 (0.92) | 2.22 (2.47) | 1,799 | 347 | 6.09 M |
+| **grouped** | 2.11 (2.60) | 0.75 (0.90) | 2.14 (2.18) | 423 | 342 | 6.09 M |
+| no occlusion | 1.69 (2.07) | 0.80 (1.06) | **2.47** (2.74) | 468 | **1,509** | 9.90 M |
+| HZB | 1.69 (2.07) | 0.92 (1.12) | 2.17 (2.24) | 328 | 449 | 6.31 M |
+
+Moving, before / grouped / no occlusion / HZB read 4.16 / 4.05 / 3.96 / 4.04 ms of render thread and 2.23 / 2.19 / 2.46 /
+2.22 ms of GPU. In the repeat session the standing render thread read 2.45, 2.37, 1.72 and 1.68, with GPU 2.23, 2.18, 2.46
+and 2.20. At 30 units the render thread is 2.12 before and 2.11 grouped.
+
+### L_TestMap, 240 units (`-Map L_TestMap`)
+
+| Viewpoint | Variant | Render thread | RHI thread | GPU | Draw calls | Parts drawn | LOD0 / 1 / 2 on screen |
+|---|---|---:|---:|---:|---:|---:|---|
+| Open strip, 170 m | before | 2.81 (3.04) | 0.77 | 2.57 | 2,358 | 1,649 | 0 / 0 / 240 |
+| | **grouped** | 2.54 (2.87) | 0.77 | 2.50 | 653 | 1,633 | |
+| | no occlusion | 1.81 (2.48) | 0.82 | 2.54 | 515 | 1,971 | |
+| | HZB | 1.78 (1.97) | 0.92 | 2.59 | 523 | 1,971 | |
+| Behind the headquarters, 170 m | before | 2.76 (3.18) | 0.76 | 2.62 | 2,493 | 1,928 | 0 / 0 / 229 |
+| | **grouped** | 2.66 (3.07) | 0.77 | 2.55 | 672 | 1,928 | |
+| | no occlusion | 1.86 (2.60) | 1.82 | 2.52 | 451 | 2,050 | |
+| | HZB | 1.83 (2.16) | 0.98 | 2.56 | 450 | 2,050 | |
+| Behind the headquarters, close (30 m, −45°) | before | 2.41 (2.81) | 0.71 | 2.34 | 366 | 166 | 13 / 82 / 0 |
+| | **grouped** | 2.25 (2.72) | 0.73 | 2.31 | 208 | 165 | |
+| | no occlusion | 1.58 (1.97) | 1.49 | 2.32 | 192 | 184 | |
+| | HZB | 1.50 (1.70) | 0.83 | 2.34 | 193 | 184 | |
+| Behind Wall_West, close | before | 3.41 (3.68) | 0.75 | 3.18 | 562 | 163 | 36 / 204 / 0 |
+| | **grouped** | 3.39 (3.61) | 0.77 | 3.17 | 402 | 163 | |
+| | no occlusion | 1.73 (2.23) | 2.20 | 3.17 | 383 | 181 | |
+| | HZB | 1.64 (1.84) | 0.82 | 3.20 | 383 | 180 | |
+
+Moving, the render thread read before → grouped 4.19 → 4.11 on the open strip, 4.10 → 4.02 behind the headquarters, 4.18
+→ 4.19 there close up, and 4.38 → 4.37 behind the wall close up. The close views draw at LOD0 and LOD1, so the grouped
+queries work with every LOD the M20 has.
+
+### Quick method, 240 moving M20s (one 30 s sample each, diagnostic)
+
+| | Before | **Grouped** | HZB |
+|---|---:|---:|---:|
+| Render thread | 3.13 (4.52) | **3.00** (4.44) | 2.54 (4.59) |
+| RHI thread | 0.81 (0.97) | 0.81 (1.00) | 1.00 (1.24) |
+| GPU | 2.57 (2.79) | **2.50** (2.70) | 2.51 (2.74) |
+| Game thread | 3.74 (7.83) | 3.69 (7.67) | 3.65 (7.89) |
+| Frame | 4.11 | **3.97** | 4.03 |
+| Frames in 30 s | 7,304 | **7,548** | 7,449 |
+| Draw calls | 2,485 | **746** | 535 |
+
+### What the numbers show
+
+- **The queries are cheap on the GPU and do cull.**
+  - On open ground they hide about 260 of 1,509 parts in view, mostly wheels behind the side skirts. That saves no
+    measurable GPU time.
+  - Under the roof they hide about 1,160 parts. Without them the GPU rises by 0.25 to 0.33 ms (+11 to +15 %), and
+    triangles go from 6.1 M to 9.9 M.
+  - Behind the headquarters and the wall they hide 120 and 18 parts: at the RTS pitch, buildings hide few units.
+- **Turning the queries off saves 0.8 to 1.7 ms of render thread with standing units, and nothing with moving ones.**
+  - Moving units' render thread is set by their render-state updates (#165), at about 4 ms in every variant.
+  - Off, hidden units are drawn, and the RHI thread shows long frames.
+- **Grouping keeps every cull, the same parts to within 1 %, and removes about 70 % of the draw calls.** At 240 units:
+  1,835 → 543 on L_Bench, 2,358 → 653 and 2,493 → 672 on L_TestMap.
+  - The render thread falls by 0.02 to 0.38 ms: −0.10 to −0.13 in the open and −0.08 to −0.38 under the roof. Moving, it
+    falls by 0.13 ms in the quick method.
+  - It is never higher than before in the 11 scenes compared.
+  - The GPU stays the same or falls by up to 0.08 ms. The RHI thread does not change.
+  - The quick method gives 3 % more frames.
+  - The renderer still visits and histories every movable primitive each frame, so grouping recovers only the part of the
+    queries' cost that is submitting and reading them back.
+- **HZB comes closest to turning the queries off while still culling.**
+  - It saves 0.8 to 1.8 ms of render thread with standing units, and 0.6 ms moving in the quick method.
+  - It costs 0.1 to 0.3 ms of RHI thread.
+  - It culls less tightly: under the roof it drew 449 parts against 342, and on open ground it culls none of the wheels.
+  - It changes the culling of every building and prop.
+- **The frame time hardly moves on this PC.** Standing, the frame is held by the GPU (about 2.7 ms in every variant).
+  Moving, it is held by the game thread. The render-thread savings are headroom for slower CPUs.
+
+### Decision
+
+**Kept: grouped part queries, for every unit** (`ARTSUnit`: vehicles, infantry, aircraft). Buildings and scenery are
+unchanged. The decision is unit-wide, not M20-specific, and not project-wide.
+
+It meets #214's acceptance:
+- The render thread improves, a little but in every scene.
+- The GPU does not regress, and it falls where units are hidden.
+- The same parts are culled.
+- It holds at 240 units.
+
+HZB saves more render-thread time but is project-wide, costs RHI time and culls less tightly. Its gain does not reach the
+frame time on this PC. #214 prefers the selective change, and the producer chose it. HZB stays measurable with `@HZB`, to
+be judged again on a map with real cover, River Crossing (#160).
+
+### Visual and gameplay checks
+
+- **Unit shots.** `unitshots -Stress 240` and `trackshots` ran before (`-Cvars rts.Render.GroupPartOcclusion=0`) and
+  after, and after twice. They were compared pixel by pixel (largest RGB channel difference, 0 to 255).
+  - The 16 unit shots differ by 0.36 to 0.83 before → after, against 0.41 to 0.71 between the two "after" runs. These
+    include the 240-unit grid, the close-up, the turret turned, the four teams under a low sun, the obstacle views and
+    both zoom ends.
+  - The 168 track frames differ by a median of 1.50 against 1.45.
+  - No part disappears or pops, and the shadows, team colours, LODs and track animation are unchanged.
+- **Gameplay is untouched.** The change is a rendering flag set in `ARTSUnit`'s constructor on every machine. Collision,
+  selection, replication and authority do not change. `WorldDivide.Units.PartOcclusion` checks the grouping, that the
+  parts stay visible, movable, shadow-casting and non-colliding, that the box still blocks picking traces, and that
+  buildings are left as they were. The full test run includes the listen-server vehicle tests.
+
+### WD_RiverCrossing_01: not measured
+
+The map does not exist yet: its greybox, #154, is open. Nothing was measured on it and no figures are given here. The
+measurement moves to its performance pass (#160) with this plan:
+1. On the finished greybox and on the dressed map, bench 30 and 240 M20s from the RTS camera: at the bridges, in each
+   village bank, behind the riverside buildings, and on open fields.
+   - Each at the default zoom and at `@Close`.
+   - With grouped queries (the default), `@ExactOcclusion` and `@HZB`.
+   - This needs viewpoints for that map, made the way the L_TestMap ones are (`RTSBenchScene`).
+2. Read the render thread, RHI thread, GPU and parts drawn as above.
+3. Keep the grouped queries unless HZB saves render-thread time there without a GPU or culling loss that matters on that
+   map.
+
+### Remaining limitations
+
+- **The gain is small.** Grouping removes most of the query draw calls but saves only about 0.1 ms of render thread at 240
+  units, up to 0.4 ms where many units are hidden. The engine's per-primitive occlusion work stays; only HZB or turning
+  queries off removes it.
+- **Moving units' render thread is about 4 ms in every variant** (the short method). It is held by their render-state
+  updates, not by occlusion.
+- **Only short and quick samples were taken.** The short method's single samples spread by about 0.1 ms in render
+  thread, so the open-ground gain is one spread wide. Its sign held in every comparison. No long-method run was made.
+- **The L_TestMap viewpoints are few and simple.** At the RTS pitch, its 28 m headquarters and 3 m walls hide few units.
+  River Crossing's villages are the real test.
+- **Found, not fixed: the M20's wheels draw with the default material in standalone games.** `MI_M20_Running` lacks the
+  *Used with Instanced Static Meshes* usage. Every `-game` run logs "missing usage flag InstancedStaticMeshes! Default
+  Material will be used in game", and the road wheels look plain light grey in `teams_low_sun`. It is the same before and after this change,
+  and it predates it → follow-up.

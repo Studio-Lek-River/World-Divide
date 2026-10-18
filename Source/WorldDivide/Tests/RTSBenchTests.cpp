@@ -176,6 +176,60 @@ bool FRTSBenchSolidLayoutTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+/**
+ * The occlusion scenes of rts.Debug.Bench (#214): the "@Occluded" roof covers the southern two thirds of the grid and its whole
+ * drive, high above the hulls; the L_TestMap viewpoints are found by their suffixes, which no other suffix contains; a grid
+ * stands with the side its viewpoint names on the anchor.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSBenchOcclusionScenesTest, "WorldDivide.Debug.Bench.OcclusionScenes", TestFlags)
+
+bool FRTSBenchOcclusionScenesTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSBenchTests;
+	const TArray<FBox2D> Hulls = MakeHulls(240, FVector2D(1000.f, 370.f));
+	FBox2D Grid(ForceInit);
+	for (const FBox2D& Hull : Hulls)
+	{
+		Grid += Hull;
+	}
+	const FBox Cover = MakeCover(Hulls, MoveDistance, 0.f);
+	TestEqual(TEXT("the roof stands at its height"), Cover.Min.Z, static_cast<double>(CoverHeight));
+	TestTrue(TEXT("the roof reaches past the grid's west side"), Cover.Min.X < Grid.Min.X);
+	TestTrue(TEXT("the roof reaches past the end of the drive"), Cover.Max.X > Grid.Max.X + MoveDistance);
+	TestTrue(TEXT("the roof reaches past the grid's south side"), Cover.Min.Y < Grid.Min.Y);
+	int32 Covered = 0;
+	for (const FBox2D& Hull : Hulls)
+	{
+		Covered += Hull.Max.Y <= Cover.Max.Y ? 1 : 0;
+	}
+	// The margin widens the roof's share a little; at least half and never the whole grid.
+	TestTrue(FString::Printf(TEXT("most of the grid stands under the roof, not all of it (%d of %d)"), Covered, Hulls.Num()),
+		Covered > Hulls.Num() / 2 && Covered < Hulls.Num());
+
+	const TArray<const TCHAR*> OtherSuffixes = { SolidsSuffix, RigidTracksSuffix, MixedTeamsSuffix, ForceLOD0Suffix, NearSuffix,
+		FarSuffix, ExactOcclusionSuffix, NoOcclusionSuffix, HZBOcclusionSuffix, OccludedSuffix, CloseSuffix };
+	TestEqual(TEXT("L_TestMap has three viewpoints"), GetTestMapViewpoints().Num(), 3);
+	for (const FViewpoint& Viewpoint : GetTestMapViewpoints())
+	{
+		const FString Set = FString(TEXT("DA_TestM20Guardian")) + Viewpoint.Suffix + CloseSuffix;
+		TestTrue(FString::Printf(TEXT("%s is found by its suffix"), Viewpoint.Suffix), FindViewpoint(Set) == &Viewpoint);
+		for (const TCHAR* Other : OtherSuffixes)
+		{
+			TestFalse(FString::Printf(TEXT("%s does not hold %s"), Viewpoint.Suffix, Other), FString(Viewpoint.Suffix).Contains(Other));
+		}
+	}
+	TestNull(TEXT("a set without a viewpoint has none"), FindViewpoint(TEXT("DA_TestM20Guardian@Occluded@NoOcclusion")));
+
+	const FVector2D Size(10000.f, 6000.f);
+	TestTrue(TEXT("Align 0 centres the grid on the anchor"),
+		PlaceGrid(FVector2D(100.f, 200.f), FVector2D::ZeroVector, Size).Equals(FVector2D(100.f, 200.f)));
+	TestTrue(TEXT("Align (-1, 0) puts the grid's west side on the anchor"),
+		PlaceGrid(FVector2D(-7300.f, 0.f), FVector2D(-1.f, 0.f), Size).Equals(FVector2D(-2300.f, 0.f)));
+	TestTrue(TEXT("Align (0, 1) puts the grid's north side on the anchor"),
+		PlaceGrid(FVector2D(0.f, -1700.f), FVector2D(0.f, 1.f), Size).Equals(FVector2D(0.f, -4700.f)));
+	return true;
+}
+
 #if WITH_EDITOR
 
 namespace RTSBenchTests

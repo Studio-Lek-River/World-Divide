@@ -3,6 +3,7 @@
 #if !UE_BUILD_SHIPPING
 
 #include "Algo/Count.h"
+#include "Buildings/RTSBuilding.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Combat/RTSWeaponComponent.h"
@@ -26,6 +27,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
+#include "Player/RTSCameraPawn.h"
 #include "Player/RTSPlayerController.h"
 #include "ProfilingDebugging/MiscTrace.h"
 #include "RHI.h"
@@ -97,6 +99,14 @@
  * while it runs), against the LODs the set without it picks; RTSBenchScene::NearSuffix and FarSuffix move the camera to
  * NearCameraDistance or FarCameraDistance. Every row also counts the units on screen at the sample's end by the LOD their
  * hull is drawn at, and how many of them have a part at another LOD (RTSUnitLOD).
+ *
+ * The occlusion suffixes (#214) change the occlusion queries of the units' parts: RTSBenchScene::ExactOcclusionSuffix gives
+ * each its own query in every frame (rts.Render.GroupPartOcclusion 0), NoOcclusionSuffix turns hardware occlusion off and
+ * HZBOcclusionSuffix tests the hierarchical Z-buffer instead, against the grouped occlusion the set without them has.
+ * OccludedSuffix roofs the southern two thirds of the grid, so occlusion culling has units to leave out, and CloseSuffix
+ * takes the camera to the RTS camera's close zoom and pitch. A set with one of RTSBenchScene's L_TestMap viewpoints
+ * (DA_TestM20Guardian@TestMapBase, ue.ps1 -Map L_TestMap) clears the map's own units and stands its grid there. Every row
+ * also counts the units' parts drawn on screen at the sample's end, so a hidden unit that is drawn anyway shows.
  */
 namespace RTSBenchCommand
 {
@@ -130,12 +140,24 @@ namespace RTSBenchCommand
 	constexpr float DefaultCameraDistance = 17000.f;
 	constexpr float CameraFOV = 60.f;
 
+	/** A part counts as drawn on screen when it was within this many seconds of the sample's end (#214). */
+	constexpr float DrawnSeconds = 0.1f;
+
 	/** The settings every scenario runs with, restored afterwards. */
 	const TArray<TPair<const TCHAR*, const TCHAR*>> BenchCVars = {
 		{ TEXT("r.DynamicRes.OperationMode"), TEXT("0") },
 		{ TEXT("r.ScreenPercentage"), TEXT("100") },
 		{ TEXT("r.VSync"), TEXT("0") },
 		{ TEXT("t.MaxFPS"), TEXT("0") },
+	};
+
+	/** The settings a set's suffix changes while it runs, restored afterwards; set before its first count spawns. */
+	const TArray<TTuple<const TCHAR*, const TCHAR*, const TCHAR*>> SuffixCVars = {
+		{ RTSBenchScene::RigidTracksSuffix, TEXT("rts.Vehicle.TrackAnimation"), TEXT("0") },
+		{ RTSBenchScene::ForceLOD0Suffix, TEXT("r.ForceLOD"), TEXT("0") },
+		{ RTSBenchScene::ExactOcclusionSuffix, TEXT("rts.Render.GroupPartOcclusion"), TEXT("0") },
+		{ RTSBenchScene::NoOcclusionSuffix, TEXT("r.AllowOcclusionQueries"), TEXT("0") },
+		{ RTSBenchScene::HZBOcclusionSuffix, TEXT("r.HZBOcclusion"), TEXT("1") },
 	};
 
 	struct FScenarioStats
@@ -171,6 +193,8 @@ namespace RTSBenchCommand
 		/** The units on screen at the sample's end by their hull's LOD (#149), and those with a part at another LOD. */
 		TArray<int32, TInlineAllocator<4>> HullLODs;
 		int32 MixedLODUnits = 0;
+		/** The units' primitive components drawn on screen at the sample's end (#214): hidden ones only when nothing culls them. */
+		int32 DrawnPrimitives = 0;
 		/**
 		 * Each frame's game thread, locomotion, render thread, GPU and running gear time, kept for the percentiles; reserved
 		 * up front so measuring never allocates.
@@ -180,15 +204,17 @@ namespace RTSBenchCommand
 		TArray<float> RenderFrames;
 		TArray<float> GPUFrames;
 		TArray<float> RunningGearFrames;
+		TArray<float> RHIFrames;
 		double P95GameMs = 0.0;
 		double P95LocomotionMs = 0.0;
 		double P95RenderMs = 0.0;
 		double P95GPUMs = 0.0;
 		double P95RunningGearMs = 0.0;
+		double P95RHIMs = 0.0;
 
 		void Reserve(int32 Capacity)
 		{
-			for (TArray<float>* Kept : { &GameFrames, &LocomotionFrames, &RenderFrames, &GPUFrames, &RunningGearFrames })
+			for (TArray<float>* Kept : { &GameFrames, &LocomotionFrames, &RenderFrames, &GPUFrames, &RunningGearFrames, &RHIFrames })
 			{
 				Kept->Reserve(Capacity);
 			}
@@ -239,6 +265,7 @@ namespace RTSBenchCommand
 			Keep(RunningGearFrames, InRunningGearMs);
 			Keep(RenderFrames, InRenderMs);
 			Keep(GPUFrames, InGPUMs);
+			Keep(RHIFrames, InRHIMs);
 			++Frames;
 			FrameMs += InFrameMs;
 			MaxFrameMs = FMath::Max(MaxFrameMs, InFrameMs);
@@ -283,6 +310,7 @@ namespace RTSBenchCommand
 			P95RenderMs = P95(RenderFrames);
 			P95GPUMs = P95(GPUFrames);
 			P95RunningGearMs = P95(RunningGearFrames);
+			P95RHIMs = P95(RHIFrames);
 		}
 
 		static FString CsvHeader()
@@ -291,18 +319,18 @@ namespace RTSBenchCommand
 				TEXT("avoidance_ms,max_avoidance_ms,search_ms,locomotion_ms,p95_locomotion_ms,max_locomotion_ms,used_memory_mb,peak_memory_mb,render_width,render_height,")
 				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms,")
 				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames,p95_render_ms,p95_gpu_ms,running_gear_ms,p95_running_gear_ms,")
-				TEXT("primitives,dynamic_materials,distinct_materials,lod0_units,lod1_units,lod2_units,lod3_units,mixed_lod_units");
+				TEXT("primitives,dynamic_materials,distinct_materials,lod0_units,lod1_units,lod2_units,lod3_units,mixed_lod_units,p95_rhi_ms,drawn_primitives");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d"),
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d"),
 				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
 				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
 				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y, Mean(Solids.Updates), SolidReuseShare(),
 				Mean(Solids.Checks), Mean(Solids.ComponentQueries), Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0),
 				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames, P95RenderMs, P95GPUMs, Mean(RunningGearMs), P95RunningGearMs,
-				Primitives, DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits);
+				Primitives, DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits, P95RHIMs, DrawnPrimitives);
 		}
 
 		int32 HullLOD(int32 LOD) const { return HullLODs.IsValidIndex(LOD) ? HullLODs[LOD] : 0; }
@@ -335,16 +363,16 @@ namespace RTSBenchCommand
 
 		static FString MarkdownHeader()
 		{
-			return TEXT("| Units | Scenario | Sample | Frame ms | Game ms (p95, max) | Render ms (p95) | RHI ms | GPU ms (p95) | Draw calls | Triangles | ")
+			return TEXT("| Units | Scenario | Sample | Frame ms | Game ms (p95, max) | Render ms (p95) | RHI ms (p95) | GPU ms (p95) | Draw calls | Triangles | ")
 				TEXT("Avoidance ms (max) | Target search ms | Locomotion ms (p95, max) | Running gear ms (p95) | Memory MB (peak) | Render res |\n")
 				TEXT("|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|\n");
 		}
 
 		FString ToMarkdown() const
 		{
-			return FString::Printf(TEXT("| %d | %s | %s | %.2f | %.2f (%.2f, %.2f) | %.2f (%.2f) | %.2f | %.2f (%.2f) | %.0f | %.2f M | %.3f (%.3f) | %.3f | %.3f (%.3f, %.3f) | %.3f (%.3f) | %.0f (%.0f) | %dx%d |\n"),
+			return FString::Printf(TEXT("| %d | %s | %s | %.2f | %.2f (%.2f, %.2f) | %.2f (%.2f) | %.2f (%.2f) | %.2f (%.2f) | %.0f | %.2f M | %.3f (%.3f) | %.3f | %.3f (%.3f, %.3f) | %.3f (%.3f) | %.0f (%.0f) | %dx%d |\n"),
 				Count, *Scenario, Sample > 0 ? *FString::Printf(TEXT("%d (%d frames)"), Sample, Frames) : TEXT("-"), Mean(FrameMs),
-				Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), P95RenderMs, Mean(RHIMs), Mean(GPUMs), P95GPUMs, Mean(DrawCalls),
+				Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), P95RenderMs, Mean(RHIMs), P95RHIMs, Mean(GPUMs), P95GPUMs, Mean(DrawCalls),
 				Mean(Triangles) / 1.0e6, Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
 				MaxLocomotionMs, Mean(RunningGearMs), P95RunningGearMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y);
 		}
@@ -358,8 +386,8 @@ namespace RTSBenchCommand
 
 		FString ToMaterialsMarkdown() const
 		{
-			return FString::Printf(TEXT("| %d | %s | %d | %d | %d | %d | %d / %d / %d / %d | %d |\n"), Count, *Scenario, Sample, Primitives,
-				DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits);
+			return FString::Printf(TEXT("| %d | %s | %d | %d | %d | %d | %d | %d / %d / %d / %d | %d |\n"), Count, *Scenario, Sample, Primitives,
+				DrawnPrimitives, DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits);
 		}
 	};
 
@@ -372,7 +400,10 @@ namespace RTSBenchCommand
 			, bRigidTracks(InUnitName.Contains(RTSBenchScene::RigidTracksSuffix))
 			, bMixedTeams(InUnitName.Contains(RTSBenchScene::MixedTeamsSuffix))
 			, bForceLOD0(InUnitName.Contains(RTSBenchScene::ForceLOD0Suffix))
-			, CameraDistance(InUnitName.Contains(RTSBenchScene::NearSuffix) ? RTSBenchScene::NearCameraDistance
+			, bOccluded(InUnitName.Contains(RTSBenchScene::OccludedSuffix))
+			, bClose(InUnitName.Contains(RTSBenchScene::CloseSuffix))
+			, Viewpoint(RTSBenchScene::FindViewpoint(InUnitName))
+			, CameraDistance(bClose ? RTSBenchScene::CloseCameraDistance : InUnitName.Contains(RTSBenchScene::NearSuffix) ? RTSBenchScene::NearCameraDistance
 				: InUnitName.Contains(RTSBenchScene::FarSuffix) ? RTSBenchScene::FarCameraDistance : DefaultCameraDistance)
 		{
 		}
@@ -523,11 +554,15 @@ namespace RTSBenchCommand
 			{
 				return Finish(TEXT("the game is a client; the benchmark runs on the server"));
 			}
-			// A mix of sizes is several names joined by '+'; the grid takes them in turn.
+			if (Viewpoint && World->GetMapName() != RTSBenchScene::TestMapName)
+			{
+				return Finish(FString::Printf(TEXT("%s is a view of %s, not of %s (ue.ps1 -Map %s)"), Viewpoint->Suffix,
+					RTSBenchScene::TestMapName, *World->GetMapName(), RTSBenchScene::TestMapName));
+			}
+			// A mix of sizes is several names joined by '+'; the grid takes them in turn. The suffixes follow the last name.
 			TArray<FString> Names;
-			FString Mix = UnitName.Replace(RTSBenchScene::SolidsSuffix, TEXT("")).Replace(RTSBenchScene::RigidTracksSuffix, TEXT(""))
-				.Replace(RTSBenchScene::MixedTeamsSuffix, TEXT("")).Replace(RTSBenchScene::ForceLOD0Suffix, TEXT(""))
-				.Replace(RTSBenchScene::NearSuffix, TEXT("")).Replace(RTSBenchScene::FarSuffix, TEXT(""));
+			int32 FirstSuffix = INDEX_NONE;
+			const FString Mix = UnitName.FindChar(TEXT('@'), FirstSuffix) ? UnitName.Left(FirstSuffix) : UnitName;
 			Mix.ParseIntoArray(Names, TEXT("+"));
 			for (const FString& Name : Names)
 			{
@@ -544,6 +579,14 @@ namespace RTSBenchCommand
 				return Finish(TEXT("no unit named"));
 			}
 			TeamId = Controller->GetTeamId();
+			if (Viewpoint)
+			{
+				ClearMapUnits();
+			}
+			if (const ARTSCameraPawn* Pawn = bClose ? Controller->GetPawn<ARTSCameraPawn>() : nullptr)
+			{
+				Pitch = Pawn->GetPitchForZoom(CameraDistance);
+			}
 			ApplySettings();
 			UseBenchCamera();
 			GoTo(EStep::Resize);
@@ -578,21 +621,13 @@ namespace RTSBenchCommand
 					CVar->Set(Setting.Value, ECVF_SetByConsole);
 				}
 			}
-			if (bRigidTracks)
+			// Some are read when the units are made or make their parts, so all are set before the first count spawns.
+			for (const TTuple<const TCHAR*, const TCHAR*, const TCHAR*>& Setting : SuffixCVars)
 			{
-				// Read when the units make their parts, so set before the first count spawns.
-				if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Vehicle.TrackAnimation")))
+				if (IConsoleVariable* CVar = UnitName.Contains(Setting.Get<0>()) ? IConsoleManager::Get().FindConsoleVariable(Setting.Get<1>()) : nullptr)
 				{
-					SavedCVars.Add(TEXT("rts.Vehicle.TrackAnimation"), CVar->GetString());
-					CVar->Set(TEXT("0"), ECVF_SetByConsole);
-				}
-			}
-			if (bForceLOD0)
-			{
-				if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ForceLOD")))
-				{
-					SavedCVars.Add(TEXT("r.ForceLOD"), CVar->GetString());
-					CVar->Set(TEXT("0"), ECVF_SetByConsole);
+					SavedCVars.Add(Setting.Get<1>(), CVar->GetString());
+					CVar->Set(Setting.Get<2>(), ECVF_SetByConsole);
 				}
 			}
 			bSavedSmoothFrameRate = GEngine->bSmoothFrameRate;
@@ -617,10 +652,58 @@ namespace RTSBenchCommand
 			Camera = World->SpawnActor<ACameraActor>();
 			Camera->GetCameraComponent()->SetFieldOfView(CameraFOV);
 			Camera->GetCameraComponent()->bConstrainAspectRatio = false;
-			const FRotator Rotation(CameraPitch, 0.f, 0.f);
-			const FVector LookAt = GetCameraLookAt();
-			Camera->SetActorLocationAndRotation(LookAt - Rotation.Vector() * CameraDistance, Rotation);
+			AimCamera();
 			GetController()->SetViewTarget(Camera.Get());
+		}
+
+		void AimCamera()
+		{
+			const FRotator Rotation(Pitch, Viewpoint ? Viewpoint->Yaw : 0.f, 0.f);
+			Camera->SetActorLocationAndRotation(GetCameraLookAt() - Rotation.Vector() * CameraDistance, Rotation);
+		}
+
+		/** A viewpoint's map comes with units of its own; only the grid is measured. */
+		void ClearMapUnits()
+		{
+			int32 Cleared = 0;
+			for (TActorIterator<ARTSUnit> It(World.Get()); It; ++It)
+			{
+				if (AController* Controller = It->GetController())
+				{
+					Controller->Destroy();
+				}
+				It->Destroy();
+				++Cleared;
+			}
+			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.Bench: cleared %d of %s's own units"), Cleared, *World->GetMapName());
+		}
+
+		/** Where a viewpoint's grid of Count units goes, and the camera on it; false when the map lacks its headquarters. */
+		bool PlaceViewpointGrid(int32 Count, const FVector2D& Spacing, const FVector2D& Largest)
+		{
+			int32 Rows = 0;
+			int32 Columns = 0;
+			RTSBenchScene::MakeGrid(Count, Spacing, FVector::ZeroVector, Rows, Columns);
+			const FVector2D Size((Rows - 1) * Spacing.X + Largest.X, (Columns - 1) * Spacing.Y + Largest.Y);
+			FVector2D Anchor = Viewpoint->Anchor;
+			if (Viewpoint->bBehindHeadquarters)
+			{
+				const ARTSBuilding* Headquarters = nullptr;
+				for (TActorIterator<ARTSBuilding> It(World.Get()); It && !Headquarters; ++It)
+				{
+					Headquarters = It->GetTeamId() == 0 ? *It : nullptr;
+				}
+				if (!Headquarters)
+				{
+					return false;
+				}
+				// The grid's side that Align points to faces the headquarters, HeadquartersGap from its edge.
+				const FBox Box = Headquarters->GetComponentsBoundingBox(/*bNonColliding*/ true);
+				Anchor = FVector2D(Box.GetCenter()) - Viewpoint->Align * (FVector2D(Box.GetExtent()) + RTSBenchScene::HeadquartersGap);
+			}
+			ViewGridCentre = FVector(RTSBenchScene::PlaceGrid(Anchor, Viewpoint->Align, Size), 0.f);
+			AimCamera();
+			return true;
 		}
 
 		/** Spawns the next count's grid, or finishes after the last. */
@@ -676,6 +759,10 @@ namespace RTSBenchCommand
 				KindComponents.FindOrAdd(Index) = Primitives.Num();
 			}
 			const FVector2D Spacing(Largest.X + RTSBenchScene::RowGap, Largest.Y + RTSBenchScene::ColumnGap);
+			if (Viewpoint && !PlaceViewpointGrid(Count, Spacing, Largest))
+			{
+				return false;
+			}
 			int32 Rows = 0;
 			int32 Columns = 0;
 			const TArray<FVector> Places = RTSBenchScene::MakeGrid(Count, Spacing, GetGridCentre(), Rows, Columns);
@@ -702,7 +789,28 @@ namespace RTSBenchCommand
 			{
 				SpawnSolids();
 			}
+			if (bOccluded)
+			{
+				SpawnCover();
+			}
 			return true;
+		}
+
+		/** The roof of an "@Occluded" set over the southern part of the grid and its drive, cleared with the solids. */
+		void SpawnCover()
+		{
+			TArray<FBox2D> Hulls;
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Units)
+			{
+				Hulls.Add(RTSBenchScene::GetHullBox(Unit->GetFootprint()));
+			}
+			const FBox Cover = RTSBenchScene::MakeCover(Hulls, Plan.bLongScene ? LongMoveDistance : MoveDistance, GetGridCentre().Z);
+			if (AActor* Actor = RTSBenchScene::SpawnCover(*World, Cover))
+			{
+				SolidActors.Add(Actor);
+			}
+			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.Bench: a roof over %.0f x %.0f m, %.0f m up"), Cover.GetSize().X / 100.f,
+				Cover.GetSize().Y / 100.f, RTSBenchScene::CoverHeight / 100.f);
 		}
 
 		/** The solids of an "@Solids" set over the ground the grid stands on and drives over, clear of its hulls. */
@@ -731,11 +839,12 @@ namespace RTSBenchCommand
 				CountSolids(RTSBenchScene::ESolidKind::Boulder), CountSolids(RTSBenchScene::ESolidKind::Wall));
 		}
 
-		FVector GetGridCentre() const { return Plan.bLongScene ? LongGridCentre : GridCentre; }
+		FVector GetGridCentre() const { return Viewpoint ? ViewGridCentre : Plan.bLongScene ? LongGridCentre : GridCentre; }
 
+		/** A viewpoint looks at its grid; L_Bench's camera at the middle of the grid and its drive. */
 		FVector GetCameraLookAt() const
 		{
-			return Plan.bLongScene ? LongGridCentre + FVector(LongMoveDistance / 2.f, 0.f, 0.f) : CameraLookAt;
+			return Viewpoint ? ViewGridCentre : Plan.bLongScene ? LongGridCentre + FVector(LongMoveDistance / 2.f, 0.f, 0.f) : CameraLookAt;
 		}
 
 		/** The long scene's units keep driving: back to the grid's place, then ahead again, each LongMoveSeconds. */
@@ -888,9 +997,14 @@ namespace RTSBenchCommand
 			return true;
 		}
 
-		/** What the units draw with: their primitive components, the slots of those that are dynamic instances, and the materials. */
+		/**
+		 * What the units draw with: their primitive components, those drawn on screen in the last frames, the slots of those that
+		 * are dynamic instances, and the materials.
+		 */
 		void CountMaterials(FScenarioStats& Stats) const
 		{
+			// A part drawn in the main view stamps its last render time on screen with the world's time; its shadow does not.
+			const float DrawnSince = World->GetTimeSeconds() - DrawnSeconds;
 			TSet<const UMaterialInterface*> Materials;
 			for (const TWeakObjectPtr<ARTSUnit>& Unit : Units)
 			{
@@ -902,6 +1016,7 @@ namespace RTSBenchCommand
 				{
 					const int32 Slots = Primitive->GetNumMaterials();
 					Stats.Primitives += Slots > 0 ? 1 : 0;
+					Stats.DrawnPrimitives += Slots > 0 && Primitive->GetLastRenderTimeOnScreen() >= DrawnSince ? 1 : 0;
 					for (int32 Slot = 0; Slot < Slots; ++Slot)
 					{
 						if (const UMaterialInterface* Material = Primitive->GetMaterial(Slot))
@@ -989,8 +1104,8 @@ namespace RTSBenchCommand
 				Markdown += Result.ToSolidsMarkdown();
 			}
 			Markdown += TEXT("\nWhat the units draw with (#150), at each sample's end:\n\n")
-				TEXT("| Units | Scenario | Sample | Primitive components | Dynamic material slots | Distinct materials | On screen at LOD0 / 1 / 2 / 3 (#149) | With a part at another LOD |\n")
-				TEXT("|---:|---|---:|---:|---:|---:|---:|---:|\n");
+				TEXT("| Units | Scenario | Sample | Primitive components | Drawn on screen (#214) | Dynamic material slots | Distinct materials | On screen at LOD0 / 1 / 2 / 3 (#149) | With a part at another LOD |\n")
+				TEXT("|---:|---|---:|---:|---:|---:|---:|---:|---:|\n");
 			for (const FScenarioStats& Result : Results)
 			{
 				Markdown += Result.ToMaterialsMarkdown();
@@ -1085,7 +1200,7 @@ namespace RTSBenchCommand
 			Scene->SetArrayField(TEXT("render"), Numbers({ Render.X, Render.Y }));
 			Scene->SetArrayField(TEXT("grid_centre"), Vector(GetGridCentre()));
 			Scene->SetArrayField(TEXT("camera_look_at"), Vector(GetCameraLookAt()));
-			Scene->SetNumberField(TEXT("camera_pitch"), CameraPitch);
+			Scene->SetNumberField(TEXT("camera_pitch"), Pitch);
 			Scene->SetNumberField(TEXT("camera_distance"), CameraDistance);
 			Scene->SetNumberField(TEXT("camera_fov"), CameraFOV);
 			// Only an "@Solids" set has the field, so the baselines of the open scene stay comparable as they are.
@@ -1113,6 +1228,23 @@ namespace RTSBenchCommand
 			if (bForceLOD0)
 			{
 				Scene->SetNumberField(TEXT("forced_lod"), 0);
+			}
+			// And a set's occlusion when a suffix changes it, the roof of an "@Occluded" one and the view of L_TestMap (#214).
+			if (const TCHAR* Occlusion = UnitName.Contains(RTSBenchScene::ExactOcclusionSuffix) ? TEXT("exact")
+				: UnitName.Contains(RTSBenchScene::NoOcclusionSuffix) ? TEXT("none")
+				: UnitName.Contains(RTSBenchScene::HZBOcclusionSuffix) ? TEXT("hzb") : nullptr)
+			{
+				Scene->SetStringField(TEXT("occlusion"), Occlusion);
+			}
+			if (bOccluded)
+			{
+				Scene->SetNumberField(TEXT("cover_share"), RTSBenchScene::CoverShare);
+				Scene->SetNumberField(TEXT("cover_height"), RTSBenchScene::CoverHeight);
+			}
+			if (Viewpoint)
+			{
+				Scene->SetStringField(TEXT("viewpoint"), Viewpoint->Description);
+				Scene->SetNumberField(TEXT("camera_yaw"), Viewpoint->Yaw);
 			}
 
 			const TSharedRef<FJsonObject> Machine = MakeShared<FJsonObject>();
@@ -1242,7 +1374,13 @@ namespace RTSBenchCommand
 		bool bMixedTeams = false;
 		/** A "@LOD0" set, and the camera's distance, which "@Near" and "@Far" change (#149). */
 		bool bForceLOD0 = false;
+		/** An "@Occluded" set, an "@Close" one, and the view of L_TestMap a set stands in, with its grid's middle (#214). */
+		bool bOccluded = false;
+		bool bClose = false;
+		const RTSBenchScene::FViewpoint* Viewpoint = nullptr;
+		FVector ViewGridCentre = FVector::ZeroVector;
 		float CameraDistance = DefaultCameraDistance;
+		float Pitch = CameraPitch;
 		TArray<RTSBenchScene::FSolid> SolidLayout;
 		TArray<TWeakObjectPtr<AActor>> SolidActors;
 

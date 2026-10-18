@@ -48,7 +48,8 @@ grid with the stats on. The frame time, game thread time, avoidance pass, draw c
 printed. -Trace also records an Unreal Insights capture (cpu, frame and region channels; each stat view is a region) to
 Saved/Traces/UnitShots_<Unit>_<Stress>.utrace. -LODs takes the unit's LOD sheet instead (#149): each LOD forced from four sides,
 the RTS camera at a zoom inside each LOD, the RTS lens just inside and outside each switch distance and the team row at each
-LOD, with the LOD of every mesh of the unit printed per shot.
+LOD, with the LOD of every mesh of the unit printed per shot. -Cvars sets console variables for the run, as for trackshots
+(rts.Render.GroupPartOcclusion=0 for the views before #214).
 Camerashots plays L_TestMap with a renderer (a GPU is needed), stages a base and a mixed formation by Team0's start spot and
 saves the camera comparison (rts.Debug.CameraShots): the camera before the real-scale retune and the camera now
 at the closest, default and farthest zoom on a vehicle, the formation, the base and the battlefield, plus the base at
@@ -66,7 +67,10 @@ sample, the same columns. -Screen (#171) is the gate's first tier: the same with
 sets one after another in one game session, each with its own warm-up,
 samples and folder. A set named with the suffix @Solids (#172; -Unit DA_TestM20Guardian@Solids) benches among solids the
 navmesh leaves out (trunks, boulders, low walls; RTSBenchScene), in its own folder Saved/Bench/<Unit>@Solids; @MixedTeams
-(#150) spreads the units over four teams. Every row also counts the units' primitives, dynamic material slots and materials. bench.json
+(#150) spreads the units over four teams. Every row also counts the units' primitives, those drawn on screen, dynamic material
+slots and materials. @ExactOcclusion, @NoOcclusion and @HZB (#214) change the occlusion queries, @Occluded roofs most of the
+grid and @Close takes the camera to the RTS close zoom; -Map L_TestMap plays L_TestMap instead, for the sets with its viewpoints
+(@TestMapOpen, @TestMapBase, @TestMapWall; RTSBenchScene). bench.json
 beside the table records the method, scene, machine, commit and content hashes.
 -SaveBaseline (clean worktree only) stores each set's run under Saved/Bench/Baselines/<commit>/<method>/<set>; -Compare reads
 the run against the baseline of HEAD, or of the ancestor -Baseline <commit> (marked OUTDATED), refuses one of another
@@ -135,7 +139,10 @@ param(
 
 	[string]$Out = 'Saved/UIBriefs/bindings.json',
 
-	[string]$Path = ''
+	[string]$Path = '',
+
+	[ValidatePattern('^L_\w+$')]
+	[string]$Map = 'L_Bench'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -365,7 +372,7 @@ function Invoke-UnitShots {
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
 		"`"$Project`"", '/Game/Maps/L_TestMap', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
 		"`"-ExecCmds=rts.Debug.UnitShots $Unit $Stress$(if ($LODs) { ' lods' })`"", '-RTSUnitShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
-		'-unattended', '-nosplash', '-nosound') + $TraceArgs)
+		'-unattended', '-nosplash', '-nosound') + $TraceArgs + @(if ($Cvars) { "-dpcvars=$Cvars" }))
 	$GameExit = $Process.ExitCode
 
 	$Shots = @('rts_default', 'zoom_in_max', 'zoom_out_max', 'closeup', 'turret_rotated', 'driving', 'obstacle_block',
@@ -718,7 +725,7 @@ function Invoke-BenchSession([string[]]$Sets, [string]$Method, [string]$BenchCou
 	$ExecCmds = ($Sets | ForEach-Object { "rts.Debug.Bench $_ $BenchCounts$BenchMethod" }) -join ','
 	$Clock = [Diagnostics.Stopwatch]::StartNew()
 	$Process = Start-Process -FilePath $EditorExe -PassThru -ArgumentList (@(
-		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
+		"`"$Project`"", "/Game/Maps/$Map", '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
 		"`"-ExecCmds=$ExecCmds`"", '-RTSBenchQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
 		'-unattended', '-nosplash', '-nosound') + $ExtraArgs)
 	# Holding the handle keeps the exit code readable once the process has gone.
