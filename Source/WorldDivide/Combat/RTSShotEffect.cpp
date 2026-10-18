@@ -1,20 +1,18 @@
 #include "Combat/RTSShotEffect.h"
 
 #include "Combat/RTSShotSound.h"
+#include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSTargetable.h"
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "Core/RTSSettings.h"
 #include "Data/RTSWeaponData.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
-#include "Materials/MaterialInstanceDynamic.h"
+#include "Units/RTSPrimitiveData.h"
 #include "Units/RTSUnit.h"
 
 namespace
 {
-	const FName ShellColorParameter(TEXT("Color"));
-
 	constexpr float MuzzleFlashSeconds = 0.08f;
 	constexpr float ImpactSeconds = 0.25f;
 
@@ -42,8 +40,8 @@ namespace
 
 ARTSShotEffect::ARTSShotEffect()
 {
-	PrimaryActorTick.bCanEverTick = true;
-	PrimaryActorTick.bStartWithTickEnabled = true;
+	// URTSShotSubsystem advances the effects it has started.
+	PrimaryActorTick.bCanEverTick = false;
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	MuzzleFlash = CreateGlow(TEXT("MuzzleFlash"));
@@ -76,6 +74,11 @@ UPointLightComponent* ARTSShotEffect::CreateLight(FName Name)
 	Light->SetupAttachment(RootComponent);
 	Light->SetUsingAbsoluteLocation(true);
 	Light->SetCastShadows(false);
+	// A flash this short lights what it touches directly; it feeds neither Lumen nor translucency.
+	Light->bAffectGlobalIllumination = false;
+	Light->bAffectTranslucentLighting = false;
+	Light->IndirectLightingIntensity = 0.f;
+	Light->VolumetricScatteringIntensity = 0.f;
 	Light->bUseInverseSquaredFalloff = false;
 	Light->SetLightFalloffExponent(2.f);
 	Light->SetIntensity(0.f);
@@ -83,47 +86,35 @@ UPointLightComponent* ARTSShotEffect::CreateLight(FName Name)
 	return Light;
 }
 
-ARTSShotEffect* ARTSShotEffect::Spawn(AActor& Shooter, const URTSWeaponData& Weapon, AActor* Target, const FVector& TargetLocation,
-	float FlightTime)
+void ARTSShotEffect::SetLook(UStaticMesh* Mesh, UMaterialInterface* Material)
 {
-	UWorld* World = Shooter.GetWorld();
-	if (!World || World->GetNetMode() == NM_DedicatedServer)
-	{
-		return nullptr;
-	}
-	const FVector AimPoint = Target ? GetAimPoint(*Target, Shooter.GetActorLocation()) : TargetLocation;
-	const FVector Muzzle = GetMuzzlePoint(Shooter, AimPoint);
-
-	FActorSpawnParameters Params;
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	ARTSShotEffect* Effect = World->SpawnActor<ARTSShotEffect>(Muzzle, FRotator::ZeroRotator, Params);
-	if (Effect)
-	{
-		Effect->Init(Weapon, Target, Muzzle, AimPoint, FlightTime);
-	}
-	return Effect;
-}
-
-void ARTSShotEffect::Init(const URTSWeaponData& InWeapon, AActor* InTarget, const FVector& InMuzzle, const FVector& TargetLocation,
-	float InFlightTime)
-{
-	Weapon = &InWeapon;
-	Target = InTarget;
-	Muzzle = InMuzzle;
-	LastTargetPoint = TargetLocation;
-	FlightTime = FMath::Max(InFlightTime, 0.f);
-
-	const URTSSettings* Settings = GetDefault<URTSSettings>();
-	UStaticMesh* Mesh = Settings->ShotEffectMesh.LoadSynchronous();
-	UMaterialInterface* Material = Settings->ShotEffectMaterial.LoadSynchronous();
-	for (UStaticMeshComponent* Glow : { MuzzleFlash.Get(), Shell.Get(), ImpactFlash.Get() })
+	for (UStaticMeshComponent* Glow : GetGlows())
 	{
 		Glow->SetStaticMesh(Mesh);
-		if (Material)
-		{
-			Glow->SetMaterial(0, UMaterialInstanceDynamic::Create(Material, this));
-		}
+		Glow->SetMaterial(0, Material);
 	}
+}
+
+TArray<UStaticMeshComponent*> ARTSShotEffect::GetGlows() const
+{
+	return { MuzzleFlash.Get(), Shell.Get(), ImpactFlash.Get() };
+}
+
+void ARTSShotEffect::Start(URTSShotSubsystem& InPool, AActor& Shooter, const URTSWeaponData& InWeapon, AActor* InTarget,
+	const FVector& TargetLocation, float InFlightTime)
+{
+	Stop();
+	Pool = &InPool;
+	Weapon = &InWeapon;
+	Target = InTarget;
+	LastTargetPoint = InTarget ? GetAimPoint(*InTarget, Shooter.GetActorLocation()) : TargetLocation;
+	// The target's bounds walk all of its parts, so they are measured once; it is a vehicle or a building and keeps its height.
+	TargetAimHeight = InTarget ? LastTargetPoint.Z - InTarget->GetActorLocation().Z : 0.f;
+	Muzzle = GetMuzzlePoint(Shooter, LastTargetPoint);
+	FlightTime = FMath::Max(InFlightTime, 0.f);
+	Age = 0.f;
+	bLanded = false;
+
 	const FLinearColor FlashColor = FMath::Lerp(InWeapon.ShellColor, FLinearColor::White, 0.5f);
 	for (UPointLightComponent* Light : { MuzzleLight.Get(), ImpactLight.Get() })
 	{
@@ -136,6 +127,34 @@ void ARTSShotEffect::Init(const URTSWeaponData& InWeapon, AActor* InTarget, cons
 	RTSShotSound::Play(*this, Muzzle, InWeapon.EffectScale, false, InWeapon.FireSound);
 	UpdateMuzzleFlash();
 	UpdateShell();
+}
+
+void ARTSShotEffect::Stop()
+{
+	for (UStaticMeshComponent* Glow : { MuzzleFlash.Get(), Shell.Get(), ImpactFlash.Get() })
+	{
+		Glow->SetVisibility(false);
+	}
+	SetLightOn(*MuzzleLight, bMuzzleLightSlot, false);
+	SetLightOn(*ImpactLight, bImpactLightSlot, false);
+	Target.Reset();
+}
+
+void ARTSShotEffect::SetLightOn(UPointLightComponent& Light, bool& bHasSlot, bool bOn)
+{
+	if (bOn && !bHasSlot)
+	{
+		bHasSlot = Pool.IsValid() && Pool->TakeShotLight();
+	}
+	else if (!bOn && bHasSlot)
+	{
+		bHasSlot = false;
+		if (Pool.IsValid())
+		{
+			Pool->ReleaseShotLight();
+		}
+	}
+	Light.SetVisibility(bHasSlot);
 }
 
 float ARTSShotEffect::GetLifetime() const
@@ -169,36 +188,41 @@ FVector ARTSShotEffect::GetMuzzlePoint(const AActor& Shooter, const FVector& Tow
 	return BoundsOrigin + Direction * Reach + FVector(0.f, 0.f, BoundsExtent.Z * 0.3f);
 }
 
+FVector ARTSShotEffect::GetTargetPoint() const
+{
+	// GetAimPoint with the height measured when the shot started.
+	const IRTSTargetable* Targetable = Cast<IRTSTargetable>(Target.Get());
+	FVector Point = Targetable ? Targetable->GetClosestFootprintPoint(Muzzle) : Target->GetActorLocation();
+	Point.Z = Target->GetActorLocation().Z + TargetAimHeight;
+	return Point;
+}
+
 FVector ARTSShotEffect::GetImpactPoint() const
 {
 	// The shell homes, so it lands wherever the target is now; where it was last seen once the target is gone.
-	return Target.IsValid() ? GetAimPoint(*Target, Muzzle) : LastTargetPoint;
+	return Target.IsValid() ? GetTargetPoint() : LastTargetPoint;
 }
 
 void ARTSShotEffect::SetGlow(UStaticMeshComponent& Glow, float Brightness) const
 {
-	if (UMaterialInstanceDynamic* Material = Cast<UMaterialInstanceDynamic>(Glow.GetMaterial(0)))
-	{
-		Material->SetVectorParameterValue(ShellColorParameter, Weapon->ShellColor * GlowStrength * Brightness);
-	}
+	Glow.SetCustomPrimitiveDataVector4(RTSPrimitiveData::ShotGlow, FVector4(Weapon->ShellColor * GlowStrength * Brightness));
 }
 
-void ARTSShotEffect::Tick(float DeltaSeconds)
+bool ARTSShotEffect::Advance(float DeltaSeconds)
 {
-	Super::Tick(DeltaSeconds);
-
+	if (!Weapon)
+	{
+		return false;
+	}
 	Age += DeltaSeconds;
 	if (Target.IsValid())
 	{
-		LastTargetPoint = GetAimPoint(*Target, Muzzle);
+		LastTargetPoint = GetTargetPoint();
 	}
 	UpdateMuzzleFlash();
 	UpdateShell();
 	UpdateImpact();
-	if (Age >= GetLifetime())
-	{
-		Destroy();
-	}
+	return Age < GetLifetime();
 }
 
 void ARTSShotEffect::UpdateMuzzleFlash()
@@ -206,7 +230,7 @@ void ARTSShotEffect::UpdateMuzzleFlash()
 	const float Alpha = Age / MuzzleFlashSeconds;
 	const bool bVisible = Alpha < 1.f;
 	MuzzleFlash->SetVisibility(bVisible);
-	MuzzleLight->SetVisibility(bVisible);
+	SetLightOn(*MuzzleLight, bMuzzleLightSlot, bVisible);
 	if (!bVisible)
 	{
 		return;
@@ -214,7 +238,10 @@ void ARTSShotEffect::UpdateMuzzleFlash()
 	const float Scale = Weapon->EffectScale;
 	MuzzleFlash->SetWorldScale3D(FVector(MuzzleFlashSize * Scale * FMath::Lerp(0.6f, 1.f, Alpha) / MeshDiameter));
 	SetGlow(*MuzzleFlash, 1.f - Alpha);
-	MuzzleLight->SetIntensity(LightIntensity * Scale * (1.f - Alpha));
+	if (bMuzzleLightSlot)
+	{
+		MuzzleLight->SetIntensity(LightIntensity * Scale * (1.f - Alpha));
+	}
 }
 
 void ARTSShotEffect::UpdateShell()
@@ -262,7 +289,7 @@ void ARTSShotEffect::UpdateImpact()
 	const float Alpha = (Age - FlightTime) / ImpactSeconds;
 	const bool bVisible = Alpha < 1.f;
 	ImpactFlash->SetVisibility(bVisible);
-	ImpactLight->SetVisibility(bVisible);
+	SetLightOn(*ImpactLight, bImpactLightSlot, bVisible);
 	if (!bVisible)
 	{
 		return;
@@ -271,5 +298,8 @@ void ARTSShotEffect::UpdateImpact()
 	const float Swell = 1.f - FMath::Square(1.f - Alpha);
 	ImpactFlash->SetWorldScale3D(FVector(FMath::Lerp(ImpactStartSize, ImpactEndSize, Swell) * Scale / MeshDiameter));
 	SetGlow(*ImpactFlash, 1.f - Alpha);
-	ImpactLight->SetIntensity(LightIntensity * 1.5f * Scale * (1.f - Alpha));
+	if (bImpactLightSlot)
+	{
+		ImpactLight->SetIntensity(LightIntensity * 1.5f * Scale * (1.f - Alpha));
+	}
 }

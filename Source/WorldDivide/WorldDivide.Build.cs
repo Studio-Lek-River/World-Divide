@@ -34,6 +34,9 @@ public class WorldDivide : ModuleRules
 		// rts.Debug.UnitShots logs the frame's draw calls, GPU time and game thread time.
 		PrivateDependencyModuleNames.AddRange(new string[] { "RHI", "RenderCore" });
 
+		// The shared shot sound waves (URTSShotSoundWave) derive from USoundWave, whose proxy factory lives here.
+		PrivateDependencyModuleNames.Add("AudioExtensions");
+
 		// The HUD reads its layout files at runtime (URTSLayoutWidget), so they ship with the game.
 		RuntimeDependencies.Add("$(ProjectDir)/UI/Layouts/...", StagedFileType.UFS);
 

@@ -6,6 +6,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
+#include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
@@ -96,6 +97,10 @@
  * RTSBenchScene::MixedTeams teams in turn, with their weapons idled, and orders them straight through RTSCommands::Dispatch,
  * since the player's own path only orders the player's units. It shows whether units of one kind in different team colours
  * still share their draws. The suffixes combine in any order.
+ *
+ * A set named with RTSBenchScene::BattleSuffix (DA_TestM20Guardian@Battle; #227) alternates its units between two
+ * teams with their weapons on and health enough to never die, so every unit fires at its neighbours for as long as the run
+ * goes. It orders them like a "@MixedTeams" set, and shows what shots cost.
  *
  * Every row also counts what the units draw with (#150): their primitive components, the material slots of those that
  * are dynamic instances, and the distinct materials over all of them.
@@ -422,6 +427,7 @@ namespace RTSBenchCommand
 			, bSolids(InUnitName.Contains(RTSBenchScene::SolidsSuffix))
 			, bRigidTracks(InUnitName.Contains(RTSBenchScene::RigidTracksSuffix))
 			, bMixedTeams(InUnitName.Contains(RTSBenchScene::MixedTeamsSuffix))
+			, bBattle(InUnitName.Contains(RTSBenchScene::BattleSuffix))
 			, bForceLOD0(InUnitName.Contains(RTSBenchScene::ForceLOD0Suffix))
 			, bOccluded(InUnitName.Contains(RTSBenchScene::OccludedSuffix))
 			, bClose(InUnitName.Contains(RTSBenchScene::CloseSuffix))
@@ -752,11 +758,16 @@ namespace RTSBenchCommand
 				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 			if (Spawned)
 			{
-				Spawned->InitFromData(UnitData[Index % UnitData.Num()].Get(), bMixedTeams ? TeamId + Index % RTSBenchScene::MixedTeams : TeamId);
+				const int32 Team = bMixedTeams ? TeamId + Index % RTSBenchScene::MixedTeams : bBattle ? TeamId + Index % 2 : TeamId;
+				Spawned->InitFromData(UnitData[Index % UnitData.Num()].Get(), Team);
 				Spawned->FinishSpawning(Transform);
-				if (bMixedTeams)
+				if (bMixedTeams && !bBattle)
 				{
 					Spawned->GetWeaponComponent()->SetComponentTickEnabled(false);
+				}
+				if (bBattle)
+				{
+					Spawned->GetHealthComponent()->SetMaxHealth(RTSBenchScene::BattleHealth);
 				}
 				Units.Add(Spawned);
 			}
@@ -892,7 +903,7 @@ namespace RTSBenchCommand
 			FRTSCommand Move;
 			Move.Type = ERTSCommandType::Move;
 			Move.TargetLocation = GetGridCentre() + FVector(bMoveBack ? 0.f : Plan.bLongScene ? LongMoveDistance : MoveDistance, 0.f, 0.f);
-			if (bMixedTeams)
+			if (bMixedTeams || bBattle)
 			{
 				RTSCommands::Dispatch(Ordered, Move);
 			}
@@ -1318,6 +1329,11 @@ namespace RTSBenchCommand
 			{
 				Scene->SetNumberField(TEXT("teams"), RTSBenchScene::MixedTeams);
 			}
+			// And a "@Battle" set that its two teams fought (#227).
+			if (bBattle)
+			{
+				Scene->SetBoolField(TEXT("battle"), true);
+			}
 			// And an "@LOD0" set that it drew every mesh at LOD0 (#149).
 			if (bForceLOD0)
 			{
@@ -1466,6 +1482,8 @@ namespace RTSBenchCommand
 		bool bRigidTracks = false;
 		/** A "@MixedTeams" set. */
 		bool bMixedTeams = false;
+		/** A "@Battle" set (#227). */
+		bool bBattle = false;
 		/** A "@LOD0" set, and the camera's distance, which "@Near" and "@Far" change (#149). */
 		bool bForceLOD0 = false;
 		/** An "@Occluded" set, an "@Close" one, and the view of L_TestMap a set stands in, with its grid's middle (#214). */

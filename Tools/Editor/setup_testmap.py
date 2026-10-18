@@ -617,9 +617,14 @@ def make_ghost_material(name):
                  spec_hash([build_ghost_material], name))
 
 
+# A shot's glow: custom primitive data from this index on, RGBA (RTSPrimitiveData::ShotGlow, #227).
+SHOT_GLOW_INDEX = 0
+
+
 def build_shot_material(name, digest):
     """Unlit additive material glowing in its "Color" parameter, for muzzle flashes, shells and impacts. Additive, so a
-    colour faded to black is gone."""
+    colour faded to black is gone. The colour is custom primitive data (RTSPrimitiveData::ShotGlow, #227), so every glow
+    shares this material instead of a dynamic instance of its own."""
     path = f"{MATERIAL_DIR}/{name}"
     if assets.does_asset_exist(path):
         material = assets.load_asset(path)
@@ -634,6 +639,8 @@ def build_shot_material(name, digest):
     color = editing.create_material_expression(material, unreal.MaterialExpressionVectorParameter, -400, 0)
     color.set_editor_property("parameter_name", "Color")
     color.set_editor_property("default_value", unreal.LinearColor(8.0, 4.0, 1.0, 1.0))
+    color.set_editor_property("use_custom_primitive_data", True)
+    color.set_editor_property("primitive_data_index", SHOT_GLOW_INDEX)
     editing.connect_material_property(color, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
     editing.recompile_material(material)
@@ -644,7 +651,7 @@ def build_shot_material(name, digest):
 
 def make_shot_material(name):
     plan_rebuild(f"{MATERIAL_DIR}/{name}", ".uasset", lambda digest: build_shot_material(name, digest),
-                 spec_hash([build_shot_material], name))
+                 spec_hash([build_shot_material], name, SHOT_GLOW_INDEX))
 
 
 def build_surface_material(name, color, roughness, digest):

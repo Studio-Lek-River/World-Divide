@@ -1853,3 +1853,62 @@ from 4.3 to 7 to 9 ms and the rigid running gear from 0.38 to 0.44–0.55 ms, an
     phase every other frame for mid-distance tracks, smears their motion vectors.
 - **The quick method's single samples spread by about ±0.2 ms at the running gear's p95.** A verdict that close to the budget needs
   long-method rows, which were not run here (#171).
+
+## #227 (pooled shot effects)
+
+Audit §2 ([`../PERFORMANCE_AUDIT.md`](../PERFORMANCE_AUDIT.md)): every shot spawned and destroyed an `ARTSShotEffect` with three glow meshes,
+two point lights and three dynamic material instances, loaded its mesh and material with `LoadSynchronous`, walked the target's bounds
+every frame, and made up to two `USoundWaveProcedural`, each with an audio component and a stop timer.
+
+### What changed
+
+| Per shot | Before | After |
+|---|---|---|
+| Effect actor | spawned, destroyed after 0.1–1 s | taken from `URTSShotSubsystem`'s pool (`rts.Fx.ShotPoolSize`, 256), advanced there, returned hidden; the oldest is reused when all are busy |
+| Glow colour | 3 `UMaterialInstanceDynamic` | custom primitive data `RTSPrimitiveData::ShotGlow` (0–3) on the shared `M_ShotFx` |
+| Mesh and material | `LoadSynchronous` twice | resolved once, at the first shot |
+| Target aim point | `GetActorBounds` every frame | bounds height measured once, footprint point per frame |
+| Lights | 2, always, lighting translucency and Lumen | only within `rts.Fx.MaxShotLights` (32) at once; no shadows, no indirect, translucent or volumetric light |
+| Sound | up to 2 new procedural waves, 2 audio components, 2 timers | one `URTSShotSoundWave` per sound key, each playing copy reading the shared samples through its own generator; fire and forget |
+
+### The bench scene
+
+No bench scene fired before: `@MixedTeams` idles its weapons. The suffix `@Battle` alternates the grid's units between two teams, so
+every neighbour is an enemy in range, gives them health enough not to die and leaves their weapons on. The test cannon and heavy
+cannon reload in 2 and 2.5 s, so 240 units fire about 100–120 shots a second, the audit's estimate.
+
+### Short method, 120 and 240 units, before (b7f73a3 plus `@Battle`) → after (one 120-frame sample each)
+
+`ue.ps1 -Task bench -Unit DA_TestM20Guardian@Battle,DA_TestTank@Battle -Counts 120,240`, RTX 4090 PC, both runs valid (#171).
+
+| Set | Units | Scenario | Frame ms | Game ms (p95) | Render ms (p95) | GPU ms | Draw calls |
+|---|---:|---|---:|---:|---:|---:|---:|
+| M20 | 120 | idle | 2.40 → 2.43 | 1.81 (2.79) → 2.06 (3.03) | 2.32 (2.72) → 2.30 (2.60) | 2.18 → 2.16 | 352 → 341 |
+| M20 | 120 | move | 4.12 → 4.23 | 4.12 (5.19) → 4.23 (5.24) | 2.66 (3.03) → 2.80 (3.22) | 2.20 → 2.19 | 400 → 405 |
+| M20 | 240 | idle | 2.69 → 2.66 | 2.39 (3.66) → 2.15 (3.08) | 2.43 (2.88) → 2.55 (2.86) | 2.42 → 2.43 | 554 → 548 |
+| M20 | 240 | move | 7.14 → 6.94 | 7.12 (7.98) → 6.94 (7.51) | 4.18 (4.88) → 3.96 (4.38) | 2.51 → 2.51 | 639 → 637 |
+| Tank | 120 | idle | 2.06 → 2.11 | 1.69 (2.45) → 1.87 (2.76) | 2.02 (2.39) → 1.95 (2.33) | 1.83 → 1.83 | 102 → 103 |
+| Tank | 120 | move | 2.34 → 2.32 | 2.34 (3.34) → 2.32 (3.17) | 1.65 (2.14) → 1.70 (2.23) | 1.82 → 1.83 | 99 → 99 |
+| Tank | 240 | idle | 2.27 → 2.16 | 2.23 (2.87) → 2.15 (2.61) | 1.79 (2.24) → 1.85 (2.25) | 1.88 → 1.91 | 112 → 113 |
+| Tank | 240 | move | 3.12 → 3.14 | 3.11 (3.67) → 3.14 (3.93) | 1.68 (2.00) → 1.57 (1.76) | 1.87 → 1.87 | 110 → 107 |
+
+### What the numbers show
+
+- **On this PC the frame time does not change beyond the noise.** At 240 units the game thread p95 drops 0.3–0.6 ms in three of four
+  rows and rises 0.26 ms in the fourth. One 120-frame sample spreads by about that much, so this is no measured gain.
+- **At about 110 shots a second over 400+ frames a second, a frame sees a shot or less.** The per-shot spawn, the MIDs and the
+  loads were a few hundredths of a millisecond spread over many frames. What the pool removes is churn: about 110 actors, 550
+  components, 330 MIDs and up to 220 sound waves and audio components a second at 240 units, all garbage for the collector.
+- **The light budget only binds in a close view of a large battle**: at 110 shots a second with 0.08 s muzzle and 0.25 s impact
+  lights, about 35 would shine at once without it.
+
+### Visual check
+
+The muzzle flash, the shell and the impact keep their sizes, timings, colours and brightness: the same values now reach `M_ShotFx`
+through custom primitive data instead of a parameter. The bench's view does not catch a flash reliably (they last 0.08–0.28 s, and at
+point blank the impact lands inside the neighbour's hull), so the before and after comparison is a PIE check.
+
+### Remaining limitations
+
+- No long-method rows: the change is not expected to move a gate, and the short-method rows above show no regression.
+- A weaker GPU or a slower CPU spends more on the lights and the churn than this PC; the RTX 3060-class run (#152, #160) will tell.

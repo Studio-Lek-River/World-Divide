@@ -1,17 +1,24 @@
 #include "Algo/AllOf.h"
+#include "Algo/Count.h"
 #include "Buildings/RTSBuilding.h"
+#include "Components/PointLightComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSShotEffect.h"
 #include "Combat/RTSShotSound.h"
+#include "Combat/RTSShotSoundWave.h"
 #include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
 #include "EngineUtils.h"
+#include "HAL/IConsoleManager.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
+#include "UObject/UObjectIterator.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
 
@@ -50,6 +57,31 @@ namespace
 		}
 		return Count;
 	}
+
+	/** Sets an integer console variable for the scope, restoring it afterwards. */
+	struct FScopedIntCVar
+	{
+		FScopedIntCVar(const TCHAR* Name, int32 Value)
+			: CVar(IConsoleManager::Get().FindConsoleVariable(Name))
+		{
+			if (CVar)
+			{
+				Saved = CVar->GetString();
+				CVar->Set(Value, ECVF_SetByConsole);
+			}
+		}
+
+		~FScopedIntCVar()
+		{
+			if (CVar)
+			{
+				CVar->Set(*Saved, ECVF_SetByConsole);
+			}
+		}
+
+		IConsoleVariable* CVar = nullptr;
+		FString Saved;
+	};
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSHealthTest, "WorldDivide.Combat.Health", TestFlags)
@@ -303,8 +335,10 @@ bool FRTSShotEffectTest::RunTest(const FString& Parameters)
 	ARTSUnit* Shooter = TestWorld.SpawnUnit(MakeUnitData(100.f, Weapon), 0, FVector::ZeroVector);
 	TestWorld.SpawnUnit(MakeUnitData(1000.f, nullptr), 1, FVector(500.f, 0.f, 0.f));
 
+	URTSShotSubsystem* Shots = TestWorld.World->GetSubsystem<URTSShotSubsystem>();
 	Shooter->GetWeaponComponent()->UpdateWeapon(0.f);
 	TestEqual(TEXT("The shot shows an effect"), CountShotEffects(*TestWorld.World), 1);
+	TestEqual(TEXT("The effect plays"), Shots->GetLiveEffects(), 1);
 	Shooter->GetWeaponComponent()->UpdateWeapon(Step);
 	TestEqual(TEXT("No effect while reloading"), CountShotEffects(*TestWorld.World), 1);
 
@@ -316,15 +350,109 @@ bool FRTSShotEffectTest::RunTest(const FString& Parameters)
 	ARTSShotEffect* Effect = *It;
 	const float Lifetime = Effect->GetLifetime();
 	float Age = 0.f;
-	// The test world does not tick, so the effect is stepped by hand.
-	while (IsValid(Effect) && Age < Lifetime + 1.f)
+	// The test world does not tick, so the pool is stepped by hand.
+	while (Shots->GetLiveEffects() > 0 && Age < Lifetime + 1.f)
 	{
-		Effect->Tick(Step);
+		Shots->AdvanceEffects(Step);
 		Age += Step;
 	}
-	TestFalse(TEXT("The effect removes itself"), IsValid(Effect));
+	TestEqual(TEXT("The effect is over"), Shots->GetLiveEffects(), 0);
 	TestTrue(FString::Printf(TEXT("It lived %.2f s, its lifetime is %.2f s"), Age, Lifetime),
 		Age >= Lifetime - KINDA_SMALL_NUMBER && Age <= Lifetime + Step + KINDA_SMALL_NUMBER);
+	TestTrue(TEXT("It went back to the pool instead of being destroyed"), IsValid(Effect) && Shots->GetPooledEffects() == 1);
+	TestTrue(TEXT("It is hidden in the pool"), Algo::AllOf(Effect->GetGlows(), [](const UStaticMeshComponent* Glow) { return !Glow->IsVisible(); }));
+	TestEqual(TEXT("It gave its lights back"), Shots->GetLiveShotLights(), 0);
+
+	Shooter->GetWeaponComponent()->UpdateWeapon(Weapon->ReloadSeconds);
+	TestEqual(TEXT("The next shot plays"), Shots->GetLiveEffects(), 1);
+	TestEqual(TEXT("It takes the pooled effect"), CountShotEffects(*TestWorld.World), 1);
+	TestEqual(TEXT("The pool is empty again"), Shots->GetPooledEffects(), 0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSShotPoolTest, "WorldDivide.Perf.ShotPool", TestFlags)
+
+bool FRTSShotPoolTest::RunTest(const FString& Parameters)
+{
+	constexpr int32 PoolSize = 8;
+	constexpr int32 MaxLights = 3;
+	constexpr int32 NumShooters = 6;
+	constexpr float Step = 0.05f;
+	const FScopedIntCVar Pool(TEXT("rts.Fx.ShotPoolSize"), PoolSize);
+	const FScopedIntCVar Lights(TEXT("rts.Fx.MaxShotLights"), MaxLights);
+	if (!TestNotNull(TEXT("rts.Fx.ShotPoolSize exists"), Pool.CVar) || !TestNotNull(TEXT("rts.Fx.MaxShotLights exists"), Lights.CVar))
+	{
+		return false;
+	}
+
+	// Quick reloads and slow shells, so many more shots are in the air than the pool holds.
+	URTSWeaponData* Weapon = MakeShellWeapon();
+	Weapon->ReloadSeconds = 0.2f;
+	const FRTSTestWorld TestWorld;
+	URTSShotSubsystem* Shots = TestWorld.World->GetSubsystem<URTSShotSubsystem>();
+	TArray<ARTSUnit*> Shooters;
+	for (int32 Index = 0; Index < NumShooters; ++Index)
+	{
+		Shooters.Add(TestWorld.SpawnUnit(MakeUnitData(100.f, Weapon), 0, FVector(0.f, 300.f * Index, 0.f)));
+	}
+	TestWorld.SpawnUnit(MakeUnitData(1.0e9f, nullptr), 1, FVector(600.f, 750.f, 0.f));
+
+	int32 MostEffects = 0;
+	int32 MostLights = 0;
+	int32 MostLit = 0;
+	int32 Glows = 0;
+	int32 DynamicGlows = 0;
+	for (int32 Frame = 0; Frame < 100; ++Frame)
+	{
+		for (ARTSUnit* Shooter : Shooters)
+		{
+			Shooter->GetWeaponComponent()->UpdateWeapon(Step);
+		}
+		Shots->Advance(Step);
+		Shots->AdvanceEffects(Step);
+
+		MostEffects = FMath::Max(MostEffects, CountShotEffects(*TestWorld.World));
+		MostLights = FMath::Max(MostLights, Shots->GetLiveShotLights());
+		int32 Lit = 0;
+		for (TActorIterator<ARTSShotEffect> It(TestWorld.World); It; ++It)
+		{
+			TInlineComponentArray<UPointLightComponent*> PointLights(*It);
+			Lit += Algo::CountIf(PointLights, [](const UPointLightComponent* Light) { return Light->IsVisible(); });
+			for (const UStaticMeshComponent* Glow : It->GetGlows())
+			{
+				++Glows;
+				DynamicGlows += Cast<UMaterialInstanceDynamic>(Glow->GetMaterial(0)) ? 1 : 0;
+			}
+		}
+		MostLit = FMath::Max(MostLit, Lit);
+	}
+	TestEqual(TEXT("The pool fills"), MostEffects, PoolSize);
+	TestTrue(FString::Printf(TEXT("Live effect actors (at most %d) stay within the pool of %d"), MostEffects, PoolSize), MostEffects <= PoolSize);
+	TestTrue(TEXT("Glows were checked"), Glows > 0);
+	TestEqual(TEXT("No glow has a dynamic material instance"), DynamicGlows, 0);
+	TestEqual(TEXT("The light budget is used"), MostLights, MaxLights);
+	TestTrue(FString::Printf(TEXT("Lights shining (at most %d) stay within the budget of %d"), MostLit, MaxLights), MostLit <= MaxLights);
+
+	// Every shot of a kind plays the same wave.
+	const auto CountWaves = []
+	{
+		int32 Count = 0;
+		for (TObjectIterator<USoundWaveProcedural> It; It; ++It)
+		{
+			++Count;
+		}
+		return Count;
+	};
+	const int32 WavesBefore = CountWaves();
+	const TArray<TPair<float, bool>> Keys = { { 0.4f, false }, { 1.6f, false }, { 1.6f, true } };
+	for (int32 Shot = 0; Shot < 50; ++Shot)
+	{
+		const TPair<float, bool>& Key = Keys[Shot % Keys.Num()];
+		TestTrue(TEXT("A wave for every shot"), RTSShotSound::GetWave(Key.Key, Key.Value) != nullptr);
+	}
+	TestTrue(TEXT("A sound's wave is reused"), RTSShotSound::GetWave(0.4f, false) == RTSShotSound::GetWave(0.4f, false));
+	const int32 NewWaves = CountWaves() - WavesBefore;
+	TestTrue(FString::Printf(TEXT("Procedural waves grew by %d for %d keys"), NewWaves, Keys.Num()), NewWaves <= Keys.Num());
 	return true;
 }
 

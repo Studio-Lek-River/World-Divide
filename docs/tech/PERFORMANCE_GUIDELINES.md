@@ -29,7 +29,7 @@ Tests: `WorldDivide.Perf.EntityRegistry`, `WorldDivide.Perf.CommandPanelRebuilds
 11. **Short-lived lights have a budget** (`rts.Fx.MaxShotLights`), cast no shadows and add no indirect light.
 12. **No temporaries in per-frame code.** Arrays and sets used every frame are members, `Reset()` each frame.
 
-Tests: `WorldDivide.Perf.ShotPool` (*planned*); `WorldDivide.Art.TeamColorMaterials`.
+Tests: `WorldDivide.Perf.ShotPool`, `WorldDivide.Art.TeamColorMaterials`.
 
 ## UI
 

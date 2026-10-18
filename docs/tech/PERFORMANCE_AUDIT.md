@@ -42,6 +42,7 @@ Gains are estimates until a `ue.ps1 -Task bench` run on L_Bench shows them. The 
 - At 240 against 240 with 2 s reloads that is in the order of 120–240 actors, 360–720 MIDs, 240–480 lights and 240–480 sound objects a second.
 - **Fix:** a pool in `URTSShotSubsystem` (or a Niagara system per weapon with auto-release pooling); colour through custom primitive data in `M_ShotFx`, as #150 did for team colour; the mesh and material resolved once; a global budget on shot lights (`rts.Fx.MaxShotLights`) with indirect lighting off; one procedural wave per sound key.
 - **Guard:** fire N shots in a test world and assert the live effect actors never exceed the pool size, no glow carries a MID, the live lights stay within the budget, and the procedural waves grow by no more than the number of sound keys.
+- **Done** in #227: the pool, the custom primitive data, the light budget and one wave per sound key are in, guarded by `WorldDivide.Perf.ShotPool`. Bench figures in [`scale/PERFORMANCE_RESULTS.md`](scale/PERFORMANCE_RESULTS.md#227-pooled-shot-effects).
 
 ## 3. Command panel rebuilt every frame
 

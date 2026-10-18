@@ -4,6 +4,7 @@
 
 class UObject;
 class USoundBase;
+class URTSShotSoundWave;
 
 /**
  * Shot and blast sounds synthesized in code, until the project has real audio: decaying filtered noise, with a low thump
@@ -15,6 +16,9 @@ namespace RTSShotSound
 
 	/** 16-bit mono PCM at SampleRate. Built on first use and cached per tenth of scale. */
 	WORLDDIVIDE_API const TArray<uint8>& GetPcm(float EffectScale, bool bImpact);
+
+	/** The wave that plays GetPcm's sound: one per tenth of scale and kind, made on first use and kept (#227). */
+	WORLDDIVIDE_API URTSShotSoundWave* GetWave(float EffectScale, bool bImpact);
 
 	/** Plays Sound at Location, or the synthesized sound when it is null. Does nothing without an audio device. */
 	WORLDDIVIDE_API void Play(const UObject& WorldContext, const FVector& Location, float EffectScale, bool bImpact, USoundBase* Sound);

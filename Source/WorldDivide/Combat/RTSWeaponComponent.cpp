@@ -2,7 +2,6 @@
 
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
-#include "Combat/RTSShotEffect.h"
 #include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSTargetable.h"
 #include "Core/RTSGameState.h"
@@ -282,7 +281,7 @@ void URTSWeaponComponent::Multicast_PlayShot_Implementation(URTSWeaponData* Weap
 	{
 		return;
 	}
-	ARTSShotEffect::Spawn(*GetOwner(), *Weapon, ShotTarget, TargetLocation, FlightTime);
+	GetWorld()->GetSubsystem<URTSShotSubsystem>()->PlayShot(*GetOwner(), *Weapon, ShotTarget, TargetLocation, FlightTime);
 	if (ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner()))
 	{
 		Unit->PlayFireKick(Weapon->EffectScale);

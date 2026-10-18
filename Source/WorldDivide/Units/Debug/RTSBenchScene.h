@@ -57,6 +57,14 @@ namespace RTSBenchScene
 	const TCHAR* const MixedTeamsSuffix = TEXT("@MixedTeams");
 	constexpr int32 MixedTeams = 4;
 
+	/**
+	 * The set name's suffix that makes its grid a battle (#227): its units alternate between two teams, so every neighbour
+	 * of a unit is an enemy in range, and keep their weapons. They are given BattleHealth, so nobody dies while it runs and
+	 * every weapon keeps firing.
+	 */
+	const TCHAR* const BattleSuffix = TEXT("@Battle");
+	constexpr float BattleHealth = 1.0e9f;
+
 	/** The set name's suffix that draws every mesh at LOD0 (r.ForceLOD 0 while it runs; #149), against the LODs it has. */
 	const TCHAR* const ForceLOD0Suffix = TEXT("@LOD0");
 
