@@ -1,6 +1,6 @@
 # RTS movement and performance at real scale
 
-Status: **audit and proposal**, Phase 2A (2026-10-15). The framework stays: an `APawn` with `UFloatingPawnMovement`, a per-unit `AAIController` with path following, and server-side separation. Nothing here replaces it. Each proposal is a local change that can be measured.
+Status: **audit and proposal**, Phase 2A (2026-10-15). §1 and §3.1–3.2 describe the code before steps 2 and 7 and are superseded by them; the idle tick interval of §3.3 is still open ([`../PERFORMANCE_AUDIT.md`](../PERFORMANCE_AUDIT.md) §6). The framework stays: an `APawn` with `UFloatingPawnMovement`, a per-unit `AAIController` with path following, and server-side separation. Nothing here replaces it. Each proposal is a local change that can be measured.
 
 ## 1. What runs per unit per frame today
 
