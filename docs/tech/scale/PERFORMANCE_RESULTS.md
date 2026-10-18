@@ -52,6 +52,7 @@ There are three methods. Their numbers live in `FRTSBenchPlan` (`Units/Debug/RTS
 |---|---|---|---|---|---|---|
 | Long | `-Long` (alias `-Full`) | 1, 30, 120, 240 | idle, move | 10 s each | 60 s: three at 240, one below | **The performance gate.** Unchanged from #138 (step 6 below). |
 | Quick | `-Quick` | 240 (or `-Counts`) | move | 3 s settle, 10 s after the order | one 30 s sample | **Iterating only. Never gate evidence.** |
+| Screen | `-Screen` | 240 (or `-Counts`) | move | 3 s settle, 10 s after the order | one 15 s sample | **The full-roster gate's first tier (#171).** Escalates to the long method; never gate evidence on its own. |
 | Short | none | 1, 30, 120, 240 | idle, move | 3 s, 1 s after the order | 120 frames | The step 0 to step 4 method, kept for continuity. |
 
 - **Quick is the long scene, shortened.** It uses the same grid south-west of the middle, the same camera, and the same back-and-forth driving every 15 s. So its row is the same kind of number as the gate's 240-unit move rows. It writes the same CSV and table columns, and its table title says "diagnostic, not gate evidence".
@@ -74,7 +75,7 @@ There are three methods. Their numbers live in `FRTSBenchPlan` (`Units/Debug/RTS
 | `DA_TestTank` | 3.23 (4.57) | 3.34 (4.72) | 3.50 (4.93) |
 
   Quick lands inside the gate's spread. It is still one sample: the M20's slowest frame was 27.3 ms in one quick run and 33.8 ms in the next.
-- **The long method was not re-run for #167.** Its code path is unchanged: the same numbers, now read from `FRTSBenchPlan` and checked by `WorldDivide.Debug.Bench.Plan`. A long run per unit type does not scale to a roster of over a hundred units; that is a follow-up.
+- **The long method was not re-run for #167.** Its code path is unchanged: the same numbers, now read from `FRTSBenchPlan` and checked by `WorldDivide.Debug.Bench.Plan`. A long run per unit type does not scale to a roster of over a hundred units; #171 adds the gate for that (below).
 
 ### Several unit sets in one run
 
@@ -119,6 +120,220 @@ A second worktree could keep building and testing while the bench runs. It is no
 - **Contention.** The bench is CPU-bound: the game thread is the limit in every scenario with 120 units or more. A build in the other worktree runs UnrealBuildTool on every core, and the automation tests run a second engine process. Either would share the CPU, memory bandwidth and disk with the measured game, and move the numbers by far more than the 0.6 ms spread a step is read against.
 - **Cost and sharing.** A second worktree needs its own `Binaries` and `Intermediate`, which is a full editor build. It would share the derived data cache and the LFS lock server with the first. Its `Saved/` and generated content would be separate, but its baseline could not be the main worktree's: a different build of the same commit.
 - **What is left.** Quick runs cut the wait instead (above). Use the worktree only for work that needs no CPU, such as editing or reading code.
+
+## Performance gate for a full roster (#171)
+
+The long method costs about 13.5 minutes per unit set. For over a hundred unit types, that is about 23 hours. The gate therefore benches every unit cheaply and only some with the long method. It decides which sets from what changed, and it never takes a disturbed run for a measurement. The long method itself, its budgets and the `-Quick`, `-Long` and `-Compare` commands are unchanged.
+
+### The three tiers
+
+| Tier | What runs | Method | Evidence |
+|---|---|---|---|
+| 1. Screen | Every unit the change can reach, one set each | **Screen**: the long scene, 240 moving units, a 10 s warm-up and one 15 s sample | Diagnostic. A clear screen says "nothing suspicious"; it is no gate evidence for that unit on its own. |
+| 2. Representatives | A few units per class, and one mixed set | **Long** (#138), unchanged | **The gate.** PASS and FAIL come from these runs. |
+| 3. Change-based selection | Decides tiers 1 and 2 from the files changed since the baseline commit | — | A shared change reaches every unit; one unit's data reaches that unit. |
+
+`ue.ps1 -Task gate` runs all three:
+1. It lists the changed files and plans with the `RTSBenchGate` commandlet, which writes `Saved/Bench/Gate/plan.json`.
+2. It screens the planned units in one game session.
+3. It judges the screens. A screen that was not a valid measurement runs once more; a suspicious one is escalated.
+4. It benches the representatives, the mixed set and the escalated units with the long method, in one session.
+5. It judges everything against `Saved/Bench/Baselines/<commit>/` and the budgets, and writes `gate.md` and `gate.json`.
+
+The decision logic is `RTSBenchGate` (`Units/Debug/RTSBenchGate.h`). Its automation tests feed it synthetic runs: `WorldDivide.Debug.Bench.Gate.*`.
+
+### Representative units
+
+`RTSBenchGate::SelectRepresentatives` reads the roster from the unit data under `/Game/Data/Units`. Each unit gets a class (tracked, wheeled, infantry, air), its parts (hull, turret, gun, vehicle parts), LOD0 triangles, footprint and every `/Game` package it is made of. For each class it picks:
+- **the pinned units**, `DA_TestM20Guardian` and `DA_TestTank`, so the history in this file stays comparable;
+- **the costliest unit**: by its last valid screen when the whole class has one, otherwise by LOD0 triangles times parts;
+- **the costliest unit of each size**, when the class spans more than one: under 4 m², 4 to 20 m², over 20 m² of footprint.
+
+- **a unit with a long baseline in a near tie**: when the costliest by the screen is less than 0.3 ms (or 10 % of triangles times parts) ahead of a unit that has a valid long baseline, the gate keeps that unit. The first end-to-end run showed why. Once the screen baselines existed, the flak truck read 2.58 ms against the builder's 2.43 ms, and the representative switched to the truck, which had no long baseline. Every gate would then be INCONCLUSIVE until the next nightly run.
+
+The mixed set takes one representative of each class: a pinned one first, then one with a long baseline. Today's roster gives five representatives: `DA_TestM20Guardian`, `DA_TestTank`, `DA_TestBuilder`, `DA_TestGrenadier` and `DA_TestJet`. Its mixed set is `DA_TestM20Guardian+DA_TestBuilder+DA_TestGrenadier+DA_TestJet`. A roster of 120 units in four classes gives at most twelve representatives plus the pinned ones (`WorldDivide.Debug.Bench.Gate.Representatives`).
+
+**A representative subset covers kinds of cost, not every unit.** A unit benched only with the screen has no gate evidence of its own. The screen is what catches a unit that costs far more than its class's representative, and it escalates that unit to the long method.
+
+Aircraft run in the bench: the jet takes off and flies by its own rules, so fewer of them stay in the camera's view than ground units. Its game thread is measured like any other. At 6.9 ms for 240 moving jets, the jet is the costliest unit of the screen.
+
+### Change-based selection
+
+`RTSBenchGate::ClassifyPath` gives each changed file a scope:
+
+| Changed | Scope | Benched |
+|---|---|---|
+| `docs/`, `*.md`, `Source/WorldDivide/Tests/`, `Tools/`, maps other than `L_Bench`, the gate's own `RTSBenchGate*` | nothing the bench runs | none |
+| `Content/Data/Units/<Unit>.uasset` | that unit | its screen, plus the long method if it is a representative or in the mixed set, or once the screen escalates it |
+| Any other `Content/` package (mesh, material, texture, animation) | every unit made of it, from the asset registry's dependencies | as one unit's data, for each of them |
+| A `Content/` package no unit is made of | shared: code may load it (a game mode, the HUD, a shared material) | broad |
+| `Source/` (movement, navigation, avoidance, combat, rendering, components), `Config/`, `Plugins/`, `UI/`, `*.uproject` | shared | **broad**: every unit screened, every representative and the mixed set long |
+| `RTSBenchCommand.cpp`, `RTSBenchPlan.h`, `L_Bench` | the bench itself | broad, and `gate.md` asks for every baseline to be regenerated |
+
+- **A shared change benches more than a change to one unit's data**: all 9 units and 6 long sets today, against 1 screen and at most 2 long sets.
+- **An unchanged unit asset is no proof that its cost is unchanged.** Any code, config or shared-content change makes the gate broad. The nightly or milestone run (`-Scope broad`) benches every unit whatever changed.
+- **Content hashes.** `bench.json` now hashes every content file the set's units are made of (the packages of the last `plan.json`), and `compare.md` names each one that changed.
+
+### Baseline compatibility
+
+A run is judged only against a baseline of the same method, scene, machine and engine. `RTSBenchGate::CompareMetadata` compares bench.json's `method`, `scene` and `machine` field by field, and the engine version of the `run` section. Any difference makes the set INCONCLUSIVE and lists the fields. A baseline must also be a valid measurement itself. A baseline stored before #171 has no validity record, so the gate does not read against it; `-Compare` still does. Baselines live under `Saved/Bench/Baselines/<commit>/<method>/<set>/`, as in #167.
+
+### Contamination detection
+
+Every bench run checks its own samples (`RTSBenchGate::CheckRun`) and writes the result to bench.json's new `run` section, with `valid` and `flags`. bench.csv gains the columns `sample_s`, `max_frame_ms`, `stall_frames` and `freeze_frames` at its end; older CSVs still parse.
+
+| Check | Limit | Catches |
+|---|---|---|
+| Sample length | at least 98 % of the planned length | interrupted or cut-short samples |
+| Frame rate | at least 10 fps over the sample | #167's disturbed run, 66 frames in 30 s (2.2 fps) |
+| Freezes | no frame over 250 ms | the process descheduled or paging |
+| Stalls | at most 3 frames over 100 ms | repeated hitches from outside the game. A normal sample's slowest frame is 5 to 23 ms. |
+| Samples agree | the samples of one scenario within 0.6 ms game thread | intermittent load during one sample. A regression in the code moves all samples alike. |
+| Other load | other processes under 1.0 core on average while the set ran | another game, a build, a test run, a virus scan beside the bench |
+| Shader compilation | no `ShaderCompileWorker` while the set ran | first-use shader compiles inside a sample |
+| Unexplained slowdown | a frame 1.5 times slower than the baseline's must be at least half explained by the game, render, RHI or GPU time | time lost outside the game, such as GPU contention from another program |
+| Setup | no Unreal Insights trace, a Development build, a result for every set | trace overhead, a wrong build, a failed run |
+
+- **ue.ps1 measures the other load.** While the game runs, it reads the CPU time of every other process every 5 s, leaving out the game and itself. It writes the mean and peak cores that overlap each set's run into that set's bench.json (`environment`). On the development PC, background load while benching is 0.65 to 0.78 cores (VS Code, the terminal, the browser).
+- **`-SaveBaseline` refuses** a run that is not valid or that ran beside other load. It prints `BASELINE REFUSED`, names the reasons and exits 1, so a contaminated run is never stored.
+- **A real regression is not contamination.** The checks look at the environment and the run's own consistency, never at the difference to the baseline alone. A run whose frames got slower because its game thread did is valid, and it fails. `WorldDivide.Debug.Bench.Gate.Contamination` covers both cases.
+- **Measured on the real game** (2026-10-18). A screen of `DA_TestTank` ran beside 14 busy-loop processes. The game's own checks found nothing: 4,125 frames, no stalls. Its game thread read 3.62 ms against about 2.8 ms on an idle machine, which would look like a +0.8 ms regression. The environment record showed 10.1 cores of other load, so the run is flagged and neither stored nor judged as a measurement.
+
+### PASS, FAIL and INCONCLUSIVE
+
+| Outcome | When |
+|---|---|
+| **PASS** | Every required long run is valid, within the budgets below, and no more than 0.6 ms game thread above its valid, compatible baseline in any scenario. Every screen is valid and clear, or its unit's long run passed. |
+| **FAIL** | A valid long run violates a budget, even without a baseline, or is more than 0.6 ms game thread above its baseline. |
+| **INCONCLUSIVE** | A run is invalid, missing or interrupted; a baseline is missing, incompatible or not itself valid; or a screen stayed invalid after its rerun. **Never a pass.** |
+
+The budgets the gate reads are the approved ones, unchanged. They apply at 240 units, mean of the samples:
+- **Move order:** the slowest game-thread frame of the move scenario is under 33 ms.
+- **Locomotion:** mean ≤ 1.0 ms and p95 ≤ 2.0 ms, for sets with a tracked or wheeled unit.
+- **Avoidance:** mean under 1.0 ms.
+
+The replication budget (`WorldDivide.Net.Vehicle.*`), the formation and path-search budgets (`WorldDivide.Commands.Formation.Performance240`, `WorldDivide.Navigation.LongPath.Cost`) and the avoidance test budgets stay with their automation tests. Run them with `ue.ps1 -Task test`.
+
+The screen never fails, because it is no gate evidence. It escalates a unit to the long method when:
+- its game thread is more than 0.3 ms above its screen baseline (half the gate's 0.6 ms, see the statistics below);
+- its locomotion reaches 80 % of a budget;
+- its slowest frame passes 33 ms;
+- or it has no valid, compatible screen baseline.
+
+`gate.md` gives the scope, every change and its scope, each set's verdict with its reasons, the checks it passed, and a **Next** list: the exact command to rerun, to trace or to store a missing baseline. `gate.json` has the same for CI. ue.ps1 exits 0 PASS, 1 FAIL and 4 INCONCLUSIVE.
+
+### Statistics: can a shorter sample screen?
+
+**Method.** Five separate game sessions (2026-10-18, commit 226068d's code, the development PC). Each benched M20 and `DA_TestTank` at 240 moving units in the long scene. Each had one 60 s sample after the usual 10 s warm-up, with every frame written (`-Frames -SampleSeconds 60`). The windows are the first 15, 30, 45 and 60 s of each sample. They are multiples of the scene's 15 s move leg, because a window that ended mid-leg would weigh driving and standing frames differently. The spread is the largest minus the smallest session mean of the game thread.
+
+| Unit | Window | Session means (game ms) | Mean | SD | **Spread** | p95 spread |
+|---|---|---|---:|---:|---:|---:|
+| M20 | 15 s | 3.95, 3.93, 3.96, 3.94, 3.93 | 3.94 | 0.012 | **0.03** | 0.22 |
+| M20 | 30 s | 4.01, 3.98, 4.01, 4.01, 4.00 | 4.00 | 0.014 | **0.03** | 0.22 |
+| M20 | 45 s | 4.07, 4.04, 4.08, 4.08, 4.07 | 4.07 | 0.016 | **0.04** | 0.17 |
+| M20 | 60 s | 4.09, 4.06, 4.12, 4.12, 4.14 | 4.11 | 0.031 | **0.08** | 0.17 |
+| `DA_TestTank` | 15 s | 2.76, 2.81, 2.78, 2.78, 2.76 | 2.78 | 0.019 | **0.05** | 0.11 |
+| `DA_TestTank` | 30 s | 2.83, 2.83, 2.87, 2.81, 2.81 | 2.83 | 0.022 | **0.06** | 0.12 |
+| `DA_TestTank` | 45 s | 2.84, 2.84, 2.89, 2.84, 2.86 | 2.85 | 0.022 | **0.05** | 0.09 |
+| `DA_TestTank` | 60 s | 2.87, 2.87, 2.91, 2.87, 2.87 | 2.87 | 0.017 | **0.04** | 0.07 |
+
+Other load in those sessions: 0.65 to 0.78 cores.
+
+- **A 15 s sample keeps the game thread's run-to-run spread at 0.05 ms or less, far within the 0.6 ms requirement.** The screen method uses it.
+- **Shorter windows read lower.** The mean rises with the window (M20 3.94 → 4.11 ms from 15 to 60 s), probably as the grid spreads over the first legs. A screen is therefore read only against a screen baseline, never against quick or long rows: `method.sample_s` differs, so `CompareMetadata` refuses the pair.
+- **The screen does not replace the long method.** It replaces nothing in the gate. It is a cheaper first tier than the quick method's 30 s, with the same spread.
+- **The escalation threshold is 0.3 ms, not the measured 0.05 ms.** Five sessions in one evening do not show how the machine varies from day to day, so the threshold keeps a margin and stays half the gate's 0.6 ms.
+- **The long method's own spread** is within 0.13 ms between the three 240-unit samples of every stored long run. Five long runs of different commits from #168 to #174 put M20 move at 4.12 to 4.21 ms. No repeated long runs were made for #171: the long method is unchanged.
+
+### Wall clock
+
+Measured on the development PC (2026-10-18):
+
+| Run | Wall clock |
+|---|---:|
+| Screen of all 9 units, one session (`-Task bench -Screen -Unit <9 units>`) | 280 s: about 29 s per unit and 20 s of start-up |
+| Long method, per set | about 812 s (13.5 min) |
+| Planner or judge (`RTSBenchGate` commandlet) | about 9 s per call, three calls per gate |
+| Gate on a docs-only change (`-Task gate`, nothing to bench) | 18 s: the planner and the judge, PASS |
+| Broad gate of today's roster: 9 screens and 6 long sets (below) | 87.2 min: 280 s of screens, 4,841 s of long runs, the rest planning and judging |
+
+**Estimate for a roster of 100 units**, from those figures:
+
+| Change | Work | Wall clock |
+|---|---|---:|
+| Docs, tests, tools | none | under 1 min |
+| One unit's data or meshes | 1 screen, plus up to 2 long sets if it is a representative or in the mix | 1 to 28 min |
+| Shared code, config or content | 100 screens (49 min) and the representatives plus the mixed set: 9 long sets (122 min) to 13 (176 min) | **about 3 to 3.7 hours** |
+| Each escalated unit | one more long set | +13.5 min |
+
+That is against about 23 hours for a long run of every unit type. The broad gate stays one evening's or one night's run, and most changes are cheaper.
+
+### Recommended use
+
+- **While developing:** the quick or screen method against HEAD's baseline (`-Compare`). It is fast and diagnostic.
+- **Before committing a change:** `-Task gate` against the baseline of the commit it sits on. Only the sets the change reaches run.
+- **Nightly or after a merge to `main`:** `-Task gate -Scope broad -SaveBaseline` on a clean checkout. It judges against the previous baseline (`-Baseline <commit>`) and stores every valid run as the new commit's baseline.
+- **Milestone acceptance:** `-Task gate -Scope broad -Baseline <the last milestone's commit>`. It benches every representative and screens every unit against the last milestone. Escalated units get their long runs. Add a long run (`-Task bench -Long -Unit ...`) of every unit changed since that milestone, and the full `-Task test`.
+- **Regenerate the baselines** after a change to the bench itself (`gate.md` says so), a new GPU driver, engine or machine, and after the screen and long baselines of a new `main` commit are needed.
+
+```powershell
+# Gate a change against the baseline of the commit it sits on
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate
+
+# Gate every unit against an older baseline (OUTDATED by the commits in between)
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate -Scope broad -Baseline 226068d
+
+# Nightly on a clean main: judge against the last night's commit and store this commit's baselines
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate -Scope broad -Baseline <last night's commit> -SaveBaseline
+
+# Store the baselines by hand on a clean checkout: screens of every unit, the long method of the representatives
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Screen -Unit DA_TestAbrams,DA_TestBuilder,DA_TestFlakTruck,DA_TestGrenadier,DA_TestHarvester,DA_TestInfantry,DA_TestJet,DA_TestM20Guardian,DA_TestTank -SaveBaseline
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Long -Unit DA_TestBuilder,DA_TestGrenadier,DA_TestJet,DA_TestM20Guardian,DA_TestTank,DA_TestM20Guardian+DA_TestBuilder+DA_TestGrenadier+DA_TestJet -SaveBaseline
+
+# Method study: every frame of a 60 s sample (never a baseline)
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Quick -Unit DA_TestM20Guardian,DA_TestTank -Frames -SampleSeconds 60
+```
+
+### End to end (2026-10-18)
+
+1. **Baselines.** On a clean checkout of 226068d (the gate's first commit): the screens of all 9 units (`-Task bench -Screen ... -SaveBaseline`) and the long method of the 6 planned sets (`-Task bench -Long ... -SaveBaseline`). Every run was valid, with 0.75 to 0.82 cores of other load, and stored.
+2. **Broad gate.** On 353993f: `-Task gate -Scope broad -Baseline 226068d`. Every changed file read "nothing the bench runs", but `-Scope broad` benches every unit anyway. **PASS** in 87.2 minutes.
+
+The screens against their baselines, about 1.5 hours apart, game thread at 240 moving units:
+
+| Unit | Baseline → gate | | Unit | Baseline → gate |
+|---|---:|---|---|---:|
+| `DA_TestAbrams` | 2.81 → 2.86 (+0.05) | | `DA_TestInfantry` | 2.70 → 2.67 (-0.03) |
+| `DA_TestBuilder` | 2.43 → 2.49 (+0.06) | | `DA_TestJet` | 6.86 → 6.87 (+0.01) |
+| `DA_TestFlakTruck` | 2.58 → 2.51 (-0.07) | | M20 Guardian | 3.99 → 4.01 (+0.02) |
+| `DA_TestGrenadier` | 2.81 → 2.74 (-0.07) | | `DA_TestTank` | 2.81 → 2.77 (-0.04) |
+| `DA_TestHarvester` | 2.54 → 2.51 (-0.03) | | | |
+
+Every unit is within 0.07 ms of its baseline, so all 9 unit types fall inside the five-session spread above.
+
+The long method, 240 units, mean of three samples (game thread, p95 locomotion where it applies):
+
+| Set | Move: baseline → gate | Idle: baseline → gate | Slowest move frame | Locomotion p95 |
+|---|---:|---:|---:|---:|
+| M20 Guardian | 4.23 → 4.24 | 1.95 → 1.99 | 21.6 ms | 1.21 ms |
+| `DA_TestTank` | 2.95 → 2.98 | 2.07 → 2.10 | 20.4 ms | 1.00 ms |
+| `DA_TestBuilder` | 2.54 → 2.55 | 1.88 → 1.89 | 18.5 ms | 0.93 ms |
+| `DA_TestGrenadier` | 2.73 → 2.71 | 1.86 → 1.87 | 18.5 ms | — |
+| `DA_TestJet` | 6.96 → 6.96 | 1.75 → 1.77 | 23.0 ms | — |
+| Mixed set | 4.22 → 4.24 | 1.87 → 1.93 | 19.2 ms | 0.54 ms |
+
+- **Every scenario at every count is within 0.12 ms**: the long method's run-to-run spread, measured across 6 sets.
+- **The bench changes did not move the long method.** 226068d's M20 and tank baselines read 4.23 and 2.95 ms moving and 1.95 and 2.07 ms idle. Their #168 baselines (a4e8364) read 4.17, 2.92, 1.94 and 2.04 ms, all within 0.06 ms.
+- **The jet's game thread is the roster's highest** at 240 moving units, 6.96 ms, more than the M20's 4.24 ms. It flies by its own rules, so its locomotion figure is 0 and its cost sits in the aircraft component. This is worth its own look once more aircraft join the roster.
+
+### Remaining limitations
+
+- **The representatives are a heuristic.** A unit whose cost is unusual but under 0.3 ms over its own screen baseline is covered only by its class's representatives. The milestone run should bench every changed unit with the long method.
+- **The other-load check sees processes, not the GPU.** GPU contention shows only as a slowdown the game's times do not explain. Protected system processes the user cannot read are not counted, and a process that starts and ends between two samples is missed.
+- **The 1.0-core limit sits about 0.25 cores above the measured background.** A busy editor or browser beside the bench can mark a run invalid. The gate then runs the screen once more and reports INCONCLUSIVE rather than a pass.
+- **One machine.** Every figure is the development PC's, and baselines never cross machines.
+- **The screen threshold has one evening's evidence** (five sessions). Repeat the five-session study after a driver or hardware change.
+- **Content dependencies include data references.** `DA_TestBuilder` lists 75 packages, because it refers to the buildings it can build. A change to a building therefore screens the builder too; this is conservative, not wrong.
 
 ## Step 0 baseline (#132, before any real-scale change)
 
