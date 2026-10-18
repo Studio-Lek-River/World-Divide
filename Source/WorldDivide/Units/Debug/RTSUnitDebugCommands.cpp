@@ -6,7 +6,9 @@
 #include "Camera/CameraComponent.h"
 #include "Buildings/RTSBuilding.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Combat/RTSWeaponComponent.h"
 #include "Components/BoxComponent.h"
+#include "Engine/DirectionalLight.h"
 #include "Containers/Ticker.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
@@ -50,7 +52,8 @@
  * with its turret turned and gun raised, then picked with the cursor's trace, selected and driving off on a move order
  * issued as the player issues it (the pick, the distance driven and the wheels' roll are logged), then with its shapes
  * drawn after driving head-on into Block_North and into a vehicle factory placed for it, along Block_North and round its
- * corner (the hull's overlap with each is logged, and the barrel's, now and at most on the way). With
+ * corner (the hull's overlap with each is logged, and the barrel's, now and at most on the way), then the unit's kind once
+ * for each of four teams side by side at the default and the closest zoom and under a low sun (#150). With
  * StressCount, that many more of the unit stand in a grid and a last picture
  * shows them with stat unit and stat rhi; the frame time, game thread time, avoidance pass, draw calls and triangles are
  * logged. The pictures go to
@@ -97,6 +100,14 @@ namespace RTSUnitDebugCommands
 	constexpr float StressRowGap = 300.f;
 	constexpr float StressColumnGap = 250.f;
 	const FVector StressCentre(0.f, 18600.f, 0.f);
+
+	/** The team shots (#150): this many of the unit on consecutive teams, in a row across the stress grid's centre. */
+	constexpr int32 TeamRowCount = 4;
+	/** The inspection camera on the row: this far back from its centre and this high. */
+	constexpr float TeamCloseUpDistance = 3200.f;
+	constexpr float TeamCloseUpHeight = 900.f;
+	/** The sun's pitch for the low-light team shot: evening light, long shadows. */
+	constexpr float LowSunPitch = -10.f;
 
 	/** The obstacle shots: the unit starts this far out from the obstacle's edge and is ordered into its middle. */
 	const TCHAR* ObstacleBlockLabel = TEXT("Block_North");
@@ -448,9 +459,12 @@ namespace RTSUnitDebugCommands
 				return Run.Drive();
 			}, DriveSeconds, false, true });
 			AddObstacleShots();
+			AddTeamShots();
 			// The same view at the default zoom with the stats on, before and after the stress grid, to compare.
 			Shots.Add({ TEXT("stats_one"), [](FUnitShotsRun& Run)
 			{
+				Run.SetLowSun(false);
+				Run.ClearTeamRow();
 				ShowUnitShapes(false);
 				Run.Obstacle.Reset();
 				Run.Unit->SetAimOverride({});
@@ -467,6 +481,113 @@ namespace RTSUnitDebugCommands
 					Run.GetCameraPawn()->SetZoomNow(Run.GetCameraPawn()->GetMaxZoom());
 					return true;
 				}, SettleSeconds, true });
+			}
+		}
+
+		/**
+		 * The unit's kind once for each of TeamRowCount teams side by side on the empty north strip (#150): every team colour
+		 * on the same model at the default and the closest zoom, and again under a low sun. Their weapons are idled, since they
+		 * stand among enemies.
+		 */
+		void AddTeamShots()
+		{
+			Shots.Add({ TEXT("teams_default"), [](FUnitShotsRun& Run)
+			{
+				ShowUnitShapes(false);
+				Run.Obstacle.Reset();
+				Run.SpawnTeamRow();
+				Run.UseTeamRowCamera(Run.GetCameraPawn()->GetDefaultZoom(), 0.f);
+				return true;
+			} });
+			Shots.Add({ TEXT("teams_close"), [](FUnitShotsRun& Run)
+			{
+				Run.UseTeamRowCamera(Run.GetCameraPawn()->GetMinZoom(), ZoomInStandOff);
+				return true;
+			} });
+			Shots.Add({ TEXT("teams_closeup"), [](FUnitShotsRun& Run)
+			{
+				return Run.UseTeamRowCloseUp();
+			} });
+			Shots.Add({ TEXT("teams_low_sun"), [](FUnitShotsRun& Run)
+			{
+				Run.SetLowSun(true);
+				return Run.UseTeamRowCloseUp();
+			} });
+		}
+
+		void SpawnTeamRow()
+		{
+			const FRTSUnitShape Shape = RTSUnitShape::FromData(*Unit->GetUnitData());
+			const float Spacing = 2.f * Shape.GetHalfWidth() + 2.f * StressColumnGap;
+			const FRotator Facing(0.f, GetCameraPawn()->GetActorRotation().Yaw + 145.f, 0.f);
+			for (int32 Index = 0; Index < TeamRowCount; ++Index)
+			{
+				const FVector Location = StressCentre + FVector(0.f, (Index - (TeamRowCount - 1) / 2.f) * Spacing, Unit->GetGroundOffset());
+				const FTransform Transform(Facing, Location);
+				ARTSUnit* Spawned = World->SpawnActorDeferred<ARTSUnit>(ARTSUnit::StaticClass(), Transform, nullptr, nullptr,
+					ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+				Spawned->InitFromData(Unit->GetUnitData(), Unit->GetTeamId() + Index);
+				Spawned->FinishSpawning(Transform);
+				Spawned->GetWeaponComponent()->SetComponentTickEnabled(false);
+				TeamRow.Add(Spawned);
+			}
+		}
+
+		void ClearTeamRow()
+		{
+			for (const TWeakObjectPtr<ARTSUnit>& Member : TeamRow)
+			{
+				if (Member.IsValid())
+				{
+					Member->Destroy();
+				}
+			}
+			TeamRow.Reset();
+		}
+
+		void UseTeamRowCamera(float Zoom, float StandOff)
+		{
+			ARTSCameraPawn* Camera = GetCameraPawn();
+			GetController()->SetViewTarget(Camera);
+			Camera->JumpTo(StressCentre - Camera->GetActorForwardVector() * StandOff);
+			Camera->SetZoomNow(Zoom);
+		}
+
+		/** The inspection camera on the whole row, from the RTS camera's side. */
+		bool UseTeamRowCloseUp()
+		{
+			if (!UseCloseUpCamera())
+			{
+				return false;
+			}
+			const FVector Back = -GetCameraPawn()->GetActorForwardVector().GetSafeNormal2D();
+			const FVector Eye = StressCentre + Back * TeamCloseUpDistance + FVector(0.f, 0.f, TeamCloseUpHeight);
+			CloseUp->SetActorLocationAndRotation(Eye, (StressCentre + CloseUpLookAt - Eye).Rotation());
+			return true;
+		}
+
+		/** Lowers the level's sun to LowSunPitch, or puts it back where it was. */
+		void SetLowSun(bool bLow)
+		{
+			ADirectionalLight* Sun = nullptr;
+			for (TActorIterator<ADirectionalLight> It(World.Get()); It && !Sun; ++It)
+			{
+				Sun = *It;
+			}
+			if (!Sun)
+			{
+				return;
+			}
+			if (bLow && !SunRotation)
+			{
+				SunRotation = Sun->GetActorRotation();
+				Sun->GetRootComponent()->SetMobility(EComponentMobility::Movable);
+				Sun->SetActorRotation(FRotator(LowSunPitch, SunRotation->Yaw, SunRotation->Roll));
+			}
+			else if (!bLow && SunRotation)
+			{
+				Sun->SetActorRotation(*SunRotation);
+				SunRotation.Reset();
 			}
 		}
 
@@ -819,6 +940,8 @@ namespace RTSUnitDebugCommands
 			ShowUnitShapes(false);
 			if (World.IsValid())
 			{
+				SetLowSun(false);
+				ClearTeamRow();
 				SetStats(false);
 				if (Unit.IsValid())
 				{
@@ -874,6 +997,9 @@ namespace RTSUnitDebugCommands
 		FString ObstacleName;
 		float MaxBarrelOverlap = 0.f;
 		bool bBarrelWentOverRoof = false;
+		/** The team shots' units, and the sun's rotation while it is lowered. */
+		TArray<TWeakObjectPtr<ARTSUnit>> TeamRow;
+		TOptional<FRotator> SunRotation;
 		int32 Written = 0;
 		FFrameStats Stats;
 

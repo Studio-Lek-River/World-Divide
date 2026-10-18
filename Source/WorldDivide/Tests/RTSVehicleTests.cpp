@@ -11,6 +11,7 @@
 #include "Misc/AutomationTest.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
+#include "Units/RTSPrimitiveData.h"
 #include "Units/RTSRunningGearSubsystem.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitMovement.h"
@@ -186,7 +187,7 @@ namespace
 	constexpr float PhaseTolerance = 0.01f;
 	constexpr float WheelTolerance = 1.f;
 	constexpr float StillPhase = 0.001f;
-	constexpr double Rate = 60.0;
+	constexpr double GearRate = 60.0;
 	/** The M20's loop, in links: what a blocked track's drift is measured against. */
 	constexpr float LoopLinks = 85.f;
 	/** Below half a link a frame, so the links' steps are told apart from their wrap. */
@@ -241,16 +242,16 @@ namespace
 		return Data;
 	}
 
-	/** Runs the unit's gear on Command for Seconds at Rate, the running gear after every update as the frame does it. */
+	/** Runs the unit's gear on Command for Seconds at GearRate, the running gear after every update as the frame does it. */
 	void RunGear(ARTSUnit& Unit, const RTSLocomotion::FCommand& Command, double Seconds, TFunctionRef<void()> Each = [] {},
 		const FRTSTrackViews* Views = nullptr)
 	{
 		Unit.GetUnitMovement()->SetCommandOverride(Command);
-		const int32 Steps = FMath::RoundToInt32(Seconds * Rate);
+		const int32 Steps = FMath::RoundToInt32(Seconds * GearRate);
 		for (int32 Index = 0; Index < Steps; ++Index)
 		{
-			Unit.GetWorld()->TimeSeconds += 1.0 / Rate;
-			Unit.GetUnitMovement()->TickComponent(1.f / Rate, LEVELTICK_All, nullptr);
+			Unit.GetWorld()->TimeSeconds += 1.0 / GearRate;
+			Unit.GetUnitMovement()->TickComponent(1.f / GearRate, LEVELTICK_All, nullptr);
 			Unit.UpdateRunningGear(Views);
 			Each();
 		}
@@ -427,7 +428,7 @@ namespace
 			Test.TestTrue(FString::Printf(TEXT("Braking, they slow down every frame (worst speed-up %.5f) to a stop"), Smooth(Down, -1.f)),
 				Smooth(Down, -1.f) < 1.e-4f && Down.Last() < 1.e-5f);
 			Test.TestTrue(FString::Printf(TEXT("Never by more than the speed allows (%.4f of a link a frame)"), Largest),
-				Largest <= CruiseSpeed / Rate / TrackedPitch + 0.01f);
+				Largest <= CruiseSpeed / GearRate / TrackedPitch + 0.01f);
 		}
 
 		// Standing for 5 s: still.
@@ -447,16 +448,39 @@ namespace
 			Unit->GetComponents(Meshes);
 			float Phase = 0.f;
 			Unit->GetTrackPhase(LeftTrack, Phase);
+			// The left track: a cube on the hull's left; the hull itself is the cube in the middle.
 			for (const UStaticMeshComponent* Mesh : Meshes)
 			{
-				const TArray<float>& Data = Mesh->GetCustomPrimitiveData().Data;
-				if (Data.Num() >= 2 && Mesh->GetStaticMesh() == LoadShape(TEXT("Cube")) && FMath::IsNearlyEqual(Data[0], Phase))
+				if (Mesh->GetStaticMesh() == LoadShape(TEXT("Cube")) && Mesh->GetRelativeLocation().Y < 0.f)
 				{
 					LeftComponent = Mesh;
 				}
 			}
+			const TArray<float>* Data = LeftComponent ? &LeftComponent->GetCustomPrimitiveData().Data : nullptr;
 			Test.TestTrue(TEXT("The left track's material has its phase, with last frame's equal to it while it stands"),
-				LeftComponent && LeftComponent->GetCustomPrimitiveData().Data[1] == LeftComponent->GetCustomPrimitiveData().Data[0]);
+				Data && Data->Num() >= 2 && (*Data)[RTSPrimitiveData::TrackPhase] == Phase
+				&& (*Data)[RTSPrimitiveData::TrackPreviousPhase] == (*Data)[RTSPrimitiveData::TrackPhase]);
+
+			// The team colour beside it (#150): each kept where it is when the other changes.
+			auto HasColor = [Data](int32 TeamId)
+			{
+				const FLinearColor Color = ARTSUnit::GetTeamColor(TeamId);
+				constexpr int32 Index = RTSPrimitiveData::TeamColor;
+				return Data && Data->Num() >= Index + 4 && (*Data)[Index] == Color.R && (*Data)[Index + 1] == Color.G
+					&& (*Data)[Index + 2] == Color.B && (*Data)[Index + 3] == Color.A;
+			};
+			Test.TestTrue(TEXT("The track has its team colour beside the phase"), HasColor(0));
+			FIntProperty* TeamProperty = FindFProperty<FIntProperty>(ARTSUnit::StaticClass(), TEXT("TeamId"));
+			TeamProperty->SetPropertyValue_InContainer(Unit, 1);
+			Unit->ProcessEvent(Unit->FindFunctionChecked(TEXT("OnRep_TeamId")), nullptr);
+			Test.TestTrue(TEXT("A new team colour leaves the phase as it was"), HasColor(1) && Data && (*Data)[RTSPrimitiveData::TrackPhase] == Phase
+				&& (*Data)[RTSPrimitiveData::TrackPreviousPhase] == Phase);
+			RunGear(*Unit, Ahead, 0.5);
+			float Moved = 0.f;
+			Unit->GetTrackPhase(LeftTrack, Moved);
+			Test.TestTrue(TEXT("and a new phase leaves the team colour"), HasColor(1) && Data && (*Data)[RTSPrimitiveData::TrackPhase] == Moved
+				&& Moved != Phase);
+			RunGear(*Unit, RTSLocomotion::FCommand(), 2.0);
 		}
 
 		// Teleported, and put in a solid that pushes it out: the hull may move, the tracks and wheels do not.
@@ -529,11 +553,10 @@ namespace
 			TArray<UStaticMeshComponent*> Meshes;
 			Rigid->GetComponents(Meshes);
 			const UMaterialInterface* RigidMaterial = Rigid->GetUnitData()->Parts[LeftTrack].RigidMaterial;
-			// Under the team colour's dynamic instance.
+			// The material itself: the team colour is no dynamic instance over it (#150).
 			const int32 Drawn = Algo::CountIf(Meshes, [RigidMaterial](const UStaticMeshComponent* Mesh)
 			{
-				const UMaterialInstance* Instance = Cast<UMaterialInstance>(Mesh->GetMaterial(0));
-				return Mesh->GetMaterial(0) == RigidMaterial || (Instance && Instance->Parent == RigidMaterial);
+				return Mesh->GetMaterial(0) == RigidMaterial;
 			});
 			Test.TestFalse(TEXT("With rts.Vehicle.TrackAnimation 0 a track keeps no phase"), Rigid->GetTrackPhase(LeftTrack, Unused));
 			Test.TestEqual(TEXT("and both are drawn with the rigid material"), Drawn, 2);

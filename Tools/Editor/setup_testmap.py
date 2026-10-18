@@ -241,7 +241,7 @@ def make_team_material():
         material = assets.load_asset(path) if assets.does_asset_exist(path) else asset_tools.create_asset(
             TEAM_MATERIAL, MATERIAL_DIR, unreal.Material, unreal.MaterialFactoryNew())
         return art.build_team_material(material)
-    return plan_now(path, build, spec_hash([art.build_team_material], path))
+    return plan_now(path, build, spec_hash([art.build_team_material], path, art.TEAM_COLOR_INDEX))
 
 
 def make_texture(source):
@@ -292,7 +292,8 @@ def make_m20_guardian():
     hull_textures = {kind: textures["Hull", kind] for kind in vehicle_art.TEXTURE_KINDS}
     master = plan_now(f"{vehicle_art.MATERIAL_DIR}/{vehicle_art.VEHICLE_MATERIAL}",
                       lambda: vehicle_art.build_vehicle_material(hull_textures),
-                      spec_hash([vehicle_art.build_vehicle_material], sorted(map(object_path, hull_textures.values()))))
+                      spec_hash([vehicle_art.build_vehicle_material], sorted(map(object_path, hull_textures.values())),
+                                vehicle_art.TEAM_COLOR_INDEX))
     lamp = plan_now(f"{vehicle_art.MATERIAL_DIR}/{vehicle_art.LAMP_MATERIAL}", vehicle_art.build_lamp_material,
                     spec_hash([vehicle_art.build_lamp_material]))
     slot_materials = {"M20_Emissive": lamp}

@@ -62,7 +62,8 @@ for iterating and never gate evidence: the long scene at 240 units (or -Counts),
 sample, the same columns. -Screen (#171) is the gate's first tier: the same with one 15 s sample. -Unit A,B runs several
 sets one after another in one game session, each with its own warm-up,
 samples and folder. A set named with the suffix @Solids (#172; -Unit DA_TestM20Guardian@Solids) benches among solids the
-navmesh leaves out (trunks, boulders, low walls; RTSBenchScene), in its own folder Saved/Bench/<Unit>@Solids. bench.json
+navmesh leaves out (trunks, boulders, low walls; RTSBenchScene), in its own folder Saved/Bench/<Unit>@Solids; @MixedTeams
+(#150) spreads the units over four teams. Every row also counts the units' primitives, dynamic material slots and materials. bench.json
 beside the table records the method, scene, machine, commit and content hashes.
 -SaveBaseline (clean worktree only) stores each set's run under Saved/Bench/Baselines/<commit>/<method>/<set>; -Compare reads
 the run against the baseline of HEAD, or of the ancestor -Baseline <commit> (marked OUTDATED), refuses one of another

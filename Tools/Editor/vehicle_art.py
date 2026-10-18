@@ -15,6 +15,9 @@ LAMP_MATERIAL = "M_VehicleLamp"
 # The team colour replaces the masked panels at this brightness of their own luminance: team colours are dark and
 # saturated, the panels mid-grey.
 TEAM_BRIGHTNESS = 2.0
+# Where the team colour comes from: custom primitive data from this index on, RGBA (RTSPrimitiveData::TeamColor, #150), so
+# every unit keeps the shared instances below instead of a dynamic instance per slot.
+TEAM_COLOR_INDEX = 4
 LAMP_STRENGTH = 4.0
 
 assets = unreal.EditorAssetLibrary
@@ -68,7 +71,8 @@ def _material(name):
 def build_vehicle_material(defaults):
     """Opaque, default lit, three samples: BaseColor, Normal and ORM texture parameters (defaults: {kind: texture} of one
     set, which the sampler types are checked against). The BC alpha masks the team panels: there BaseColor becomes the
-    panel's own luminance in the team "Color" (ARTSUnit::TeamColorParameter) by TeamStrength."""
+    panel's own luminance in the team "Color" by TeamStrength, the colour read from custom primitive data
+    (TEAM_COLOR_INDEX)."""
     material = _material(VEHICLE_MATERIAL)
     editing.delete_all_material_expressions(material)
 
@@ -89,6 +93,8 @@ def build_vehicle_material(defaults):
     color = editing.create_material_expression(material, unreal.MaterialExpressionVectorParameter, -900, -400)
     color.set_editor_property("parameter_name", "Color")
     color.set_editor_property("default_value", unreal.LinearColor(0.05, 0.25, 0.9, 1.0))
+    color.set_editor_property("use_custom_primitive_data", True)
+    color.set_editor_property("primitive_data_index", TEAM_COLOR_INDEX)
     team = editing.create_material_expression(material, unreal.MaterialExpressionMultiply, -700, -250)
     editing.connect_material_expressions(luminance, "", team, "A")
     editing.connect_material_expressions(color, "", team, "B")
@@ -123,7 +129,7 @@ def build_vehicle_material(defaults):
 # The track's link shift (#151), from the channels m20_guardian_bake.add_track_animation_uvs writes: UV1, UV2 and UV3 the
 # offsets in local cm (X, Z) to the vertex's place in the previous, next and next-but-one link, UV4.x the turn in radians
 # to the next link. The phase through one link comes as custom primitive data from ARTSUnit::UpdateRunningGear: the
-# current one, and last frame's unwrapped, for the motion vectors.
+# current one, and last frame's unwrapped, for the motion vectors (RTSPrimitiveData::TrackPhase and TrackPreviousPhase).
 TRACK_ANIMATION = "TrackAnimation"
 TRACK_PHASE = ("TrackPhase", 0)
 TRACK_PREVIOUS_PHASE = ("TrackPreviousPhase", 1)

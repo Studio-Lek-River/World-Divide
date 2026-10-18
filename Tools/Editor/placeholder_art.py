@@ -13,6 +13,8 @@ MESH_DIR = "/Game/Art/Placeholder/Meshes"
 MATERIAL_DIR = "/Game/Art/Placeholder/Materials"
 TEXTURE_DIR = "/Game/Art/Placeholder/Textures"
 WHITE_TEXTURE = "/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture"
+# The team colour: custom primitive data from this index on, RGBA (RTSPrimitiveData::TeamColor, #150).
+TEAM_COLOR_INDEX = 4
 
 # Imported models whose footprint centre is further than this from the origin are re-imported shifted onto it.
 CENTRE_TOLERANCE = 0.5
@@ -42,7 +44,8 @@ def read_gltf_materials(source):
 
 
 def build_team_material(material):
-    """Lit material: BaseTexture x BaseTint, blended by TintStrength towards its own brightness in the team "Color"."""
+    """Lit material: BaseTexture x BaseTint, blended by TintStrength towards its own brightness in the team "Color", read
+    from custom primitive data (TEAM_COLOR_INDEX), so every unit and building of a kind keeps its shared instances."""
     editing.delete_all_material_expressions(material)
 
     texture = editing.create_material_expression(material, unreal.MaterialExpressionTextureSampleParameter2D, -1200, 0)
@@ -64,6 +67,8 @@ def build_team_material(material):
     color = editing.create_material_expression(material, unreal.MaterialExpressionVectorParameter, -700, 450)
     color.set_editor_property("parameter_name", "Color")
     color.set_editor_property("default_value", unreal.LinearColor(1.0, 1.0, 1.0, 1.0))
+    color.set_editor_property("use_custom_primitive_data", True)
+    color.set_editor_property("primitive_data_index", TEAM_COLOR_INDEX)
     team = editing.create_material_expression(material, unreal.MaterialExpressionMultiply, -500, 300)
     editing.connect_material_expressions(luminance, "", team, "A")
     editing.connect_material_expressions(color, "", team, "B")

@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
+#include "Commands/RTSCommandDispatch.h"
 #include "Containers/Ticker.h"
 #include "Data/RTSAircraftData.h"
 #include "Data/RTSUnitData.h"
@@ -18,6 +19,7 @@
 #include "EngineUtils.h"
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformMemory.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/EngineVersion.h"
@@ -80,8 +82,15 @@
  * name, so its output and baselines have their own folder, and bench.json's scene names the layout.
  *
  * A set named with RTSBenchScene::RigidTracksSuffix (DA_TestM20Guardian@RigidTracks; #151) benches its units with tracks that
- * do not move their links (rts.Vehicle.TrackAnimation 0 while it runs), against the animated set without the suffix. The two
- * suffixes combine in either order.
+ * do not move their links (rts.Vehicle.TrackAnimation 0 while it runs), against the animated set without the suffix.
+ *
+ * A set named with RTSBenchScene::MixedTeamsSuffix (DA_TestM20Guardian@MixedTeams; #150) spreads its units over
+ * RTSBenchScene::MixedTeams teams in turn, with their weapons idled, and orders them straight through RTSCommands::Dispatch,
+ * since the player's own path only orders the player's units. It shows whether units of one kind in different team colours
+ * still share their draws. The suffixes combine in any order.
+ *
+ * Every row also counts what the units draw with (#150): their primitive components, the material slots of those that
+ * are dynamic instances, and the distinct materials over all of them.
  */
 namespace RTSBenchCommand
 {
@@ -149,6 +158,10 @@ namespace RTSBenchCommand
 		double MaxLocomotionMs = 0.0;
 		/** The running gear pass: wheels and tracks (URTSRunningGearSubsystem, #151). */
 		double RunningGearMs = 0.0;
+		/** What the units draw with at the sample's end (#150): primitive components, dynamic instance slots, materials. */
+		int32 Primitives = 0;
+		int32 DynamicMaterials = 0;
+		int32 DistinctMaterials = 0;
 		/**
 		 * Each frame's game thread, locomotion, render thread, GPU and running gear time, kept for the percentiles; reserved
 		 * up front so measuring never allocates.
@@ -268,17 +281,19 @@ namespace RTSBenchCommand
 			return TEXT("count,scenario,sample,frames,units,frame_ms,game_ms,p95_game_ms,max_game_ms,render_ms,rhi_ms,gpu_ms,draw_calls,triangles,")
 				TEXT("avoidance_ms,max_avoidance_ms,search_ms,locomotion_ms,p95_locomotion_ms,max_locomotion_ms,used_memory_mb,peak_memory_mb,render_width,render_height,")
 				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms,")
-				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames,p95_render_ms,p95_gpu_ms,running_gear_ms,p95_running_gear_ms");
+				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames,p95_render_ms,p95_gpu_ms,running_gear_ms,p95_running_gear_ms,")
+				TEXT("primitives,dynamic_materials,distinct_materials");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f"),
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d"),
 				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
 				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
 				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y, Mean(Solids.Updates), SolidReuseShare(),
 				Mean(Solids.Checks), Mean(Solids.ComponentQueries), Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0),
-				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames, P95RenderMs, P95GPUMs, Mean(RunningGearMs), P95RunningGearMs);
+				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames, P95RenderMs, P95GPUMs, Mean(RunningGearMs), P95RunningGearMs,
+				Primitives, DynamicMaterials, DistinctMaterials);
 		}
 
 		/** The row as the gate reads it back from bench.csv. */
@@ -329,6 +344,12 @@ namespace RTSBenchCommand
 				Mean(Solids.Updates), SolidReuseShare() * 100.0, Mean(Solids.Checks), Mean(Solids.ComponentQueries),
 				Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0));
 		}
+
+		FString ToMaterialsMarkdown() const
+		{
+			return FString::Printf(TEXT("| %d | %s | %d | %d | %d | %d |\n"), Count, *Scenario, Sample, Primitives, DynamicMaterials,
+				DistinctMaterials);
+		}
 	};
 
 	class FBenchRun : public TSharedFromThis<FBenchRun>
@@ -338,6 +359,7 @@ namespace RTSBenchCommand
 			: World(&InWorld), UnitName(InUnitName), Counts(InPlan.Counts), Plan(InPlan)
 			, bSolids(InUnitName.Contains(RTSBenchScene::SolidsSuffix))
 			, bRigidTracks(InUnitName.Contains(RTSBenchScene::RigidTracksSuffix))
+			, bMixedTeams(InUnitName.Contains(RTSBenchScene::MixedTeamsSuffix))
 		{
 		}
 
@@ -489,7 +511,8 @@ namespace RTSBenchCommand
 			}
 			// A mix of sizes is several names joined by '+'; the grid takes them in turn.
 			TArray<FString> Names;
-			FString Mix = UnitName.Replace(RTSBenchScene::SolidsSuffix, TEXT("")).Replace(RTSBenchScene::RigidTracksSuffix, TEXT(""));
+			FString Mix = UnitName.Replace(RTSBenchScene::SolidsSuffix, TEXT("")).Replace(RTSBenchScene::RigidTracksSuffix, TEXT(""))
+				.Replace(RTSBenchScene::MixedTeamsSuffix, TEXT(""));
 			Mix.ParseIntoArray(Names, TEXT("+"));
 			for (const FString& Name : Names)
 			{
@@ -600,8 +623,12 @@ namespace RTSBenchCommand
 				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 			if (Spawned)
 			{
-				Spawned->InitFromData(UnitData[Index % UnitData.Num()].Get(), TeamId);
+				Spawned->InitFromData(UnitData[Index % UnitData.Num()].Get(), bMixedTeams ? TeamId + Index % RTSBenchScene::MixedTeams : TeamId);
 				Spawned->FinishSpawning(Transform);
+				if (bMixedTeams)
+				{
+					Spawned->GetWeaponComponent()->SetComponentTickEnabled(false);
+				}
 				Units.Add(Spawned);
 			}
 			return Spawned;
@@ -710,7 +737,14 @@ namespace RTSBenchCommand
 			FRTSCommand Move;
 			Move.Type = ERTSCommandType::Move;
 			Move.TargetLocation = GetGridCentre() + FVector(bMoveBack ? 0.f : Plan.bLongScene ? LongMoveDistance : MoveDistance, 0.f, 0.f);
-			GetController()->Server_IssueCommand(Ordered, Move);
+			if (bMixedTeams)
+			{
+				RTSCommands::Dispatch(Ordered, Move);
+			}
+			else
+			{
+				GetController()->Server_IssueCommand(Ordered, Move);
+			}
 			bMoveBack = !bMoveBack;
 			LastMoveTime = FPlatformTime::Seconds();
 		}
@@ -824,9 +858,37 @@ namespace RTSBenchCommand
 			Current.UsedMemoryMB = Memory.UsedPhysical / (1024.0 * 1024.0);
 			Current.PeakMemoryMB = Memory.PeakUsedPhysical / (1024.0 * 1024.0);
 			Current.RenderSize = GetRenderSize();
+			CountMaterials(Current);
 			Results.Add(Current);
 			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.Bench: %s"), *Current.ToCsv());
 			return true;
+		}
+
+		/** What the units draw with: their primitive components, the slots of those that are dynamic instances, and the materials. */
+		void CountMaterials(FScenarioStats& Stats) const
+		{
+			TSet<const UMaterialInterface*> Materials;
+			for (const TWeakObjectPtr<ARTSUnit>& Unit : Units)
+			{
+				if (!Unit.IsValid())
+				{
+					continue;
+				}
+				for (const UPrimitiveComponent* Primitive : TInlineComponentArray<UPrimitiveComponent*>(Unit.Get()))
+				{
+					const int32 Slots = Primitive->GetNumMaterials();
+					Stats.Primitives += Slots > 0 ? 1 : 0;
+					for (int32 Slot = 0; Slot < Slots; ++Slot)
+					{
+						if (const UMaterialInterface* Material = Primitive->GetMaterial(Slot))
+						{
+							Materials.Add(Material);
+							Stats.DynamicMaterials += Material->IsA<UMaterialInstanceDynamic>() ? 1 : 0;
+						}
+					}
+				}
+			}
+			Stats.DistinctMaterials = Materials.Num();
 		}
 
 		/** The resolution the scene renders at before any upscale. */
@@ -871,6 +933,13 @@ namespace RTSBenchCommand
 			for (const FScenarioStats& Result : Results)
 			{
 				Markdown += Result.ToSolidsMarkdown();
+			}
+			Markdown += TEXT("\nWhat the units draw with (#150), at each sample's end:\n\n")
+				TEXT("| Units | Scenario | Sample | Primitive components | Dynamic material slots | Distinct materials |\n")
+				TEXT("|---:|---|---:|---:|---:|---:|\n");
+			for (const FScenarioStats& Result : Results)
+			{
+				Markdown += Result.ToMaterialsMarkdown();
 			}
 			return FFileHelper::SaveStringToFile(Csv, *FPaths::Combine(Dir, TEXT("bench.csv")))
 				&& FFileHelper::SaveStringToFile(Markdown, *FPaths::Combine(Dir, TEXT("bench.md")))
@@ -980,6 +1049,11 @@ namespace RTSBenchCommand
 			if (bRigidTracks)
 			{
 				Scene->SetStringField(TEXT("tracks"), TEXT("rigid"));
+			}
+			// And a "@MixedTeams" set how many teams its units are spread over.
+			if (bMixedTeams)
+			{
+				Scene->SetNumberField(TEXT("teams"), RTSBenchScene::MixedTeams);
 			}
 
 			const TSharedRef<FJsonObject> Machine = MakeShared<FJsonObject>();
@@ -1105,6 +1179,8 @@ namespace RTSBenchCommand
 		bool bSolids = false;
 		/** A "@RigidTracks" set. */
 		bool bRigidTracks = false;
+		/** A "@MixedTeams" set. */
+		bool bMixedTeams = false;
 		TArray<RTSBenchScene::FSolid> SolidLayout;
 		TArray<TWeakObjectPtr<AActor>> SolidActors;
 

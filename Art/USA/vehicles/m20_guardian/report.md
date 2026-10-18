@@ -194,7 +194,7 @@ Nothing in the FBX depends on Blender shaders: every look is in the three images
   the maps are DirectX. ORM sRGB off, compression Masks. Set LOD bias or Max Texture Size to 2048 if the source set is
   imported instead.
 - **Master material `M_M20_Vehicle`** (opaque, default lit): BaseColor = lerp(BC.rgb, BC.rgb luminance × `TeamColor`,
-  BC.a × `TeamStrength`) for the ID panels (the parameter `ARTSUnit::TeamColorParameter` already sets); Normal = N;
+  BC.a × `TeamStrength`) for the ID panels (the team colour comes from custom primitive data 4 to 7, `RTSPrimitiveData::TeamColor`, since #150); Normal = N;
   AmbientOcclusion = ORM.r; Roughness = ORM.g; Metallic = ORM.b. One material instance per set: `MI_M20_Hull`,
   `MI_M20_Turret`, `MI_M20_Running`, `MI_M20_Track`. The track instance can pan its UVs along U for track movement.
 - **`M_M20_Emissive`**: BaseColor and Emissive from Vertex Color × an emissive strength (about 4); only the lamps use it.

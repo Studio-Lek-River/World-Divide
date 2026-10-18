@@ -19,7 +19,6 @@
 #include "Economy/RTSSupplySource.h"
 #include "Engine/StaticMesh.h"
 #include "HAL/IConsoleManager.h"
-#include "Materials/MaterialInstanceDynamic.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "NavigationSystem.h"
 #include "NavMesh/RecastNavMesh.h"
@@ -33,6 +32,7 @@
 #include "Units/RTSApproach.h"
 #include "Units/RTSBarrelClearance.h"
 #include "Units/RTSGround.h"
+#include "Units/RTSPrimitiveData.h"
 #include "Units/RTSRunningGearSubsystem.h"
 #include "Units/RTSUnitAIController.h"
 #include "Units/RTSUnitMovement.h"
@@ -147,9 +147,6 @@ namespace
 		return Part;
 	}
 }
-
-/** Engine basic shapes expose this parameter; real unit and building materials should too. */
-const FName ARTSUnit::TeamColorParameter(TEXT("Color"));
 
 ARTSUnit::ARTSUnit()
 {
@@ -537,7 +534,8 @@ void ARTSUnit::UpdateRunningGear(const FRTSTrackViews* Views)
 		{
 			// Custom primitive data reaches the renderer as an update of the primitive's data: no render state rebuild and
 			// no move (#165).
-			Track.Component->SetCustomPrimitiveDataVector2(0, FVector2D(Track.Phase, Track.PreviousPhase));
+			static_assert(RTSPrimitiveData::TrackPreviousPhase == RTSPrimitiveData::TrackPhase + 1);
+			Track.Component->SetCustomPrimitiveDataVector2(RTSPrimitiveData::TrackPhase, FVector2D(Track.Phase, Track.PreviousPhase));
 			Track.bSent = true;
 		}
 	}
@@ -600,21 +598,17 @@ bool ARTSUnit::IsTrackDrawn(const FTrack& Track, const FRTSTrackViews* Views) co
 
 void ARTSUnit::ApplyTeamColor()
 {
+	// As custom primitive data, not a dynamic material instance per slot: every unit keeps the meshes' shared material
+	// instances, so the same part of every unit draws together whatever its team (#150). The track phase (0, 1) is left
+	// as it is.
+	const FVector4 Color(GetTeamColor(TeamId));
 	TArray<UStaticMeshComponent*, TInlineAllocator<8>> Parts = { Mesh.Get(), Turret.Get(), Gun.Get() };
 	Parts.Append(PartComponents);
 	for (UStaticMeshComponent* Part : Parts)
 	{
-		if (!Part || !Part->GetStaticMesh())
+		if (Part && Part->GetStaticMesh())
 		{
-			continue;
-		}
-		// Every slot, since a model can carry several materials.
-		for (int32 Slot = 0; Slot < Part->GetNumMaterials(); ++Slot)
-		{
-			if (UMaterialInstanceDynamic* Material = Part->CreateDynamicMaterialInstance(Slot))
-			{
-				Material->SetVectorParameterValue(TeamColorParameter, GetTeamColor(TeamId));
-			}
+			Part->SetCustomPrimitiveDataVector4(RTSPrimitiveData::TeamColor, Color);
 		}
 	}
 }

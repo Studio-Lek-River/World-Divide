@@ -1321,3 +1321,119 @@ Here all 480 tracks get their phase every frame they move: about 0.25 µs per tr
 - **The GPU cost of the shift is measured from 170 m.** There every track is a few pixels high, and the vertex work does not show against the frame. A close camera over many tracks has not been benched: the bench's scene has a single fixed camera.
 - **The worst-case CPU is the primitive-data update**, one render command per moving track and frame. If close views of large armies become common, the phase could go to the material less often, every other frame for example, before anything else.
 - **The full-roster gate was not run** (#171), as asked. #150 and #149 change the M20's rendering next; the final M20-against-placeholder gate stays theirs.
+
+## #150 (shared team-colour materials)
+
+Same machine (Ryzen 7 7800X3D, RTX 4090), on 2026-10-18, same build configuration and method. "Before" is `main` at `da9a7b1` plus only the bench additions below, benched in the same session as "after".
+
+### What changed
+
+**Before.** `ARTSUnit::ApplyTeamColor` and `ARTSBuilding::ApplyTeamColor` made a dynamic material instance (MID) for every material slot of every part and set its `Color` vector parameter. An M20 has 9 drawn parts and 10 slots, so it had 10 MIDs: 2,400 at 240 tanks. Each MID is its own material render proxy. Mesh draw commands of different units therefore never matched, and the renderer could not merge (dynamically instance) them.
+
+**After.** The team colour is custom primitive data (CPD). `M_Vehicle` and `M_PlaceholderTeam` read their `Color` parameter from CPD 4 to 7, and every unit and building part keeps the material instances of its mesh (`MI_M20_*`, `MI_<Placeholder>_*`). `ApplyTeamColor` calls `SetCustomPrimitiveDataVector4(RTSPrimitiveData::TeamColor, colour)` on each drawn part, the wheel ISMs included. This is a primitive-data update, as the track phase is (#165): no render-state rebuild. It runs only when the unit's data or team arrives (spawn, `OnRep_UnitData`, `OnRep_TeamId`), so the existing replication carries it and there is no RPC. Materials without team colour (`M_VehicleLamp`, `MI_M20_Track_Static`) no longer get a pointless MID either. No game code makes a team-colour MID any more; the placement ghost and the shot effects keep their own, unrelated to teams.
+
+### Custom primitive data layout (`Units/RTSPrimitiveData.h`)
+
+| Index | Value | Read by | Written by |
+|---:|---|---|---|
+| 0 | Track phase through one link | `M_Vehicle` with `TrackAnimation` on | `ARTSUnit::UpdateRunningGear` (#151), while the track moves and is seen |
+| 1 | Last frame's phase, unwrapped | the same, for motion vectors | the same |
+| 2, 3 | Free | — | — |
+| 4 to 7 | Team colour, RGBA | `M_Vehicle`, `M_PlaceholderTeam` (`Color`) | `ARTSUnit::ApplyTeamColor`, `ARTSBuilding::ApplyTeamColor` |
+
+A vector parameter reads four floats from its index, so the team colour starts at 4 and the two never overlap. `WorldDivide.Art.TeamColorMaterials` checks the materials against the header, and `WorldDivide.Units.RunningGear.Spin` checks that writing either one leaves the other as it is.
+
+### The bench additions
+
+- Every bench row now counts what the units draw with at the end of the sample: their primitive components, the material slots that are MIDs, and the distinct materials (`primitives`, `dynamic_materials`, `distinct_materials` in `bench.csv`; a third table in `bench.md`).
+- A set with the suffix `@MixedTeams` spreads its units over four teams in turn. This is the mixed-team scenario: units of one kind in four team colours. Their weapons are idled so neighbours do not fight, and the move goes straight through `RTSCommands::Dispatch`, since the player's own path only orders the player's units.
+- `rts.Debug.UnitShots` (`ue.ps1 -Task unitshots`) adds four views of one M20 per team, side by side: at the default and the closest RTS zoom, from an inspection camera, and from that camera under a low sun (pitch −10°).
+
+### Resources (240 M20s, every scenario)
+
+| | Before | After |
+|---|---:|---:|
+| Primitive components | 2,160 | 2,160 |
+| Material slots that are MIDs | 2,400 | **0** |
+| Distinct materials the units draw with | 2,400 | **5** |
+
+The five are `MI_M20_Hull`, `MI_M20_Turret`, `MI_M20_Running`, `MI_M20_Track` and `M_VehicleLamp`, at every count and team mix. The counts are the same in the `@MixedTeams` set.
+
+### Short method, 1 to 240 M20s (`ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestM20Guardian@MixedTeams`, 59 s)
+
+One team (`DA_TestM20Guardian`); before → after.
+
+| Units | Scenario | Draw calls | Render ms | GPU ms (p95) | Game ms (p95) | Running gear ms (p95) |
+|---:|---|---|---|---|---|---|
+| 1 | idle | 108 → 107 | 1.97 → 1.99 | 1.77 (1.80) → 1.77 (1.80) | 1.05 (1.59) → 1.00 (1.22) | 0.001 → 0.001 |
+| 1 | move | 108 → 108 | 2.00 → 2.00 | 1.80 (1.85) → 1.79 (1.83) | 1.11 (1.60) → 1.12 (1.68) | 0.007 → 0.013 |
+| 30 | idle | 573 → **370** | 2.30 → 2.26 | 2.10 (2.14) → 2.06 (2.29) | 1.19 (1.81) → 1.16 (1.77) | 0.003 → 0.003 |
+| 30 | move | 572 → **369** | 2.31 → 2.26 | 2.13 (2.17) → 2.07 (2.11) | 1.81 (2.97) → 1.78 (2.80) | 0.104 (0.200) → 0.113 (0.254) |
+| 120 | idle | 1,673 → **994** | 3.12 → 2.98 | 2.89 (2.93) → 2.78 (2.80) | 1.48 (2.17) → 1.39 (1.83) | 0.011 → 0.011 |
+| 120 | move | 1,750 → **1,039** | 2.60 → 2.71 | 2.93 (3.25) → 2.80 (3.00) | 4.00 (5.24) → 3.85 (4.66) | 0.487 (0.690) → 0.466 (0.665) |
+| 240 | idle | 2,785 → **1,620** | 3.96 → 3.83 | 3.74 (3.95) → 3.62 (3.86) | 1.90 (2.23) → 1.80 (2.08) | 0.022 → 0.021 |
+| 240 | move | 2,905 → **1,689** | 4.05 → 4.08 | 3.82 (4.05) → 3.70 (3.94) | 7.12 (8.76) → 6.56 (7.45) | 1.015 (1.290) → 0.956 (1.182) |
+
+Four teams (`@MixedTeams`), 240 units: idle 2,785 → **1,620** draw calls, move 2,902 → **1,689**; GPU 3.74 → 3.61 ms idle, 3.83 → 3.71 ms moving. The mixed-team rows equal the one-team rows at every count, after as before: team colours do not split the draws.
+
+### Quick method, 240 moving M20s (`-Quick`, one 30 s sample each, diagnostic)
+
+| | Before | After, one team | Before, four teams | After, four teams |
+|---|---:|---:|---:|---:|
+| Draw calls | 3,646 | **2,101** | 3,646 | **2,100** |
+| Render thread, mean (p95) | 4.29 (4.80) | 4.16 (4.64) | 4.29 (4.81) | 4.22 (4.68) |
+| GPU, mean (p95) | 4.30 (4.56) | 4.18 (4.45) | 4.31 (4.57) | 4.18 (4.44) |
+| Game thread, mean (p95) | 4.09 (7.86) | 3.87 (7.39) | 3.96 (8.18) | 3.88 (8.03) |
+| Running gear, mean (p95) | 0.411 (1.121) | 0.390 (1.079) | 0.423 (1.245) | 0.401 (1.195) |
+
+Against #151's long-method figure of 3,639 draw calls, 240 moving M20s now draw about **2,100: −42 %**. The issue's 2,556 was the older `unitshots -Stress 240` scene; it was not re-run. GPU time is down about 0.12 ms, about 3 %. The render thread is down 0.07 to 0.13 ms, within one sample's spread. The game thread and the running gear do not change beyond the run-to-run spread, as expected: the change touches only what is drawn.
+
+### Where the draw calls go now
+
+Draw calls were taken apart at 240 standing M20s (short method), with diagnostic cvars on and with a temporary switch that brought the per-slot MIDs back on today's materials. The temporary switch was not committed.
+
+| 240 idle M20s | Draw calls | Without occlusion queries (`r.AllowOcclusionQueries 0`) |
+|---|---:|---:|
+| One scene unit (baseline of the level) | 107 | 102 |
+| With per-unit MIDs (as before #150) | 2,785 | 1,300 |
+| With shared materials (now) | 1,620 | **110** |
+
+- **The meshes' draws are now independent of the unit count:** 102 → 110 from 1 to 240 M20s. With MIDs they grew by 5 per tank. `r.MeshDrawCommands.LogDynamicInstancingStats` reports 1,386 base-pass mesh draw commands in 12 instancing buckets: every part of every M20, the wheel sets included, merges with the same part of the others.
+- **What is left is about 1,500 hardware occlusion queries:** about one per visible primitive, 9 primitives per M20. They counted the same before. They cost the RHI and render thread, not the GPU: without them the render thread at 240 idle tanks fell from 3.83 to 1.68 ms. Turning them off is a project-wide renderer choice, not part of this issue → follow-up.
+- **Shadows** add about 30 draw calls at 240 tanks (`r.ShadowQuality 0`); the cascades already merge.
+- **Further hull instancing would not pay.** Merging the hull, turret, gun and weapon station of a tank would remove no draw: they already merge across tanks. It would remove only occlusion queries, and the turret, gun and station must stay separate components to aim. The wheels are already one ISM per wheel mesh per tank, which merges across tanks. Nothing was added.
+
+### Unreal Insights
+
+`ue.ps1 -Task bench -Quick -Trace -Unit DA_TestM20Guardian` writes `Saved/Traces/Bench_DA_TestM20Guardian.utrace` (region `DA_TestM20Guardian_240_move_1`, 2,099 draw calls under tracing). Nothing new appears on the game thread. `ApplyTeamColor` no longer allocates MIDs on spawn, but spawning is outside the measured region.
+
+### Visual comparison
+
+`unitshots` and `trackshots` were captured before and after on the same build. They are compared pixel by pixel (largest RGB channel difference, 0 to 255):
+
+| Captures | Mean difference before → after | Two identical "after" runs |
+|---|---|---|
+| 15 unit shots (default, closest and farthest zoom, close-up, turret, driving, obstacles, the four-team row at both zooms, close and low sun) | 0.37 to 0.77 | — |
+| 168 track frames (forward, reverse, pivots, turns, braking, wraps, far, blocked) | 0.61 to 2.58, median 1.06 | 0.44 to 2.18, median 1.22 |
+
+Before → after stays within the variation between two identical runs (temporal anti-aliasing and the moving tracks). The team panels, weathering, normals, shadows and the track links are unchanged under both lights. Four M20s on teams 0 to 3 stand side by side in four colours: no colour carries over between units.
+
+### Implications for #149 (LODs)
+
+- An LOD's material slots can use the same `MI_M20_*` instances, or new ones of `M_Vehicle`, and the team colour comes along with no code: it is per primitive, not per material. The far track LODs can use `MI_M20_Track_Static`, as #151 planned.
+- Draw calls are now set by the mesh/material pairs per pass and by the occlusion queries, not by the unit count. LODs will cut triangles (40 M at 240 tanks), not draw calls. Fewer separate parts at far LODs (one merged rigid far mesh) would cut occlusion queries and component cost.
+
+### Material conventions for vehicles and other team-coloured content
+
+- **Team colour is per primitive.** Read it in the master material from the `Color` vector parameter with *Use Custom Primitive Data* on, index `RTSPrimitiveData::TeamColor` (4). Never make a MID for it, and never set it per material instance.
+- **One master per kind of surface, one constant instance per texture set.** USA, China and Insurgent vehicles are new `MI_*` instances of `M_Vehicle` with their own textures, or of a faction master built the same way. The faction look lives in the textures and the instance parameters (`TeamStrength`, `TeamBrightness`); the team lives in the CPD.
+- **Every CPD index is in `RTSPrimitiveData.h`.** A new per-unit value (damage, a highlight) takes a free index there, and the Python material builders use the same number. 2 and 3 are free; 8 and up after the team colour.
+- **Per-unit values go through CPD, written only when they change**, as a primitive-data update; never a render-state rebuild (#165).
+- **Materials that change per frame on one actor only** (the placement ghost, shot glows) may keep their own MID: they are one actor each, not an army.
+
+### Remaining limitations
+
+- **Hardware occlusion queries now make up most of the draw calls** (about 1,500 of 1,620 at 240 standing M20s) and about half the render thread. Disabling them, or making unit parts skip them, needs measuring across the maps → follow-up.
+- **Unset CPD reads as black.** A team-tinted mesh drawn by anything other than `ARTSUnit` or `ARTSBuilding` (a future portrait capture, a level prop) must set CPD 4 to 7 itself, or use an instance with `TeamStrength`/`TintStrength` 0.
+- **No long-method run** was made, as asked. The quick and short methods show the draw-call and GPU change at every count. The final M20 against placeholder gate stays with #149.
+- **Late join** is covered by the vehicle network test's tank that replicates only after it has driven. Joining a match already under way, in the lobby, was not tested by hand.

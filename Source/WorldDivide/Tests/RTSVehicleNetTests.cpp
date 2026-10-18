@@ -3,6 +3,7 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "AIController.h"
+#include "Buildings/RTSBuilding.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Components/StaticMeshComponent.h"
@@ -14,6 +15,7 @@
 #include "Engine/StaticMeshActor.h"
 #include "EngineUtils.h"
 #include "HAL/IConsoleManager.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "Navigation/RTSMoveRequestSubsystem.h"
 #include "PlayInEditorDataTypes.h"
@@ -23,6 +25,7 @@
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestScale.h"
+#include "Units/RTSPrimitiveData.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitMovement.h"
 
@@ -34,6 +37,7 @@
  * hull comes to rest within 10 cm and 2 degrees of the server's within a second of the server's rest reaching it; a pivot
  * runs its tracks opposite ways on the client too; a correction of the client's copy is no travel; a client that first
  * sees a vehicle under way starts its travel from nothing. The listen server also measures what the gear state costs.
+ * Every unit and building on every client carries its team's colour (#150), a vehicle first seen late included.
  */
 namespace RTSVehicleNetTests
 {
@@ -123,6 +127,50 @@ namespace RTSVehicleNetTests
 			}
 		}
 		return Best;
+	}
+
+	/** #150: every drawn part of Copy carries the colour of team TeamId, and none is a dynamic material instance. */
+	bool HasTeamColor(const AActor& Copy, int32 TeamId)
+	{
+		const FLinearColor Expected = ARTSUnit::GetTeamColor(TeamId);
+		constexpr int32 Index = RTSPrimitiveData::TeamColor;
+		TArray<UStaticMeshComponent*> Parts;
+		Copy.GetComponents(Parts);
+		int32 Drawn = 0;
+		for (const UStaticMeshComponent* Part : Parts)
+		{
+			if (!Part->GetStaticMesh())
+			{
+				continue;
+			}
+			++Drawn;
+			const TArray<float>& Data = Part->GetCustomPrimitiveData().Data;
+			if (Data.Num() < Index + 4 || !FLinearColor(Data[Index], Data[Index + 1], Data[Index + 2], Data[Index + 3]).Equals(Expected, 1.e-6f))
+			{
+				return false;
+			}
+			for (int32 Slot = 0; Slot < Part->GetNumMaterials(); ++Slot)
+			{
+				if (Part->GetMaterial(Slot) && Part->GetMaterial(Slot)->IsA<UMaterialInstanceDynamic>())
+				{
+					return false;
+				}
+			}
+		}
+		return Drawn > 0;
+	}
+
+	/** The copy of ServerBuilding in a client's world: the building of the same data standing where it stands. */
+	ARTSBuilding* FindBuildingCopy(UWorld& ClientWorld, const ARTSBuilding& ServerBuilding)
+	{
+		for (TActorIterator<ARTSBuilding> It(&ClientWorld); It; ++It)
+		{
+			if (It->GetBuildingData() == ServerBuilding.GetBuildingData() && FVector::Dist2D(It->GetActorLocation(), ServerBuilding.GetActorLocation()) < 10.0)
+			{
+				return *It;
+			}
+		}
+		return nullptr;
 	}
 
 	ARTSUnit* SpawnUnit(UWorld& World, const TCHAR* DataPath, int32 TeamId, const FVector& Location, float Yaw)
@@ -394,6 +442,42 @@ namespace RTSVehicleNetTests
 		};
 		Session->Phases.Add({ TEXT("Spawn"), Spawn });
 		Session->Phases.Add({ TEXT("First sight"), [Session](double Elapsed) { return Elapsed > 2.0; } });
+		// Every unit and building of the map, of every team, in its team's colour on every client (#150).
+		Session->Phases.Add({ TEXT("Team colours"), [&Test, Session](double)
+		{
+			TSet<int32> Teams;
+			int32 Checked = 0;
+			TArray<FString> Wrong;
+			auto Check = [&](const AActor* Copy, const AActor& Original, int32 TeamId, int32 Client)
+			{
+				if (!Copy)
+				{
+					return;
+				}
+				++Checked;
+				Teams.Add(TeamId);
+				if (!HasTeamColor(*Copy, TeamId))
+				{
+					Wrong.Add(FString::Printf(TEXT("%s on client %d"), *Original.GetName(), Client + 1));
+				}
+			};
+			for (int32 Client = 0; Client < Session->ClientWorlds.Num(); ++Client)
+			{
+				for (TActorIterator<ARTSUnit> It(Session->ServerWorld); It; ++It)
+				{
+					Check(FindCopy(*Session->ClientWorlds[Client], **It), **It, It->GetTeamId(), Client);
+				}
+				for (TActorIterator<ARTSBuilding> It(Session->ServerWorld); It; ++It)
+				{
+					Check(FindBuildingCopy(*Session->ClientWorlds[Client], **It), **It, It->GetTeamId(), Client);
+				}
+			}
+			Test.TestTrue(FString::Printf(TEXT("Clients' copies of %d units and buildings of %d teams carry their team's colour%s%s"), Checked,
+				Teams.Num(), Wrong.IsEmpty() ? TEXT("") : TEXT("; not: "), *FString::Join(Wrong, TEXT(", "))),
+				Checked > 0 && Teams.Num() >= 2 && Wrong.IsEmpty());
+			Test.AddInfo(FString::Printf(TEXT("Team colours: %d copies of %d teams checked on %d client(s)"), Checked, Teams.Num(), Session->ClientWorlds.Num()));
+			return true;
+		} });
 
 		// A drive ahead, stopped half way.
 		Session->Phases.Add({ TEXT("Drive"), OrderTo(ERTSCommandType::Move, FVector(4000.f, 0.f, 0.f)) });
@@ -587,6 +671,7 @@ namespace RTSVehicleNetTests
 					const double Since = Unit->GetRealizedMotion().DrivenDistance - Late->ServerDriven;
 					Test.TestTrue(FString::Printf(TEXT("Client %d's travel starts from nothing (%.0f cm, the server drove %.0f before it was seen)"), Index + 1,
 						Copy->GetRealizedMotion().DrivenDistance, Late->ServerDriven), Copy->GetRealizedMotion().DrivenDistance <= Since + 1.0);
+					Test.TestTrue(FString::Printf(TEXT("Client %d's late copy carries its team's colour"), Index + 1), HasTeamColor(*Copy, Unit->GetTeamId()));
 				}
 			}
 			Unit->Destroy();

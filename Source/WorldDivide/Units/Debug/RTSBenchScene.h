@@ -44,6 +44,13 @@ namespace RTSBenchScene
 	/** The set name's suffix that benches with rigid tracks (#151). */
 	const TCHAR* const RigidTracksSuffix = TEXT("@RigidTracks");
 
+	/**
+	 * The set name's suffix that spreads its units over MixedTeams teams in turn (#150), so units of one kind carry
+	 * different team colours. Their weapons are idled, since neighbours of other teams would otherwise fight.
+	 */
+	const TCHAR* const MixedTeamsSuffix = TEXT("@MixedTeams");
+	constexpr int32 MixedTeams = 4;
+
 	/** Bumped whenever the solids' layout rules change; recorded in bench.json, so runs of another layout never compare. */
 	constexpr int32 SolidsVersion = 1;
 	constexpr int32 SolidsSeed = 172;

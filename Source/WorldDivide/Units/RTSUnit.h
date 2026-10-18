@@ -265,10 +265,8 @@ public:
 	/** Every machine. The roll in radians, [0, 2 pi), of the wheel URTSUnitData::Parts[PartIndex] is; false when it is none. */
 	bool GetWheelAngle(int32 PartIndex, float& OutRadians) const;
 
+	/** The colour of team InTeamId; units and buildings give it to their materials as RTSPrimitiveData::TeamColor. */
 	static FLinearColor GetTeamColor(int32 InTeamId);
-
-	/** Material vector parameter that receives the team colour, on units and buildings alike. */
-	static const FName TeamColorParameter;
 
 	/** Feet, not eye height: navmesh queries start from the ground. */
 	virtual FVector GetNavAgentLocation() const override;

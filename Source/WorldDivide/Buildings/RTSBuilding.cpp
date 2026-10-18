@@ -16,7 +16,6 @@
 #include "Economy/RTSHarvesterComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
-#include "Materials/MaterialInstanceDynamic.h"
 #include "NavAreas/NavArea_Null.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "Navigation/RTSNavAgents.h"
@@ -24,6 +23,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Player/RTSPlayerController.h"
 #include "Units/RTSAircraftComponent.h"
+#include "Units/RTSPrimitiveData.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
 #include "WorldDivide.h"
@@ -527,18 +527,8 @@ void ARTSBuilding::ApplyConstructionVisual()
 
 void ARTSBuilding::ApplyTeamColor()
 {
-	if (!Mesh->GetStaticMesh())
-	{
-		return;
-	}
-	// Every slot, since a model can carry several materials.
-	for (int32 Slot = 0; Slot < Mesh->GetNumMaterials(); ++Slot)
-	{
-		if (UMaterialInstanceDynamic* Material = Mesh->CreateDynamicMaterialInstance(Slot))
-		{
-			Material->SetVectorParameterValue(ARTSUnit::TeamColorParameter, ARTSUnit::GetTeamColor(TeamId));
-		}
-	}
+	// As custom primitive data, so buildings of a kind keep sharing their material instances whatever their team (#150).
+	Mesh->SetCustomPrimitiveDataVector4(RTSPrimitiveData::TeamColor, FVector4(ARTSUnit::GetTeamColor(TeamId)));
 }
 
 void ARTSBuilding::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
