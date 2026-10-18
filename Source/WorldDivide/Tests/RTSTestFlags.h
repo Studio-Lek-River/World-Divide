@@ -186,6 +186,17 @@ namespace RTSTests
 			RestoreHandle.Reset();
 		});
 	}
+
+	/**
+	 * For the rest of this PIE session the engine ticks in step with real time again, and move requests keep to the
+	 * real-time budget, as every session that did not apply the fixed step itself ran before #179: for tests whose checks
+	 * hang on real time, such as emulated network lag. Ending PIE still puts the editor back as it was.
+	 */
+	inline void UseRealTimeStep()
+	{
+		FApp::SetUseFixedTimeStep(false);
+		UseRealTimeMoveBudget();
+	}
 #endif
 
 	/**

@@ -1064,6 +1064,38 @@ Every row is inside the run-to-run spread of about 0.6 ms. The locomotion budget
 - **Latency grows with the group.** About 0.5 frames per long-route vehicle at 2 ms, so the back of 100 vehicles starts about 1.6 s after the front at 30 Hz. A shared route per group and agent (#174's option A) would shorten that.
 - **The budget is real time,** so on a slower machine more requests wait. The simulation's timing then depends on CPU speed, as with any real-time budget.
 
+## #179 (AIvsAI independent of the real-time move budget)
+
+Same machine, on 2026-10-18. The code is in 498df5f. The measurements below were taken with #181 on top, because the match only ends with a winner since then.
+
+### Root cause and what changed
+
+- **Machine-dependent schedule.** #174's `URTSMoveRequestSubsystem` spends a real-time budget (`rts.Nav.MoveRequestBudgetMs`, 2 ms) of path work per frame. Under the fixed 1/30 s test step, a faster or busier CPU therefore ran a different number of move requests per frame. The same test then played a different match each run: `WorldDivide.Smoke.AIvsAI` failed 1 run in 4 on `4a2a706` and passed with the budget off.
+- **Under `-RTSTestFixedStep`:**
+  - the requests run `rts.Nav.MoveRequestsPerFrame` at a time (`URTSMoveRequestSubsystem::TestRequestsPerFrame`, 4) instead of the ms budget;
+  - the fixed step applies from the first PIE frame;
+  - navmesh rebuilds finish in the frame they start (`RTSTests::CompleteNavigationBuild`).
+  
+  The engine's step, the request count and the navmesh hook are restored when PIE ends.
+- **The vehicle network tests keep real time** (`RTSTests::UseRealTimeStep`). They never took the fixed step themselves, and their checks run against real-time network emulation (100 ms round trip, packet loss). Once every PIE session started at the fixed step, game time outran the emulated lag: `WorldDivide.Net.Vehicle.Dedicated` saw only 1 to 17 of 60 vehicles under way on the clients, in every run. They now run in real time again, as before 498df5f.
+- **Production is unchanged.** `rts.Nav.MoveRequestsPerFrame` defaults to 0, which keeps the 2 ms real-time budget outside the tests.
+- **Stalled AI build orders and waves:**
+  - the AI passes over build-order steps nothing it has left can make, such as builders once its headquarters is gone (`WorldDivide.AI.BuildOrderOutOfReach`);
+  - an army that can no longer grow goes once the wave interval has passed (`WorldDivide.AI.WavesOutOfCredits`).
+  
+  #181 later weighs those waves against the enemy's defences.
+- **`ue.ps1 -Task test -Repeat N`** runs a filter N times, each in a fresh editor. It prints each run's result and wall-clock time, plus the tests' info lines that differ between runs. `WorldDivide.Smoke.AIvsAI` reports the match length and an end-state digest (every unit's position to the centimetre and every building's health), so identical runs show as identical lines.
+
+### Determinism
+
+- **Before #181,** the default setting played the same match on every run. The end-state digest `f550da9a` was identical across separate runs, and every one was the stand-off that #181 resolves.
+- **With #181,** `ue.ps1 -Task test -Filter WorldDivide.Smoke.AIvsAI -Repeat 10` passes 10 of 10 in 302 s wall-clock, 30 s each. Every run reports the same match (352 game seconds, digest `5cd35b8e`).
+- **Each `rts.Nav.MoveRequestsPerFrame` value is its own fixed trajectory** (#181's table). That is expected: the request count changes when units start their paths.
+
+### Remaining limitations
+
+- Determinism holds for the fixed-step tests, not for real-time play. With the 2 ms budget a slower machine still runs fewer requests per frame, as #174 notes.
+
 ## #181 (AIvsAI matches that end with both sides bankrupt)
 
 Same machine, on 2026-10-18. Every run is `WorldDivide.Smoke.AIvsAI` on L_SkirmishDuel under the fixed 30 Hz test step of #179 (`-RTSTestFixedStep=30`, `-nullrhi`). A setting other than the default is passed with `ue.ps1 -Task test -Filter WorldDivide.Smoke.AIvsAI -Cvars rts.Nav.MoveRequestsPerFrame=N`. Each setting plays one fixed match.

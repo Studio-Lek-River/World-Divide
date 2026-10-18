@@ -190,6 +190,9 @@ bool FRTSVehicleNetWaitForSession::Update()
 	{
 		Session->PhaseStart = FPlatformTime::Seconds();
 	}
+	// These checks run against real-time network emulation (lag and loss), so the session keeps real time, as it did
+	// before every PIE session took the fixed test step (#179). Again each frame: the fixed step comes as PIE begins.
+	RTSTests::UseRealTimeStep();
 	UWorld* Server = FindWorld(Session->bDedicated ? NM_DedicatedServer : NM_ListenServer);
 	TArray<UWorld*> Clients;
 	for (int32 Index = 0; Index < Session->ClientCount; ++Index)
