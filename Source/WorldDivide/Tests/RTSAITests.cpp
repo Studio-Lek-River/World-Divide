@@ -2,6 +2,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
+#include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSGameState.h"
@@ -14,6 +15,8 @@
 #include "Data/RTSUnitData.h"
 #include "Data/RTSUpgradeData.h"
 #include "Data/RTSWeaponData.h"
+#include "Economy/RTSHarvesterComponent.h"
+#include "Economy/RTSSupplySource.h"
 #include "EngineUtils.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/RTSTestFlags.h"
@@ -211,6 +214,12 @@ namespace RTSAITests
 		ARTSBuilding* Barracks = SpawnCompleted(TestWorld, BarracksData, AITeam, FVector(3000.f, 0.f, 0.f));
 		const TArray<TObjectPtr<URTSEntityData>>& Queue = Barracks->GetProductionComponent()->GetQueue();
 		TestEqual(TEXT("The standing barracks counts"), AI->CountOwned(*BarracksData), 1);
+		// A harvester at work brings more credits, so a step the credits do not cover yet is worth waiting for (#181).
+		URTSBuildingData* DepotData = MakeBuilding();
+		DepotData->bAcceptsSupply = true;
+		SpawnCompleted(TestWorld, DepotData, AITeam, FVector(3000.f, -3000.f, 0.f));
+		TestWorld.SpawnSupplySource(1000, FIntPoint(3, 3), FVector(6000.f, -3000.f, 0.f));
+		TestWorld.SpawnUnit(NewObject<URTSHarvesterData>(), AITeam, FVector(4500.f, -3000.f, 0.f));
 
 		AI->Think(ARTSAIPlayer::ThinkInterval);
 		TestEqual(TEXT("The barracks is met, so the first infantry is queued"), Queue.Num(), 1);
@@ -372,6 +381,270 @@ namespace RTSAITests
 			{
 				TestEqual(*FString::Printf(TEXT("%s, the army cannot grow and goes after the interval"), *With), AI->GetWaveCount(), 1);
 				TestEqual(*FString::Printf(TEXT("%s, both tanks go"), *With), AI->GetWaveUnits().Num(), 2);
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * The assault estimate (#181) against a tower with 500 health, 30 damage a second and 81 m of range: rifles walking in
+	 * under fire fall short, tanks closing in fast win with a margin only in numbers, a weapon that outranges the tower always
+	 * wins, and units already beside it fire from the start.
+	 */
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAICanOvercomeTest, "WorldDivide.AI.CanOvercome", TestFlags)
+
+	bool FRTSAICanOvercomeTest::RunTest(const FString& Parameters)
+	{
+		const RTSAI::FFighter Tower{ 500.f, 30.f, 8125.f, 0.f };
+		const RTSAI::FFighter Rifle{ 100.f, 16.f, 3500.f, 450.f };
+		const RTSAI::FFighter Tank{ 200.f, 20.f, 6500.f, 1100.f };
+		const RTSAI::FFighter Artillery{ 100.f, 5.f, 9000.f, 400.f };
+
+		TestFalse(TEXT("Nobody overcomes nothing"), RTSAI::CanOvercome({}, Tower));
+		TestFalse(TEXT("Five rifles walking in under fire fall short"),
+			RTSAI::CanOvercome({ Rifle, Rifle, Rifle, Rifle, Rifle }, Tower));
+		TestFalse(TEXT("Two tanks fall short"), RTSAI::CanOvercome({ Tank, Tank }, Tower));
+		TestTrue(TEXT("Three tanks win"), RTSAI::CanOvercome({ Tank, Tank, Tank }, Tower));
+		TestFalse(TEXT("But not with half its health again to spare"), RTSAI::CanOvercome({ Tank, Tank, Tank }, Tower, 1.5f));
+		TestTrue(TEXT("Six tanks have that margin"), RTSAI::CanOvercome({ Tank, Tank, Tank, Tank, Tank, Tank }, Tower, 1.5f));
+		TestTrue(TEXT("A weapon that outranges the tower is never hit"), RTSAI::CanOvercome({ Artillery }, Tower));
+
+		RTSAI::FFighter Beside = Rifle;
+		Beside.Distance = 0.f;
+		TestTrue(TEXT("Five rifles already beside it fire from the start and win"),
+			RTSAI::CanOvercome({ Beside, Beside, Beside, Beside, Beside }, Tower));
+		return true;
+	}
+
+	/** A tower with 500 health, 50 damage a second and 30 m of range, its weapon live. */
+	ARTSBuilding* SpawnTower(FAutomationTestBase& Test, const FRTSTestWorld& TestWorld, int32 TeamId, const FVector& Location)
+	{
+		URTSWeaponData* Gun = MakeWeapon();
+		Gun->Range = 3000.f;
+		Gun->Damage = 50.f;
+		URTSBuildingData* Data = MakeBuilding();
+		Data->Weapon = Gun;
+		Data->bIsDefense = true;
+		ARTSBuilding* Tower = SpawnCompleted(TestWorld, Data, TeamId, Location);
+		Test.TestNotNull(TEXT("The tower's weapon is live"), Tower->GetWeaponComponent()->GetWeaponData());
+		return Tower;
+	}
+
+	/** Tanks with 100 health and 50 damage a second at 8 m, driving 10 m/s. */
+	URTSUnitData* MakeStrongTank()
+	{
+		URTSWeaponData* Cannon = MakeWeapon();
+		Cannon->Damage = 50.f;
+		URTSUnitData* Tank = MakeUnit(700, Cannon);
+		Tank->MoveSpeed = 1000.f;
+		return Tank;
+	}
+
+	/**
+	 * A wave weighs the defences at its target (#181): two light tanks do not set off at a building a tower covers, but at
+	 * one no defence covers; six strong tanks set off at the covered one.
+	 */
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIWavesWeighDefencesTest, "WorldDivide.AI.WavesWeighDefences", TestFlags)
+
+	bool FRTSAIWavesWeighDefencesTest::RunTest(const FString& Parameters)
+	{
+		const float R = ARTSAIPlayer::DefenseRadius;
+		FRTSAIWaveSettings Settings;
+		Settings.Size = 2;
+		Settings.MinSize = 1;
+		Settings.Interval = 30.f;
+		{
+			const FRTSTestWorld TestWorld;
+			TestWorld.SpawnGameState();
+			URTSUnitData* Tank = MakeUnit(700, MakeWeapon());
+			ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
+			SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-1.2f * R, 0.f, 0.f));
+			SpawnTower(*this, TestWorld, PlayerTeam, FVector(-1.2f * R, 1500.f, 0.f));
+			SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(1.2f * R, 0.f, 0.f));
+			TestWorld.SpawnUnit(Tank, AITeam, FVector(0.8f * R, 0.f, 0.f));
+			TestWorld.SpawnUnit(Tank, AITeam, FVector(0.8f * R, 300.f, 0.f));
+			AI->SetWaveSettings(Settings);
+
+			AI->Think(1.f);
+			TestEqual(TEXT("Two light tanks hold back from the only building, which a tower too strong for them covers"),
+				AI->GetWaveCount(), 0);
+
+			// Far from the tower's reach.
+			SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-1.2f * R, -R, 0.f));
+			AI->Think(1.f);
+			TestEqual(TEXT("A building no defence covers draws the wave"), AI->GetWaveCount(), 1);
+			TestEqual(TEXT("With both tanks"), AI->GetWaveUnits().Num(), 2);
+		}
+		{
+			const FRTSTestWorld TestWorld;
+			TestWorld.SpawnGameState();
+			URTSUnitData* Tank = MakeStrongTank();
+			ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
+			SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-1.2f * R, 0.f, 0.f));
+			SpawnTower(*this, TestWorld, PlayerTeam, FVector(-1.2f * R, 1500.f, 0.f));
+			SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(1.2f * R, 0.f, 0.f));
+			for (int32 Index = 0; Index < 6; ++Index)
+			{
+				TestWorld.SpawnUnit(Tank, AITeam, FVector(0.8f * R, 300.f * Index, 0.f));
+			}
+			FRTSAIWaveSettings Six = Settings;
+			Six.Size = 6;
+			AI->SetWaveSettings(Six);
+
+			AI->Think(1.f);
+			TestEqual(TEXT("Six strong tanks can take the tower and set off"), AI->GetWaveCount(), 1);
+			TestEqual(TEXT("All six"), AI->GetWaveUnits().Num(), 6);
+		}
+		return true;
+	}
+
+	/**
+	 * Wave units a tower fires on (#181): six strong tanks turn on it together rather than on the building they were sent at;
+	 * two light tanks fall back to the gather point and leave the wave.
+	 */
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIWavesEngageDefencesTest, "WorldDivide.AI.WavesEngageDefences", TestFlags)
+
+	bool FRTSAIWavesEngageDefencesTest::RunTest(const FString& Parameters)
+	{
+		const float R = ARTSAIPlayer::DefenseRadius;
+		for (const bool bStrong : { true, false })
+		{
+			const FRTSTestWorld TestWorld;
+			TestWorld.SpawnGameState();
+			URTSUnitData* Tank = bStrong ? MakeStrongTank() : MakeUnit(700, MakeWeapon());
+			const int32 Count = bStrong ? 6 : 2;
+			ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
+			SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-1.2f * R, 0.f, 0.f));
+			SpawnCompleted(TestWorld, MakeBuilding(), AITeam, FVector(1.2f * R, 0.f, 0.f));
+			for (int32 Index = 0; Index < Count; ++Index)
+			{
+				TestWorld.SpawnUnit(Tank, AITeam, FVector(0.8f * R, 300.f * Index, 0.f));
+			}
+			FRTSAIWaveSettings Settings;
+			Settings.Size = Count;
+			Settings.MinSize = 1;
+			Settings.Interval = 30.f;
+			AI->SetWaveSettings(Settings);
+
+			AI->Think(1.f);
+			const TArray<ARTSUnit*> Wave = AI->GetWaveUnits();
+			const FString With = bStrong ? TEXT("Six strong tanks") : TEXT("Two light tanks");
+			if (!TestEqual(*FString::Printf(TEXT("%s set off at the undefended building"), *With), Wave.Num(), Count))
+			{
+				continue;
+			}
+
+			// A tower on their way, in its range of them but out of theirs.
+			ARTSBuilding* Tower = SpawnTower(*this, TestWorld, PlayerTeam, Wave[0]->GetActorLocation() + FVector(-2000.f, 0.f, 0.f));
+			const int32 IssuedBefore = AI->GetIssuedCommandCount();
+			AI->Think(1.f);
+			if (bStrong)
+			{
+				TestEqual(*FString::Printf(TEXT("%s stay in their wave"), *With), AI->GetWaveUnits().Num(), Count);
+				for (const ARTSUnit* Unit : Wave)
+				{
+					TestEqual(*FString::Printf(TEXT("%s each attack the tower"), *With), Unit->GetWeaponComponent()->GetTarget(),
+						static_cast<AActor*>(Tower));
+				}
+				continue;
+			}
+			// The test world has no navmesh, so the move back ends at once; the order itself is what counts here.
+			TestEqual(*FString::Printf(TEXT("%s fall back from a tower they cannot beat"), *With), AI->GetWaveUnits().Num(), 0);
+			TestEqual(*FString::Printf(TEXT("%s, in one order back to the gather point"), *With), AI->GetIssuedCommandCount(),
+				IssuedBefore + 1);
+		}
+		return true;
+	}
+
+	/**
+	 * A build-order step the credits do not cover (#181): passed over for the army while no harvester brings more, waited for
+	 * while one is at work.
+	 */
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIBuildOrderWithoutIncomeTest, "WorldDivide.AI.BuildOrderWithoutIncome", TestFlags)
+
+	bool FRTSAIBuildOrderWithoutIncomeTest::RunTest(const FString& Parameters)
+	{
+		for (const bool bHarvesting : { false, true })
+		{
+			const FRTSTestWorld TestWorld;
+			TestWorld.SpawnGameState();
+			URTSUnitData* Infantry = MakeUnit(100, MakeWeapon());
+			URTSBuildingData* Factory = MakeBuilding();
+			Factory->Cost = 1500;
+			URTSBuilderData* Builder = NewObject<URTSBuilderData>();
+			Builder->Buildings = { Factory };
+			URTSAIBuildOrderData* BuildOrder = NewObject<URTSAIBuildOrderData>();
+			BuildOrder->Steps = { MakeStep(Factory, 1) };
+			BuildOrder->ArmyUnits = { Infantry };
+
+			ARTSAIPlayer* AI = SpawnAI(TestWorld, BuildOrder, 650);
+			SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-20000.f, 0.f, 0.f));
+			ARTSBuilding* Barracks = SpawnCompleted(TestWorld, MakeBuilding({ Infantry }), AITeam, FVector(0.f, 3000.f, 0.f));
+			TestWorld.SpawnUnit(Builder, AITeam, FVector(0.f, -1500.f, 0.f));
+			ARTSUnit* Harvester = nullptr;
+			if (bHarvesting)
+			{
+				URTSHarvesterData* HarvesterData = NewObject<URTSHarvesterData>();
+				URTSBuildingData* DepotData = MakeBuilding();
+				DepotData->bAcceptsSupply = true;
+				SpawnCompleted(TestWorld, DepotData, AITeam, FVector(3000.f, -3000.f, 0.f));
+				TestWorld.SpawnSupplySource(1000, FIntPoint(3, 3), FVector(6000.f, -3000.f, 0.f));
+				Harvester = TestWorld.SpawnUnit(HarvesterData, AITeam, FVector(4500.f, -3000.f, 0.f));
+			}
+
+			AI->Think(ARTSAIPlayer::ThinkInterval);
+			const int32 Queued = Barracks->GetProductionComponent()->GetQueue().Num();
+			if (bHarvesting)
+			{
+				TestTrue(TEXT("The idle harvester is sent to work"), Harvester->GetQueuedCommandCount() > 0);
+				TestEqual(TEXT("While it brings credits, the AI saves up for the factory"), Queued, 0);
+				TestEqual(TEXT("Its credits untouched"), AI->GetRTSPlayerState()->GetCredits(), 650);
+			}
+			else
+			{
+				TestEqual(TEXT("With no income the factory is out of reach: the barracks trains infantry"), Queued, 1);
+				TestEqual(TEXT("Paid from the credits"), AI->GetRTSPlayerState()->GetCredits(), 550);
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * An idle harvester with no source in its search radius (#181) is sent to the nearest one elsewhere, unless an enemy
+	 * defence covers it.
+	 */
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIHarvestFarSourceTest, "WorldDivide.AI.HarvestFarSource", TestFlags)
+
+	bool FRTSAIHarvestFarSourceTest::RunTest(const FString& Parameters)
+	{
+		for (const bool bCovered : { false, true })
+		{
+			const FRTSTestWorld TestWorld;
+			TestWorld.SpawnGameState();
+			URTSHarvesterData* HarvesterData = NewObject<URTSHarvesterData>();
+			HarvesterData->SearchRadius = 2000.f;
+			URTSBuildingData* DepotData = MakeBuilding();
+			DepotData->bAcceptsSupply = true;
+
+			ARTSAIPlayer* AI = SpawnAI(TestWorld, NewObject<URTSAIBuildOrderData>(), 0);
+			SpawnCompleted(TestWorld, MakeBuilding(), PlayerTeam, FVector(-20000.f, 0.f, 0.f));
+			SpawnCompleted(TestWorld, DepotData, AITeam, FVector(0.f, 0.f, 0.f));
+			ARTSSupplySource* Far = TestWorld.SpawnSupplySource(1000, FIntPoint(3, 3), FVector(10000.f, 0.f, 0.f));
+			if (bCovered)
+			{
+				SpawnTower(*this, TestWorld, PlayerTeam, FVector(10000.f, 2500.f, 0.f));
+			}
+			ARTSUnit* Harvester = TestWorld.SpawnUnit(HarvesterData, AITeam, FVector(1500.f, 0.f, 0.f));
+
+			AI->Think(ARTSAIPlayer::ThinkInterval);
+			if (bCovered)
+			{
+				TestEqual(TEXT("A source an enemy tower covers is left alone"), Harvester->GetQueuedCommandCount(), 0);
+			}
+			else
+			{
+				TestTrue(TEXT("The harvester goes to the source outside its search radius"), Harvester->GetQueuedCommandCount() > 0);
+				TestEqual(TEXT("That one"), Harvester->GetHarvesterComponent()->GetSource(), Far);
 			}
 		}
 		return true;

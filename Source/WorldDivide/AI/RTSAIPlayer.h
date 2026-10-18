@@ -43,6 +43,26 @@ namespace RTSAI
 
 	/** Share of Army (rounded up, at least 1 of a non-empty army) to send at Threat: their indices, nearest first (2D). */
 	WORLDDIVIDE_API TArray<int32> PickResponders(TConstArrayView<FVector> Army, const FVector& Threat, float Share);
+
+	/** One side of a fight between a group of units and a defence, as CanOvercome weighs it. */
+	struct FFighter
+	{
+		float Health = 0.f;
+		float DamagePerSecond = 0.f;
+		/** Weapon range in cm. */
+		float Range = 0.f;
+		/** Move speed in cm/s. */
+		float Speed = 0.f;
+		/** An attacker's distance from the defence's footprint in cm; negative sets off from the edge of its range. */
+		float Distance = -1.f;
+	};
+
+	/**
+	 * Attackers close in on Defence from their Distance and fire once each is within its own range; Defence fires at the one
+	 * within its range with the shortest range first, the nearest it, and never at one that outranges it (#181). True when
+	 * the attackers deal Margin times Defence's health before every one of them is destroyed.
+	 */
+	WORLDDIVIDE_API bool CanOvercome(TConstArrayView<FFighter> Attackers, const FFighter& Defence, float Margin = 1.f);
 }
 
 /**
@@ -52,9 +72,12 @@ namespace RTSAI
  * it has left could work on), idle harvesters go back to work and the army gathers ahead of the base until a wave goes at the
  * nearest enemy building, unless an enemy unit comes
  * near its buildings, or an enemy unit or building fires on them from further out: then the army, and wave units still near
- * the base, fight it off first. An enemy that hits one of its builders or harvesters elsewhere draws part of the army. Its
- * orders take the same path as a player's (RTSCommands::Issue), paid from its own credits, and it sees what every player
- * sees.
+ * the base, fight it off first. An enemy that hits one of its builders or harvesters elsewhere draws part of the army. Waves
+ * weigh the enemy's defences (#181): they go at a building no defence covers, or first at a covering defence they can
+ * destroy, and wave units that come under fire of a defence close in on it together, or fall back when they cannot beat
+ * it. A step it cannot afford while no harvester is bringing credits is passed over for the army, and an idle harvester
+ * with no source in its search radius is sent to the nearest source elsewhere that no enemy defence covers. Its orders
+ * take the same path as a player's (RTSCommands::Issue), paid from its own credits, and it sees what every player sees.
  */
 UCLASS()
 class WORLDDIVIDE_API ARTSAIPlayer : public AAIController
@@ -93,6 +116,21 @@ public:
 
 	/** Share of the idle army sent at an enemy that hit one of the AI's builders or harvesters. */
 	static constexpr float ResponseShare = 0.5f;
+
+	/**
+	 * How many times a defence's health a wave must be able to deal (RTSAI::CanOvercome) before it sets off at it, while the
+	 * army can still grow; once it cannot, once its health.
+	 */
+	static constexpr float AssaultMargin = 1.5f;
+
+	/**
+	 * How far past a defence's range wave units still count as in its fight, in cm: they join the attack on it, or fall back
+	 * with the rest.
+	 */
+	static constexpr float AssaultReach = 3000.f;
+
+	/** Room beyond an enemy defence's range that a far source must lie for an idle harvester to be sent to it, in cm. */
+	static constexpr float SafeHarvestMargin = 1000.f;
 
 	/**
 	 * Server only. Unit was hit: if it is a builder or harvester, every AI on its team remembers DamageInstigator for
@@ -192,6 +230,9 @@ private:
 	 */
 	bool CanArmyGrow(const URTSAIBuildOrderData& BuildOrder) const;
 
+	/** Credits are on their way: an own harvester is at work. */
+	bool HasIncomeComing() const;
+
 	/** Sends an idle builder to place Data near the base. False when it cannot yet: no credits, builder or spot. */
 	bool TryBuild(URTSBuildingData& Data);
 
@@ -201,13 +242,49 @@ private:
 	/** Keeps the army growing once the build order is done: the next affordable army unit, a short queue per building. */
 	void ProduceArmy(const URTSAIBuildOrderData& BuildOrder);
 
-	/** Sends idle harvesters back to the nearest source, while one is in reach of an own depot. */
+	/**
+	 * Sends idle harvesters back to work while an own depot stands: at the nearest source in their search radius, or else at
+	 * the nearest source anywhere that no enemy defence covers.
+	 */
 	void KeepHarvesting();
+
+	/** The enemy's constructed defences whose weapons fire: armed, and powered when they need it. */
+	TArray<ARTSBuilding*> FindEnemyDefences() const;
+
+	/** Of Defences, those whose range reaches Target's footprint edge; Target itself when it is one of them. */
+	static TArray<ARTSBuilding*> FindCovering(TConstArrayView<ARTSBuilding*> Defences, const AActor& Target);
+
+	/**
+	 * Units (those that can hit the ground) destroy Defence with Margin to spare while it and the other Defences in range of
+	 * it fire on them (RTSAI::CanOvercome): from where they stand within its range when bWhereTheyStand, the rest from its edge.
+	 */
+	static bool CanOvercome(TConstArrayView<ARTSUnit*> Units, const ARTSBuilding& Defence, TConstArrayView<ARTSBuilding*> Defences,
+		float Margin, bool bWhereTheyStand = false);
+
+	/**
+	 * Where Units go next, nearest their centre first: an enemy building no defence covers, or the nearest defence covering
+	 * one that they can overcome with Margin. Null when every building left is covered by defences too strong for them.
+	 */
+	AActor* ChooseWaveTarget(TConstArrayView<ARTSUnit*> Units, TConstArrayView<ARTSBuilding*> Defences, float Margin) const;
+
+	/** Attack-moves Units at Target. */
+	void AttackMove(TConstArrayView<ARTSUnit*> Units, const AActor& Target);
+
+	/**
+	 * Wave units within AssaultReach of an enemy defence's range that it fires on: while the wave can overcome it, those not
+	 * fighting enemy units attack it rather than another building; otherwise they all fall back to the gather point and
+	 * rejoin the army.
+	 */
+	void EngageDefences(TConstArrayView<ARTSBuilding*> Defences);
 
 	/** Points the rally point of each building that produces army units at the gather point, once. */
 	void SetRallyPoints(const URTSAIBuildOrderData& BuildOrder);
 
-	/** Sends a wave when the army is ready, and moves wave units that have nothing left to fight on to the next building. */
+	/**
+	 * Lets wave units take on or fall back from the defences firing on them (EngageDefences), sends a wave when the army is
+	 * ready and has a target it can take (ChooseWaveTarget), and moves wave units that have nothing left to fight on to the
+	 * next one, or back to the gather point when none is left that they can take.
+	 */
 	void UpdateWaves(float DeltaSeconds);
 
 	/**
@@ -259,6 +336,12 @@ private:
 	TArray<FPendingBuild> PendingBuilds;
 
 	TArray<TWeakObjectPtr<ARTSUnit>> WaveUnits;
+
+	/** The defence each wave unit was last ordered to attack. */
+	TMap<TWeakObjectPtr<ARTSUnit>, TWeakObjectPtr<ARTSBuilding>> WaveAssaults;
+
+	/** Wave units pulled back from a defence on their way to the gather point; they join no wave before they get there. */
+	TArray<TWeakObjectPtr<ARTSUnit>> Retreating;
 
 	TSet<TWeakObjectPtr<ARTSBuilding>> RalliedBuildings;
 

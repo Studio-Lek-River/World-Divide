@@ -16,6 +16,7 @@
 #include "Data/RTSHarvesterData.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSUpgradeData.h"
+#include "Data/RTSWeaponData.h"
 #include "Economy/RTSHarvesterComponent.h"
 #include "Economy/RTSSupplySource.h"
 #include "Engine/World.h"
@@ -74,6 +75,27 @@ namespace
 			Sum += Unit->GetActorLocation();
 		}
 		return Units.IsEmpty() ? Sum : Sum / Units.Num();
+	}
+
+	/** Damage a second of Weapon's fire deals, 0 unarmed. */
+	float GetDamagePerSecond(const URTSWeaponComponent& Weapon)
+	{
+		const URTSWeaponData* Data = Weapon.GetWeaponData();
+		return Data ? Weapon.GetDamage() / Data->ReloadSeconds : 0.f;
+	}
+
+	/** The point of Target's footprint nearest From: a building's or unit's edge, a supply source's, or its location. */
+	FVector GetClosestPoint(const AActor& Target, const FVector& From)
+	{
+		if (const IRTSTargetable* Targetable = Cast<IRTSTargetable>(&Target))
+		{
+			return Targetable->GetClosestFootprintPoint(From);
+		}
+		if (const ARTSSupplySource* Source = Cast<ARTSSupplySource>(&Target))
+		{
+			return Source->GetClosestFootprintPoint(From);
+		}
+		return Target.GetActorLocation();
 	}
 }
 
@@ -157,6 +179,77 @@ namespace RTSAI
 		const int32 Count = Army.IsEmpty() ? 0 : FMath::Clamp(FMath::CeilToInt(Army.Num() * Share), 1, Army.Num());
 		Indices.SetNum(Count);
 		return Indices;
+	}
+
+	bool CanOvercome(TConstArrayView<FFighter> Attackers, const FFighter& Defence, float Margin)
+	{
+		// The fight in short steps, until a side is spent or it has gone on far longer than an assault does.
+		constexpr float Step = 0.25f;
+		constexpr float MaxSeconds = 300.f;
+
+		TArray<int32> Order;
+		for (int32 Index = 0; Index < Attackers.Num(); ++Index)
+		{
+			if (Attackers[Index].DamagePerSecond > 0.f && Attackers[Index].Health > 0.f)
+			{
+				Order.Add(Index);
+			}
+		}
+		const float Needed = Defence.Health * Margin;
+		if (Needed <= 0.f)
+		{
+			return true;
+		}
+		if (Order.IsEmpty())
+		{
+			return false;
+		}
+		// The shortest ranges close in furthest, so the defence has them nearest.
+		Order.StableSort([&Attackers](int32 A, int32 B) { return Attackers[A].Range < Attackers[B].Range; });
+
+		// When each attacker comes into the defence's range, and into its own.
+		TArray<float> Health;
+		TArray<float> UnderFireFrom;
+		TArray<float> FiringFrom;
+		for (const FFighter& Attacker : Attackers)
+		{
+			const float Start = Attacker.Distance < 0.f ? Defence.Range : Attacker.Distance;
+			const float Speed = FMath::Max(Attacker.Speed, 1.f);
+			Health.Add(Attacker.Health);
+			UnderFireFrom.Add(FMath::Max(Start - Defence.Range, 0.f) / Speed);
+			FiringFrom.Add(FMath::Max(Start - Attacker.Range, 0.f) / Speed);
+		}
+
+		float Dealt = 0.f;
+		for (float Time = 0.f; Time < MaxSeconds; Time += Step)
+		{
+			bool bAnyLeft = false;
+			for (const int32 Index : Order)
+			{
+				if (Health[Index] > 0.f)
+				{
+					bAnyLeft = true;
+					Dealt += Time >= FiringFrom[Index] ? Attackers[Index].DamagePerSecond * Step : 0.f;
+				}
+			}
+			if (Dealt >= Needed)
+			{
+				return true;
+			}
+			if (!bAnyLeft)
+			{
+				return false;
+			}
+			for (const int32 Index : Order)
+			{
+				if (Health[Index] > 0.f && Attackers[Index].Range <= Defence.Range && Time >= UnderFireFrom[Index])
+				{
+					Health[Index] -= Defence.DamagePerSecond * Step;
+					break;
+				}
+			}
+		}
+		return false;
 	}
 }
 
@@ -445,8 +538,14 @@ void ARTSAIPlayer::FollowBuildOrder()
 	{
 		return;
 	}
+	// A step the credits do not cover is worth waiting for only while a harvester brings more (#181).
+	const int32 Credits = GetRTSPlayerState()->GetCredits();
+	const bool bIncomeComing = HasIncomeComing();
 	const int32 Step = RTSAI::FindCurrentStep(BuildOrder->Steps, [this](const URTSEntityData& Entry) { return CountOwned(Entry); },
-		[this](const URTSEntityData& Entry) { return CanWorkOn(Entry); });
+		[this, Credits, bIncomeComing](const URTSEntityData& Entry)
+		{
+			return (Credits >= Entry.Cost || bIncomeComing) && CanWorkOn(Entry);
+		});
 	if (Step == INDEX_NONE)
 	{
 		ProduceArmy(*BuildOrder);
@@ -602,14 +701,9 @@ bool ARTSAIPlayer::CanArmyGrow(const URTSAIBuildOrderData& BuildOrder) const
 {
 	const UWorld* World = GetWorld();
 	const ARTSPlayerState* Player = GetRTSPlayerState();
-	for (TActorIterator<ARTSUnit> It(World); It; ++It)
+	if (HasIncomeComing())
 	{
-		// Credits on their way.
-		if (It->GetTeamId() == Player->GetTeamId() && IsStanding(*It) && It->GetHarvesterComponent()->CanHarvest()
-			&& It->GetQueuedCommandCount() > 0)
-		{
-			return true;
-		}
+		return true;
 	}
 	for (TActorIterator<ARTSBuilding> It(World); It; ++It)
 	{
@@ -631,10 +725,24 @@ bool ARTSAIPlayer::CanArmyGrow(const URTSAIBuildOrderData& BuildOrder) const
 	return false;
 }
 
+bool ARTSAIPlayer::HasIncomeComing() const
+{
+	const int32 TeamId = GetRTSPlayerState()->GetTeamId();
+	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
+	{
+		if (It->GetTeamId() == TeamId && IsStanding(*It) && It->GetHarvesterComponent()->CanHarvest() && It->GetQueuedCommandCount() > 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void ARTSAIPlayer::KeepHarvesting()
 {
 	const UWorld* World = GetWorld();
 	const int32 TeamId = GetRTSPlayerState()->GetTeamId();
+	TOptional<TArray<ARTSBuilding*>> Defences;
 	for (TActorIterator<ARTSUnit> It(World); It; ++It)
 	{
 		ARTSUnit* Unit = *It;
@@ -643,16 +751,229 @@ void ARTSAIPlayer::KeepHarvesting()
 		{
 			continue;
 		}
-		// Only while there is work: a source in reach and a depot to take it to.
+		// Only while there is work: a source and a depot to take it to.
 		const FVector Location = Unit->GetActorLocation();
-		if (!ARTSSupplySource::FindNearest(*World, Location, Data->SearchRadius)
-			|| !URTSHarvesterComponent::FindNearestDepot(*World, TeamId, Location))
+		if (!URTSHarvesterComponent::FindNearestDepot(*World, TeamId, Location))
 		{
 			continue;
 		}
 		FRTSCommand Harvest;
 		Harvest.Type = ERTSCommandType::Harvest;
+		if (!ARTSSupplySource::FindNearest(*World, Location, Data->SearchRadius))
+		{
+			// None in its own search radius: the nearest elsewhere on the map, as a player would send it, that no enemy
+			// defence covers (#181).
+			if (!Defences.IsSet())
+			{
+				Defences = FindEnemyDefences();
+			}
+			ARTSSupplySource* Nearest = nullptr;
+			float NearestDistance = TNumericLimits<float>::Max();
+			for (TActorIterator<ARTSSupplySource> Source(World); Source; ++Source)
+			{
+				const float Distance = FVector::DistSquared2D(Location, Source->GetActorLocation());
+				if (Source->IsDepleted() || Distance >= NearestDistance
+					|| Defences->ContainsByPredicate([&Source](const ARTSBuilding* Defence)
+					{
+						const FVector From = Defence->GetActorLocation();
+						return FVector::Dist2D(From, Source->GetClosestFootprintPoint(From))
+							<= Defence->GetWeaponComponent()->GetRange() + SafeHarvestMargin;
+					}))
+				{
+					continue;
+				}
+				Nearest = *Source;
+				NearestDistance = Distance;
+			}
+			if (!Nearest)
+			{
+				continue;
+			}
+			Harvest.TargetActor = Nearest;
+		}
 		Issue({ Unit }, Harvest);
+	}
+}
+
+TArray<ARTSBuilding*> ARTSAIPlayer::FindEnemyDefences() const
+{
+	const int32 TeamId = GetRTSPlayerState()->GetTeamId();
+	TArray<ARTSBuilding*> Defences;
+	for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
+	{
+		// A building's weapon is only set while it is constructed and powered: the ones that fire.
+		const URTSWeaponData* Weapon = It->GetWeaponComponent()->GetWeaponData();
+		if (It->GetTeamId() != TeamId && IsStanding(*It) && Weapon && Weapon->CanHit(/*bAirborne*/ false))
+		{
+			Defences.Add(*It);
+		}
+	}
+	return Defences;
+}
+
+TArray<ARTSBuilding*> ARTSAIPlayer::FindCovering(TConstArrayView<ARTSBuilding*> Defences, const AActor& Target)
+{
+	TArray<ARTSBuilding*> Covering;
+	for (ARTSBuilding* Defence : Defences)
+	{
+		const FVector From = Defence->GetActorLocation();
+		if (Defence == &Target || FVector::Dist2D(From, GetClosestPoint(Target, From)) <= Defence->GetWeaponComponent()->GetRange())
+		{
+			Covering.Add(Defence);
+		}
+	}
+	return Covering;
+}
+
+bool ARTSAIPlayer::CanOvercome(TConstArrayView<ARTSUnit*> Units, const ARTSBuilding& Defence, TConstArrayView<ARTSBuilding*> Defences,
+	float Margin, bool bWhereTheyStand)
+{
+	TArray<RTSAI::FFighter> Attackers;
+	for (const ARTSUnit* Unit : Units)
+	{
+		const URTSWeaponComponent* Weapon = Unit->GetWeaponComponent();
+		if (Weapon->GetWeaponData() && Weapon->GetWeaponData()->CanHit(/*bAirborne*/ false))
+		{
+			// Units still outside its range count as arriving at its edge, as the wave was weighed when it set off.
+			const FVector Location = Unit->GetActorLocation();
+			const float Distance = FMath::Min(static_cast<float>(FVector::Dist2D(Location, Defence.GetClosestFootprintPoint(Location))),
+				Defence.GetWeaponComponent()->GetRange());
+			Attackers.Add({ Unit->GetHealthComponent()->GetHealth(), GetDamagePerSecond(*Weapon), Weapon->GetRange(),
+				Unit->GetUnitData() ? Unit->GetUnitData()->MoveSpeed : 0.f, bWhereTheyStand ? Distance : -1.f });
+		}
+	}
+	// The defences in range of it fire on the attackers too.
+	RTSAI::FFighter Target;
+	Target.Health = Defence.GetHealthComponent()->GetHealth();
+	Target.Range = Defence.GetWeaponComponent()->GetRange();
+	for (const ARTSBuilding* Covering : FindCovering(Defences, Defence))
+	{
+		Target.DamagePerSecond += GetDamagePerSecond(*Covering->GetWeaponComponent());
+	}
+	return RTSAI::CanOvercome(Attackers, Target, Margin);
+}
+
+AActor* ARTSAIPlayer::ChooseWaveTarget(TConstArrayView<ARTSUnit*> Units, TConstArrayView<ARTSBuilding*> Defences, float Margin) const
+{
+	const FVector Center = GetCentroid(Units);
+	const int32 TeamId = GetRTSPlayerState()->GetTeamId();
+	TArray<ARTSBuilding*> Buildings;
+	for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
+	{
+		if (It->GetTeamId() != TeamId && IsStanding(*It))
+		{
+			Buildings.Add(*It);
+		}
+	}
+	Buildings.StableSort([&Center](const ARTSBuilding& A, const ARTSBuilding& B)
+	{
+		return FVector::DistSquared2D(A.GetActorLocation(), Center) < FVector::DistSquared2D(B.GetActorLocation(), Center);
+	});
+
+	for (ARTSBuilding* Building : Buildings)
+	{
+		TArray<ARTSBuilding*> Covering = FindCovering(Defences, *Building);
+		if (Covering.IsEmpty())
+		{
+			return Building;
+		}
+		// The defences have to go first, the nearest of them first.
+		Covering.StableSort([&Center](const ARTSBuilding& A, const ARTSBuilding& B)
+		{
+			return FVector::DistSquared2D(A.GetActorLocation(), Center) < FVector::DistSquared2D(B.GetActorLocation(), Center);
+		});
+		if (CanOvercome(Units, *Covering[0], Defences, Margin))
+		{
+			return Covering[0];
+		}
+	}
+	return nullptr;
+}
+
+void ARTSAIPlayer::AttackMove(TConstArrayView<ARTSUnit*> Units, const AActor& Target)
+{
+	// An attack-move, so enemy units on the way and around the target are fought first; EngageDefences turns them on a
+	// defence once it fires on them.
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::AttackMove;
+	Command.TargetLocation = Target.GetActorLocation();
+	Issue(Units, Command);
+	for (ARTSUnit* Unit : Units)
+	{
+		WaveAssaults.Remove(Unit);
+	}
+}
+
+void ARTSAIPlayer::EngageDefences(TConstArrayView<ARTSBuilding*> Defences)
+{
+	for (ARTSBuilding* Defence : Defences)
+	{
+		// The whole wave weighs in: units still on their way join the fight as they arrive.
+		const TArray<ARTSUnit*> Wave = GetWaveUnits();
+		const float Range = Defence->GetWeaponComponent()->GetRange();
+		TArray<ARTSUnit*> Group;
+		bool bUnderFire = false;
+		for (const TWeakObjectPtr<ARTSUnit>& Unit : WaveUnits)
+		{
+			const FVector Location = Unit->GetActorLocation();
+			const float Distance = FVector::Dist2D(Location, Defence->GetClosestFootprintPoint(Location));
+			if (Distance <= Range + AssaultReach)
+			{
+				Group.Add(Unit.Get());
+				bUnderFire |= Distance <= Range;
+			}
+		}
+		if (!bUnderFire)
+		{
+			continue;
+		}
+
+		if (CanOvercome(Wave, *Defence, Defences, 1.f, /*bWhereTheyStand*/ true))
+		{
+			// At the defence rather than at another building nearer them while it fires on them; units fighting enemy units
+			// carry on with that.
+			TArray<ARTSUnit*> Ordered;
+			for (ARTSUnit* Unit : Group)
+			{
+				const AActor* Target = Unit->GetWeaponComponent()->GetTarget();
+				if (WaveAssaults.FindRef(Unit).Get() != Defence && Target != Defence && !Cast<ARTSUnit>(Target))
+				{
+					Ordered.Add(Unit);
+				}
+			}
+			if (!Ordered.IsEmpty())
+			{
+				FRTSCommand Attack;
+				Attack.Type = ERTSCommandType::Attack;
+				Attack.TargetActor = Defence;
+				Attack.TargetLocation = Defence->GetActorLocation();
+				Issue(Ordered, Attack);
+				for (ARTSUnit* Unit : Ordered)
+				{
+					WaveAssaults.Add(Unit, Defence);
+				}
+			}
+			continue;
+		}
+
+		// Too strong for them: back to the gather point, to go again with the army.
+		FVector Gather;
+		if (!GetGatherPoint(Gather))
+		{
+			continue;
+		}
+		FRTSCommand Retreat;
+		Retreat.Type = ERTSCommandType::Move;
+		Retreat.TargetLocation = Gather;
+		Issue(Group, Retreat);
+		for (ARTSUnit* Unit : Group)
+		{
+			WaveUnits.Remove(Unit);
+			WaveAssaults.Remove(Unit);
+			Retreating.Add(Unit);
+		}
+		UE_LOG(LogWorldDivide, Log, TEXT("AI team %d pulls %d wave units back from %s"),
+			GetRTSPlayerState()->GetTeamId(), Group.Num(), *Defence->GetName());
 	}
 }
 
@@ -694,8 +1015,20 @@ void ARTSAIPlayer::UpdateWaves(float DeltaSeconds)
 {
 	SecondsSinceWave += DeltaSeconds;
 	WaveUnits.RemoveAll([](const TWeakObjectPtr<ARTSUnit>& Unit) { return !IsStanding(Unit.Get()); });
+	for (auto It = WaveAssaults.CreateIterator(); It; ++It)
+	{
+		if (!WaveUnits.Contains(It->Key))
+		{
+			It.RemoveCurrent();
+		}
+	}
+	// Units pulled back count as army again once they are back at the gather point.
+	Retreating.RemoveAll([](const TWeakObjectPtr<ARTSUnit>& Unit) { return !IsStanding(Unit.Get()) || Unit->GetQueuedCommandCount() == 0; });
 
-	// Wave units that reached their target with nothing left in range go on to the next building.
+	const TArray<ARTSBuilding*> Defences = FindEnemyDefences();
+	EngageDefences(Defences);
+
+	// Wave units that reached their target with nothing left in range go on to the next one they can take, or back.
 	TArray<ARTSUnit*> Done;
 	for (const TWeakObjectPtr<ARTSUnit>& Unit : WaveUnits)
 	{
@@ -704,17 +1037,26 @@ void ARTSAIPlayer::UpdateWaves(float DeltaSeconds)
 			Done.Add(Unit.Get());
 		}
 	}
-	if (const ARTSBuilding* Next = Done.IsEmpty() ? nullptr : FindNearestEnemyBuilding(GetCentroid(Done)))
+	if (!Done.IsEmpty())
 	{
-		FRTSCommand AttackMove;
-		AttackMove.Type = ERTSCommandType::AttackMove;
-		AttackMove.TargetLocation = Next->GetActorLocation();
-		Issue(Done, AttackMove);
+		FVector Gather;
+		if (const AActor* Next = ChooseWaveTarget(Done, Defences, 1.f))
+		{
+			AttackMove(Done, *Next);
+		}
+		else if (GetGatherPoint(Gather))
+		{
+			FRTSCommand AttackMove;
+			AttackMove.Type = ERTSCommandType::AttackMove;
+			AttackMove.TargetLocation = Gather;
+			Issue(Done, AttackMove);
+			WaveUnits.RemoveAll([&Done](const TWeakObjectPtr<ARTSUnit>& Unit) { return Done.Contains(Unit.Get()); });
+		}
 	}
 
 	// The army stays home while it fights off an enemy in the base; responders stay on their own fight.
 	TArray<ARTSUnit*> Army = GatherArmy();
-	Army.RemoveAll([this](const ARTSUnit* Unit) { return Responders.Contains(Unit); });
+	Army.RemoveAll([this](const ARTSUnit* Unit) { return Responders.Contains(Unit) || Retreating.Contains(Unit); });
 	if (bDefending || Army.IsEmpty())
 	{
 		return;
@@ -725,15 +1067,14 @@ void ARTSAIPlayer::UpdateWaves(float DeltaSeconds)
 	{
 		return;
 	}
-	const ARTSBuilding* Target = FindNearestEnemyBuilding(GetCentroid(Army));
+	// An army that cannot take anything left keeps gathering rather than throwing itself at the defences. While it can
+	// grow it waits for a margin; once it cannot, it goes as soon as it can win at all.
+	const AActor* Target = ChooseWaveTarget(Army, Defences, bCanGrow ? AssaultMargin : 1.f);
 	if (!Target)
 	{
 		return;
 	}
-	FRTSCommand AttackMove;
-	AttackMove.Type = ERTSCommandType::AttackMove;
-	AttackMove.TargetLocation = Target->GetActorLocation();
-	Issue(Army, AttackMove);
+	AttackMove(Army, *Target);
 	for (ARTSUnit* Unit : Army)
 	{
 		WaveUnits.Add(Unit);

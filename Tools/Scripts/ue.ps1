@@ -7,6 +7,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task b
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Commands
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -TimeDilation 1
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Smoke.AIvsAI -Repeat 10
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Smoke.AIvsAI -Cvars rts.Nav.MoveRequestsPerFrame=6
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup -Render
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task editor
@@ -30,7 +31,9 @@ Exits nonzero on any failure: 2 when the editor is running (build, editor), 3 wh
 The PIE smoke tests tick a fixed 1/30 game second per frame as fast as the CPU allows (-RTSTestFixedStep=30); -TimeDilation N
 instead runs them in step with real time at N game seconds per real second, -TimeDilation 1 at real time.
 -Repeat N runs the tests N times, each in a fresh editor, and passes only when every run does; it prints each run's result,
-its wall-clock time and the tests' info lines that differ between runs, then the total (#179).
+its wall-clock time and the tests' info lines that differ between runs, then the total (#179). -Cvars sets console variables
+for the test run (-dpcvars, comma-separated name=value), such as another rts.Nav.MoveRequestsPerFrame to try a different
+fixed-step trajectory (#181).
 Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
 Editor opens the editor with the Unreal MCP server at http://127.0.0.1:8000/mcp (docs/ui/AI_TEAM.md); test and setup run without it.
 Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in the UI test state for each faction look at
@@ -86,6 +89,8 @@ param(
 
 	[ValidateRange(1, 100)]
 	[int]$Repeat = 1,
+
+	[string]$Cvars = '',
 
 	[switch]$Render,
 
@@ -193,8 +198,9 @@ function Invoke-TestRun {
 
 	# A fixed time step unless -TimeDilation asks for real-time ticking (RTSTests::ApplyTestTimeDilation).
 	$TimeArg = if ($TimeDilation -gt 0) { "-RTSTestTimeDilation=$TimeDilation" } else { '-RTSTestFixedStep=30' }
+	$CvarArgs = @(if ($Cvars) { "-dpcvars=$Cvars" })
 	& $EditorCmd $Project "-ExecCmds=Automation RunTests $Filter;Quit" '-TestExit=Automation Test Queue Empty' `
-		"-ReportExportPath=$ReportDir" "-abslog=$LogFile" $TimeArg $NoMCPPlugins -unattended -nullrhi -nosplash -nosound | Out-Host
+		"-ReportExportPath=$ReportDir" "-abslog=$LogFile" $TimeArg @CvarArgs $NoMCPPlugins -unattended -nullrhi -nosplash -nosound | Out-Host
 	$EditorExit = $LASTEXITCODE
 
 	$Index = Join-Path $ReportDir 'index.json'

@@ -1063,3 +1063,71 @@ Every row is inside the run-to-run spread of about 0.6 ms. The locomotion budget
 - **Other moves still search at once:** attack orders on a unit or a building (`UpdateAttackOrder`), harvesters, builders, and the engine's repaths when a building changes the navmesh. A 100-unit attack order on a far target would still spike.
 - **Latency grows with the group.** About 0.5 frames per long-route vehicle at 2 ms, so the back of 100 vehicles starts about 1.6 s after the front at 30 Hz. A shared route per group and agent (#174's option A) would shorten that.
 - **The budget is real time,** so on a slower machine more requests wait. The simulation's timing then depends on CPU speed, as with any real-time budget.
+
+## #181 (AIvsAI matches that end with both sides bankrupt)
+
+Same machine, on 2026-10-18. Every run is `WorldDivide.Smoke.AIvsAI` on L_SkirmishDuel under the fixed 30 Hz test step of #179 (`-RTSTestFixedStep=30`, `-nullrhi`). A setting other than the default is passed with `ue.ps1 -Task test -Filter WorldDivide.Smoke.AIvsAI -Cvars rts.Nav.MoveRequestsPerFrame=N`. Each setting plays one fixed match.
+
+### Root cause
+
+L_SkirmishDuel has one 5000 supply source per base and 10000 starting credits per side. Both sides run dry after about 300 game seconds. In the stand-offs one side had already won the field and destroyed the other's headquarters, depot and factory. A tower (81 m range, 500 health) and the power plant beside it were left. The power plant keeps its team in the match, because defences alone do not.
+
+- **Waves spent on the tower.** Wave units attack-moved to the nearest building and shot the power plant or whatever else stood nearest. Meanwhile the tower, which outranges rifles (35 m) and tanks (65 m), destroyed them one by one. In one diagnosed run, 19 units fell to a tower that lost 160 health. #179's rule that an army which can no longer grow goes once the interval has passed then sent the last one or two units into it as well.
+- **Build-order steps without income.** An AI whose depot was destroyed waited for a 1500 depot with 650 credits and no harvester at work, instead of training the army it could still pay for.
+- **Supplies out of reach.** Idle harvesters only look within their 200 m search radius. The other base's source, 360 m away, still held supplies at the end of a stand-off but was never used.
+
+### What changed (`ARTSAIPlayer`)
+
+- **The assault estimate** (`RTSAI::CanOvercome`) runs a short simulation of the fight. The attackers close in at their move speed and fire once within their own range. The defence fires at the attacker with the shortest range first, and never at one that outranges it. The estimate counts the defence's damage plus that of every other defence in range of it. Its inputs are the units' current health, weapon damage, reload, range and speed, and the defences' health, damage and range. Only constructed, powered defences count, and those are the ones whose weapon fires. Nothing hidden is used: every player sees these buildings.
+- **Wave targets** (`ChooseWaveTarget`) are taken nearest the army first:
+  - An enemy building no defence covers is attacked as before.
+  - A building a defence covers is attacked through that defence, if the wave can destroy it with `AssaultMargin` (1.5×) of its health to spare. Without the margin the next building is tried.
+  - With no building left that it can take, the army keeps gathering instead of setting off.
+  - Once the army can no longer grow (no credits for an army unit, none queued, no harvester at work), the margin drops to 1×. It then goes as soon as it can win at all.
+- **Defences in the fight** (`EngageDefences`) are weighed again each think, once a defence fires on wave units:
+  - **The wave can still win** (1×, counting units already in range from where they stand and the rest from its range's edge): the units in the fight that are not fighting enemy units attack the defence, instead of another building in their range.
+  - **It cannot**: the units within `AssaultReach` of the fight fall back to the gather point and rejoin the army. They set off in no new wave before they arrive.
+- **Waves still attack-move**, so enemy units on the way and around the target are fought first. Only units wasting fire on a building that cannot hurt them are switched to the defence.
+- **Build-order recovery:** a step the credits do not cover is passed over, like an out-of-reach step (#179), while no own harvester is at work. With one at work the AI still saves up for it.
+- **Far sources:** an idle harvester with no source in its search radius, while an own depot stands, is ordered to the nearest source elsewhere that no enemy defence covers (its range plus `SafeHarvestMargin`, 10 m). This is the same Harvest order a player can give.
+- No change to credits, costs, unit or building data, the victory conditions or the 1800 s limit of the test. Orders still take `RTSCommands::Issue`.
+- `ue.ps1 -Cvars name=value` passes console variables to a test run (`-dpcvars`), to replay the match on another fixed-step trajectory.
+
+### Results
+
+| `rts.Nav.MoveRequestsPerFrame` | Before (498df5f) | After |
+|---|---|---|
+| 4 (default) | stand-off at 1800 s | team 1 wins at 352 s, 10 of 10 runs identical |
+| 1 | team 1 wins at 360 s | team 1 wins at 345 s |
+| 2 | team 1 wins at 395 s | team 1 wins at 653 s |
+| 3 | team 1 wins at 353 s | team 1 wins at 454 s |
+| 5 | stand-off | team 1 wins at 341 s |
+| 6 | stand-off | stand-off |
+| 7 | team 1 wins at 360 s | team 1 wins at 657 s |
+| 8 | team 1 wins at 361 s | team 0 wins at 682 s |
+
+- `ue.ps1 -Task test -Filter WorldDivide.Smoke.AIvsAI -Repeat 10` passes 10 of 10 in 302 s wall-clock (30 s a run). Every run reports the same info lines (end-state digest `5cd35b8e`).
+- With `-Cvars`, settings 1, 2, 3, 5, 7 and 8 each end with a winner, in 30 to 42 s wall-clock each. Settings 9, 10, 12 and 16, run once with the same code during development, also end with a winner.
+- A stand-off runs the full 1800 game seconds, which takes about 80 s wall-clock.
+
+### Test coverage
+
+- **`WorldDivide.AI.CanOvercome`**: the estimate against the duel's tower:
+  - five rifles walking in fall short, but five already beside it win;
+  - two tanks fall short and three win, though not with a 1.5× margin;
+  - six tanks have that margin;
+  - a weapon that outranges the tower always wins.
+- **`WorldDivide.AI.WavesWeighDefences`**:
+  - two light tanks hold back from a building a strong tower covers;
+  - they go for a building no defence covers once there is one;
+  - six strong tanks set off at the covered building.
+- **`WorldDivide.AI.WavesEngageDefences`**: six strong tanks under a tower's fire attack it together, and two light tanks fall back to the gather point and leave the wave.
+- **`WorldDivide.AI.BuildOrderWithoutIncome`**: a 1500 step with 650 credits is passed over for infantry without income, and waited for while a harvester is at work. `WorldDivide.AI.BuildOrder` now has a harvester at work, so its "waits rather than skipping ahead" check covers the case where waiting is still right.
+- **`WorldDivide.AI.HarvestFarSource`**: an idle harvester goes to a source outside its search radius, but not to one an enemy tower covers.
+
+### Remaining limitations
+
+- **A genuine stand-off can still happen** (setting 6). Both armies trade around team 1's tower until about 500 s. Team 0 ends with 7 damaged units against a 460-health tower, which the estimate rightly calls a loss. Team 1 has no army, and neither side has credits or supplies left. The AI now holds rather than feeding units to the tower, so the match runs to the limit with no winner. The game has no rule that ends such a match. An explicit draw (for example, the match ends drawn once no team has an armed unit, a production building it can pay for or a harvester at work for N seconds) is a gameplay decision for a separate issue. It is not counted as a win here.
+- **The estimate is a model.** It ignores enemy units defending around the defence, terrain, and a defence's habit of keeping its current target. A wave can still lose a fight the estimate called. It then falls back once the fight turns.
+- **No flanking:** a wave does not look for a firing position outside a defence's range, such as tanks shooting a building the tower covers only on its near side.
+- **A far source on the way through the enemy army** is still used if no defence covers it. A harvester that cannot reach it is re-ordered each think.
