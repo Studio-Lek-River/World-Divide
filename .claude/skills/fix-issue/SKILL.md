@@ -1,6 +1,6 @@
 ---
 name: fix-issue
-description: Take a World-Divide GitHub issue number, investigate it against the UE 5.8 codebase, propose a fix and wait for approval, then implement it on main, build, run the automation tests and commit with Closes #n. Wraps the birds-ai issue flow (D:\birds-ai\commands\issue\body.md) with the Unreal and repo rules of this project. Use with /fix-issue <number>; a bare /fix-issue says what to pick up next.
+description: Take a World-Divide GitHub issue number, investigate it against the UE 5.8 codebase, propose a fix and wait for approval, then implement it on main, build, test only where the lean test rule says so and commit with Closes #n. Wraps the birds-ai issue flow (D:\birds-ai\commands\issue\body.md) with the Unreal and repo rules of this project. Use with /fix-issue <number>; a bare /fix-issue says what to pick up next.
 user-invocable: true
 argument-hint: "[issue number]"
 ---
@@ -31,7 +31,7 @@ If that file cannot be read, use this fallback: inspect the issue → investigat
 
 ## 2. Gate 1 — propose and stop
 
-Present the viable approaches: affected files and classes, new classes/data assets, how it replicates, which tests prove the Acceptance, and tradeoffs. Recommend one. Do not invent alternatives just to offer a choice. Then `AskUserQuestion` (approve / adjust / stop) and wait. A recommendation is not approval.
+Present the viable approaches: affected files and classes, new classes/data assets, how it replicates, which Acceptance items need a test under the lean test rule (section 4; usually none, the rest is a manual check), and tradeoffs. Recommend one. Do not invent alternatives just to offer a choice. Then `AskUserQuestion` (approve / adjust / stop) and wait. A recommendation is not approval.
 
 ## 3. Prepare git
 
@@ -47,7 +47,12 @@ Once approved:
 - **Server-authoritative.** Every player order is an `FRTSCommand` sent through `ARTSPlayerController::Server_IssueCommand` and executed only on the server (`RTSCommands::Dispatch`). Gameplay state changes happen on the server and replicate; clients never mutate it directly. Singleplayer runs the same path.
 - **Never hand-edit `.uasset` / `.umap`.** They are binary and live in Git LFS. Create or change test content by extending `Tools/Editor/setup_testmap.py` and regenerating.
 - **Module dependencies** go in `Source/WorldDivide/WorldDivide.Build.cs`; editor-only code stays behind `WITH_EDITOR` / `Target.bBuildEditor`.
-- **Tests.** Cover the issue's Acceptance with automation tests in `Source/WorldDivide/Tests`, named under the `WorldDivide.` prefix, matching the style of `RTSCommandTests.cpp`. PIE-driven tests run headless (`-nullrhi`).
+- **Tests: lean, not per detail.** Do not cover every Acceptance item with a test. Write a test only when one of these holds, and say which rule in the report:
+  1. **Shared foundation**: commands (`RTSCommands::Dispatch`), replication, navigation/movement, data loading. Breakage there spreads silently.
+  2. **Bug that came back**: a regression that already bit once gets one test.
+  3. **Data validation**: one test that loops over all data assets of a kind (units, weapons, UI layouts), never one test per asset.
+  
+  Not tested: tuning values, visuals (muzzle flash, recoil, smoke), feel, single-unit details, UI looks. Those go in the manual test plan. Prefer extending an existing test over adding a new one. Each unit/building milestone gets at most one smoke test that runs its whole flow (spawn, move, fire, die), written or extended at the milestone gate (section 8a). Tests live in `Source/WorldDivide/Tests`, named under the `WorldDivide.` prefix, in the style of `RTSCommandTests.cpp`; PIE-driven tests run headless (`-nullrhi`). Existing tests must still compile: fix a compile break, but do not run the suite for it.
 - **Original IP only.** Nothing from C&C Generals: no names, art, audio, UI or code.
 - Match the surrounding code: tabs, `RTS` prefix, Unreal naming (`A`/`U`/`F`/`E`), comment density.
 - Implement only the approved direction. Findings outside the scope go to the report as suggested new issues, not into this change.
@@ -59,19 +64,15 @@ All through `Tools/Scripts/ue.ps1` (engine from `UE_ROOT`, default `D:\Program F
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task build
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup    # only if setup_testmap.py or data-asset properties changed
-powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.<Area>,WorldDivide.<Area2>
-powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Tier fast
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.<Area>,WorldDivide.<Area2>   # only for shared-foundation changes
 ```
 
 - `build` exits 2 when `UnrealEditor` is running: ask the user to close the editor, then retry. Never kill the process yourself.
 - Run `setup` after `build`, since the script uses the new C++ classes.
-- **Tests, cheapest first; never the full suite by default.** Each editor start costs about 15 s, so put every filter in one comma-separated `-Filter`.
-  1. While working: `-Filter` with the areas the change touches and the new tests, their `[Slow]` tests included. After a failure, fix it and run `-Rerun` (only the tests that failed last time), not the whole filter again.
-  2. Before the commit: `-Tier fast`, the whole suite without the `[Slow]` tests of `Config/Tests/Tags.ini`, about 2 min. It catches regressions elsewhere. Skip it when step 1 already ran the areas that could break, such as a docs-only change or one confined to a single area.
-  3. The full suite, a bare `-Task test` (two editors in parallel, about 5 min), only when the change touches shared foundations (navigation, movement, avoidance, networking, commands, the test helpers, `Build.cs` or config), for a scale step, or at a milestone gate. Say why in the report.
-- Do not commit red. Exit 5 means the watchdog killed a hung run; the test it names is the one to look at.
-- If the run names a test over 8 s without a `[Slow]` tag, add it to `Config/Tests/Tags.ini` in the same commit.
-- The report names the filters and tier that ran, with the counts and wall clock.
+- **Tests per issue: none by default.** Build (and setup) is the per-issue check; the manual test plan covers the rest. Run tests only when the change touches a shared foundation (rule 1 in section 4) or adds a test: then one `-Filter` with the touched areas, and `-Rerun` after a failure. No `-Tier fast` and no full suite per issue; the full suite runs at the milestone gate (section 8a).
+- Do not commit with a test you ran still red. Exit 5 means the watchdog killed a hung run; the test it names is the one to look at.
+- If a run names a test over 8 s without a `[Slow]` tag, add it to `Config/Tests/Tags.ini` in the same commit.
+- The report says whether tests ran (filter, counts, wall clock) or were left to the milestone gate.
 - `git status` afterwards: include regenerated assets under `Content/` in the commit; anything unexpected (e.g. untouched maps rewritten) → investigate before committing.
 - Inspect `git diff` for leftovers, debug logging and out-of-scope edits.
 
@@ -84,8 +85,8 @@ Imperative subject in the repo's style (e.g. `Add health and weapon components w
 Report:
 
 - Commit SHA and subject, files changed.
-- Build and test result (succeeded / failed counts from `ue.ps1`).
-- Each **Acceptance** item: covered by an automated test (name it) or needs a manual check.
+- Build result, and the test result if tests ran (otherwise "tests: milestone gate").
+- Each **Acceptance** item: a manual check by default, or the automated test that covers it (name it and the lean rule it falls under).
 - A short manual checklist for what only the user can verify: PIE behaviour, feel, listen-server client view (*Play → Net Mode: Play As Listen Server, 2 players*).
 - Suggested follow-up issues, if any.
 
@@ -106,11 +107,20 @@ After the push, always, without asking again:
 - Update that milestone's description (`gh api -X PATCH repos/Studio-Lek-River/World-Divide/milestones/<id> -f description=...`): drop the line of the issue just closed and insert the new ones in order under `Work top to bottom:`, as `- [<code>] #<n> <title>` lines in their section.
 - Report the new issue URLs and the new order.
 
+## 8a. Milestone gate
+
+Run when the last open code issue of a milestone is closed, or when the producer calls it (`/fix-issue gate <milestone>`). No issue branch, same Gate 2 as above.
+
+1. Build, setup, then the full suite: a bare `-Task test` (two editors in parallel).
+2. Fix every red test. A test that only guards a tuning value or a visual detail is deleted, not fixed.
+3. For a unit/building milestone: write or extend its one smoke test (spawn, move, fire, die in PIE).
+4. Full suite green, then commit (`Pass the <milestone> gate: ...`), report counts and wall clock, and Gate 2.
+
 ## 9. What's next
 
 End every run (and answer a bare `/fix-issue`) with a short **What's next** block, so the producer never has to remember the flow. Read it live: the milestone work orders, `gh issue view` for state, and for design issues `docs/ui/ROUND_GUIDE.md`.
 
-1. **Next step.** The first open issue in the lowest open milestone's work order. Say its number and title, what it delivers in one line, and the exact command:
+1. **Next step.** If the lowest open milestone has no open code issues left and its gate has not run, the next step is its milestone gate (section 8a): `/fix-issue gate <milestone>`. Otherwise the first open issue in the lowest open milestone's work order. Say its number and title, what it delivers in one line, and the exact command:
    - code issue → `/fix-issue <n>`;
    - design issue (`[..-design]`) → the step of its round (`docs/ui/ROUND_GUIDE.md`) it is at, worked out from what exists:
      - no `Saved/UIBriefs/<Panel>/` yet → `/ui-brief <n>`, then hand the ZIP to ChatGPT;
