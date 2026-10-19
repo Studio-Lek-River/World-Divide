@@ -1754,7 +1754,7 @@ barracks = make_building("DA_TestBarracks", "Test Barracks", barracks_mesh, buil
                          (16, 16), 800.0, None, 500, 5.0, 0, 1, units=[infantry, grenadier], upgrades=[rifle_training])
 vehicle_factory = make_building("DA_TestVehicleFactory", "Test Vehicle Factory", vehicle_factory_mesh,
                                 building_fit(vehicle_factory_mesh, (24, 24), 1300.0), (24, 24), 1200.0, None, 1200, 8.0, 0, 2,
-                                units=[tank, abrams, harvester, flak_truck])
+                                units=[tank, abrams, m20, harvester, flak_truck])
 # Four pads of 12 x 24 m side by side on a low slab; each jet it produces parks on one.
 airfield = make_building("DA_TestAirfield", "Test Airfield", airfield_mesh, building_fit(airfield_mesh, (24, 48), 100.0),
                          (24, 48), 1500.0, None, 1000, 10.0, 0, 2, units=[jet], airfield_pads=4)
