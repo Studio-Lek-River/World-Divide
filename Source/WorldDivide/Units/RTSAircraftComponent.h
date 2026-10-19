@@ -24,7 +24,7 @@ UENUM()
 enum class ERTSAircraftMission : uint8
 {
 	None,
-	/** Fly at the target and make passes until the load is spent or the target is gone. */
+	/** Fly at the target, or a ground point for force fire, and make passes until the load is spent or the target is gone. */
 	Attack,
 	/** Fly to a point and circle there. */
 	Move,
@@ -36,7 +36,7 @@ enum class ERTSAircraftMission : uint8
  * Server-side pilot of an aircraft unit. It ignores the navmesh: in the air it always flies forward at the unit's MoveSpeed,
  * turns at its TurnRate toward where its mission leads, climbs to its cruise altitude and rolls into its turns. An Attack
  * order takes it off its pad once fully rearmed, at the target until the load is spent or the target is gone, then back to
- * the pad, where it rearms. Move and AttackMove send it to circle a point; Stop sends it home. A pad lost with its airfield
+ * the pad, where it rearms; a ForceFire does the same at a target of any team or at a point on the ground. Move and AttackMove send it to circle a point; Stop sends it home. A pad lost with its airfield
  * is replaced by a free pad of another own airfield; until there is one, it circles where it is.
  * Every unit has one; it stays inert unless the unit's data is URTSAircraftData. Clients see it fly through movement
  * replication, its ammo through the weapon and whether it is rearming through IsRearming.
@@ -62,6 +62,12 @@ public:
 
 	/** Server only. Takes over the unit's orders; the order queue stays empty, so Shift has no effect. */
 	void ExecuteCommand(const FRTSCommand& Command);
+
+	/**
+	 * Whether the aircraft can carry out Command as a ForceFire: its weapon may fire at it (URTSWeaponComponent::CanForceFireAt),
+	 * and it is parked, to rearm first, or has ammo left.
+	 */
+	bool CanForceFire(const FRTSCommand& Command) const;
 
 	/** Server only. Flies the mission and rearms on the pad. Public so tests can step it deterministically. */
 	void UpdateAircraft(float DeltaSeconds);
@@ -122,7 +128,13 @@ private:
 	/** Ends the mission and heads home. */
 	void ReturnToPad();
 
-	/** Points the weapon at the attack target in flight, at nothing otherwise. */
+	/** Forgets the attack target or ground point. */
+	void ClearAttack();
+
+	/** The attack can go on: a ground point always, a forced target while CanForceTarget allows it, else while CanTarget does. */
+	bool IsAttackValid() const;
+
+	/** Points the weapon at the attack target or ground point in flight, at nothing otherwise. */
 	void ApplyWeaponMode();
 
 	/** Binds to a free pad of the nearest own airfield with one; false when there is none. */
@@ -141,6 +153,13 @@ private:
 	ERTSAircraftMission Mission = ERTSAircraftMission::None;
 
 	TWeakObjectPtr<AActor> Target;
+
+	/** The ground point of a ForceFire without a target. */
+	TOptional<FVector> AttackLocation;
+
+	/** The attack is a ForceFire: at a target of any team, or at AttackLocation. */
+	bool bForced = false;
+
 	FVector MovePoint = FVector::ZeroVector;
 
 	/** Where a pad-less aircraft circles until a pad is free. */

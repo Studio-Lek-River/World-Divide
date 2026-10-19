@@ -559,6 +559,79 @@ namespace RTSAirTests
 			FlatCruiseZ, 1.f);
 		return true;
 	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAirForceFireGroundTest, "WorldDivide.Air.ForceFireGround", TestFlags)
+
+	bool FRTSAirForceFireGroundTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		TestWorld.SpawnGameState();
+		URTSWeaponData* Bombs = MakeWeapon(600.f, 40.f, true, false);
+		Bombs->SplashRadius = 300.f;
+		URTSAircraftData* JetData = MakeJet(Bombs);
+		ARTSBuilding* Airfield = SpawnCompleted(TestWorld, MakeAirfield(1), 0, FVector::ZeroVector);
+		ARTSUnit* Jet = SpawnParked(TestWorld, JetData, *Airfield);
+		const FVector Point(8000.f, 0.f, 0.f);
+		// No target: the splash at the point hits the enemy standing on it.
+		ARTSUnit* OnPoint = TestWorld.SpawnUnit(MakeGroundUnit(nullptr), 1, Point);
+		URTSHealthComponent* Health = OnPoint->GetHealthComponent();
+		URTSAircraftComponent* Aircraft = Jet->GetAircraftComponent();
+		URTSWeaponComponent* Weapon = Jet->GetWeaponComponent();
+		const FRTSCommand ForceFire = MakeCommand(ERTSCommandType::ForceFire, nullptr, Point);
+
+		TestTrue(TEXT("A parked jet can force-fire at the ground"), Jet->CanForceFire(ForceFire));
+		Jet->ExecuteCommand(ForceFire);
+		TestEqual(TEXT("The jet takes the order"), Aircraft->GetMission(), ERTSAircraftMission::Attack);
+
+		const float SpentTime = StepUntil({ Jet }, 30.f, [&] { return Weapon->GetAmmo() == 0; });
+		TestTrue(FString::Printf(TEXT("The jet spends its load at the point (%.2f s)"), SpentTime), SpentTime >= 0.f);
+		TestEqual(TEXT("Every shot landed on the point with splash"), Health->GetHealth(),
+			Health->GetMaxHealth() - JetData->AmmoPerSortie * 40.f, 0.01f);
+		StepUnits({ Jet });
+		TestEqual(TEXT("Empty, it heads home"), Aircraft->GetMission(), ERTSAircraftMission::Return);
+		TestFalse(TEXT("Its weapon drops the point"), Weapon->GetOrderedLocation().IsSet());
+		TestFalse(TEXT("An empty jet in the air takes no new force fire"), Jet->CanForceFire(ForceFire));
+
+		const float LandTime = StepUntil({ Jet }, 30.f, [&] { return Aircraft->GetState() == ERTSAircraftState::Parked; });
+		TestTrue(FString::Printf(TEXT("The jet lands (%.2f s)"), LandTime), LandTime >= 0.f);
+		TestTrue(TEXT("On its own pad"), IsParkedOnPad(*Jet, *Airfield));
+		TestEqual(TEXT("The order ends there"), Aircraft->GetMission(), ERTSAircraftMission::None);
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAirForceFireOwnTest, "WorldDivide.Air.ForceFireOwn", TestFlags)
+
+	bool FRTSAirForceFireOwnTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		URTSAircraftData* JetData = MakeJet(MakeWeapon(600.f, 40.f, true, false));
+		URTSAircraftData* SturdyData = MakeJet(nullptr);
+		SturdyData->MaxHealth = 1000.f;
+		ARTSBuilding* Airfield = SpawnCompleted(TestWorld, MakeAirfield(1), 0, FVector::ZeroVector);
+		ARTSBuilding* OtherAirfield = SpawnCompleted(TestWorld, MakeAirfield(1), 0, FVector(8000.f, 0.f, 0.f));
+		ARTSUnit* Jet = SpawnParked(TestWorld, JetData, *Airfield);
+		ARTSUnit* Own = SpawnParked(TestWorld, SturdyData, *OtherAirfield);
+		URTSAircraftComponent* Aircraft = Jet->GetAircraftComponent();
+		URTSWeaponComponent* Weapon = Jet->GetWeaponComponent();
+		URTSHealthComponent* Health = Own->GetHealthComponent();
+
+		Jet->ExecuteCommand(MakeCommand(ERTSCommandType::Attack, Own));
+		TestEqual(TEXT("A plain attack on an own jet is refused"), Aircraft->GetMission(), ERTSAircraftMission::None);
+		const FRTSCommand ForceFire = MakeCommand(ERTSCommandType::ForceFire, Own);
+		TestTrue(TEXT("Force fire at the own parked jet is allowed"), Jet->CanForceFire(ForceFire));
+		Jet->ExecuteCommand(ForceFire);
+		TestEqual(TEXT("The jet takes the order"), Aircraft->GetMission(), ERTSAircraftMission::Attack);
+
+		const float SpentTime = StepUntil({ Jet, Own }, 30.f, [&] { return Weapon->GetAmmo() == 0; });
+		TestTrue(FString::Printf(TEXT("The jet spends its load on its own jet (%.2f s)"), SpentTime), SpentTime >= 0.f);
+		TestEqual(TEXT("Every shot hit it"), Health->GetHealth(), Health->GetMaxHealth() - JetData->AmmoPerSortie * 40.f, 0.01f);
+
+		const float LandTime = StepUntil({ Jet, Own }, 30.f, [&] { return Aircraft->GetState() == ERTSAircraftState::Parked; });
+		TestTrue(FString::Printf(TEXT("The jet lands (%.2f s)"), LandTime), LandTime >= 0.f);
+		TestTrue(TEXT("On its own pad"), IsParkedOnPad(*Jet, *Airfield));
+		TestEqual(TEXT("The order ends there"), Aircraft->GetMission(), ERTSAircraftMission::None);
+		return true;
+	}
 }
 
 #endif

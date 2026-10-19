@@ -131,7 +131,7 @@ bool URTSAircraftComponent::ParkAt(ARTSBuilding& InAirfield)
 	PadIndex = Index;
 	State = ERTSAircraftState::Parked;
 	Mission = ERTSAircraftMission::None;
-	Target = nullptr;
+	ClearAttack();
 	Roll = 0.f;
 	RearmProgress = 0.f;
 	// Pads face the airfield's front, +X.
@@ -159,6 +159,7 @@ void URTSAircraftComponent::ExecuteCommand(const FRTSCommand& Command)
 		{
 			return;
 		}
+		ClearAttack();
 		Mission = ERTSAircraftMission::Attack;
 		Target = Command.TargetActor;
 		if (State == ERTSAircraftState::Landing)
@@ -167,11 +168,29 @@ void URTSAircraftComponent::ExecuteCommand(const FRTSCommand& Command)
 		}
 		break;
 	}
+	case ERTSCommandType::ForceFire:
+		if (!CanForceFire(Command))
+		{
+			return;
+		}
+		ClearAttack();
+		Mission = ERTSAircraftMission::Attack;
+		bForced = true;
+		Target = Command.TargetActor;
+		if (!Command.TargetActor)
+		{
+			AttackLocation = Command.TargetLocation;
+		}
+		if (State == ERTSAircraftState::Landing)
+		{
+			State = ERTSAircraftState::Flying;
+		}
+		break;
 	case ERTSCommandType::Move:
 	case ERTSCommandType::AttackMove:
 		Mission = ERTSAircraftMission::Move;
 		MovePoint = Command.TargetLocation;
-		Target = nullptr;
+		ClearAttack();
 		if (State == ERTSAircraftState::Landing)
 		{
 			State = ERTSAircraftState::Flying;
@@ -183,7 +202,7 @@ void URTSAircraftComponent::ExecuteCommand(const FRTSCommand& Command)
 		{
 			// Already home: a pending attack is called off.
 			Mission = ERTSAircraftMission::None;
-			Target = nullptr;
+			ClearAttack();
 		}
 		else if (Mission != ERTSAircraftMission::Return)
 		{
@@ -195,6 +214,30 @@ void URTSAircraftComponent::ExecuteCommand(const FRTSCommand& Command)
 		return;
 	}
 	ApplyWeaponMode();
+}
+
+bool URTSAircraftComponent::CanForceFire(const FRTSCommand& Command) const
+{
+	// An empty aircraft in the air has nothing to fire with; one on its pad rearms first.
+	return CanFly() && GetUnit()->GetWeaponComponent()->CanForceFireAt(Command.TargetActor, Command.TargetLocation)
+		&& (State == ERTSAircraftState::Parked || GetAmmo() != 0);
+}
+
+void URTSAircraftComponent::ClearAttack()
+{
+	Target = nullptr;
+	AttackLocation.Reset();
+	bForced = false;
+}
+
+bool URTSAircraftComponent::IsAttackValid() const
+{
+	if (AttackLocation)
+	{
+		return true;
+	}
+	const URTSWeaponComponent* Weapon = GetUnit()->GetWeaponComponent();
+	return bForced ? Weapon->CanForceTarget(Target.Get()) : Weapon->CanTarget(Target.Get());
 }
 
 void URTSAircraftComponent::UpdateAircraft(float DeltaSeconds)
@@ -211,10 +254,10 @@ void URTSAircraftComponent::UpdateAircraft(float DeltaSeconds)
 		UpdateRearm(DeltaSeconds);
 		if (Mission == ERTSAircraftMission::Attack)
 		{
-			if (!GetUnit()->GetWeaponComponent()->CanTarget(Target.Get()))
+			if (!IsAttackValid())
 			{
 				Mission = ERTSAircraftMission::None;
-				Target = nullptr;
+				ClearAttack();
 			}
 			// Each sortie starts with a full load.
 			else if (GetAmmo() >= AircraftData->AmmoPerSortie)
@@ -251,7 +294,7 @@ void URTSAircraftComponent::TakeOff()
 void URTSAircraftComponent::ReturnToPad()
 {
 	Mission = ERTSAircraftMission::Return;
-	Target = nullptr;
+	ClearAttack();
 	LoiterPoint = GetOwner()->GetActorLocation();
 	PadSearchCooldown = 0.f;
 	if (State == ERTSAircraftState::Parked)
@@ -269,8 +312,7 @@ void URTSAircraftComponent::ReturnToPad()
 
 void URTSAircraftComponent::UpdateFlight(float DeltaSeconds)
 {
-	const URTSWeaponComponent* Weapon = GetUnit()->GetWeaponComponent();
-	if (Mission == ERTSAircraftMission::Attack && (!Weapon->CanTarget(Target.Get()) || GetAmmo() == 0))
+	if (Mission == ERTSAircraftMission::Attack && (!IsAttackValid() || GetAmmo() == 0))
 	{
 		ReturnToPad();
 	}
@@ -282,7 +324,7 @@ void URTSAircraftComponent::UpdateFlight(float DeltaSeconds)
 	FVector Goal = LoiterPoint;
 	if (Mission == ERTSAircraftMission::Attack)
 	{
-		Goal = Target->GetActorLocation();
+		Goal = AttackLocation ? *AttackLocation : Target->GetActorLocation();
 	}
 	else if (Mission == ERTSAircraftMission::Move)
 	{
@@ -409,7 +451,14 @@ void URTSAircraftComponent::ApplyWeaponMode()
 	// Aircraft only fire at what they were sent to attack.
 	Weapon->SetAutoAcquire(false);
 	const bool bAttacking = State == ERTSAircraftState::Flying && Mission == ERTSAircraftMission::Attack;
-	Weapon->SetOrderedTarget(bAttacking ? Target.Get() : nullptr);
+	if (bAttacking && AttackLocation)
+	{
+		Weapon->SetOrderedLocation(*AttackLocation);
+	}
+	else
+	{
+		Weapon->SetOrderedTarget(bAttacking ? Target.Get() : nullptr, bForced);
+	}
 }
 
 void URTSAircraftComponent::NotifyPadLost()

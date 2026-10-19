@@ -98,7 +98,7 @@ public:
 
 	/**
 	 * Whether this unit can carry out Command as a ForceFire: a ground unit with a weapon that may hit its target of any team
-	 * (URTSWeaponComponent::CanForceTarget), or the ground when it has none.
+	 * (URTSWeaponComponent::CanForceTarget), or the ground when it has none. An aircraft asks its URTSAircraftComponent.
 	 */
 	bool CanForceFire(const FRTSCommand& Command) const;
 

@@ -1583,8 +1583,11 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 
 bool ARTSUnit::CanForceFire(const FRTSCommand& Command) const
 {
-	// Aircraft, parked or not, take no force-fire order.
-	return !AircraftComponent->CanFly() && WeaponComponent->CanForceFireAt(Command.TargetActor, Command.TargetLocation);
+	if (AircraftComponent->CanFly())
+	{
+		return AircraftComponent->CanForceFire(Command);
+	}
+	return WeaponComponent->CanForceFireAt(Command.TargetActor, Command.TargetLocation);
 }
 
 void ARTSUnit::StepAside(const FVector& Location)
