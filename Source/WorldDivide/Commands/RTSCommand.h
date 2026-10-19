@@ -44,7 +44,8 @@ enum class ERTSCommandType : uint8
 	LaunchSuperweapon,
 	/**
 	 * Fire at TargetActor, any IRTSTargetable of any team, until it dies or can no longer be hit; when it is null, at the
-	 * ground at TargetLocation until another order replaces it. Ground units only, and only those whose weapon can hit it.
+	 * ground at TargetLocation until another order replaces it. Ground units only, and only those whose weapon can hit it; or
+	 * the command's Building, an own armed one with the target already in range.
 	 */
 	ForceFire,
 };
@@ -71,7 +72,7 @@ struct WORLDDIVIDE_API FRTSCommand
 	UPROPERTY(BlueprintReadWrite, Category = "Command")
 	TObjectPtr<URTSEntityData> EntityData = nullptr;
 
-	/** ForceFire: the own building that carries out the order, such as a tower; null for an order to units. */
+	/** ForceFire and Stop: the own building that carries out the order, such as a tower; null for an order to units. */
 	UPROPERTY(BlueprintReadWrite, Category = "Command")
 	TObjectPtr<ARTSBuilding> Building = nullptr;
 

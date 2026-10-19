@@ -24,8 +24,8 @@ namespace RTSCommands
 
 	/**
 	 * Server only. Executes Player's order for Units, the one path every order takes, from a player's controller or an AI
-	 * opponent: refused once the match is over; a Build without units only in debug build; building orders checked against
-	 * Player; unit orders dispatched to those of Units that are Player's.
+	 * opponent: refused once the match is over; a Build without units only in debug build; an order naming a Building goes to
+	 * BuildingOrder; building orders checked against Player; unit orders dispatched to those of Units that are Player's.
 	 */
 	WORLDDIVIDE_API void Issue(ARTSPlayerState& Player, TConstArrayView<ARTSUnit*> Units, const FRTSCommand& Command);
 
@@ -61,6 +61,12 @@ namespace RTSCommands
 	WORLDDIVIDE_API bool Produce(ARTSPlayerState& Player, const FRTSCommand& Command);
 	WORLDDIVIDE_API bool CancelProduction(ARTSPlayerState& Player, const FRTSCommand& Command);
 	WORLDDIVIDE_API bool SetRallyPoint(ARTSPlayerState& Player, const FRTSCommand& Command);
+
+	/**
+	 * Server only. An order for the command's Building, one of Player's: ForceFire (ARTSBuilding::ForceFire) or Stop
+	 * (ARTSBuilding::StopFiring). Returns false, and tells Player, when the command is rejected.
+	 */
+	WORLDDIVIDE_API bool BuildingOrder(ARTSPlayerState& Player, const FRTSCommand& Command);
 
 	/**
 	 * Server only. Launches the command's TargetActor, one of Player's superweapons, at TargetLocation once it is ready.

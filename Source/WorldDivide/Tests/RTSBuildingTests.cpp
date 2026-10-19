@@ -4,11 +4,14 @@
 #include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
+#include "Commands/RTSCommandDispatch.h"
+#include "Core/RTSPlayerState.h"
 #include "Data/RTSBuilderData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
 #include "Misc/AutomationTest.h"
+#include "Player/RTSPlayerController.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
 #include "Units/RTSUnit.h"
@@ -37,6 +40,24 @@ namespace
 		Weapon->Damage = Damage;
 		Weapon->ReloadSeconds = ReloadSeconds;
 		return Weapon;
+	}
+
+	FRTSCommand MakeBuildingOrder(ERTSCommandType Type, ARTSBuilding* Building, AActor* Target, const FVector& Location = FVector::ZeroVector)
+	{
+		FRTSCommand Command;
+		Command.Type = Type;
+		Command.Building = Building;
+		Command.TargetActor = Target;
+		Command.TargetLocation = Location;
+		return Command;
+	}
+
+	void StepWeapon(ARTSBuilding& Building, float Seconds, float Step = 0.05f)
+	{
+		for (float Time = 0.f; Time < Seconds; Time += Step)
+		{
+			Building.GetWeaponComponent()->UpdateWeapon(Step);
+		}
 	}
 }
 
@@ -156,6 +177,89 @@ bool FRTSTowerTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Friendly unit untouched"), IsValid(Friendly) && Friendly->GetHealthComponent()->GetHealth() == 100.f);
 	TestTrue(TEXT("Unfinished tower never fires"),
 		IsValid(EnemyAtUnfinished) && EnemyAtUnfinished->GetHealthComponent()->GetHealth() == 100.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTowerForceFireTest, "WorldDivide.Buildings.ForceFire", TestFlags)
+
+bool FRTSTowerForceFireTest::RunTest(const FString& Parameters)
+{
+	URTSWeaponData* Gun = MakeWeapon(1000.f, 50.f, 1.f);
+	Gun->SplashRadius = 200.f;
+	URTSUnitData* Light = NewObject<URTSUnitData>();
+	Light->MaxHealth = 100.f;
+	URTSUnitData* Heavy = NewObject<URTSUnitData>();
+	Heavy->MaxHealth = 1000.f;
+
+	const FRTSTestWorld TestWorld;
+	TestWorld.SpawnGameState();
+	ARTSPlayerController* Controller = TestWorld.World->SpawnActor<ARTSPlayerController>();
+	ARTSPlayerState* Player = TestWorld.SpawnPlayer(0, 0);
+	Controller->SetPlayerState(Player);
+	// As the game mode does at login: refusals find the controller through the player state's owner.
+	Player->SetOwner(Controller);
+	ARTSPlayerState* Opponent = TestWorld.SpawnPlayer(1, 0);
+
+	ARTSBuilding* Tower = TestWorld.SpawnBuilding(MakeBuildingData(3.f, Gun), 0, FVector::ZeroVector);
+	Tower->UpdateConstruction(3.f);
+	ARTSBuilding* Unfinished = TestWorld.SpawnBuilding(MakeBuildingData(3.f, Gun), 0, FVector(0.f, 5000.f, 0.f));
+	URTSWeaponComponent* Weapon = Tower->GetWeaponComponent();
+
+	ARTSUnit* Own = TestWorld.SpawnUnit(Light, 0, FVector(400.f, 0.f, 0.f));
+	ARTSUnit* Enemy = TestWorld.SpawnUnit(Heavy, 1, FVector(700.f, 0.f, 0.f));
+	ARTSUnit* FarEnemy = TestWorld.SpawnUnit(Heavy, 1, FVector(3000.f, 0.f, 0.f));
+	ARTSUnit* Bystander = TestWorld.SpawnUnit(Heavy, 0, FVector(0.f, -650.f, 0.f));
+	ARTSUnit* Walker = TestWorld.SpawnUnit(Heavy, 0, FVector(0.f, 500.f, 0.f));
+
+	// A tower cannot close in, so a target out of range is refused.
+	RTSCommands::Issue(*Player, {}, MakeBuildingOrder(ERTSCommandType::ForceFire, Tower, FarEnemy));
+	TestEqual(TEXT("A target out of range is refused"), Controller->GetOrderRefusalCount(), 1);
+	TestTrue(TEXT("The tower takes no order at it"), Weapon->GetTarget() != FarEnemy);
+
+	// Its own unit, until it dies; then the tower engages enemies on its own again.
+	RTSCommands::Issue(*Player, {}, MakeBuildingOrder(ERTSCommandType::ForceFire, Tower, Own));
+	TestTrue(TEXT("A target in range is accepted"), Weapon->GetTarget() == Own);
+	for (float Time = 0.f; IsValid(Own) && Time < 3.f; Time += 0.05f)
+	{
+		Weapon->UpdateWeapon(0.05f);
+	}
+	TestFalse(TEXT("The tower shot its own unit dead"), IsValid(Own));
+	TestEqual(TEXT("The enemy was left alone meanwhile"), Enemy->GetHealthComponent()->GetHealth(), 1000.f);
+	StepWeapon(*Tower, 0.2f);
+	TestTrue(TEXT("Auto-acquire picks the enemy once the target is dead"), Weapon->GetTarget() == Enemy);
+
+	// The ground, with splash.
+	const FVector Spot(0.f, -600.f, 0.f);
+	RTSCommands::Issue(*Player, {}, MakeBuildingOrder(ERTSCommandType::ForceFire, Tower, nullptr, Spot));
+	TestTrue(TEXT("The tower aims at the ground"), Weapon->GetOrderedLocation().IsSet());
+	const float EnemyHealth = Enemy->GetHealthComponent()->GetHealth();
+	StepWeapon(*Tower, 1.1f);
+	TestTrue(TEXT("The splash hurts the unit next to the spot"), Bystander->GetHealthComponent()->GetHealth() < 1000.f);
+	TestEqual(TEXT("The enemy is not shot meanwhile"), Enemy->GetHealthComponent()->GetHealth(), EnemyHealth);
+
+	// The opponent can neither stop nor order this tower.
+	RTSCommands::Issue(*Opponent, {}, MakeBuildingOrder(ERTSCommandType::Stop, Tower, nullptr));
+	TestTrue(TEXT("The opponent cannot stop the tower"), Weapon->GetOrderedLocation().IsSet());
+	RTSCommands::Issue(*Opponent, {}, MakeBuildingOrder(ERTSCommandType::ForceFire, Tower, Bystander));
+	TestTrue(TEXT("Nor order it"), Weapon->GetTarget() != Bystander && Weapon->GetOrderedLocation().IsSet());
+
+	// Stop clears the order.
+	RTSCommands::Issue(*Player, {}, MakeBuildingOrder(ERTSCommandType::Stop, Tower, nullptr));
+	TestFalse(TEXT("Stop clears the ground order"), Weapon->GetOrderedLocation().IsSet());
+	StepWeapon(*Tower, 0.2f);
+	TestTrue(TEXT("And the tower engages the enemy again"), Weapon->GetTarget() == Enemy);
+
+	// A target that walks out of range is dropped.
+	RTSCommands::Issue(*Player, {}, MakeBuildingOrder(ERTSCommandType::ForceFire, Tower, Walker));
+	TestTrue(TEXT("The tower aims at the walker"), Weapon->GetTarget() == Walker);
+	Walker->SetActorLocation(FVector(0.f, 3000.f, 0.f));
+	Tower->Tick(0.f);
+	TestTrue(TEXT("A target out of range is dropped"), Weapon->GetTarget() != Walker);
+
+	// A tower under construction takes no order.
+	TestFalse(TEXT("A tower under construction refuses"), RTSCommands::BuildingOrder(*Player,
+		MakeBuildingOrder(ERTSCommandType::ForceFire, Unfinished, nullptr, FVector(0.f, 5300.f, 0.f))));
+	TestFalse(TEXT("And has no ordered spot"), Unfinished->GetWeaponComponent()->GetOrderedLocation().IsSet());
 	return true;
 }
 

@@ -191,6 +191,7 @@ void ARTSBuilding::Tick(float DeltaSeconds)
 	{
 		ProductionComponent->UpdateProduction(DeltaSeconds);
 		SuperweaponComponent->UpdateCharge(DeltaSeconds);
+		UpdateForcedFire();
 	}
 }
 
@@ -234,6 +235,49 @@ void ARTSBuilding::RefreshWeapon()
 	check(HasAuthority());
 	const bool bPowered = BuildingData && (!BuildingData->bRequiresPower || !ARTSPlayerState::IsLowPowerForTeam(*GetWorld(), TeamId));
 	WeaponComponent->SetWeaponData(IsConstructed() && bPowered ? BuildingData->Weapon.Get() : nullptr);
+}
+
+bool ARTSBuilding::ForceFire(AActor* Target, const FVector& Location)
+{
+	check(HasAuthority());
+	// Clients pick the target, so it is checked here.
+	if (!IsConstructed() || !WeaponComponent->CanForceFireAt(Target, Location)
+		|| !(Target ? WeaponComponent->IsInRange(Target) : WeaponComponent->IsInRange(Location)))
+	{
+		return false;
+	}
+	if (Target)
+	{
+		WeaponComponent->SetOrderedTarget(Target, /*bForce*/ true);
+	}
+	else
+	{
+		WeaponComponent->SetOrderedLocation(Location);
+	}
+	ForcedTarget = Target;
+	return true;
+}
+
+void ARTSBuilding::StopFiring()
+{
+	check(HasAuthority());
+	WeaponComponent->ClearOrder();
+	ForcedTarget.Reset();
+}
+
+void ARTSBuilding::UpdateForcedFire()
+{
+	if (ForcedTarget.IsExplicitlyNull())
+	{
+		return;
+	}
+	// The weapon drops a target that died or can no longer be hit itself. Range is 0 while unpowered, so a short power dip
+	// keeps the order.
+	AActor* Target = ForcedTarget.Get();
+	if (!Target || WeaponComponent->GetTarget() != Target || (WeaponComponent->IsArmed() && !WeaponComponent->IsInRange(Target)))
+	{
+		StopFiring();
+	}
 }
 
 void ARTSBuilding::UpdateNavCut(float DeltaSeconds)

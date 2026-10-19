@@ -148,6 +148,11 @@ namespace RTSCommands
 			}
 			return;
 		}
+		if (Command.Building)
+		{
+			BuildingOrder(Player, Command);
+			return;
+		}
 		switch (Command.Type)
 		{
 		case ERTSCommandType::CancelConstruction:
@@ -285,6 +290,32 @@ namespace RTSCommands
 		}
 		Building->GetProductionComponent()->SetRallyPoint(Command.TargetLocation);
 		return true;
+	}
+
+	bool BuildingOrder(ARTSPlayerState& Player, const FRTSCommand& Command)
+	{
+		ARTSBuilding* Building = Command.Building;
+		bool bDone = false;
+		if (IsValid(Building) && Building->GetTeamId() == Player.GetTeamId())
+		{
+			if (Command.Type == ERTSCommandType::ForceFire)
+			{
+				bDone = Building->ForceFire(Command.TargetActor, Command.TargetLocation);
+			}
+			else if (Command.Type == ERTSCommandType::Stop)
+			{
+				Building->StopFiring();
+				bDone = true;
+			}
+		}
+		if (!bDone)
+		{
+			UE_LOG(LogWorldDivide, Verbose, TEXT("Team %d cannot order %s to %s"), Player.GetTeamId(), *GetNameSafe(Building),
+				*UEnum::GetValueAsString(Command.Type));
+			const FVector Location = IsValid(Command.TargetActor) ? Command.TargetActor->GetActorLocation() : Command.TargetLocation;
+			ARTSPlayerController::NotifyOrderRefused(&Player, Location);
+		}
+		return bDone;
 	}
 
 	bool LaunchSuperweapon(ARTSPlayerState& Player, const FRTSCommand& Command)

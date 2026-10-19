@@ -74,6 +74,12 @@ public:
 	/** The weapon can fire at a location on the ground. */
 	bool CanTargetGround() const;
 
+	/**
+	 * The one check for a force-fire order, for units and buildings alike: armed, and able to hit Target of any team
+	 * (CanForceTarget), or the ground at Location when Target is null. Range is the owner's concern.
+	 */
+	bool CanForceFireAt(const AActor* Target, const FVector& Location) const;
+
 	/** Server only. Shots left before the weapon holds fire, as an aircraft's load per sortie; INDEX_NONE for no limit. */
 	void SetAmmo(int32 InAmmo) { Ammo = InAmmo; }
 

@@ -97,6 +97,11 @@ bool URTSWeaponComponent::CanTargetGround() const
 	return WeaponData && WeaponData->bCanTargetGround;
 }
 
+bool URTSWeaponComponent::CanForceFireAt(const AActor* InTarget, const FVector& Location) const
+{
+	return IsArmed() && (InTarget ? CanForceTarget(InTarget) : CanTargetGround());
+}
+
 bool URTSWeaponComponent::IsInRange(const AActor* Candidate) const
 {
 	const IRTSTargetable* Targetable = Cast<IRTSTargetable>(Candidate);
@@ -251,8 +256,14 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 	}
 	else if (bTargetOrdered)
 	{
-		// The unit drops the order once the target is gone and closes in while it is out of range.
-		if (!(bTargetForced ? CanForceTarget(Current) : CanTarget(Current)) || !IsInRange(Current))
+		// The unit drops the order once the target is gone and closes in while it is out of range. A forced target that is
+		// gone ends the order here, so a building, which has no order queue, engages on its own again.
+		if (bTargetForced && !CanForceTarget(Current))
+		{
+			ClearOrder();
+			return;
+		}
+		if (!(bTargetForced || CanTarget(Current)) || !IsInRange(Current))
 		{
 			return;
 		}

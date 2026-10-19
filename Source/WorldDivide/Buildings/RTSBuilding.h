@@ -47,6 +47,16 @@ public:
 	/** Server only. Arms the weapon once constructed, unless the data requires power and the owner is low on power. */
 	void RefreshWeapon();
 
+	/**
+	 * Server only. Fire at Target, of any team, until it dies or leaves range; when it is null, at the ground at Location until
+	 * StopFiring. Refused, returning false, unless the building is constructed, its weapon can force-fire there
+	 * (URTSWeaponComponent::CanForceFireAt) and the target or spot is already in range: a building cannot close in.
+	 */
+	bool ForceFire(AActor* Target, const FVector& Location);
+
+	/** Server only. Drops a force-fire order; the weapon engages enemies in range on its own again. */
+	void StopFiring();
+
 	URTSBuildingData* GetBuildingData() const { return BuildingData; }
 	virtual int32 GetTeamId() const override { return TeamId; }
 	virtual URTSHealthComponent* GetHealthComponent() const override { return HealthComponent; }
@@ -158,6 +168,9 @@ private:
 
 	void ReleaseHeldUnits();
 
+	/** Server only, each tick once constructed: drops a force-fired target that is gone or, while armed, out of range. */
+	void UpdateForcedFire();
+
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<USceneComponent> Root;
 
@@ -198,6 +211,9 @@ private:
 	bool bNavCutPending = false;
 	float NavCutWaited = 0.f;
 	TArray<TWeakObjectPtr<ARTSUnit>> HeldUnits;
+
+	/** Server only. The actor a force-fire order is at; unset for none or an order at the ground. */
+	TWeakObjectPtr<AActor> ForcedTarget;
 
 	/** Server only. The aircraft bound to each pad; one destroyed frees its pad by itself. */
 	TArray<TWeakObjectPtr<ARTSUnit>> Pads;
