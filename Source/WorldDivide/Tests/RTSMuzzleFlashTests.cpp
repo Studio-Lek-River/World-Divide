@@ -80,8 +80,8 @@ namespace RTSMuzzleFlashTests
 }
 
 /**
- * The muzzle flash the setup builds (#220): NS_MuzzleFlash with the user parameters ARTSShotEffect sets, its sprites drawn
- * with M_MuzzleFlash, and the M20's gun pointing at it.
+ * The muzzle flash the setup builds (#220, #294): NS_MuzzleFlash with the user parameters ARTSShotEffect sets, its layers
+ * (core, blast cone, brake jets, fireball) drawn with M_MuzzleFlash and M_MuzzleFire, and the M20's gun pointing at it.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMuzzleFlashAssetTest, "WorldDivide.Combat.MuzzleFlash.Asset", RTSTests::TestFlags)
 
@@ -99,13 +99,21 @@ bool FRTSMuzzleFlashAssetTest::RunTest(const FString& Parameters)
 	const FNiagaraParameterStore& User = System->GetExposedParameters();
 	TestTrue(TEXT("It takes User.Color"), User.IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetColorDef(), TEXT("User.Color"))) != INDEX_NONE);
 	TestTrue(TEXT("It takes User.Scale"), User.IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), TEXT("User.Scale"))) != INDEX_NONE);
-	TestEqual(TEXT("A core and a spray"), System->GetEmitterHandles().Num(), 2);
+	TestTrue(TEXT("It takes User.Brake"), User.IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetIntDef(), TEXT("User.Brake"))) != INDEX_NONE);
+	TestEqual(TEXT("A core, a blast cone, two brake jets and a fireball"), System->GetEmitterHandles().Num(), 5);
+	TestFalse(TEXT("The M20's gun has no muzzle brake"), M20->Weapon->bMuzzleBrake);
 	TestTrue(TEXT("It is ready to run"), System->IsValid());
 	const UMaterial* Material = LoadObject<UMaterial>(nullptr, TEXT("/Game/Materials/M_MuzzleFlash.M_MuzzleFlash"));
 	if (TestNotNull(TEXT("M_MuzzleFlash loads"), Material))
 	{
 		TestTrue(TEXT("It draws Niagara sprites"), Material->bUsedWithNiagaraSprites != 0);
 		TestTrue(TEXT("It is additive"), Material->GetBlendMode() == BLEND_Additive);
+	}
+	const UMaterial* Fire = LoadObject<UMaterial>(nullptr, TEXT("/Game/Materials/M_MuzzleFire.M_MuzzleFire"));
+	if (TestNotNull(TEXT("M_MuzzleFire loads"), Fire))
+	{
+		TestTrue(TEXT("The fire draws Niagara sprites"), Fire->bUsedWithNiagaraSprites != 0);
+		TestTrue(TEXT("The fire is additive"), Fire->GetBlendMode() == BLEND_Additive);
 	}
 	return true;
 }

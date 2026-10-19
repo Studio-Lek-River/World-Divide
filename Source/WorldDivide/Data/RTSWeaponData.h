@@ -75,9 +75,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	TObjectPtr<UNiagaraSystem> MuzzleFlash;
 
+	/** The gun has a muzzle brake, so its Niagara muzzle flash also throws fire out to both sides (#294, User.Brake). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	bool bMuzzleBrake = false;
+
 	/**
 	 * A puff of smoke left at the muzzle after each shot (#221): it leaves along the bore, then drifts in world space as the
-	 * turret turns. User parameters Count, Direction and Scale (EffectScale); none leaves no smoke. Vehicle cannons have one.
+	 * turret turns. User parameters Count, Direction, Scale (EffectScale) and GroundHeight (the muzzle's height above the ground, for
+	 * the ground blast, #294); none leaves no smoke. Vehicle cannons have one.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	TObjectPtr<UNiagaraSystem> MuzzleSmoke;

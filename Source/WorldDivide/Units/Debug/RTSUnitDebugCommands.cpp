@@ -6,6 +6,7 @@
 #include "Camera/CameraComponent.h"
 #include "Buildings/RTSBuilding.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Combat/RTSShotEffect.h"
 #include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/LightComponent.h"
@@ -32,6 +33,7 @@
 #include "Misc/Paths.h"
 #include "NavigationSystem.h"
 #include "NavMesh/RecastNavMesh.h"
+#include "NiagaraComponent.h"
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSPlayerController.h"
 #include "ProfilingDebugging/MiscTrace.h"
@@ -109,6 +111,12 @@ namespace RTSUnitDebugCommands
 	constexpr float SmokeViewElevation = 12.f;
 	/** How slowly the world runs while a muzzle flash is held for its picture (#220): as still as the engine allows. */
 	constexpr float FlashHoldDilation = 0.0001f;
+
+	/** The moments after the shot the firing is held at for its pictures (#294), in seconds. */
+	constexpr float MuzzleFlashHolds[] = { 0.f, 0.03f, 0.08f, 0.15f };
+
+	/** The step a held firing's Niagara systems are advanced to its moment by. */
+	constexpr float FlashHoldStep = 1.f / 240.f;
 	/** The share of their brightness the sun and the sky keep for the night pictures. */
 	constexpr float NightLightShare = 0.01f;
 	/**
@@ -545,21 +553,27 @@ namespace RTSUnitDebugCommands
 				Run.Unit->PlayGunRecoil();
 				return true;
 			}, SettleSeconds + Unit->GetUnitData()->GunRecoil.GetSettleSeconds() });
-			// The gun's muzzle flash and light (#220), turret turned and gun raised, held at its brightest: close up and from
-			// the RTS camera, by day and at night.
+			// The gun's firing (#220, #294), turret turned and gun raised, held 0, 30, 80 and 150 ms after the shot: close up
+			// and from the RTS camera, by day and at night.
 			for (const bool bNight : { false, true })
 			{
-				const FString Time = bNight ? TEXT("night") : TEXT("day");
-				Shots.Add({ TEXT("muzzle_flash_") + Time, [bNight](FUnitShotsRun& Run)
+				for (const float HoldSeconds : MuzzleFlashHolds)
 				{
-					Run.SetNight(bNight);
-					return Run.UseCloseUpCamera() && Run.HoldMuzzleFlash();
-				} });
-				Shots.Add({ TEXT("muzzle_flash_") + Time + TEXT("_rts"), [](FUnitShotsRun& Run)
-				{
-					Run.UseRTSCamera(Run.GetCameraPawn()->GetDefaultZoom(), 0.f);
-					return Run.HoldMuzzleFlash();
-				} });
+					const FString Name = FString::Printf(TEXT("muzzle_flash_%s_%03.0f"), bNight ? TEXT("night") : TEXT("day"), HoldSeconds * 1000.f);
+					// From in front with the gun at TurretShotAim, as the smoke's pictures, so the whole firing is in view.
+					Shots.Add({ Name, [bNight, HoldSeconds](FUnitShotsRun& Run)
+					{
+						Run.SetNight(bNight);
+						Run.Unit->SetAimOverride(TurretShotAim);
+						return Run.UseLODCamera(FVector::ForwardVector, SmokeViewDistance, false, SmokeViewElevation)
+							&& Run.HoldMuzzleFlash(HoldSeconds);
+					}, HoldSeconds == MuzzleFlashHolds[0] ? TraverseSeconds : SettleSeconds });
+					Shots.Add({ Name + TEXT("_rts"), [HoldSeconds](FUnitShotsRun& Run)
+					{
+						Run.UseRTSCamera(Run.GetCameraPawn()->GetDefaultZoom(), 0.f);
+						return Run.HoldMuzzleFlash(HoldSeconds);
+					} });
+				}
 			}
 			// The muzzle smoke (#221) by day, the gun at TurretShotAim: from the RTS camera just after the shot, then from in
 			// front just after another one and once the turret has turned back to the front, the puff left where it was fired.
@@ -859,10 +873,10 @@ namespace RTSUnitDebugCommands
 		}
 
 		/**
-		 * Fires the unit's gun along its bore through the shot effects players see, without a target, and holds the world
-		 * nearly still so the flash and its light stay at their brightest for the picture. False without a weapon.
+		 * Fires the unit's gun along its bore through the shot effects players see, without a target, moves the flash, its
+		 * light and the smoke Seconds on, and holds the world nearly still there for the picture. False without a weapon.
 		 */
-		bool HoldMuzzleFlash()
+		bool HoldMuzzleFlash(float Seconds = 0.f)
 		{
 			const URTSWeaponData* Weapon = Unit->GetUnitData()->Weapon;
 			if (Weapon && !Weapon->MuzzleFlash)
@@ -875,6 +889,20 @@ namespace RTSUnitDebugCommands
 			if (!FireGun())
 			{
 				return false;
+			}
+			if (Seconds > 0.f)
+			{
+				URTSShotSubsystem* ShotSubsystem = World->GetSubsystem<URTSShotSubsystem>();
+				const ARTSShotEffect* Effect = ShotSubsystem->GetLatestEffect();
+				const int32 Steps = FMath::CeilToInt(Seconds / FlashHoldStep);
+				for (UNiagaraComponent* System : { Effect ? Effect->GetNiagaraFlash() : nullptr, ShotSubsystem->GetLatestMuzzleSmoke(*Unit) })
+				{
+					if (System)
+					{
+						System->AdvanceSimulation(Steps, Seconds / Steps);
+					}
+				}
+				ShotSubsystem->AdvanceEffects(Seconds);
 			}
 			World->GetWorldSettings()->SetTimeDilation(FlashHoldDilation);
 			bHoldingFlash = true;

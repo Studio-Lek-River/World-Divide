@@ -30,6 +30,14 @@ namespace
 
 	const FName FlashColorParameter(TEXT("User.Color"));
 	const FName FlashScaleParameter(TEXT("User.Scale"));
+	const FName FlashBrakeParameter(TEXT("User.Brake"));
+
+	/** GetMuzzleLightCurve: full this long, then falling by e every DecaySeconds, flickering FlickerHz, out at the end. */
+	constexpr float MuzzleLightPeakSeconds = 0.015f;
+	constexpr float MuzzleLightDecaySeconds = 0.035f;
+	constexpr float MuzzleLightFlickerHz = 55.f;
+	constexpr float MuzzleLightFlicker = 0.22f;
+	constexpr float MuzzleLightOutSeconds = 0.03f;
 
 	constexpr float MuzzleFlashSeconds = 0.08f;
 	/** How long a Niagara muzzle flash (#220) and its light last: NS_MuzzleFlash's lifetime. */
@@ -128,6 +136,22 @@ float ARTSShotEffect::GetMuzzleLightBoost(float ViewDistance)
 		ViewDistance);
 }
 
+float ARTSShotEffect::GetMuzzleLightCurve(float Age)
+{
+	if (Age < 0.f || Age >= NiagaraFlashSeconds)
+	{
+		return 0.f;
+	}
+	if (Age < MuzzleLightPeakSeconds)
+	{
+		return 1.f;
+	}
+	const float Fall = FMath::Exp(-(Age - MuzzleLightPeakSeconds) / MuzzleLightDecaySeconds);
+	const float Flicker = 1.f - MuzzleLightFlicker * 0.5f * (1.f - FMath::Cos(UE_TWO_PI * MuzzleLightFlickerHz * Age));
+	const float Out = FMath::Min((NiagaraFlashSeconds - Age) / MuzzleLightOutSeconds, 1.f);
+	return Fall * Flicker * Out;
+}
+
 bool ARTSShotEffect::IsMuzzleLightInRange(float ViewDistance)
 {
 	const float Distance = CVarMuzzleLightDistance.GetValueOnGameThread();
@@ -167,6 +191,7 @@ void ARTSShotEffect::PlayNiagaraFlash(const FTransform& MuzzleTransform)
 	NiagaraFlash->SetWorldLocationAndRotation(MuzzleTransform.GetLocation(), MuzzleTransform.GetRotation());
 	NiagaraFlash->SetVariableLinearColor(FlashColorParameter, FMath::Lerp(Weapon->ShellColor, FLinearColor::White, 0.3f) * GlowStrength);
 	NiagaraFlash->SetVariableFloat(FlashScaleParameter, Weapon->EffectScale);
+	NiagaraFlash->SetVariableInt(FlashBrakeParameter, Weapon->bMuzzleBrake ? 1 : 0);
 	// A machine that never renders (tests under -nullrhi) places the flash but Niagara does not run it.
 	NiagaraFlash->ActivateSystem(true);
 	bNiagaraFlashLive = true;
@@ -316,8 +341,9 @@ void ARTSShotEffect::UpdateMuzzleFlash()
 	}
 	if (bMuzzleLightSlot)
 	{
-		const float Brightness = bMuzzleGlow ? 1.f : NiagaraFlashLightScale * MuzzleLightBoost;
-		MuzzleLight->SetIntensity(LightIntensity * Scale * Brightness * (1.f - Alpha));
+		// The placeholder glow's light fades with it; a Niagara flash's follows its fire, a sharp peak and a flicker down.
+		const float Brightness = bMuzzleGlow ? 1.f - Alpha : NiagaraFlashLightScale * MuzzleLightBoost * GetMuzzleLightCurve(Age);
+		MuzzleLight->SetIntensity(LightIntensity * Scale * Brightness);
 	}
 }
 

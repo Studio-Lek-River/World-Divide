@@ -67,16 +67,20 @@ public:
 	static bool LoadEditorModule(FName ModuleName);
 
 	/**
-	 * Builds the muzzle flash of vehicle guns (#220) as the Niagara system AssetPath (such as /Game/Effects/NS_MuzzleFlash),
-	 * new, in place of the one there: Python cannot edit a Niagara system's modules. Returns null and logs why when it fails.
+	 * Builds the muzzle flash of vehicle guns (#220, #294) as the Niagara system AssetPath (such as
+	 * /Game/Effects/NS_MuzzleFlash), new, in place of the one there: Python cannot edit a Niagara system's modules. The core,
+	 * the blast cone and the brake jets glow in GlowMaterial, the fireball burns in FireMaterial. Returns null and logs why
+	 * when it fails.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
-	static UNiagaraSystem* BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* Material);
+	static UNiagaraSystem* BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* GlowMaterial, UMaterialInterface* FireMaterial);
 
 	/**
-	 * Builds the muzzle smoke of vehicle cannons (#221) as the Niagara system AssetPath (such as /Game/Effects/NS_MuzzleSmoke),
-	 * new, in place of the one there, as BuildMuzzleFlashSystem. Returns null and logs why when it fails.
+	 * Builds the muzzle smoke of vehicle cannons (#221, #303) and the ground blast (#294) as the Niagara system AssetPath
+	 * (such as /Game/Effects/NS_MuzzleSmoke), new, in place of the one there, as BuildMuzzleFlashSystem: the blast cloud in
+	 * BlastMaterial, the drifting cloud in DriftMaterial and the dust in DustMaterial. Returns null and logs why when it fails.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
-	static UNiagaraSystem* BuildMuzzleSmokeSystem(const FString& AssetPath, UMaterialInterface* Material);
+	static UNiagaraSystem* BuildMuzzleSmokeSystem(const FString& AssetPath, UMaterialInterface* BlastMaterial, UMaterialInterface* DriftMaterial,
+		UMaterialInterface* DustMaterial);
 };

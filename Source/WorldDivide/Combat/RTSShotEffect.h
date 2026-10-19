@@ -73,6 +73,12 @@ public:
 	 */
 	static float GetMuzzleLightBoost(float ViewDistance);
 
+	/**
+	 * A Niagara muzzle flash's light at Age seconds after the shot, as a share of its brightest (#294): full within 15 ms,
+	 * as the core flares, then a fast flickering fall with the fireball, dark at NS_MuzzleFlash's 0.15 s.
+	 */
+	static float GetMuzzleLightCurve(float Age);
+
 	/** Whether a shot seen from ViewDistance cm has a muzzle light, and a muzzle flash (rts.Fx.MuzzleLightDistance, rts.Fx.MuzzleFlashDistance). */
 	static bool IsMuzzleLightInRange(float ViewDistance);
 	static bool IsMuzzleFlashInRange(float ViewDistance);

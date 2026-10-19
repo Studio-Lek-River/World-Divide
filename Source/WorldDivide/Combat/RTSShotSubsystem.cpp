@@ -1,5 +1,6 @@
 #include "Combat/RTSShotSubsystem.h"
 
+#include "AI/Navigation/NavAgentInterface.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Combat/RTSAreaDamage.h"
 #include "Combat/RTSHealthComponent.h"
@@ -53,6 +54,7 @@ namespace
 	const FName SmokeCountParameter(TEXT("User.Count"));
 	const FName SmokeDirectionParameter(TEXT("User.Direction"));
 	const FName SmokeScaleParameter(TEXT("User.Scale"));
+	const FName SmokeGroundHeightParameter(TEXT("User.GroundHeight"));
 }
 
 void URTSShotSubsystem::AddShell(AActor& Target, float Damage, AActor* Instigator, float FlightTime)
@@ -296,6 +298,10 @@ void URTSShotSubsystem::PlayMuzzleSmoke(AActor& Shooter, const URTSWeaponData& W
 	Component.SetVariableInt(SmokeCountParameter, GetMuzzleSmokeCount(ViewDistance, Scalability::GetQualityLevels().EffectsQuality));
 	Component.SetVariableVec3(SmokeDirectionParameter, Muzzle.GetUnitAxis(EAxis::X));
 	Component.SetVariableFloat(SmokeScaleParameter, Weapon.EffectScale);
+	// How high the muzzle is above the ground the shooter stands on, which decides the ground blast (#294).
+	const INavAgentInterface* Agent = Cast<INavAgentInterface>(&Shooter);
+	const float GroundZ = Agent ? Agent->GetNavAgentLocation().Z : Shooter.GetActorLocation().Z;
+	Component.SetVariableFloat(SmokeGroundHeightParameter, FMath::Max(Muzzle.GetLocation().Z - GroundZ, 0.f));
 	// A machine that never renders (tests under -nullrhi) places the puff but Niagara does not run it.
 	Component.ActivateSystem(true);
 

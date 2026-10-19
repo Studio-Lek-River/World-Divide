@@ -73,8 +73,9 @@ namespace RTSMuzzleSmokeTests
 }
 
 /**
- * The muzzle smoke the setup builds (#221): NS_MuzzleSmoke with the user parameters URTSShotSubsystem sets, simulated in
- * world space and drawn with the translucent M_MuzzleSmoke, and the M20's gun pointing at it.
+ * The muzzle smoke the setup builds (#221, #303): NS_MuzzleSmoke with the user parameters URTSShotSubsystem sets, its blast
+ * cloud, drifting cloud and ground blast (#294) all simulated in world space and drawn with the translucent M_MuzzleSmoke,
+ * and the M20's gun pointing at it.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMuzzleSmokeAssetTest, "WorldDivide.Combat.MuzzleSmoke.Asset", RTSTests::TestFlags)
 
@@ -94,10 +95,14 @@ bool FRTSMuzzleSmokeAssetTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("It takes User.Direction"),
 		User.IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(), TEXT("User.Direction"))) != INDEX_NONE);
 	TestTrue(TEXT("It takes User.Scale"), User.IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), TEXT("User.Scale"))) != INDEX_NONE);
-	if (TestEqual(TEXT("One emitter of puffs"), System->GetEmitterHandles().Num(), 1))
+	TestTrue(TEXT("It takes User.GroundHeight"),
+		User.IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), TEXT("User.GroundHeight"))) != INDEX_NONE);
+	TestEqual(TEXT("A blast cloud, a drifting cloud and a ground blast"), System->GetEmitterHandles().Num(), 3);
+	for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
 	{
-		const FVersionedNiagaraEmitterData* Emitter = System->GetEmitterHandles()[0].GetEmitterData();
-		TestTrue(TEXT("The puffs live in world space, left behind as the turret turns"), Emitter && !Emitter->bLocalSpace);
+		const FVersionedNiagaraEmitterData* Emitter = Handle.GetEmitterData();
+		TestTrue(*FString::Printf(TEXT("%s lives in world space, left behind as the turret turns"), *Handle.GetName().ToString()),
+			Emitter && !Emitter->bLocalSpace);
 	}
 	TestTrue(TEXT("It is ready to run"), System->IsValid());
 	const UMaterial* Material = LoadObject<UMaterial>(nullptr, TEXT("/Game/Materials/M_MuzzleSmoke.M_MuzzleSmoke"));
@@ -259,6 +264,55 @@ bool FRTSMuzzleSmokeCapTest::RunTest(const FString& Parameters)
 		TestTrue(FString::Printf(TEXT("%s: the caps were reached (%d puffs, %d per shooter)"), *Case, MostTotal, MostEach),
 			MostEach == MaxEach && (Tanks.Num() * MaxEach <= MaxTotal || MostTotal == MaxTotal));
 	}
+	return true;
+}
+
+/**
+ * Smoke on every shot (#303, it went missing in play): an M20 firing at a target from the default RTS view leaves a puff
+ * for each of six shots, with particles to show and the muzzle's height above the ground for the ground blast.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMuzzleSmokeEveryShotTest, "WorldDivide.Combat.MuzzleSmoke.EveryShot", RTSTests::TestFlags)
+
+bool FRTSMuzzleSmokeEveryShotTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSMuzzleSmokeTests;
+
+	URTSUnitData* M20 = LoadM20(*this);
+	if (!M20)
+	{
+		return false;
+	}
+	const FRTSTestWorld TestWorld;
+	URTSShotSubsystem* Shots = TestWorld.World->GetSubsystem<URTSShotSubsystem>();
+	ARTSUnit* Tank = TestWorld.SpawnUnit(M20, 0, FVector::ZeroVector);
+	TestWorld.SpawnUnit(MakeTarget(), 1, FVector(2500.f, 0.f, 0.f));
+	Shots->SetViewLocationOverride(Tank->GetActorLocation() + FVector(-10000.f, 0.f, 15000.f));
+
+	int32 Fired = 0;
+	Tank->OnShot().AddLambda([&](const FRTSShotEvent& Event)
+	{
+		++Fired;
+		const UNiagaraComponent* Smoke = Shots->GetLatestMuzzleSmoke(*Tank);
+		if (!TestNotNull(*FString::Printf(TEXT("Shot %d left a puff"), Fired), Smoke))
+		{
+			return;
+		}
+		TestEqual(*FString::Printf(TEXT("Shot %d: a puff each"), Fired), Shots->GetMuzzleSmokesPlayed(), Fired);
+		const FNiagaraParameterStore& Values = Smoke->GetOverrideParameters();
+		const int32* Count = reinterpret_cast<const int32*>(Values.GetParameterData(FNiagaraVariable(FNiagaraTypeDefinition::GetIntDef(), TEXT("User.Count"))));
+		const float* Ground = reinterpret_cast<const float*>(Values.GetParameterData(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), TEXT("User.GroundHeight"))));
+		TestTrue(*FString::Printf(TEXT("Shot %d: particles to show"), Fired), Count && *Count >= 2);
+		TestTrue(*FString::Printf(TEXT("Shot %d: the muzzle is above the ground (%.0f cm)"), Fired, Ground ? *Ground : -1.f),
+			Ground && *Ground > 100.f && *Ground < 400.f);
+	});
+	for (float Time = 0.f; Time < 30.f && Fired < 6; Time += Step)
+	{
+		Tank->UpdateTurret(Step);
+		Tank->GetWeaponComponent()->UpdateWeapon(Step);
+		Shots->AdvanceEffects(Step);
+	}
+	Shots->SetViewLocationOverride({});
+	TestEqual(TEXT("The M20 fired six times"), Fired, 6);
 	return true;
 }
 

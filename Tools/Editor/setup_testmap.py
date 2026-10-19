@@ -428,13 +428,15 @@ def interaction_radius(mesh, scale):
 
 
 def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_scale, shell_color, arc_height=0.0,
-                ground=True, air=False, muzzle_flash=None, muzzle_smoke=None, splash_radius=0.0):
+                ground=True, air=False, muzzle_flash=None, muzzle_smoke=None, splash_radius=0.0, muzzle_brake=False):
     """muzzle_flash: the Niagara system a vehicle gun flashes (make_muzzle_flash); None keeps the placeholder glow.
+    muzzle_brake: the gun has a muzzle brake, so its flash throws fire sideways too (#294).
     muzzle_smoke: the Niagara system a vehicle cannon leaves at the muzzle after a shot (make_muzzle_smoke); None leaves none.
     splash_radius: the blast in cm of a shot at a ground location (force fire); 0 for none."""
     return plan_data_asset(name, WEAPON_DIR, unreal.RTSWeaponData, {
         "muzzle_flash": muzzle_flash,
         "muzzle_smoke": muzzle_smoke,
+        "muzzle_brake": muzzle_brake,
         "range": weapon_range,
         "damage": damage,
         "reload_seconds": reload_seconds,
@@ -691,118 +693,312 @@ def make_shot_material(name):
                  spec_hash([build_shot_material], name, SHOT_GLOW_INDEX))
 
 
-def build_muzzle_flash_material(name):
-    """Unlit additive sprite material for the Niagara muzzle flash (#220): the particle colour, times its alpha as it
-    fades, in a soft round blob brightest at the centre."""
+# The firing flipbooks Tools/Art/muzzle_fx_blender.py bakes from its fire and smoke simulation (#294): 8 x 8 frames each.
+EFFECT_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Source", "Effects")
+EFFECT_TEXTURE_DIR = f"{EFFECT_DIR}/Textures"
+FLIPBOOK_LAST_FRAME = 63.0
+
+
+def import_effect_texture(source, name):
+    """A flipbook as linear data (heat, six-way light) with its alpha, in the effects texture group."""
+    task = unreal.AssetImportTask()
+    task.filename = source
+    task.destination_path = EFFECT_TEXTURE_DIR
+    task.destination_name = name
+    task.automated = True
+    task.replace_existing = True
+    task.save = False
+    asset_tools.import_asset_tasks([task])
+    texture = unreal.load_asset(f"{EFFECT_TEXTURE_DIR}/{name}")
+    if not isinstance(texture, unreal.Texture2D):
+        raise RuntimeError(f"Could not import {source}")
+    texture.set_editor_property("srgb", False)
+    texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_DEFAULT)
+    texture.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_EFFECTS)
+    return texture
+
+
+def make_effect_texture(name):
+    source = os.path.join(EFFECT_SOURCE_DIR, f"{name}.png")
+    return plan_now(f"{EFFECT_TEXTURE_DIR}/{name}", lambda: import_effect_texture(source, name),
+                    spec_hash([import_effect_texture], name, file_hash(source)))
+
+
+def new_material(name):
+    """The material name, emptied, to build again."""
     path = f"{MATERIAL_DIR}/{name}"
     if assets.does_asset_exist(path):
         material = assets.load_asset(path)
     else:
         material = asset_tools.create_asset(name, MATERIAL_DIR, unreal.Material, unreal.MaterialFactoryNew())
+    unreal.MaterialEditingLibrary.delete_all_material_expressions(material)
+    return material
 
-    editing = unreal.MaterialEditingLibrary
-    editing.delete_all_material_expressions(material)
+
+def expression(material, kind, x, y):
+    return unreal.MaterialEditingLibrary.create_material_expression(material, kind, x, y)
+
+
+def connect(source, source_pin, target, target_pin):
+    unreal.MaterialEditingLibrary.connect_material_expressions(source, source_pin, target, target_pin)
+
+
+def custom_node(material, x, y, code, output_type, inputs, outputs=()):
+    """A Custom expression with the named inputs and, past its return value, the named extra float3 outputs."""
+    node = expression(material, unreal.MaterialExpressionCustom, x, y)
+    node.set_editor_property("code", code)
+    node.set_editor_property("output_type", output_type)
+    custom_inputs = []
+    for input_name in inputs:
+        custom_input = unreal.CustomInput()
+        custom_input.set_editor_property("input_name", input_name)
+        custom_inputs.append(custom_input)
+    node.set_editor_property("inputs", custom_inputs)
+    custom_outputs = []
+    for output_name in outputs:
+        custom_output = unreal.CustomOutput()
+        custom_output.set_editor_property("output_name", output_name)
+        custom_output.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT3)
+        custom_outputs.append(custom_output)
+    node.set_editor_property("additional_outputs", custom_outputs)
+    return node
+
+
+def scalar_parameter(material, x, y, name, value):
+    node = expression(material, unreal.MaterialExpressionScalarParameter, x, y)
+    node.set_editor_property("parameter_name", name)
+    node.set_editor_property("default_value", value)
+    return node
+
+
+# The frame of an 8 x 8 flipbook a particle shows at Age (0 to 1 over its life), from the frame First to Last: the two
+# neighbouring frames out as UVA and UVB and how far it is between them returned, so the motion blends. A particle whose
+# random value is over a half shows it mirrored, so neighbours look different.
+FLIPBOOK_CODE = """float Frame = lerp(First, Last, saturate(Age));
+float A = floor(Frame);
+float B = min(A + 1.0, Last);
+float2 Local = UV;
+if (Random > 0.5) Local.x = 1.0 - Local.x;
+UVA = float3((float2(fmod(A, 8.0), floor(A / 8.0)) + Local) / 8.0, 0.0);
+UVB = float3((float2(fmod(B, 8.0), floor(B / 8.0)) + Local) / 8.0, 0.0);
+return Frame - A;"""
+
+
+def flipbook_frame(material, x, y, first, last):
+    """The flipbook frame node, its first and last frames scalar parameters FrameFirst and FrameLast."""
+    node = custom_node(material, x, y, FLIPBOOK_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT1,
+                       ["UV", "Age", "Random", "First", "Last"], ["UVA", "UVB"])
+    connect(expression(material, unreal.MaterialExpressionTextureCoordinate, x - 300, y), "", node, "UV")
+    connect(expression(material, unreal.MaterialExpressionParticleRelativeTime, x - 300, y + 80), "", node, "Age")
+    connect(expression(material, unreal.MaterialExpressionParticleRandom, x - 300, y + 160), "", node, "Random")
+    connect(scalar_parameter(material, x - 300, y + 240, "FrameFirst", first), "", node, "First")
+    connect(scalar_parameter(material, x - 300, y + 320, "FrameLast", last), "", node, "Last")
+    return node
+
+
+def component_mask(material, x, y, channels):
+    """A component mask keeping only channels ("r", "rg", ...): every channel is set, as a new mask keeps some by default."""
+    mask = expression(material, unreal.MaterialExpressionComponentMask, x, y)
+    for channel in "rgba":
+        mask.set_editor_property(channel, channel in channels)
+    return mask
+
+
+def flipbook_sample(material, x, y, texture, frame, pin):
+    """A sample of texture at the frame node's UVA or UVB."""
+    sample = expression(material, unreal.MaterialExpressionTextureSample, x, y)
+    sample.set_editor_property("texture", texture)
+    sample.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
+    mask = component_mask(material, x - 150, y, "rg")
+    connect(frame, pin, mask, "")
+    connect(mask, "", sample, "UVs")
+    return sample
+
+
+def blended_sample(material, x, y, texture, frame):
+    """texture's two neighbouring frames, blended by the frame node."""
+    blend = expression(material, unreal.MaterialExpressionLinearInterpolate, x + 300, y)
+    connect(flipbook_sample(material, x, y, texture, frame, "UVA"), "RGBA", blend, "A")
+    connect(flipbook_sample(material, x, y + 250, texture, frame, "UVB"), "RGBA", blend, "B")
+    connect(frame, "", blend, "Alpha")
+    return blend
+
+
+GLOW_CODE = """float Radius = lerp(0.5, 1.0, saturate(Age * 6.0));
+float Falloff = saturate(1.0 - length(UV - 0.5) * 2.0 / Radius);
+float Fade = 1.0 - saturate(Age);
+return Color.rgb * Color.a * Falloff * Falloff * Fade * Fade;"""
+
+
+def build_muzzle_flash_material(name):
+    """Unlit additive sprite material for the core, the blast cone and the brake jets of the muzzle flash (#220, #294): the
+    particle colour in a soft oval, brightest at its centre, that swells from half the sprite to all of it in the first
+    sixth of the particle's life and burns out as it ends. The oval follows the sprite, so a sprite stretched along its
+    velocity is a tongue of flame."""
+    material = new_material(name)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE)
     material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
     material.set_editor_property("used_with_niagara_sprites", True)
 
-    color = editing.create_material_expression(material, unreal.MaterialExpressionParticleColor, -800, 0)
-    uv = editing.create_material_expression(material, unreal.MaterialExpressionTextureCoordinate, -800, 200)
-    blob = editing.create_material_expression(material, unreal.MaterialExpressionCustom, -500, 100)
-    blob.set_editor_property("code", "float Falloff = saturate(1.0 - length(UV - 0.5) * 2.0);\n"
-                                     "return Color.rgb * Color.a * Falloff * Falloff;")
-    blob.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT3)
-    color_input = unreal.CustomInput()
-    color_input.set_editor_property("input_name", "Color")
-    uv_input = unreal.CustomInput()
-    uv_input.set_editor_property("input_name", "UV")
-    blob.set_editor_property("inputs", [color_input, uv_input])
-    editing.connect_material_expressions(color, "RGBA", blob, "Color")
-    editing.connect_material_expressions(uv, "", blob, "UV")
-    editing.connect_material_property(blob, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    glow = custom_node(material, -500, 100, GLOW_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT3, ["Color", "UV", "Age"])
+    connect(expression(material, unreal.MaterialExpressionParticleColor, -800, 0), "RGBA", glow, "Color")
+    connect(expression(material, unreal.MaterialExpressionTextureCoordinate, -800, 200), "", glow, "UV")
+    connect(expression(material, unreal.MaterialExpressionParticleRelativeTime, -800, 400), "", glow, "Age")
+    unreal.MaterialEditingLibrary.connect_material_property(glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    unreal.MaterialEditingLibrary.recompile_material(material)
+    return material
 
-    editing.recompile_material(material)
+
+# The fireball's colour by its heat as it cools: dark red, orange, white-yellow, white; as bright as the shot's colour.
+FIRE_CODE = """float H = Heat * (1.0 - 0.75 * saturate(Age));
+float3 C = lerp(float3(0.35, 0.03, 0.0), float3(1.0, 0.36, 0.05), smoothstep(0.05, 0.45, H));
+C = lerp(C, float3(1.0, 0.86, 0.5), smoothstep(0.45, 0.85, H));
+C = lerp(C, float3(1.0, 0.98, 0.9), smoothstep(0.85, 1.0, H));
+return C * Heat * max(max(Color.r, Color.g), Color.b) * Color.a * 0.6;"""
+
+
+def build_muzzle_fire_material(name, fire):
+    """Unlit additive sprite material for the fireball of the muzzle flash (#294): the T_MuzzleFire flipbook played over
+    the particle's life, its heat coloured white-yellow through orange to dark red as it cools, as bright as the particle
+    colour (ARTSShotEffect's User.Color)."""
+    material = new_material(name)
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    material.set_editor_property("used_with_niagara_sprites", True)
+
+    frame = flipbook_frame(material, -1200, 0, 0.0, FLIPBOOK_LAST_FRAME)
+    heat = blended_sample(material, -800, 0, fire, frame)
+    red = component_mask(material, -400, 0, "r")
+    connect(heat, "", red, "")
+    shade = custom_node(material, -200, 100, FIRE_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT3, ["Heat", "Age", "Color"])
+    connect(red, "", shade, "Heat")
+    connect(expression(material, unreal.MaterialExpressionParticleRelativeTime, -400, 200), "", shade, "Age")
+    connect(expression(material, unreal.MaterialExpressionParticleColor, -400, 300), "RGBA", shade, "Color")
+    unreal.MaterialEditingLibrary.connect_material_property(shade, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    unreal.MaterialEditingLibrary.recompile_material(material)
     return material
 
 
 def make_muzzle_flash():
-    """The Niagara muzzle flash of vehicle guns (#220) and its sprite material, built now so the weapons can point at it.
-    The system is built in C++ (URTSEditorScripting::BuildMuzzleFlashSystem, RTSMuzzleFlashBuilder.cpp), so its hash covers
-    that source too."""
-    material_name = "M_MuzzleFlash"
-    material = plan_now(f"{MATERIAL_DIR}/{material_name}", lambda: build_muzzle_flash_material(material_name),
-                        spec_hash([build_muzzle_flash_material], material_name))
+    """The Niagara muzzle flash of vehicle guns (#220, #294), its glow and fire materials and the fire flipbook, built now
+    so the weapons can point at it. The system is built in C++ (URTSEditorScripting::BuildMuzzleFlashSystem,
+    RTSMuzzleFlashBuilder.cpp), so its hash covers that source too."""
+    glow = plan_now(f"{MATERIAL_DIR}/M_MuzzleFlash", lambda: build_muzzle_flash_material("M_MuzzleFlash"),
+                    spec_hash([build_muzzle_flash_material, custom_node], GLOW_CODE, "M_MuzzleFlash"))
+    fire_texture = make_effect_texture("T_MuzzleFire")
+    fire = plan_now(f"{MATERIAL_DIR}/M_MuzzleFire", lambda: build_muzzle_fire_material("M_MuzzleFire", fire_texture),
+                    spec_hash([build_muzzle_fire_material, custom_node, flipbook_frame, flipbook_sample, blended_sample, component_mask],
+                              FLIPBOOK_CODE, FIRE_CODE, "M_MuzzleFire", fire_texture))
     path = f"{EFFECT_DIR}/NS_MuzzleFlash"
 
     def build():
         if not unreal.RTSEditorScripting.load_editor_module("NiagaraEditor"):
             raise RuntimeError("Could not load the NiagaraEditor module")
-        system = unreal.RTSEditorScripting.build_muzzle_flash_system(path, material)
+        system = unreal.RTSEditorScripting.build_muzzle_flash_system(path, glow, fire)
         if not system:
             raise RuntimeError(f"Could not build {path}; the log says why")
         return system
     builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSMuzzleFlashBuilder.cpp"))
-    return plan_now(path, build, spec_hash([make_muzzle_flash], path, material, builder_source))
+    return plan_now(path, build, spec_hash([make_muzzle_flash], path, glow, fire, builder_source))
 
 
-def build_muzzle_smoke_material(name):
-    """Lit translucent sprite material for the Niagara muzzle smoke (#221): the particle colour in a soft round puff that
-    grows from a third of the sprite to all of it over the particle's life and fades out, slowly at first, as it does, thin enough that
-    overlapping puffs stay see-through."""
-    path = f"{MATERIAL_DIR}/{name}"
-    if assets.does_asset_exist(path):
-        material = assets.load_asset(path)
-    else:
-        material = asset_tools.create_asset(name, MATERIAL_DIR, unreal.Material, unreal.MaterialFactoryNew())
+# A smoke sprite's normal from its six-way light, so the side it is lit from most faces that way, in the sprite's tangent
+# space (+X right, +Y down the flipbook, +Z toward the camera); its albedo brighter where it is lit through; its opacity
+# thinned from the edges inward by Erosion as it ages.
+SMOKE_CODE = """float3 N = float3(RLT.r - RLT.g, BBF.r - RLT.b, (BBF.b - BBF.g) * 0.5 + 0.6);
+Normal = normalize(N);
+float Light = (RLT.r + RLT.g + RLT.b + BBF.r + BBF.g + BBF.b) / 6.0;
+Albedo = Color.rgb * lerp(0.55, 1.15, saturate(Light * 1.6));
+float Thin = saturate(Age) * Erosion;
+return saturate((RLT.a - Thin) / max(1.0 - Thin, 0.05)) * Color.a;"""
 
-    editing = unreal.MaterialEditingLibrary
-    editing.delete_all_material_expressions(material)
+
+def build_muzzle_smoke_material(name, rlt, bbf):
+    """Lit translucent sprite material for the muzzle smoke and the ground blast (#221, #294, #303): the six-way lit smoke
+    flipbooks Tools/Art/muzzle_fx_blender.py bakes (T_MuzzleSmoke_RLT and _BBF), played from FrameFirst to FrameLast over
+    the particle's life. The six views give each pixel a normal, so the sun, the sky and the muzzle light shade the cloud
+    from wherever they are; the particle colour tints it. It thins from its edges inward by Erosion as it ages and fades
+    where it meets the ground. The instances (SMOKE_LOOKS) set the frames and the erosion of the blast cloud, the drifting
+    cloud and the dust."""
+    material = new_material(name)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
     material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
+    material.set_editor_property("translucency_lighting_mode", unreal.TranslucencyLightingMode.TLM_VOLUMETRIC_DIRECTIONAL)
     material.set_editor_property("used_with_niagara_sprites", True)
 
-    color = editing.create_material_expression(material, unreal.MaterialExpressionParticleColor, -800, 0)
-    uv = editing.create_material_expression(material, unreal.MaterialExpressionTextureCoordinate, -800, 200)
-    age = editing.create_material_expression(material, unreal.MaterialExpressionParticleRelativeTime, -800, 400)
-    puff = editing.create_material_expression(material, unreal.MaterialExpressionCustom, -500, 200)
-    puff.set_editor_property("code", "float Radius = lerp(0.33, 1.0, sqrt(saturate(Age)));\n"
-                                     "float Falloff = saturate(1.0 - length(UV - 0.5) * 2.0 / Radius);\n"
-                                     "float Fade = saturate(1.0 - Age * Age);\n"
-                                     "return Alpha * 0.6 * Falloff * Falloff * Fade;")
-    puff.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
-    inputs = []
-    for input_name in ("Alpha", "UV", "Age"):
-        custom_input = unreal.CustomInput()
-        custom_input.set_editor_property("input_name", input_name)
-        inputs.append(custom_input)
-    puff.set_editor_property("inputs", inputs)
-    editing.connect_material_expressions(color, "A", puff, "Alpha")
-    editing.connect_material_expressions(uv, "", puff, "UV")
-    editing.connect_material_expressions(age, "", puff, "Age")
-    editing.connect_material_property(color, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
-    editing.connect_material_property(puff, "", unreal.MaterialProperty.MP_OPACITY)
+    frame = flipbook_frame(material, -1400, 0, 0.0, FLIPBOOK_LAST_FRAME)
+    rlt_sample = blended_sample(material, -1000, 0, rlt, frame)
+    bbf_sample = blended_sample(material, -1000, 600, bbf, frame)
+    shade = custom_node(material, -300, 200, SMOKE_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT1,
+                        ["RLT", "BBF", "Color", "Age", "Erosion"], ["Normal", "Albedo"])
+    connect(rlt_sample, "", shade, "RLT")
+    connect(bbf_sample, "", shade, "BBF")
+    connect(expression(material, unreal.MaterialExpressionParticleColor, -600, 400), "RGBA", shade, "Color")
+    connect(expression(material, unreal.MaterialExpressionParticleRelativeTime, -600, 500), "", shade, "Age")
+    connect(scalar_parameter(material, -600, 600, "Erosion", 0.5), "", shade, "Erosion")
 
+    fade = expression(material, unreal.MaterialExpressionDepthFade, 0, 300)
+    fade.set_editor_property("fade_distance_default", 80.0)
+    connect(shade, "", fade, "Opacity")
+    roughness = expression(material, unreal.MaterialExpressionConstant, 0, 500)
+    roughness.set_editor_property("r", 1.0)
+    editing = unreal.MaterialEditingLibrary
+    editing.connect_material_property(shade, "Albedo", unreal.MaterialProperty.MP_BASE_COLOR)
+    editing.connect_material_property(shade, "Normal", unreal.MaterialProperty.MP_NORMAL)
+    editing.connect_material_property(fade, "", unreal.MaterialProperty.MP_OPACITY)
+    editing.connect_material_property(roughness, "", unreal.MaterialProperty.MP_ROUGHNESS)
     editing.recompile_material(material)
     return material
 
 
+# The smoke instances: the frames of the flipbook each plays and how much it erodes. The blast cloud plays the dense
+# billow, the drifting cloud and the dust the later, larger and thinner frames.
+SMOKE_LOOKS = {
+    "MI_MuzzleSmoke_Blast": {"FrameFirst": 0.0, "FrameLast": 40.0, "Erosion": 0.35},
+    "MI_MuzzleSmoke_Drift": {"FrameFirst": 18.0, "FrameLast": 63.0, "Erosion": 0.6},
+    "MI_MuzzleSmoke_Dust": {"FrameFirst": 6.0, "FrameLast": 50.0, "Erosion": 0.7},
+}
+
+
+def build_material_instance(name, parent, scalars):
+    path = f"{MATERIAL_DIR}/{name}"
+    if assets.does_asset_exist(path):
+        instance = assets.load_asset(path)
+    else:
+        instance = asset_tools.create_asset(name, MATERIAL_DIR, unreal.MaterialInstanceConstant,
+                                            unreal.MaterialInstanceConstantFactoryNew())
+    editing = unreal.MaterialEditingLibrary
+    editing.set_material_instance_parent(instance, parent)
+    for parameter, value in scalars.items():
+        editing.set_material_instance_scalar_parameter_value(instance, parameter, value)
+    editing.update_material_instance(instance)
+    return instance
+
+
 def make_muzzle_smoke():
-    """The Niagara muzzle smoke of vehicle cannons (#221) and its sprite material, built now so the weapons can point at it.
-    Built in C++ like the muzzle flash (URTSEditorScripting::BuildMuzzleSmokeSystem, RTSMuzzleFlashBuilder.cpp)."""
-    material_name = "M_MuzzleSmoke"
-    material = plan_now(f"{MATERIAL_DIR}/{material_name}", lambda: build_muzzle_smoke_material(material_name),
-                        spec_hash([build_muzzle_smoke_material], material_name))
+    """The Niagara muzzle smoke of vehicle cannons (#221, #303) with its ground blast (#294), the smoke material, its
+    instances and the six-way flipbooks, built now so the weapons can point at it. Built in C++ like the muzzle flash
+    (URTSEditorScripting::BuildMuzzleSmokeSystem, RTSMuzzleFlashBuilder.cpp)."""
+    rlt = make_effect_texture("T_MuzzleSmoke_RLT")
+    bbf = make_effect_texture("T_MuzzleSmoke_BBF")
+    parent = plan_now(f"{MATERIAL_DIR}/M_MuzzleSmoke", lambda: build_muzzle_smoke_material("M_MuzzleSmoke", rlt, bbf),
+                      spec_hash([build_muzzle_smoke_material, custom_node, flipbook_frame, flipbook_sample, blended_sample,
+                                 scalar_parameter, component_mask], FLIPBOOK_CODE, SMOKE_CODE, "M_MuzzleSmoke", rlt, bbf))
+    looks = {name: plan_now(f"{MATERIAL_DIR}/{name}", lambda n=name, v=values: build_material_instance(n, parent, v),
+                            spec_hash([build_material_instance], name, parent, sorted(values.items())))
+             for name, values in SMOKE_LOOKS.items()}
     path = f"{EFFECT_DIR}/NS_MuzzleSmoke"
 
     def build():
         if not unreal.RTSEditorScripting.load_editor_module("NiagaraEditor"):
             raise RuntimeError("Could not load the NiagaraEditor module")
-        system = unreal.RTSEditorScripting.build_muzzle_smoke_system(path, material)
+        system = unreal.RTSEditorScripting.build_muzzle_smoke_system(
+            path, looks["MI_MuzzleSmoke_Blast"], looks["MI_MuzzleSmoke_Drift"], looks["MI_MuzzleSmoke_Dust"])
         if not system:
             raise RuntimeError(f"Could not build {path}; the log says why")
         return system
     builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSMuzzleFlashBuilder.cpp"))
-    return plan_now(path, build, spec_hash([make_muzzle_smoke], path, material, builder_source))
+    return plan_now(path, build, spec_hash([make_muzzle_smoke], path, *looks.values(), builder_source))
 
 
 def build_surface_material(name, color, roughness, digest):
@@ -1840,11 +2036,12 @@ TOWER_RANGE_OVER_TANK = 1.25
 
 # Shell speed in cm/s, effect scale, shell colour; the grenade lobs. Shell speeds grew with the ranges, so a shot still
 # flies 0.2 to 1 s. Vehicle guns flash the Niagara muzzle flash; infantry, defences and jets keep the placeholder glow.
-# The tank cannons leave a puff of smoke at the muzzle after each shot.
+# The tank cannons leave a puff of smoke at the muzzle after each shot. The test tank's gun has a muzzle brake; the M20's
+# and the Abrams' have none.
 muzzle_flash = make_muzzle_flash()
 muzzle_smoke = make_muzzle_smoke()
 cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 30000.0, 1.6, (1.0, 0.45, 0.1), muzzle_flash=muzzle_flash,
-                     muzzle_smoke=muzzle_smoke, splash_radius=250.0)
+                     muzzle_smoke=muzzle_smoke, splash_radius=250.0, muzzle_brake=True)
 rifle = make_weapon("DA_TestRifle", 3500.0, 8.0, 0.5, 45000.0, 0.4, (1.0, 0.85, 0.3))
 # A main battle tank, 9.8 x 3.7 m with its gun forward; the placeholder's long gun lets the width bind.
 tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 1080.0, 370.0), 200.0, cannon, 1100.0, 75.0,

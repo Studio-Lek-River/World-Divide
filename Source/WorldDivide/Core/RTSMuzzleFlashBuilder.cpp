@@ -1,4 +1,4 @@
-// URTSEditorScripting::BuildMuzzleFlashSystem (#220) and BuildMuzzleSmokeSystem (#221), on their own so that setup_testmap.py
+// URTSEditorScripting::BuildMuzzleFlashSystem (#220, #294) and BuildMuzzleSmokeSystem (#221, #303), on their own so that setup_testmap.py
 // rebuilds NS_MuzzleFlash and NS_MuzzleSmoke only when this file changes.
 #include "Core/RTSEditorScripting.h"
 
@@ -92,10 +92,11 @@ namespace RTSMuzzleFlashBuilder
 	 * that live Lifetime seconds (an expression too; the emitter runs for LoopSeconds), sized and coloured by the HLSL
 	 * expressions Size and Color and drawn with Material, inside Bounds around the system (+X along the bore). In the
 	 * system's space when bLocalSpace, so they move with it; in world space otherwise, left where they were born.
+	 * RendererExtras adds more sprite renderer properties to its JSON, each led by a comma.
 	 */
 	void AddSpriteBurst(UNiagaraSystem* System, FName Name, const FString& Count, float LoopSeconds, const FString& Lifetime,
 		const FString& Size, const FString& Color, UMaterialInterface* Material, const FBox& Bounds, bool bLocalSpace,
-		FNiagaraExternalEditContext& Context)
+		FNiagaraExternalEditContext& Context, const FString& RendererExtras = FString())
 	{
 		UNiagaraEmitter* Template = LoadObject<UNiagaraEmitter>(nullptr, TEXT("/Niagara/DefaultAssets/Templates/Emitters/SimpleSpriteBurst.SimpleSpriteBurst"));
 		FNiagaraExt_EmitterTopology Topology;
@@ -120,8 +121,8 @@ namespace RTSMuzzleFlashBuilder
 		FNiagaraExt_StackItemReference Renderer(System, Name);
 		Renderer.RendererIndex = 0;
 		FNiagaraExt_RendererData RendererData;
-		RendererData.PropertyValues = FString::Printf(TEXT("{\"Material\": \"%s\", \"bCastShadows\": false}"),
-			Material ? *Material->GetPathName() : TEXT("None"));
+		RendererData.PropertyValues = FString::Printf(TEXT("{\"Material\": \"%s\", \"bCastShadows\": false%s}"),
+			Material ? *Material->GetPathName() : TEXT("None"), *RendererExtras);
 		FNiagaraEdit::SetRendererData(Renderer, RendererData, Context);
 	}
 
@@ -180,6 +181,71 @@ namespace RTSMuzzleFlashBuilder
 		return Previous;
 	}
 
+	const FName ParticleSpawn(TEXT("ParticleSpawnScript"));
+	const FName ParticleUpdate(TEXT("ParticleUpdateScript"));
+
+	/**
+	 * Sprites of Emitter sized by the HLSL expression Size, a float2 of width and length, instead of uniformly: set after
+	 * InitializeParticle, whose own non-uniform size stays hidden behind its static switch until the graph recompiles.
+	 */
+	void SetSpriteSize2D(UNiagaraSystem* System, FName Emitter, const FString& Size, FNiagaraExternalEditContext& Context)
+	{
+		const FName SpriteSize(TEXT("Particles.SpriteSize"));
+		FNiagaraExt_SetParameterEntry Entry;
+		Entry.Variable.Name = SpriteSize;
+		Entry.Variable.Type = FNiagaraTypeDefinition::GetVec2Def();
+		const FVector2f DefaultSize(100.f, 100.f);
+		Entry.DefaultValue.Set(Entry.Variable.Type, FNiagaraVariant(&DefaultSize, sizeof(DefaultSize)));
+		FNiagaraExt_ModuleTopology Topology;
+		FNiagaraEdit::AddSetParametersModule(FNiagaraExt_StackItemReference(System, Emitter, ParticleSpawn, TEXT("InitializeParticle")), { Entry },
+			Topology, Context);
+		SetExpression(ModuleInput(System, Emitter, ParticleSpawn, Topology.ModuleName, SpriteSize), Size, Context);
+	}
+
+	/** Sprites of Emitter turned to a random angle each, so neighbours look different. */
+	void SetRandomRotation(UNiagaraSystem* System, FName Emitter, FNiagaraExternalEditContext& Context)
+	{
+		SetEnum(ModuleInput(System, Emitter, ParticleSpawn, TEXT("InitializeParticle"), TEXT("Sprite Rotation Mode")), TEXT("Random"), Context);
+	}
+
+	/** Emitter's particles are born in a sphere of Radius cm (an expression) around Offset from the system (an expression). */
+	void SetSpawnSphere(UNiagaraSystem* System, FName Emitter, const FString& Radius, const FString& Offset,
+		FNiagaraExternalEditContext& Context)
+	{
+		const FName Sphere = AddModule(System, Emitter, ParticleSpawn, TEXT("InitializeParticle"),
+			TEXT("/Niagara/Modules/Spawn/Location/SphereLocation.SphereLocation"), Context);
+		SetExpression(ModuleInput(System, Emitter, ParticleSpawn, Sphere, TEXT("Sphere Radius")), Radius, Context);
+		SetExpression(ModuleInput(System, Emitter, ParticleSpawn, Sphere, TEXT("Offset")), Offset, Context);
+	}
+
+	/**
+	 * Emitter's particles leave at Velocity (an expression), slowed by Drag; Acceleration (an expression, none when empty)
+	 * pushes them on. The forces go before the solver that applies them; the solver is added at the end when the template
+	 * has none.
+	 */
+	void SetMotion(UNiagaraSystem* System, FName Emitter, const FString& Velocity, float Drag, const FString& Acceleration,
+		FNiagaraExternalEditContext& Context)
+	{
+		const FName AddVelocity = AddModule(System, Emitter, ParticleSpawn, TEXT("InitializeParticle"),
+			TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocity.AddVelocity"), Context);
+		SetExpression(ModuleInput(System, Emitter, ParticleSpawn, AddVelocity, TEXT("Velocity")), Velocity, Context);
+
+		const FName Solver(TEXT("SolveForcesAndVelocity"));
+		bool bHasSolver = false;
+		FName Last = AddModule(System, Emitter, ParticleUpdate, ModuleBefore(System, Emitter, ParticleUpdate, Solver, bHasSolver, Context),
+			TEXT("/Niagara/Modules/Update/Forces/Drag.Drag"), Context);
+		SetFloat(ModuleInput(System, Emitter, ParticleUpdate, Last, TEXT("Drag")), Drag, Context);
+		if (!Acceleration.IsEmpty())
+		{
+			Last = AddModule(System, Emitter, ParticleUpdate, Last, TEXT("/Niagara/Modules/Update/Forces/AccelerationForce.AccelerationForce"), Context);
+			SetExpression(ModuleInput(System, Emitter, ParticleUpdate, Last, TEXT("Acceleration")), Acceleration, Context);
+		}
+		if (!bHasSolver)
+		{
+			AddModule(System, Emitter, ParticleUpdate, Last, TEXT("/Niagara/Modules/Solvers/SolveForcesAndVelocity.SolveForcesAndVelocity"), Context);
+		}
+	}
+
 	/** Compiles System and returns it, or logs each error and returns null. */
 	UNiagaraSystem* FinishSystem(UNiagaraSystem* System, const FString& AssetPath, const TCHAR* Builder, FNiagaraExternalEditContext& Context)
 	{
@@ -211,7 +277,8 @@ namespace RTSMuzzleFlashBuilder
 	}
 }
 
-UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* Material)
+UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* GlowMaterial,
+	UMaterialInterface* FireMaterial)
 {
 	using namespace RTSMuzzleFlashBuilder;
 	TOptional<FNiagaraExternalEditContext> Edit;
@@ -219,29 +286,59 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& Asset
 	FNiagaraExternalEditContext& Context = *Edit;
 	if (System)
 	{
-		// The shot's colour and size: URTSWeaponData's ShellColor and EffectScale, set by ARTSShotEffect.
+		// The shot's colour and size, URTSWeaponData's ShellColor and EffectScale, and whether its gun has a muzzle brake
+		// (bMuzzleBrake, 1 or 0): set by ARTSShotEffect.
 		const FLinearColor DefaultColor(8.f, 4.f, 1.f);
 		const float DefaultScale = 1.f;
+		const int32 DefaultBrake = 0;
 		AddUserParameter(System, TEXT("User.Color"), FNiagaraTypeDefinition::GetColorDef(), DefaultColor, Context);
 		AddUserParameter(System, TEXT("User.Scale"), FNiagaraTypeDefinition::GetFloatDef(), DefaultScale, Context);
+		AddUserParameter(System, TEXT("User.Brake"), FNiagaraTypeDefinition::GetIntDef(), DefaultBrake, Context);
 
-		// A ball of fire at the muzzle, 4 m across on the M20's gun (scale 2), and a spray of smaller ones blown 2 to 5 m out
-		// along the bore, all gone in 0.15 s: big and long enough to read from the RTS camera. The bounds hold the spray of
-		// the heaviest gun (scale 2.5).
-		const FBox Bounds(FVector(-300.0, -300.0, -300.0), FVector(900.0, 300.0, 300.0));
-		AddSpriteBurst(System, TEXT("Core"), TEXT("1"), 0.15f, TEXT("0.15"), TEXT("User.Scale * 200.0"), TEXT("User.Color"), Material, Bounds,
-			true, Context);
-		AddSpriteBurst(System, TEXT("Spray"), TEXT("4"), 0.15f, TEXT("0.15"), TEXT("User.Scale * 90.0"), TEXT("User.Color * 0.7"), Material,
+		// The layers of a real firing (docs/art/refs/muzzle_flash), along the bore (+X), all gone within 0.15 s; sizes are for
+		// a scale of 1, so twice them on the M20's gun (scale 2). The bounds hold the heaviest gun (scale 2.5).
+		const FBox Bounds(FVector(-300.0, -700.0, -700.0), FVector(1100.0, 700.0, 700.0));
+		const FString Stretched(TEXT(", \"Alignment\": \"VelocityAligned\""));
+
+		// A white-hot core right at the muzzle: flares in a frame or two and burns out in 0.08 s.
+		AddSpriteBurst(System, TEXT("Core"), TEXT("1"), 0.15f, TEXT("0.08"), TEXT("User.Scale * 60.0"), TEXT("User.Color * 0.5"), GlowMaterial,
 			Bounds, true, Context);
-		const FName Velocity = AddModule(System, TEXT("Spray"), TEXT("ParticleSpawnScript"), TEXT("InitializeParticle"),
-			TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocity.AddVelocity"), Context);
-		SetExpression(ModuleInput(System, TEXT("Spray"), TEXT("ParticleSpawnScript"), Velocity, TEXT("Velocity")),
-			TEXT("float3((700.0 + rand(900.0)) * User.Scale, rand(300.0) - 150.0, rand(300.0) - 150.0)"), Context);
+		SetSpawnSphere(System, TEXT("Core"), TEXT("0.0"), TEXT("float3(User.Scale * 20.0, 0.0, 0.0)"), Context);
+
+		// The blast cone: two tongues of flame stretched along the bore, 1.5 to 2.2 m long, born clear of the muzzle so none
+		// lies over the barrel, thrown out and gone in 0.06 to 0.09 s.
+		AddSpriteBurst(System, TEXT("Cone"), TEXT("2"), 0.15f, TEXT("0.06 + rand(0.03)"), TEXT("User.Scale * 60.0"), TEXT("User.Color * 0.9"),
+			GlowMaterial, Bounds, true, Context, Stretched);
+		SetSpriteSize2D(System, TEXT("Cone"), TEXT("float2(User.Scale * (40.0 + rand(15.0)), User.Scale * (150.0 + rand(70.0)))"), Context);
+		SetSpawnSphere(System, TEXT("Cone"), TEXT("0.0"), TEXT("float3(User.Scale * 140.0, 0.0, 0.0)"), Context);
+		SetMotion(System, TEXT("Cone"), TEXT("float3(User.Scale * (900.0 + rand(500.0)), 0.0, 0.0)"), 25.f, FString(), Context);
+
+		// The brake jets: on a gun with a muzzle brake, a tongue of flame thrown out to each side and a little forward.
+		for (const TPair<const TCHAR*, const TCHAR*>& Jet : { TPair<const TCHAR*, const TCHAR*>(TEXT("JetLeft"), TEXT("-")),
+			TPair<const TCHAR*, const TCHAR*>(TEXT("JetRight"), TEXT("")) })
+		{
+			AddSpriteBurst(System, Jet.Key, TEXT("User.Brake"), 0.15f, TEXT("0.05 + rand(0.02)"), TEXT("User.Scale * 30.0"),
+				TEXT("User.Color * 0.8"), GlowMaterial, Bounds, true, Context, Stretched);
+			SetSpriteSize2D(System, Jet.Key, TEXT("float2(User.Scale * 30.0, User.Scale * (90.0 + rand(30.0)))"), Context);
+			SetMotion(System, Jet.Key, FString::Printf(TEXT("float3(User.Scale * 150.0, %sUser.Scale * (600.0 + rand(250.0)), 0.0)"), Jet.Value),
+				25.f, FString(), Context);
+		}
+
+		// The fireball: six billows of the baked fire (T_MuzzleFire), 1.1 to 1.7 m across, thrown out along the bore and
+		// slowed hard by the air, cooling from white-yellow to dark red in 0.11 to 0.16 s.
+		AddSpriteBurst(System, TEXT("Fireball"), TEXT("6"), 0.2f, TEXT("0.11 + rand(0.05)"), TEXT("User.Scale * (110.0 + rand(60.0))"),
+			TEXT("User.Color"), FireMaterial, Bounds, true, Context);
+		SetRandomRotation(System, TEXT("Fireball"), Context);
+		SetSpawnSphere(System, TEXT("Fireball"), TEXT("User.Scale * 20.0"), TEXT("float3(User.Scale * 60.0, 0.0, 0.0)"), Context);
+		SetMotion(System, TEXT("Fireball"),
+			TEXT("float3(User.Scale * (500.0 + rand(700.0)), User.Scale * (rand(240.0) - 120.0), User.Scale * (rand(240.0) - 120.0))"), 14.f,
+			FString(), Context);
 	}
 	return FinishSystem(System, AssetPath, TEXT("BuildMuzzleFlashSystem"), Context);
 }
 
-UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& AssetPath, UMaterialInterface* Material)
+UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& AssetPath, UMaterialInterface* BlastMaterial,
+	UMaterialInterface* DriftMaterial, UMaterialInterface* DustMaterial)
 {
 	using namespace RTSMuzzleFlashBuilder;
 	TOptional<FNiagaraExternalEditContext> Edit;
@@ -249,53 +346,64 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& Asset
 	FNiagaraExternalEditContext& Context = *Edit;
 	if (System)
 	{
-		// Set by URTSShotSubsystem: the particles for the quality and the distance, the bore in world space, EffectScale.
+		// Set by URTSShotSubsystem: the particles for the quality and the distance, the bore in world space, EffectScale and
+		// how high the muzzle is above the ground in cm.
 		const int32 DefaultCount = 10;
 		const FVector3f DefaultDirection(1.f, 0.f, 0.f);
 		const float DefaultScale = 1.f;
+		const float DefaultGroundHeight = 200.f;
 		AddUserParameter(System, TEXT("User.Count"), FNiagaraTypeDefinition::GetIntDef(), DefaultCount, Context);
 		AddUserParameter(System, TEXT("User.Direction"), FNiagaraTypeDefinition::GetVec3Def(), DefaultDirection, Context);
 		AddUserParameter(System, TEXT("User.Scale"), FNiagaraTypeDefinition::GetFloatDef(), DefaultScale, Context);
+		AddUserParameter(System, TEXT("User.GroundHeight"), FNiagaraTypeDefinition::GetFloatDef(), DefaultGroundHeight, Context);
 
-		// Grey puffs in world space, so they stay where the shot was fired as the turret turns. They leave the muzzle along the
-		// bore at 0.4 to 2.6 m/s a unit of scale, so they string out into a plume, drag stops them within half a second, 0.3
-		// to 1.7 m out on the M20's gun (scale 2), and they rise a little as they spread. M_MuzzleSmoke grows each puff from
-		// a third of its sprite to all of it over its life and fades it out, so they end 2 to 3.2 m across on the M20's gun
-		// after 2.2 to 3 s. The bounds hold the heaviest gun's drift.
-		const FName Emitter(TEXT("Puffs"));
-		const FName ParticleSpawn(TEXT("ParticleSpawnScript"));
-		const FName ParticleUpdate(TEXT("ParticleUpdateScript"));
-		const FBox Bounds(FVector(-1500.0, -1500.0, -500.0), FVector(1500.0, 1500.0, 1500.0));
-		AddSpriteBurst(System, Emitter, TEXT("User.Count"), URTSShotSubsystem::MuzzleSmokeSeconds, TEXT("2.2 + rand(0.8)"),
-			TEXT("User.Scale * (100.0 + rand(60.0))"), TEXT("float4(0.52, 0.5, 0.47, 1.0)"), Material, Bounds, false, Context);
-		const FName Velocity = AddModule(System, Emitter, ParticleSpawn, TEXT("InitializeParticle"),
-			TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocity.AddVelocity"), Context);
-		SetExpression(ModuleInput(System, Emitter, ParticleSpawn, Velocity, TEXT("Velocity")),
-			TEXT("User.Direction * ((40.0 + rand(220.0)) * User.Scale) + float3(rand(40.0) - 20.0, rand(40.0) - 20.0, rand(30.0))"), Context);
+		// All in world space, so the smoke stays where the shot was fired as the turret turns. Sizes are for a scale of 1,
+		// twice them on the M20's gun; the bounds hold the heaviest gun's drift and the ground under it.
+		const FBox Bounds(FVector(-1500.0, -1500.0, -800.0), FVector(1500.0, 1500.0, 1500.0));
 
-		// The forces go before the solver that applies them; the solver is added at the end when the template has none.
-		const FName Solver(TEXT("SolveForcesAndVelocity"));
-		bool bHasSolver = false;
-		FName BeforeSolver = ModuleBefore(System, Emitter, ParticleUpdate, Solver, bHasSolver, Context);
-		const FName Drag = AddModule(System, Emitter, ParticleUpdate, BeforeSolver, TEXT("/Niagara/Modules/Update/Forces/Drag.Drag"), Context);
-		SetFloat(ModuleInput(System, Emitter, ParticleUpdate, Drag, TEXT("Drag")), 3.f, Context);
-		const FName Rise = AddModule(System, Emitter, ParticleUpdate, Drag,
-			TEXT("/Niagara/Modules/Update/Forces/AccelerationForce.AccelerationForce"), Context);
-		SetExpression(ModuleInput(System, Emitter, ParticleUpdate, Rise, TEXT("Acceleration")), TEXT("float3(0.0, 0.0, 40.0 * User.Scale)"), Context);
-		if (!bHasSolver)
-		{
-			AddModule(System, Emitter, ParticleUpdate, Rise, TEXT("/Niagara/Modules/Solvers/SolveForcesAndVelocity.SolveForcesAndVelocity"), Context);
-		}
+		// The blast cloud: six tenths of the particles, never fewer than three, rolling out of the fireball along the bore and
+		// sideways, 1.5 to 2.3 m across, braked by the air within a second and thinning out over 1 to 1.6 s.
+		AddSpriteBurst(System, TEXT("Blast"), TEXT("max(User.Count * 6 / 10, 3)"), URTSShotSubsystem::MuzzleSmokeSeconds, TEXT("1.0 + rand(0.6)"),
+			TEXT("User.Scale * (150.0 + rand(80.0))"), TEXT("float4(0.46, 0.44, 0.41, 0.9)"), BlastMaterial, Bounds, false, Context);
+		SetRandomRotation(System, TEXT("Blast"), Context);
+		SetSpawnSphere(System, TEXT("Blast"), TEXT("User.Scale * 30.0"), TEXT("User.Direction * (User.Scale * 70.0)"), Context);
+		SetMotion(System, TEXT("Blast"),
+			TEXT("User.Direction * (User.Scale * (150.0 + rand(350.0))) + float3(rand(160.0) - 80.0, rand(160.0) - 80.0, rand(60.0)) * User.Scale"),
+			3.f, TEXT("float3(0.0, 0.0, 30.0 * User.Scale)"), Context);
+
+		// The drifting cloud: the rest, at least one, larger and thinner, 2.4 to 3.6 m across, drifting on and rising slowly,
+		// gone in 2.4 to 3 s.
+		AddSpriteBurst(System, TEXT("Drift"), TEXT("max(User.Count * 4 / 10, 1)"), URTSShotSubsystem::MuzzleSmokeSeconds, TEXT("2.4 + rand(0.6)"),
+			TEXT("User.Scale * (240.0 + rand(120.0))"), TEXT("float4(0.54, 0.52, 0.49, 0.55)"), DriftMaterial, Bounds, false, Context);
+		SetRandomRotation(System, TEXT("Drift"), Context);
+		SetSpawnSphere(System, TEXT("Drift"), TEXT("User.Scale * 40.0"), TEXT("User.Direction * (User.Scale * 150.0)"), Context);
+		SetMotion(System, TEXT("Drift"),
+			TEXT("User.Direction * (User.Scale * (60.0 + rand(80.0))) + float3(rand(40.0) - 20.0, rand(40.0) - 20.0, 20.0 + rand(20.0)) * User.Scale"),
+			0.8f, TEXT("float3(0.0, 0.0, 25.0 * User.Scale)"), Context);
+
+		// The ground blast: when the muzzle is less than 3 m a unit of scale above the ground, the pressure wave kicks dust off
+		// it under and ahead of the muzzle, thrown out flat along the bore and to the sides, settling in 0.6 to 1 s.
+		AddSpriteBurst(System, TEXT("Dust"), TEXT("User.GroundHeight < 300.0 * User.Scale ? max(User.Count * 6 / 10, 2) : 0"),
+			URTSShotSubsystem::MuzzleSmokeSeconds, TEXT("0.6 + rand(0.4)"), TEXT("User.Scale * (120.0 + rand(80.0))"),
+			TEXT("float4(0.6, 0.5, 0.38, 0.75)"), DustMaterial, Bounds, false, Context);
+		SetRandomRotation(System, TEXT("Dust"), Context);
+		SetSpawnSphere(System, TEXT("Dust"), TEXT("User.Scale * 40.0"),
+			TEXT("float3(User.Direction.x, User.Direction.y, 0.0) * (User.Scale * 120.0) + float3(0.0, 0.0, 30.0 - User.GroundHeight)"), Context);
+		SetMotion(System, TEXT("Dust"),
+			TEXT("float3(User.Direction.x, User.Direction.y, 0.0) * (User.Scale * (100.0 + rand(300.0))) + float3(rand(400.0) - 200.0, rand(400.0) - 200.0, 20.0 + rand(40.0)) * User.Scale"),
+			4.f, FString(), Context);
 	}
 	return FinishSystem(System, AssetPath, TEXT("BuildMuzzleSmokeSystem"), Context);
 }
 #else
-UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* Material)
+UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* GlowMaterial,
+	UMaterialInterface* FireMaterial)
 {
 	return nullptr;
 }
 
-UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& AssetPath, UMaterialInterface* Material)
+UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& AssetPath, UMaterialInterface* BlastMaterial,
+	UMaterialInterface* DriftMaterial, UMaterialInterface* DustMaterial)
 {
 	return nullptr;
 }

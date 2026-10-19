@@ -54,8 +54,8 @@ Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in t
 Unitshots plays L_TestMap with a renderer (a GPU is needed) at 1920x1080 and saves views of the first unit with the data
 asset -Unit (rts.Debug.UnitShots): the RTS camera at its default, closest and farthest zoom, a close-up, the turret turned,
 the gun's recoil at rest, at full stroke and run out again (#218), the hull at rest and rocked back from the front and the side with the gun at
-0, 90 and 180 degrees (recoil_rest_*/recoil_rock_*, #219), the muzzle flash held at its brightest, close up and from the RTS camera, by
-day and at night (muzzle_flash_*, #220), the muzzle smoke just after a shot and left behind as the turret turns (muzzle_smoke_*, #221), the unit picked, selected and driving on a move order, driving into, along and round obstacles with its shapes drawn (the hull's
+0, 90 and 180 degrees (recoil_rest_*/recoil_rock_*, #219), the firing held 0, 30, 80 and 150 ms after the shot, close up and from the RTS camera, by
+day and at night (muzzle_flash_<day|night>_<ms>[_rts], #220, #294), the muzzle smoke just after a shot and left behind as the turret turns (muzzle_smoke_*, #221), the unit picked, selected and driving on a move order, driving into, along and round obstacles with its shapes drawn (the hull's
 and barrel's overlap printed), and the default view with stat unit and stat rhi, to Saved/UnitShots/<Unit>; with -Stress N also N more of the unit in a
 grid with the stats on. The frame time, game thread time, avoidance pass, draw calls and triangles of the stat views are
 printed. -Trace also records an Unreal Insights capture (cpu, frame and region channels; each stat view is a region) to

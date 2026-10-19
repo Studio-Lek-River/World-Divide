@@ -2050,3 +2050,48 @@ muzzle light.
   has to run on an idle machine, with a stored baseline, for #152.
 - Niagara does not run under `-nullrhi`, so the tests check the flash's placement, count and lifetime, not its pixels. The
   look is checked in `ue.ps1 -Task unitshots` (`muzzle_flash_day`, `_night`, `_day_rts`, `_night_rts`).
+
+## #294 and #303 (a real firing: layered flash, ground blast, smoke from a simulation)
+
+### What changed
+
+`NS_MuzzleFlash` is a layered firing along the bore, all CPU sprites with fixed bounds: a white-hot core (1), a blast cone
+of two flame tongues (2), brake jets on a gun with a muzzle brake (2, none on the M20), and a fireball of six billows of a
+baked fire flipbook (6). Eleven particles at most, gone in 0.15 s. `NS_MuzzleSmoke` carries the ground blast and the smoke,
+all world space: a blast cloud (six tenths of `User.Count`, at least 3), a drifting cloud (the rest, at least 1) and, when
+the muzzle is less than 3 m a unit of scale above the ground, dust (six tenths, at least 2): 18 particles at epic quality
+up close. The fire and smoke are 8 × 8 flipbooks (2048², BC3) baked from our own Mantaflow simulation by
+`Tools/Art/muzzle_fx_blender.py`; the smoke is lit through six-way lightmaps turned into a normal, translucent with
+volumetric directional lighting. The muzzle light follows a curve (full for 15 ms, then a flickering fall, dark at 0.15 s)
+inside the #227 budget and the #220 distances. No component is spawned per shot: the effect pool and the smoke pool are as
+before.
+
+### Short method, 240 standing and moving M20s firing, interleaved runs
+
+`ue.ps1 -Task bench -Unit DA_TestM20Guardian@Battle,DA_TestM20Guardian@Battle@Close -Counts 240`, RTX 4090 PC, 5 runs each,
+"on" and "off" interleaved. "Off" sets `rts.Fx.MuzzleFlashDistance`, `rts.Fx.MuzzleLightDistance` and
+`rts.Fx.MuzzleSmokeDistance` to 1 cm through `-Cvars`: no flash, no muzzle light, no smoke.
+
+| Set | Scenario | Effects | Frame ms (mean, range) | Game ms | Render ms | GPU ms |
+|---|---|---|---:|---:|---:|---:|
+| `@Battle` | idle | on | 2.84 (2.8–2.9) | 2.54 | 2.69 | 2.55 |
+| `@Battle` | idle | off | 2.68 (2.6–2.7) | 2.27 | 2.54 | 2.42 |
+| `@Battle` | move | on | 8.18 (7.8–8.7) | 8.18 | 4.60 | 2.64 |
+| `@Battle` | move | off | 8.01 (7.7–8.8) | 8.00 | 4.64 | 2.56 |
+| `@Battle@Close` | idle | on | 3.36 (3.3–3.4) | 2.59 | 3.34 | 3.11 |
+| `@Battle@Close` | idle | off | 3.25 (3.2–3.3) | 2.05 | 3.25 | 3.03 |
+| `@Battle@Close` | move | on | 8.01 (7.8–8.4) | 8.00 | 4.57 | 3.23 |
+| `@Battle@Close` | move | off | 7.92 (7.4–8.6) | 7.92 | 4.62 | 3.17 |
+
+- **0.1–0.2 ms a frame for the whole firing, flash, light and smoke together**, against 0.2–0.3 ms for #220's flash alone.
+  Every row is well under #220's (5.25 and 6.49 ms standing): the build has moved on since, so the on/off pairs of the same
+  build are the measure, and they stay inside 0.5 ms.
+- **The caps hold:** `WorldDivide.Combat.MuzzleFlash.Cull` still counts at most `rts.Fx.MaxShotLights` muzzle lights for 240
+  M20s firing at once; `WorldDivide.Combat.MuzzleSmoke.Cap` still holds the smoke pool and the per-shooter cap.
+
+### Remaining limitations
+
+- Niagara does not run under `-nullrhi`, so the tests check the systems' layout, parameters and the puff per shot, not
+  pixels. The look is checked in `ue.ps1 -Task unitshots` (`muzzle_flash_<day|night>_<ms>[_rts]`, `muzzle_smoke_*`).
+- The three flipbooks are 2048² each (about 16 MB on the GPU with mips); half size would do at the RTS zoom if memory gets
+  tight.

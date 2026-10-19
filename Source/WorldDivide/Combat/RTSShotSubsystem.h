@@ -96,6 +96,9 @@ public:
 	void ReleaseShotLight();
 
 	int32 GetLiveEffects() const { return LiveEffects.Num(); }
+
+	/** The shot effect started last and still playing, null when none plays. For rts.Debug.UnitShots. */
+	ARTSShotEffect* GetLatestEffect() const { return LiveEffects.IsEmpty() ? nullptr : LiveEffects.Last().Get(); }
 	int32 GetPooledEffects() const { return FreeEffects.Num(); }
 	int32 GetLiveShotLights() const { return LiveShotLights; }
 
