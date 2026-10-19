@@ -382,17 +382,23 @@ def make_m20_guardian():
         "gun_mesh": meshes["Gun"],
         "gun_offset": unreal.Vector(*layout["gun_pivot_offset"]),
         "gun_muzzle_offset": unreal.Vector(*layout["gun_muzzle_offset"]),
-        "gun_recoil": gun_recoil(30.0, 0.06, 0.45),
+        # A 105 mm gun's stroke and run-out, its jump on the trunnions and the hull's rock on its suspension (#218).
+        "gun_recoil": gun_recoil(30.0, 0.015, 0.03, 0.7, jump_degrees=1.0, jump_seconds=0.3, hull_rock_degrees=0.6,
+                                 hull_rock_seconds=0.75),
         "parts": parts,
     }
 
 
-def gun_recoil(distance, recoil_seconds, return_seconds):
-    """A gun's recoil stroke (FRTSGunRecoil, #218): cm back, seconds back and seconds out again."""
+def gun_recoil(distance, recoil_seconds, hold_seconds, return_seconds, jump_degrees=0.0, jump_seconds=0.4,
+               hull_rock_degrees=0.0, hull_rock_seconds=1.0):
+    """A vehicle's reaction to its gun firing (FRTSGunRecoil, #218): the barrel's stroke in cm and its seconds back, held
+    and out again; the gun's jump and the hull's rock in degrees, and the seconds each takes to settle."""
     value = unreal.RTSGunRecoil()
-    value.set_editor_property("distance", distance)
-    value.set_editor_property("recoil_seconds", recoil_seconds)
-    value.set_editor_property("return_seconds", return_seconds)
+    for name, setting in (("distance", distance), ("recoil_seconds", recoil_seconds), ("hold_seconds", hold_seconds),
+                          ("return_seconds", return_seconds), ("jump_degrees", jump_degrees),
+                          ("jump_seconds", jump_seconds), ("hull_rock_degrees", hull_rock_degrees),
+                          ("hull_rock_seconds", hull_rock_seconds)):
+        value.set_editor_property(name, setting)
     return value
 
 

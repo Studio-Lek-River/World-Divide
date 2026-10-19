@@ -91,6 +91,8 @@ namespace RTSUnitDebugCommands
 
 	/** The turned turret for the turret shot. */
 	const FVector2D TurretShotAim(60.f, 10.f);
+	/** Of FRTSGunRecoil::HullRockSeconds: when the hull has rocked back furthest (the spring's peak, #218). */
+	constexpr float HullRockPeakShare = 0.174f;
 
 	/** The drive shot: the unit is picked along a ray from here relative to it, as from the RTS camera, and sent this far ahead. */
 	const FVector PickFrom(-1700.f, 0.f, 2500.f);
@@ -498,12 +500,18 @@ namespace RTSUnitDebugCommands
 				Run.Unit->SetGunRecoilHold(Run.Unit->GetUnitData()->GunRecoil.RecoilSeconds);
 				return true;
 			} });
+			// About when the hull has rocked back furthest: the barrel on its way out and the gun swinging back down.
+			Shots.Add({ TEXT("recoil_rock"), [](FUnitShotsRun& Run)
+			{
+				Run.Unit->SetGunRecoilHold(Run.Unit->GetUnitData()->GunRecoil.HullRockSeconds * HullRockPeakShare);
+				return true;
+			} });
 			Shots.Add({ TEXT("recoil_returned"), [](FUnitShotsRun& Run)
 			{
 				Run.Unit->SetGunRecoilHold({});
 				Run.Unit->PlayGunRecoil();
 				return true;
-			}, SettleSeconds + Unit->GetUnitData()->GunRecoil.GetSeconds() });
+			}, SettleSeconds + Unit->GetUnitData()->GunRecoil.GetSettleSeconds() });
 			Shots.Add({ TEXT("driving"), [](FUnitShotsRun& Run)
 			{
 				Run.Unit->SetAimOverride({});

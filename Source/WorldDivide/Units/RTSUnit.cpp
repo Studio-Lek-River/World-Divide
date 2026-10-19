@@ -19,6 +19,7 @@
 #include "Economy/RTSSupplySource.h"
 #include "Engine/StaticMesh.h"
 #include "HAL/IConsoleManager.h"
+#include "Misc/App.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "NavigationSystem.h"
 #include "NavMesh/RecastNavMesh.h"
@@ -79,6 +80,12 @@ namespace
 	/** A fire kick jolts the mesh back this many cm per unit of effect scale and eases it home over this long. */
 	constexpr float FireKickPerScale = 8.f;
 	constexpr float FireKickSeconds = 0.15f;
+	/**
+	 * How the gun's jump and the hull's rock settle (FRTSRecoilSpring's damping, #218): the gun on its stiff elevation drive
+	 * swings back past rest by about a fifth of its kick, the hull on its suspension by under a tenth.
+	 */
+	constexpr float GunJumpDamping = 0.45f;
+	constexpr float HullRockDamping = 0.6f;
 
 	/**
 	 * The ground is looked for from this far above a unit's feet, enough for the steepest ramp it climbs in a frame, down to
@@ -337,6 +344,9 @@ void ARTSUnit::CreateParts()
 	GunRecoilTime.Reset();
 	GunRecoilOffset = 0.f;
 	bGunRecoilHeld = false;
+	GunJump.Reset();
+	HullLift.Reset();
+	HullSide.Reset();
 	LastGearPose.Reset();
 	GearHull.Reset();
 	GearTime.Reset();
@@ -974,10 +984,7 @@ void ARTSUnit::OnRep_TurretYaw()
 
 void ARTSUnit::OnRep_GunPitch()
 {
-	if (Gun)
-	{
-		Gun->SetRelativeRotation(FRotator(GunPitch, 0.f, 0.f));
-	}
+	PlaceGun();
 }
 
 bool ARTSUnit::IsAimedAt(const AActor& Target) const
@@ -1080,6 +1087,11 @@ FVector ARTSUnit::GetNavAgentLocation() const
 
 void ARTSUnit::PlayFireKick(float EffectScale)
 {
+	// A hull that rocks back on its suspension (PlayGunRecoil) does not also slide back.
+	if (UnitData && UnitData->GunRecoil.HullRockDegrees > 0.f)
+	{
+		return;
+	}
 	FireKickDistance = FireKickPerScale * EffectScale;
 	FireKickTimeLeft = FireKickSeconds;
 	UpdateMeshTransform();
@@ -1097,48 +1109,99 @@ bool ARTSUnit::UpdateFireKick(float DeltaSeconds)
 
 void ARTSUnit::PlayGunRecoil()
 {
-	if (RecoilParts.IsEmpty() || !UnitData || UnitData->GunRecoil.Distance <= 0.f || bGunRecoilHeld)
+	if (!UnitData || bGunRecoilHeld)
 	{
 		return;
 	}
-	GunRecoilFrom = GunRecoilOffset;
-	GunRecoilTime = 0.f;
+	// Nobody sees a tank off screen recoil, and moving its hull and parts for a second is most of what the recoil costs. A
+	// machine that never renders (tests under -nullrhi) has no frames to go by and plays it all.
+	if (FApp::CanEverRender() && !Mesh->WasRecentlyRendered())
+	{
+		return;
+	}
+	const FRTSGunRecoil& Recoil = UnitData->GunRecoil;
+	if (!RecoilParts.IsEmpty() && Recoil.Distance > 0.f)
+	{
+		GunRecoilFrom = GunRecoilOffset;
+		GunRecoilTime = 0.f;
+	}
+	if (Gun && Recoil.JumpDegrees > 0.f)
+	{
+		GunJump.Kick(Recoil.JumpDegrees, Recoil.JumpSeconds, GunJumpDamping);
+	}
+	if (Recoil.HullRockDegrees > 0.f)
+	{
+		// The shot pushes back along the bore above the suspension: the hull lifts on the side the gun points to.
+		float Side = 0.f;
+		float Ahead = 1.f;
+		FMath::SinCos(&Side, &Ahead, FMath::DegreesToRadians(TurretYaw));
+		HullLift.Kick(Recoil.HullRockDegrees * Ahead, Recoil.HullRockSeconds, HullRockDamping);
+		HullSide.Kick(Recoil.HullRockDegrees * Side, Recoil.HullRockSeconds, HullRockDamping);
+	}
 	UpdateGunRecoil(0.f);
 }
 
 void ARTSUnit::SetGunRecoilHold(TOptional<float> Time)
 {
 	bGunRecoilHeld = false;
-	if (Time && !RecoilParts.IsEmpty() && UnitData)
+	GunRecoilTime.Reset();
+	GunRecoilOffset = 0.f;
+	GunJump.Reset();
+	HullLift.Reset();
+	HullSide.Reset();
+	PlaceRecoilParts();
+	PlaceGun();
+	UpdateMeshTransform();
+	if (Time)
 	{
 		GunRecoilFrom = 0.f;
-		GunRecoilTime = *Time;
-		UpdateGunRecoil(0.f);
-		bGunRecoilHeld = GunRecoilTime.IsSet();
+		PlayGunRecoil();
+		UpdateGunRecoil(*Time);
+		bGunRecoilHeld = IsRecoiling();
 	}
 }
 
 void ARTSUnit::UpdateGunRecoil(float DeltaSeconds)
 {
-	if (!GunRecoilTime || !UnitData)
+	if (!UnitData)
 	{
 		return;
 	}
-	const FRTSGunRecoil& Recoil = UnitData->GunRecoil;
-	if (!bGunRecoilHeld)
+	const float Elapsed = bGunRecoilHeld ? 0.f : DeltaSeconds;
+	if (GunRecoilTime)
 	{
-		*GunRecoilTime += DeltaSeconds;
+		*GunRecoilTime += Elapsed;
+		if (*GunRecoilTime >= UnitData->GunRecoil.GetSeconds())
+		{
+			GunRecoilTime.Reset();
+			GunRecoilOffset = 0.f;
+		}
+		else
+		{
+			GunRecoilOffset = UnitData->GunRecoil.OffsetAt(*GunRecoilTime, GunRecoilFrom);
+		}
+		PlaceRecoilParts();
 	}
-	if (*GunRecoilTime >= Recoil.GetSeconds())
+	// Placed once more on the frame the spring comes to rest, so it ends at exactly zero.
+	if (GunJump.IsActive())
 	{
-		GunRecoilTime.Reset();
-		GunRecoilOffset = 0.f;
+		GunJump.Advance(Elapsed);
+		PlaceGun();
 	}
-	else
+	if (HullLift.IsActive() || HullSide.IsActive())
 	{
-		GunRecoilOffset = Recoil.OffsetAt(*GunRecoilTime, GunRecoilFrom);
+		HullLift.Advance(Elapsed);
+		HullSide.Advance(Elapsed);
+		UpdateMeshTransform();
 	}
-	PlaceRecoilParts();
+}
+
+void ARTSUnit::PlaceGun()
+{
+	if (Gun)
+	{
+		Gun->SetRelativeRotation(FRotator(GunPitch + GunJump.GetAngle(), 0.f, 0.f));
+	}
 }
 
 void ARTSUnit::PlaceRecoilParts()
@@ -1196,9 +1259,25 @@ void ARTSUnit::UpdateMeshTransform()
 	const float KickAlpha = FMath::Square(FireKickTimeLeft / FireKickSeconds);
 	const FVector Kick(-FireKickDistance * KickAlpha, 0.f, 0.f);
 	// Leaning around the bottom of the hull box keeps the tracks on the slope.
-	const FVector Pivot(0.f, 0.f, -Collision->GetUnscaledBoxExtent().Z);
+	const FVector Extent = Collision->GetUnscaledBoxExtent();
+	const FVector Pivot(0.f, 0.f, -Extent.Z);
+	FVector Hull = MeshRestLocation + Kick;
+	FQuat Rotation = FQuat::Identity;
+	// The rock from a shot (PlayGunRecoil) lifts the side the gun points to, hinged on the bottom edge across from it, so
+	// the hull rises but never sinks into the ground.
+	const FVector2D Rock = GetHullRock();
+	const float RockDegrees = Rock.Size();
+	if (RockDegrees > UE_KINDA_SMALL_NUMBER)
+	{
+		const FVector Lifted(Rock / RockDegrees, 0.f);
+		const float Reach = FMath::Min(Extent.X / FMath::Max(FMath::Abs(Lifted.X), UE_KINDA_SMALL_NUMBER),
+			Extent.Y / FMath::Max(FMath::Abs(Lifted.Y), UE_KINDA_SMALL_NUMBER));
+		const FVector Hinge(-Lifted.X * Reach, -Lifted.Y * Reach, -Extent.Z);
+		Rotation = FQuat((Lifted ^ FVector::UpVector).GetSafeNormal(), FMath::DegreesToRadians(RockDegrees));
+		Hull = Hinge + Rotation.RotateVector(Hull - Hinge);
+	}
 	const FQuat Tilt = MeshTilt.Quaternion();
-	Mesh->SetRelativeLocationAndRotation(Pivot + Tilt.RotateVector(MeshRestLocation + Kick - Pivot), Tilt);
+	Mesh->SetRelativeLocationAndRotation(Pivot + Tilt.RotateVector(Hull - Pivot), Tilt * Rotation);
 }
 
 void ARTSUnit::SnapToGround()

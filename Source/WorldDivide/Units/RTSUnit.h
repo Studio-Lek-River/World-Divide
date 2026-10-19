@@ -201,17 +201,27 @@ public:
 	void PlayFireKick(float EffectScale);
 
 	/**
-	 * Every machine that draws. Slides the gun's recoiling parts (FRTSVehiclePart::bRecoils) back along the bore and out again
-	 * by URTSUnitData::GunRecoil; a shot before they are out starts the stroke where they are. Cosmetic only: the gun, its
-	 * muzzle and the aim do not move.
+	 * Every machine that draws. The unit's reaction to its own shot, by URTSUnitData::GunRecoil (#218): the gun's recoiling
+	 * parts (FRTSVehiclePart::bRecoils) snap back along the bore and run out again, the gun jumps on its trunnions and the
+	 * hull rocks back on its suspension away from the shot. A shot before they have settled carries on from where they are.
+	 * Cosmetic only: the replicated aim, the actor, its collision and its movement do not change.
 	 */
 	void PlayGunRecoil();
 
-	/** Every machine. Runs a recoil stroke on by DeltaSeconds and places the recoiling parts; Tick runs it, public so tests can step it. */
+	/** Every machine. Runs the recoil on by DeltaSeconds and places the parts it moves; Tick runs it, public so tests can step it. */
 	void UpdateGunRecoil(float DeltaSeconds);
 
 	/** Every machine. How far back the recoiling parts are now, in cm before MeshScale; zero at rest. */
 	float GetGunRecoilOffset() const { return GunRecoilOffset; }
+
+	/** Every machine. Degrees the gun's jump lifts it above GetGunPitch now. */
+	float GetGunJump() const { return GunJump.GetAngle(); }
+
+	/** Every machine. Degrees the hull is rocked back now: X lifting its front, Y lifting its right side. */
+	FVector2D GetHullRock() const { return FVector2D(HullLift.GetAngle(), HullSide.GetAngle()); }
+
+	/** Every machine. True while the gun recoils, jumps or the hull rocks. */
+	bool IsRecoiling() const { return GunRecoilTime.IsSet() || GunJump.IsActive() || HullLift.IsActive() || HullSide.IsActive(); }
 
 	/**
 	 * Every machine, for inspecting a vehicle (rts.Debug.UnitShots). Holds the recoiling parts Time seconds into a stroke
@@ -475,6 +485,9 @@ private:
 	/** Places the recoiling parts GunRecoilOffset back from their rest along the gun's bore. */
 	void PlaceRecoilParts();
 
+	/** Sets the gun's rotation from GunPitch and its jump. */
+	void PlaceGun();
+
 	/**
 	 * Eases the mesh of a vehicle that tilts to the ground toward the slope under it, and every other mesh back upright.
 	 * Returns true when the mesh has to move.
@@ -696,8 +709,12 @@ private:
 	/** How far back the stroke started, in cm before MeshScale. */
 	float GunRecoilFrom = 0.f;
 	float GunRecoilOffset = 0.f;
-	/** Holds the stroke where it is (SetGunRecoilHold). */
+	/** Holds the recoil where it is (SetGunRecoilHold). */
 	bool bGunRecoilHeld = false;
+	/** The gun's jump on its trunnions, and the hull's rock: lifting its front and its right side, in degrees. */
+	FRTSRecoilSpring GunJump;
+	FRTSRecoilSpring HullLift;
+	FRTSRecoilSpring HullSide;
 
 	FRotator MeshTilt = FRotator::ZeroRotator;
 

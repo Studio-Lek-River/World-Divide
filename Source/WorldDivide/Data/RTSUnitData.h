@@ -69,7 +69,11 @@ struct FRTSVehiclePart
 	bool bRecoils = false;
 };
 
-/** How a gun's recoiling parts (FRTSVehiclePart::bRecoils) move on each shot, drawn on each machine that shows it. */
+/**
+ * How a vehicle reacts to its own gun firing, drawn on each machine that shows it (#218): the barrel (FRTSVehiclePart::
+ * bRecoils) snaps back along the bore and the recuperator runs it out again, braked by its buffer toward the end; the
+ * gun kicks up on its trunnions; and the hull rocks back on its suspension, lifting on the side the gun points to.
+ */
 USTRUCT(BlueprintType)
 struct WORLDDIVIDE_API FRTSGunRecoil
 {
@@ -79,19 +83,78 @@ struct WORLDDIVIDE_API FRTSGunRecoil
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0"))
 	float Distance = 0.f;
 
-	/** Seconds to slide back the full stroke, easing out as the recoil brake takes it. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.01"))
-	float RecoilSeconds = 0.06f;
+	/** Seconds to slide back the full stroke: a real gun takes about a hundredth, a frame on screen. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.001"))
+	float RecoilSeconds = 0.015f;
 
-	/** Seconds to run back out to rest, easing in and out. */
+	/** Seconds the barrel stays fully back before it runs out. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0"))
+	float HoldSeconds = 0.03f;
+
+	/** Seconds to run back out to rest: quick at first, then slowed by the buffer over the last part. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.01"))
-	float ReturnSeconds = 0.45f;
+	float ReturnSeconds = 0.7f;
+
+	/** Degrees the gun kicks up on its trunnions at its highest; 0 does not. It swings back past rest once and settles. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0"))
+	float JumpDegrees = 0.f;
+
+	/** Seconds the gun's jump takes to settle. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.05"))
+	float JumpSeconds = 0.4f;
+
+	/**
+	 * Degrees the hull rocks back at its most, lifting on the side the gun points to and pivoting on the opposite edge of
+	 * its bottom, so it never sinks into the ground; 0 leaves the hull still. Only the mesh moves: the actor, its collision
+	 * and its movement do not.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0"))
+	float HullRockDegrees = 0.f;
+
+	/** Seconds the hull takes to settle on its suspension. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.05"))
+	float HullRockSeconds = 1.f;
 
 	/** How far back the barrel is, in cm before MeshScale, Time seconds into a stroke that started From cm back. */
 	float OffsetAt(float Time, float From) const;
 
-	/** Seconds a stroke lasts, back and out again. */
-	float GetSeconds() const { return RecoilSeconds + ReturnSeconds; }
+	/** Seconds a stroke lasts, back, held and out again. */
+	float GetSeconds() const { return RecoilSeconds + HoldSeconds + ReturnSeconds; }
+
+	/** Seconds until the stroke, the jump and the rock have all settled. */
+	float GetSettleSeconds() const { return FMath::Max3(GetSeconds(), JumpSeconds, HullRockSeconds); }
+};
+
+/**
+ * A damped spring kicked by each shot (FRTSGunRecoil's gun jump and hull rock): an angle that rises to its peak, swings back
+ * past rest by a little and settles within its settle time. A kick before it has settled adds to how it moves now, so
+ * the angle never jumps.
+ */
+struct WORLDDIVIDE_API FRTSRecoilSpring
+{
+	/** Kicks the spring so that from rest it would peak at Peak (degrees); Damping below 1 sets how far it swings back. */
+	void Kick(float Peak, float SettleSeconds, float Damping);
+
+	/** Runs the spring on; at its settle time it comes to rest at exactly zero. */
+	void Advance(float DeltaSeconds);
+
+	float GetAngle() const { return Angle; }
+	bool IsActive() const { return bActive; }
+	void Reset() { *this = FRTSRecoilSpring(); }
+
+private:
+	/** The angle and rate at the last kick, the time since, and the spring's decay and swing from that kick. */
+	float FromAngle = 0.f;
+	float FromRate = 0.f;
+	float Time = 0.f;
+	float Settle = 1.f;
+	float Decay = 0.f;
+	float Swing = 1.f;
+	float Angle = 0.f;
+	bool bActive = false;
+
+	/** The angle and rate Elapsed seconds after the last kick. */
+	void Evaluate(float Elapsed, float& OutAngle, float& OutRate) const;
 };
 
 /** What moves a ground unit: legs walk anywhere they face, tracks and wheels drive the hull (RTSLocomotion). */
