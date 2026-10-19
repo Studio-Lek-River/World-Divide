@@ -291,8 +291,9 @@ namespace RTSVehicleNetTests
 			TWeakObjectPtr<ARTSUnit> Target;
 			/** Events on the server, then on each client. */
 			TArray<int32> Events;
-			/** URTSShotSubsystem::GetMuzzleFlashesPlayed before the shots, on the server, then on each client. */
+			/** URTSShotSubsystem::GetMuzzleFlashesPlayed and GetMuzzleSmokesPlayed before the shots, on the server, then on each client. */
 			TArray<int32> FlashesBefore;
+			TArray<int32> SmokesBefore;
 			int32 Fired = 0;
 			TOptional<double> Stopped;
 		};
@@ -331,6 +332,7 @@ namespace RTSVehicleNetTests
 			for (UWorld* World : GetShotWorlds(*Session))
 			{
 				Shots->FlashesBefore.Add(World->GetSubsystem<URTSShotSubsystem>()->GetMuzzleFlashesPlayed());
+				Shots->SmokesBefore.Add(World->GetSubsystem<URTSShotSubsystem>()->GetMuzzleSmokesPlayed());
 			}
 			for (int32 Index = 0; Index < Copies.Num(); ++Index)
 			{
@@ -378,6 +380,8 @@ namespace RTSVehicleNetTests
 			{
 				const int32 Flashes = Worlds[Index]->GetSubsystem<URTSShotSubsystem>()->GetMuzzleFlashesPlayed() - Shots->FlashesBefore[Index];
 				Test.TestEqual(*FString::Printf(TEXT("Shots: world %d plays one muzzle flash per event"), Index), Flashes, Shots->Events[Index]);
+				const int32 Smokes = Worlds[Index]->GetSubsystem<URTSShotSubsystem>()->GetMuzzleSmokesPlayed() - Shots->SmokesBefore[Index];
+				Test.TestEqual(*FString::Printf(TEXT("Shots: world %d leaves one muzzle smoke per event"), Index), Smokes, Shots->Events[Index]);
 			}
 			for (int32 Index = 0; Index < Shots->Events.Num(); ++Index)
 			{

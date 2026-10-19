@@ -98,6 +98,15 @@ namespace RTSUnitDebugCommands
 
 	/** The turned turret for the turret shot. */
 	const FVector2D TurretShotAim(60.f, 10.f);
+	/**
+	 * The muzzle smoke's pictures (#221): real seconds after the shot for the puff leaving the barrel, and then for the turret
+	 * to turn most of the way from TurretShotAim back to the front, leaving the puff behind.
+	 */
+	constexpr double SmokeLeavingSeconds = 0.4;
+	constexpr double SmokeTurnedSeconds = 1.0;
+	/** The close muzzle smoke pictures look from in front of the unit, this far and this many degrees up, across the turned gun. */
+	constexpr float SmokeViewDistance = 2200.f;
+	constexpr float SmokeViewElevation = 12.f;
 	/** How slowly the world runs while a muzzle flash is held for its picture (#220): as still as the engine allows. */
 	constexpr float FlashHoldDilation = 0.0001f;
 	/** The share of their brightness the sun and the sky keep for the night pictures. */
@@ -552,6 +561,26 @@ namespace RTSUnitDebugCommands
 					return Run.HoldMuzzleFlash();
 				} });
 			}
+			// The muzzle smoke (#221) by day, the gun at TurretShotAim: from the RTS camera just after the shot, then from in
+			// front just after another one and once the turret has turned back to the front, the puff left where it was fired.
+			Shots.Add({ TEXT("muzzle_smoke_rts"), [](FUnitShotsRun& Run)
+			{
+				Run.ReleaseMuzzleFlash();
+				Run.SetNight(false);
+				Run.Unit->SetAimOverride(TurretShotAim);
+				Run.UseRTSCamera(Run.GetCameraPawn()->GetDefaultZoom(), 0.f);
+				return Run.FireGun();
+			}, SmokeLeavingSeconds });
+			Shots.Add({ TEXT("muzzle_smoke_leaving"), [](FUnitShotsRun& Run)
+			{
+				Run.World->GetSubsystem<URTSShotSubsystem>()->AdvanceEffects(10.f);
+				return Run.UseLODCamera(FVector::ForwardVector, SmokeViewDistance, false, SmokeViewElevation) && Run.FireGun();
+			}, SmokeLeavingSeconds });
+			Shots.Add({ TEXT("muzzle_smoke_turned"), [](FUnitShotsRun& Run)
+			{
+				Run.Unit->SetAimOverride(FVector2D::ZeroVector);
+				return true;
+			}, SmokeTurnedSeconds });
 			// The hull's rock (#219) from the front and the side, at rest and held where it has rocked back furthest, for each
 			// way the gun points: the hull lifts on the gun's side and pivots on the edge across from it.
 			for (const float Yaw : RockGunYaws)
@@ -836,23 +865,38 @@ namespace RTSUnitDebugCommands
 		bool HoldMuzzleFlash()
 		{
 			const URTSWeaponData* Weapon = Unit->GetUnitData()->Weapon;
-			if (!Weapon)
-			{
-				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.UnitShots: %s has no weapon to flash"), *UnitName);
-				return false;
-			}
-			if (!Weapon->MuzzleFlash)
+			if (Weapon && !Weapon->MuzzleFlash)
 			{
 				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.UnitShots: %s's weapon has no Niagara muzzle flash"), *UnitName);
 			}
 			ReleaseMuzzleFlash();
-			URTSShotSubsystem* ShotSubsystem = World->GetSubsystem<URTSShotSubsystem>();
 			// The last shot's effect plays out first, so only this one shows.
-			ShotSubsystem->AdvanceEffects(10.f);
-			const FTransform Muzzle = Unit->GetMuzzleTransform();
-			ShotSubsystem->PlayShot(*Unit, *Weapon, nullptr, Muzzle.GetLocation() + Muzzle.GetUnitAxis(EAxis::X) * Weapon->Range, 1.f, Muzzle);
+			World->GetSubsystem<URTSShotSubsystem>()->AdvanceEffects(10.f);
+			if (!FireGun())
+			{
+				return false;
+			}
 			World->GetWorldSettings()->SetTimeDilation(FlashHoldDilation);
 			bHoldingFlash = true;
+			return true;
+		}
+
+		/** Fires the unit's gun once along its bore through the shot effects players see, without a target. False without a weapon. */
+		bool FireGun()
+		{
+			const URTSWeaponData* Weapon = Unit->GetUnitData()->Weapon;
+			if (!Weapon)
+			{
+				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.UnitShots: %s has no weapon to fire"), *UnitName);
+				return false;
+			}
+			if (!Weapon->MuzzleSmoke)
+			{
+				UE_LOG(LogWorldDivide, Verbose, TEXT("rts.Debug.UnitShots: %s's weapon has no muzzle smoke"), *UnitName);
+			}
+			const FTransform Muzzle = Unit->GetMuzzleTransform();
+			World->GetSubsystem<URTSShotSubsystem>()->PlayShot(*Unit, *Weapon, nullptr,
+				Muzzle.GetLocation() + Muzzle.GetUnitAxis(EAxis::X) * Weapon->Range, 1.f, Muzzle);
 			return true;
 		}
 

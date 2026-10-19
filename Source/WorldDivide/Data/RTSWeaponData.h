@@ -64,6 +64,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	TObjectPtr<UNiagaraSystem> MuzzleFlash;
 
+	/**
+	 * A puff of smoke left at the muzzle after each shot (#221): it leaves along the bore, then drifts in world space as the
+	 * turret turns. User parameters Count, Direction and Scale (EffectScale); none leaves no smoke. Vehicle cannons have one.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	TObjectPtr<UNiagaraSystem> MuzzleSmoke;
+
 	/** Played at the muzzle; none plays a synthesized shot. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	TObjectPtr<USoundBase> FireSound;

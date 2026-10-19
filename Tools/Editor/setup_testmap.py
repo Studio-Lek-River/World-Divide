@@ -428,10 +428,12 @@ def interaction_radius(mesh, scale):
 
 
 def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_scale, shell_color, arc_height=0.0,
-                ground=True, air=False, muzzle_flash=None):
-    """muzzle_flash: the Niagara system a vehicle gun flashes (make_muzzle_flash); None keeps the placeholder glow."""
+                ground=True, air=False, muzzle_flash=None, muzzle_smoke=None):
+    """muzzle_flash: the Niagara system a vehicle gun flashes (make_muzzle_flash); None keeps the placeholder glow.
+    muzzle_smoke: the Niagara system a vehicle cannon leaves at the muzzle after a shot (make_muzzle_smoke); None leaves none."""
     return plan_data_asset(name, WEAPON_DIR, unreal.RTSWeaponData, {
         "muzzle_flash": muzzle_flash,
+        "muzzle_smoke": muzzle_smoke,
         "range": weapon_range,
         "damage": damage,
         "reload_seconds": reload_seconds,
@@ -739,6 +741,66 @@ def make_muzzle_flash():
         return system
     builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSMuzzleFlashBuilder.cpp"))
     return plan_now(path, build, spec_hash([make_muzzle_flash], path, material, builder_source))
+
+
+def build_muzzle_smoke_material(name):
+    """Lit translucent sprite material for the Niagara muzzle smoke (#221): the particle colour in a soft round puff that
+    grows from a third of the sprite to all of it over the particle's life and fades out, slowly at first, as it does, thin enough that
+    overlapping puffs stay see-through."""
+    path = f"{MATERIAL_DIR}/{name}"
+    if assets.does_asset_exist(path):
+        material = assets.load_asset(path)
+    else:
+        material = asset_tools.create_asset(name, MATERIAL_DIR, unreal.Material, unreal.MaterialFactoryNew())
+
+    editing = unreal.MaterialEditingLibrary
+    editing.delete_all_material_expressions(material)
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
+    material.set_editor_property("used_with_niagara_sprites", True)
+
+    color = editing.create_material_expression(material, unreal.MaterialExpressionParticleColor, -800, 0)
+    uv = editing.create_material_expression(material, unreal.MaterialExpressionTextureCoordinate, -800, 200)
+    age = editing.create_material_expression(material, unreal.MaterialExpressionParticleRelativeTime, -800, 400)
+    puff = editing.create_material_expression(material, unreal.MaterialExpressionCustom, -500, 200)
+    puff.set_editor_property("code", "float Radius = lerp(0.33, 1.0, sqrt(saturate(Age)));\n"
+                                     "float Falloff = saturate(1.0 - length(UV - 0.5) * 2.0 / Radius);\n"
+                                     "float Fade = saturate(1.0 - Age * Age);\n"
+                                     "return Alpha * 0.6 * Falloff * Falloff * Fade;")
+    puff.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    inputs = []
+    for input_name in ("Alpha", "UV", "Age"):
+        custom_input = unreal.CustomInput()
+        custom_input.set_editor_property("input_name", input_name)
+        inputs.append(custom_input)
+    puff.set_editor_property("inputs", inputs)
+    editing.connect_material_expressions(color, "A", puff, "Alpha")
+    editing.connect_material_expressions(uv, "", puff, "UV")
+    editing.connect_material_expressions(age, "", puff, "Age")
+    editing.connect_material_property(color, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
+    editing.connect_material_property(puff, "", unreal.MaterialProperty.MP_OPACITY)
+
+    editing.recompile_material(material)
+    return material
+
+
+def make_muzzle_smoke():
+    """The Niagara muzzle smoke of vehicle cannons (#221) and its sprite material, built now so the weapons can point at it.
+    Built in C++ like the muzzle flash (URTSEditorScripting::BuildMuzzleSmokeSystem, RTSMuzzleFlashBuilder.cpp)."""
+    material_name = "M_MuzzleSmoke"
+    material = plan_now(f"{MATERIAL_DIR}/{material_name}", lambda: build_muzzle_smoke_material(material_name),
+                        spec_hash([build_muzzle_smoke_material], material_name))
+    path = f"{EFFECT_DIR}/NS_MuzzleSmoke"
+
+    def build():
+        if not unreal.RTSEditorScripting.load_editor_module("NiagaraEditor"):
+            raise RuntimeError("Could not load the NiagaraEditor module")
+        system = unreal.RTSEditorScripting.build_muzzle_smoke_system(path, material)
+        if not system:
+            raise RuntimeError(f"Could not build {path}; the log says why")
+        return system
+    builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSMuzzleFlashBuilder.cpp"))
+    return plan_now(path, build, spec_hash([make_muzzle_smoke], path, material, builder_source))
 
 
 def build_surface_material(name, color, roughness, digest):
@@ -1776,8 +1838,11 @@ TOWER_RANGE_OVER_TANK = 1.25
 
 # Shell speed in cm/s, effect scale, shell colour; the grenade lobs. Shell speeds grew with the ranges, so a shot still
 # flies 0.2 to 1 s. Vehicle guns flash the Niagara muzzle flash; infantry, defences and jets keep the placeholder glow.
+# The tank cannons leave a puff of smoke at the muzzle after each shot.
 muzzle_flash = make_muzzle_flash()
-cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 30000.0, 1.6, (1.0, 0.45, 0.1), muzzle_flash=muzzle_flash)
+muzzle_smoke = make_muzzle_smoke()
+cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 30000.0, 1.6, (1.0, 0.45, 0.1), muzzle_flash=muzzle_flash,
+                     muzzle_smoke=muzzle_smoke)
 rifle = make_weapon("DA_TestRifle", 3500.0, 8.0, 0.5, 45000.0, 0.4, (1.0, 0.85, 0.3))
 # A main battle tank, 9.8 x 3.7 m with its gun forward; the placeholder's long gun lets the width bind.
 tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 1080.0, 370.0), 200.0, cannon, 1100.0, 75.0,
@@ -1785,7 +1850,7 @@ tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 108
 # A heavier second tank to try out. It wears the standard tank's model here; on a machine with the local Abrams art,
 # import_local_art.py gives it that model and its traversing turret.
 heavy_cannon = make_weapon("DA_TestHeavyCannon", TANK_RANGE, 60.0, 2.5, 32500.0, 2.0, (1.0, 0.4, 0.08),
-                           muzzle_flash=muzzle_flash)
+                           muzzle_flash=muzzle_flash, muzzle_smoke=muzzle_smoke)
 abrams = make_unit("DA_TestAbrams", "Test Abrams", tank_mesh, fit_scale(tank_mesh, 1080.0, 380.0), 350.0, heavy_cannon,
                    1000.0, 60.0, 1100, 14.0)
 # The M20 Guardian at its real size (7.1 m hull), to try the Blender to Unreal pipeline out: the heavy tank's weapon and

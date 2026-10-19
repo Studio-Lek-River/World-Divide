@@ -72,4 +72,11 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
 	static UNiagaraSystem* BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* Material);
+
+	/**
+	 * Builds the muzzle smoke of vehicle cannons (#221) as the Niagara system AssetPath (such as /Game/Effects/NS_MuzzleSmoke),
+	 * new, in place of the one there, as BuildMuzzleFlashSystem. Returns null and logs why when it fails.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
+	static UNiagaraSystem* BuildMuzzleSmokeSystem(const FString& AssetPath, UMaterialInterface* Material);
 };
