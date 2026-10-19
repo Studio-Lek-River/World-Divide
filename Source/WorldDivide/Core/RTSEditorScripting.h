@@ -68,7 +68,7 @@ public:
 
 	/**
 	 * Builds the muzzle flash of vehicle guns (#220) as the Niagara system AssetPath (such as /Game/Effects/NS_MuzzleFlash),
-	 * replacing the one there: Python cannot edit a Niagara system's modules. Returns null and logs why when it fails.
+	 * new, in place of the one there: Python cannot edit a Niagara system's modules. Returns null and logs why when it fails.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
 	static UNiagaraSystem* BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* Material);

@@ -9,6 +9,7 @@
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraSystem.h"
 #include "NiagaraTypes.h"
+#include "UObject/Package.h"
 #include "WorldDivide.h"
 
 // Named, not anonymous: the unity build shares one scope among several files.
@@ -125,38 +126,19 @@ namespace RTSMuzzleFlashBuilder
 UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* Material)
 {
 	using namespace RTSMuzzleFlashBuilder;
+	// Built new each time: a system whose emitters are removed and added again in place plays nothing. The one there moves
+	// out of the way, so the new one takes its package and the save replaces the file; whatever pointed at the old one is
+	// pointed at the new one by the caller.
 	const FString Name = FPackageName::GetShortName(AssetPath);
-	UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *(AssetPath + TEXT(".") + Name), nullptr, LOAD_NoWarn | LOAD_Quiet);
-	const bool bExists = System != nullptr;
-	FNiagaraExternalEditContext CreateContext;
-	if (!bExists)
+	if (UNiagaraSystem* Old = LoadObject<UNiagaraSystem>(nullptr, *(AssetPath + TEXT(".") + Name), nullptr, LOAD_NoWarn | LOAD_Quiet))
 	{
-		System = FNiagaraEdit::CreateNiagaraSystem(Name, FPackageName::GetLongPackagePath(AssetPath), nullptr, CreateContext);
+		Old->ClearFlags(RF_Public | RF_Standalone);
+		Old->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
 	}
+	FNiagaraExternalEditContext CreateContext;
+	UNiagaraSystem* System = FNiagaraEdit::CreateNiagaraSystem(Name, FPackageName::GetLongPackagePath(AssetPath), nullptr, CreateContext);
 	// Each edit goes through a view model of the system, which the context makes from it.
 	FNiagaraExternalEditContext Context = System ? FNiagaraExternalEditContext(System) : MoveTemp(CreateContext);
-	if (bExists)
-	{
-		// Rebuilt in place, so what references it keeps the reference.
-		TArray<FName> Emitters;
-		for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
-		{
-			Emitters.Add(Handle.GetName());
-		}
-		for (const FName Emitter : Emitters)
-		{
-			FNiagaraEdit::RemoveEmitter(FNiagaraExt_StackItemReference(System, Emitter), Context);
-		}
-		TArray<FNiagaraVariable> UserParameters;
-		System->GetExposedParameters().GetParameters(UserParameters);
-		for (const FNiagaraVariable& Parameter : UserParameters)
-		{
-			FNiagaraExt_Variable Variable;
-			Variable.Name = Parameter.GetName();
-			Variable.Type = Parameter.GetType();
-			FNiagaraEdit::RemoveUserVariable(System, Variable, Context);
-		}
-	}
 	if (System)
 	{
 		// The shot's colour and size: URTSWeaponData's ShellColor and EffectScale, set by ARTSShotEffect.
@@ -165,17 +147,18 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& Asset
 		AddUserParameter(System, TEXT("User.Color"), FNiagaraTypeDefinition::GetColorDef(), DefaultColor, Context);
 		AddUserParameter(System, TEXT("User.Scale"), FNiagaraTypeDefinition::GetFloatDef(), DefaultScale, Context);
 
-		// A ball of fire at the muzzle and a spray of smaller ones blown out along the bore, all gone within a tenth of a
-		// second. The bounds hold the spray of the heaviest gun (scale 2.5).
-		const FBox Bounds(FVector(-150.0, -150.0, -150.0), FVector(450.0, 150.0, 150.0));
-		AddSpriteBurst(System, TEXT("Core"), 1, 0.07f, TEXT("User.Scale * 80.0"), TEXT("User.Color"), Material, Bounds, Context);
-		AddSpriteBurst(System, TEXT("Spray"), 4, 0.06f, TEXT("User.Scale * 40.0"), TEXT("User.Color * 0.7"), Material, Bounds, Context);
+		// A ball of fire at the muzzle, 4 m across on the M20's gun (scale 2), and a spray of smaller ones blown 2 to 5 m out
+		// along the bore, all gone in 0.15 s: big and long enough to read from the RTS camera. The bounds hold the spray of
+		// the heaviest gun (scale 2.5).
+		const FBox Bounds(FVector(-300.0, -300.0, -300.0), FVector(900.0, 300.0, 300.0));
+		AddSpriteBurst(System, TEXT("Core"), 1, 0.15f, TEXT("User.Scale * 200.0"), TEXT("User.Color"), Material, Bounds, Context);
+		AddSpriteBurst(System, TEXT("Spray"), 4, 0.15f, TEXT("User.Scale * 90.0"), TEXT("User.Color * 0.7"), Material, Bounds, Context);
 		UNiagaraScript* AddVelocity = LoadObject<UNiagaraScript>(nullptr, TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocity.AddVelocity"));
 		FNiagaraExt_ModuleTopology Velocity;
 		FNiagaraEdit::AddModule(FNiagaraExt_StackItemReference(System, TEXT("Spray"), TEXT("ParticleSpawnScript"), TEXT("InitializeParticle")),
 			AddVelocity, Velocity, Context);
 		SetExpression(ModuleInput(System, TEXT("Spray"), TEXT("ParticleSpawnScript"), Velocity.ModuleName, TEXT("Velocity")),
-			TEXT("float3((600.0 + rand(1200.0)) * User.Scale, rand(200.0) - 100.0, rand(200.0) - 100.0)"), Context);
+			TEXT("float3((700.0 + rand(900.0)) * User.Scale, rand(300.0) - 150.0, rand(300.0) - 150.0)"), Context);
 
 		System->RequestCompile(false);
 		System->WaitForCompilationComplete(false, false);

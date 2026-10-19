@@ -61,7 +61,7 @@ public:
 	/** The weapon's Niagara muzzle flash, null until the effect first plays one. Public for the tests. */
 	UNiagaraComponent* GetNiagaraFlash() const { return NiagaraFlash; }
 
-	/** Whether the Niagara muzzle flash is playing: from its shot for as long as the placeholder flash would show. */
+	/** Whether the Niagara muzzle flash is playing: from its shot for NS_MuzzleFlash's 0.15 s. */
 	bool IsNiagaraFlashLive() const;
 
 	/** Whether the muzzle light holds a slot of the light budget. Public for the tests. */

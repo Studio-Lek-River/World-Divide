@@ -2009,12 +2009,17 @@ off by a temporary switch that was not committed.
 ### What changed
 
 A weapon with a `URTSWeaponData::MuzzleFlash` (the test cannons and the flak truck) flashes `NS_MuzzleFlash` at the muzzle
-along the bore instead of the placeholder glow: one burst of a core and four sprites, CPU, fixed bounds, gone in 0.07 s. The
-system is built by `setup_testmap.py` through `URTSEditorScripting::BuildMuzzleFlashSystem`. Each pooled `ARTSShotEffect` makes
-one Niagara component the first time it plays a flash and reuses it, so no component is spawned per shot. The muzzle light
-keeps the #227 budget (`rts.Fx.MaxShotLights`, 32) and grows up to three times brighter and wider with the camera's distance
-(5–250 m). Past `rts.Fx.MuzzleLightDistance` (250 m) a shot has no muzzle light, past `rts.Fx.MuzzleFlashDistance` (500 m)
-no flash either. A dedicated server plays none.
+along the bore instead of the placeholder glow: a core 4 m across on the M20's gun and four sprites blown 2–5 m out, CPU,
+fixed bounds, gone in 0.15 s. The system is built new by `setup_testmap.py` through
+`URTSEditorScripting::BuildMuzzleFlashSystem` (a system whose emitters are removed and added again in place plays nothing).
+Each pooled `ARTSShotEffect` makes one Niagara component the first time it plays a flash and reuses it, so no component is
+spawned per shot. The muzzle light keeps the #227 budget (`rts.Fx.MaxShotLights`, 32), shines three times as bright as the
+placeholder's, and grows up to three times brighter and wider again with the camera's distance (50–250 m). Past
+`rts.Fx.MuzzleLightDistance` (250 m) a shot has no muzzle light, past `rts.Fx.MuzzleFlashDistance` (500 m) no flash either.
+A dedicated server plays none.
+
+The first version (1.6 m, 0.07 s, the placeholder's light) could not be seen at the default RTS zoom: four frames of a few
+pixels.
 
 ### Short method, 240 standing M20s firing, interleaved runs
 
@@ -2024,17 +2029,17 @@ muzzle light.
 
 | Set | Scenario | Flash | Frame ms (mean, range) | Game ms | Render ms | GPU ms |
 |---|---|---|---:|---:|---:|---:|
-| `@Battle` | idle | on | 5.84 (4.3–7.7) | 3.25 | 5.82 | 5.24 |
-| `@Battle` | idle | off | 5.66 (4.4–6.4) | 3.34 | 5.64 | 4.89 |
-| `@Battle` | move | on | 12.86 (10.7–14.9) | 12.83 | 7.56 | 5.82 |
-| `@Battle` | move | off | 12.73 (12.2–13.3) | 12.70 | 7.65 | 5.48 |
-| `@Battle@Close` | idle | on | 7.46 (5.2–9.7) | 3.43 | 7.43 | 6.79 |
-| `@Battle@Close` | idle | off | 7.72 (6.9–8.3) | 3.74 | 7.73 | 7.12 |
-| `@Battle@Close` | move | on | 13.06 (10.4–14.6) | 13.05 | 7.71 | 6.85 |
-| `@Battle@Close` | move | off | 13.14 (12.2–13.9) | 13.14 | 7.81 | 8.08 |
+| `@Battle` | idle | on | 5.25 (4.9–5.8) | 3.01 | 5.24 | 4.75 |
+| `@Battle` | idle | off | 4.97 (4.3–5.3) | 3.04 | 4.96 | 4.54 |
+| `@Battle` | move | on | 12.19 (11.6–12.9) | 12.17 | 7.26 | 4.86 |
+| `@Battle` | move | off | 12.41 (12.0–13.0) | 12.39 | 7.20 | 4.96 |
+| `@Battle@Close` | idle | on | 6.49 (6.1–7.2) | 3.22 | 6.49 | 6.05 |
+| `@Battle@Close` | idle | off | 6.27 (6.1–6.4) | 2.93 | 6.25 | 5.85 |
+| `@Battle@Close` | move | on | 11.72 (11.0–12.6) | 11.72 | 6.93 | 5.99 |
+| `@Battle@Close` | move | off | 11.36 (10.8–11.9) | 11.34 | 6.71 | 6.26 |
 
-- **No cost shows above the noise.** Every difference between on and off is well inside the spread of the runs. Close up,
-  where every flash and light plays, the "on" means are even a little lower.
+- **About 0.2–0.3 ms a frame at 240 firing tanks, inside the runs' spread.** Standing, the means with the flash are 0.2–0.3 ms
+  higher, on the render thread and the GPU. Driving, the difference goes both ways.
 - **The lights stay capped:** `WorldDivide.Combat.MuzzleFlash.Cull` fires 240 M20s on one frame and counts at most
   `rts.Fx.MaxShotLights` muzzle lights.
 

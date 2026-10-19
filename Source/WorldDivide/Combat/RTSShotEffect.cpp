@@ -32,6 +32,8 @@ namespace
 	const FName FlashScaleParameter(TEXT("User.Scale"));
 
 	constexpr float MuzzleFlashSeconds = 0.08f;
+	/** How long a Niagara muzzle flash (#220) and its light last: NS_MuzzleFlash's lifetime. */
+	constexpr float NiagaraFlashSeconds = 0.15f;
 	constexpr float ImpactSeconds = 0.25f;
 
 	/** Emissive strength at full brightness, well into bloom. */
@@ -50,6 +52,8 @@ namespace
 	constexpr float ShellStreakPerSpeed = 0.015f;
 
 	constexpr float LightIntensity = 12.f;
+	/** A Niagara muzzle flash's light is this many times brighter, so it reads in daylight too. */
+	constexpr float NiagaraFlashLightScale = 3.f;
 	constexpr float LightRadius = 450.f;
 
 	/** Light weapons make no sound where they hit; heavy ones blast. */
@@ -241,7 +245,7 @@ void ARTSShotEffect::SetLightOn(UPointLightComponent& Light, bool& bHasSlot, boo
 
 float ARTSShotEffect::GetLifetime() const
 {
-	return FMath::Max(MuzzleFlashSeconds, FlightTime + ImpactSeconds);
+	return FMath::Max(bMuzzleGlow ? MuzzleFlashSeconds : NiagaraFlashSeconds, FlightTime + ImpactSeconds);
 }
 
 FVector ARTSShotEffect::GetAimPoint(const AActor& InTarget, const FVector& From)
@@ -294,10 +298,10 @@ bool ARTSShotEffect::Advance(float DeltaSeconds)
 
 void ARTSShotEffect::UpdateMuzzleFlash()
 {
-	const float Alpha = Age / MuzzleFlashSeconds;
+	const float Alpha = Age / (bMuzzleGlow ? MuzzleFlashSeconds : NiagaraFlashSeconds);
 	const bool bVisible = Alpha < 1.f;
 	MuzzleFlash->SetVisibility(bVisible && bMuzzleGlow);
-	// The system's own lifetime is a little shorter; it ends itself.
+	// The system ends itself after the same time.
 	bNiagaraFlashLive &= bVisible;
 	SetLightOn(*MuzzleLight, bMuzzleLightSlot, bVisible && bMuzzleLightInRange);
 	if (!bVisible)
@@ -312,7 +316,8 @@ void ARTSShotEffect::UpdateMuzzleFlash()
 	}
 	if (bMuzzleLightSlot)
 	{
-		MuzzleLight->SetIntensity(LightIntensity * Scale * MuzzleLightBoost * (1.f - Alpha));
+		const float Brightness = bMuzzleGlow ? 1.f : NiagaraFlashLightScale * MuzzleLightBoost;
+		MuzzleLight->SetIntensity(LightIntensity * Scale * Brightness * (1.f - Alpha));
 	}
 }
 
