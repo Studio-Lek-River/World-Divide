@@ -83,4 +83,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
 	static UNiagaraSystem* BuildMuzzleSmokeSystem(const FString& AssetPath, UMaterialInterface* BlastMaterial, UMaterialInterface* DriftMaterial,
 		UMaterialInterface* DustMaterial);
+
+	/**
+	 * Builds the engine exhaust of vehicles (#222) as the Niagara system AssetPath (such as /Game/Effects/NS_Exhaust), new, in
+	 * place of the one there, as BuildMuzzleFlashSystem: a continuous stream of thin puffs in Material, at User.Rate a second.
+	 * Returns null and logs why when it fails.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
+	static UNiagaraSystem* BuildExhaustSystem(const FString& AssetPath, UMaterialInterface* Material);
 };

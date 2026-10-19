@@ -14,6 +14,7 @@ enum class ERTSVehiclePartMount : uint8
 };
 
 class UMaterialInterface;
+class UNiagaraSystem;
 
 /** A part beyond the hull, turret and gun: an add-on such as a weapon station, or a road wheel. */
 USTRUCT(BlueprintType)
@@ -137,6 +138,81 @@ struct WORLDDIVIDE_API FRTSGunRecoil
 
 	/** Seconds until the stroke, the jump and the rock have all settled. */
 	float GetSettleSeconds() const { return FMath::Max3(GetSeconds(), JumpSeconds, HullRockSeconds); }
+};
+
+/**
+ * A vehicle's running engine, drawn on each machine that shows it (#222): light exhaust at its outlets, from how the hull
+ * actually moves (FRTSRealizedMotion), never from its orders. Idle below IdleSpeed, accelerating while its speed climbs
+ * faster than AccelerationThreshold, moving otherwise. No outlets, no exhaust.
+ */
+USTRUCT(BlueprintType)
+struct WORLDDIVIDE_API FRTSVehicleExhaust
+{
+	GENERATED_BODY()
+
+	/**
+	 * The engine's continuous emitter, driven by its User.Rate, User.Opacity, User.Size and User.Direction
+	 * (URTSExhaustSubsystem).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust")
+	TObjectPtr<UNiagaraSystem> System;
+
+	/** Where the exhaust leaves the hull, in Mesh's own space as the parts' offsets (MeshScale applies). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust")
+	TArray<FVector> Outlets;
+
+	/** Which way the exhaust leaves the outlets, in Mesh's own space. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust")
+	FVector Direction = FVector(-1.f, 0.f, 0.f);
+
+	/** Puffs a second from each outlet, standing, moving and accelerating, before the effects quality scales them. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0"))
+	float IdleRate = 12.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0"))
+	float MovingRate = 10.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0"))
+	float AcceleratingRate = 20.f;
+
+	/**
+	 * More puffs a second for each metre a second the hull drives, so the trail it leaves stays closed at any speed: 5 a
+	 * metre, one every 20 cm, a third of a puff's width.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0"))
+	float PuffsPerMetre = 5.f;
+
+	/** How opaque a puff is born, standing, moving and accelerating: light in normal running. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0", ClampMax = "1"))
+	float IdleOpacity = 0.55f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0", ClampMax = "1"))
+	float MovingOpacity = 0.45f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0", ClampMax = "1"))
+	float AcceleratingOpacity = 0.6f;
+
+	/** How wide a puff is born in cm; it grows as it drifts. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "1"))
+	float Size = 60.f;
+
+	/** cm/s under which the hull counts as standing, unless it pivots. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0"))
+	float IdleSpeed = 30.f;
+
+	/** cm/s² the hull's speed must climb by, smoothed, to count as accelerating. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "1"))
+	float AccelerationThreshold = 100.f;
+
+	/** Seconds over which the speed's climb is smoothed, so a client's replicated speed does not flicker the state. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0.01"))
+	float AccelerationSmoothing = 0.15f;
+
+	/** Seconds the accelerating state holds after the climb last passed the threshold, so it does not flicker either. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0"))
+	float AccelerationHold = 0.4f;
+
+	bool HasExhaust() const { return System != nullptr && !Outlets.IsEmpty(); }
 };
 
 /**
@@ -323,6 +399,10 @@ public:
 	/** How the gun's recoiling parts (the barrel) move on each shot. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FRTSGunRecoil GunRecoil;
+
+	/** The engine's exhaust; none without outlets. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+	FRTSVehicleExhaust Exhaust;
 
 	/** Add-ons and running gear, placed on the hull, the turret or the gun. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")

@@ -33,6 +33,7 @@
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSBarrelClearance.h"
+#include "Units/RTSExhaustSubsystem.h"
 #include "Units/RTSGround.h"
 #include "Units/RTSPrimitiveData.h"
 #include "Units/RTSRunningGearSubsystem.h"
@@ -438,6 +439,18 @@ void ARTSUnit::CreateParts()
 		else
 		{
 			Gear->Register(*this);
+		}
+	}
+	// The engine's exhaust (#222), on every machine that draws.
+	if (URTSExhaustSubsystem* Exhaust = GetWorld() ? GetWorld()->GetSubsystem<URTSExhaustSubsystem>() : nullptr)
+	{
+		if (UnitData->Exhaust.HasExhaust())
+		{
+			Exhaust->Register(*this);
+		}
+		else
+		{
+			Exhaust->Unregister(*this);
 		}
 	}
 }
@@ -1380,6 +1393,10 @@ void ARTSUnit::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (URTSRunningGearSubsystem* Gear = GetWorld()->GetSubsystem<URTSRunningGearSubsystem>())
 	{
 		Gear->Unregister(*this);
+	}
+	if (URTSExhaustSubsystem* Exhaust = GetWorld()->GetSubsystem<URTSExhaustSubsystem>())
+	{
+		Exhaust->Unregister(*this);
 	}
 	Super::EndPlay(EndPlayReason);
 }

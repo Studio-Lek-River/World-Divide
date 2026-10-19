@@ -149,6 +149,11 @@ EDataValidationResult URTSUnitData::IsDataValid(FDataValidationContext& Context)
 		Context.AddError(FText::FromString(FString::Printf(TEXT("Locomotion: %s"), *Error)));
 		Result = EDataValidationResult::Invalid;
 	}
+	if (!Exhaust.Outlets.IsEmpty() && !Exhaust.System)
+	{
+		Context.AddError(FText::FromString(TEXT("Exhaust: outlets without a system")));
+		Result = EDataValidationResult::Invalid;
+	}
 	return Result;
 }
 #endif

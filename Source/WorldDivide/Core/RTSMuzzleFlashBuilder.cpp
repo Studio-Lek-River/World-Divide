@@ -1,5 +1,6 @@
-// URTSEditorScripting::BuildMuzzleFlashSystem (#220, #294) and BuildMuzzleSmokeSystem (#221, #303), on their own so that setup_testmap.py
-// rebuilds NS_MuzzleFlash and NS_MuzzleSmoke only when this file changes.
+// URTSEditorScripting::BuildMuzzleFlashSystem (#220, #294), BuildMuzzleSmokeSystem (#221, #303) and BuildExhaustSystem
+// (#222), on their own so that setup_testmap.py rebuilds NS_MuzzleFlash, NS_MuzzleSmoke and NS_Exhaust only when this file
+// changes.
 #include "Core/RTSEditorScripting.h"
 
 #if WITH_EDITOR
@@ -246,6 +247,46 @@ namespace RTSMuzzleFlashBuilder
 		}
 	}
 
+	/**
+	 * Adds a continuous emitter from the SimpleSpriteBurst template: while the system is active, Rate sprites a second (an HLSL
+	 * expression, spawned interpolated) instead of the template's burst, living Lifetime seconds, sized and coloured by Size
+	 * and Color at birth and drawn with Material in world space, left where they were born, inside Bounds around the system.
+	 */
+	void AddSpriteStream(UNiagaraSystem* System, FName Name, const FString& Rate, const FString& Lifetime, const FString& Size,
+		const FString& Color, UMaterialInterface* Material, const FBox& Bounds, FNiagaraExternalEditContext& Context)
+	{
+		AddSpriteBurst(System, Name, TEXT("0"), 1.f, Lifetime, Size, Color, Material, Bounds, false, Context);
+		const FName EmitterUpdate(TEXT("EmitterUpdateScript"));
+		SetEnum(ModuleInput(System, Name, EmitterUpdate, TEXT("EmitterState"), TEXT("Loop Behavior")), TEXT("Infinite"), Context);
+		FNiagaraEdit::RemoveModule(FNiagaraExt_StackItemReference(System, Name, EmitterUpdate, TEXT("SpawnBurst_Instantaneous")),
+			Context);
+		const FName Spawn = AddModule(System, Name, EmitterUpdate, TEXT("EmitterState"), TEXT("/Niagara/Modules/Emitter/SpawnRate.SpawnRate"),
+			Context);
+		SetExpression(ModuleInput(System, Name, EmitterUpdate, Spawn, TEXT("SpawnRate")), Rate, Context);
+		// A frame's sprites are spread along the system's move over that frame, so a fast hull or a slow frame leaves a trail
+		// rather than clumps.
+		FNiagaraExt_EmitterData EmitterData;
+		EmitterData.PropertyValues = TEXT("{\"InterpolatedSpawnMode\": \"Interpolation\"}");
+		FNiagaraEdit::SetEmitterData(FNiagaraExt_StackItemReference(System, Name), EmitterData, Context);
+	}
+
+	/** Emitter's sprites resized each update by the HLSL expression Size, a float2, which may read Particles.NormalizedAge. */
+	void SetSpriteSizeOverLife(UNiagaraSystem* System, FName Emitter, const FString& Size, FNiagaraExternalEditContext& Context)
+	{
+		const FName SpriteSize(TEXT("Particles.SpriteSize"));
+		FNiagaraExt_SetParameterEntry Entry;
+		Entry.Variable.Name = SpriteSize;
+		Entry.Variable.Type = FNiagaraTypeDefinition::GetVec2Def();
+		const FVector2f DefaultSize(100.f, 100.f);
+		Entry.DefaultValue.Set(Entry.Variable.Type, FNiagaraVariant(&DefaultSize, sizeof(DefaultSize)));
+		FNiagaraExt_ScriptStackTopology Stack;
+		FNiagaraEdit::GetScriptStackTopology(FNiagaraExt_StackItemReference(System, Emitter, ParticleUpdate), Stack, Context);
+		FNiagaraExt_ModuleTopology Topology;
+		FNiagaraEdit::AddSetParametersModule(FNiagaraExt_StackItemReference(System, Emitter, ParticleUpdate,
+			Stack.Modules.IsEmpty() ? NAME_None : Stack.Modules.Last().ModuleName), { Entry }, Topology, Context);
+		SetExpression(ModuleInput(System, Emitter, ParticleUpdate, Topology.ModuleName, SpriteSize), Size, Context);
+	}
+
 	/** Compiles System and returns it, or logs each error and returns null. */
 	UNiagaraSystem* FinishSystem(UNiagaraSystem* System, const FString& AssetPath, const TCHAR* Builder, FNiagaraExternalEditContext& Context)
 	{
@@ -395,6 +436,42 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& Asset
 	}
 	return FinishSystem(System, AssetPath, TEXT("BuildMuzzleSmokeSystem"), Context);
 }
+
+UNiagaraSystem* URTSEditorScripting::BuildExhaustSystem(const FString& AssetPath, UMaterialInterface* Material)
+{
+	using namespace RTSMuzzleFlashBuilder;
+	TOptional<FNiagaraExternalEditContext> Edit;
+	UNiagaraSystem* System = CreateSystem(AssetPath, Edit);
+	FNiagaraExternalEditContext& Context = *Edit;
+	if (System)
+	{
+		// Set by URTSExhaustSubsystem from the unit's FRTSVehicleExhaust: puffs a second for the engine's state, the quality
+		// and the distance, how opaque a puff is born, how wide in cm, and which way the outlet faces in world space.
+		const float DefaultRate = 10.f;
+		const float DefaultOpacity = 0.45f;
+		const float DefaultSize = 60.f;
+		const FVector3f DefaultDirection(-1.f, 0.f, 0.f);
+		AddUserParameter(System, TEXT("User.Rate"), FNiagaraTypeDefinition::GetFloatDef(), DefaultRate, Context);
+		AddUserParameter(System, TEXT("User.Direction"), FNiagaraTypeDefinition::GetVec3Def(), DefaultDirection, Context);
+		AddUserParameter(System, TEXT("User.Opacity"), FNiagaraTypeDefinition::GetFloatDef(), DefaultOpacity, Context);
+		AddUserParameter(System, TEXT("User.Size"), FNiagaraTypeDefinition::GetFloatDef(), DefaultSize, Context);
+
+		// Thin grey-brown puffs in world space, so a driving hull leaves them behind: blown half a metre or so out of the outlet
+		// along User.Direction, slowed by the air within a second, rising as they cool and growing to three times their size as
+		// they thin out over 1.2 to 1.8 s. The bounds hold a plume left by a hull at full speed.
+		const FBox Bounds(FVector(-900.0, -900.0, -400.0), FVector(900.0, 900.0, 700.0));
+		AddSpriteStream(System, TEXT("Exhaust"), TEXT("User.Rate"), TEXT("1.2 + rand(0.6)"), TEXT("User.Size"),
+			TEXT("float4(0.2, 0.19, 0.18, User.Opacity)"), Material, Bounds, Context);
+		SetRandomRotation(System, TEXT("Exhaust"), Context);
+		SetSpawnSphere(System, TEXT("Exhaust"), TEXT("User.Size * 0.2"), TEXT("float3(0.0, 0.0, 0.0)"), Context);
+		SetMotion(System, TEXT("Exhaust"),
+			TEXT("User.Direction * (90.0 + rand(60.0)) + float3(rand(30.0) - 15.0, rand(30.0) - 15.0, rand(30.0) - 15.0)"), 2.f,
+			TEXT("float3(0.0, 0.0, 50.0)"), Context);
+		SetSpriteSizeOverLife(System, TEXT("Exhaust"), TEXT("float2(1.0, 1.0) * User.Size * (1.0 + 2.0 * Particles.NormalizedAge)"),
+			Context);
+	}
+	return FinishSystem(System, AssetPath, TEXT("BuildExhaustSystem"), Context);
+}
 #else
 UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* GlowMaterial,
 	UMaterialInterface* FireMaterial)
@@ -404,6 +481,11 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& Asset
 
 UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& AssetPath, UMaterialInterface* BlastMaterial,
 	UMaterialInterface* DriftMaterial, UMaterialInterface* DustMaterial)
+{
+	return nullptr;
+}
+
+UNiagaraSystem* URTSEditorScripting::BuildExhaustSystem(const FString& AssetPath, UMaterialInterface* Material)
 {
 	return nullptr;
 }

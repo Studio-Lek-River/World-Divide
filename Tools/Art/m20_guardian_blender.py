@@ -79,6 +79,11 @@ SKIRT_Z = (0.62, 1.36)
 SKIRT_EDGES = (-3.05, -2.05, -1.05, -0.05, 0.55, 1.00, 2.00, 3.05)
 BLUE_SKIRT = 0.55
 
+# The exhaust leaves the rear grille back and a touch down, its louvres turning the hot gas toward the ground (#222), at
+# the grille's open face: its frame stands GRILLE_DEPTH off the rear plate, where m20_guardian_materials.EXHAUST is.
+EXHAUST_DIRECTION = Vector((-1.0, 0.0, -0.15)).normalized()
+GRILLE_DEPTH = 0.10
+
 TURRET_RING = Vector((-0.35, 0.0, HULL_ROOF))
 TURRET_RING_RADIUS = 1.0
 TURRET_SKIRT_TOP = 1.50
@@ -752,7 +757,7 @@ def build_rear(hull):
             hull.add("Dark", oriented_box((x - depth * 0.55, y_centre, z), *louvre, 0.004, half_width, 0.035),
                      bevel=False)
 
-    grille(0.0, 0.50, 0.70, 1.24, 8, 0.10)
+    grille(0.0, 0.50, 0.70, 1.24, 8, GRILLE_DEPTH)
     for side in (1, -1):
         grille(side * 0.82, 0.16, 0.74, 1.20, 6, 0.07)
         # Tail lamps in a guard on the sponson corners.
@@ -1641,6 +1646,9 @@ def write_layout(parts):
         "rws_muzzle_offset": unreal_cm(Vector((0.18 + RWS_BARREL_LENGTH, 0.0, 0.38))),
         "wheels": {obj.name: unreal_cm(obj.location) for obj in parts["wheels"]},
         "track_offsets": {f"M20_Track_{s}": unreal_cm(parts[f"track_{s}"].location) for s in ("L", "R")},
+        # Where the engine's exhaust leaves the rear grille, and which way (#222).
+        "exhaust_offsets": [unreal_cm(Vector(mats.EXHAUST) + Vector((-(GRILLE_DEPTH - 0.04), 0.0, 0.0)))],
+        "exhaust_direction": [round(EXHAUST_DIRECTION.x, 4), round(-EXHAUST_DIRECTION.y, 4), round(EXHAUST_DIRECTION.z, 4)],
         "blender_ring": list(TURRET_RING),
     }
     layout.update(running_layout())

@@ -2095,3 +2095,56 @@ before.
   pixels. The look is checked in `ue.ps1 -Task unitshots` (`muzzle_flash_<day|night>_<ms>[_rts]`, `muzzle_smoke_*`).
 - The three flipbooks are 2048² each (about 16 MB on the GPU with mips); half size would do at the RTS zoom if memory gets
   tight.
+
+## #222 (engine exhaust that follows the vehicle's motion)
+
+### What changed
+
+A vehicle whose data has exhaust outlets (`URTSUnitData::Exhaust`: the M20 at its rear grille, from `m20_guardian.json`;
+the flak truck at a tailpipe on its van) shows light exhaust from `NS_Exhaust`: one continuous CPU sprite emitter per
+outlet, fixed bounds, world space, built by `setup_testmap.py` through `URTSEditorScripting::BuildExhaustSystem`. Its
+state comes from the hull's realized forward speed, not its orders: idle, moving, or accelerating while the smoothed climb
+of the speed passes a threshold. Each state has its own rate and opacity (12, 10 and 20 puffs a second; 0.55, 0.45 and
+0.6), plus 5 puffs a second per m/s of speed so a driving hull's trail stays closed (one puff every 20 cm, under a third of
+its width, at any speed), all scaled by the effects quality and toward half at the distance's end. The puffs leave the M20's
+grille at its open face and fade over 10 cm where they meet a surface (`FadeDistance` on `MI_Exhaust`), so they show from
+the grille on. `URTSExhaustSubsystem` runs once a frame in
+`TG_PostUpdateWork`, like the running gear: it makes a vehicle's Niagara components the first time a camera comes near
+and keeps them, stops them past `rts.Fx.ExhaustDistance` (200 m, with 10 % hysteresis), and lets only the
+`rts.Fx.ExhaustMaxVehicles` (48) nearest vehicles run. It sends a parameter only when it changed. A dedicated server
+registers nothing. `rts.Fx.Exhaust 0` stops every emitter.
+
+### Short method, 240 standing and moving M20s firing, interleaved runs
+
+`ue.ps1 -Task bench -Unit DA_TestM20Guardian@Battle,DA_TestM20Guardian@Battle@Far -Counts 240`, Ryzen 7 7800X3D, RTX 4090,
+5 runs each, "on" and "off" interleaved, every run valid. "Off" is `-Cvars rts.Fx.Exhaust=0`. `@Battle` is the bench's
+170 m camera, where every M20 is within the exhaust distance; `@Far` is 450 m, past it. The bench's new exhaust table gives
+the subsystem's own pass and the emitters running at each sample's end.
+
+| Set | Scenario | Exhaust | Frame ms (mean, range) | Game ms | Render ms | GPU ms | Exhaust pass ms | Emitters |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| `@Battle` | idle | on | 2.82 (2.7–2.9) | 2.72 | 2.51 | 2.47 | 0.034 | 48 |
+| `@Battle` | idle | off | 2.77 (2.7–2.8) | 2.52 | 2.58 | 2.47 | 0.015 | 0 |
+| `@Battle` | move | on | 8.15 (8.0–8.2) | 8.14 | 4.48 | 2.61 | 0.044 | 48 |
+| `@Battle` | move | off | 8.04 (8.0–8.1) | 8.03 | 4.44 | 2.56 | 0.017 | 0 |
+| `@Battle@Far` | idle | on | 2.21 (2.1–2.4) | 2.21 | 1.77 | 1.69 | 0.019 | 0 |
+| `@Battle@Far` | idle | off | 2.12 (2.1–2.1) | 2.11 | 1.84 | 1.72 | 0.013 | 0 |
+| `@Battle@Far` | move | on | 7.87 (7.7–8.1) | 7.86 | 4.34 | 1.80 | 0.024 | 0 |
+| `@Battle@Far` | move | off | 7.87 (7.8–8.1) | 7.86 | 4.35 | 1.83 | 0.017 | 0 |
+
+- **0.1–0.2 ms of game thread at 240 M20s with 48 vehicles showing exhaust** (0.20 standing, 0.11 driving), within the
+  gate's 0.3 ms against a screen baseline and the 0.6 ms run-to-run spread. The subsystem's own pass is 0.02–0.04 ms; the
+  rest is Niagara ticking the running systems.
+- **Without the budget every vehicle cost about 7 µs of game thread.** The first version let all 240 run: +1.7 ms game
+  thread standing (2.57 → 4.25) and +1.3 ms driving (7.99 → 9.25), the same at the lowest effects quality, so the cost is
+  per running system, not per particle. That is why `rts.Fx.ExhaustMaxVehicles` exists.
+- **Distant exhaust is culled:** at 450 m no emitter runs and the on and off rows agree within 0.1 ms.
+
+### Remaining limitations
+
+- Niagara does not run under `-nullrhi`, so `WorldDivide.Vehicle.Exhaust` checks the state, the emitters' activity and
+  their parameters, not pixels. The look is checked in `ue.ps1 -Task trackshots` (`exhaust_idle`, `exhaust_accelerate`,
+  `exhaust_moving`), which steps the game at a fixed 30 fps while it takes them, so the slow frames of taking a picture do
+  not clump the puffs.
+- More than 48 vehicles near the camera show exhaust only on the nearest. If that shows at the RTS zoom, the next step is
+  one system for all vehicles fed through a Niagara data channel, rather than a system per outlet.

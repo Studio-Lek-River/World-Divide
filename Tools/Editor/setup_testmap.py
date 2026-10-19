@@ -273,10 +273,10 @@ def make_art(name, source, yaw=0.0, tint=TEAM_TINT):
                               sorted((slot, object_path(instance)) for slot, instance in slot_materials.items())))
 
 
-def make_m20_guardian():
+def make_m20_guardian(exhaust_system):
     """Imports the M20 Guardian's parts, textures and material instances (see vehicle_art.py) and returns its unit data
-    properties: the hull as Mesh at real size, the turret, the gun and every other part where m20_guardian.json puts it.
-    The wheels of the right side are the exported left wheel turned round."""
+    properties: the hull as Mesh at real size, the turret, the gun and every other part where m20_guardian.json puts it,
+    and the exhaust (exhaust_system) at its grille. The wheels of the right side are the exported left wheel turned round."""
     with open(os.path.join(M20_SOURCE_DIR, "m20_guardian.json")) as file:
         layout = json.load(file)
     texture_dir, material_dir, mesh_dir = (f"{M20_DIR}/{folder}" for folder in ("Textures", "Materials", "Meshes"))
@@ -387,6 +387,8 @@ def make_m20_guardian():
         "gun_recoil": gun_recoil(30.0, 0.015, 0.03, 0.7, jump_degrees=1.0, jump_seconds=0.3, hull_rock_degrees=0.6,
                                  hull_rock_seconds=0.75),
         "parts": parts,
+        # Out of the rear grille, along its louvres (#222).
+        "exhaust": vehicle_exhaust(exhaust_system, layout["exhaust_offsets"], layout["exhaust_direction"]),
     }
 
 
@@ -918,7 +920,7 @@ def build_muzzle_smoke_material(name, rlt, bbf):
     flipbooks Tools/Art/muzzle_fx_blender.py bakes (T_MuzzleSmoke_RLT and _BBF), played from FrameFirst to FrameLast over
     the particle's life. The six views give each pixel a normal, so the sun, the sky and the muzzle light shade the cloud
     from wherever they are; the particle colour tints it. It thins from its edges inward by Erosion as it ages and fades
-    where it meets the ground. The instances (SMOKE_LOOKS) set the frames and the erosion of the blast cloud, the drifting
+    over FadeDistance cm where it meets the ground or a hull. The instances (SMOKE_LOOKS) set the frames and the erosion of the blast cloud, the drifting
     cloud and the dust."""
     material = new_material(name)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
@@ -938,8 +940,8 @@ def build_muzzle_smoke_material(name, rlt, bbf):
     connect(scalar_parameter(material, -600, 600, "Erosion", 0.5), "", shade, "Erosion")
 
     fade = expression(material, unreal.MaterialExpressionDepthFade, 0, 300)
-    fade.set_editor_property("fade_distance_default", 80.0)
     connect(shade, "", fade, "Opacity")
+    connect(scalar_parameter(material, -300, 400, "FadeDistance", 80.0), "", fade, "FadeDistance")
     roughness = expression(material, unreal.MaterialExpressionConstant, 0, 500)
     roughness.set_editor_property("r", 1.0)
     editing = unreal.MaterialEditingLibrary
@@ -999,6 +1001,41 @@ def make_muzzle_smoke():
         return system
     builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSMuzzleFlashBuilder.cpp"))
     return plan_now(path, build, spec_hash([make_muzzle_smoke], path, *looks.values(), builder_source))
+
+
+# The exhaust's look (#222): the later, thinner frames of the muzzle smoke's flipbook, eroded, so a puff reads as a light
+# haze rather than smoke; it fades over a few cm only, so a puff shows right at the grille it leaves.
+EXHAUST_LOOK = {"FrameFirst": 24.0, "FrameLast": 63.0, "Erosion": 0.4, "FadeDistance": 10.0}
+
+
+def make_exhaust():
+    """The Niagara engine exhaust of vehicles (#222) and its material, an instance of the muzzle smoke's (make_muzzle_smoke
+    builds the parent first). Built in C++ like the muzzle flash (URTSEditorScripting::BuildExhaustSystem,
+    RTSMuzzleFlashBuilder.cpp)."""
+    parent = assets.load_asset(f"{MATERIAL_DIR}/M_MuzzleSmoke")
+    look = plan_now(f"{MATERIAL_DIR}/MI_Exhaust", lambda: build_material_instance("MI_Exhaust", parent, EXHAUST_LOOK),
+                    spec_hash([build_material_instance], "MI_Exhaust", parent, sorted(EXHAUST_LOOK.items())))
+    path = f"{EFFECT_DIR}/NS_Exhaust"
+
+    def build():
+        if not unreal.RTSEditorScripting.load_editor_module("NiagaraEditor"):
+            raise RuntimeError("Could not load the NiagaraEditor module")
+        system = unreal.RTSEditorScripting.build_exhaust_system(path, look)
+        if not system:
+            raise RuntimeError(f"Could not build {path}; the log says why")
+        return system
+    builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSMuzzleFlashBuilder.cpp"))
+    return plan_now(path, build, spec_hash([make_exhaust], path, look, builder_source))
+
+
+def vehicle_exhaust(system, outlets, direction):
+    """A vehicle's engine exhaust (FRTSVehicleExhaust, #222): the system, the outlets in the mesh's own space in cm and
+    the way the exhaust leaves them; the rates, opacities and thresholds keep the struct's defaults."""
+    value = unreal.RTSVehicleExhaust()
+    value.set_editor_property("system", system)
+    value.set_editor_property("outlets", [unreal.Vector(*outlet) for outlet in outlets])
+    value.set_editor_property("direction", unreal.Vector(*direction))
+    return value
 
 
 def build_surface_material(name, color, roughness, digest):
@@ -2040,6 +2077,8 @@ TOWER_RANGE_OVER_TANK = 1.25
 # and the Abrams' have none.
 muzzle_flash = make_muzzle_flash()
 muzzle_smoke = make_muzzle_smoke()
+# Vehicles' engine exhaust (#222): the M20 from its model, the flak truck from a tailpipe placed on its van.
+exhaust = make_exhaust()
 cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 30000.0, 1.6, (1.0, 0.45, 0.1), muzzle_flash=muzzle_flash,
                      muzzle_smoke=muzzle_smoke, splash_radius=250.0, muzzle_brake=True)
 rifle = make_weapon("DA_TestRifle", 3500.0, 8.0, 0.5, 45000.0, 0.4, (1.0, 0.85, 0.3))
@@ -2055,7 +2094,7 @@ abrams = make_unit("DA_TestAbrams", "Test Abrams", tank_mesh, fit_scale(tank_mes
 # The M20 Guardian at its real size (7.1 m hull), to try the Blender to Unreal pipeline out: the heavy tank's weapon and
 # cost, a light tank's speed and turn rate, and a turret that traverses at 45 degrees a second. No building offers it;
 # two stand in L_TestMap.
-m20_mesh, m20_parts = make_m20_guardian()
+m20_mesh, m20_parts = make_m20_guardian(exhaust)
 m20 = make_unit("DA_TestM20Guardian", "Test M20 Guardian", m20_mesh, (1.0, 1.0, 1.0), 350.0, heavy_cannon, 1250.0, 100.0,
                 1100, 14.0)
 add_properties(m20, dict(m20_parts, turret_turn_rate=45.0))
@@ -2079,6 +2118,11 @@ flak = make_weapon("DA_TestFlak", 8000.0, 25.0, 0.6, 40000.0, 0.8, (0.9, 0.9, 0.
 # An air-defence truck, 7.0 x 2.5 m; the van's proportions let the width bind.
 flak_truck = make_unit("DA_TestFlakTruck", "Test Flak Truck", truck_mesh, fit_scale(truck_mesh, 700.0, 250.0), 250.0,
                        flak, 1400.0, 75.0, 800, 8.0)
+# A tailpipe under the van's rear, toward its right side, blowing out backward.
+truck_box = truck_mesh.get_bounding_box()
+add_properties(flak_truck, {"exhaust": vehicle_exhaust(exhaust, [(
+    truck_box.min.x, truck_box.min.y + 0.75 * (truck_box.max.y - truck_box.min.y),
+    truck_box.min.z + 0.12 * (truck_box.max.z - truck_box.min.z))], (-1.0, 0.0, 0.0))})
 missiles = make_weapon("DA_TestJetMissiles", 5000.0, 60.0, 1.0, 20000.0, 1.2, (1.0, 0.3, 0.2), splash_radius=400.0)
 
 # A fighter compressed to 0.6x, 10 m long with a 7 m span. Four missiles a sortie, eight seconds on its pad to rearm.

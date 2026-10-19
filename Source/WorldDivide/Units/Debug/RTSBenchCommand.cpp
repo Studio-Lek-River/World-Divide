@@ -47,6 +47,7 @@
 #include "Units/Debug/RTSUnitLOD.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSExhaustSubsystem.h"
 #include "Units/RTSRunningGearSubsystem.h"
 #include "Units/RTSUnitMovement.h"
 #include "WorldDivide.h"
@@ -197,6 +198,10 @@ namespace RTSBenchCommand
 		double MaxLocomotionMs = 0.0;
 		/** The running gear pass: wheels and tracks (URTSRunningGearSubsystem, #151). */
 		double RunningGearMs = 0.0;
+		/** The engine exhaust pass (URTSExhaustSubsystem, #222), its slowest frame, and its emitters running at the sample's end. */
+		double ExhaustMs = 0.0;
+		double MaxExhaustMs = 0.0;
+		int32 ExhaustEmitters = 0;
 		/** What the units draw with at the sample's end (#150): primitive components, dynamic instance slots, materials. */
 		int32 Primitives = 0;
 		int32 DynamicMaterials = 0;
@@ -340,19 +345,19 @@ namespace RTSBenchCommand
 				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms,")
 				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames,p95_render_ms,p95_gpu_ms,running_gear_ms,p95_running_gear_ms,")
 				TEXT("primitives,dynamic_materials,distinct_materials,lod0_units,lod1_units,lod2_units,lod3_units,mixed_lod_units,p95_rhi_ms,drawn_primitives,")
-				TEXT("track_updates,tracks,drawn_tracks,animated_tracks");
+				TEXT("track_updates,tracks,drawn_tracks,animated_tracks,exhaust_ms,max_exhaust_ms,exhaust_emitters");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d,%.1f,%d,%d,%d"),
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d,%.1f,%d,%d,%d,%.3f,%.3f,%d"),
 				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
 				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
 				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y, Mean(Solids.Updates), SolidReuseShare(),
 				Mean(Solids.Checks), Mean(Solids.ComponentQueries), Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0),
 				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames, P95RenderMs, P95GPUMs, Mean(RunningGearMs), P95RunningGearMs,
 				Primitives, DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits, P95RHIMs, DrawnPrimitives,
-				Mean(TrackUpdates), Tracks, DrawnTracks, AnimatedTracks);
+				Mean(TrackUpdates), Tracks, DrawnTracks, AnimatedTracks, Mean(ExhaustMs), MaxExhaustMs, ExhaustEmitters);
 		}
 
 		int32 HullLOD(int32 LOD) const { return HullLODs.IsValidIndex(LOD) ? HullLODs[LOD] : 0; }
@@ -410,6 +415,12 @@ namespace RTSBenchCommand
 		{
 			return FString::Printf(TEXT("| %d | %s | %d | %.1f | %d | %d | %d |\n"), Count, *Scenario, Sample, Mean(TrackUpdates), Tracks,
 				DrawnTracks, AnimatedTracks);
+		}
+
+		FString ToExhaustMarkdown() const
+		{
+			return FString::Printf(TEXT("| %d | %s | %d | %.3f (%.3f) | %d |\n"), Count, *Scenario, Sample, Mean(ExhaustMs), MaxExhaustMs,
+				ExhaustEmitters);
 		}
 
 		FString ToMaterialsMarkdown() const
@@ -958,6 +969,7 @@ namespace RTSBenchCommand
 			URTSUnitMovement::TakeLocomotionSeconds();
 			URTSRunningGearSubsystem::TakeSeconds();
 			URTSRunningGearSubsystem::TakeTrackUpdates();
+			URTSExhaustSubsystem::TakeSeconds();
 			FRTSSolidStats::Take();
 			TRACE_BEGIN_REGION(*RegionName());
 			GoTo(Next);
@@ -1003,6 +1015,9 @@ namespace RTSBenchCommand
 				URTSUnitMovement::TakeLocomotionSeconds() * 1000.0, URTSRunningGearSubsystem::TakeSeconds() * 1000.0);
 			Stats.AddSolids(FRTSSolidStats::Take());
 			Stats.TrackUpdates += URTSRunningGearSubsystem::TakeTrackUpdates();
+			const double ExhaustMs = URTSExhaustSubsystem::TakeSeconds() * 1000.0;
+			Stats.ExhaustMs += ExhaustMs;
+			Stats.MaxExhaustMs = FMath::Max(Stats.MaxExhaustMs, ExhaustMs);
 		}
 
 		/** Takes one frame of the scenario; true once it has all of them, logged and kept. */
@@ -1029,6 +1044,8 @@ namespace RTSBenchCommand
 			CountMaterials(Current);
 			CountLODs(Current);
 			CountTracks(Current);
+			const URTSExhaustSubsystem* Exhaust = World->GetSubsystem<URTSExhaustSubsystem>();
+			Current.ExhaustEmitters = Exhaust ? Exhaust->GetActiveEmitters() : 0;
 			Results.Add(Current);
 			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.Bench: %s"), *Current.ToCsv());
 			return true;
@@ -1209,6 +1226,13 @@ namespace RTSBenchCommand
 			for (const FScenarioStats& Result : Results)
 			{
 				Markdown += Result.ToTracksMarkdown();
+			}
+			Markdown += TEXT("\nThe engine exhaust (#222): its pass per frame, and the emitters running at each sample's end:\n\n")
+				TEXT("| Units | Scenario | Sample | Exhaust ms (max) | Emitters |\n")
+				TEXT("|---:|---|---:|---:|---:|\n");
+			for (const FScenarioStats& Result : Results)
+			{
+				Markdown += Result.ToExhaustMarkdown();
 			}
 			return FFileHelper::SaveStringToFile(Csv, *FPaths::Combine(Dir, TEXT("bench.csv")))
 				&& FFileHelper::SaveStringToFile(Markdown, *FPaths::Combine(Dir, TEXT("bench.md")))

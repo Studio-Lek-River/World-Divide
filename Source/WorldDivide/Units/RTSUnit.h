@@ -160,6 +160,9 @@ public:
 	URTSAircraftComponent* GetAircraftComponent() const { return AircraftComponent; }
 	URTSUnitMovement* GetUnitMovement() const { return Movement; }
 
+	/** The hull's mesh, which leans, kicks and rocks with it; the turret and the hull's parts ride on it. */
+	UStaticMeshComponent* GetMesh() const { return Mesh; }
+
 	/** Every machine. What the tracks or wheels of a vehicle did, for presentation (#151); see FRTSRealizedMotion. */
 	const FRTSRealizedMotion& GetRealizedMotion() const;
 

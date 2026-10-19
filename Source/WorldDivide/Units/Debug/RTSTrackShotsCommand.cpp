@@ -14,6 +14,7 @@
 #include "EngineUtils.h"
 #include "HAL/IConsoleManager.h"
 #include "ImageUtils.h"
+#include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
@@ -22,6 +23,7 @@
 #include "ShaderCompiler.h"
 #endif
 #include "UnrealClient.h"
+#include "Units/RTSExhaustSubsystem.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitMovement.h"
 #include "WorldDivide.h"
@@ -32,7 +34,8 @@
  * either way, accelerating, braking, stopped, driven into Block_North, and coming back into the animation distance from
  * far away; then driving past a still camera at full speed, beside it and from the RTS angle, plain and with the previous
  * frame's reprojection shown (motion_*, #243); and standing while its gun fires, the hull rocking on its suspension, seen from
- * beside the track the gun turns to and from the sprocket and idler the gun lifts (fire_*, #219). Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
+ * beside the track the gun turns to and from the sprocket and idler the gun lifts (fire_*, #219); and its engine's exhaust
+ * standing, setting off and driving, seen from behind (exhaust_*, #222). Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
  * Saved/TrackShots/<UnitData>/<scenario>_<n>.png, and logs with each the realized side travel, each track's phase and what
  * its material has. With -RTSTrackShotsQuit on the command line (ue.ps1 -Task trackshots) the game quits when done.
  */
@@ -65,6 +68,17 @@ namespace RTSTrackShots
 	/** Fixed views for the motion scenarios, from the start place: the hull passes their middle a second after it sets off. */
 	const FView MotionSideView{ FVector(300.f, -900.f, 60.f), FVector(300.f, -132.f, 40.f), 60.f };
 	const FView MotionRTSView{ FVector(-900.f, -1200.f, 1700.f), FVector(300.f, 0.f, 0.f), 30.f };
+	/** Behind the hull at three quarters and above, on the rear grille where the exhaust leaves (#222). */
+	const FView ExhaustView{ FVector(-1100.f, -650.f, 420.f), FVector(-380.f, 0.f, 90.f), 50.f };
+
+	/**
+	 * The exhaust scenarios (#222): real seconds for the plume to build before the first picture, game seconds between
+	 * pictures, and the game's step while they run. Each picture holds the game for a long frame, which would show the puffs
+	 * of that frame all at one place: a fixed 30 fps step shows the trail as a game running at 30 fps leaves it.
+	 */
+	constexpr double ExhaustWarm = 3.0;
+	constexpr double ExhaustSpacing = 0.2;
+	constexpr double ExhaustStep = 1.0 / 30.0;
 
 	/**
 	 * The fire scenarios (#219): seconds for the turret to come round before the shot, and the game's speed while the hull
@@ -84,7 +98,7 @@ namespace RTSTrackShots
 		TFunction<bool(const ARTSUnit&)> Until;
 		/** Run just before the first picture, such as a new command to brake on. */
 		TFunction<void(ARTSUnit&)> AtFirst;
-		/** Real seconds between pictures; zero takes them as fast as they come. */
+		/** Real seconds between pictures, game seconds with a FixedStep; zero takes them as fast as they come. */
 		double Spacing = 0.0;
 		/**
 		 * The game's speed while the pictures are taken: slowed, so that from one picture to the next the links move a share of
@@ -98,6 +112,8 @@ namespace RTSTrackShots
 		bool bFixedCamera = false;
 		/** Shows the previous frame reprojected onto this one: a part whose motion vectors are wrong is drawn twice. */
 		bool bReprojection = false;
+		/** Game seconds each frame steps while the scenario runs, whatever the frame took; zero steps by real time. */
+		double FixedStep = 0.0;
 	};
 
 	RTSLocomotion::FCommand Ahead(float Speed)
@@ -268,6 +284,14 @@ namespace RTSTrackShots
 					return InUnit.GetUnitData()->GunRecoil.HullRockDegrees > 0.f;
 				}, FireWarm, nullptr, [](ARTSUnit& InUnit) { InUnit.PlayGunRecoil(); }, FireSpacing, FireTimeDilation });
 			}
+			// The engine's exhaust (#222) at the game's own speed, as the puffs drift and fade: standing, setting off from a stand
+			// for full speed (the pictures run through 2.4 s of the climb, to about 1,000 cm/s), and driving on at a steady speed.
+			Scenarios.Add_GetRef({ TEXT("exhaust_idle"), ExhaustView, Drive(RTSLocomotion::FCommand()), ExhaustWarm, nullptr, nullptr,
+				ExhaustSpacing, 1.f }).FixedStep = ExhaustStep;
+			Scenarios.Add_GetRef({ TEXT("exhaust_accelerate"), ExhaustView, Drive(RTSLocomotion::FCommand()), ExhaustWarm, nullptr,
+				[](ARTSUnit& InUnit) { InUnit.GetUnitMovement()->SetCommandOverride(Ahead(1.e5f)); }, ExhaustSpacing, 1.f }).FixedStep = ExhaustStep;
+			Scenarios.Add_GetRef({ TEXT("exhaust_moving"), ExhaustView, Drive(Ahead(300.f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing,
+				1.f }).FixedStep = ExhaustStep;
 			// Driving past a still camera at full speed, pictures as fast as they come, without letting a frame settle (#243).
 			for (const bool bReprojection : { false, true })
 			{
@@ -314,6 +338,11 @@ namespace RTSTrackShots
 				Camera->SetActorRelativeRotation(Look);
 			}
 			GEngine->Exec(World.Get(), Scenario.bReprojection ? TEXT("ShowFlag.VisualizeReprojection 1") : TEXT("ShowFlag.VisualizeReprojection 0"));
+			FApp::SetUseFixedTimeStep(Scenario.FixedStep > 0.0);
+			if (Scenario.FixedStep > 0.0)
+			{
+				FApp::SetFixedDeltaTime(Scenario.FixedStep);
+			}
 			Camera->GetCameraComponent()->SetFieldOfView(Scenario.View.FOV);
 			Step = EStep::Warm;
 			StepStart = FPlatformTime::Seconds();
@@ -363,7 +392,8 @@ namespace RTSTrackShots
 			{
 				return FPlatformTime::Seconds() - StepStart > CaptureTimeout ? Finish(TEXT("no screenshot arrived")) : true;
 			}
-			if (Scenario.Spacing > 0.0 && FPlatformTime::Seconds() - LastShotTime < Scenario.Spacing && Shot > 0)
+			const double Now = Scenario.FixedStep > 0.0 ? World->GetTimeSeconds() : FPlatformTime::Seconds();
+			if (Scenario.Spacing > 0.0 && Now - LastShotTime < Scenario.Spacing && Shot > 0)
 			{
 				return true;
 			}
@@ -377,7 +407,7 @@ namespace RTSTrackShots
 				return Finish(FString::Printf(TEXT("could not write %s"), *Path));
 			}
 			LogGear(Scenario.Name);
-			LastShotTime = FPlatformTime::Seconds();
+			LastShotTime = Now;
 			if (++Shot < Frames)
 			{
 				Request();
@@ -402,10 +432,13 @@ namespace RTSTrackShots
 			}
 			// The hull's rock from a shot (#219): its front and its right side lifted, in degrees.
 			const FVector2D Rock = Unit->GetHullRock();
+			// The engine's exhaust state (#222).
+			const URTSExhaustSubsystem* Exhaust = World->GetSubsystem<URTSExhaustSubsystem>();
+			const ERTSExhaustState ExhaustState = Exhaust ? Exhaust->GetState(*Unit) : ERTSExhaustState::Idle;
 			UE_LOG(LogWorldDivide, Display,
-				TEXT("rts.Debug.TrackShots: %s %02d: %s, %.0f cm/s, %.1f deg/s; travel L %.1f R %.1f cm; phase L %.4f (material %.4f) R %.4f (material %.4f); rock front %.3f right %.3f deg"),
+				TEXT("rts.Debug.TrackShots: %s %02d: %s, %.0f cm/s, %.1f deg/s; travel L %.1f R %.1f cm; phase L %.4f (material %.4f) R %.4f (material %.4f); rock front %.3f right %.3f deg; exhaust %s"),
 				*Name, Shot, *UEnum::GetValueAsString(Motion.Status), Motion.ForwardSpeed, Motion.YawRate, Motion.LeftTravel, Motion.RightTravel,
-				Phase[0], Sent[0], Phase[1], Sent[1], Rock.X, Rock.Y);
+				Phase[0], Sent[0], Phase[1], Sent[1], Rock.X, Rock.Y, *UEnum::GetDisplayValueAsText(ExhaustState).ToString());
 		}
 
 		bool Finish(const FString& Error)
@@ -415,6 +448,7 @@ namespace RTSTrackShots
 				Unit->GetUnitMovement()->SetCommandOverride({});
 				Unit->SetAimOverride({});
 			}
+			FApp::SetUseFixedTimeStep(false);
 			if (World.IsValid())
 			{
 				World->GetWorldSettings()->SetTimeDilation(1.f);
