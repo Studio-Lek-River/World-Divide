@@ -4,6 +4,7 @@ namespace RTSCommandPanel
 {
 	const FName StopId(TEXT("Stop"));
 	const FName AttackMoveId(TEXT("AttackMove"));
+	const FName ForceFireId(TEXT("ForceFire"));
 
 	FKey GetPositionKey(int32 Position)
 	{

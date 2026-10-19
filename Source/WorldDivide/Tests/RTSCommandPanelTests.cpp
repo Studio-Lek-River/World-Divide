@@ -5,6 +5,7 @@
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSUpgradeData.h"
+#include "Data/RTSWeaponData.h"
 #include "Misc/AutomationTest.h"
 #include "Player/RTSCommandButton.h"
 #include "Player/RTSPlayerController.h"
@@ -226,6 +227,80 @@ namespace RTSCommandPanelTests
 		return true;
 	}
 
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSCommandPanelForceFireTest, "WorldDivide.UI.Commands.ForceFire", TestFlags)
+
+	bool FRTSCommandPanelForceFireTest::RunTest(const FString& Parameters)
+	{
+		const FRTSTestWorld TestWorld;
+		TestWorld.SpawnGameState();
+		ARTSPlayerState* Player = TestWorld.SpawnPlayer(0, 1000);
+		ARTSPlayerController* Controller = SpawnController(TestWorld, Player);
+		URTSWeaponData* Cannon = NewObject<URTSWeaponData>();
+		URTSUnitData* TankData = MakeData<URTSUnitData>(TEXT("Tank"), 600);
+		TankData->Weapon = Cannon;
+		URTSUnitData* ScoutData = MakeData<URTSUnitData>(TEXT("Scout"), 100);
+		URTSBuildingData* Plant = MakeBuilding(TEXT("Plant"), 200);
+		URTSBuilderData* BuilderData = MakeData<URTSBuilderData>(TEXT("Builder"), 100);
+		BuilderData->Buildings = { Plant };
+		URTSBuildingData* TowerData = MakeBuilding(TEXT("Tower"), 400);
+		TowerData->Weapon = Cannon;
+
+		ARTSUnit* Tank = TestWorld.SpawnUnit(TankData, 0, FVector::ZeroVector);
+		ARTSUnit* Scout = TestWorld.SpawnUnit(ScoutData, 0, FVector(300.f, 0.f, 0.f));
+		ARTSUnit* Builder = TestWorld.SpawnUnit(BuilderData, 0, FVector(600.f, 0.f, 0.f));
+		Controller->SelectUnits({ Tank, Scout });
+		TArray<FRTSCommandButton> Buttons = Controller->GetCommandButtons();
+		if (!TestEqual(TEXT("Armed units get Stop, Attack-move and Force fire"), Buttons.Num(), 3))
+		{
+			return false;
+		}
+		TestEqual(TEXT("Force fire comes last"), Buttons[2].Id, RTSCommandPanel::ForceFireId);
+		TestTrue(TEXT("on C"), Buttons[2].Hotkey == EKeys::C);
+		TestTrue(TEXT("as a free unit order"), Buttons[2].Category == ERTSCommandCategory::Unit && Buttons[2].bEnabled);
+		TestFalse(TEXT("not armed yet"), Buttons[2].bActive);
+		TestTrue(TEXT("The button arms it"), Controller->ExecuteCommandButton(Buttons[2]));
+		TestTrue(TEXT("armed"), Controller->IsForceFireArmed());
+		TestTrue(TEXT("and its button shows it"), Find(Controller->GetCommandButtons(), RTSCommandPanel::ForceFireId)->bActive);
+
+		TestTrue(TEXT("Attack-move arms"), Controller->BeginAttackMove());
+		TestFalse(TEXT("and cancels force fire"), Controller->IsForceFireArmed());
+		TestTrue(TEXT("Force fire arms again"), Controller->BeginForceFire());
+		TestFalse(TEXT("and cancels attack-move"), Controller->IsAttackMoveArmed());
+		Controller->HandleEscape();
+		TestFalse(TEXT("Esc cancels it"), Controller->IsForceFireArmed());
+		TestFalse(TEXT("without opening the menu"), Controller->IsInGameMenuOpen());
+
+		Controller->SelectUnits({ Tank, Builder });
+		TestTrue(TEXT("Force fire arms with a builder alongside"), Controller->BeginForceFire());
+		Controller->BeginPlacement(Plant);
+		TestTrue(TEXT("Placement starts"), Controller->GetPlacementData() == Plant);
+		TestFalse(TEXT("and cancels force fire"), Controller->IsForceFireArmed());
+		Controller->CancelPlacement();
+
+		TestTrue(TEXT("Armed again"), Controller->BeginForceFire());
+		Controller->SelectUnits({ Scout });
+		TestFalse(TEXT("A selection without shooters cancels it"), Controller->IsForceFireArmed());
+		TestNull(TEXT("and has no Force fire button"), Find(Controller->GetCommandButtons(), RTSCommandPanel::ForceFireId));
+		TestFalse(TEXT("nor arms it"), Controller->BeginForceFire());
+
+		ARTSBuilding* Site = TestWorld.SpawnBuilding(TowerData, 0, FVector(3000.f, 0.f, 0.f));
+		Controller->SelectBuilding(Site);
+		TestTrue(TEXT("A tower under construction has no commands"), Controller->GetCommandButtons().IsEmpty());
+		ARTSBuilding* Tower = SpawnCompleted(TestWorld, TowerData, 0, FVector(-3000.f, 0.f, 0.f));
+		Controller->SelectBuilding(Tower);
+		Buttons = Controller->GetCommandButtons();
+		if (TestEqual(TEXT("A tower gets Stop and Force fire"), Buttons.Num(), 2))
+		{
+			TestEqual(TEXT("Stop"), Buttons[0].Id, RTSCommandPanel::StopId);
+			TestEqual(TEXT("then Force fire"), Buttons[1].Id, RTSCommandPanel::ForceFireId);
+			TestTrue(TEXT("The tower's Force fire arms it"), Controller->ExecuteCommandButton(Buttons[1]));
+		}
+		Controller->SetInGameMenuOpen(true);
+		TestFalse(TEXT("The in-game menu cancels it"), Controller->IsForceFireArmed());
+		TestFalse(TEXT("and nothing arms it while open"), Controller->BeginForceFire());
+		return true;
+	}
+
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSCommandPanelHotkeysTest, "WorldDivide.UI.Commands.Hotkeys", TestFlags)
 
 	bool FRTSCommandPanelHotkeysTest::RunTest(const FString& Parameters)
@@ -236,20 +311,25 @@ namespace RTSCommandPanelTests
 			MakeButton(TEXT("Duplicate"), EKeys::T),
 			MakeButton(TEXT("Reserved"), EKeys::W),
 			MakeButton(TEXT("Second"), EKeys::G),
+			MakeButton(TEXT("Cee"), EKeys::C),
 			MakeButton(TEXT("Stop"), EKeys::X, ERTSCommandCategory::Unit),
+			MakeButton(TEXT("ForceFire"), EKeys::C, ERTSCommandCategory::Unit),
 		};
 		TArray<FString> Warnings;
-		RTSCommandPanel::ResolveHotkeys(Buttons, { EKeys::W, EKeys::X }, Warnings);
+		RTSCommandPanel::ResolveHotkeys(Buttons, { EKeys::W, EKeys::X, EKeys::C }, Warnings);
 		TestTrue(TEXT("An own hotkey is kept"), Buttons[0].Hotkey == EKeys::T);
 		TestTrue(TEXT("No hotkey gives the position key"), Buttons[1].Hotkey == EKeys::Two);
 		TestTrue(TEXT("A duplicate falls back to its position key"), Buttons[2].Hotkey == EKeys::Three);
 		TestTrue(TEXT("A reserved key falls back to its position key"), Buttons[3].Hotkey == EKeys::Four);
 		TestTrue(TEXT("A later own hotkey is kept"), Buttons[4].Hotkey == EKeys::G);
-		TestTrue(TEXT("A unit order keeps its reserved key"), Buttons[5].Hotkey == EKeys::X);
-		if (TestEqual(TEXT("The duplicate and the reserved key warn"), Warnings.Num(), 2))
+		TestTrue(TEXT("A data hotkey C, Force fire's key, falls back to its position key"), Buttons[5].Hotkey == EKeys::Six);
+		TestTrue(TEXT("A unit order keeps its reserved key"), Buttons[6].Hotkey == EKeys::X);
+		TestTrue(TEXT("Force fire keeps C"), Buttons[7].Hotkey == EKeys::C);
+		if (TestEqual(TEXT("The duplicate and the two reserved keys warn"), Warnings.Num(), 3))
 		{
 			TestTrue(TEXT("naming the duplicate"), Warnings[0].Contains(TEXT("Duplicate")) && Warnings[0].Contains(TEXT("taken")));
 			TestTrue(TEXT("and the reserved one"), Warnings[1].Contains(TEXT("Reserved")) && Warnings[1].Contains(TEXT("reserved")));
+			TestTrue(TEXT("and the one on C"), Warnings[2].Contains(TEXT("Cee")) && Warnings[2].Contains(TEXT("reserved")));
 		}
 
 		// Past the ninth button there is no position key left.

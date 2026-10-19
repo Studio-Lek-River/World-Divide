@@ -3297,7 +3297,20 @@ bool FRTSCheckInGameMenu::Update()
 	Test->TestTrue(TEXT("Attack-move arms again"), Controller->BeginAttackMove());
 	Controller->SetInGameMenuOpen(true);
 	Test->TestFalse(TEXT("Opening the menu disarms attack-move"), Controller->IsAttackMoveArmed());
+	Test->TestFalse(TEXT("Nor does force fire arm while it is open"), Controller->BeginForceFire());
 	Controller->SetInGameMenuOpen(false);
+
+	if (Test->TestTrue(TEXT("The player's units can force-fire"), Controller->HasForceFireShooters()))
+	{
+		Test->TestTrue(TEXT("Force fire arms"), Controller->BeginForceFire());
+		Controller->HandleEscape();
+		Test->TestFalse(TEXT("Esc disarms force fire"), Controller->IsForceFireArmed());
+		Test->TestFalse(TEXT("Without opening the menu"), Controller->IsInGameMenuOpen());
+		Controller->BeginForceFire();
+		Controller->SetInGameMenuOpen(true);
+		Test->TestFalse(TEXT("Opening the menu disarms force fire"), Controller->IsForceFireArmed());
+		Controller->SetInGameMenuOpen(false);
+	}
 	SetDebugBuild(bWasDebugBuild);
 	return true;
 }
@@ -4093,8 +4106,25 @@ bool FRTSCheckCommandPanel::Update()
 	Controller->ConfirmPlacement(false);
 	Test->TestNull(TEXT("Confirming sends the builder and ends placement"), Controller->GetPlacementData());
 	const TSet<FKey> Reserved = Controller->GetReservedKeys();
-	Test->TestTrue(TEXT("The camera, Stop and Attack-move keys are never command hotkeys"),
-		Reserved.Contains(EKeys::W) && Reserved.Contains(EKeys::X) && Reserved.Contains(EKeys::J));
+	Test->TestTrue(TEXT("The camera, Stop, Attack-move and Force fire keys are never command hotkeys"),
+		Reserved.Contains(EKeys::W) && Reserved.Contains(EKeys::X) && Reserved.Contains(EKeys::J) && Reserved.Contains(EKeys::C));
+
+	ARTSUnit* Tank = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), UnitSpot + FVector(0.f, 600.f, 0.f));
+	if (!Tank)
+	{
+		Test->AddError(TEXT("Could not spawn the tank"));
+		return true;
+	}
+	Controller->SelectUnits({ Tank });
+	const int32 ForceFireIndex = GetSelectionListCount(*Controller, TEXT("commands")) - 1;
+	Test->TestEqual(TEXT("A tank's orders end with Force fire"),
+		GetSelectionListValue(*Controller, TEXT("commands"), ForceFireIndex, TEXT("id")).String, FString(TEXT("ForceFire")));
+	RunCommandAction(*Controller, TEXT("commands"), ForceFireIndex);
+	Test->TestTrue(TEXT("Clicking it arms force fire"), Controller->IsForceFireArmed());
+	Test->TestTrue(TEXT("Armed shows the crosshair"), Controller->CurrentMouseCursor == EMouseCursor::Crosshairs);
+	Controller->CancelForceFire();
+	Test->TestFalse(TEXT("Right click or Esc disarms"), Controller->IsForceFireArmed());
+	Test->TestTrue(TEXT("Disarmed restores the cursor"), Controller->CurrentMouseCursor == EMouseCursor::Default);
 	return true;
 }
 
@@ -4943,6 +4973,133 @@ bool FRTSAttackMoveArmedSmokeTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckAttackMoveArming(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAttackMoveDisarmed(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+/**
+ * Force fire through the controller: a tank fires at the ground beside an enemy infantry out of its range, closes in and kills
+ * it by splash alone, never taking the infantry as its target; then a selected tower fires at an own infantry until it dies.
+ */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueForceFireGround, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueForceFireGround::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	ARTSUnit* Tank = SpawnTestUnit(World, TankPath, Controller->GetTeamId(), AttackMoveWest);
+	ARTSUnit* Enemy = SpawnTestUnit(World, InfantryPath, Controller->GetTeamId() + 1, AttackMoveEast);
+	if (!Tank || !Enemy)
+	{
+		Test->AddError(TEXT("Could not spawn the test units"));
+		return true;
+	}
+	Test->TestFalse(TEXT("The enemy starts out of the tank's range"), Tank->GetWeaponComponent()->IsInRange(Enemy));
+	State->Attacker = Tank;
+	State->Victim = Enemy;
+
+	// Beside the infantry, well inside the cannon's splash.
+	Controller->SelectUnits({ Tank });
+	Controller->ConfirmForceFire(nullptr, AttackMoveEast + FVector(0.f, 100.f, 0.f), false);
+	Test->TestFalse(TEXT("Sending it disarms force fire"), Controller->IsForceFireArmed());
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyForceFireGround, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyForceFireGround::Update()
+{
+	const ARTSUnit* Tank = State->Attacker.Get();
+	if (!Tank)
+	{
+		Test->AddError(TEXT("The tank died"));
+		return true;
+	}
+	State->bHadTarget |= Tank->GetWeaponComponent()->GetTarget() != nullptr;
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (State->Victim.IsValid() && Elapsed < AttackMoveTimeout)
+	{
+		return false;
+	}
+	Test->TestFalse(TEXT("The splash killed the enemy"), State->Victim.IsValid());
+	Test->AddInfo(FString::Printf(TEXT("Ground force fire finished after %.1f s, %d shots"), Elapsed, Tank->GetWeaponComponent()->GetShotsFired()));
+	Test->TestFalse(TEXT("The tank fired at the ground only"), State->bHadTarget);
+	Test->TestTrue(TEXT("and did fire"), Tank->GetWeaponComponent()->GetShotsFired() > 0);
+	Test->TestTrue(TEXT("The tank closed in"), FVector::Dist2D(Tank->GetActorLocation(), AttackMoveWest) > 500.f);
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSIssueTowerForceFire, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSIssueTowerForceFire::Update()
+{
+	ARTSPlayerController* Controller = GetTestController(*Test);
+	if (!Controller)
+	{
+		return true;
+	}
+	UWorld* World = Controller->GetWorld();
+	URTSBuildingData* TowerData = LoadObject<URTSBuildingData>(nullptr, TowerPath);
+	// A tower without power holds fire.
+	const ARTSBuilding* Plant = SpawnPowerPlant(World, Controller->GetTeamId());
+	ARTSBuilding* Tower = TowerData ? SpawnBuilding(World, TowerData, Controller->GetTeamId(), MatchEndTowerSpot, true) : nullptr;
+	ARTSUnit* Own = SpawnTestUnit(World, InfantryPath, Controller->GetTeamId(), MatchEndFighterStart);
+	if (!Plant || !Tower || !Own)
+	{
+		Test->AddError(TEXT("Could not spawn the power plant, the tower or the own infantry"));
+		return true;
+	}
+	Test->TestTrue(TEXT("The own infantry is in the tower's range"), Tower->GetWeaponComponent()->IsInRange(Own));
+	State->Building = Tower;
+	State->Victim = Own;
+
+	Test->TestTrue(TEXT("The tower can be selected"), Controller->SelectBuilding(Tower));
+	Test->TestTrue(TEXT("Force fire arms for it"), Controller->BeginForceFire());
+	Controller->ConfirmForceFire(Own, Own->GetActorLocation(), false);
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyTowerForceFire, FAutomationTestBase*, Test, TSharedRef<FSmokeState>, State);
+bool FRTSVerifyTowerForceFire::Update()
+{
+	const double Elapsed = FPlatformTime::Seconds() - State->PhaseStart;
+	if (State->Victim.IsValid() && Elapsed < AttackMoveTimeout)
+	{
+		return false;
+	}
+	const ARTSBuilding* Tower = State->Building.Get();
+	if (!Tower)
+	{
+		Test->AddError(TEXT("The tower is gone"));
+		return true;
+	}
+	Test->TestFalse(TEXT("The tower killed the own infantry"), State->Victim.IsValid());
+	Test->TestTrue(TEXT("by firing at it"), Tower->GetWeaponComponent()->GetShotsFired() > 0);
+	Test->AddInfo(FString::Printf(TEXT("Tower force fire finished after %.1f s, %d shots"), Elapsed, Tower->GetWeaponComponent()->GetShotsFired()));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSForceFireSmokeTest, "WorldDivide.Smoke.ForceFire",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRTSForceFireSmokeTest::RunTest(const FString& Parameters)
+{
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+
+	const TSharedRef<FSmokeState> State = MakeShared<FSmokeState>();
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSWaitForNavigation(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueForceFireGround(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyForceFireGround(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSIssueTowerForceFire(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyTowerForceFire(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

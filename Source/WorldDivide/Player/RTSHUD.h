@@ -111,10 +111,10 @@ private:
 	void DrawOrderRefusal(const ARTSPlayerController& Controller);
 
 	/**
-	 * Bottom center above the bottom panels, where the cancel button would be: that needs a selected building, attack-move
-	 * selected units.
+	 * Bottom center above the bottom panels, while a targeting mode is armed: attack-move, force fire or superweapon
+	 * targeting, each with its own line.
 	 */
-	void DrawAttackMoveHint(const ARTSPlayerController& Controller);
+	void DrawTargetingHint(const ARTSPlayerController& Controller);
 
 	/** Green to red over a dark backdrop; Top is the bar's upper edge. */
 	void DrawHealthBar(float Left, float Top, float Width, float HealthFraction);

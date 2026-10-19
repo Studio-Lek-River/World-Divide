@@ -10,7 +10,7 @@ class URTSEntityData;
 UENUM()
 enum class ERTSCommandCategory : uint8
 {
-	/** An order to the selected units: Stop or Attack-move. */
+	/** An order to the selection: Stop, Attack-move or Force fire. */
 	Unit,
 	/** A building the selected builder places. */
 	Build,
@@ -40,7 +40,7 @@ struct WORLDDIVIDE_API FRTSCommandButton
 {
 	GENERATED_BODY()
 
-	/** The entity data's name, or Stop or AttackMove. */
+	/** The entity data's name, or Stop, AttackMove or ForceFire. */
 	FName Id;
 
 	FText DisplayName;
@@ -82,6 +82,7 @@ namespace RTSCommandPanel
 	/** Id of the unit orders. */
 	extern WORLDDIVIDE_API const FName StopId;
 	extern WORLDDIVIDE_API const FName AttackMoveId;
+	extern WORLDDIVIDE_API const FName ForceFireId;
 
 	/** The key 1-9 of the button at Position in its list, or an invalid key past the ninth. */
 	WORLDDIVIDE_API FKey GetPositionKey(int32 Position);

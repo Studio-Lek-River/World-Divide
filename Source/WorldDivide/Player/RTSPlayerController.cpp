@@ -110,6 +110,9 @@ void ARTSPlayerController::CreateInputActions()
 	AttackMoveAction = MakeAction(this, TEXT("IA_AttackMove"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, AttackMoveAction, EKeys::J);
 
+	ForceFireAction = MakeAction(this, TEXT("IA_ForceFire"), EInputActionValueType::Boolean);
+	MapKey(MappingContext, ForceFireAction, EKeys::C);
+
 	CancelAction = MakeAction(this, TEXT("IA_Cancel"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, CancelAction, EKeys::Escape);
 
@@ -159,6 +162,7 @@ void ARTSPlayerController::SetupInputComponent()
 	Input->BindAction(MoveOrderAction, ETriggerEvent::Started, this, &ThisClass::OnMoveOrder);
 	Input->BindAction(StopOrderAction, ETriggerEvent::Started, this, &ThisClass::OnStopOrder);
 	Input->BindAction(AttackMoveAction, ETriggerEvent::Started, this, &ThisClass::OnAttackMoveKey);
+	Input->BindAction(ForceFireAction, ETriggerEvent::Started, this, &ThisClass::OnForceFireKey);
 	Input->BindAction(CancelAction, ETriggerEvent::Started, this, &ThisClass::OnCancel);
 	Input->BindAction(CancelConstructionAction, ETriggerEvent::Started, this, &ThisClass::OnCancelConstruction);
 	Input->BindAction(JumpToAttackAction, ETriggerEvent::Started, this, &ThisClass::OnJumpToAttack);
@@ -192,6 +196,7 @@ void ARTSPlayerController::PlayerTick(float DeltaTime)
 	{
 		SetSuperweaponTargeting(false);
 	}
+	UpdateMouseCursor();
 
 	if (bSelecting)
 	{
@@ -367,6 +372,11 @@ void ARTSPlayerController::UpdateSelection()
 	AnnouncedUnits = MoveTemp(Units);
 	AnnouncedBuilding = Building;
 	SelectionGroups = GroupByType(SelectedUnits);
+	// A selection without shooters, or whose last one died, has nothing left to force-fire with.
+	if (bForceFireArmed && !HasForceFireShooters())
+	{
+		CancelForceFire();
+	}
 	OnSelectionChanged.Broadcast();
 }
 
@@ -412,10 +422,11 @@ bool ARTSPlayerController::RequestRestart()
 
 void ARTSPlayerController::HandleEscape()
 {
-	if (PlacementData || bAttackMoveArmed || bSuperweaponTargeting)
+	if (PlacementData || bAttackMoveArmed || bForceFireArmed || bSuperweaponTargeting)
 	{
 		CancelPlacement();
 		CancelAttackMove();
+		CancelForceFire();
 		CancelSuperweaponTargeting();
 		return;
 	}
@@ -428,6 +439,7 @@ void ARTSPlayerController::SetInGameMenuOpen(bool bOpen)
 	{
 		CancelPlacement();
 		CancelAttackMove();
+		CancelForceFire();
 		CancelSuperweaponTargeting();
 		bSelecting = false;
 	}
@@ -453,6 +465,11 @@ bool ARTSPlayerController::IsOwnUnit(const ARTSUnit* Unit) const
 bool ARTSPlayerController::IsShiftDown() const
 {
 	return IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
+}
+
+bool ARTSPlayerController::IsCtrlDown() const
+{
+	return IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
 }
 
 void ARTSPlayerController::OnPan(const FInputActionValue& Value)
@@ -596,6 +613,16 @@ void ARTSPlayerController::HandleSelectPressed(const FVector2D& Mouse)
 		CancelSuperweaponTargeting();
 		return;
 	}
+	// Armed with C, or Ctrl held: the click fires instead of starting a selection.
+	if (bForceFireArmed || (IsCtrlDown() && HasForceFireShooters()))
+	{
+		FHitResult Hit;
+		if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+		{
+			ConfirmForceFire(Hit.GetActor(), Hit.Location, IsShiftDown());
+		}
+		return;
+	}
 	if (const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>())
 	{
 		if (RTSHUD->IsOnLaunchButton(Mouse))
@@ -717,9 +744,10 @@ void ARTSPlayerController::OnMoveOrder()
 		CancelPlacement();
 		return;
 	}
-	if (bAttackMoveArmed)
+	if (bAttackMoveArmed || bForceFireArmed)
 	{
 		CancelAttackMove();
+		CancelForceFire();
 		return;
 	}
 	if (bSuperweaponTargeting)
@@ -732,6 +760,11 @@ void ARTSPlayerController::OnMoveOrder()
 	FHitResult Hit;
 	if (!GetMousePosition(Mouse.X, Mouse.Y) || IsOnHUDPanel(Mouse) || !GetHitResultUnderCursor(ECC_Visibility, false, Hit))
 	{
+		return;
+	}
+	if (IsCtrlDown() && HasForceFireShooters())
+	{
+		ConfirmForceFire(Hit.GetActor(), Hit.Location, IsShiftDown());
 		return;
 	}
 	if (SelectedUnits.IsEmpty())
@@ -779,12 +812,23 @@ void ARTSPlayerController::OnStopOrder()
 	}
 	FRTSCommand Command;
 	Command.Type = ERTSCommandType::Stop;
+	if (ARTSBuilding* Tower = GetSelectedWeaponBuilding())
+	{
+		Command.Building = Tower;
+		Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+		return;
+	}
 	IssueToSelection(Command);
 }
 
 void ARTSPlayerController::OnAttackMoveKey()
 {
 	BeginAttackMove();
+}
+
+void ARTSPlayerController::OnForceFireKey()
+{
+	BeginForceFire();
 }
 
 bool ARTSPlayerController::BeginAttackMove()
@@ -794,6 +838,7 @@ bool ARTSPlayerController::BeginAttackMove()
 		return false;
 	}
 	CancelPlacement();
+	CancelForceFire();
 	CancelSuperweaponTargeting();
 	SetAttackMoveArmed(true);
 	return true;
@@ -807,7 +852,83 @@ void ARTSPlayerController::CancelAttackMove()
 void ARTSPlayerController::SetAttackMoveArmed(bool bArmed)
 {
 	bAttackMoveArmed = bArmed;
-	CurrentMouseCursor = bAttackMoveArmed || bSuperweaponTargeting ? EMouseCursor::Crosshairs : EMouseCursor::Default;
+	UpdateMouseCursor();
+}
+
+ARTSBuilding* ARTSPlayerController::GetSelectedWeaponBuilding() const
+{
+	ARTSBuilding* Building = GetSelectedBuilding();
+	return IsValid(Building) && Building->GetTeamId() == GetTeamId() && Building->IsConstructed()
+		&& Building->GetBuildingData() && Building->GetBuildingData()->Weapon ? Building : nullptr;
+}
+
+bool ARTSPlayerController::HasForceFireShooters() const
+{
+	if (GetSelectedWeaponBuilding())
+	{
+		return true;
+	}
+	// Unit data replicates; the weapon component only knows its data on the server.
+	return SelectedUnits.ContainsByPredicate([](const TWeakObjectPtr<ARTSUnit>& Unit)
+	{
+		return Unit.IsValid() && Unit->GetUnitData() && Unit->GetUnitData()->Weapon;
+	});
+}
+
+bool ARTSPlayerController::BeginForceFire()
+{
+	if (bInGameMenuOpen || !HasForceFireShooters())
+	{
+		return false;
+	}
+	CancelPlacement();
+	CancelAttackMove();
+	CancelSuperweaponTargeting();
+	bForceFireArmed = true;
+	UpdateMouseCursor();
+	return true;
+}
+
+void ARTSPlayerController::CancelForceFire()
+{
+	bForceFireArmed = false;
+	UpdateMouseCursor();
+}
+
+void ARTSPlayerController::ConfirmForceFire(AActor* HitActor, const FVector& Location, bool bQueue)
+{
+	FRTSCommand Command;
+	Command.Type = ERTSCommandType::ForceFire;
+	if (Cast<IRTSTargetable>(HitActor))
+	{
+		Command.TargetActor = HitActor;
+	}
+	else
+	{
+		Command.TargetLocation = Location;
+	}
+	if (ARTSBuilding* Tower = GetSelectedWeaponBuilding())
+	{
+		Command.Building = Tower;
+		Server_IssueCommand(TArray<ARTSUnit*>(), Command);
+	}
+	else
+	{
+		Command.bQueue = bQueue;
+		IssueToSelection(Command);
+	}
+	// Shift keeps force fire armed for the next target, as it keeps attack-move armed.
+	if (!bQueue)
+	{
+		CancelForceFire();
+	}
+}
+
+void ARTSPlayerController::UpdateMouseCursor()
+{
+	const bool bTargeting = bAttackMoveArmed || bForceFireArmed || bSuperweaponTargeting
+		|| (!bInGameMenuOpen && IsCtrlDown() && HasForceFireShooters());
+	CurrentMouseCursor = bTargeting ? EMouseCursor::Crosshairs : EMouseCursor::Default;
 }
 
 ARTSBuilding* ARTSPlayerController::GetSelectedSuperweapon() const
@@ -843,6 +964,7 @@ bool ARTSPlayerController::BeginSuperweaponTargeting()
 	}
 	CancelPlacement();
 	CancelAttackMove();
+	CancelForceFire();
 	SetSuperweaponTargeting(true);
 	return true;
 }
@@ -855,7 +977,7 @@ void ARTSPlayerController::CancelSuperweaponTargeting()
 void ARTSPlayerController::SetSuperweaponTargeting(bool bTargeting)
 {
 	bSuperweaponTargeting = bTargeting;
-	CurrentMouseCursor = bAttackMoveArmed || bSuperweaponTargeting ? EMouseCursor::Crosshairs : EMouseCursor::Default;
+	UpdateMouseCursor();
 }
 
 void ARTSPlayerController::ConfirmAttackMove(const FVector& Location, bool bQueue)
@@ -1120,6 +1242,27 @@ TArray<FRTSCommandButton> ARTSPlayerController::GetCommandButtons() const
 		AttackMove.bActive = bAttackMoveArmed;
 		Buttons.Add(MoveTemp(AttackMove));
 	}
+	else if (GetSelectedWeaponBuilding())
+	{
+		FRTSCommandButton Stop;
+		Stop.Id = RTSCommandPanel::StopId;
+		Stop.DisplayName = NSLOCTEXT("RTSCommands", "Stop", "Stop");
+		Stop.Description = NSLOCTEXT("RTSCommands", "StopBuildingDescription", "The selected building stops firing.");
+		Stop.Hotkey = EKeys::X;
+		Buttons.Add(MoveTemp(Stop));
+	}
+	if (HasForceFireShooters())
+	{
+		FRTSCommandButton ForceFire;
+		ForceFire.Id = RTSCommandPanel::ForceFireId;
+		ForceFire.DisplayName = NSLOCTEXT("RTSCommands", "ForceFire", "Force fire");
+		ForceFire.Description = NSLOCTEXT("RTSCommands", "ForceFireDescription",
+			"The selection fires at the unit, building or ground clicked next, whatever its team. Ctrl and a click does the same.");
+		// No IconSprite: the placeholder icon until the faction's T_Cmd_<Faction>_ForceFire.png is delivered.
+		ForceFire.Hotkey = EKeys::C;
+		ForceFire.bActive = bForceFireArmed;
+		Buttons.Add(MoveTemp(ForceFire));
+	}
 
 	TArray<FString> Warnings;
 	RTSCommandPanel::ResolveHotkeys(Buttons, GetReservedKeys(), Warnings);
@@ -1154,10 +1297,14 @@ bool ARTSPlayerController::ExecuteCommandButton(const FRTSCommandButton& Button)
 		return Data && PlacementData == Data;
 	}
 	case ERTSCommandCategory::Unit:
-		if (Button.Id == RTSCommandPanel::StopId && !SelectedUnits.IsEmpty())
+		if (Button.Id == RTSCommandPanel::StopId && (!SelectedUnits.IsEmpty() || GetSelectedWeaponBuilding()))
 		{
 			OnStopOrder();
 			return true;
+		}
+		if (Button.Id == RTSCommandPanel::ForceFireId)
+		{
+			return BeginForceFire();
 		}
 		return Button.Id == RTSCommandPanel::AttackMoveId && BeginAttackMove();
 	}
@@ -1232,6 +1379,7 @@ void ARTSPlayerController::BeginPlacement(URTSBuildingData* Data)
 {
 	CancelPlacement();
 	CancelAttackMove();
+	CancelForceFire();
 	if (!Data || bInGameMenuOpen || GetMissingPrerequisite(*Data) || IsAtBuildLimit(*Data))
 	{
 		return;

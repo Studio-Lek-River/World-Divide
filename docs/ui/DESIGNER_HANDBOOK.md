@@ -55,7 +55,7 @@ All layout numbers are in **HUD units at 1920x1080**. The engine scales them by 
 | `MapButtons` (layout) | under the minimap, 8 apart | 280 x 48 | Overlays (production overview), General Powers, Objectives |
 | `ResourceBar` (layout) | full width, above the bottom panels | full width x 40 | power bar, credits, rank |
 | `Selection` (layout) | bottom left | 460 x 280 frame | the selected unit or building, and its production queue (the `ProductionQueue` layout, in its `QueueSlot`) |
-| `Commands` (layout `CommandPanel`) | bottom centre | fills x 280 frame | the build and produce cards of the selection, and Stop and Attack-move for units |
+| `Commands` (layout `CommandPanel`) | bottom centre | fills x 280 frame | the build and produce cards of the selection, Stop, Attack-move and Force fire for units, and Stop and Force fire for a tower |
 | `Upgrades` (layout `UpgradePanel`) | bottom right | 300 x 280 frame | the upgrades the selection can research |
 | `Scoreboard` | floating, under the map buttons | 360 x 300 | |
 | `Tooltip` | floating, bottom right, just above the resource bar | 460 x 240 | |
@@ -273,7 +273,7 @@ The selection panel's hero art is `Art.<Entity>` in the entity's `HeroArtSprite`
 | faction HUD piece | `UI/Textures/<Faction>/T_UI_<Faction>_<Piece>.png` |
 | shared HUD piece | `UI/Textures/Common/T_UI_Common_<Piece>.png` |
 | entity icon | `UI/Textures/<Faction>/Icons/T_Icon_<Faction>_<Entity>.png` |
-| command icon | `UI/Textures/<Faction>/Commands/T_Cmd_<Faction>_<Command>.png` |
+| command icon | `UI/Textures/<Faction>/Commands/T_Cmd_<Faction>_<Command>.png`, such as `T_Cmd_USA_Stop.png`, `T_Cmd_USA_AttackMove.png` and `T_Cmd_USA_ForceFire.png` |
 | illustration | `UI/Textures/<Faction>/Art/T_Art_<Faction>_<Name>.png` |
 | mockup (not used by the game) | `docs/ui/mockups/Mockup_<Panel>_<Faction>.png` |
 

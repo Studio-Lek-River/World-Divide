@@ -57,9 +57,14 @@ DECLARE_MULTICAST_DELEGATE(FRTSSelectionChangedSignature);
  *
  * Controls: WASD/arrows or screen edge pan, mouse wheel zoom, Q/E or middle-mouse drag rotate,
  * left click/drag select (Shift adds; a click on an own building selects that building), right click move, attack an
- * enemy unit or building, or harvest a supply source (Shift queues), X stop. J then left click attack-moves the selection to
- * the clicked spot (Shift queues and keeps attack-move armed); right click, Esc or an emptied selection cancels it, and the
- * HUD shows a hint while it is armed. Delete cancels the own
+ * enemy unit or building, or harvest a supply source (Shift queues), X stop (a selected tower too). J then left click
+ * attack-moves the selection to the clicked spot (Shift queues and keeps attack-move armed); right click, Esc or an emptied
+ * selection cancels it, and the HUD shows a hint while it is armed.
+ * Force fire, with shooters selected (armed units or an own finished tower): Ctrl and a left or right click fires at the
+ * clicked unit or building of any team, or at the ground; or C then left click does the same (Shift queues and keeps it
+ * armed), and right click, Esc, the in-game menu, attack-move, placement, superweapon targeting or a selection without
+ * shooters cancels it. The cursor is a crosshair while a targeting mode is armed or Ctrl is held with shooters selected,
+ * and the HUD shows a hint while a mode is armed. Delete cancels the own
  * construction site under the cursor, or else the selected one, as does the selection panel's cancel button.
  * The command and upgrades panels show what the selection can do (GetCommandButtons); a click on a button, or its hotkey (the
  * entity's own key, else its position 1-9), runs it through ExecuteCommandButton.
@@ -220,13 +225,14 @@ public:
 
 	/**
 	 * What the selection can do, in order: the production building's units and upgrades, else the build menu, then Stop and
-	 * Attack-move while units are selected. Availability, its reason and the hotkeys are filled in; the panels only show them.
+	 * Attack-move while units are selected, and Force fire while the selection has a shooter (HasForceFireShooters); a
+	 * selected tower gets Stop and Force fire. Availability, its reason and the hotkeys are filled in; the panels only show them.
 	 */
 	TArray<FRTSCommandButton> GetCommandButtons() const;
 
 	/**
 	 * Local. Runs Button as a click on it does: queues its unit or upgrade, starts placing its building, stops the selection
-	 * or arms attack-move. False, changing nothing, when the button is disabled or the in-game menu is open.
+	 * or arms attack-move or force fire. False, changing nothing, when the button is disabled or the in-game menu is open.
 	 */
 	bool ExecuteCommandButton(const FRTSCommandButton& Button);
 
@@ -264,6 +270,29 @@ public:
 	/** Sends the selected units an attack-move to Location. bQueue queues it and keeps attack-move armed for the next waypoint. */
 	void ConfirmAttackMove(const FVector& Location, bool bQueue);
 
+	/** The selected building while it is the player's own constructed building with a weapon, such as a tower, or null. */
+	ARTSBuilding* GetSelectedWeaponBuilding() const;
+
+	/**
+	 * The selection has something that can force-fire: a selected unit whose data has a weapon, or GetSelectedWeaponBuilding.
+	 * Read from the replicated data, so clients see the same; the server checks each shooter again (ARTSUnit::CanForceFire).
+	 */
+	bool HasForceFireShooters() const;
+
+	/**
+	 * Local. Arms force fire for the selection until the next left click fires, or it is cancelled; false, changing nothing,
+	 * without shooters or while the in-game menu is open.
+	 */
+	bool BeginForceFire();
+	void CancelForceFire();
+	bool IsForceFireArmed() const { return bForceFireArmed; }
+
+	/**
+	 * Sends the selection a force fire: at HitActor when it is targetable, whatever its team, else at the ground at Location.
+	 * Units and a selected tower both get it. bQueue queues it for units and keeps force fire armed; otherwise it disarms.
+	 */
+	void ConfirmForceFire(AActor* HitActor, const FVector& Location, bool bQueue);
+
 	/** The local player's team's result, InProgress before the game state has replicated. */
 	ERTSMatchResult GetMatchResult() const;
 
@@ -285,10 +314,10 @@ public:
 	/** Point, in viewport pixels, lies on a panel of the UMG HUD, where clicks never select, order or place. */
 	bool IsOnHUDPanel(const FVector2D& Point) const;
 
-	/** Local. What Esc does: cancels placement, attack-move or superweapon targeting while one is armed, else opens or closes the in-game menu. */
+	/** Local. What Esc does: cancels placement, attack-move, force fire or superweapon targeting while one is armed, else opens or closes the in-game menu. */
 	void HandleEscape();
 
-	/** Local. Opening the in-game menu cancels placement, attack-move and superweapon targeting; nothing new can be armed while it is open. */
+	/** Local. Opening the in-game menu cancels placement, attack-move, force fire and superweapon targeting; nothing new can be armed while it is open. */
 	void SetInGameMenuOpen(bool bOpen);
 	bool IsInGameMenuOpen() const { return bInGameMenuOpen; }
 
@@ -411,6 +440,7 @@ private:
 	void OnMoveOrder();
 	void OnStopOrder();
 	void OnAttackMoveKey();
+	void OnForceFireKey();
 	void OnCancel();
 	void OnCancelConstruction();
 	void OnJumpToAttack();
@@ -427,8 +457,13 @@ private:
 	void UpdatePlacement();
 	void SetAttackMoveArmed(bool bArmed);
 	void SetSuperweaponTargeting(bool bTargeting);
+
+	/** The crosshair while a targeting mode is armed, or while Ctrl is held with shooters selected; else the default cursor. */
+	void UpdateMouseCursor();
+
 	bool IsOwnUnit(const ARTSUnit* Unit) const;
 	bool IsShiftDown() const;
+	bool IsCtrlDown() const;
 	ARTSCameraPawn* GetCameraPawn() const;
 
 	UPROPERTY(Transient)
@@ -457,6 +492,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> AttackMoveAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ForceFireAction;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> CancelAction;
@@ -519,6 +557,9 @@ private:
 
 	/** Set by J until the next left click sends the attack-move, or right click or Esc cancels it. */
 	bool bAttackMoveArmed = false;
+
+	/** Set by C or the Force fire button with shooters selected, until the next left click fires or it is cancelled. */
+	bool bForceFireArmed = false;
 
 	/** Set by 1 or the HUD's launch entry with a ready superweapon selected, until the next left click launches it or it is cancelled. */
 	bool bSuperweaponTargeting = false;

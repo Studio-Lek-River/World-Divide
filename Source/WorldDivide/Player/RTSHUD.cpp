@@ -150,7 +150,7 @@ void ARTSHUD::DrawHUD()
 			DrawRallyPoint(*Controller, *Producer);
 		}
 		DrawSuperweaponMenu(*Controller);
-		DrawAttackMoveHint(*Controller);
+		DrawTargetingHint(*Controller);
 	}
 	DrawSuperweapons(*Controller, DrawScoreboard() + MenuLineHeight * 0.5f);
 	if (!bMatchOver)
@@ -437,17 +437,6 @@ void ARTSHUD::DrawSuperweaponMenu(const ARTSPlayerController& Controller)
 	GetTextSize(Text, Width, Height);
 	LaunchButton = FBox2D(FVector2D(MenuMargin, Y), FVector2D(MenuMargin + Width, Y + MenuLineHeight));
 	DrawText(Text, Controller.CanRequestLaunch(Building) ? MenuColor : UnaffordableColor, MenuMargin, Y);
-
-	if (!Controller.IsSuperweaponTargeting())
-	{
-		return;
-	}
-	const FString Hint = TEXT("Launch: left click a target    Right click / Esc: cancel");
-	GetTextSize(Hint, Width, Height);
-	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
-	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - BottomInset - Size.Y);
-	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
-	DrawText(Hint, DefeatColor, Min.X + ButtonPadding, Min.Y + ButtonPadding);
 }
 
 bool ARTSHUD::IsOnLaunchButton(const FVector2D& Point) const
@@ -548,20 +537,35 @@ void ARTSHUD::DrawOrderRefusal(const ARTSPlayerController& Controller)
 	DrawText(Text, DefeatColor, Min.X + ButtonPadding, Min.Y + ButtonPadding, Font, AttackAlertTextScale);
 }
 
-void ARTSHUD::DrawAttackMoveHint(const ARTSPlayerController& Controller)
+void ARTSHUD::DrawTargetingHint(const ARTSPlayerController& Controller)
 {
-	if (!Controller.IsAttackMoveArmed())
+	// At most one mode is armed at a time: arming one cancels the others.
+	FString Text;
+	FLinearColor Color = SelectionColor;
+	if (Controller.IsAttackMoveArmed())
+	{
+		Text = TEXT("Attack-move: left click a target (Shift: queue)    Right click / Esc: cancel");
+	}
+	else if (Controller.IsForceFireArmed())
+	{
+		Text = TEXT("Force fire: left click a unit, building or the ground (Shift: queue)    Right click / Esc: cancel");
+	}
+	else if (Controller.IsSuperweaponTargeting())
+	{
+		Text = TEXT("Launch: left click a target    Right click / Esc: cancel");
+		Color = DefeatColor;
+	}
+	else
 	{
 		return;
 	}
-	const FString Text = TEXT("Attack-move: left click a target (Shift: queue)    Right click / Esc: cancel");
 	float Width = 0.f;
 	float Height = 0.f;
 	GetTextSize(Text, Width, Height);
 	const FVector2D Size(Width + ButtonPadding * 2.f, Height + ButtonPadding * 2.f);
 	const FVector2D Min((Canvas->ClipX - Size.X) * 0.5f, Canvas->ClipY - BottomInset - Size.Y);
 	DrawRect(HealthBackground, Min.X, Min.Y, Size.X, Size.Y);
-	DrawText(Text, SelectionColor, Min.X + ButtonPadding, Min.Y + ButtonPadding);
+	DrawText(Text, Color, Min.X + ButtonPadding, Min.Y + ButtonPadding);
 }
 
 FString ARTSHUD::GetMatchResultTitle(ERTSMatchResult Result)

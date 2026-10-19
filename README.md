@@ -31,9 +31,10 @@ Command-line build:
 | Left click / left drag | Select own units (Shift adds or toggles); a click on an own building selects that building |
 | Delete, or the HUD's cancel button | Cancel the own construction site under the cursor, or else the selected one, for a refund; with a production building selected, cancel the last entry in its queue |
 | Right click | Move, attack when on an enemy unit or building, harvest when on a supply source, or resume an own construction site with builders (Shift queues); with a production building selected, set its rally point |
-| X, or Stop in the command panel | Stop |
+| X, or Stop in the command panel | Stop; with an own tower selected, it stops firing |
 | Space | Centre the camera on the latest attack warning, for up to 20 seconds after it |
 | J or Attack-move in the command panel, then left click | Attack-move: walk to the clicked spot, stopping to fight enemies that come into range on the way (Shift queues and keeps attack-move armed); right click or Esc cancels |
+| Ctrl + left or right click, or C or Force fire in the command panel, then left click | Force fire, with armed units or an own tower selected: fire at the clicked unit or building of any team, own ones included, or at the ground, where splash weapons hurt everything around the spot (Shift queues and keeps force fire armed); units close in, a tower fires only within its range. The cursor turns into a crosshair while Ctrl is held; right click or Esc cancels |
 | The hotkey shown on the button (1–9 by default), or a click on its card in the command panel | With a builder selected: place that building; the builder walks there, places it and builds it. With `rts.DebugBuild 1` in the console and no builder selected: place that building of your faction directly. A greyed card says why it is not available |
 | The hotkey shown on the button (1–9 by default), or a click on its card in the command or upgrades panel | With a production building selected: queue that unit or research that upgrade; a click on a queued entry in the selection panel cancels it for a refund |
 | Left click / right click or Esc | While placing: build (Shift queues it and keeps placing) / cancel (Esc also stops PIE in the editor) |

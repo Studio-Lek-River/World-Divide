@@ -1042,6 +1042,7 @@ namespace
 			Key = HashCombine(Key, GetTypeHash(Producer ? Producer->GetProductionComponent()->GetQueue().Num() : INDEX_NONE));
 			Key = HashCombine(Key, GetTypeHash(Controller.GetPlacementData()));
 			Key = HashCombine(Key, GetTypeHash(Controller.IsAttackMoveArmed()));
+			Key = HashCombine(Key, GetTypeHash(Controller.IsForceFireArmed()));
 			if (CachedKey != Key || CachedFrame != GFrameCounter)
 			{
 				CachedKey = Key;
