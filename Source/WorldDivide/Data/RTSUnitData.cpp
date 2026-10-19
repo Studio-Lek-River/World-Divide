@@ -4,6 +4,19 @@
 #include "Misc/DataValidation.h"
 #endif
 
+float FRTSGunRecoil::OffsetAt(float Time, float From) const
+{
+	// Back from where the barrel was, so a shot before it is out again starts its stroke there instead of jumping, then
+	// out to rest; never past Distance.
+	if (Time < RecoilSeconds)
+	{
+		const float Back = 1.f - FMath::Square(1.f - FMath::Max(Time, 0.f) / RecoilSeconds);
+		return FMath::Lerp(FMath::Min(From, Distance), Distance, Back);
+	}
+	const float Out = (Time - RecoilSeconds) / ReturnSeconds;
+	return Out >= 1.f ? 0.f : Distance * (1.f - FMath::SmoothStep(0.f, 1.f, Out));
+}
+
 float FRTSLocomotionProfile::GetMinTurnRadius() const
 {
 	const float Steered = Wheelbase / FMath::Tan(FMath::DegreesToRadians(FMath::Clamp(MaxSteerAngle, 1.f, 80.f)));

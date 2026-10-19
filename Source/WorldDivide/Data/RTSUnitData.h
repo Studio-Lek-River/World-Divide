@@ -63,6 +63,35 @@ struct FRTSVehiclePart
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part")
 	TObjectPtr<UMaterialInterface> RigidMaterial;
+
+	/** A part on the gun that slides back along the bore when it fires and runs out again: the barrel (GunRecoil, #218). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part")
+	bool bRecoils = false;
+};
+
+/** How a gun's recoiling parts (FRTSVehiclePart::bRecoils) move on each shot, drawn on each machine that shows it. */
+USTRUCT(BlueprintType)
+struct WORLDDIVIDE_API FRTSGunRecoil
+{
+	GENERATED_BODY()
+
+	/** How far the barrel slides back in cm, before the unit's MeshScale; 0 does not recoil. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0"))
+	float Distance = 0.f;
+
+	/** Seconds to slide back the full stroke, easing out as the recoil brake takes it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.01"))
+	float RecoilSeconds = 0.06f;
+
+	/** Seconds to run back out to rest, easing in and out. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.01"))
+	float ReturnSeconds = 0.45f;
+
+	/** How far back the barrel is, in cm before MeshScale, Time seconds into a stroke that started From cm back. */
+	float OffsetAt(float Time, float From) const;
+
+	/** Seconds a stroke lasts, back and out again. */
+	float GetSeconds() const { return RecoilSeconds + ReturnSeconds; }
 };
 
 /** What moves a ground unit: legs walk anywhere they face, tracks and wheels drive the hull (RTSLocomotion). */
@@ -213,6 +242,10 @@ public:
 	/** Degrees per second the gun elevates. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats", meta = (ClampMin = "1"))
 	float GunElevationRate = 30.f;
+
+	/** How the gun's recoiling parts (the barrel) move on each shot. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+	FRTSGunRecoil GunRecoil;
 
 	/** Add-ons and running gear, placed on the hull, the turret or the gun. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")

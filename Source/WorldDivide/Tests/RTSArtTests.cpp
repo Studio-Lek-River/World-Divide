@@ -39,8 +39,8 @@ namespace
 	const TCHAR* M20Dir = TEXT("/Game/Art/USA/Vehicles/M20Guardian");
 	/** The triangles of each exported part, as m20_guardian_blender.py counted them. */
 	const TCHAR* M20TrianglesFile = TEXT("Art/USA/vehicles/m20_guardian/export_triangles.json");
-	/** The RWS, two tracks, and twelve road wheels, two sprockets and two idlers. */
-	constexpr int32 M20PartCount = 19;
+	/** The barrel, the RWS, two tracks, and twelve road wheels, two sprockets and two idlers. */
+	constexpr int32 M20PartCount = 20;
 	constexpr int32 M20WheelCount = 16;
 	/** The hull's length as exported, in cm. */
 	constexpr double M20HullLength = 710.2;
@@ -126,6 +126,15 @@ bool FRTSM20GuardianArtTest::RunTest(const FString& Parameters)
 		TestTrue(FString::Printf(TEXT("It sits at GunMuzzleOffset (%s)"), *Muzzle->RelativeLocation.ToString()),
 			Muzzle->RelativeLocation.Equals(Data->GunMuzzleOffset, 1.0) && Muzzle->RelativeRotation.IsNearlyZero());
 	}
+	// The barrel is its own part on the gun's pivot, which recoils through the mantlet (#218), and reaches the muzzle.
+	const FRTSVehiclePart* Barrel = Data->Parts.FindByPredicate([](const FRTSVehiclePart& Part) { return Part.bRecoils; });
+	if (TestNotNull(TEXT("The barrel recoils"), Barrel) && TestNotNull(TEXT("The barrel has a mesh"), Barrel->Mesh.Get()))
+	{
+		TestTrue(TEXT("It rides on the gun at its pivot"), Barrel->MountedOn == ERTSVehiclePartMount::Gun && Barrel->Offset.IsNearlyZero());
+		TestTrue(FString::Printf(TEXT("It ends at the muzzle (%.1f cm)"), Barrel->Mesh->GetBoundingBox().Max.X),
+			FMath::IsNearlyEqual(Barrel->Mesh->GetBoundingBox().Max.X, Data->GunMuzzleOffset.X, 1.0));
+		TestTrue(TEXT("It has a recoil stroke"), Data->GunRecoil.Distance > 0.f);
+	}
 	if (Data->Mesh)
 	{
 		const FBox Box = Data->Mesh->GetBoundingBox();
@@ -150,11 +159,11 @@ bool FRTSM20GuardianArtTest::RunTest(const FString& Parameters)
 		{
 			continue;
 		}
-		// The mesh build drops degenerate triangles; the v5 gun and RWS export a few dozen, nothing else is lost.
+		// The mesh build drops degenerate triangles; the v5 mantlet (SM_M20_Gun) and RWS export a few dozen, nothing else is lost.
 		const int32 Exported = static_cast<int32>(Part.Value->AsNumber());
 		const int32 Imported = Mesh->GetNumTriangles(0);
 		TestTrue(*FString::Printf(TEXT("%s keeps its triangles (%d of %d)"), *Part.Key, Imported, Exported),
-			Imported <= Exported && Imported >= Exported - FMath::Max(Exported / 100, 1));
+			Imported <= Exported && Imported >= Exported - FMath::Max(Exported / 100, 30));
 		TestFalse(*FString::Printf(TEXT("%s has Nanite off"), *Part.Key), Mesh->IsNaniteEnabled());
 		for (const FStaticMaterial& Slot : Mesh->GetStaticMaterials())
 		{

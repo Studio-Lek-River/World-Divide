@@ -2,7 +2,7 @@
 Art/USA/vehicles/m20_guardian) from code, as a modular hero model for close-zoom review and the game:
 
   blender -b --python Tools/Art/m20_guardian_blender.py -- [--stage 1|2] [--no-bake] [--preview] [--verify] [--samples N]
-                                                          [--tracks-only] [--lods]
+                                                          [--tracks-only] [--lods] [--split-barrel]
 
 --stage 1 builds the blockout (hull, running gear, turret, gun) and renders it. --stage 2 (the default) adds the detail,
 applies the bevels to the game meshes, lays out the UVs, bakes the texture sets from the high-poly twins, and writes the
@@ -10,11 +10,12 @@ applies the bevels to the game meshes, lays out the UVs, bakes the texture sets 
 Art/USA/vehicles/m20_guardian. --no-bake skips the UVs and bakes (the FBX then carry the procedural slots). --preview only
 builds and renders quick views to renders/preview_*.png. --verify re-imports every FBX into an empty scene and checks
 scale, origin and triangles. --tracks-only opens the saved .blend and only writes the tracks' animation UVs (#151) and
-re-exports the two track FBX. --lods opens it and only writes the tracks' belt LODs to fbx/lods (#149).
+re-exports the two track FBX. --lods opens it and only writes the tracks' belt LODs to fbx/lods (#149). --split-barrel opens it and
+splits the barrel out of the gun, as build_gun builds it since #218, keeping the baked textures.
 
 Every dimension is in metres in the block below: tune proportions there, not in the meshes. The tank faces +X, +Y is its
 left, its tracks sit on z = 0 and the origin is under the hull centre. Moving parts are separate objects with their pivot
-as origin: Turret on the turret ring, Gun on the trunnions, RWS on its ring, each road wheel, idler and sprocket on its
+as origin: Turret on the turret ring, Gun (the mantlet) and Barrel on the trunnions, RWS on its ring, each road wheel, idler and sprocket on its
 axle, and each track. Each part also has a high-poly twin (<name>_High, hidden, in the M20_High collection): the same
 mesh plus bolts, weld beads and other detail that only goes into the normal map.
 
@@ -1144,16 +1145,15 @@ def barrel_profile():
 
 
 def build_gun(turret):
+    """The mantlet (M20_Gun, on the trunnions) and the barrel (M20_Barrel), a separate part on the same pivot that the
+    game slides back through the mantlet when the gun fires (#218)."""
     gun = Part("M20_Gun")
     z = TRUNNION.z
     gun.zone("Mantlet")
     gun.add("Paint", loft(octagon(1.28, 0.42, 0.26, 0.10), octagon(MANTLET_FRONT, 0.35, 0.22, 0.09)))
     gun.add("Paint", loft(octagon(MANTLET_FRONT, 0.32, 0.20, 0.08), octagon(MANTLET_FRONT + 0.03, 0.30, 0.18, 0.07)),
             SMALL)
-    gun.zone("Barrel")
-    gun.add("Barrel", lathe((0.0, 0.0, z), (1, 0, 0), barrel_profile(), segments=24), bevel=False)
     if DETAIL:
-        gun.zone("Mantlet")
         front = Quad((MANTLET_FRONT + 0.03, 0.30, z - 0.18), (MANTLET_FRONT + 0.03, -0.30, z - 0.18),
                      (MANTLET_FRONT + 0.03, 0.30, z + 0.18), (MANTLET_FRONT + 0.03, -0.30, z + 0.18),
                      (TRUNNION.x, 0.0, z))
@@ -1194,15 +1194,19 @@ def build_gun(turret):
         # Lifting eye on a lug on the mantlet top plate.
         gun.add("Metal", box(MANTLET_FRONT - 0.26, MANTLET_FRONT - 0.14, -0.025, 0.025, z + 0.24, z + 0.275), SMALL)
         gun.add("Metal", torus((MANTLET_FRONT - 0.20, 0.0, z + 0.31), (0, 1, 0), 0.04, 0.013), SMALL)
-        gun.zone("Barrel")
+    gun = gun.build(TRUNNION, turret, TURRET_RING)
+
+    barrel = Part("M20_Barrel")
+    barrel.add("Barrel", lathe((0.0, 0.0, z), (1, 0, 0), barrel_profile(), segments=24), bevel=False)
+    if DETAIL:
         # Muzzle reference sensor on its bracket.
-        gun.add("Olive", box(MUZZLE_X - 0.36, MUZZLE_X - 0.30, -0.03, 0.03, z + 0.10, z + 0.14), SMALL)
-        gun.add("Dark", box(MUZZLE_X - 0.40, MUZZLE_X - 0.26, -0.045, 0.045, z + 0.14, z + 0.21), SMALL)
-        gun.add("Optics", box(MUZZLE_X - 0.40, MUZZLE_X - 0.395, -0.03, 0.03, z + 0.155, z + 0.195), bevel=False)
+        barrel.add("Olive", box(MUZZLE_X - 0.36, MUZZLE_X - 0.30, -0.03, 0.03, z + 0.10, z + 0.14), SMALL)
+        barrel.add("Dark", box(MUZZLE_X - 0.40, MUZZLE_X - 0.26, -0.045, 0.045, z + 0.14, z + 0.21), SMALL)
+        barrel.add("Optics", box(MUZZLE_X - 0.40, MUZZLE_X - 0.395, -0.03, 0.03, z + 0.155, z + 0.195), bevel=False)
         for x in SLEEVE_BANDS:
             r = sleeve_radius(x) + 0.009
-            gun.add("Metal", box(x - 0.02, x + 0.02, -0.025, 0.025, z - r - 0.025, z - r + 0.005), SMALL, high=True)
-    return gun.build(TRUNNION, turret, TURRET_RING)
+            barrel.add("Metal", box(x - 0.02, x + 0.02, -0.025, 0.025, z - r - 0.025, z - r + 0.005), SMALL, high=True)
+    return gun, barrel.build(TRUNNION, gun, TRUNNION)
 
 
 # ---- remote weapon station ----
@@ -1487,9 +1491,9 @@ def build_tank():
     turret = build_turret()
     turret.parent = parts["hull"]
     parts["turret"] = turret
-    parts["gun"] = build_gun(turret)
+    parts["gun"], parts["barrel"] = build_gun(turret)
     parts["rws"] = build_rws(turret)
-    socket("Muzzle_Socket", parts["gun"], (MUZZLE_X - TRUNNION.x, 0.0, 0.0))
+    socket("Muzzle_Socket", parts["barrel"], (MUZZLE_X - TRUNNION.x, 0.0, 0.0))
     socket("Coax_Socket", parts["gun"], (MANTLET_FRONT + 0.07 - TRUNNION.x, -0.24, -0.08))
     socket("RWS_Muzzle_Socket", parts["rws"], (0.18 + RWS_BARREL_LENGTH, 0.0, 0.38))
     # One mesh per wheel kind, shared by every instance; the right side's turn half round so the hub faces out. The
@@ -1584,9 +1588,10 @@ def finish_game_meshes(parts):
     linked = tracks + [template]
     bake.finalize([o for o in game_objects() if o not in linked], list(MATERIALS))
     bake.finalize(linked, list(MATERIALS), triangulate=False)
-    hull, turret, gun, rws = parts["hull"], parts["turret"], parts["gun"], parts["rws"]
+    hull, turret, gun, barrel, rws = parts["hull"], parts["turret"], parts["gun"], parts["barrel"], parts["rws"]
     running = [bpy.data.objects[n] for n in ("M20_RoadWheel_L1", "M20_Sprocket_L", "M20_Idler_L")]
-    sets = {"M20_Hull": [hull], "M20_Turret": [turret, gun, rws], "M20_Running": running, "M20_Track": [template]}
+    sets = {"M20_Hull": [hull], "M20_Turret": [turret, gun, barrel, rws], "M20_Running": running,
+            "M20_Track": [template]}
     weights = {"M20_Hull": hidden_weight, "M20_Turret": hidden_weight, "M20_Running": running_weight}
     for name, lows in sets.items():
         bake.unwrap(lows, weight=weights.get(name))
@@ -1602,7 +1607,7 @@ def finish_game_meshes(parts):
     world.use_nodes = True
     world.node_tree.nodes["Background"].inputs["Color"].default_value = (1.0, 1.0, 1.0, 1.0)
     bpy.context.scene.world = world
-    body = [hull, turret, gun, rws] + tracks + [w for w in parts["wheels"]]
+    body = [hull, turret, gun, barrel, rws] + tracks + [w for w in parts["wheels"]]
     ao_scope = {"M20_Hull": body, "M20_Turret": body, "M20_Running": running, "M20_Track": [template]}
     paths = {}
     for name, size, game_size in TEXTURE_SETS:
@@ -1700,6 +1705,90 @@ def tracks_only():
     layout.update(running_layout())
     with open(path, "w") as file:
         json.dump(layout, file, indent=2)
+    bpy.ops.wm.save_as_mainfile(filepath=BLEND)
+
+
+def keep_islands(obj, keep):
+    """Deletes the faces of obj's mesh whose linked island keep(island's largest local x) rejects, and the material
+    slots no face uses any more."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    seen, doomed = set(), []
+    for face in bm.faces:
+        if face.index in seen:
+            continue
+        island, stack = [], [face]
+        seen.add(face.index)
+        while stack:
+            current = stack.pop()
+            island.append(current)
+            for edge in current.edges:
+                for other in edge.link_faces:
+                    if other.index not in seen:
+                        seen.add(other.index)
+                        stack.append(other)
+        if not keep(max(v.co.x for f in island for v in f.verts)):
+            doomed += island
+    bmesh.ops.delete(bm, geom=doomed, context="FACES")
+    used = sorted({face.material_index for face in bm.faces})
+    for face in bm.faces:
+        face.material_index = used.index(face.material_index)
+    bm.to_mesh(obj.data)
+    bm.free()
+    materials = [obj.data.materials[i] for i in used]
+    obj.data.materials.clear()
+    for material in materials:
+        obj.data.materials.append(material)
+
+
+def split_barrel():
+    """--split-barrel: opens the saved .blend and splits the barrel out of M20_Gun into M20_Barrel on the same pivot,
+    as build_gun now builds it (#218): every island reaching past the mantlet's front, with its high-poly twin and the
+    muzzle socket. Exports just the gun and the barrel FBX, so the textures, renders and every other part stay as they
+    are; the barrel keeps its UVs in the turret's texture set."""
+    bpy.ops.wm.open_mainfile(filepath=BLEND)
+    if "M20_Barrel" in bpy.data.objects:
+        print("split-barrel: M20_Barrel is there already")
+        return
+    gun = bpy.data.objects["M20_Gun"]
+    front = MANTLET_FRONT + 0.16 - TRUNNION.x  # past the boot and clamp ring, short of the first sleeve band
+    pieces = {}
+    for source, name, parent in ((gun, "M20_Barrel", gun), (bpy.data.objects["M20_Gun_High"], "M20_Barrel_High", None)):
+        copy = source.copy()
+        copy.data = source.data.copy()
+        copy.name = copy.data.name = name
+        for collection in source.users_collection:
+            collection.objects.link(copy)
+        keep_islands(source, lambda x: x <= front)
+        keep_islands(copy, lambda x: x > front)
+        pieces[name] = copy
+    barrel = pieces["M20_Barrel"]
+    barrel.parent = gun
+    barrel.matrix_parent_inverse.identity()
+    barrel.location = (0.0, 0.0, 0.0)
+    barrel.rotation_euler = (0.0, 0.0, 0.0)
+    high = pieces["M20_Barrel_High"]
+    high.parent = barrel
+    high.matrix_parent_inverse.identity()
+    high.location = (0.0, 0.0, 0.0)
+    muzzle = bpy.data.objects["Muzzle_Socket"]
+    location = muzzle.location.copy()
+    muzzle.parent = barrel
+    muzzle.matrix_parent_inverse.identity()
+    muzzle.location = location
+    bpy.context.view_layer.update()
+    export_fbx({"SM_M20_Gun", "SM_M20_Barrel"})
+    path = os.path.join(OUT_DIR, "export_triangles.json")
+    triangles = json.load(open(path))
+    for object_name, file_name in (("M20_Gun", "SM_M20_Gun"), ("M20_Barrel", "SM_M20_Barrel")):
+        mesh = bpy.data.objects[object_name].evaluated_get(bpy.context.evaluated_depsgraph_get()).to_mesh()
+        mesh.calc_loop_triangles()
+        triangles[file_name] = len(mesh.loop_triangles)
+        print(f"split-barrel: {file_name} {triangles[file_name]} tris, x {min(v.co.x for v in mesh.vertices):.3f} .. "
+              f"{max(v.co.x for v in mesh.vertices):.3f}, materials {[m.name for m in mesh.materials]}")
+    ordered = {file_name: triangles[file_name] for _, file_name in EXPORTS}
+    with open(path, "w") as file:
+        json.dump(ordered, file, indent=2)
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 
 
@@ -1871,7 +1960,7 @@ def lods():
 
 
 EXPORTS = (("M20_Hull", "SM_M20_Hull"),("M20_Turret", "SM_M20_Turret"), ("M20_Gun", "SM_M20_Gun"),
-           ("M20_RWS", "SM_M20_RWS"), ("M20_Track_L", "SM_M20_Track_L"), ("M20_Track_R", "SM_M20_Track_R"),
+           ("M20_Barrel", "SM_M20_Barrel"), ("M20_RWS", "SM_M20_RWS"), ("M20_Track_L", "SM_M20_Track_L"), ("M20_Track_R", "SM_M20_Track_R"),
            ("M20_RoadWheel_L1", "SM_M20_RoadWheel"), ("M20_Sprocket_L", "SM_M20_Sprocket"),
            ("M20_Idler_L", "SM_M20_Idler"))
 
@@ -1911,7 +2000,7 @@ def texture_memory(size, alpha=True):
 def write_report(low, high, triangles, components):
     size = high - low
     groups = {
-        "Hull": ["M20_Hull"], "Turret": ["M20_Turret"], "Gun": ["M20_Gun"], "RWS": ["M20_RWS"],
+        "Hull": ["M20_Hull"], "Turret": ["M20_Turret"], "Gun": ["M20_Gun"], "Barrel": ["M20_Barrel"], "RWS": ["M20_RWS"],
         "Tracks (2)": ["M20_Track_L", "M20_Track_R"],
         "Road wheels (12)": [n for n in triangles if n.startswith("M20_RoadWheel")],
         "Sprockets (2)": [n for n in triangles if n.startswith("M20_Sprocket")],
@@ -1991,6 +2080,9 @@ def main():
         return
     if "--lods" in ARGS:
         lods()
+        return
+    if "--split-barrel" in ARGS:
+        split_barrel()
         return
     parts = build_tank()
     if PREVIEW or STAGE == 1:

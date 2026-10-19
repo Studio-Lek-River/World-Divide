@@ -31,8 +31,8 @@ namespace RTSTeamColorTests
 	const TCHAR* VehicleMaterialPath = TEXT("/Game/Materials/M_Vehicle.M_Vehicle");
 	const TCHAR* TeamMaterialPath = TEXT("/Game/Materials/M_PlaceholderTeam.M_PlaceholderTeam");
 
-	/** Hull, turret, gun, weapon station, two tracks and one instanced component for each of the three wheel meshes. */
-	constexpr int32 M20DrawnParts = 9;
+	/** Hull, turret, gun, barrel (#218), weapon station, two tracks and one instanced component for each of the three wheel meshes. */
+	constexpr int32 M20DrawnParts = 10;
 
 	/** The teams a match can have: the colours repeat after these. */
 	constexpr int32 TeamColors = 6;
@@ -135,7 +135,7 @@ bool FRTSTeamColorValuesTest::RunTest(const FString& Parameters)
 	ARTSUnit* Blue = TestWorld.SpawnUnit(Data, 0, FVector::ZeroVector);
 	ARTSUnit* Red = TestWorld.SpawnUnit(Data, 1, FVector(0.f, 2000.f, 0.f));
 	ARTSUnit* AlsoBlue = TestWorld.SpawnUnit(Data, 0, FVector(0.f, 4000.f, 0.f));
-	TestEqual(TEXT("An M20 draws its nine parts in its team's colour"), TestColored(*this, TEXT("Team 0"), *Blue, 0), M20DrawnParts);
+	TestEqual(TEXT("An M20 draws its ten parts in its team's colour"), TestColored(*this, TEXT("Team 0"), *Blue, 0), M20DrawnParts);
 	TestColored(*this, TEXT("Team 1"), *Red, 1);
 	TestColored(*this, TEXT("Team 0, another"), *AlsoBlue, 0);
 	TestSharesMaterials(*this, TEXT("Two M20s of opposing teams"), *Blue, *Red);

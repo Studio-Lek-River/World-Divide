@@ -200,6 +200,25 @@ public:
 	/** Every machine. Jolts the mesh back for a moment, as a shot recoils; cosmetic only. */
 	void PlayFireKick(float EffectScale);
 
+	/**
+	 * Every machine that draws. Slides the gun's recoiling parts (FRTSVehiclePart::bRecoils) back along the bore and out again
+	 * by URTSUnitData::GunRecoil; a shot before they are out starts the stroke where they are. Cosmetic only: the gun, its
+	 * muzzle and the aim do not move.
+	 */
+	void PlayGunRecoil();
+
+	/** Every machine. Runs a recoil stroke on by DeltaSeconds and places the recoiling parts; Tick runs it, public so tests can step it. */
+	void UpdateGunRecoil(float DeltaSeconds);
+
+	/** Every machine. How far back the recoiling parts are now, in cm before MeshScale; zero at rest. */
+	float GetGunRecoilOffset() const { return GunRecoilOffset; }
+
+	/**
+	 * Every machine, for inspecting a vehicle (rts.Debug.UnitShots). Holds the recoiling parts Time seconds into a stroke
+	 * from rest; unset lets them run out again.
+	 */
+	void SetGunRecoilHold(TOptional<float> Time);
+
 	/** Distance from the actor origin down to the ground contact point: half the hull's height. */
 	float GetGroundOffset() const;
 
@@ -453,6 +472,9 @@ private:
 	/** Eases the mesh back from a fire kick. Returns true when the mesh has to move. */
 	bool UpdateFireKick(float DeltaSeconds);
 
+	/** Places the recoiling parts GunRecoilOffset back from their rest along the gun's bore. */
+	void PlaceRecoilParts();
+
 	/**
 	 * Eases the mesh of a vehicle that tilts to the ground toward the slope under it, and every other mesh back upright.
 	 * Returns true when the mesh has to move.
@@ -660,6 +682,22 @@ private:
 	FVector MeshRestLocation = FVector::ZeroVector;
 	float FireKickDistance = 0.f;
 	float FireKickTimeLeft = 0.f;
+
+	/** A part on the gun that recoils (FRTSVehiclePart::bRecoils), and where it rests in the gun's space. */
+	struct FRecoilPart
+	{
+		UStaticMeshComponent* Component = nullptr;
+		FVector Rest = FVector::ZeroVector;
+	};
+	TArray<FRecoilPart> RecoilParts;
+
+	/** Seconds into the running recoil stroke; unset at rest. */
+	TOptional<float> GunRecoilTime;
+	/** How far back the stroke started, in cm before MeshScale. */
+	float GunRecoilFrom = 0.f;
+	float GunRecoilOffset = 0.f;
+	/** Holds the stroke where it is (SetGunRecoilHold). */
+	bool bGunRecoilHeld = false;
 
 	FRotator MeshTilt = FRotator::ZeroRotator;
 

@@ -319,7 +319,7 @@ def make_m20_guardian():
     # m20_guardian_blender.py --lods, without the link shift; the wheels are instanced, so they switch by their box.
     meshes = {}
     for part, length, triangles in (("Hull", 710.2, (10000, 2600, 560)), ("Turret", 424.2, (7000, 1600, 380)),
-                                    ("Gun", 322.0, (1600, 350, 80)), ("RWS", 165.0, (700, 120, 40)),
+                                    ("Gun", 65.5, (800, 180, 40)), ("Barrel", 290.0, (800, 170, 40)), ("RWS", 165.0, (700, 120, 40)),
                                     ("Track_L", 647.3, (2400,)), ("Track_R", 647.3, (2400,)),
                                     ("RoadWheel", 68.0, (300, 120, 20)), ("Sprocket", 68.4, (300, 120, 20)),
                                     ("Idler", 54.0, (300, 120, 20))):
@@ -348,7 +348,8 @@ def make_m20_guardian():
                       custom_slot and (custom_slot[0], object_path(custom_slot[1])),
                       *socket_spec[1]))
 
-    def part(mesh, mount, offset, yaw=0.0, wheel=False, roll_radius=0.0, track_pitch=0.0, rigid_material=None):
+    def part(mesh, mount, offset, yaw=0.0, wheel=False, roll_radius=0.0, track_pitch=0.0, rigid_material=None,
+             recoils=False):
         value = unreal.RTSVehiclePart()
         value.set_editor_property("mesh", mesh)
         value.set_editor_property("mounted_on", mount)
@@ -358,10 +359,13 @@ def make_m20_guardian():
         value.set_editor_property("roll_radius", roll_radius)
         value.set_editor_property("track_pitch", track_pitch)
         value.set_editor_property("rigid_material", rigid_material)
+        value.set_editor_property("recoils", recoils)
         return value
 
+    # The barrel shares the gun's pivot and slides back through the mantlet when it fires (#218).
+    parts = [part(meshes["Barrel"], unreal.RTSVehiclePartMount.GUN, (0.0, 0.0, 0.0), recoils=True)]
     # The tracks move their links by their pitch, and the wheels roll by where they meet the track (#151).
-    parts = [part(meshes["RWS"], unreal.RTSVehiclePartMount.TURRET, layout["rws_offset"])]
+    parts.append(part(meshes["RWS"], unreal.RTSVehiclePartMount.TURRET, layout["rws_offset"]))
     parts += [part(meshes[name[len("M20_"):]], unreal.RTSVehiclePartMount.HULL, offset, track_pitch=layout["track_pitch"],
                    rigid_material=instances["MI_M20_Track_Static"])
               for name, offset in sorted(layout["track_offsets"].items())]
@@ -378,8 +382,18 @@ def make_m20_guardian():
         "gun_mesh": meshes["Gun"],
         "gun_offset": unreal.Vector(*layout["gun_pivot_offset"]),
         "gun_muzzle_offset": unreal.Vector(*layout["gun_muzzle_offset"]),
+        "gun_recoil": gun_recoil(30.0, 0.06, 0.45),
         "parts": parts,
     }
+
+
+def gun_recoil(distance, recoil_seconds, return_seconds):
+    """A gun's recoil stroke (FRTSGunRecoil, #218): cm back, seconds back and seconds out again."""
+    value = unreal.RTSGunRecoil()
+    value.set_editor_property("distance", distance)
+    value.set_editor_property("recoil_seconds", recoil_seconds)
+    value.set_editor_property("return_seconds", return_seconds)
+    return value
 
 
 def fit_scale(mesh, length, width, height=None):

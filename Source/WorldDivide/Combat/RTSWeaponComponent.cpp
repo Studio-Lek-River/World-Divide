@@ -301,6 +301,7 @@ void URTSWeaponComponent::Multicast_PlayShot_Implementation(URTSWeaponData* Weap
 			Unit->OnShot().Broadcast(Event);
 		}
 		Unit->PlayFireKick(Weapon->EffectScale);
+		Unit->PlayGunRecoil();
 	}
 }
 

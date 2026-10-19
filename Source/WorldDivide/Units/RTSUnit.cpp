@@ -333,6 +333,10 @@ void ARTSUnit::CreateParts()
 	Wheels.Reset();
 	WheelSets.Reset();
 	Tracks.Reset();
+	RecoilParts.Reset();
+	GunRecoilTime.Reset();
+	GunRecoilOffset = 0.f;
+	bGunRecoilHeld = false;
 	LastGearPose.Reset();
 	GearHull.Reset();
 	GearTime.Reset();
@@ -371,6 +375,10 @@ void ARTSUnit::CreateParts()
 			Slot.Component = MakePartComponent<UStaticMeshComponent>(*this, *Parent, Part.Mesh);
 			Slot.Component->SetRelativeTransform(Rest);
 			PartComponents.Add(Slot.Component);
+			if (Part.bRecoils && Part.MountedOn == ERTSVehiclePartMount::Gun)
+			{
+				RecoilParts.Add({ Slot.Component, Part.Offset });
+			}
 			if (Part.TrackPitch > 0.f && Part.MountedOn == ERTSVehiclePartMount::Hull)
 			{
 				AddTrack(Slot, Part);
@@ -1087,6 +1095,61 @@ bool ARTSUnit::UpdateFireKick(float DeltaSeconds)
 	return true;
 }
 
+void ARTSUnit::PlayGunRecoil()
+{
+	if (RecoilParts.IsEmpty() || !UnitData || UnitData->GunRecoil.Distance <= 0.f || bGunRecoilHeld)
+	{
+		return;
+	}
+	GunRecoilFrom = GunRecoilOffset;
+	GunRecoilTime = 0.f;
+	UpdateGunRecoil(0.f);
+}
+
+void ARTSUnit::SetGunRecoilHold(TOptional<float> Time)
+{
+	bGunRecoilHeld = false;
+	if (Time && !RecoilParts.IsEmpty() && UnitData)
+	{
+		GunRecoilFrom = 0.f;
+		GunRecoilTime = *Time;
+		UpdateGunRecoil(0.f);
+		bGunRecoilHeld = GunRecoilTime.IsSet();
+	}
+}
+
+void ARTSUnit::UpdateGunRecoil(float DeltaSeconds)
+{
+	if (!GunRecoilTime || !UnitData)
+	{
+		return;
+	}
+	const FRTSGunRecoil& Recoil = UnitData->GunRecoil;
+	if (!bGunRecoilHeld)
+	{
+		*GunRecoilTime += DeltaSeconds;
+	}
+	if (*GunRecoilTime >= Recoil.GetSeconds())
+	{
+		GunRecoilTime.Reset();
+		GunRecoilOffset = 0.f;
+	}
+	else
+	{
+		GunRecoilOffset = Recoil.OffsetAt(*GunRecoilTime, GunRecoilFrom);
+	}
+	PlaceRecoilParts();
+}
+
+void ARTSUnit::PlaceRecoilParts()
+{
+	// The parts ride on the gun, whose X is the bore, so the gun's elevation and the turret's traverse carry them as before.
+	for (const FRecoilPart& Part : RecoilParts)
+	{
+		Part.Component->SetRelativeLocation(Part.Rest - FVector(GunRecoilOffset, 0.f, 0.f));
+	}
+}
+
 bool ARTSUnit::UpdateTilt(float DeltaSeconds)
 {
 	FRotator Target = FRotator::ZeroRotator;
@@ -1185,6 +1248,7 @@ void ARTSUnit::Tick(float DeltaSeconds)
 	{
 		UpdateMeshTransform();
 	}
+	UpdateGunRecoil(DeltaSeconds);
 	// The wheels follow later in the frame, once avoidance has pushed the hull too: URTSRunningGearSubsystem.
 }
 

@@ -26,7 +26,7 @@ TEXTURE_DIR = os.path.join(OUT_DIR, "textures")
 # wheels, sprockets and idlers are one mesh each, instanced: those overlaps are by design and not rasterised.
 SETS = {
     "M20_Hull": (["M20_Hull"], 2048),
-    "M20_Turret": (["M20_Turret", "M20_Gun", "M20_RWS"], 2048),
+    "M20_Turret": (["M20_Turret", "M20_Gun", "M20_Barrel", "M20_RWS"], 2048),
     "M20_Running": (["M20_RoadWheel_L1", "M20_Sprocket_L", "M20_Idler_L"], 2048),
     "M20_Track": (["M20_Track_L"], 1024),
 }

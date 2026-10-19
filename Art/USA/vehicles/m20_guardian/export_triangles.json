@@ -1,7 +1,8 @@
 {
   "SM_M20_Hull": 28268,
   "SM_M20_Turret": 19168,
-  "SM_M20_Gun": 4500,
+  "SM_M20_Gun": 2304,
+  "SM_M20_Barrel": 2196,
   "SM_M20_RWS": 2540,
   "SM_M20_Track_L": 6120,
   "SM_M20_Track_R": 6120,

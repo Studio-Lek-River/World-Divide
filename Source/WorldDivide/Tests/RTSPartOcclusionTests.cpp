@@ -27,8 +27,8 @@ namespace RTSPartOcclusionTests
 	const TCHAR* FactoryDataPath = TEXT("/Game/Data/Buildings/DA_TestVehicleFactory.DA_TestVehicleFactory");
 	const TCHAR* GroupCVarName = TEXT("rts.Render.GroupPartOcclusion");
 
-	/** Hull, turret, gun, weapon station, two tracks and one instanced component for each of the three wheel meshes. */
-	constexpr int32 M20DrawnParts = 9;
+	/** Hull, turret, gun, barrel (#218), weapon station, two tracks and one instanced component for each of the three wheel meshes. */
+	constexpr int32 M20DrawnParts = 10;
 
 	TArray<UStaticMeshComponent*> GetDrawnParts(const AActor& Actor)
 	{
@@ -104,7 +104,7 @@ bool FRTSPartOcclusionTest::RunTest(const FString& Parameters)
 	{
 		const FScopedGroupCVar Group(true);
 		const ARTSUnit* Grouped = TestWorld.SpawnUnit(M20, 0, FVector::ZeroVector);
-		TestEqual(TEXT("All nine parts of an M20 are grouped"), TestGrouped(*this, TEXT("M20"), *Grouped, true), M20DrawnParts);
+		TestEqual(TEXT("All ten parts of an M20 are grouped"), TestGrouped(*this, TEXT("M20"), *Grouped, true), M20DrawnParts);
 		TArray<UInstancedStaticMeshComponent*> Wheels;
 		Grouped->GetComponents(Wheels);
 		TestEqual(TEXT("The M20's three wheel sets are among them"), Wheels.Num(), 3);

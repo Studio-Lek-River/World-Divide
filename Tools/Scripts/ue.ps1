@@ -53,7 +53,7 @@ Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in t
 -Panel <Panel>@<Scene> first selects a scene of RTSUITestState::ApplyScene (Selection@Hero3, Selection@Building, ...).
 Unitshots plays L_TestMap with a renderer (a GPU is needed) at 1920x1080 and saves views of the first unit with the data
 asset -Unit (rts.Debug.UnitShots): the RTS camera at its default, closest and farthest zoom, a close-up, the turret turned,
-the unit picked, selected and driving on a move order, driving into, along and round obstacles with its shapes drawn (the hull's
+the gun's recoil at rest, at full stroke and run out again (#218), the unit picked, selected and driving on a move order, driving into, along and round obstacles with its shapes drawn (the hull's
 and barrel's overlap printed), and the default view with stat unit and stat rhi, to Saved/UnitShots/<Unit>; with -Stress N also N more of the unit in a
 grid with the stats on. The frame time, game thread time, avoidance pass, draw calls and triangles of the stat views are
 printed. -Trace also records an Unreal Insights capture (cpu, frame and region channels; each stat view is a region) to

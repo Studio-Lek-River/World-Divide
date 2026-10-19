@@ -483,6 +483,27 @@ namespace RTSUnitDebugCommands
 				Run.Unit->SetAimOverride(TurretShotAim);
 				return true;
 			}, TraverseSeconds });
+			// The gun's recoil (#218) from the same view: at rest, held at full stroke, and run out again after a real stroke.
+			Shots.Add({ TEXT("recoil_rest"), [](FUnitShotsRun& Run)
+			{
+				if (Run.Unit->GetUnitData()->GunRecoil.Distance <= 0.f)
+				{
+					UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.UnitShots: %s has no gun recoil"), *Run.UnitName);
+				}
+				Run.Unit->SetGunRecoilHold({});
+				return true;
+			} });
+			Shots.Add({ TEXT("recoil_full"), [](FUnitShotsRun& Run)
+			{
+				Run.Unit->SetGunRecoilHold(Run.Unit->GetUnitData()->GunRecoil.RecoilSeconds);
+				return true;
+			} });
+			Shots.Add({ TEXT("recoil_returned"), [](FUnitShotsRun& Run)
+			{
+				Run.Unit->SetGunRecoilHold({});
+				Run.Unit->PlayGunRecoil();
+				return true;
+			}, SettleSeconds + Unit->GetUnitData()->GunRecoil.GetSeconds() });
 			Shots.Add({ TEXT("driving"), [](FUnitShotsRun& Run)
 			{
 				Run.Unit->SetAimOverride({});
