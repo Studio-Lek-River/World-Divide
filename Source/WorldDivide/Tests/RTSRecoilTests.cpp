@@ -8,9 +8,8 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
-namespace
+namespace RTSRecoilTests
 {
-	using RTSTests::TestFlags;
 	using RTSTests::FRTSTestWorld;
 
 	constexpr float Step = 1.f / 60.f;
@@ -59,10 +58,12 @@ namespace
  * The M20's barrel on one shot (#218): it slides back along the bore by GunRecoil.Distance in RecoilSeconds, the rest of the gun
  * staying put, and runs out to exactly where it rested.
  */
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRecoilStrokeTest, "WorldDivide.Combat.Recoil.Stroke", TestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRecoilStrokeTest, "WorldDivide.Combat.Recoil.Stroke", RTSTests::TestFlags)
 
 bool FRTSRecoilStrokeTest::RunTest(const FString& Parameters)
 {
+	using namespace RTSRecoilTests;
+
 	URTSUnitData* M20 = LoadM20(*this);
 	if (!M20)
 	{
@@ -109,10 +110,12 @@ bool FRTSRecoilStrokeTest::RunTest(const FString& Parameters)
  * start the next stroke where it is, so it never jumps or goes further back than a full stroke, and after the last shot it
  * comes back to its rest within RestTolerance.
  */
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRecoilRepeatedTest, "WorldDivide.Combat.Recoil.Repeated", TestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRecoilRepeatedTest, "WorldDivide.Combat.Recoil.Repeated", RTSTests::TestFlags)
 
 bool FRTSRecoilRepeatedTest::RunTest(const FString& Parameters)
 {
+	using namespace RTSRecoilTests;
+
 	URTSUnitData* M20 = LoadM20(*this);
 	if (!M20)
 	{
@@ -178,10 +181,12 @@ bool FRTSRecoilRepeatedTest::RunTest(const FString& Parameters)
  * Turret and gun while the barrel recoils (#218): they traverse and elevate frame for frame as without recoil, the barrel turns
  * with the gun, and the muzzle the shots leave from does not move with the barrel.
  */
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRecoilTrackingTest, "WorldDivide.Combat.Recoil.Tracking", TestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRecoilTrackingTest, "WorldDivide.Combat.Recoil.Tracking", RTSTests::TestFlags)
 
 bool FRTSRecoilTrackingTest::RunTest(const FString& Parameters)
 {
+	using namespace RTSRecoilTests;
+
 	URTSUnitData* M20 = LoadM20(*this);
 	if (!M20)
 	{
