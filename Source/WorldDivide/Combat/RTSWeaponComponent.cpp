@@ -286,7 +286,7 @@ void URTSWeaponComponent::Multicast_PlayShot_Implementation(URTSWeaponData* Weap
 	AActor& Shooter = *GetOwner();
 	const FVector AimPoint = ShotTarget ? ARTSShotEffect::GetAimPoint(*ShotTarget, Shooter.GetActorLocation()) : FVector(TargetLocation);
 	const FTransform Muzzle = GetMuzzleTransform(Shooter, AimPoint);
-	GetWorld()->GetSubsystem<URTSShotSubsystem>()->PlayShot(Shooter, *Weapon, ShotTarget, TargetLocation, FlightTime, Muzzle.GetLocation());
+	GetWorld()->GetSubsystem<URTSShotSubsystem>()->PlayShot(Shooter, *Weapon, ShotTarget, TargetLocation, FlightTime, Muzzle);
 	if (ARTSUnit* Unit = Cast<ARTSUnit>(&Shooter))
 	{
 		// The one event per shot the vehicle's presentation listens to (#217), before the kick moves the barrel; a unit

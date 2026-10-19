@@ -6,6 +6,8 @@
 
 class UFont;
 class UFontFace;
+class UMaterialInterface;
+class UNiagaraSystem;
 
 /** Engine calls Tools/Editor scripts need that Unreal does not expose to Python. */
 UCLASS()
@@ -63,4 +65,11 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
 	static bool LoadEditorModule(FName ModuleName);
+
+	/**
+	 * Builds the muzzle flash of vehicle guns (#220) as the Niagara system AssetPath (such as /Game/Effects/NS_MuzzleFlash),
+	 * replacing the one there: Python cannot edit a Niagara system's modules. Returns null and logs why when it fails.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
+	static UNiagaraSystem* BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* Material);
 };

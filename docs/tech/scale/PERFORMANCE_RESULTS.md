@@ -2003,3 +2003,45 @@ off by a temporary switch that was not committed.
   rock, which moves the hull and every part on it. Driving, every hull already moves, and the move rows did not change.
 - **Gated, the default view is back within the runs without recoil.** Zoomed in (`@Battle@Close`), every tank still recoils, as it
   should: 7.3 ms idle in one run.
+
+## #220 (Niagara muzzle flash and firing light)
+
+### What changed
+
+A weapon with a `URTSWeaponData::MuzzleFlash` (the test cannons and the flak truck) flashes `NS_MuzzleFlash` at the muzzle
+along the bore instead of the placeholder glow: one burst of a core and four sprites, CPU, fixed bounds, gone in 0.07 s. The
+system is built by `setup_testmap.py` through `URTSEditorScripting::BuildMuzzleFlashSystem`. Each pooled `ARTSShotEffect` makes
+one Niagara component the first time it plays a flash and reuses it, so no component is spawned per shot. The muzzle light
+keeps the #227 budget (`rts.Fx.MaxShotLights`, 32) and grows up to three times brighter and wider with the camera's distance
+(5–250 m). Past `rts.Fx.MuzzleLightDistance` (250 m) a shot has no muzzle light, past `rts.Fx.MuzzleFlashDistance` (500 m)
+no flash either. A dedicated server plays none.
+
+### Short method, 240 standing M20s firing, interleaved runs
+
+`ue.ps1 -Task bench -Unit DA_TestM20Guardian@Battle,DA_TestM20Guardian@Battle@Close -Counts 240`, RTX 4090 PC, 5 runs each.
+"Off" sets both distances to 1 cm through `[SystemSettings]` in a temporary `DefaultEngine.ini` (not committed): no flash, no
+muzzle light.
+
+| Set | Scenario | Flash | Frame ms (mean, range) | Game ms | Render ms | GPU ms |
+|---|---|---|---:|---:|---:|---:|
+| `@Battle` | idle | on | 5.84 (4.3–7.7) | 3.25 | 5.82 | 5.24 |
+| `@Battle` | idle | off | 5.66 (4.4–6.4) | 3.34 | 5.64 | 4.89 |
+| `@Battle` | move | on | 12.86 (10.7–14.9) | 12.83 | 7.56 | 5.82 |
+| `@Battle` | move | off | 12.73 (12.2–13.3) | 12.70 | 7.65 | 5.48 |
+| `@Battle@Close` | idle | on | 7.46 (5.2–9.7) | 3.43 | 7.43 | 6.79 |
+| `@Battle@Close` | idle | off | 7.72 (6.9–8.3) | 3.74 | 7.73 | 7.12 |
+| `@Battle@Close` | move | on | 13.06 (10.4–14.6) | 13.05 | 7.71 | 6.85 |
+| `@Battle@Close` | move | off | 13.14 (12.2–13.9) | 13.14 | 7.81 | 8.08 |
+
+- **No cost shows above the noise.** Every difference between on and off is well inside the spread of the runs. Close up,
+  where every flash and light plays, the "on" means are even a little lower.
+- **The lights stay capped:** `WorldDivide.Combat.MuzzleFlash.Cull` fires 240 M20s on one frame and counts at most
+  `rts.Fx.MaxShotLights` muzzle lights.
+
+### Remaining limitations
+
+- The full-roster gate (`ue.ps1 -Task gate -Baseline 1c314a8`) was stopped after an hour without a verdict. Other processes on
+  this PC used 5–7 cores, so every screen was invalid, and there is no screen baseline at 1c314a8 to judge against. The gate
+  has to run on an idle machine, with a stored baseline, for #152.
+- Niagara does not run under `-nullrhi`, so the tests check the flash's placement, count and lifetime, not its pixels. The
+  look is checked in `ue.ps1 -Task unitshots` (`muzzle_flash_day`, `_night`, `_day_rts`, `_night_rts`).

@@ -1,5 +1,6 @@
 #include "Combat/RTSShotSubsystem.h"
 
+#include "Camera/PlayerCameraManager.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSShotEffect.h"
 #include "Combat/RTSTargetable.h"
@@ -7,8 +8,10 @@
 #include "Core/RTSSettings.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
 #include "Materials/MaterialInterface.h"
+#include "Misc/App.h"
 
 namespace
 {
@@ -59,8 +62,42 @@ int32 URTSShotSubsystem::GetMaxShotLights()
 	return FMath::Max(CVarMaxShotLights.GetValueOnGameThread(), 0);
 }
 
+float URTSShotSubsystem::GetViewDistance(const FVector& Location) const
+{
+	if (ViewLocationOverride)
+	{
+		return FVector::Dist(*ViewLocationOverride, Location);
+	}
+	const UWorld* World = GetWorld();
+	if (!World || !FApp::CanEverRender())
+	{
+		return 0.f;
+	}
+	float Nearest = TNumericLimits<float>::Max();
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		const APlayerController* Player = It->Get();
+		if (Player && Player->IsLocalController() && Player->PlayerCameraManager)
+		{
+			Nearest = FMath::Min(Nearest, static_cast<float>(FVector::Dist(Player->PlayerCameraManager->GetCameraLocation(), Location)));
+		}
+	}
+	return Nearest == TNumericLimits<float>::Max() ? 0.f : Nearest;
+}
+
+int32 URTSShotSubsystem::GetLiveMuzzleFlashes() const
+{
+	int32 Live = 0;
+	// An effect back in the pool has stopped its flash.
+	for (const ARTSShotEffect* Effect : LiveEffects)
+	{
+		Live += IsValid(Effect) && Effect->IsNiagaraFlashLive() ? 1 : 0;
+	}
+	return Live;
+}
+
 void URTSShotSubsystem::PlayShot(AActor& Shooter, const URTSWeaponData& Weapon, AActor* Target, const FVector& TargetLocation,
-	float FlightTime, const FVector& MuzzleLocation)
+	float FlightTime, const FTransform& Muzzle)
 {
 	UWorld* World = GetWorld();
 	if (!World || World->GetNetMode() == NM_DedicatedServer)
@@ -99,7 +136,7 @@ void URTSShotSubsystem::PlayShot(AActor& Shooter, const URTSWeaponData& Weapon, 
 	}
 	if (IsValid(Effect))
 	{
-		Effect->Start(*this, Shooter, Weapon, Target, TargetLocation, FlightTime, MuzzleLocation);
+		Effect->Start(*this, Shooter, Weapon, Target, TargetLocation, FlightTime, Muzzle, GetViewDistance(Muzzle.GetLocation()));
 		LiveEffects.Add(Effect);
 	}
 }

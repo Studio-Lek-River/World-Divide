@@ -4,6 +4,7 @@
 #include "Engine/DataAsset.h"
 #include "RTSWeaponData.generated.h"
 
+class UNiagaraSystem;
 class USoundBase;
 
 /**
@@ -55,6 +56,13 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 	FLinearColor ShellColor = FLinearColor(1.f, 0.55f, 0.15f);
+
+	/**
+	 * Played at the muzzle along the bore (#220), with the user parameters Color (from ShellColor) and Scale (EffectScale);
+	 * none shows the placeholder glow. Vehicle guns have one.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	TObjectPtr<UNiagaraSystem> MuzzleFlash;
 
 	/** Played at the muzzle; none plays a synthesized shot. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")

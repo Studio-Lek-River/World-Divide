@@ -1,4 +1,4 @@
-"""Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters and superweapon included), AI build order and faction data assets, the placement ghost and shot effect materials, the
+"""Builds the placeholder weapon, unit, harvester, builder, upgrade, building (headquarters and superweapon included), AI build order and faction data assets, the placement ghost and shot effect materials, the vehicle guns' Niagara muzzle flash, the
 placeholder models (imported from Art/Source/Placeholder by placeholder_art.py), the ground and water materials, the L_TestMap level
 with a supply source and two builders by each base, the L_Skirmish and L_SkirmishDuel levels, the same ground without the
 armies and with four and two start spots, the skirmish maps L_RiverFord, L_QuarryCross and L_SixPeaks with two, four and
@@ -51,6 +51,7 @@ UI_STYLE_DIR = "/Game/UI/Styles"
 # A theme font size is pixels of the em at the 1080p reference; Slate reads points at 96 DPI (RTSLayout::FontPointsPerPixel).
 FONT_POINTS_PER_PIXEL = 0.75
 MATERIAL_DIR = "/Game/Materials"
+EFFECT_DIR = "/Game/Effects"
 MAP_PATH = "/Game/Maps/L_TestMap"
 # rts.Debug.Bench's level: 300 x 300 m, team 0's headquarters at (-BENCH_CORNER, -BENCH_CORNER), team 1's opposite.
 BENCH_MAP_PATH = "/Game/Maps/L_Bench"
@@ -427,8 +428,10 @@ def interaction_radius(mesh, scale):
 
 
 def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_scale, shell_color, arc_height=0.0,
-                ground=True, air=False):
+                ground=True, air=False, muzzle_flash=None):
+    """muzzle_flash: the Niagara system a vehicle gun flashes (make_muzzle_flash); None keeps the placeholder glow."""
     return plan_data_asset(name, WEAPON_DIR, unreal.RTSWeaponData, {
+        "muzzle_flash": muzzle_flash,
         "range": weapon_range,
         "damage": damage,
         "reload_seconds": reload_seconds,
@@ -682,6 +685,60 @@ def build_shot_material(name, digest):
 def make_shot_material(name):
     plan_rebuild(f"{MATERIAL_DIR}/{name}", ".uasset", lambda digest: build_shot_material(name, digest),
                  spec_hash([build_shot_material], name, SHOT_GLOW_INDEX))
+
+
+def build_muzzle_flash_material(name):
+    """Unlit additive sprite material for the Niagara muzzle flash (#220): the particle colour, times its alpha as it
+    fades, in a soft round blob brightest at the centre."""
+    path = f"{MATERIAL_DIR}/{name}"
+    if assets.does_asset_exist(path):
+        material = assets.load_asset(path)
+    else:
+        material = asset_tools.create_asset(name, MATERIAL_DIR, unreal.Material, unreal.MaterialFactoryNew())
+
+    editing = unreal.MaterialEditingLibrary
+    editing.delete_all_material_expressions(material)
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    material.set_editor_property("used_with_niagara_sprites", True)
+
+    color = editing.create_material_expression(material, unreal.MaterialExpressionParticleColor, -800, 0)
+    uv = editing.create_material_expression(material, unreal.MaterialExpressionTextureCoordinate, -800, 200)
+    blob = editing.create_material_expression(material, unreal.MaterialExpressionCustom, -500, 100)
+    blob.set_editor_property("code", "float Falloff = saturate(1.0 - length(UV - 0.5) * 2.0);\n"
+                                     "return Color.rgb * Color.a * Falloff * Falloff;")
+    blob.set_editor_property("output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT3)
+    color_input = unreal.CustomInput()
+    color_input.set_editor_property("input_name", "Color")
+    uv_input = unreal.CustomInput()
+    uv_input.set_editor_property("input_name", "UV")
+    blob.set_editor_property("inputs", [color_input, uv_input])
+    editing.connect_material_expressions(color, "RGBA", blob, "Color")
+    editing.connect_material_expressions(uv, "", blob, "UV")
+    editing.connect_material_property(blob, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+
+    editing.recompile_material(material)
+    return material
+
+
+def make_muzzle_flash():
+    """The Niagara muzzle flash of vehicle guns (#220) and its sprite material, built now so the weapons can point at it.
+    The system is built in C++ (URTSEditorScripting::BuildMuzzleFlashSystem, RTSMuzzleFlashBuilder.cpp), so its hash covers
+    that source too."""
+    material_name = "M_MuzzleFlash"
+    material = plan_now(f"{MATERIAL_DIR}/{material_name}", lambda: build_muzzle_flash_material(material_name),
+                        spec_hash([build_muzzle_flash_material], material_name))
+    path = f"{EFFECT_DIR}/NS_MuzzleFlash"
+
+    def build():
+        if not unreal.RTSEditorScripting.load_editor_module("NiagaraEditor"):
+            raise RuntimeError("Could not load the NiagaraEditor module")
+        system = unreal.RTSEditorScripting.build_muzzle_flash_system(path, material)
+        if not system:
+            raise RuntimeError(f"Could not build {path}; the log says why")
+        return system
+    builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSMuzzleFlashBuilder.cpp"))
+    return plan_now(path, build, spec_hash([make_muzzle_flash], path, material, builder_source))
 
 
 def build_surface_material(name, color, roughness, digest):
@@ -1718,15 +1775,17 @@ TANK_RANGE = 6500.0
 TOWER_RANGE_OVER_TANK = 1.25
 
 # Shell speed in cm/s, effect scale, shell colour; the grenade lobs. Shell speeds grew with the ranges, so a shot still
-# flies 0.2 to 1 s.
-cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 30000.0, 1.6, (1.0, 0.45, 0.1))
+# flies 0.2 to 1 s. Vehicle guns flash the Niagara muzzle flash; infantry, defences and jets keep the placeholder glow.
+muzzle_flash = make_muzzle_flash()
+cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 30000.0, 1.6, (1.0, 0.45, 0.1), muzzle_flash=muzzle_flash)
 rifle = make_weapon("DA_TestRifle", 3500.0, 8.0, 0.5, 45000.0, 0.4, (1.0, 0.85, 0.3))
 # A main battle tank, 9.8 x 3.7 m with its gun forward; the placeholder's long gun lets the width bind.
 tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 1080.0, 370.0), 200.0, cannon, 1100.0, 75.0,
                  700, 10.0)
 # A heavier second tank to try out. It wears the standard tank's model here; on a machine with the local Abrams art,
 # import_local_art.py gives it that model and its traversing turret.
-heavy_cannon = make_weapon("DA_TestHeavyCannon", TANK_RANGE, 60.0, 2.5, 32500.0, 2.0, (1.0, 0.4, 0.08))
+heavy_cannon = make_weapon("DA_TestHeavyCannon", TANK_RANGE, 60.0, 2.5, 32500.0, 2.0, (1.0, 0.4, 0.08),
+                           muzzle_flash=muzzle_flash)
 abrams = make_unit("DA_TestAbrams", "Test Abrams", tank_mesh, fit_scale(tank_mesh, 1080.0, 380.0), 350.0, heavy_cannon,
                    1000.0, 60.0, 1100, 14.0)
 # The M20 Guardian at its real size (7.1 m hull), to try the Blender to Unreal pipeline out: the heavy tank's weapon and
@@ -1750,7 +1809,8 @@ add_properties(grenadier, {"prerequisites": [rifle_training]})
 # The tower hits ground and air alike; the flak truck only aircraft in flight, the jet's missiles only the ground.
 tower_gun = make_weapon("DA_TestTowerGun", TANK_RANGE * TOWER_RANGE_OVER_TANK, 30.0, 1.0, 35000.0, 1.2, (0.4, 0.8, 1.0),
                         air=True)
-flak = make_weapon("DA_TestFlak", 8000.0, 25.0, 0.6, 40000.0, 0.8, (0.9, 0.9, 0.5), ground=False, air=True)
+flak = make_weapon("DA_TestFlak", 8000.0, 25.0, 0.6, 40000.0, 0.8, (0.9, 0.9, 0.5), ground=False, air=True,
+                   muzzle_flash=muzzle_flash)
 # An air-defence truck, 7.0 x 2.5 m; the van's proportions let the width bind.
 flak_truck = make_unit("DA_TestFlakTruck", "Test Flak Truck", truck_mesh, fit_scale(truck_mesh, 700.0, 250.0), 250.0,
                        flak, 1400.0, 75.0, 800, 8.0)

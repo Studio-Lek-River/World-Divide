@@ -180,7 +180,7 @@ bool FRTSVehicleWaitForPlay::Update()
 		}
 		return true;
 	}
-	if (FPlatformTime::Seconds() - State->PhaseStart > NavTimeout)
+	if (FPlatformTime::Seconds() - State->PhaseStart > RTSVehicleMovementTests::NavTimeout)
 	{
 		Test->AddError(TEXT("PIE did not start or the navmeshes were not built in time"));
 		return true;
@@ -435,9 +435,9 @@ void FRTSVehicleCollisionTest::GetTests(TArray<FString>& OutBeautifiedNames, TAr
 bool FRTSVehicleCollisionTest::RunTest(const FString& Parameters)
 {
 	using namespace RTSVehicleMovementTests;
-	if (!AutomationOpenMap(TestMap))
+	if (!AutomationOpenMap(RTSVehicleMovementTests::TestMap))
 	{
-		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		AddError(FString::Printf(TEXT("Could not open %s"), RTSVehicleMovementTests::TestMap));
 		return false;
 	}
 	const UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
@@ -466,9 +466,9 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSVehicleBlockedTest, "WorldDivide.Navigation
 bool FRTSVehicleBlockedTest::RunTest(const FString& Parameters)
 {
 	using namespace RTSVehicleMovementTests;
-	if (!AutomationOpenMap(TestMap))
+	if (!AutomationOpenMap(RTSVehicleMovementTests::TestMap))
 	{
-		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		AddError(FString::Printf(TEXT("Could not open %s"), RTSVehicleMovementTests::TestMap));
 		return false;
 	}
 	TSharedRef<FState> State = MakeShared<FState>();
@@ -681,9 +681,9 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSVehicleBlockedFeedbackTest, "WorldDivide.Na
 bool FRTSVehicleBlockedFeedbackTest::RunTest(const FString& Parameters)
 {
 	using namespace RTSVehicleMovementTests;
-	if (!AutomationOpenMap(TestMap))
+	if (!AutomationOpenMap(RTSVehicleMovementTests::TestMap))
 	{
-		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		AddError(FString::Printf(TEXT("Could not open %s"), RTSVehicleMovementTests::TestMap));
 		return false;
 	}
 	TSharedRef<FState> State = MakeShared<FState>();
@@ -868,7 +868,7 @@ bool FRTSVehicleBlockedFeedbackTest::RunTest(const FString& Parameters)
 	// A harvest of a source behind the blockage.
 	{
 		FScenario& Scenario = AddScenario(TEXT("A harvest across the blockage"), KeptOrderSeconds + 5.0);
-		Scenario.DataPath = HarvesterPath;
+		Scenario.DataPath = RTSVehicleMovementTests::HarvesterPath;
 		TSharedRef<FFeedback> Data = MakeShared<FFeedback>();
 		Scenario.Begin = [Data](ARTSUnit& Unit, ARTSPlayerController& Controller)
 		{
@@ -1355,9 +1355,9 @@ void FRTSVehicleOffNavmeshTest::GetTests(TArray<FString>& OutBeautifiedNames, TA
 bool FRTSVehicleOffNavmeshTest::RunTest(const FString& Parameters)
 {
 	using namespace RTSVehicleMovementTests;
-	if (!AutomationOpenMap(TestMap))
+	if (!AutomationOpenMap(RTSVehicleMovementTests::TestMap))
 	{
-		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		AddError(FString::Printf(TEXT("Could not open %s"), RTSVehicleMovementTests::TestMap));
 		return false;
 	}
 	const UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();

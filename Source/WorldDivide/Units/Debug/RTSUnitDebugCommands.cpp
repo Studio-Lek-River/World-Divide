@@ -6,18 +6,25 @@
 #include "Camera/CameraComponent.h"
 #include "Buildings/RTSBuilding.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSWeaponComponent.h"
+#include "Components/LightComponent.h"
+#include "Components/SkyLightComponent.h"
 #include "Components/BoxComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Containers/Ticker.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
+#include "Data/RTSWeaponData.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/Engine.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/GameViewportClient.h"
+#include "Engine/PostProcessVolume.h"
+#include "Engine/SkyLight.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "GameFramework/WorldSettings.h"
 #include "HAL/IConsoleManager.h"
 #include "ImageUtils.h"
 #include "Misc/CommandLine.h"
@@ -91,6 +98,10 @@ namespace RTSUnitDebugCommands
 
 	/** The turned turret for the turret shot. */
 	const FVector2D TurretShotAim(60.f, 10.f);
+	/** How slowly the world runs while a muzzle flash is held for its picture (#220): as still as the engine allows. */
+	constexpr float FlashHoldDilation = 0.0001f;
+	/** The share of their brightness the sun and the sky keep for the night pictures. */
+	constexpr float NightLightShare = 0.01f;
 	/**
 	 * Seconds into a shot when the hull has rocked back furthest (#218): the peak of FRTSRecoilSpring, at acos(r) / Swing for
 	 * its damping ratio r, a share of the settle time of about a sixth at the M20's 0.6.
@@ -525,6 +536,22 @@ namespace RTSUnitDebugCommands
 				Run.Unit->PlayGunRecoil();
 				return true;
 			}, SettleSeconds + Unit->GetUnitData()->GunRecoil.GetSettleSeconds() });
+			// The gun's muzzle flash and light (#220), turret turned and gun raised, held at its brightest: close up and from
+			// the RTS camera, by day and at night.
+			for (const bool bNight : { false, true })
+			{
+				const FString Time = bNight ? TEXT("night") : TEXT("day");
+				Shots.Add({ TEXT("muzzle_flash_") + Time, [bNight](FUnitShotsRun& Run)
+				{
+					Run.SetNight(bNight);
+					return Run.UseCloseUpCamera() && Run.HoldMuzzleFlash();
+				} });
+				Shots.Add({ TEXT("muzzle_flash_") + Time + TEXT("_rts"), [](FUnitShotsRun& Run)
+				{
+					Run.UseRTSCamera(Run.GetCameraPawn()->GetDefaultZoom(), 0.f);
+					return Run.HoldMuzzleFlash();
+				} });
+			}
 			// The hull's rock (#219) from the front and the side, at rest and held where it has rocked back furthest, for each
 			// way the gun points: the hull lifts on the gun's side and pivots on the edge across from it.
 			for (const float Yaw : RockGunYaws)
@@ -536,6 +563,8 @@ namespace RTSUnitDebugCommands
 					const bool bTurn = &View == &RockViews[0];
 					Shots.Add({ TEXT("recoil_rest_") + Suffix, [Yaw, Direction](FUnitShotsRun& Run)
 					{
+						Run.ReleaseMuzzleFlash();
+						Run.SetNight(false);
 						Run.Unit->SetGunRecoilHold({});
 						Run.Unit->SetAimOverride(FVector2D(Yaw, 0.f));
 						return Run.UseLODCamera(Direction, RockViewDistance, false, RockViewElevation);
@@ -797,6 +826,98 @@ namespace RTSUnitDebugCommands
 			{
 				Sun->SetActorRotation(*SunRotation);
 				SunRotation.Reset();
+			}
+		}
+
+		/**
+		 * Fires the unit's gun along its bore through the shot effects players see, without a target, and holds the world
+		 * nearly still so the flash and its light stay at their brightest for the picture. False without a weapon.
+		 */
+		bool HoldMuzzleFlash()
+		{
+			const URTSWeaponData* Weapon = Unit->GetUnitData()->Weapon;
+			if (!Weapon)
+			{
+				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.UnitShots: %s has no weapon to flash"), *UnitName);
+				return false;
+			}
+			if (!Weapon->MuzzleFlash)
+			{
+				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.UnitShots: %s's weapon has no Niagara muzzle flash"), *UnitName);
+			}
+			ReleaseMuzzleFlash();
+			URTSShotSubsystem* ShotSubsystem = World->GetSubsystem<URTSShotSubsystem>();
+			// The last shot's effect plays out first, so only this one shows.
+			ShotSubsystem->AdvanceEffects(10.f);
+			const FTransform Muzzle = Unit->GetMuzzleTransform();
+			ShotSubsystem->PlayShot(*Unit, *Weapon, nullptr, Muzzle.GetLocation() + Muzzle.GetUnitAxis(EAxis::X) * Weapon->Range, 1.f, Muzzle);
+			World->GetWorldSettings()->SetTimeDilation(FlashHoldDilation);
+			bHoldingFlash = true;
+			return true;
+		}
+
+		void ReleaseMuzzleFlash()
+		{
+			if (bHoldingFlash)
+			{
+				World->GetWorldSettings()->SetTimeDilation(1.f);
+				bHoldingFlash = false;
+			}
+		}
+
+		/**
+		 * Dims the sun and the sky to a share of their brightness for the night pictures, or brings them back. The exposure
+		 * is held at the daylight one (manual, no bias, as the map previews), so the eye does not adapt the night away.
+		 */
+		void SetNight(bool bNight)
+		{
+			if (bNight == NightExposure.IsValid())
+			{
+				return;
+			}
+			if (!bNight)
+			{
+				NightExposure->Destroy();
+				NightExposure.Reset();
+				for (const TPair<TWeakObjectPtr<ULightComponentBase>, float>& Light : NightLights)
+				{
+					if (ULightComponent* Direct = Cast<ULightComponent>(Light.Key.Get()))
+					{
+						Direct->SetIntensity(Light.Value);
+					}
+					else if (USkyLightComponent* Sky = Cast<USkyLightComponent>(Light.Key.Get()))
+					{
+						Sky->SetIntensity(Light.Value);
+					}
+				}
+				NightLights.Reset();
+				return;
+			}
+			FActorSpawnParameters Params;
+			Params.ObjectFlags |= RF_Transient;
+			NightExposure = World->SpawnActor<APostProcessVolume>(Params);
+			NightExposure->bUnbound = true;
+			NightExposure->Priority = 1000.f;
+			FPostProcessSettings& Exposure = NightExposure->Settings;
+			Exposure.bOverride_AutoExposureMethod = true;
+			Exposure.AutoExposureMethod = AEM_Manual;
+			Exposure.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
+			Exposure.AutoExposureApplyPhysicalCameraExposure = false;
+			Exposure.bOverride_AutoExposureBias = true;
+			Exposure.AutoExposureBias = 0.f;
+			for (TActorIterator<ADirectionalLight> It(World.Get()); It; ++It)
+			{
+				ULightComponent* Light = It->GetLightComponent();
+				Light->SetMobility(EComponentMobility::Movable);
+				NightLights.Add({ Light, Light->Intensity });
+				Light->SetIntensity(Light->Intensity * NightLightShare);
+			}
+			for (TActorIterator<ASkyLight> It(World.Get()); It; ++It)
+			{
+				USkyLightComponent* Sky = It->GetLightComponent();
+				Sky->SetMobility(EComponentMobility::Movable);
+				NightLights.Add({ Sky, Sky->Intensity });
+				Sky->SetIntensity(Sky->Intensity * NightLightShare);
 			}
 		}
 
@@ -1154,6 +1275,8 @@ namespace RTSUnitDebugCommands
 			if (World.IsValid())
 			{
 				SetLowSun(false);
+				ReleaseMuzzleFlash();
+				SetNight(false);
 				ClearTeamRow();
 				SetStats(false);
 				if (SavedForceLOD)
@@ -1221,6 +1344,13 @@ namespace RTSUnitDebugCommands
 		/** The team shots' units, and the sun's rotation while it is lowered. */
 		TArray<TWeakObjectPtr<ARTSUnit>> TeamRow;
 		TOptional<FRotator> SunRotation;
+		/**
+		 * The sun and sky dimmed for the night pictures with the brightness they had, the exposure held for them, and whether a
+		 * muzzle flash is held.
+		 */
+		TArray<TPair<TWeakObjectPtr<ULightComponentBase>, float>> NightLights;
+		TWeakObjectPtr<APostProcessVolume> NightExposure;
+		bool bHoldingFlash = false;
 		int32 Written = 0;
 		FFrameStats Stats;
 

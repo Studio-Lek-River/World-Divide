@@ -32,11 +32,27 @@ public:
 	int32 GetShellsInFlight() const { return Shells.Num(); }
 
 	/**
-	 * Shows a shot from Shooter's MuzzleLocation at Target, or at TargetLocation when Target is gone, landing after FlightTime
-	 * seconds. Does nothing on a dedicated server.
+	 * Shows a shot from Shooter's Muzzle (X along the bore) at Target, or at TargetLocation when Target is gone, landing after
+	 * FlightTime seconds. Does nothing on a dedicated server.
 	 */
 	void PlayShot(AActor& Shooter, const URTSWeaponData& Weapon, AActor* Target, const FVector& TargetLocation, float FlightTime,
-		const FVector& MuzzleLocation);
+		const FTransform& Muzzle);
+
+	/**
+	 * cm from Location to the nearest camera of this machine's local players, for the muzzle flash's culling (#220). 0 on a
+	 * machine that never renders, or without a camera, so tests under -nullrhi see every flash.
+	 */
+	float GetViewDistance(const FVector& Location) const;
+
+	/** Makes GetViewDistance measure from Location instead of the cameras, or from the cameras again when unset. For the tests. */
+	void SetViewLocationOverride(TOptional<FVector> Location) { ViewLocationOverride = Location; }
+
+	/** Counts a Niagara muzzle flash started by an effect. */
+	void CountMuzzleFlash() { ++MuzzleFlashesPlayed; }
+
+	/** Niagara muzzle flashes started in this world, and those playing now. */
+	int32 GetMuzzleFlashesPlayed() const { return MuzzleFlashesPlayed; }
+	int32 GetLiveMuzzleFlashes() const;
 
 	/** Moves every shot effect DeltaSeconds on and takes those that are over back into the pool. Public so tests can step it. */
 	void AdvanceEffects(float DeltaSeconds);
@@ -82,4 +98,6 @@ private:
 
 	bool bLookResolved = false;
 	int32 LiveShotLights = 0;
+	int32 MuzzleFlashesPlayed = 0;
+	TOptional<FVector> ViewLocationOverride;
 };

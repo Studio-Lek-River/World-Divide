@@ -6,6 +6,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Commands/RTSCommand.h"
 #include "Combat/RTSShotEffect.h"
+#include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Components/StaticMeshComponent.h"
@@ -20,6 +21,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "Navigation/RTSMoveRequestSubsystem.h"
+#include "NiagaraComponent.h"
 #include "PlayInEditorDataTypes.h"
 #include "Player/RTSPlayerController.h"
 #include "Settings/LevelEditorPlaySettings.h"
@@ -27,6 +29,7 @@
 #include "Tests/AutomationEditorCommon.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestScale.h"
+#include "UObject/UObjectIterator.h"
 #include "Units/RTSPrimitiveData.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitMovement.h"
@@ -269,8 +272,17 @@ namespace RTSVehicleNetTests
 
 	/**
 	 * #217: an M20 fires a few shots at an unarmed enemy. Each shot raises one shot event on a listen server's host and on
-	 * every client, counted against the shots the server fired; a dedicated server raises none and shows none.
+	 * every client, counted against the shots the server fired; a dedicated server raises none and shows none. Each event
+	 * plays one Niagara muzzle flash (#220); the dedicated server plays none and has no Niagara component.
 	 */
+	/** The server's world, then each client's. */
+	TArray<UWorld*> GetShotWorlds(const FSession& Session)
+	{
+		TArray<UWorld*> Worlds = { Session.ServerWorld };
+		Worlds.Append(Session.ClientWorlds);
+		return Worlds;
+	}
+
 	void AddShotEvents(FAutomationTestBase& Test, const TSharedRef<FSession>& Session)
 	{
 		struct FShots
@@ -279,6 +291,8 @@ namespace RTSVehicleNetTests
 			TWeakObjectPtr<ARTSUnit> Target;
 			/** Events on the server, then on each client. */
 			TArray<int32> Events;
+			/** URTSShotSubsystem::GetMuzzleFlashesPlayed before the shots, on the server, then on each client. */
+			TArray<int32> FlashesBefore;
 			int32 Fired = 0;
 			TOptional<double> Stopped;
 		};
@@ -314,6 +328,10 @@ namespace RTSVehicleNetTests
 				Copies.Add(Copy);
 			}
 			Shots->Events.Init(0, Copies.Num());
+			for (UWorld* World : GetShotWorlds(*Session))
+			{
+				Shots->FlashesBefore.Add(World->GetSubsystem<URTSShotSubsystem>()->GetMuzzleFlashesPlayed());
+			}
 			for (int32 Index = 0; Index < Copies.Num(); ++Index)
 			{
 				if (Copies[Index])
@@ -355,6 +373,12 @@ namespace RTSVehicleNetTests
 			}
 			Test.TestTrue(FString::Printf(TEXT("Shots: the M20 fired %d shots, and none once its target was gone"), Fired),
 				Fired >= MinShots && Fired == Shots->Fired);
+			const TArray<UWorld*> Worlds = GetShotWorlds(*Session);
+			for (int32 Index = 0; Index < Shots->Events.Num() && Index < Worlds.Num() && Index < Shots->FlashesBefore.Num(); ++Index)
+			{
+				const int32 Flashes = Worlds[Index]->GetSubsystem<URTSShotSubsystem>()->GetMuzzleFlashesPlayed() - Shots->FlashesBefore[Index];
+				Test.TestEqual(*FString::Printf(TEXT("Shots: world %d plays one muzzle flash per event"), Index), Flashes, Shots->Events[Index]);
+			}
 			for (int32 Index = 0; Index < Shots->Events.Num(); ++Index)
 			{
 				const int32 Events = Shots->Events[Index];
@@ -382,6 +406,12 @@ namespace RTSVehicleNetTests
 					++Effects;
 				}
 				Test.TestEqual(TEXT("Shots: the dedicated server shows no shot"), Effects, 0);
+				int32 NiagaraComponents = 0;
+				for (TObjectIterator<UNiagaraComponent> It; It; ++It)
+				{
+					NiagaraComponents += It->GetWorld() == Session->ServerWorld ? 1 : 0;
+				}
+				Test.TestEqual(TEXT("Shots: the dedicated server has no muzzle flash"), NiagaraComponents, 0);
 			}
 			if (Shooter)
 			{

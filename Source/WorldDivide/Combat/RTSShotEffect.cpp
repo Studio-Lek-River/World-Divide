@@ -8,10 +8,29 @@
 #include "Data/RTSWeaponData.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "HAL/IConsoleManager.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
 #include "Units/RTSPrimitiveData.h"
 
 namespace
 {
+	TAutoConsoleVariable<float> CVarMuzzleLightDistance(
+		TEXT("rts.Fx.MuzzleLightDistance"), 25000.f,
+		TEXT("cm from the nearest camera within which a shot lights its muzzle (#220), past the default RTS view (about 180 m); 0 or less lights every one."));
+
+	TAutoConsoleVariable<float> CVarMuzzleFlashDistance(
+		TEXT("rts.Fx.MuzzleFlashDistance"), 50000.f,
+		TEXT("cm from the nearest camera within which a shot shows its Niagara muzzle flash (#220), past the farthest RTS view; 0 or less shows every one."));
+
+	/** The muzzle light's boost (GetMuzzleLightBoost) starts past this many cm from the camera and is full at the far end. */
+	constexpr float MuzzleLightBoostStart = 5000.f;
+	constexpr float MuzzleLightBoostEnd = 25000.f;
+	constexpr float MuzzleLightMaxBoost = 3.f;
+
+	const FName FlashColorParameter(TEXT("User.Color"));
+	const FName FlashScaleParameter(TEXT("User.Scale"));
+
 	constexpr float MuzzleFlashSeconds = 0.08f;
 	constexpr float ImpactSeconds = 0.25f;
 
@@ -99,8 +118,59 @@ TArray<UStaticMeshComponent*> ARTSShotEffect::GetGlows() const
 	return { MuzzleFlash.Get(), Shell.Get(), ImpactFlash.Get() };
 }
 
+float ARTSShotEffect::GetMuzzleLightBoost(float ViewDistance)
+{
+	return FMath::GetMappedRangeValueClamped(FVector2f(MuzzleLightBoostStart, MuzzleLightBoostEnd), FVector2f(1.f, MuzzleLightMaxBoost),
+		ViewDistance);
+}
+
+bool ARTSShotEffect::IsMuzzleLightInRange(float ViewDistance)
+{
+	const float Distance = CVarMuzzleLightDistance.GetValueOnGameThread();
+	return Distance <= 0.f || ViewDistance <= Distance;
+}
+
+bool ARTSShotEffect::IsMuzzleFlashInRange(float ViewDistance)
+{
+	const float Distance = CVarMuzzleFlashDistance.GetValueOnGameThread();
+	return Distance <= 0.f || ViewDistance <= Distance;
+}
+
+bool ARTSShotEffect::IsNiagaraFlashLive() const
+{
+	return bNiagaraFlashLive;
+}
+
+void ARTSShotEffect::PlayNiagaraFlash(const FTransform& MuzzleTransform)
+{
+	if (!NiagaraFlash)
+	{
+		NiagaraFlash = NewObject<UNiagaraComponent>(this, TEXT("NiagaraFlash"));
+		NiagaraFlash->SetupAttachment(RootComponent);
+		NiagaraFlash->SetUsingAbsoluteLocation(true);
+		NiagaraFlash->SetUsingAbsoluteRotation(true);
+		NiagaraFlash->SetUsingAbsoluteScale(true);
+		NiagaraFlash->SetAutoActivate(false);
+		NiagaraFlash->SetAutoDestroy(false);
+		NiagaraFlash->SetCastShadow(false);
+		NiagaraFlash->SetCanEverAffectNavigation(false);
+		NiagaraFlash->RegisterComponent();
+	}
+	if (NiagaraFlash->GetAsset() != Weapon->MuzzleFlash)
+	{
+		NiagaraFlash->SetAsset(Weapon->MuzzleFlash);
+	}
+	NiagaraFlash->SetWorldLocationAndRotation(MuzzleTransform.GetLocation(), MuzzleTransform.GetRotation());
+	NiagaraFlash->SetVariableLinearColor(FlashColorParameter, FMath::Lerp(Weapon->ShellColor, FLinearColor::White, 0.3f) * GlowStrength);
+	NiagaraFlash->SetVariableFloat(FlashScaleParameter, Weapon->EffectScale);
+	// A machine that never renders (tests under -nullrhi) places the flash but Niagara does not run it.
+	NiagaraFlash->ActivateSystem(true);
+	bNiagaraFlashLive = true;
+	Pool->CountMuzzleFlash();
+}
+
 void ARTSShotEffect::Start(URTSShotSubsystem& InPool, AActor& Shooter, const URTSWeaponData& InWeapon, AActor* InTarget,
-	const FVector& TargetLocation, float InFlightTime, const FVector& MuzzleLocation)
+	const FVector& TargetLocation, float InFlightTime, const FTransform& MuzzleTransform, float ViewDistance)
 {
 	Stop();
 	Pool = &InPool;
@@ -109,10 +179,20 @@ void ARTSShotEffect::Start(URTSShotSubsystem& InPool, AActor& Shooter, const URT
 	LastTargetPoint = InTarget ? GetAimPoint(*InTarget, Shooter.GetActorLocation()) : TargetLocation;
 	// The target's bounds walk all of its parts, so they are measured once; it is a vehicle or a building and keeps its height.
 	TargetAimHeight = InTarget ? LastTargetPoint.Z - InTarget->GetActorLocation().Z : 0.f;
-	Muzzle = MuzzleLocation;
+	Muzzle = MuzzleTransform.GetLocation();
 	FlightTime = FMath::Max(InFlightTime, 0.f);
 	Age = 0.f;
 	bLanded = false;
+
+	// A vehicle gun's flash is its Niagara system, not shown at all far from every camera; other weapons keep the glow.
+	const bool bNiagaraFlash = InWeapon.MuzzleFlash != nullptr;
+	bMuzzleGlow = !bNiagaraFlash;
+	bMuzzleLightInRange = !bNiagaraFlash || IsMuzzleLightInRange(ViewDistance);
+	MuzzleLightBoost = bNiagaraFlash ? GetMuzzleLightBoost(ViewDistance) : 1.f;
+	if (bNiagaraFlash && IsMuzzleFlashInRange(ViewDistance))
+	{
+		PlayNiagaraFlash(MuzzleTransform);
+	}
 
 	const FLinearColor FlashColor = FMath::Lerp(InWeapon.ShellColor, FLinearColor::White, 0.5f);
 	for (UPointLightComponent* Light : { MuzzleLight.Get(), ImpactLight.Get() })
@@ -120,6 +200,7 @@ void ARTSShotEffect::Start(URTSShotSubsystem& InPool, AActor& Shooter, const URT
 		Light->SetLightColor(FlashColor);
 		Light->SetAttenuationRadius(LightRadius * InWeapon.EffectScale);
 	}
+	MuzzleLight->SetAttenuationRadius(LightRadius * InWeapon.EffectScale * MuzzleLightBoost);
 	MuzzleFlash->SetWorldLocation(Muzzle);
 	MuzzleLight->SetWorldLocation(Muzzle);
 
@@ -136,6 +217,8 @@ void ARTSShotEffect::Stop()
 	}
 	SetLightOn(*MuzzleLight, bMuzzleLightSlot, false);
 	SetLightOn(*ImpactLight, bImpactLightSlot, false);
+	// The Niagara flash ends itself; the next shot restarts it.
+	bNiagaraFlashLive = false;
 	Target.Reset();
 }
 
@@ -213,18 +296,23 @@ void ARTSShotEffect::UpdateMuzzleFlash()
 {
 	const float Alpha = Age / MuzzleFlashSeconds;
 	const bool bVisible = Alpha < 1.f;
-	MuzzleFlash->SetVisibility(bVisible);
-	SetLightOn(*MuzzleLight, bMuzzleLightSlot, bVisible);
+	MuzzleFlash->SetVisibility(bVisible && bMuzzleGlow);
+	// The system's own lifetime is a little shorter; it ends itself.
+	bNiagaraFlashLive &= bVisible;
+	SetLightOn(*MuzzleLight, bMuzzleLightSlot, bVisible && bMuzzleLightInRange);
 	if (!bVisible)
 	{
 		return;
 	}
 	const float Scale = Weapon->EffectScale;
-	MuzzleFlash->SetWorldScale3D(FVector(MuzzleFlashSize * Scale * FMath::Lerp(0.6f, 1.f, Alpha) / MeshDiameter));
-	SetGlow(*MuzzleFlash, 1.f - Alpha);
+	if (bMuzzleGlow)
+	{
+		MuzzleFlash->SetWorldScale3D(FVector(MuzzleFlashSize * Scale * FMath::Lerp(0.6f, 1.f, Alpha) / MeshDiameter));
+		SetGlow(*MuzzleFlash, 1.f - Alpha);
+	}
 	if (bMuzzleLightSlot)
 	{
-		MuzzleLight->SetIntensity(LightIntensity * Scale * (1.f - Alpha));
+		MuzzleLight->SetIntensity(LightIntensity * Scale * MuzzleLightBoost * (1.f - Alpha));
 	}
 }
 

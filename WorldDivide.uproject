@@ -26,6 +26,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "Niagara",
+			"Enabled": true
+		},
+		{
 			"Name": "CommonUI",
 			"Enabled": true
 		},
