@@ -267,6 +267,9 @@ public:
 	 */
 	bool IsAimedAt(const AActor& Target) const;
 
+	/** As IsAimedAt, at a point such as a force-fire location on the ground. */
+	bool IsAimedAt(const FVector& Point) const;
+
 	/**
 	 * Server only. True while the barrel's reach comes near an obstacle, so UpdateTurret keeps it out (RTSBarrelClearance)
 	 * and URTSAvoidanceSubsystem does not drive it in. False without a barrel.
@@ -391,6 +394,8 @@ private:
 
 	/** The turret's yaw toward Target relative to the hull, in degrees. */
 	float GetTurretYawToward(const AActor& Target) const;
+	float GetTurretYawToward(const FVector& Point) const;
+
 
 	/**
 	 * Turns the wanted turret Yaw and gun Pitch into the closest ones that keep the barrel out of obstacles, where the unit

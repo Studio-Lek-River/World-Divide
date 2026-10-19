@@ -762,7 +762,12 @@ void ARTSUnit::SetAimOverride(TOptional<FVector2D> YawPitch)
 
 float ARTSUnit::GetTurretYawToward(const AActor& Target) const
 {
-	const FVector ToTarget = Target.GetActorLocation() - GetActorLocation();
+	return GetTurretYawToward(Target.GetActorLocation());
+}
+
+float ARTSUnit::GetTurretYawToward(const FVector& Point) const
+{
+	const FVector ToTarget = Point - GetActorLocation();
 	return FRotator::NormalizeAxis(ToTarget.Rotation().Yaw - GetActorRotation().Yaw);
 }
 
@@ -772,24 +777,24 @@ void ARTSUnit::UpdateTurret(float DeltaSeconds)
 	{
 		return;
 	}
-	const AActor* Target = WeaponComponent->GetTarget();
-	float Goal = AimOverride ? AimOverride->X : Target ? GetTurretYawToward(*Target) : 0.f;
-	// Up toward the target's middle from the trunnion; the hull's tilt is left out.
+	const TOptional<FVector> AimPoint = WeaponComponent->GetAimPoint();
+	float Goal = AimOverride ? AimOverride->X : AimPoint ? GetTurretYawToward(*AimPoint) : 0.f;
+	// Up toward the target's middle, or the ordered point on the ground, from the trunnion; the hull's tilt is left out.
 	float PitchGoal = 0.f;
 	if (AimOverride)
 	{
 		PitchGoal = AimOverride->Y;
 	}
-	else if (Target && Gun)
+	else if (AimPoint && Gun)
 	{
-		const FVector ToTarget = Target->GetActorLocation() - Gun->GetComponentLocation();
+		const FVector ToTarget = *AimPoint - Gun->GetComponentLocation();
 		PitchGoal = FMath::RadiansToDegrees(FMath::Atan2(ToTarget.Z, ToTarget.Size2D()));
 	}
 	PitchGoal = HasGun() ? FMath::Clamp(PitchGoal, UnitData->GunMinPitch, UnitData->GunMaxPitch) : 0.f;
 	// An inspection aim is held as given.
 	if (!AimOverride)
 	{
-		KeepBarrelClear(Goal, PitchGoal, Target != nullptr);
+		KeepBarrelClear(Goal, PitchGoal, AimPoint.IsSet());
 	}
 
 	const float Yaw = FMath::FixedTurn(TurretYaw, Goal, UnitData->TurretTurnRate * DeltaSeconds);
@@ -992,8 +997,13 @@ void ARTSUnit::OnRep_GunPitch()
 
 bool ARTSUnit::IsAimedAt(const AActor& Target) const
 {
+	return IsAimedAt(Target.GetActorLocation());
+}
+
+bool ARTSUnit::IsAimedAt(const FVector& Point) const
+{
 	// A barrel that cannot point there without reaching into an obstacle waits, even where it passes the target on its way.
-	return !HasTurret() || (!bAimBlocked && FMath::Abs(FMath::FindDeltaAngleDegrees(TurretYaw, GetTurretYawToward(Target))) <= TurretAimTolerance);
+	return !HasTurret() || (!bAimBlocked && FMath::Abs(FMath::FindDeltaAngleDegrees(TurretYaw, GetTurretYawToward(Point))) <= TurretAimTolerance);
 }
 
 const FName ARTSUnit::MuzzleSocketName(TEXT("Muzzle"));
@@ -1410,10 +1420,10 @@ void ARTSUnit::TickOrders(float DeltaSeconds)
 	if (Movement->UsesLocomotion())
 	{
 		TOptional<float> Facing;
-		const AActor* Target = WeaponComponent->GetTarget();
-		if (Target && (!HasTurret() || bAimBlocked) && Movement->Velocity.SizeSquared2D() < FMath::Square(StandingSpeed))
+		const TOptional<FVector> AimPoint = WeaponComponent->GetAimPoint();
+		if (AimPoint && (!HasTurret() || bAimBlocked) && Movement->Velocity.SizeSquared2D() < FMath::Square(StandingSpeed))
 		{
-			const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
+			const FVector ToTarget = *AimPoint - GetActorLocation();
 			if (!ToTarget.IsNearlyZero())
 			{
 				Facing = ToTarget.Rotation().Yaw;
@@ -1428,9 +1438,10 @@ void ARTSUnit::TickOrders(float DeltaSeconds)
 	{
 		FaceTowardYaw(Movement->Velocity.Rotation().Yaw, DeltaSeconds);
 	}
-	else if (const AActor* Target = WeaponComponent->GetTarget(); Target && (!HasTurret() || bAimBlocked))
+	else if (const TOptional<FVector> AimPoint = WeaponComponent->GetAimPoint(); AimPoint && (!HasTurret() || bAimBlocked))
 	{
-		const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
+		const FVector ToTarget = *AimPoint - GetActorLocation();
+
 		if (!ToTarget.IsNearlyZero())
 		{
 			const FRotator Before = GetActorRotation();

@@ -10,14 +10,8 @@ class URTSBuildingData;
 namespace RTSSuperweapon
 {
 	/**
-	 * Damage a strike deals Distance from its target point: Damage at the point, falling off linearly to EdgeFraction of it at
-	 * Radius, and nothing beyond. A zero radius hits only the point itself.
-	 */
-	WORLDDIVIDE_API float ComputeFalloffDamage(float Damage, float Distance, float Radius, float EdgeFraction);
-
-	/**
 	 * Server only. Deals Data's strike at Center to every unit on the ground and every building, of any team, within its
-	 * radius: units by their centre, buildings by the nearest point of their footprint, measured along the ground.
+	 * radius, through RTSCombat::ApplyAreaDamage.
 	 */
 	WORLDDIVIDE_API void ApplyStrike(UWorld& World, const FVector& Center, const URTSBuildingData& Data, AActor* Instigator);
 }

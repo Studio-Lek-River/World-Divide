@@ -57,6 +57,9 @@ public:
 	/** Server only. Calls Visit for every standing building of a team other than TeamId. */
 	void ForEachEnemyBuilding(int32 TeamId, TFunctionRef<void(ARTSBuilding&)> Visit) const;
 
+	/** Server only. Calls Visit for every standing building of every team. */
+	void ForEachBuilding(TFunctionRef<void(ARTSBuilding&)> Visit) const;
+
 	virtual void PostInitializeComponents() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

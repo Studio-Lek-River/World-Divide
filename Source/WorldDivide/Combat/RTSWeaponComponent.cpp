@@ -1,6 +1,7 @@
 #include "Combat/RTSWeaponComponent.h"
 
 #include "Buildings/RTSBuilding.h"
+#include "Combat/RTSAreaDamage.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSShotEffect.h"
 #include "Combat/RTSShotSubsystem.h"
@@ -35,17 +36,37 @@ float URTSWeaponComponent::GetDamage() const
 	return WeaponData ? WeaponData->Damage * DamageMultiplier : 0.f;
 }
 
-void URTSWeaponComponent::SetOrderedTarget(AActor* InTarget)
+void URTSWeaponComponent::SetOrderedTarget(AActor* InTarget, bool bForce)
 {
 	if (InTarget)
 	{
 		Target = InTarget;
+		OrderedLocation.Reset();
 		bTargetOrdered = true;
+		bTargetForced = bForce;
 	}
-	else if (bTargetOrdered)
+	else
+	{
+		ClearOrder();
+	}
+}
+
+void URTSWeaponComponent::SetOrderedLocation(const FVector& Location)
+{
+	Target = nullptr;
+	OrderedLocation = Location;
+	bTargetOrdered = true;
+	bTargetForced = true;
+}
+
+void URTSWeaponComponent::ClearOrder()
+{
+	if (bTargetOrdered)
 	{
 		Target = nullptr;
+		OrderedLocation.Reset();
 		bTargetOrdered = false;
+		bTargetForced = false;
 	}
 }
 
@@ -60,11 +81,20 @@ void URTSWeaponComponent::SetAutoAcquire(bool bEnable)
 
 bool URTSWeaponComponent::CanTarget(const AActor* Candidate) const
 {
+	return CanForceTarget(Candidate) && Cast<IRTSTargetable>(Candidate)->GetTeamId() != TeamId;
+}
+
+bool URTSWeaponComponent::CanForceTarget(const AActor* Candidate) const
+{
 	const IRTSTargetable* Targetable = Cast<IRTSTargetable>(Candidate);
 	return Targetable && IsValid(Candidate) && Candidate != GetOwner()
-		&& Targetable->GetTeamId() != TeamId
 		&& !Targetable->GetHealthComponent()->IsDead()
 		&& (!WeaponData || WeaponData->CanHit(Targetable->IsAirborne()));
+}
+
+bool URTSWeaponComponent::CanTargetGround() const
+{
+	return WeaponData && WeaponData->bCanTargetGround;
 }
 
 bool URTSWeaponComponent::IsInRange(const AActor* Candidate) const
@@ -76,6 +106,24 @@ bool URTSWeaponComponent::IsInRange(const AActor* Candidate) const
 	}
 	const FVector Origin = GetOwner()->GetActorLocation();
 	return FVector::Dist2D(Origin, Targetable->GetClosestFootprintPoint(Origin)) <= WeaponData->Range;
+}
+
+bool URTSWeaponComponent::IsInRange(const FVector& Location) const
+{
+	return WeaponData && FVector::Dist2D(GetOwner()->GetActorLocation(), Location) <= WeaponData->Range;
+}
+
+TOptional<FVector> URTSWeaponComponent::GetAimPoint() const
+{
+	if (OrderedLocation)
+	{
+		return OrderedLocation;
+	}
+	if (const AActor* Current = Target.Get())
+	{
+		return Current->GetActorLocation();
+	}
+	return {};
 }
 
 namespace
@@ -193,10 +241,18 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 	}
 
 	AActor* Current = Target.Get();
-	if (bTargetOrdered)
+	if (OrderedLocation)
+	{
+		// The unit closes in while the location is out of range.
+		if (!CanTargetGround() || !IsInRange(*OrderedLocation))
+		{
+			return;
+		}
+	}
+	else if (bTargetOrdered)
 	{
 		// The unit drops the order once the target is gone and closes in while it is out of range.
-		if (!CanTarget(Current) || !IsInRange(Current))
+		if (!(bTargetForced ? CanForceTarget(Current) : CanTarget(Current)) || !IsInRange(Current))
 		{
 			return;
 		}
@@ -238,7 +294,8 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 	}
 
 	// A turret comes round first; the reload keeps counting meanwhile.
-	if (const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner()); Unit && !Unit->IsAimedAt(*Current))
+	const FVector AimPoint = OrderedLocation ? *OrderedLocation : Current->GetActorLocation();
+	if (const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner()); Unit && !Unit->IsAimedAt(AimPoint))
 	{
 		return;
 	}
@@ -253,6 +310,11 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 	{
 		--Ammo;
 	}
+	if (OrderedLocation)
+	{
+		FireAtLocation(*OrderedLocation);
+		return;
+	}
 	const IRTSTargetable* Targetable = Cast<IRTSTargetable>(Current);
 	const FVector Origin = GetOwner()->GetActorLocation();
 	const float FlightTime = WeaponData->GetFlightTime(FVector::Dist2D(Origin, Targetable->GetClosestFootprintPoint(Origin)));
@@ -265,6 +327,20 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 	else
 	{
 		Targetable->GetHealthComponent()->ApplyDamage(GetDamage(), GetOwner());
+	}
+}
+
+void URTSWeaponComponent::FireAtLocation(const FVector& Location)
+{
+	const float FlightTime = WeaponData->GetFlightTime(FVector::Dist2D(GetOwner()->GetActorLocation(), Location));
+	Multicast_PlayShot(WeaponData, nullptr, Location, FlightTime);
+	if (FlightTime > 0.f)
+	{
+		GetWorld()->GetSubsystem<URTSShotSubsystem>()->AddGroundShell(Location, GetDamage(), WeaponData->SplashRadius, GetOwner(), FlightTime);
+	}
+	else
+	{
+		RTSCombat::ApplyAreaDamage(*GetWorld(), Location, GetDamage(), WeaponData->SplashRadius, URTSWeaponData::SplashEdgeFraction, GetOwner());
 	}
 }
 

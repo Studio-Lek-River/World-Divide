@@ -3,12 +3,15 @@
 #include "Buildings/RTSBuilding.h"
 #include "Components/PointLightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Combat/RTSAreaDamage.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSShotEffect.h"
 #include "Combat/RTSShotSound.h"
 #include "Combat/RTSShotSoundWave.h"
 #include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSWeaponComponent.h"
+#include "Core/RTSGameState.h"
+#include "Data/RTSAircraftData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
@@ -19,6 +22,7 @@
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
 #include "UObject/UObjectIterator.h"
+#include "Units/RTSAircraftComponent.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
 
@@ -46,6 +50,30 @@ namespace
 		Weapon->ReloadSeconds = 10.f;
 		Weapon->ShellSpeed = 1000.f;
 		return Weapon;
+	}
+
+	float DamageTaken(const IRTSTargetable& Target)
+	{
+		return Target.GetHealthComponent()->GetMaxHealth() - Target.GetHealthComponent()->GetHealth();
+	}
+
+	/** A jet that takes off with its first move order, for a blast it must stay out of. */
+	ARTSUnit* SpawnFlyingJet(const FRTSTestWorld& TestWorld, int32 TeamId, const FVector& Location)
+	{
+		URTSAircraftData* Data = NewObject<URTSAircraftData>();
+		Data->MaxHealth = 1000.f;
+		Data->MoveSpeed = 1000.f;
+		Data->TurnRate = 90.f;
+		Data->CruiseAltitude = 800.f;
+		Data->ClimbRate = 400.f;
+		Data->MaxBankAngle = 45.f;
+		ARTSUnit* Jet = TestWorld.SpawnUnit(Data, TeamId, Location);
+		FRTSCommand Move;
+		Move.Type = ERTSCommandType::Move;
+		Move.TargetLocation = Location + FVector(200.f, 0.f, 0.f);
+		Jet->ExecuteCommand(Move);
+		Jet->GetAircraftComponent()->UpdateAircraft(0.1f);
+		return Jet;
 	}
 
 	int32 CountShotEffects(UWorld& World)
@@ -324,7 +352,111 @@ bool FRTSShellDelayTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSForceFireGroundTest, "WorldDivide.Combat.ForceFire.Ground", TestFlags)
+
+bool FRTSForceFireGroundTest::RunTest(const FString& Parameters)
+{
+	constexpr float Damage = 100.f;
+	constexpr float Radius = 400.f;
+	URTSWeaponData* Weapon = NewObject<URTSWeaponData>();
+	Weapon->Range = 2000.f;
+	Weapon->Damage = Damage;
+	Weapon->ReloadSeconds = 1.f;
+	Weapon->SplashRadius = Radius;
+
+	const FRTSTestWorld TestWorld;
+	TestWorld.SpawnGameState();
+	const FVector Point(1000.f, 0.f, 0.f);
+	ARTSUnit* Shooter = TestWorld.SpawnUnit(MakeUnitData(1000.f, Weapon), 0, FVector::ZeroVector);
+	// Around the point: an enemy on it, an own unit halfway out, an own building whose edge lies inside, an enemy just
+	// outside and an enemy jet in flight over the point.
+	URTSUnitData* VictimData = MakeUnitData(1000.f, nullptr);
+	ARTSUnit* OnPoint = TestWorld.SpawnUnit(VictimData, 1, Point);
+	ARTSUnit* Own = TestWorld.SpawnUnit(VictimData, 0, Point + FVector(0.f, 200.f, 0.f));
+	URTSBuildingData* BuildingData = NewObject<URTSBuildingData>();
+	BuildingData->Footprint = FIntPoint(2, 2);
+	BuildingData->MaxHealth = 1000.f;
+	ARTSBuilding* OwnBuilding = TestWorld.SpawnBuilding(BuildingData, 0, Point + FVector(0.f, -450.f, 0.f));
+	ARTSUnit* Outside = TestWorld.SpawnUnit(VictimData, 1, Point + FVector(Radius + 10.f, 0.f, 0.f));
+	ARTSUnit* Jet = SpawnFlyingJet(TestWorld, 1, Point);
+	TestTrue(TEXT("The jet is in flight"), Jet->IsAirborne());
+	const float BuildingDistance = FVector::Dist2D(OwnBuilding->GetClosestFootprintPoint(Point), Point);
+	TestTrue(FString::Printf(TEXT("The building's edge is inside the radius (%.0f cm)"), BuildingDistance), BuildingDistance < Radius);
+
+	URTSWeaponComponent* Gun = Shooter->GetWeaponComponent();
+	TestTrue(TEXT("Force fire may target an own unit"), Gun->CanForceTarget(Own));
+	TestFalse(TEXT("But not the shooter itself"), Gun->CanForceTarget(Shooter));
+	TestFalse(TEXT("Nor does the ordinary check allow the own unit"), Gun->CanTarget(Own));
+
+	Gun->SetOrderedLocation(Point);
+	Gun->UpdateWeapon(0.f);
+	TestEqual(TEXT("One shot at the point"), Gun->GetShotsFired(), 1);
+	TestNull(TEXT("A ground shot has no target"), Gun->GetTarget());
+	TestEqual(TEXT("Full damage on the point"), DamageTaken(*OnPoint), Damage);
+	TestEqual(TEXT("An own unit takes the falloff"), DamageTaken(*Own),
+		RTSCombat::ComputeFalloffDamage(Damage, 200.f, Radius, URTSWeaponData::SplashEdgeFraction), 0.01f);
+	TestEqual(TEXT("An own building takes it at its nearest edge"), DamageTaken(*OwnBuilding),
+		RTSCombat::ComputeFalloffDamage(Damage, BuildingDistance, Radius, URTSWeaponData::SplashEdgeFraction), 0.01f);
+	TestEqual(TEXT("Nothing just outside the radius"), DamageTaken(*Outside), 0.f);
+	TestEqual(TEXT("Nothing to an aircraft in flight"), DamageTaken(*Jet), 0.f);
+	TestEqual(TEXT("Nothing to the shooter, far from the point"), DamageTaken(*Shooter), 0.f);
+
+	// Without a splash radius a ground shot does nothing.
+	URTSWeaponData* NoSplash = DuplicateObject(Weapon, GetTransientPackage());
+	NoSplash->SplashRadius = 0.f;
+	ARTSUnit* Plain = TestWorld.SpawnUnit(MakeUnitData(1000.f, NoSplash), 0, FVector(0.f, 300.f, 0.f));
+	Plain->GetWeaponComponent()->SetOrderedLocation(Point);
+	Plain->GetWeaponComponent()->UpdateWeapon(0.f);
+	TestEqual(TEXT("The plain weapon fired"), Plain->GetWeaponComponent()->GetShotsFired(), 1);
+	TestEqual(TEXT("A zero radius hurts nothing on the point"), DamageTaken(*OnPoint), Damage);
+
+	// Out of range it holds fire, and clearing the order drops the location.
+	Gun->SetOrderedLocation(FVector(5000.f, 0.f, 0.f));
+	Gun->UpdateWeapon(Weapon->ReloadSeconds);
+	TestEqual(TEXT("No shot out of range"), Gun->GetShotsFired(), 1);
+	Gun->ClearOrder();
+	TestFalse(TEXT("The order is cleared"), Gun->GetOrderedLocation().IsSet());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSForceFireGroundShellTest, "WorldDivide.Combat.ForceFire.GroundShell", TestFlags)
+
+bool FRTSForceFireGroundShellTest::RunTest(const FString& Parameters)
+{
+	URTSWeaponData* Weapon = MakeShellWeapon();
+	Weapon->SplashRadius = 300.f;
+	const FRTSTestWorld TestWorld;
+	URTSShotSubsystem* Shots = TestWorld.World->GetSubsystem<URTSShotSubsystem>();
+	if (!TestNotNull(TEXT("The world has a shot subsystem"), Shots))
+	{
+		return false;
+	}
+	const FVector Point(800.f, 0.f, 0.f);
+	ARTSUnit* Shooter = TestWorld.SpawnUnit(MakeUnitData(100.f, Weapon), 0, FVector::ZeroVector);
+	ARTSUnit* Victim = TestWorld.SpawnUnit(MakeUnitData(100.f, nullptr), 1, Point);
+	const float FlightTime = Weapon->GetFlightTime(800.f);
+
+	Shooter->GetWeaponComponent()->SetOrderedLocation(Point);
+	Shooter->GetWeaponComponent()->UpdateWeapon(0.f);
+	TestEqual(TEXT("A ground shell is in flight"), Shots->GetShellsInFlight(), 1);
+	TestEqual(TEXT("No damage when the shot is fired"), DamageTaken(*Victim), 0.f);
+
+	Shots->Advance(FlightTime * 0.5f);
+	TestEqual(TEXT("No damage halfway"), DamageTaken(*Victim), 0.f);
+
+	// The shooter dies before the shell lands; the blast still comes, where it was aimed.
+	Shooter->GetHealthComponent()->ApplyDamage(1000.f, nullptr);
+	TestFalse(TEXT("The shooter is dead"), IsValid(Shooter));
+	Victim->SetActorLocation(Point + FVector(0.f, 100.f, 0.f));
+	Shots->Advance(FlightTime * 0.5f);
+	TestEqual(TEXT("The splash lands with the shell, at the point"), DamageTaken(*Victim),
+		RTSCombat::ComputeFalloffDamage(Weapon->Damage, 100.f, Weapon->SplashRadius, URTSWeaponData::SplashEdgeFraction), 0.01f);
+	TestEqual(TEXT("The shell is gone"), Shots->GetShellsInFlight(), 0);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSShotEffectTest, "WorldDivide.Combat.ShotEffect", TestFlags)
+
 
 bool FRTSShotEffectTest::RunTest(const FString& Parameters)
 {

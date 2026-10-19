@@ -1,6 +1,7 @@
 #include "Combat/RTSShotSubsystem.h"
 
 #include "Camera/PlayerCameraManager.h"
+#include "Combat/RTSAreaDamage.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSShotEffect.h"
 #include "Combat/RTSTargetable.h"
@@ -59,6 +60,11 @@ void URTSShotSubsystem::AddShell(AActor& Target, float Damage, AActor* Instigato
 	Shells.Add({ &Target, Instigator, Damage, FlightTime });
 }
 
+void URTSShotSubsystem::AddGroundShell(const FVector& Location, float Damage, float Radius, AActor* Instigator, float FlightTime)
+{
+	Shells.Add({ nullptr, Instigator, Damage, FlightTime, Location, Radius });
+}
+
 void URTSShotSubsystem::Advance(float DeltaSeconds)
 {
 	for (int32 Index = 0; Index < Shells.Num();)
@@ -74,6 +80,12 @@ void URTSShotSubsystem::Advance(float DeltaSeconds)
 		// Off the list before the damage, which may kill the target and run its death handling.
 		const FShell Landed = Shell;
 		Shells.RemoveAtSwap(Index);
+		if (Landed.Location)
+		{
+			RTSCombat::ApplyAreaDamage(*GetWorld(), *Landed.Location, Landed.Damage, Landed.Radius, URTSWeaponData::SplashEdgeFraction,
+				Landed.Instigator.Get());
+			continue;
+		}
 		const IRTSTargetable* Targetable = Cast<IRTSTargetable>(Landed.Target.Get());
 		if (Targetable && IsValid(Landed.Target.Get()) && !Targetable->GetHealthComponent()->IsDead())
 		{

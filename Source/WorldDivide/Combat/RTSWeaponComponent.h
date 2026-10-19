@@ -15,7 +15,8 @@ class URTSWeaponData;
  * Enemy units come before enemy buildings when it picks a target on its own. It keeps checking its target every frame but
  * looks for a new one five times a second, weapons spread over the frames, and at once when the target is lost; units
  * come from URTSAvoidanceSubsystem::QueryRadius and buildings from ARTSGameState's lists per team.
- * The owner decides what it may shoot (an ordered target, anything in range, or nothing while moving);
+ * The owner decides what it may shoot (an ordered target, a forced one of any team, an ordered ground location, anything in
+ * range, or nothing while moving);
  * turning and closing in are the unit's job. Clients never run it; they see each shot through Multicast_PlayShot and
  * the damage through health replication.
  */
@@ -43,8 +44,20 @@ public:
 	/** Server only. The owner's team; targets of any other team are enemies. */
 	void SetTeamId(int32 InTeamId) { TeamId = InTeamId; }
 
-	/** Server only. Shoot only this target, once it is in range; null clears the order. */
-	void SetOrderedTarget(AActor* InTarget);
+	/**
+	 * Server only. Shoot only this target, once it is in range; null clears the order, a ground location's too. A forced order
+	 * (force fire, #305) may be at a target of any team, as CanForceTarget allows.
+	 */
+	void SetOrderedTarget(AActor* InTarget, bool bForce = false);
+
+	/** Server only. Shoot only at Location on the ground, once it is in range, with the weapon's splash. */
+	void SetOrderedLocation(const FVector& Location);
+
+	/** Server only. Drops an ordered target or location. */
+	void ClearOrder();
+
+	/** The ground location the weapon is ordered to shoot at, if any. */
+	const TOptional<FVector>& GetOrderedLocation() const { return OrderedLocation; }
 
 	/** Server only. Without an ordered target, engage the nearest enemy in range while this is set. */
 	void SetAutoAcquire(bool bEnable);
@@ -54,6 +67,12 @@ public:
 	 * under construction count.
 	 */
 	bool CanTarget(const AActor* Candidate) const;
+
+	/** As CanTarget, but of any team, the owner's own included: what force fire may shoot. Never the owner itself. */
+	bool CanForceTarget(const AActor* Candidate) const;
+
+	/** The weapon can fire at a location on the ground. */
+	bool CanTargetGround() const;
 
 	/** Server only. Shots left before the weapon holds fire, as an aircraft's load per sortie; INDEX_NONE for no limit. */
 	void SetAmmo(int32 InAmmo) { Ammo = InAmmo; }
@@ -67,7 +86,13 @@ public:
 	/** Distance to the edge of the target's footprint is within range. */
 	bool IsInRange(const AActor* Candidate) const;
 
+	/** Distance along the ground to Location is within range. */
+	bool IsInRange(const FVector& Location) const;
+
 	AActor* GetTarget() const { return Target.Get(); }
+
+	/** Where the weapon aims: its ordered location, else its target's centre; unset with neither. */
+	TOptional<FVector> GetAimPoint() const;
 
 	/** Server only. Advances the reload and fires when possible. Public so tests can step it deterministically. */
 	void UpdateWeapon(float DeltaSeconds);
@@ -88,6 +113,9 @@ private:
 	/** Every machine but a dedicated server shows the shot. Unreliable: a lost shot is only a missing effect. */
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayShot(URTSWeaponData* Weapon, AActor* ShotTarget, FVector_NetQuantize TargetLocation, float FlightTime);
+
+	/** Fires a shot at Location, which lands with the weapon's splash. */
+	void FireAtLocation(const FVector& Location);
 
 	/** The nearest enemy unit in range, or failing that the nearest enemy building in range. */
 	AActor* FindNearestEnemyInRange() const;
@@ -111,7 +139,9 @@ private:
 	TWeakObjectPtr<AActor> Target;
 	int32 TeamId = 0;
 	float DamageMultiplier = 1.f;
+	TOptional<FVector> OrderedLocation;
 	bool bTargetOrdered = false;
+	bool bTargetForced = false;
 	bool bAutoAcquire = true;
 
 	UPROPERTY(Replicated)

@@ -1,5 +1,6 @@
 #include "Buildings/RTSBuilding.h"
 #include "Buildings/RTSSuperweaponComponent.h"
+#include "Combat/RTSAreaDamage.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSGameState.h"
@@ -108,7 +109,7 @@ namespace RTSSuperweaponTests
 
 	bool FRTSSuperweaponFalloffTest::RunTest(const FString& Parameters)
 	{
-		using RTSSuperweapon::ComputeFalloffDamage;
+		using RTSCombat::ComputeFalloffDamage;
 		TestEqual(TEXT("Full damage at the target point"), ComputeFalloffDamage(400.f, 0.f, 1000.f, 0.25f), 400.f);
 		TestEqual(TEXT("The edge fraction at the radius"), ComputeFalloffDamage(400.f, 1000.f, 1000.f, 0.25f), 100.f);
 		TestEqual(TEXT("Halfway between at half the radius"), ComputeFalloffDamage(400.f, 500.f, 1000.f, 0.25f), 250.f);
@@ -230,9 +231,9 @@ namespace RTSSuperweaponTests
 		TestFalse(TEXT("The strike has landed"), Superweapon->IsStrikePending());
 		TestEqual(TEXT("The unit on the point takes full damage"), DamageTaken(*OnPoint), Damage);
 		TestEqual(TEXT("The own unit halfway out takes the falloff for its distance"), DamageTaken(*Own),
-			RTSSuperweapon::ComputeFalloffDamage(Damage, 500.f, Radius, EdgeFraction));
+			RTSCombat::ComputeFalloffDamage(Damage, 500.f, Radius, EdgeFraction));
 		TestEqual(TEXT("The building takes the falloff for the distance to its edge"), DamageTaken(*EnemyBuilding),
-			RTSSuperweapon::ComputeFalloffDamage(Damage, 800.f, Radius, EdgeFraction), 0.01f);
+			RTSCombat::ComputeFalloffDamage(Damage, 800.f, Radius, EdgeFraction), 0.01f);
 		TestEqual(TEXT("A unit outside the radius is untouched"), DamageTaken(*Outside), 0.f);
 		TestEqual(TEXT("So is an aircraft in flight"), DamageTaken(*Jet), 0.f);
 		TestEqual(TEXT("And the superweapon far away"), DamageTaken(*Building), 0.f);

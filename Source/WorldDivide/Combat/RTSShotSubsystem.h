@@ -12,7 +12,8 @@ class URTSWeaponData;
 
 /**
  * Server-side shells in flight. Each one homes on its target and deals its damage when it lands, even when the shooter
- * died in the meantime. A target that is gone or dead by then takes nothing. Shells hold while the match is over.
+ * died in the meantime. A target that is gone or dead by then takes nothing. A shell fired at a ground location (#305)
+ * lands there and deals its damage as a blast through RTSCombat::ApplyAreaDamage. Shells hold while the match is over.
  *
  * And, on every machine that draws, the shots players see (#227): a pool of ARTSShotEffect, at most rts.Fx.ShotPoolSize
  * of them, started by PlayShot and advanced here, flying for the same time as the shell. When all are busy the oldest is
@@ -32,6 +33,9 @@ class WORLDDIVIDE_API URTSShotSubsystem : public UTickableWorldSubsystem
 public:
 	/** Server only. Target must be an IRTSTargetable. */
 	void AddShell(AActor& Target, float Damage, AActor* Instigator, float FlightTime);
+
+	/** Server only. A shell that lands on Location after FlightTime and deals Damage to everything within Radius. */
+	void AddGroundShell(const FVector& Location, float Damage, float Radius, AActor* Instigator, float FlightTime);
 
 	/** Server only. Flies every shell DeltaSeconds on and deals the damage of those that land. Public so tests can step it. */
 	void Advance(float DeltaSeconds);
@@ -109,6 +113,9 @@ private:
 		TWeakObjectPtr<AActor> Instigator;
 		float Damage = 0.f;
 		float TimeLeft = 0.f;
+		/** A ground shell's landing point and blast radius; a shell at a target has none. */
+		TOptional<FVector> Location;
+		float Radius = 0.f;
 	};
 
 	TArray<FShell> Shells;

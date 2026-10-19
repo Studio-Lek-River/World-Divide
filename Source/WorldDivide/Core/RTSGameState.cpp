@@ -93,6 +93,20 @@ void ARTSGameState::ForEachEnemyBuilding(int32 TeamId, TFunctionRef<void(ARTSBui
 	}
 }
 
+void ARTSGameState::ForEachBuilding(TFunctionRef<void(ARTSBuilding&)> Visit) const
+{
+	for (const TPair<int32, TArray<TWeakObjectPtr<ARTSBuilding>>>& Team : BuildingsByTeam)
+	{
+		for (const TWeakObjectPtr<ARTSBuilding>& Listed : Team.Value)
+		{
+			if (ARTSBuilding* Building = Listed.Get())
+			{
+				Visit(*Building);
+			}
+		}
+	}
+}
+
 void ARTSGameState::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();

@@ -85,7 +85,47 @@ bool FRTSTurretAimTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSForceFireTurretAimTest, "WorldDivide.Combat.ForceFire.TurretAim", TestFlags)
+
+bool FRTSForceFireTurretAimTest::RunTest(const FString& Parameters)
+{
+	constexpr float Step = 0.05f;
+
+	// The tank faces +X and is ordered to fire at a point on the ground a quarter turn to its left.
+	URTSWeaponData* Weapon = MakeInstantWeapon();
+	Weapon->SplashRadius = 200.f;
+	const FRTSTestWorld TestWorld;
+	ARTSUnit* Tank = TestWorld.SpawnUnit(MakeUnitData(Weapon, true), 0, FVector::ZeroVector);
+	const FVector Point(0.f, 500.f, 0.f);
+	URTSWeaponComponent* Gun = Tank->GetWeaponComponent();
+	Gun->SetOrderedLocation(Point);
+
+	Gun->UpdateWeapon(Step);
+	TestFalse(TEXT("The turret still points ahead, away from the point"), Tank->IsAimedAt(Point));
+	TestEqual(TEXT("No shot before the turret comes round"), Gun->GetShotsFired(), 0);
+
+	float FirstShotTime = -1.f;
+	for (int32 Frame = 1; Frame * Step <= 2.f && FirstShotTime < 0.f; ++Frame)
+	{
+		Tank->UpdateTurret(Step);
+		Gun->UpdateWeapon(Step);
+		if (Gun->GetShotsFired() > 0)
+		{
+			FirstShotTime = Frame * Step;
+		}
+	}
+
+	const float TraverseTime = 90.f / TurretTurnRate;
+	TestTrue(FString::Printf(TEXT("The first shot came at %.2f s, once the turret had traversed (about %.2f s)"), FirstShotTime,
+		TraverseTime), FirstShotTime > TraverseTime * 0.8f && FirstShotTime <= TraverseTime + Step);
+	TestTrue(FString::Printf(TEXT("The turret points at the point (%.1f degrees)"), Tank->GetTurretYaw()),
+		FMath::IsNearlyEqual(Tank->GetTurretYaw(), 90.f, 6.f));
+	TestTrue(TEXT("The hull did not turn"), FMath::IsNearlyZero(Tank->GetActorRotation().Yaw));
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTurretlessTest, "WorldDivide.Combat.Turret.None", TestFlags)
+
 
 bool FRTSTurretlessTest::RunTest(const FString& Parameters)
 {

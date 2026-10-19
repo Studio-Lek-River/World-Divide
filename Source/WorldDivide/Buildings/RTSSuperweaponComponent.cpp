@@ -1,72 +1,20 @@
 #include "Buildings/RTSSuperweaponComponent.h"
 
 #include "Buildings/RTSBuilding.h"
+#include "Combat/RTSAreaDamage.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Engine/World.h"
-#include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/RTSPlayerController.h"
-#include "Units/RTSUnit.h"
 #include "WorldDivide.h"
 
 namespace RTSSuperweapon
 {
-	float ComputeFalloffDamage(float Damage, float Distance, float Radius, float EdgeFraction)
-	{
-		if (Distance > Radius)
-		{
-			return 0.f;
-		}
-		if (Radius <= 0.f)
-		{
-			return Damage;
-		}
-		const float Alpha = FMath::Clamp(Distance / Radius, 0.f, 1.f);
-		return Damage * FMath::Lerp(1.f, FMath::Clamp(EdgeFraction, 0.f, 1.f), Alpha);
-	}
-
 	void ApplyStrike(UWorld& World, const FVector& Center, const URTSBuildingData& Data, AActor* Instigator)
 	{
-		// Gathered first: damage destroys what it kills, which must not happen while iterating.
-		TArray<TPair<TWeakObjectPtr<AActor>, float>> Hits;
-		auto Consider = [&](AActor& Actor, const IRTSTargetable& Target)
-		{
-			if (Actor.IsActorBeingDestroyed() || Target.GetHealthComponent()->IsDead())
-			{
-				return;
-			}
-			// A unit's footprint point lies on its selection radius; its centre is what stands in the blast.
-			const FVector Point = Actor.IsA<ARTSUnit>() ? Actor.GetActorLocation() : Target.GetClosestFootprintPoint(Center);
-			const float Distance = FVector::Dist2D(Point, Center);
-			const float Damage = ComputeFalloffDamage(Data.SuperweaponDamage, Distance, Data.SuperweaponRadius, Data.SuperweaponEdgeDamage);
-			if (Damage > 0.f)
-			{
-				Hits.Emplace(&Actor, Damage);
-			}
-		};
-		for (TActorIterator<ARTSUnit> It(&World); It; ++It)
-		{
-			// A ground strike: aircraft in flight are out of it.
-			if (!It->IsAirborne())
-			{
-				Consider(**It, **It);
-			}
-		}
-		for (TActorIterator<ARTSBuilding> It(&World); It; ++It)
-		{
-			Consider(**It, **It);
-		}
-
-		for (const TPair<TWeakObjectPtr<AActor>, float>& Hit : Hits)
-		{
-			const IRTSTargetable* Target = Cast<IRTSTargetable>(Hit.Key.Get());
-			if (Target && !Target->GetHealthComponent()->IsDead())
-			{
-				Target->GetHealthComponent()->ApplyDamage(Hit.Value, Instigator);
-			}
-		}
+		RTSCombat::ApplyAreaDamage(World, Center, Data.SuperweaponDamage, Data.SuperweaponRadius, Data.SuperweaponEdgeDamage, Instigator);
 	}
 }
 

@@ -23,6 +23,9 @@ public:
 	/** The weapon can hit a target that is airborne, or one on the ground when bAirborne is false. */
 	bool CanHit(bool bAirborne) const { return bAirborne ? bCanTargetAir : bCanTargetGround; }
 
+	/** The share of a shot's damage its splash still deals at SplashRadius, falling off linearly from the full damage at the point. */
+	static constexpr float SplashEdgeFraction = 0.5f;
+
 	/** Reach in cm, measured to the edge of the target's footprint. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon", meta = (ClampMin = "0"))
 	float Range = 800.f;
@@ -37,6 +40,14 @@ public:
 	/** Shell speed in cm/s, measured to the edge of the target's footprint. 0 hits at once. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon", meta = (ClampMin = "0"))
 	float ShellSpeed = 0.f;
+
+	/**
+	 * Blast radius in cm of a shot at a ground location (force fire, #305): every unit on the ground and every building of any
+	 * team within it takes damage, falling off to SplashEdgeFraction at the edge. A shot at a unit or building hits only
+	 * that target. 0 fires no splash, so a ground shot does nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon", meta = (ClampMin = "0"))
+	float SplashRadius = 0.f;
 
 	/** Hits units and buildings on the ground, aircraft parked on their pads included. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")

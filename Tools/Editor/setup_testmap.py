@@ -428,9 +428,10 @@ def interaction_radius(mesh, scale):
 
 
 def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_scale, shell_color, arc_height=0.0,
-                ground=True, air=False, muzzle_flash=None, muzzle_smoke=None):
+                ground=True, air=False, muzzle_flash=None, muzzle_smoke=None, splash_radius=0.0):
     """muzzle_flash: the Niagara system a vehicle gun flashes (make_muzzle_flash); None keeps the placeholder glow.
-    muzzle_smoke: the Niagara system a vehicle cannon leaves at the muzzle after a shot (make_muzzle_smoke); None leaves none."""
+    muzzle_smoke: the Niagara system a vehicle cannon leaves at the muzzle after a shot (make_muzzle_smoke); None leaves none.
+    splash_radius: the blast in cm of a shot at a ground location (force fire); 0 for none."""
     return plan_data_asset(name, WEAPON_DIR, unreal.RTSWeaponData, {
         "muzzle_flash": muzzle_flash,
         "muzzle_smoke": muzzle_smoke,
@@ -438,6 +439,7 @@ def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_
         "damage": damage,
         "reload_seconds": reload_seconds,
         "shell_speed": shell_speed,
+        "splash_radius": splash_radius,
         "can_target_ground": ground,
         "can_target_air": air,
         "shell_arc_height": arc_height,
@@ -1842,7 +1844,7 @@ TOWER_RANGE_OVER_TANK = 1.25
 muzzle_flash = make_muzzle_flash()
 muzzle_smoke = make_muzzle_smoke()
 cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 30000.0, 1.6, (1.0, 0.45, 0.1), muzzle_flash=muzzle_flash,
-                     muzzle_smoke=muzzle_smoke)
+                     muzzle_smoke=muzzle_smoke, splash_radius=250.0)
 rifle = make_weapon("DA_TestRifle", 3500.0, 8.0, 0.5, 45000.0, 0.4, (1.0, 0.85, 0.3))
 # A main battle tank, 9.8 x 3.7 m with its gun forward; the placeholder's long gun lets the width bind.
 tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 1080.0, 370.0), 200.0, cannon, 1100.0, 75.0,
@@ -1850,7 +1852,7 @@ tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 108
 # A heavier second tank to try out. It wears the standard tank's model here; on a machine with the local Abrams art,
 # import_local_art.py gives it that model and its traversing turret.
 heavy_cannon = make_weapon("DA_TestHeavyCannon", TANK_RANGE, 60.0, 2.5, 32500.0, 2.0, (1.0, 0.4, 0.08),
-                           muzzle_flash=muzzle_flash, muzzle_smoke=muzzle_smoke)
+                           muzzle_flash=muzzle_flash, muzzle_smoke=muzzle_smoke, splash_radius=350.0)
 abrams = make_unit("DA_TestAbrams", "Test Abrams", tank_mesh, fit_scale(tank_mesh, 1080.0, 380.0), 350.0, heavy_cannon,
                    1000.0, 60.0, 1100, 14.0)
 # The M20 Guardian at its real size (7.1 m hull), to try the Blender to Unreal pipeline out: the heavy tank's weapon and
@@ -1864,7 +1866,8 @@ add_properties(m20, dict(m20_parts, turret_turn_rate=45.0))
 INFANTRY_HEIGHT = 180.0
 infantry = make_unit("DA_TestInfantry", "Test Infantry", infantry_mesh, fit_height(infantry_mesh, INFANTRY_HEIGHT), 100.0,
                      rifle, 450.0, 540.0, 150, 4.0)
-grenade = make_weapon("DA_TestGrenade", 3000.0, 25.0, 1.5, 7500.0, 1.0, (1.0, 0.6, 0.2), arc_height=800.0)
+grenade = make_weapon("DA_TestGrenade", 3000.0, 25.0, 1.5, 7500.0, 1.0, (1.0, 0.6, 0.2), arc_height=800.0,
+                      splash_radius=400.0)
 grenadier = make_unit("DA_TestGrenadier", "Test Grenadier", infantry_mesh, fit_height(infantry_mesh, INFANTRY_HEIGHT), 120.0,
                       grenade, 420.0, 540.0, 300, 6.0)
 rifle_training = make_upgrade("DA_TestRifleTraining", "Test Rifle Training", 400, 8.0, unreal.RTSUpgradeStat.WEAPON_DAMAGE, 1.5,
@@ -1873,13 +1876,14 @@ rifle_training = make_upgrade("DA_TestRifleTraining", "Test Rifle Training", 400
 add_properties(grenadier, {"prerequisites": [rifle_training]})
 # The tower hits ground and air alike; the flak truck only aircraft in flight, the jet's missiles only the ground.
 tower_gun = make_weapon("DA_TestTowerGun", TANK_RANGE * TOWER_RANGE_OVER_TANK, 30.0, 1.0, 35000.0, 1.2, (0.4, 0.8, 1.0),
-                        air=True)
+                        air=True, splash_radius=250.0)
 flak = make_weapon("DA_TestFlak", 8000.0, 25.0, 0.6, 40000.0, 0.8, (0.9, 0.9, 0.5), ground=False, air=True,
                    muzzle_flash=muzzle_flash)
 # An air-defence truck, 7.0 x 2.5 m; the van's proportions let the width bind.
 flak_truck = make_unit("DA_TestFlakTruck", "Test Flak Truck", truck_mesh, fit_scale(truck_mesh, 700.0, 250.0), 250.0,
                        flak, 1400.0, 75.0, 800, 8.0)
-missiles = make_weapon("DA_TestJetMissiles", 5000.0, 60.0, 1.0, 20000.0, 1.2, (1.0, 0.3, 0.2))
+missiles = make_weapon("DA_TestJetMissiles", 5000.0, 60.0, 1.0, 20000.0, 1.2, (1.0, 0.3, 0.2), splash_radius=400.0)
+
 # A fighter compressed to 0.6x, 10 m long with a 7 m span. Four missiles a sortie, eight seconds on its pad to rearm.
 jet = make_aircraft("DA_TestJet", "Test Jet", jet_mesh, fit_scale(jet_mesh, 1000.0, 700.0), 150.0, missiles, 4000.0,
                     75.0, 1200, 12.0, 3000.0, 1200.0, 45.0, 4, 8.0)
