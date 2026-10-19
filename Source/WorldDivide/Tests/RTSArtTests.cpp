@@ -7,6 +7,7 @@
 #include "Data/RTSUnitData.h"
 #include "Dom/JsonObject.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshSocket.h"
 #include "StaticMeshAttributes.h"
 #include "Algo/AllOf.h"
 #include "Algo/AnyOf.h"
@@ -20,6 +21,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "StaticMeshResources.h"
 #include "Tests/RTSTestFlags.h"
+#include "Units/RTSUnit.h"
 
 /**
  * The placeholder models are a few hundred triangles each: Nanite gains nothing on them, and the translucent placement
@@ -116,6 +118,13 @@ bool FRTSM20GuardianArtTest::RunTest(const FString& Parameters)
 			TestTrue(*FString::Printf(TEXT("%s slot %s may be drawn instanced"), *Part.Mesh->GetName(), *Slot.MaterialSlotName.ToString()),
 				Master && Master->GetUsageByFlag(MATUSAGE_InstancedStaticMeshes));
 		}
+	}
+	// Shots leave from the gun's Muzzle socket (#217), at the bore's tip the Blender script measured.
+	const UStaticMeshSocket* Muzzle = Data->GunMesh ? Data->GunMesh->FindSocket(ARTSUnit::MuzzleSocketName) : nullptr;
+	if (TestNotNull(TEXT("The gun has a Muzzle socket"), Muzzle))
+	{
+		TestTrue(FString::Printf(TEXT("It sits at GunMuzzleOffset (%s)"), *Muzzle->RelativeLocation.ToString()),
+			Muzzle->RelativeLocation.Equals(Data->GunMuzzleOffset, 1.0) && Muzzle->RelativeRotation.IsNearlyZero());
 	}
 	if (Data->Mesh)
 	{

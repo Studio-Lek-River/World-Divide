@@ -978,13 +978,29 @@ bool ARTSUnit::IsAimedAt(const AActor& Target) const
 	return !HasTurret() || (!bAimBlocked && FMath::Abs(FMath::FindDeltaAngleDegrees(TurretYaw, GetTurretYawToward(Target))) <= TurretAimTolerance);
 }
 
+const FName ARTSUnit::MuzzleSocketName(TEXT("Muzzle"));
+
 FVector ARTSUnit::GetMuzzleLocation() const
+{
+	return GetMuzzleTransform().GetLocation();
+}
+
+FTransform ARTSUnit::GetMuzzleTransform() const
 {
 	if (Gun)
 	{
-		return Gun->GetComponentTransform().TransformPosition(UnitData->GunMuzzleOffset);
+		if (Gun->DoesSocketExist(MuzzleSocketName))
+		{
+			FTransform Socket = Gun->GetSocketTransform(MuzzleSocketName);
+			Socket.SetScale3D(FVector::OneVector);
+			return Socket;
+		}
+		const FTransform& GunTransform = Gun->GetComponentTransform();
+		return FTransform(GunTransform.GetRotation(), GunTransform.TransformPosition(UnitData->GunMuzzleOffset));
 	}
-	return Turret->GetComponentTransform().TransformPosition(UnitData ? UnitData->MuzzleOffset : FVector::ZeroVector);
+	const FTransform& TurretTransform = Turret->GetComponentTransform();
+	return FTransform(TurretTransform.GetRotation(),
+		TurretTransform.TransformPosition(UnitData ? UnitData->MuzzleOffset : FVector::ZeroVector));
 }
 
 FLinearColor ARTSUnit::GetTeamColor(int32 InTeamId)

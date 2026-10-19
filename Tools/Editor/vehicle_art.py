@@ -352,6 +352,20 @@ def import_part(source, directory, name, slot_materials, expected_size):
     return mesh
 
 
+def set_sockets(mesh, sockets):
+    """Gives a part the sockets {name: location in cm, in the part's own space}, with no rotation: X along the part, as
+    exported (the gun's Muzzle, #217). A socket of the same name a reimport kept is replaced."""
+    for name, location in sorted(sockets.items()):
+        old = mesh.find_socket(name)
+        if old:
+            mesh.remove_socket(old)
+        socket = unreal.StaticMeshSocket(mesh)
+        socket.set_editor_property("socket_name", name)
+        socket.set_editor_property("relative_location", unreal.Vector(*location))
+        mesh.add_socket(socket)
+    return mesh
+
+
 # The LODs (#149). Every part of a vehicle changes LOD at the same distances from the camera: LOD_DISTANCES in cm, for
 # LOD1, LOD2 and LOD3. A part's screen size for a distance is the engine's (ComputeBoundsScreenSize) for its own bounds
 # radius there, so a small part has a small threshold and switches with the hull. The projection is the RTS camera's:

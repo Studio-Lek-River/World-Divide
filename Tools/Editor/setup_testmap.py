@@ -329,18 +329,24 @@ def make_m20_guardian():
         custom = {lod: os.path.join(M20_SOURCE_DIR, "fbx", "lods", f"{name}_LOD{lod}.fbx")
                   for lod in (2, 3)} if part.startswith("Track") else None
         custom_slot = ("M20_Track_Static", instances["MI_M20_Track_Static"]) if custom else None
+        # The gun's muzzle, where its shots leave (#217): the tip of the bore the Blender script measured.
+        sockets = {"Muzzle": tuple(layout["gun_muzzle_offset"])} if part == "Gun" else {}
 
-        def build(s=source, n=name, l=length, t=triangles, i=instanced, c=custom, cs=custom_slot):
-            return vehicle_art.build_lods(vehicle_art.import_part(s, mesh_dir, n, slot_materials, l), t, i, c, cs)
+        def build(s=source, n=name, l=length, t=triangles, i=instanced, c=custom, cs=custom_slot, so=sockets):
+            mesh = vehicle_art.build_lods(vehicle_art.import_part(s, mesh_dir, n, slot_materials, l), t, i, c, cs)
+            return vehicle_art.set_sockets(mesh, so)
 
+        # The sockets join the hash only of a part that has them, so adding them rebuilt the gun alone.
+        socket_spec = ([vehicle_art.set_sockets], [sorted(sockets.items())]) if sockets else ([], [])
         meshes[part] = plan_now(
             f"{mesh_dir}/{name}", build,
             spec_hash([vehicle_art.import_part, vehicle_art.build_lods, vehicle_art.lod_radius,
-                       vehicle_art.lod_screen_sizes], mesh_dir, name, length, file_hash(source),
+                       vehicle_art.lod_screen_sizes] + socket_spec[0], mesh_dir, name, length, file_hash(source),
                       sorted((slot, object_path(material)) for slot, material in slot_materials.items()),
                       triangles, instanced, vehicle_art.LOD_DISTANCES, vehicle_art.SCREEN_MULTIPLE,
                       sorted((lod, file_hash(path)) for lod, path in (custom or {}).items()),
-                      custom_slot and (custom_slot[0], object_path(custom_slot[1]))))
+                      custom_slot and (custom_slot[0], object_path(custom_slot[1])),
+                      *socket_spec[1]))
 
     def part(mesh, mount, offset, yaw=0.0, wheel=False, roll_radius=0.0, track_pitch=0.0, rigid_material=None):
         value = unreal.RTSVehiclePart()

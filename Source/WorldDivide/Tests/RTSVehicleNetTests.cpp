@@ -5,6 +5,8 @@
 #include "AIController.h"
 #include "Buildings/RTSBuilding.h"
 #include "Commands/RTSCommand.h"
+#include "Combat/RTSShotEffect.h"
+#include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Components/StaticMeshComponent.h"
 #include "Data/RTSUnitData.h"
@@ -264,6 +266,130 @@ namespace RTSVehicleNetTests
 	private:
 		bool bDedicated;
 	};
+
+	/**
+	 * #217: an M20 fires a few shots at an unarmed enemy. Each shot raises one shot event on a listen server's host and on
+	 * every client, counted against the shots the server fired; a dedicated server raises none and shows none.
+	 */
+	void AddShotEvents(FAutomationTestBase& Test, const TSharedRef<FSession>& Session)
+	{
+		struct FShots
+		{
+			TWeakObjectPtr<ARTSUnit> Shooter;
+			TWeakObjectPtr<ARTSUnit> Target;
+			/** Events on the server, then on each client. */
+			TArray<int32> Events;
+			int32 Fired = 0;
+			TOptional<double> Stopped;
+		};
+		constexpr int32 MinShots = 4;
+		TSharedRef<FShots> Shots = MakeShared<FShots>();
+		Session->Phases.Add({ TEXT("Shots: spawn"), [&Test, Session, Shots](double)
+		{
+			// The phases before leave their vehicles in this strip, within range.
+			for (TActorIterator<ARTSUnit> It(Session->ServerWorld); It; ++It)
+			{
+				if (It->GetActorLocation().Y > DriveStart.Y - 8000.f)
+				{
+					It->Destroy();
+				}
+			}
+			Shots->Shooter = SpawnUnit(*Session->ServerWorld, M20Path, 0, DriveStart, 0.f);
+			return Test.TestNotNull(TEXT("Shots: the M20 spawns on the server"), Shots->Shooter.Get());
+		} });
+		Session->Phases.Add({ TEXT("Shots: first sight"), [](double Elapsed) { return Elapsed > 2.0; } });
+		Session->Phases.Add({ TEXT("Shots: listen and fire"), [&Test, Session, Shots](double)
+		{
+			ARTSUnit* Shooter = Shots->Shooter.Get();
+			if (!Shooter)
+			{
+				Test.AddError(TEXT("Shots: the M20 is gone"));
+				return true;
+			}
+			TArray<ARTSUnit*> Copies = { Shooter };
+			for (UWorld* Client : Session->ClientWorlds)
+			{
+				ARTSUnit* Copy = FindCopy(*Client, *Shooter);
+				Test.TestNotNull(TEXT("Shots: the client sees the M20"), Copy);
+				Copies.Add(Copy);
+			}
+			Shots->Events.Init(0, Copies.Num());
+			for (int32 Index = 0; Index < Copies.Num(); ++Index)
+			{
+				if (Copies[Index])
+				{
+					Copies[Index]->OnShot().AddLambda([Shots, Index](const FRTSShotEvent&) { ++Shots->Events[Index]; });
+				}
+			}
+			// Ahead and to the side, so the turret turns; unarmed, so the M20 lives.
+			ARTSUnit* Target = SpawnUnit(*Session->ServerWorld, M20Path, 1, DriveStart + FVector(2500.f, 1200.f, 0.f), 180.f);
+			if (Test.TestNotNull(TEXT("Shots: the target spawns"), Target))
+			{
+				Target->GetWeaponComponent()->SetComponentTickEnabled(false);
+				Shots->Target = Target;
+			}
+			return true;
+		} });
+		Session->Phases.Add({ TEXT("Shots: fired"), [&Test, Session, Shots](double Elapsed)
+		{
+			ARTSUnit* Shooter = Shots->Shooter.Get();
+			const int32 Fired = Shooter ? Shooter->GetWeaponComponent()->GetShotsFired() : 0;
+			if (!Shots->Stopped)
+			{
+				if (Fired < MinShots && Elapsed < PhaseTimeout && Shots->Target.IsValid())
+				{
+					return false;
+				}
+				// No target left, no more shots; the last one still has to cross the network.
+				if (Shots->Target.IsValid())
+				{
+					Shots->Target->Destroy();
+				}
+				Shots->Fired = Fired;
+				Shots->Stopped = Elapsed;
+				return false;
+			}
+			if (Elapsed - *Shots->Stopped < 2.0)
+			{
+				return false;
+			}
+			Test.TestTrue(FString::Printf(TEXT("Shots: the M20 fired %d shots, and none once its target was gone"), Fired),
+				Fired >= MinShots && Fired == Shots->Fired);
+			for (int32 Index = 0; Index < Shots->Events.Num(); ++Index)
+			{
+				const int32 Events = Shots->Events[Index];
+				if (Index == 0)
+				{
+					Test.TestEqual(Session->bDedicated ? TEXT("Shots: the dedicated server raises no event")
+						: TEXT("Shots: the host raises one event per shot"), Events, Session->bDedicated ? 0 : Fired);
+				}
+				else if (Session->bDedicated)
+				{
+					// About 2 % of the packets are lost, and the shot is unreliable: never more, at most a few fewer.
+					Test.TestTrue(FString::Printf(TEXT("Shots: client %d raises at most one event per shot (%d of %d)"), Index, Events, Fired),
+						Events <= Fired && Events >= Fired - 2);
+				}
+				else
+				{
+					Test.TestEqual(*FString::Printf(TEXT("Shots: client %d raises one event per shot"), Index), Events, Fired);
+				}
+			}
+			if (Session->bDedicated)
+			{
+				int32 Effects = 0;
+				for (TActorIterator<ARTSShotEffect> It(Session->ServerWorld); It; ++It)
+				{
+					++Effects;
+				}
+				Test.TestEqual(TEXT("Shots: the dedicated server shows no shot"), Effects, 0);
+			}
+			if (Shooter)
+			{
+				Shooter->Destroy();
+			}
+			return true;
+		} });
+	}
 }
 
 DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVehicleNetWaitForSession, FAutomationTestBase*, Test, TSharedRef<RTSVehicleNetTests::FSession>, Session);
@@ -1153,6 +1279,7 @@ bool FRTSVehicleNetListenTest::RunTest(const FString& Parameters)
 	AddDrives(*this, Session);
 	AddStuckFeedback(*this, Session);
 	AddGroupOrders(*this, Session);
+	AddShotEvents(*this, Session);
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSStartNetSession(false));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetWaitForSession(this, Session));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetRunPhases(this, Session));
@@ -1182,6 +1309,7 @@ bool FRTSVehicleNetDedicatedTest::RunTest(const FString& Parameters)
 	AddDrives(*this, Session);
 	AddStuckFeedback(*this, Session);
 	AddGroupOrders(*this, Session);
+	AddShotEvents(*this, Session);
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSStartNetSession(true));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetWaitForSession(this, Session));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetRunPhases(this, Session));

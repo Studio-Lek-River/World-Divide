@@ -2,6 +2,7 @@
 
 #include "Buildings/RTSBuilding.h"
 #include "Combat/RTSHealthComponent.h"
+#include "Combat/RTSShotEffect.h"
 #include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSTargetable.h"
 #include "Core/RTSGameState.h"
@@ -247,6 +248,7 @@ void URTSWeaponComponent::UpdateWeapon(float DeltaSeconds)
 		return;
 	}
 	Cooldown = WeaponData->ReloadSeconds;
+	++ShotsFired;
 	if (Ammo > 0)
 	{
 		--Ammo;
@@ -281,11 +283,42 @@ void URTSWeaponComponent::Multicast_PlayShot_Implementation(URTSWeaponData* Weap
 	{
 		return;
 	}
-	GetWorld()->GetSubsystem<URTSShotSubsystem>()->PlayShot(*GetOwner(), *Weapon, ShotTarget, TargetLocation, FlightTime);
-	if (ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner()))
+	AActor& Shooter = *GetOwner();
+	const FVector AimPoint = ShotTarget ? ARTSShotEffect::GetAimPoint(*ShotTarget, Shooter.GetActorLocation()) : FVector(TargetLocation);
+	const FTransform Muzzle = GetMuzzleTransform(Shooter, AimPoint);
+	GetWorld()->GetSubsystem<URTSShotSubsystem>()->PlayShot(Shooter, *Weapon, ShotTarget, TargetLocation, FlightTime, Muzzle.GetLocation());
+	if (ARTSUnit* Unit = Cast<ARTSUnit>(&Shooter))
 	{
+		// The one event per shot the vehicle's presentation listens to (#217), before the kick moves the barrel; a unit
+		// without listeners builds nothing.
+		if (Unit->OnShot().IsBound())
+		{
+			FRTSShotEvent Event;
+			Event.Weapon = Weapon;
+			Event.Muzzle = Muzzle;
+			const FVector Toward = AimPoint - Muzzle.GetLocation();
+			Event.Direction = Toward.IsNearlyZero() ? Muzzle.GetUnitAxis(EAxis::X) : Toward.GetSafeNormal();
+			Unit->OnShot().Broadcast(Event);
+		}
 		Unit->PlayFireKick(Weapon->EffectScale);
 	}
+}
+
+FTransform URTSWeaponComponent::GetMuzzleTransform(const AActor& Shooter, const FVector& Toward)
+{
+	if (const ARTSUnit* Unit = Cast<ARTSUnit>(&Shooter); Unit && Unit->HasTurret())
+	{
+		return Unit->GetMuzzleTransform();
+	}
+	FVector BoundsOrigin;
+	FVector BoundsExtent;
+	Shooter.GetActorBounds(false, BoundsOrigin, BoundsExtent);
+	const FVector Direction = (Toward - BoundsOrigin).GetSafeNormal2D();
+	// The bounds are world aligned, so their corner reach overshoots a turned hull; most of it lands near the front.
+	const float Reach = FVector(BoundsExtent.X, BoundsExtent.Y, 0.f).Size() * 0.7f;
+	const FVector Location = BoundsOrigin + Direction * Reach + FVector(0.f, 0.f, BoundsExtent.Z * 0.3f);
+	const FVector Facing = Toward - Location;
+	return FTransform(Facing.IsNearlyZero() ? FRotator::ZeroRotator : Facing.Rotation(), Location);
 }
 
 void URTSWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)

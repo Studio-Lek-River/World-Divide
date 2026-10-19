@@ -29,6 +29,23 @@ struct FRTSTrackViews
 };
 
 class AAIController;
+class URTSWeaponData;
+
+/**
+ * One shot as the machines that draw see it (#217): raised by ARTSUnit::OnShot once per authoritative shot, on a listen
+ * server's host and on every client, never on a dedicated server. For the gun's recoil, flash and smoke.
+ */
+struct FRTSShotEvent
+{
+	const URTSWeaponData* Weapon = nullptr;
+	/** The barrel tip in world space, X along the bore (ARTSUnit::GetMuzzleTransform). */
+	FTransform Muzzle;
+	/** Unit vector from the muzzle toward where the shot is aimed. */
+	FVector Direction = FVector::ForwardVector;
+};
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FRTSShotDelegate, const FRTSShotEvent&);
+
 class UBoxComponent;
 class UInstancedStaticMeshComponent;
 class UStaticMeshComponent;
@@ -238,6 +255,21 @@ public:
 	/** Every machine. The barrel tip in world space, on the gun when the data gives one; only meaningful with a turret. */
 	FVector GetMuzzleLocation() const;
 
+	/**
+	 * Every machine. The barrel tip with X along the bore: the gun mesh's MuzzleSocketName socket, else the gun at
+	 * URTSUnitData::GunMuzzleOffset, else the turret at MuzzleOffset. Follows TurretYaw and GunPitch; only meaningful with a turret.
+	 */
+	FTransform GetMuzzleTransform() const;
+
+	/** The gun mesh's socket at the tip of its bore. */
+	static const FName MuzzleSocketName;
+
+	/**
+	 * Every machine that draws. Raised once per shot from URTSWeaponComponent::Multicast_PlayShot; nothing is built for a
+	 * unit nobody listens to.
+	 */
+	FRTSShotDelegate& OnShot() { return ShotDelegate; }
+
 	/** A turret unit whose data also gives it a gun that elevates. */
 	bool HasGun() const;
 
@@ -426,6 +458,8 @@ private:
 	 * Returns true when the mesh has to move.
 	 */
 	bool UpdateTilt(float DeltaSeconds);
+
+	FRTSShotDelegate ShotDelegate;
 
 	/** Places the mesh from its rest location, tilt and fire kick; it leans around the bottom of the hull box. */
 	void UpdateMeshTransform();

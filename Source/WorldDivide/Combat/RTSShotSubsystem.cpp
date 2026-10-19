@@ -60,7 +60,7 @@ int32 URTSShotSubsystem::GetMaxShotLights()
 }
 
 void URTSShotSubsystem::PlayShot(AActor& Shooter, const URTSWeaponData& Weapon, AActor* Target, const FVector& TargetLocation,
-	float FlightTime)
+	float FlightTime, const FVector& MuzzleLocation)
 {
 	UWorld* World = GetWorld();
 	if (!World || World->GetNetMode() == NM_DedicatedServer)
@@ -99,7 +99,7 @@ void URTSShotSubsystem::PlayShot(AActor& Shooter, const URTSWeaponData& Weapon, 
 	}
 	if (IsValid(Effect))
 	{
-		Effect->Start(*this, Shooter, Weapon, Target, TargetLocation, FlightTime);
+		Effect->Start(*this, Shooter, Weapon, Target, TargetLocation, FlightTime, MuzzleLocation);
 		LiveEffects.Add(Effect);
 	}
 }

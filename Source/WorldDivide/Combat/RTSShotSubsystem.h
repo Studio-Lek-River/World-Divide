@@ -32,10 +32,11 @@ public:
 	int32 GetShellsInFlight() const { return Shells.Num(); }
 
 	/**
-	 * Shows a shot from Shooter at Target, or at TargetLocation when Target is gone, landing after FlightTime seconds.
-	 * Does nothing on a dedicated server.
+	 * Shows a shot from Shooter's MuzzleLocation at Target, or at TargetLocation when Target is gone, landing after FlightTime
+	 * seconds. Does nothing on a dedicated server.
 	 */
-	void PlayShot(AActor& Shooter, const URTSWeaponData& Weapon, AActor* Target, const FVector& TargetLocation, float FlightTime);
+	void PlayShot(AActor& Shooter, const URTSWeaponData& Weapon, AActor* Target, const FVector& TargetLocation, float FlightTime,
+		const FVector& MuzzleLocation);
 
 	/** Moves every shot effect DeltaSeconds on and takes those that are over back into the pool. Public so tests can step it. */
 	void AdvanceEffects(float DeltaSeconds);

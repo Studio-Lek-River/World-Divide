@@ -1,8 +1,11 @@
 #include "Combat/RTSHealthComponent.h"
+#include "Combat/RTSShotEffect.h"
 #include "Combat/RTSWeaponComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
 #include "Engine/StaticMesh.h"
+#include "EngineUtils.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
@@ -96,6 +99,76 @@ bool FRTSTurretlessTest::RunTest(const FString& Parameters)
 	Unit->UpdateTurret(0.05f);
 	TestEqual(TEXT("It fires straight away, as before"), Enemy->GetHealthComponent()->GetHealth(), 90.f);
 	TestEqual(TEXT("Its turret yaw stays zero"), Unit->GetTurretYaw(), 0.f);
+	return true;
+}
+
+/**
+ * The M20's shot event (#217): with the turret turned and the gun raised, the event's muzzle is the gun mesh's Muzzle
+ * socket within 1 cm, X along the bore, and the shot's flash starts there.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSShotMuzzleTest, "WorldDivide.Combat.Turret.ShotMuzzle", TestFlags)
+
+bool FRTSShotMuzzleTest::RunTest(const FString& Parameters)
+{
+	constexpr float Step = 0.05f;
+	constexpr float Tolerance = 1.f;
+	URTSUnitData* M20 = LoadObject<URTSUnitData>(nullptr, TEXT("/Game/Data/Units/DA_TestM20Guardian.DA_TestM20Guardian"));
+	if (!TestNotNull(TEXT("DA_TestM20Guardian loads"), M20) || !TestNotNull(TEXT("It has a weapon"), M20->Weapon.Get()))
+	{
+		return false;
+	}
+	const FRTSTestWorld TestWorld;
+	ARTSUnit* Tank = TestWorld.SpawnUnit(M20, 0, FVector::ZeroVector);
+	// Ahead and to the left, above the tank, so the turret turns and the gun rises.
+	const FVector TargetLocation(1500.f, 1500.f, Tank->GetNavAgentLocation().Z + 500.f);
+	ARTSUnit* Enemy = TestWorld.SpawnUnit(MakeUnitData(nullptr, false), 1, TargetLocation);
+
+	UStaticMeshComponent* Gun = nullptr;
+	Tank->ForEachComponent<UStaticMeshComponent>(false, [&Gun](UStaticMeshComponent* Component)
+	{
+		Gun = Component->DoesSocketExist(ARTSUnit::MuzzleSocketName) ? Component : Gun;
+	});
+	if (!TestNotNull(TEXT("The gun mesh has a Muzzle socket"), Gun))
+	{
+		return false;
+	}
+
+	TArray<FRTSShotEvent> Events;
+	TArray<FTransform> Sockets;
+	Tank->OnShot().AddLambda([&Events, &Sockets, Gun](const FRTSShotEvent& Event)
+	{
+		Events.Add(Event);
+		Sockets.Add(Gun->GetSocketTransform(ARTSUnit::MuzzleSocketName));
+	});
+	for (int32 Frame = 0; Frame < 200 && Events.IsEmpty(); ++Frame)
+	{
+		Tank->UpdateTurret(Step);
+		Tank->GetWeaponComponent()->UpdateWeapon(Step);
+	}
+	if (!TestEqual(TEXT("One shot, one event"), Events.Num(), 1))
+	{
+		return false;
+	}
+	const FRTSShotEvent& Event = Events[0];
+	TestTrue(FString::Printf(TEXT("The turret turned (%.1f degrees)"), Tank->GetTurretYaw()), Tank->GetTurretYaw() > 30.f);
+	TestTrue(FString::Printf(TEXT("The gun rose (%.1f degrees)"), Tank->GetGunPitch()), Tank->GetGunPitch() > 5.f);
+	TestTrue(TEXT("The event carries the weapon"), Event.Weapon == M20->Weapon);
+	const float Distance = FVector::Dist(Event.Muzzle.GetLocation(), Sockets[0].GetLocation());
+	TestTrue(FString::Printf(TEXT("The muzzle is the socket (%.2f cm off)"), Distance), Distance <= Tolerance);
+	const FVector Bore = Event.Muzzle.GetUnitAxis(EAxis::X);
+	TestTrue(TEXT("Its X runs along the bore"), FVector::DotProduct(Bore, Sockets[0].GetUnitAxis(EAxis::X)) > 0.9999f);
+	TestTrue(FString::Printf(TEXT("The bore points up by the gun's pitch (%.1f degrees)"), Bore.Rotation().Pitch),
+		FMath::IsNearlyEqual(Bore.Rotation().Pitch, Tank->GetGunPitch(), 0.5f));
+	TestTrue(TEXT("The shot leaves toward the enemy"), FVector::DotProduct(Event.Direction,
+		(Enemy->GetActorLocation() - Event.Muzzle.GetLocation()).GetSafeNormal()) > 0.95f);
+	TestTrue(TEXT("The direction is a unit vector"), Event.Direction.IsNormalized());
+
+	TActorIterator<ARTSShotEffect> Effect(TestWorld.World);
+	if (TestTrue(TEXT("The shot is shown"), static_cast<bool>(Effect)))
+	{
+		const float FlashDistance = FVector::Dist(Effect->GetGlows()[0]->GetComponentLocation(), Event.Muzzle.GetLocation());
+		TestTrue(FString::Printf(TEXT("Its flash starts at the muzzle (%.2f cm off)"), FlashDistance), FlashDistance <= Tolerance);
+	}
 	return true;
 }
 

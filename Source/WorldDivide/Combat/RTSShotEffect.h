@@ -31,11 +31,11 @@ public:
 	void SetLook(UStaticMesh* Mesh, UMaterialInterface* Material);
 
 	/**
-	 * Fires from Shooter at Target, or at TargetLocation when Target is gone, landing after FlightTime seconds. Pool hands out
-	 * the light slots.
+	 * Fires from Shooter's MuzzleLocation at Target, or at TargetLocation when Target is gone, landing after FlightTime
+	 * seconds. Pool hands out the light slots.
 	 */
 	void Start(URTSShotSubsystem& Pool, AActor& Shooter, const URTSWeaponData& Weapon, AActor* Target, const FVector& TargetLocation,
-		float FlightTime);
+		float FlightTime, const FVector& MuzzleLocation);
 
 	/** Moves the effect DeltaSeconds on; returns false once it is over. */
 	bool Advance(float DeltaSeconds);
@@ -48,9 +48,6 @@ public:
 
 	/** The point the shell flies to on Target: the edge of its footprint facing From, halfway up. */
 	static FVector GetAimPoint(const AActor& Target, const FVector& From);
-
-	/** Where a shot leaves Shooter toward Toward: the edge of its bounds on that side, two thirds up. */
-	static FVector GetMuzzlePoint(const AActor& Shooter, const FVector& Toward);
 
 	/** The glows: the muzzle flash, the shell and the impact flash. Public for the tests. */
 	TArray<UStaticMeshComponent*> GetGlows() const;

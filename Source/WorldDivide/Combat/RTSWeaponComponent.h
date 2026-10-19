@@ -61,6 +61,9 @@ public:
 	/** Shots left, INDEX_NONE for no limit. Replicates for the HUD. */
 	int32 GetAmmo() const { return Ammo; }
 
+	/** Server only. Shots fired since the weapon was made; for the tests. */
+	int32 GetShotsFired() const { return ShotsFired; }
+
 	/** Distance to the edge of the target's footprint is within range. */
 	bool IsInRange(const AActor* Candidate) const;
 
@@ -68,6 +71,12 @@ public:
 
 	/** Server only. Advances the reload and fires when possible. Public so tests can step it deterministically. */
 	void UpdateWeapon(float DeltaSeconds);
+
+	/**
+	 * Where a shot leaves Shooter toward Toward, X along the shot: a turret unit's barrel tip (ARTSUnit::GetMuzzleTransform),
+	 * otherwise the edge of its bounds on that side, two thirds up, facing Toward.
+	 */
+	static FTransform GetMuzzleTransform(const AActor& Shooter, const FVector& Toward);
 
 	/** Seconds every weapon has spent searching for a target since the last call, which resets it; for rts.Debug.Bench. */
 	static double TakeSearchSeconds();
@@ -107,6 +116,8 @@ private:
 
 	UPROPERTY(Replicated)
 	int32 Ammo = INDEX_NONE;
+
+	int32 ShotsFired = 0;
 
 	/** Seconds until the next shot; zero means ready, so the first shot on a new target is immediate. */
 	float Cooldown = 0.f;

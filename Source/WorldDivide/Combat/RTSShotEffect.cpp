@@ -9,7 +9,6 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Units/RTSPrimitiveData.h"
-#include "Units/RTSUnit.h"
 
 namespace
 {
@@ -101,7 +100,7 @@ TArray<UStaticMeshComponent*> ARTSShotEffect::GetGlows() const
 }
 
 void ARTSShotEffect::Start(URTSShotSubsystem& InPool, AActor& Shooter, const URTSWeaponData& InWeapon, AActor* InTarget,
-	const FVector& TargetLocation, float InFlightTime)
+	const FVector& TargetLocation, float InFlightTime, const FVector& MuzzleLocation)
 {
 	Stop();
 	Pool = &InPool;
@@ -110,7 +109,7 @@ void ARTSShotEffect::Start(URTSShotSubsystem& InPool, AActor& Shooter, const URT
 	LastTargetPoint = InTarget ? GetAimPoint(*InTarget, Shooter.GetActorLocation()) : TargetLocation;
 	// The target's bounds walk all of its parts, so they are measured once; it is a vehicle or a building and keeps its height.
 	TargetAimHeight = InTarget ? LastTargetPoint.Z - InTarget->GetActorLocation().Z : 0.f;
-	Muzzle = GetMuzzlePoint(Shooter, LastTargetPoint);
+	Muzzle = MuzzleLocation;
 	FlightTime = FMath::Max(InFlightTime, 0.f);
 	Age = 0.f;
 	bLanded = false;
@@ -171,21 +170,6 @@ FVector ARTSShotEffect::GetAimPoint(const AActor& InTarget, const FVector& From)
 	FVector Point = Targetable ? Targetable->GetClosestFootprintPoint(From) : InTarget.GetActorLocation();
 	Point.Z = BoundsOrigin.Z;
 	return Point;
-}
-
-FVector ARTSShotEffect::GetMuzzlePoint(const AActor& Shooter, const FVector& Toward)
-{
-	if (const ARTSUnit* Unit = Cast<ARTSUnit>(&Shooter); Unit && Unit->HasTurret())
-	{
-		return Unit->GetMuzzleLocation();
-	}
-	FVector BoundsOrigin;
-	FVector BoundsExtent;
-	Shooter.GetActorBounds(false, BoundsOrigin, BoundsExtent);
-	const FVector Direction = (Toward - BoundsOrigin).GetSafeNormal2D();
-	// The bounds are world aligned, so their corner reach overshoots a turned hull; most of it lands near the front.
-	const float Reach = FVector(BoundsExtent.X, BoundsExtent.Y, 0.f).Size() * 0.7f;
-	return BoundsOrigin + Direction * Reach + FVector(0.f, 0.f, BoundsExtent.Z * 0.3f);
 }
 
 FVector ARTSShotEffect::GetTargetPoint() const
