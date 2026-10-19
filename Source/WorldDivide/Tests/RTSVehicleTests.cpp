@@ -441,7 +441,7 @@ namespace
 				&& FMath::Abs(PhaseDelta(Now.Phase[1], Mark.Phase[1])) <= StillPhase);
 		}
 
-		// The material has the phase, and last frame's: equal once standing, so the links do not smear.
+		// The material has the phase, and no link rate once standing, so the links do not smear.
 		const UStaticMeshComponent* LeftComponent = nullptr;
 		{
 			TArray<UStaticMeshComponent*> Meshes;
@@ -457,9 +457,8 @@ namespace
 				}
 			}
 			const TArray<float>* Data = LeftComponent ? &LeftComponent->GetCustomPrimitiveData().Data : nullptr;
-			Test.TestTrue(TEXT("The left track's material has its phase, with last frame's equal to it while it stands"),
-				Data && Data->Num() >= 2 && (*Data)[RTSPrimitiveData::TrackPhase] == Phase
-				&& (*Data)[RTSPrimitiveData::TrackPreviousPhase] == (*Data)[RTSPrimitiveData::TrackPhase]);
+			Test.TestTrue(TEXT("The left track's material has its phase, with no link rate while it stands"),
+				Data && Data->Num() >= 3 && (*Data)[RTSPrimitiveData::TrackPhase] == Phase && (*Data)[RTSPrimitiveData::TrackRate] == 0.f);
 
 			// The team colour beside it (#150): each kept where it is when the other changes.
 			auto HasColor = [Data](int32 TeamId)
@@ -474,12 +473,14 @@ namespace
 			TeamProperty->SetPropertyValue_InContainer(Unit, 1);
 			Unit->ProcessEvent(Unit->FindFunctionChecked(TEXT("OnRep_TeamId")), nullptr);
 			Test.TestTrue(TEXT("A new team colour leaves the phase as it was"), HasColor(1) && Data && (*Data)[RTSPrimitiveData::TrackPhase] == Phase
-				&& (*Data)[RTSPrimitiveData::TrackPreviousPhase] == Phase);
+				&& (*Data)[RTSPrimitiveData::TrackRate] == 0.f);
 			RunGear(*Unit, Ahead, 0.5);
 			float Moved = 0.f;
+			float Drawn = 0.f;
 			Unit->GetTrackPhase(LeftTrack, Moved);
-			Test.TestTrue(TEXT("and a new phase leaves the team colour"), HasColor(1) && Data && (*Data)[RTSPrimitiveData::TrackPhase] == Moved
-				&& Moved != Phase);
+			Unit->GetTrackMaterialPhase(LeftTrack, Drawn);
+			Test.TestTrue(TEXT("and a new phase leaves the team colour"), HasColor(1) && Data && (*Data)[RTSPrimitiveData::TrackRate] < 0.f
+				&& FMath::Abs(PhaseDelta(Drawn, Moved)) <= ARTSUnit::TrackDriftLimit && Moved != Phase);
 			RunGear(*Unit, RTSLocomotion::FCommand(), 2.0);
 		}
 
@@ -620,6 +621,108 @@ bool FRTSRunningGearTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Once the unit stops, the wheels stop"), GetPart(*Unit, LeftWheel).Equals(Turned));
 
 	TestTrackedGear(*this);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTrackRateTest, "WorldDivide.Units.RunningGear.TrackRate", TestFlags)
+
+/**
+ * #216: a track's material works its phase out from a link rate and a start time, sent only when the rate changes or the
+ * phase drifts from the realized travel. In every frame the drawn phase stays within ARTSUnit::TrackDriftLimit of the
+ * travel's, a steady drive hardly sends, and a stopped track has its phase exactly, without a rate.
+ */
+bool FRTSTrackRateTest::RunTest(const FString& Parameters)
+{
+	const FRTSTestWorld TestWorld;
+	ARTSUnit* Unit = TestWorld.SpawnUnit(MakeTrackedData(), 0, FVector::ZeroVector);
+	const RTSLocomotion::FLimits& Limits = Unit->GetUnitMovement()->GetLimits();
+	TArray<const UStaticMeshComponent*, TInlineAllocator<2>> Components;
+	Unit->GetTrackComponents(Components);
+	if (!TestEqual(TEXT("Both tracks are there"), Components.Num(), 2))
+	{
+		return false;
+	}
+
+	/**
+	 * Over one run: the largest gap between the drawn and the travel's phase, and at its end; the phases sent, of one a track
+	 * and frame at most; and each side's rate at its end.
+	 */
+	struct FRun
+	{
+		float WorstDrift = 0.f;
+		float EndDrift = 0.f;
+		int32 Sent = 0;
+		int32 Frames = 0;
+		float Rate[2] = { 0.f, 0.f };
+	};
+	auto Run = [Unit, &Components](const RTSLocomotion::FCommand& Command, double Seconds)
+	{
+		FRun Out;
+		Unit->GetUnitMovement()->SetCommandOverride(Command);
+		for (int32 Index = FMath::RoundToInt32(Seconds * GearRate); Index > 0; --Index)
+		{
+			Unit->GetWorld()->TimeSeconds += 1.0 / GearRate;
+			Unit->GetUnitMovement()->TickComponent(1.f / GearRate, LEVELTICK_All, nullptr);
+			Out.Sent += Unit->UpdateRunningGear();
+			Out.Frames += 2;
+			Out.EndDrift = 0.f;
+			for (int32 Side = 0; Side < 2; ++Side)
+			{
+				float Phase = 0.f;
+				float Drawn = 0.f;
+				Unit->GetTrackPhase(LeftTrack + Side, Phase);
+				Unit->GetTrackMaterialPhase(LeftTrack + Side, Drawn);
+				Out.EndDrift = FMath::Max(Out.EndDrift, FMath::Abs(PhaseDelta(Drawn, Phase)));
+			}
+			Out.WorstDrift = FMath::Max(Out.WorstDrift, Out.EndDrift);
+		}
+		for (int32 Side = 0; Side < 2; ++Side)
+		{
+			Out.Rate[Side] = Components[Side]->GetCustomPrimitiveData().Data[RTSPrimitiveData::TrackRate];
+		}
+		return Out;
+	};
+	auto Within = [this](const TCHAR* What, const FRun& Done)
+	{
+		TestTrue(FString::Printf(TEXT("%s: the drawn phase stays within the drift limit (%.4f of a link; %d sends in %d track frames)"), What,
+			Done.WorstDrift, Done.Sent, Done.Frames), Done.WorstDrift <= ARTSUnit::TrackDriftLimit + 1.e-4f);
+	};
+	auto Stands = [this, &Within](const TCHAR* What, const FRun& Done)
+	{
+		Within(What, Done);
+		TestTrue(FString::Printf(TEXT("%s: stopped, the material has the phase exactly (%.6f) and no rate (%.3f, %.3f)"), What, Done.EndDrift,
+			Done.Rate[0], Done.Rate[1]), Done.EndDrift == 0.f && Done.Rate[0] == 0.f && Done.Rate[1] == 0.f);
+	};
+
+	RTSLocomotion::FCommand Ahead;
+	Ahead.Speed = 600.f;
+	const FRun Accelerate = Run(Ahead, 2.0);
+	Within(TEXT("Accelerating"), Accelerate);
+	TestTrue(FString::Printf(TEXT("Accelerating sends in at most one track frame of twenty (%d of %d)"), Accelerate.Sent, Accelerate.Frames),
+		20 * Accelerate.Sent <= Accelerate.Frames);
+	const FRun Cruise = Run(Ahead, 3.0);
+	Within(TEXT("Cruising"), Cruise);
+	TestTrue(FString::Printf(TEXT("Cruising sends in at most one track frame of twenty (%d of %d)"), Cruise.Sent, Cruise.Frames),
+		20 * Cruise.Sent <= Cruise.Frames);
+	TestTrue(FString::Printf(TEXT("Forward, both tracks count down (%.2f, %.2f links/s)"), Cruise.Rate[0], Cruise.Rate[1]),
+		Cruise.Rate[0] < 0.f && Cruise.Rate[1] < 0.f);
+	Stands(TEXT("Braking"), Run(RTSLocomotion::FCommand(), 2.0));
+	const FRun Still = Run(RTSLocomotion::FCommand(), 1.0);
+	TestEqual(TEXT("Standing sends nothing"), Still.Sent, 0);
+
+	RTSLocomotion::FCommand Back;
+	Back.Speed = -300.f;
+	const FRun Reverse = Run(Back, 3.0);
+	Within(TEXT("Reversing"), Reverse);
+	TestTrue(FString::Printf(TEXT("Reversing, both tracks count up (%.2f, %.2f links/s)"), Reverse.Rate[0], Reverse.Rate[1]),
+		Reverse.Rate[0] > 0.f && Reverse.Rate[1] > 0.f);
+	Stands(TEXT("Stopping from reverse"), Run(RTSLocomotion::FCommand(), 2.0));
+
+	const FRun Pivot = Run(RTSLocomotion::FCommand::FromTracks(Limits, 200.f, -200.f), 2.0);
+	Within(TEXT("Pivoting right"), Pivot);
+	TestTrue(FString::Printf(TEXT("Pivoting right, the left track counts down and the right one up (%.2f, %.2f links/s)"), Pivot.Rate[0],
+		Pivot.Rate[1]), Pivot.Rate[0] < 0.f && Pivot.Rate[1] > 0.f);
+	Stands(TEXT("Stopping a pivot"), Run(RTSLocomotion::FCommand(), 2.0));
 	return true;
 }
 

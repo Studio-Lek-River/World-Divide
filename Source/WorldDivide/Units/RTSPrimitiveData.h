@@ -13,11 +13,15 @@
  */
 namespace RTSPrimitiveData
 {
-	/** M_Vehicle with TrackAnimation on: the phase through one link, and last frame's, unwrapped (ARTSUnit::UpdateRunningGear). */
+	/**
+	 * M_Vehicle with TrackAnimation on (#216): the phase through one link at a start time, the links per second it counts on
+	 * by from there, that start time in world seconds, and the links per second squared the rate changes by; the material
+	 * works out the phase, and last frame's, from the scene's time (ARTSUnit::UpdateRunningGear).
+	 */
 	constexpr int32 TrackPhase = 0;
-	constexpr int32 TrackPreviousPhase = 1;
-
-	/** 2 and 3 are free. */
+	constexpr int32 TrackRate = 1;
+	constexpr int32 TrackStart = 2;
+	constexpr int32 TrackAcceleration = 3;
 
 	/**
 	 * M_ShotFx: a shot's glow, RGBA, emissive strength included (ARTSShotEffect; #227), from 0 to 3. M_ShotFx shares no

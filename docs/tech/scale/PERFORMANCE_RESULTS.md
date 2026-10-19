@@ -1854,6 +1854,72 @@ from 4.3 to 7 to 9 ms and the rigid running gear from 0.38 to 0.44–0.55 ms, an
 - **The quick method's single samples spread by about ±0.2 ms at the running gear's p95.** A verdict that close to the budget needs
   long-method rows, which were not run here (#171).
 
+## #216 (track phase from a link rate in the material)
+
+#212 left the running gear's p95 over budget at 240 moving M20s: every moving track in view sent its phase every frame, about
+1 µs each (`SetCustomPrimitiveDataInternal` copies the component's whole custom data into a scene update).
+
+### What changed
+
+- **The material works the phase out** (`TRACK_PHASE_HLSL`, `M_Vehicle`): `Phase + s × (Rate + ½ × Acceleration × s)` with `s` the
+  scene's time since `Start`. Custom primitive data 0 to 3 hold the phase, the link rate, the start time and the acceleration.
+  The previous frame's phase comes from the same curve at `View.PrevFrameGameTime`, so the motion vectors stay right.
+- **The CPU still counts the exact phase** from the realized side travel, and sends `(Phase, Rate, Start, Acceleration)` only when
+  the material's phase drifts more than 0.02 of a link (about 3 mm) from it, when its rate is off by more than a quarter link a
+  frame, when the track stops (once, exactly, without a rate), or when it comes back into a camera's range or view.
+- **The acceleration was not in the issue.** With a rate alone, an accelerating track sent in about half its frames (92 of 240 track
+  frames in `WorldDivide.Units.RunningGear.TrackRate`); with it, 6 of 240.
+
+### Bench (long method, 240 moving M20s, idle machine)
+
+`ue.ps1 -Task bench -Long -Counts 240 -Unit DA_TestM20Guardian@LOD0@RigidTracks,DA_TestM20Guardian@LOD0@AllTracks`, then the same in
+reverse order in a second session; the close sets in a first session (`@Close@RigidTracks`, `@Close`, `@Close@AllTracks`). The
+first session's `@LOD0@AllTracks` failed the validity check (#171; another program loaded the machine) and is not used.
+
+| 240 moving M20s | Running gear ms mean (p95), three samples | Phase updates per frame | #212 updates |
+|---|---|---|---|
+| `@LOD0@RigidTracks`, run A | 0.404, 0.403, 0.398 (1.149, 1.125, 1.126) | 0 | 0 |
+| `@LOD0@AllTracks`, run A | 0.415, 0.417, 0.418 (1.187, 1.207, 1.198) | 6.0–6.4 | 172–180 |
+| `@LOD0@AllTracks`, run B (first) | 0.418, 0.416, 0.425 (1.194, 1.173, 1.228) | 6.3–6.8 | |
+| `@LOD0@RigidTracks`, run B | 0.399, 0.407, 0.405 (1.151, 1.135, 1.133) | 0 | |
+| `@Close@RigidTracks` | 0.397, 0.414, 0.411 (1.321, 1.303, 1.357) | 0 | 0 |
+| `@Close` (60 m cutoff) | 0.411, 0.421, 0.421 (1.336, 1.275, 1.325) | 3.6–4.1 | about 92 |
+| `@Close@AllTracks` | 0.386, 0.401, 0.393 (1.227, 1.190, 1.203) | 3.7–4.3 | 104–106 |
+
+GPU at the stress view: 4.11–4.13 ms rigid and animated alike. Game thread means 4.02–4.19 ms in both.
+
+### Against the budget (relative to rigid)
+
+| Budget | All-animated stress (`@LOD0@AllTracks`) | Close, 60 m cutoff | #212 (stress) |
+|---|---|---|---|
+| Running gear ≤ +0.2 ms mean | **Met** (+0.015) | **Met** (+0.010) | +0.14 |
+| Running gear ≤ +0.4 ms p95 | **Met** (+0.06) | **Met** (−0.02, noise) | +0.47 |
+| GPU ≤ +0.5 ms mean / ≤ +1.0 ms p95 | **Met** (+0.01 / 0.00) | **Met** | met |
+
+The phase updates drop from 172–180 to about 6 per frame with every M20 in view. What remains is the tracks of M20s that brake,
+pivot or stop, and avoidance's small speed changes.
+
+### Visual check
+
+`trackshots` before (the #243 capture of HEAD) → after, and two identical "after" runs, compared pixel by pixel (largest RGB channel
+difference, 0 to 255), 216 frames:
+
+| | Range | Median |
+|---|---|---|
+| Before → after, run 1 | 0.62 to 7.03 | 1.71 |
+| Before → after, run 2 | 0.62 to 6.73 | 2.07 |
+| After run 1 → after run 2 | 0.64 to 8.00 | 1.94 |
+
+The worst frames are the motion sequences in both comparisons (temporal anti-aliasing). The material's phase stays within 0.02 of a
+link of the gear's in every sequence (0.0194 at most, accelerating) except the deliberate `far` one, and stopped and blocked tracks
+match it exactly.
+
+### Limitations
+
+- **A send can move the links by up to 0.02 of a link** (about 3 mm on the M20), too little to see at RTS distances.
+- **The shader's scene time is a float.** Its steps grow after hours of play (2 ms after about 4.5 hours); a track at top speed
+  then steps by up to a tenth of a link between sends, like every time-driven material.
+
 ## #227 (pooled shot effects)
 
 Audit §2 ([`../PERFORMANCE_AUDIT.md`](../PERFORMANCE_AUDIT.md)): every shot spawned and destroyed an `ARTSShotEffect` with three glow meshes,

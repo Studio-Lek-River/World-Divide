@@ -245,11 +245,12 @@ bool FRTSTeamColorMaterialsTest::RunTest(const FString& Parameters)
 		}
 	};
 	TestReads(VehicleMaterialPath, { { TEXT("Color"), RTSPrimitiveData::TeamColor }, { TEXT("TrackPhase"), RTSPrimitiveData::TrackPhase },
-		{ TEXT("TrackPreviousPhase"), RTSPrimitiveData::TrackPreviousPhase } });
+		{ TEXT("TrackRate"), RTSPrimitiveData::TrackRate }, { TEXT("TrackStart"), RTSPrimitiveData::TrackStart },
+		{ TEXT("TrackAcceleration"), RTSPrimitiveData::TrackAcceleration } });
 	TestReads(TeamMaterialPath, { { TEXT("Color"), RTSPrimitiveData::TeamColor } });
 	TestReads(TEXT("/Game/Materials/M_ShotFx.M_ShotFx"), { { TEXT("Color"), RTSPrimitiveData::ShotGlow } });
 	TestTrue(TEXT("The team colour's four floats do not overlap the track phase"),
-		RTSPrimitiveData::TeamColor > RTSPrimitiveData::TrackPreviousPhase);
+		RTSPrimitiveData::TeamColor > RTSPrimitiveData::TrackAcceleration);
 	return true;
 }
 #endif

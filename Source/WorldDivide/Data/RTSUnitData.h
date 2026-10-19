@@ -52,7 +52,7 @@ struct FRTSVehiclePart
 	/**
 	 * Non-zero makes a hull part a track: the length in cm of one of its links, before the unit's MeshScale. Its material
 	 * (M_Vehicle with TrackAnimation, #151) moves the links round their loop by the travel of the track's side, from the
-	 * part's Offset.Y, which the unit gives it as a phase through one link in custom primitive data.
+	 * part's Offset.Y, which the unit gives it as a phase through one link and a link rate in custom primitive data (#216).
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part", meta = (ClampMin = "0"))
 	float TrackPitch = 0.f;

@@ -292,8 +292,10 @@ def make_m20_guardian():
     hull_textures = {kind: textures["Hull", kind] for kind in vehicle_art.TEXTURE_KINDS}
     master = plan_now(f"{vehicle_art.MATERIAL_DIR}/{vehicle_art.VEHICLE_MATERIAL}",
                       lambda: vehicle_art.build_vehicle_material(hull_textures),
-                      spec_hash([vehicle_art.build_vehicle_material], sorted(map(object_path, hull_textures.values())),
-                                vehicle_art.TEAM_COLOR_INDEX))
+                      spec_hash([vehicle_art.build_vehicle_material, vehicle_art.build_track_animation, vehicle_art._mask],
+                                sorted(map(object_path, hull_textures.values())), vehicle_art.TEAM_COLOR_INDEX,
+                                vehicle_art.TRACK_PHASE_HLSL, vehicle_art.TRACK_SHIFT_HLSL, vehicle_art.TRACK_TURN_HLSL,
+                                vehicle_art.TRACK_INPUTS))
     lamp = plan_now(f"{vehicle_art.MATERIAL_DIR}/{vehicle_art.LAMP_MATERIAL}", vehicle_art.build_lamp_material,
                     spec_hash([vehicle_art.build_lamp_material]))
     slot_materials = {"M20_Emissive": lamp}

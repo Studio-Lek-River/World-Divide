@@ -132,11 +132,23 @@ def build_vehicle_material(defaults):
 
 # The track's link shift (#151), from the channels m20_guardian_bake.add_track_animation_uvs writes: UV1, UV2 and UV3 the
 # offsets in local cm (X, Z) to the vertex's place in the previous, next and next-but-one link, UV4.x the turn in radians
-# to the next link. The phase through one link comes as custom primitive data from ARTSUnit::UpdateRunningGear: the
-# current one, and last frame's unwrapped, for the motion vectors (RTSPrimitiveData::TrackPhase and TrackPreviousPhase).
+# to the next link. ARTSUnit::UpdateRunningGear sends, as custom primitive data, the phase through one link at a start
+# time, the links per second it counts on by, that start time in world seconds and the links per second squared the rate
+# changes by (RTSPrimitiveData::TrackPhase, TrackRate, TrackStart and TrackAcceleration, #216), only when the phase
+# drifts from the realized travel or the rate is off.
 TRACK_ANIMATION = "TrackAnimation"
 TRACK_PHASE = ("TrackPhase", 0)
-TRACK_PREVIOUS_PHASE = ("TrackPreviousPhase", 1)
+TRACK_RATE = ("TrackRate", 1)
+TRACK_START = ("TrackStart", 2)
+TRACK_ACCELERATION = ("TrackAcceleration", 3)
+TRACK_INPUTS = (TRACK_PHASE, TRACK_RATE, TRACK_START, TRACK_ACCELERATION)
+# The phase now, and last frame's unwrapped against it for the motion vectors, by the scene's time (the world's): the
+# previous frame's time is the world's less its delta, so a standing track (no rate) has both the same.
+TRACK_PHASE_HLSL = """float Since = View.GameTime - Start;
+float Before = Since - (View.GameTime - View.PrevFrameGameTime);
+float U = Phase + Since * (Rate + 0.5 * Acceleration * Since);
+float T = frac(U);
+return float2(T, T - (U - (Phase + Before * (Rate + 0.5 * Acceleration * Before))));"""
 # A Catmull-Rom curve through the four places, from this link's (0) at T = 0 to the next one's at T = 1.
 TRACK_SHIFT_HLSL = """float2 O = 0.5 * ((Next - Prev) * T + (2.0 * Prev + 4.0 * Next - Next2) * T * T + (-Prev - 3.0 * Next + Next2) * T * T * T);
 return float3(O.x, 0.0, O.y);"""
@@ -181,6 +193,15 @@ def _uv(material, x, y, index):
     return uv
 
 
+def _mask(material, x, y, source, channel):
+    """One channel, "r" or "g", of source."""
+    mask = editing.create_material_expression(material, unreal.MaterialExpressionComponentMask, x, y)
+    for name in ("r", "g", "b", "a"):
+        mask.set_editor_property(name, name == channel)
+    _connect(source, "", mask, "")
+    return mask
+
+
 def _transform(material, x, y, source, destination):
     transform = editing.create_material_expression(material, unreal.MaterialExpressionTransform, x, y)
     transform.set_editor_property("transform_source_type", source)
@@ -192,9 +213,12 @@ def build_track_animation(material, normal_sample):
     """The TrackAnimation static switch (off by default, on in a track's instance): World Position Offset moves every
     vertex along TRACK_SHIFT_HLSL by the phase, last frame's phase for the previous frame's place, and the normal map's
     normal turns with the link (TRACK_TURN_HLSL), so it meets the next link's at the wrap. Off, the material is the
-    plain one: no offset, the normal map as it is."""
-    phase = _scalar(material, -2200, 900, TRACK_PHASE[0], primitive_index=TRACK_PHASE[1])
-    previous = _scalar(material, -2200, 1050, TRACK_PREVIOUS_PHASE[0], primitive_index=TRACK_PREVIOUS_PHASE[1])
+    plain one: no offset, the normal map as it is. The phase, and last frame's, come from TRACK_PHASE_HLSL."""
+    pins = [name[len("Track"):] for name, _ in TRACK_INPUTS]
+    phases = _custom(material, -2500, 900, TRACK_PHASE_HLSL, pins, output=unreal.CustomMaterialOutputType.CMOT_FLOAT2)
+    for i, ((name, index), pin) in enumerate(zip(TRACK_INPUTS, pins)):
+        _connect(_scalar(material, -2800, 800 + 120 * i, name, primitive_index=index), "", phases, pin)
+    phase, previous = (_mask(material, -2300, 900 + 150 * i, phases, channel) for i, channel in enumerate(("r", "g")))
     offsets = [_uv(material, -2200, 1200 + 120 * i, i + 1) for i in range(3)]
     shifts = []
     for row, t in enumerate((phase, previous)):

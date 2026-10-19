@@ -373,16 +373,8 @@ namespace RTSTrackShots
 			for (int32 Side = 0; Side < 2; ++Side)
 			{
 				Unit->GetTrackPhase(TrackParts[Side], Phase[Side]);
-				TArray<UStaticMeshComponent*> Meshes;
-				Unit->GetComponents(Meshes);
-				const UStaticMesh* Mesh = Unit->GetUnitData()->Parts.IsValidIndex(TrackParts[Side]) ? Unit->GetUnitData()->Parts[TrackParts[Side]].Mesh.Get() : nullptr;
-				for (const UStaticMeshComponent* Component : Meshes)
-				{
-					if (Component->GetStaticMesh() == Mesh && Component->GetCustomPrimitiveData().Data.Num() > 0)
-					{
-						Sent[Side] = Component->GetCustomPrimitiveData().Data[0];
-					}
-				}
+				// What the material draws now, from the link rate it was sent (#216).
+				Unit->GetTrackMaterialPhase(TrackParts[Side], Sent[Side]);
 			}
 			UE_LOG(LogWorldDivide, Display,
 				TEXT("rts.Debug.TrackShots: %s %02d: %s, %.0f cm/s, %.1f deg/s; travel L %.1f R %.1f cm; phase L %.4f (material %.4f) R %.4f (material %.4f)"),

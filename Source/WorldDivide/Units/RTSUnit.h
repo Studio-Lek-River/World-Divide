@@ -268,6 +268,25 @@ public:
 	/** Every machine. The phase through one link of the track URTSUnitData::Parts[PartIndex] is; false when it is none. */
 	bool GetTrackPhase(int32 PartIndex, float& OutPhase) const;
 
+	/**
+	 * Every machine. The phase the material of the track URTSUnitData::Parts[PartIndex] draws now, [0, 1), worked out from the
+	 * phase, link rate, start time and acceleration its custom primitive data has (RTSPrimitiveData::TrackPhase, #216) as
+	 * M_Vehicle works it out; false when it is no track.
+	 */
+	bool GetTrackMaterialPhase(int32 PartIndex, float& OutPhase) const;
+
+	/**
+	 * Of a link: how far the phase a track's material works out from its link rate may drift from the realized travel's before
+	 * the track sends its phase again (#216). About 3 mm on the M20, too little to see the links jump by.
+	 */
+	static constexpr float TrackDriftLimit = 0.02f;
+
+	/**
+	 * Of a link per frame: a link rate off from the realized travel's by this much sends the phase at once, before its drift
+	 * could wrap past half a link and look small.
+	 */
+	static constexpr float TrackRateLimit = 0.25f;
+
 	/** Every machine. The components of the unit's tracks, animated or rigid (#212). */
 	void GetTrackComponents(TArray<const UStaticMeshComponent*, TInlineAllocator<2>>& OutComponents) const;
 
@@ -473,6 +492,8 @@ private:
 	double GearTurned = 0.0;
 	double GearLeft = 0.0;
 	double GearRight = 0.0;
+	/** World seconds UpdateRunningGear last ran at, for the tracks' link rates. */
+	TOptional<double> GearTime;
 
 	/** Server only. See SetAimOverride. */
 	TOptional<FVector2D> AimOverride;
@@ -514,15 +535,26 @@ private:
 		 * bottom run. Driving forward runs the bottom of the track backward under the hull, so forward travel lowers it.
 		 */
 		float Phase = 0.f;
-		/** Last frame's phase, unwrapped against Phase, for the material's motion vectors. */
-		float PreviousPhase = 0.f;
-		/** The material has Phase and PreviousPhase as they are. */
-		bool bSent = true;
+		/** Links per second the phase changed by over the last frame: negative driving forward, zero standing. */
+		float Rate = 0.f;
+		/** Links per second squared Rate changed by since the frame before. */
+		float Acceleration = 0.f;
+		/**
+		 * What the material has (#216): the phase at SentStart, in world seconds, and the link rate and acceleration it counts
+		 * on by from there. The custom primitive data starts at zero, which is a standing track at phase 0.
+		 */
+		float SentPhase = 0.f;
+		float SentRate = 0.f;
+		float SentStart = 0.f;
+		float SentAcceleration = 0.f;
 	};
 	TArray<FTrack> Tracks;
 
 	/** Makes the part in Slot a track, or for a unit whose tracks do not animate draws it with its rigid material. */
 	void AddTrack(FPartSlot& Slot, const FRTSVehiclePart& Part);
+
+	/** The phase Track's material draws at world time Now, unwrapped, as M_Vehicle works it out from what it was sent. */
+	static float GetSentPhase(const FTrack& Track, float Now);
 
 	/** True when Track's phase should go to its material now; see FRTSTrackViews. */
 	bool IsTrackDrawn(const FTrack& Track, const FRTSTrackViews* Views) const;

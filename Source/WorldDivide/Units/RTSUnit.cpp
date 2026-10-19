@@ -335,6 +335,7 @@ void ARTSUnit::CreateParts()
 	Tracks.Reset();
 	LastGearPose.Reset();
 	GearHull.Reset();
+	GearTime.Reset();
 	bWheelsSettled = true;
 	const FRTSRealizedMotion& Motion = Movement->GetRealizedMotion();
 	GearDriven = Motion.DrivenDistance;
@@ -455,6 +456,31 @@ bool ARTSUnit::GetTrackPhase(int32 PartIndex, float& OutPhase) const
 	return true;
 }
 
+bool ARTSUnit::GetTrackMaterialPhase(int32 PartIndex, float& OutPhase) const
+{
+	if (!PartSlots.IsValidIndex(PartIndex) || PartSlots[PartIndex].Track == INDEX_NONE)
+	{
+		return false;
+	}
+	// From the component's data itself, so it shows what reached the material.
+	const TArray<float>& Data = Tracks[PartSlots[PartIndex].Track].Component->GetCustomPrimitiveData().Data;
+	auto Read = [&Data](int32 Index) { return Data.IsValidIndex(Index) ? Data[Index] : 0.f; };
+	FTrack Sent;
+	Sent.SentPhase = Read(RTSPrimitiveData::TrackPhase);
+	Sent.SentRate = Read(RTSPrimitiveData::TrackRate);
+	Sent.SentStart = Read(RTSPrimitiveData::TrackStart);
+	Sent.SentAcceleration = Read(RTSPrimitiveData::TrackAcceleration);
+	OutPhase = FMath::Frac(GetSentPhase(Sent, static_cast<float>(GetWorld()->GetTimeSeconds())));
+	return true;
+}
+
+float ARTSUnit::GetSentPhase(const FTrack& Track, float Now)
+{
+	// As vehicle_art.py's TRACK_PHASE_HLSL, in floats as the shader has them.
+	const float Since = Now - Track.SentStart;
+	return Track.SentPhase + Since * (Track.SentRate + 0.5f * Track.SentAcceleration * Since);
+}
+
 void ARTSUnit::GetTrackComponents(TArray<const UStaticMeshComponent*, TInlineAllocator<2>>& OutComponents) const
 {
 	OutComponents.Reset();
@@ -544,30 +570,50 @@ int32 ARTSUnit::UpdateRunningGear(const FRTSTrackViews* Views)
 		return SideTravel ? (Side < 0.f ? SideTravel->X : SideTravel->Y) : Driven - Side * TurnedRadians;
 	};
 
+	// The material counts the phase on from a link rate and a start time by the scene's time, which is the world's (#216).
+	const double Now = GetWorld()->GetTimeSeconds();
+	const float Seconds = GearTime ? static_cast<float>(Now - *GearTime) : 0.f;
+	GearTime = Now;
 	int32 Sent = 0;
+	const float NowSeconds = static_cast<float>(Now);
 	for (FTrack& Track : Tracks)
 	{
+		const float LastRate = Track.Rate;
+		Track.Rate = 0.f;
+		Track.Acceleration = 0.f;
 		if (bRolls)
 		{
 			// Links of travel along the ground. The phase counts through one link only, and goes down driving forward.
 			const float Links = TravelOf(Track.Side) / Track.Pitch;
 			Track.Phase = FMath::Frac(Track.Phase - FMath::Frac(Links));
-			Track.PreviousPhase = Track.Phase + Links;
-			Track.bSent = false;
+			if (Seconds > 0.f)
+			{
+				Track.Rate = -Links / Seconds;
+				Track.Acceleration = (Track.Rate - LastRate) / Seconds;
+			}
 		}
-		else if (Track.PreviousPhase != Track.Phase)
+		// The material's phase against the travel's, wrapped to [-0.5, 0.5) of a link, and its rate over the last frame against
+		// the travel's. Standing, the material has the phase exactly and no motion, so its links stand without smearing;
+		// rolling, it may drift by TrackDriftLimit before the phase is sent again, and its rate by TrackRateLimit a frame.
+		const float Since = NowSeconds - Track.SentStart;
+		const float Drift = FMath::Frac(Track.Phase - GetSentPhase(Track, NowSeconds) + 0.5f) - 0.5f;
+		const float SentRate = Track.SentRate + Track.SentAcceleration * (Since - 0.5f * Seconds);
+		const bool bStale = Track.Rate == 0.f
+			? Track.SentRate != 0.f || Track.SentAcceleration != 0.f || Drift != 0.f
+			: FMath::Abs(Drift) > TrackDriftLimit || FMath::Abs(Track.Rate - SentRate) * FMath::Max(Seconds, 1.f / 60.f) > TrackRateLimit;
+		if (bStale && IsTrackDrawn(Track, Views))
 		{
-			// Stopped: once more without motion, so the links do not smear as if still running.
-			Track.PreviousPhase = Track.Phase;
-			Track.bSent = false;
-		}
-		if (!Track.bSent && IsTrackDrawn(Track, Views))
-		{
-			// Custom primitive data reaches the renderer as an update of the primitive's data: no render state rebuild and
-			// no move (#165).
-			static_assert(RTSPrimitiveData::TrackPreviousPhase == RTSPrimitiveData::TrackPhase + 1);
-			Track.Component->SetCustomPrimitiveDataVector2(RTSPrimitiveData::TrackPhase, FVector2D(Track.Phase, Track.PreviousPhase));
-			Track.bSent = true;
+			// From the phase as it is: the last frame's rate is the one half a frame ago, so the rate now is half a frame of
+			// acceleration on. Custom primitive data reaches the renderer as an update of the primitive's data: no render state
+			// rebuild and no move (#165).
+			static_assert(RTSPrimitiveData::TrackRate == RTSPrimitiveData::TrackPhase + 1 && RTSPrimitiveData::TrackStart == RTSPrimitiveData::TrackPhase + 2
+				&& RTSPrimitiveData::TrackAcceleration == RTSPrimitiveData::TrackPhase + 3);
+			Track.SentPhase = Track.Phase;
+			Track.SentRate = Track.Rate + 0.5f * Track.Acceleration * Seconds;
+			Track.SentStart = NowSeconds;
+			Track.SentAcceleration = Track.Acceleration;
+			Track.Component->SetCustomPrimitiveDataVector4(RTSPrimitiveData::TrackPhase,
+				FVector4(Track.SentPhase, Track.SentRate, Track.SentStart, Track.SentAcceleration));
 			++Sent;
 		}
 	}
