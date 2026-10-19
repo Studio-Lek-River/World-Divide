@@ -92,8 +92,15 @@ public:
 	 * A Harvest for a unit that cannot harvest becomes a move up to the source, as a Build naming an own construction site
 	 * becomes a move up to the site for a unit that cannot build. A builder's new building is paid here, queued or not, and
 	 * refused when the player cannot afford it; it is refunded if the order ends before the building is placed.
+	 * A ForceFire the unit cannot carry out (CanForceFire) is ignored, and the queue stays as it was.
 	 */
 	void ExecuteCommand(const FRTSCommand& InCommand);
+
+	/**
+	 * Whether this unit can carry out Command as a ForceFire: a ground unit with a weapon that may hit its target of any team
+	 * (URTSWeaponComponent::CanForceTarget), or the ground when it has none.
+	 */
+	bool CanForceFire(const FRTSCommand& Command) const;
 
 	/**
 	 * Server only. Moves to Location ahead of the current order, then picks the queue up again where it was: a builder resumes
@@ -453,11 +460,15 @@ private:
 	void CancelMoveRequest();
 
 	/**
-	 * Each tick while an Attack is the current order: drop it once the target is gone, otherwise close in or hold.
-	 * Units are followed; buildings stand in their own navmesh hole, so the unit walks to a reachable spot outside the
-	 * footprint, facing side first, and drops the order when there is none in range.
+	 * Each tick while an Attack or a ForceFire is the current order: drop it once the target is gone or can no longer be
+	 * hit, otherwise close in or hold. Units are followed; buildings stand in their own navmesh hole, so the unit walks to a
+	 * reachable spot outside the footprint, facing side first, and drops the order when there is none in range. A ground spot
+	 * is approached by a partial path if need be; the order ends only when that approach gets nowhere.
 	 */
 	void UpdateAttackOrder();
+
+	/** UpdateAttackOrder's part for a ForceFire at the ground, the current order. */
+	void UpdateGroundFireOrder(AAIController& AI);
 
 	/**
 	 * Each tick while an AttackMove is the current order: stand and fight while the weapon has an enemy in range, otherwise
@@ -472,8 +483,8 @@ private:
 	void UpdateBuildOrder(float DeltaSeconds);
 
 	/**
-	 * Points the weapon at what the current order allows: the attack target, anything in range when idle or attack-moving,
-	 * nothing while moving otherwise.
+	 * Points the weapon at what the current order allows: the attack target, the force-fired target or ground spot, anything
+	 * in range when idle or attack-moving, nothing while moving otherwise.
 	 */
 	void ApplyWeaponMode();
 
@@ -693,6 +704,9 @@ private:
 
 	/** Set while an attack-move stops to fight, so the aborted move does not end the order. */
 	bool bStoppingToFight = false;
+
+	/** Server only. Where the last approach toward a force-fired ground spot started, to tell one that got nowhere. */
+	TOptional<FVector> GroundApproachStart;
 
 	TOptional<FVector> MoveGoal;
 	TOptional<FVector> MoveTarget;

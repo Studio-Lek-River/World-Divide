@@ -10,7 +10,9 @@
 #include "Combat/RTSShotSoundWave.h"
 #include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSWeaponComponent.h"
+#include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSGameState.h"
+#include "Core/RTSPlayerState.h"
 #include "Data/RTSAircraftData.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
@@ -19,6 +21,7 @@
 #include "HAL/IConsoleManager.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Misc/AutomationTest.h"
+#include "Player/RTSPlayerController.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
 #include "UObject/UObjectIterator.h"
@@ -452,6 +455,191 @@ bool FRTSForceFireGroundShellTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("The splash lands with the shell, at the point"), DamageTaken(*Victim),
 		RTSCombat::ComputeFalloffDamage(Weapon->Damage, 100.f, Weapon->SplashRadius, URTSWeaponData::SplashEdgeFraction), 0.01f);
 	TestEqual(TEXT("The shell is gone"), Shots->GetShellsInFlight(), 0);
+	return true;
+}
+
+namespace
+{
+	constexpr float ForceFireStep = 0.05f;
+
+	/** A gun that hits the ground or the air, reloading every second, without splash. */
+	URTSWeaponData* MakeForceFireWeapon(bool bGround, bool bAir)
+	{
+		URTSWeaponData* Weapon = NewObject<URTSWeaponData>();
+		Weapon->Range = 1500.f;
+		Weapon->Damage = 50.f;
+		Weapon->ReloadSeconds = 1.f;
+		Weapon->bCanTargetGround = bGround;
+		Weapon->bCanTargetAir = bAir;
+		return Weapon;
+	}
+
+	FRTSCommand MakeForceFire(AActor* Target, const FVector& Location = FVector::ZeroVector)
+	{
+		FRTSCommand Command;
+		Command.Type = ERTSCommandType::ForceFire;
+		Command.TargetActor = Target;
+		Command.TargetLocation = Location;
+		return Command;
+	}
+
+	/** Seconds of what the game runs each frame: the avoidance grid, the units' orders, then their weapons. */
+	void StepForceFire(const FRTSTestWorld& TestWorld, TConstArrayView<ARTSUnit*> Units, float Seconds)
+	{
+		URTSAvoidanceSubsystem* Avoidance = TestWorld.World->GetSubsystem<URTSAvoidanceSubsystem>();
+		for (float Time = 0.f; Time < Seconds; Time += ForceFireStep)
+		{
+			if (Avoidance)
+			{
+				Avoidance->Separate(ForceFireStep);
+			}
+			for (ARTSUnit* Unit : Units)
+			{
+				if (IsValid(Unit))
+				{
+					Unit->Tick(ForceFireStep);
+				}
+			}
+			for (ARTSUnit* Unit : Units)
+			{
+				if (IsValid(Unit))
+				{
+					Unit->GetWeaponComponent()->UpdateWeapon(ForceFireStep);
+				}
+			}
+		}
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSForceFireFriendlyTest, "WorldDivide.Combat.ForceFire.Friendly", TestFlags)
+
+bool FRTSForceFireFriendlyTest::RunTest(const FString& Parameters)
+{
+	const FRTSTestWorld TestWorld;
+	TestWorld.SpawnGameState();
+	ARTSUnit* Tank = TestWorld.SpawnUnit(MakeUnitData(1000.f, MakeForceFireWeapon(true, false)), 0, FVector::ZeroVector);
+	ARTSUnit* Own = TestWorld.SpawnUnit(MakeUnitData(1000.f, nullptr), 0, FVector(600.f, 0.f, 0.f));
+	URTSBuildingData* SiteData = NewObject<URTSBuildingData>();
+	SiteData->Footprint = FIntPoint(2, 2);
+	SiteData->MaxHealth = 1000.f;
+	ARTSBuilding* Site = TestWorld.SpawnBuilding(SiteData, 0, FVector(0.f, -800.f, 0.f));
+	TestFalse(TEXT("The site is under construction"), Site->IsConstructed());
+
+	FRTSCommand Attack;
+	Attack.Type = ERTSCommandType::Attack;
+	Attack.TargetActor = Own;
+	Tank->ExecuteCommand(Attack);
+	TestEqual(TEXT("A plain attack on an own unit is refused"), Tank->GetQueuedCommandCount(), 0);
+	Attack.TargetActor = Site;
+	Tank->ExecuteCommand(Attack);
+	TestEqual(TEXT("A plain attack on an own construction site is refused"), Tank->GetQueuedCommandCount(), 0);
+
+	Tank->ExecuteCommand(MakeForceFire(Own));
+	TestEqual(TEXT("A force fire at the own unit is taken"), Tank->GetQueuedCommandCount(), 1);
+	StepForceFire(TestWorld, { Tank, Own }, 0.5f);
+	TestTrue(TEXT("The own unit is hit"), DamageTaken(*Own) > 0.f);
+
+	Tank->ExecuteCommand(MakeForceFire(Site));
+	TestEqual(TEXT("A force fire at the own site replaces it"), Tank->GetQueuedCommandCount(), 1);
+	// The reload of the last shot at the unit runs out first.
+	StepForceFire(TestWorld, { Tank, Own }, 1.2f);
+	TestTrue(TEXT("The own site is hit"), DamageTaken(*Site) > 0.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSForceFirePersistsTest, "WorldDivide.Combat.ForceFire.Persists", TestFlags)
+
+bool FRTSForceFirePersistsTest::RunTest(const FString& Parameters)
+{
+	const FRTSTestWorld TestWorld;
+	TestWorld.SpawnGameState();
+	ARTSUnit* Tank = TestWorld.SpawnUnit(MakeUnitData(1000.f, MakeForceFireWeapon(true, false)), 0, FVector::ZeroVector);
+	URTSWeaponComponent* Gun = Tank->GetWeaponComponent();
+	const FVector Point(800.f, 0.f, 0.f);
+
+	// At the ground: shot after shot, until another order comes.
+	Tank->ExecuteCommand(MakeForceFire(nullptr, Point));
+	StepForceFire(TestWorld, { Tank }, 3.5f);
+	TestTrue(FString::Printf(TEXT("The ground order fires over several reloads (%d shots)"), Gun->GetShotsFired()), Gun->GetShotsFired() >= 4);
+	TestEqual(TEXT("And is still the unit's order"), Tank->GetQueuedCommandCount(), 1);
+	TestTrue(TEXT("The weapon aims at the point"), Gun->GetOrderedLocation().IsSet());
+
+	FRTSCommand Move;
+	Move.Type = ERTSCommandType::Move;
+	Move.TargetLocation = FVector(-500.f, 0.f, 0.f);
+	Tank->ExecuteCommand(Move);
+	TestFalse(TEXT("A move ends it"), Gun->GetOrderedLocation().IsSet());
+
+	Tank->ExecuteCommand(MakeForceFire(nullptr, Point));
+	StepForceFire(TestWorld, { Tank }, 0.2f);
+	FRTSCommand Stop;
+	Stop.Type = ERTSCommandType::Stop;
+	Tank->ExecuteCommand(Stop);
+	TestEqual(TEXT("A stop ends it"), Tank->GetQueuedCommandCount(), 0);
+	TestFalse(TEXT("And clears the weapon's point"), Gun->GetOrderedLocation().IsSet());
+
+	// At an own unit: over once it dies, and the tank picks its own targets again.
+	ARTSUnit* Own = TestWorld.SpawnUnit(MakeUnitData(100.f, nullptr), 0, FVector(600.f, 0.f, 0.f));
+	ARTSUnit* Enemy = TestWorld.SpawnUnit(MakeUnitData(1000.f, nullptr), 1, FVector(0.f, 900.f, 0.f));
+	Tank->ExecuteCommand(MakeForceFire(Own));
+	StepForceFire(TestWorld, { Tank, Own, Enemy }, 0.2f);
+	TestTrue(TEXT("The tank fires at the own unit, not the enemy"), Gun->GetTarget() == Own);
+	StepForceFire(TestWorld, { Tank, Own, Enemy }, 2.f);
+	TestFalse(TEXT("The own unit died"), IsValid(Own));
+	TestEqual(TEXT("The order ended with it"), Tank->GetQueuedCommandCount(), 0);
+	TestTrue(TEXT("Auto-acquire picks the enemy"), Gun->GetTarget() == Enemy);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSForceFireRefusedTest, "WorldDivide.Combat.ForceFire.Refused", TestFlags)
+
+bool FRTSForceFireRefusedTest::RunTest(const FString& Parameters)
+{
+	const FRTSTestWorld TestWorld;
+	TestWorld.SpawnGameState();
+	ARTSPlayerController* Controller = TestWorld.World->SpawnActor<ARTSPlayerController>();
+	ARTSPlayerState* Player = TestWorld.SpawnPlayer(0, 0);
+	Controller->SetPlayerState(Player);
+	// As the game mode does at login: refusals find the controller through the player state's owner.
+	Player->SetOwner(Controller);
+
+	ARTSUnit* Unarmed = TestWorld.SpawnUnit(MakeUnitData(1000.f, nullptr), 0, FVector::ZeroVector);
+	ARTSUnit* Flak = TestWorld.SpawnUnit(MakeUnitData(1000.f, MakeForceFireWeapon(false, true)), 0, FVector(0.f, 300.f, 0.f));
+	ARTSUnit* Tank = TestWorld.SpawnUnit(MakeUnitData(1000.f, MakeForceFireWeapon(true, false)), 0, FVector(0.f, -300.f, 0.f));
+	ARTSUnit* Jet = SpawnFlyingJet(TestWorld, 1, FVector(600.f, 0.f, 0.f));
+	TestTrue(TEXT("The jet is in flight"), Jet->IsAirborne());
+	const FVector Point(800.f, 0.f, 0.f);
+
+	// The flak is busy shooting at the jet.
+	FRTSCommand Attack;
+	Attack.Type = ERTSCommandType::Attack;
+	Attack.TargetActor = Jet;
+	Flak->ExecuteCommand(Attack);
+	TestEqual(TEXT("The flak attacks the jet"), Flak->GetQueuedCommandCount(), 1);
+
+	TestFalse(TEXT("An unarmed unit cannot force-fire"), Unarmed->CanForceFire(MakeForceFire(nullptr, Point)));
+	TestFalse(TEXT("Nor can flak at the ground"), Flak->CanForceFire(MakeForceFire(nullptr, Point)));
+	TestFalse(TEXT("Nor a ground weapon at an airborne target"), Tank->CanForceFire(MakeForceFire(Jet)));
+
+	Unarmed->ExecuteCommand(MakeForceFire(nullptr, Point));
+	TestEqual(TEXT("The unarmed unit takes no order"), Unarmed->GetQueuedCommandCount(), 0);
+	Flak->ExecuteCommand(MakeForceFire(nullptr, Point));
+	TestEqual(TEXT("The flak keeps its attack"), Flak->GetQueuedCommandCount(), 1);
+	TestTrue(TEXT("And its target"), Flak->GetWeaponComponent()->GetTarget() == Jet);
+	Tank->ExecuteCommand(MakeForceFire(Jet));
+	TestEqual(TEXT("The tank's order at the jet is refused"), Tank->GetQueuedCommandCount(), 0);
+
+	// A group order: the units that can fire take it, the rest keep theirs, and nobody is told of a refusal.
+	RTSCommands::Issue(*Player, { Unarmed, Flak, Tank }, MakeForceFire(nullptr, Point));
+	TestEqual(TEXT("The tank takes the group's order"), Tank->GetQueuedCommandCount(), 1);
+	TestTrue(TEXT("The tank aims at the point"), Tank->GetWeaponComponent()->GetOrderedLocation().IsSet());
+	TestEqual(TEXT("The flak keeps its attack in the group"), Flak->GetQueuedCommandCount(), 1);
+	TestEqual(TEXT("No refusal while one unit can fire"), Controller->GetOrderRefusalCount(), 0);
+
+	// No unit of the group can: one refusal.
+	RTSCommands::Issue(*Player, { Unarmed, Flak }, MakeForceFire(nullptr, Point));
+	TestEqual(TEXT("A group that cannot fire is refused once"), Controller->GetOrderRefusalCount(), 1);
+	TestEqual(TEXT("The flak still keeps its attack"), Flak->GetQueuedCommandCount(), 1);
 	return true;
 }
 

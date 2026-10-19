@@ -13,7 +13,10 @@ namespace RTSCommands
 	/** Drops null, duplicate and foreign units: a player may only order their own team. */
 	WORLDDIVIDE_API TArray<ARTSUnit*> FilterOwnedUnits(TConstArrayView<ARTSUnit*> Units, int32 TeamId);
 
-	/** Server only. A move or attack-move is spread over a formation around the target; other orders go to every unit unchanged. */
+	/**
+	 * Server only. A move or attack-move is spread over a formation around the target; a force fire goes only to the units
+	 * that can carry it out (ARTSUnit::CanForceFire), refused once when none can; other orders go to every unit unchanged.
+	 */
 	WORLDDIVIDE_API void Dispatch(TConstArrayView<ARTSUnit*> Units, const FRTSCommand& Command);
 
 	/** The slot Dispatch sends each of Units to on a move to Target, in the units' order: RTSFormation::Plan facing the way they travel. */

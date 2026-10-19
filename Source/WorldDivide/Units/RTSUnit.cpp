@@ -1503,6 +1503,12 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 {
 	check(HasAuthority());
 
+	// Clients pick the target, so the server checks it; a unit that cannot fire at it keeps what it was doing.
+	if (InCommand.Type == ERTSCommandType::ForceFire && !CanForceFire(InCommand))
+	{
+		return;
+	}
+
 	if (AircraftComponent->CanFly())
 	{
 		AircraftComponent->ExecuteCommand(InCommand);
@@ -1573,6 +1579,16 @@ void ARTSUnit::ExecuteCommand(const FRTSCommand& InCommand)
 	{
 		StartNextCommand();
 	}
+}
+
+bool ARTSUnit::CanForceFire(const FRTSCommand& Command) const
+{
+	// Aircraft, parked or not, take no force-fire order.
+	if (AircraftComponent->CanFly() || !WeaponComponent->IsArmed())
+	{
+		return false;
+	}
+	return Command.TargetActor ? WeaponComponent->CanForceTarget(Command.TargetActor) : WeaponComponent->CanTargetGround();
 }
 
 void ARTSUnit::StepAside(const FVector& Location)
@@ -1849,6 +1865,18 @@ bool ARTSUnit::StartCommand(AAIController& AI, FRTSCommand& Command)
 		return true;
 	}
 
+	if (Command.Type == ERTSCommandType::ForceFire)
+	{
+		// Checked again for a queued order: its target may have died or taken off since.
+		if (!CanForceFire(Command))
+		{
+			return false;
+		}
+		GroundApproachStart.Reset();
+		AI.StopMovement();
+		return true;
+	}
+
 	if (Command.Type == ERTSCommandType::Harvest)
 	{
 		// Clients name the source, so anything else in TargetActor counts as none: the nearest source then.
@@ -1896,7 +1924,8 @@ void ARTSUnit::UpdateBuildOrder(float DeltaSeconds)
 
 void ARTSUnit::UpdateAttackOrder()
 {
-	if (CommandQueue.IsEmpty() || CommandQueue[0].Type != ERTSCommandType::Attack)
+	if (CommandQueue.IsEmpty()
+		|| (CommandQueue[0].Type != ERTSCommandType::Attack && CommandQueue[0].Type != ERTSCommandType::ForceFire))
 	{
 		return;
 	}
@@ -1907,7 +1936,13 @@ void ARTSUnit::UpdateAttackOrder()
 	}
 
 	AActor* Target = CommandQueue[0].TargetActor;
-	if (!WeaponComponent->CanTarget(Target))
+	const bool bForced = CommandQueue[0].Type == ERTSCommandType::ForceFire;
+	if (bForced && !Target)
+	{
+		UpdateGroundFireOrder(*AI);
+		return;
+	}
+	if (bForced ? !WeaponComponent->CanForceTarget(Target) : !WeaponComponent->CanTarget(Target))
 	{
 		AI->StopMovement();
 		PopCommand();
@@ -1957,6 +1992,41 @@ void ARTSUnit::UpdateAttackOrder()
 	}
 }
 
+void ARTSUnit::UpdateGroundFireOrder(AAIController& AI)
+{
+	const FVector Spot = CommandQueue[0].TargetLocation;
+	const bool bMoving = AI.GetMoveStatus() != EPathFollowingStatus::Idle;
+	if (WeaponComponent->IsInRange(Spot))
+	{
+		if (bMoving)
+		{
+			AI.StopMovement();
+		}
+		GroundApproachStart.Reset();
+		return;
+	}
+	if (bMoving)
+	{
+		return;
+	}
+
+	// The last approach ended out of range where it started, such as a partial path to a spot across water: out of reach.
+	const bool bStuck = GroundApproachStart
+		&& FVector::DistSquared2D(*GroundApproachStart, GetActorLocation()) < FMath::Square(MoveAcceptanceRadius);
+	GroundApproachStart = GetActorLocation();
+	const EPathFollowingRequestResult::Type Result = bStuck ? EPathFollowingRequestResult::Failed
+		: AI.MoveToLocation(Spot, WeaponComponent->GetRange() * AttackApproachFraction,
+			/*bStopOnOverlap*/ false, /*bUsePathfinding*/ true, /*bProjectDestinationToNavigation*/ true,
+			/*bCanStrafe*/ true, /*FilterClass*/ nullptr, /*bAllowPartialPath*/ true);
+	if (Result == EPathFollowingRequestResult::Failed)
+	{
+		UE_LOG(LogWorldDivide, Verbose, TEXT("%s cannot get %s in range and drops the force fire"), *GetName(), *Spot.ToString());
+		AI.StopMovement();
+		PopCommand();
+		StartNextCommand();
+	}
+}
+
 void ARTSUnit::UpdateAttackMoveOrder()
 {
 	if (CommandQueue.IsEmpty() || CommandQueue[0].Type != ERTSCommandType::AttackMove)
@@ -1995,8 +2065,22 @@ void ARTSUnit::UpdateAttackMoveOrder()
 void ARTSUnit::ApplyWeaponMode()
 {
 	const FRTSCommand* Current = CommandQueue.IsEmpty() ? nullptr : &CommandQueue[0];
-	const bool bAttacking = Current && Current->Type == ERTSCommandType::Attack;
-	WeaponComponent->SetOrderedTarget(bAttacking ? Current->TargetActor.Get() : nullptr);
+	if (Current && Current->Type == ERTSCommandType::Attack)
+	{
+		WeaponComponent->SetOrderedTarget(Current->TargetActor);
+	}
+	else if (Current && Current->Type == ERTSCommandType::ForceFire && Current->TargetActor)
+	{
+		WeaponComponent->SetOrderedTarget(Current->TargetActor, /*bForce*/ true);
+	}
+	else if (Current && Current->Type == ERTSCommandType::ForceFire)
+	{
+		WeaponComponent->SetOrderedLocation(Current->TargetLocation);
+	}
+	else
+	{
+		WeaponComponent->ClearOrder();
+	}
 	// Units on a plain move ignore enemies; idle and attack-moving units engage whatever comes into range.
 	WeaponComponent->SetAutoAcquire(Current == nullptr || Current->Type == ERTSCommandType::AttackMove);
 }
@@ -2025,8 +2109,8 @@ void ARTSUnit::NotifyMoveFinished(const FPathFollowingResult& Result)
 	}
 	// UpdateAttackOrder, the harvester and the builder start and stop their own moves and end their orders themselves.
 	if (!CommandQueue.IsEmpty()
-		&& (CommandQueue[0].Type == ERTSCommandType::Attack || CommandQueue[0].Type == ERTSCommandType::Harvest
-			|| CommandQueue[0].Type == ERTSCommandType::Build))
+		&& (CommandQueue[0].Type == ERTSCommandType::Attack || CommandQueue[0].Type == ERTSCommandType::ForceFire
+			|| CommandQueue[0].Type == ERTSCommandType::Harvest || CommandQueue[0].Type == ERTSCommandType::Build))
 	{
 		return;
 	}

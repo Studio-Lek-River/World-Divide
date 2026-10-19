@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "RTSCommand.generated.h"
 
+class ARTSBuilding;
 class ARTSPlayerState;
 class URTSEntityData;
 
@@ -41,6 +42,11 @@ enum class ERTSCommandType : uint8
 	AttackMove,
 	/** Launch TargetActor, an own superweapon that is ready, at TargetLocation. */
 	LaunchSuperweapon,
+	/**
+	 * Fire at TargetActor, any IRTSTargetable of any team, until it dies or can no longer be hit; when it is null, at the
+	 * ground at TargetLocation until another order replaces it. Ground units only, and only those whose weapon can hit it.
+	 */
+	ForceFire,
 };
 
 /**
@@ -64,6 +70,10 @@ struct WORLDDIVIDE_API FRTSCommand
 	/** What to build or produce. */
 	UPROPERTY(BlueprintReadWrite, Category = "Command")
 	TObjectPtr<URTSEntityData> EntityData = nullptr;
+
+	/** ForceFire: the own building that carries out the order, such as a tower; null for an order to units. */
+	UPROPERTY(BlueprintReadWrite, Category = "Command")
+	TObjectPtr<ARTSBuilding> Building = nullptr;
 
 	/** Append to the unit's order queue instead of replacing it (Shift). */
 	UPROPERTY(BlueprintReadWrite, Category = "Command")

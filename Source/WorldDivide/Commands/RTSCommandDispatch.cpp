@@ -12,6 +12,7 @@
 #include "Data/RTSFactionData.h"
 #include "Engine/World.h"
 #include "HAL/IConsoleManager.h"
+#include "Player/RTSPlayerController.h"
 #include "Units/RTSUnit.h"
 #include "WorldDivide.h"
 
@@ -58,6 +59,30 @@ namespace RTSCommands
 		FRTSCommand Order = Command;
 		LastOrderId = LastOrderId == MAX_int32 ? 1 : LastOrderId + 1;
 		Order.OrderId = LastOrderId;
+
+		if (Command.Type == ERTSCommandType::ForceFire)
+		{
+			// Units that cannot fire at it keep their orders; the player hears of it only when none of them can. No spread:
+			// everyone fires at the same target or spot.
+			TArray<ARTSUnit*, TInlineAllocator<16>> Firing;
+			for (ARTSUnit* Unit : Units)
+			{
+				if (Unit->CanForceFire(Order))
+				{
+					Firing.Add(Unit);
+				}
+			}
+			if (Firing.IsEmpty())
+			{
+				const FVector Location = IsValid(Order.TargetActor) ? Order.TargetActor->GetActorLocation() : Order.TargetLocation;
+				ARTSPlayerController::NotifyOrderRefused(Order.Issuer, Location, Order.OrderId);
+			}
+			for (ARTSUnit* Unit : Firing)
+			{
+				Unit->ExecuteCommand(Order);
+			}
+			return;
+		}
 
 		const bool bFormation = Command.Type == ERTSCommandType::Move || Command.Type == ERTSCommandType::AttackMove;
 		if (!bFormation || Units.Num() == 1)
