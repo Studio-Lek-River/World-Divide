@@ -204,9 +204,13 @@ public:
 	 * Every machine that draws. The unit's reaction to its own shot, by URTSUnitData::GunRecoil (#218): the gun's recoiling
 	 * parts (FRTSVehiclePart::bRecoils) snap back along the bore and run out again, the gun jumps on its trunnions and the
 	 * hull rocks back on its suspension away from the shot. A shot before they have settled carries on from where they are.
-	 * Cosmetic only: the replicated aim, the actor, its collision and its movement do not change.
+	 * Cosmetic only: the replicated aim, the actor, its collision and its movement do not change. Skipped for a unit off
+	 * screen or beyond rts.Vehicle.RecoilDistance of every camera on this machine (IsRecoilSeen).
 	 */
 	void PlayGunRecoil();
+
+	/** Every machine. Whether the recoil is near enough to one of ViewLocations to be seen (rts.Vehicle.RecoilDistance, #219). */
+	bool IsRecoilSeen(TConstArrayView<FVector> ViewLocations) const;
 
 	/** Every machine. Runs the recoil on by DeltaSeconds and places the parts it moves; Tick runs it, public so tests can step it. */
 	void UpdateGunRecoil(float DeltaSeconds);
@@ -487,6 +491,9 @@ private:
 
 	/** Sets the gun's rotation from GunPitch and its jump. */
 	void PlaceGun();
+
+	/** Where this machine's local players look from, for IsRecoilSeen. */
+	TArray<FVector, TInlineAllocator<2>> GetLocalViewLocations() const;
 
 	/**
 	 * Eases the mesh of a vehicle that tilts to the ground toward the slope under it, and every other mesh back upright.

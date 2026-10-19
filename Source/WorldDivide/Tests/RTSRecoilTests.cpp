@@ -1,12 +1,15 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Data/RTSUnitData.h"
 #include "Data/RTSWeaponData.h"
 #include "Engine/StaticMesh.h"
+#include "HAL/IConsoleManager.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestWorld.h"
+#include "UObject/Package.h"
 #include "Units/RTSUnit.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -371,6 +374,166 @@ bool FRTSRecoilTrackingTest::RunTest(const FString& Parameters)
 	Tank->SetGunRecoilHold({});
 	TestFalse(TEXT("Let go, it is at rest"), Tank->IsRecoiling());
 	TestTrue(TEXT("Exactly where it rested"), GetBarrel(*Tank, Barrel).Equals(Rest, RestTolerance));
+	return true;
+}
+
+/**
+ * The rock is drawn only (#219): an M20 rocking and one whose data has no rock, at the gun's 0, 90 and 180 degrees, keep
+ * their actor and collision box exactly where they rest through every frame of a shot; and on the rocking one the turret,
+ * the tracks and every wheel stay where they sit on the hull, so nothing opens a gap between them.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRecoilRockVisualOnlyTest, "WorldDivide.Combat.Recoil.RockVisualOnly", RTSTests::TestFlags)
+
+bool FRTSRecoilRockVisualOnlyTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSRecoilTests;
+
+	URTSUnitData* M20 = LoadM20(*this);
+	if (!M20)
+	{
+		return false;
+	}
+	URTSUnitData* Still = DuplicateObject<URTSUnitData>(M20, GetTransientPackage());
+	Still->GunRecoil.HullRockDegrees = 0.f;
+	const FRTSTestWorld TestWorld;
+	ARTSUnit* Tanks[2] = { TestWorld.SpawnUnit(M20, 0, FVector::ZeroVector), TestWorld.SpawnUnit(Still, 0, FVector(3000.f, 0.f, 0.f)) };
+	const UStaticMeshComponent* Hull = FindHull(*Tanks[0]);
+	TArray<UInstancedStaticMeshComponent*> WheelSets;
+	Tanks[0]->GetComponents(WheelSets);
+	if (!TestNotNull(TEXT("The hull is drawn"), Hull) || !TestFalse(TEXT("The M20 has wheels"), WheelSets.IsEmpty()))
+	{
+		return false;
+	}
+	// The parts on the hull and the turret: the gun's own jump and the barrel's stroke are the recoil (Recoil.Rock).
+	TArray<int32> Parts;
+	for (int32 Index = 0; Index < M20->Parts.Num(); ++Index)
+	{
+		if (M20->Parts[Index].MountedOn != ERTSVehiclePartMount::Gun)
+		{
+			Parts.Add(Index);
+		}
+	}
+
+	for (const float Yaw : { 0.f, 90.f, 180.f })
+	{
+		const FString Gun = FString::Printf(TEXT("Gun at %.0f degrees"), Yaw);
+		FTransform ActorRest[2];
+		FTransform CollisionRest[2];
+		FBox BoundsRest[2];
+		for (int32 Tank = 0; Tank < 2; ++Tank)
+		{
+			Tanks[Tank]->SetAimOverride(FVector2D(Yaw, 0.f));
+			for (float Time = 0.f; Time < 5.f; Time += Step)
+			{
+				Tanks[Tank]->UpdateTurret(Step);
+			}
+			Tanks[Tank]->UpdateRunningGear();
+			const UBoxComponent* Collision = Tanks[Tank]->FindComponentByClass<UBoxComponent>();
+			ActorRest[Tank] = Tanks[Tank]->GetActorTransform();
+			CollisionRest[Tank] = Collision->GetComponentTransform();
+			BoundsRest[Tank] = Collision->Bounds.GetBox();
+		}
+		TestTrue(FString::Printf(TEXT("%s: both collision boxes are the same size"), *Gun),
+			BoundsRest[0].GetExtent().Equals(BoundsRest[1].GetExtent(), 0.f));
+
+		// Where everything sits on the hull at rest: the parts, and each wheel instance as drawn.
+		const FTransform HullRest = Hull->GetComponentTransform();
+		TArray<FTransform> PartsRest;
+		for (const int32 Part : Parts)
+		{
+			FTransform Transform;
+			Tanks[0]->GetPartTransform(Part, Transform);
+			PartsRest.Add(Transform.GetRelativeTransform(HullRest));
+		}
+		auto GetWheelsOnHull = [&WheelSets](const FTransform& HullNow)
+		{
+			TArray<FTransform> OnHull;
+			for (const UInstancedStaticMeshComponent* Set : WheelSets)
+			{
+				for (int32 Instance = 0; Instance < Set->GetInstanceCount(); ++Instance)
+				{
+					FTransform Transform;
+					Set->GetInstanceTransform(Instance, Transform, /*bWorldSpace*/ true);
+					OnHull.Add(Transform.GetRelativeTransform(HullNow));
+				}
+			}
+			return OnHull;
+		};
+		const TArray<FTransform> WheelsRest = GetWheelsOnHull(HullRest);
+
+		Tanks[0]->PlayGunRecoil();
+		Tanks[1]->PlayGunRecoil();
+		bool bStill = true;
+		float MostRock = 0.f;
+		float MostPartGap = 0.f;
+		float MostWheelGap = 0.f;
+		for (float Time = 0.f; Time < SettleLimit && (Tanks[0]->IsRecoiling() || Tanks[1]->IsRecoiling()); Time += Step)
+		{
+			for (int32 Tank = 0; Tank < 2; ++Tank)
+			{
+				Tanks[Tank]->UpdateGunRecoil(Step);
+				Tanks[Tank]->UpdateRunningGear();
+				const UBoxComponent* Collision = Tanks[Tank]->FindComponentByClass<UBoxComponent>();
+				bStill &= Tanks[Tank]->GetActorTransform().Equals(ActorRest[Tank], 0.f)
+					&& Collision->GetComponentTransform().Equals(CollisionRest[Tank], 0.f) && Collision->Bounds.GetBox() == BoundsRest[Tank];
+			}
+			const FTransform HullNow = Hull->GetComponentTransform();
+			MostRock = FMath::Max(MostRock, static_cast<float>(Tanks[0]->GetHullRock().Size()));
+			for (int32 Index = 0; Index < Parts.Num(); ++Index)
+			{
+				FTransform Transform;
+				Tanks[0]->GetPartTransform(Parts[Index], Transform);
+				MostPartGap = FMath::Max(MostPartGap,
+					static_cast<float>(FVector::Dist(Transform.GetRelativeTransform(HullNow).GetLocation(), PartsRest[Index].GetLocation())));
+			}
+			const TArray<FTransform> Wheels = GetWheelsOnHull(HullNow);
+			for (int32 Index = 0; Index < Wheels.Num(); ++Index)
+			{
+				MostWheelGap = FMath::Max(MostWheelGap,
+					static_cast<float>(FVector::Dist(Wheels[Index].GetLocation(), WheelsRest[Index].GetLocation())));
+			}
+		}
+		TestTrue(FString::Printf(TEXT("%s: the hull rocked (%.2f degrees)"), *Gun, MostRock), MostRock > M20->GunRecoil.HullRockDegrees * 0.5f);
+		TestTrue(FString::Printf(TEXT("%s: the actors and their collision stay exactly where they rest, rocking or not"), *Gun), bStill);
+		TestTrue(FString::Printf(TEXT("%s: the turret and the tracks stay on the hull (%.4f cm)"), *Gun, MostPartGap), MostPartGap < RestTolerance);
+		TestTrue(FString::Printf(TEXT("%s: every wheel stays on the hull (%.4f cm)"), *Gun, MostWheelGap), MostWheelGap < RestTolerance);
+	}
+	return true;
+}
+
+/**
+ * The recoil plays only where it can be seen (#219): within rts.Vehicle.RecoilDistance of a camera on this machine, the M20's
+ * LOD2 switch at 110 m; past it, or with no camera at all, the tank skips its gun's recoil and the hull's rock. 0 plays it
+ * everywhere.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRecoilDistanceTest, "WorldDivide.Combat.Recoil.Distance", RTSTests::TestFlags)
+
+bool FRTSRecoilDistanceTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSRecoilTests;
+
+	URTSUnitData* M20 = LoadM20(*this);
+	IConsoleVariable* RecoilDistance = IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Vehicle.RecoilDistance"));
+	if (!M20 || !TestNotNull(TEXT("rts.Vehicle.RecoilDistance exists"), RecoilDistance))
+	{
+		return false;
+	}
+	const float Saved = RecoilDistance->GetFloat();
+	const FRTSTestWorld TestWorld;
+	const ARTSUnit* Tank = TestWorld.SpawnUnit(M20, 0, FVector(1000.f, 2000.f, 0.f));
+	const FVector Location = Tank->GetActorLocation();
+	const FVector Near = Location + FVector(-6000.f, 0.f, 8000.f);
+	const FVector Far = Location + FVector(-10000.f, 0.f, 15000.f);
+
+	RecoilDistance->Set(11000.f, ECVF_SetByConsole);
+	TestTrue(TEXT("Seen from 100 m"), Tank->IsRecoilSeen({ Near }));
+	TestFalse(TEXT("Not from 180 m, the default RTS view"), Tank->IsRecoilSeen({ Far }));
+	TestTrue(TEXT("Seen when one of the cameras is near"), Tank->IsRecoilSeen({ Far, Near }));
+	TestFalse(TEXT("Not without a camera"), Tank->IsRecoilSeen({}));
+	RecoilDistance->Set(0.f, ECVF_SetByConsole);
+	TestTrue(TEXT("At 0, from anywhere"), Tank->IsRecoilSeen({ Far }));
+	TestTrue(TEXT("At 0, even without a camera"), Tank->IsRecoilSeen({}));
+	RecoilDistance->Set(Saved, ECVF_SetByConsole);
 	return true;
 }
 

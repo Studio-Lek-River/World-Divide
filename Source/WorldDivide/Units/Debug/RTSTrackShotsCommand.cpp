@@ -31,7 +31,8 @@
  * the hull beside its left track, or at its sprocket or idler: driving forward and in reverse, turning either way, pivoting
  * either way, accelerating, braking, stopped, driven into Block_North, and coming back into the animation distance from
  * far away; then driving past a still camera at full speed, beside it and from the RTS angle, plain and with the previous
- * frame's reprojection shown (motion_*, #243). Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
+ * frame's reprojection shown (motion_*, #243); and standing while its gun fires, the hull rocking on its suspension, seen from
+ * beside the track the gun turns to and from the sprocket and idler the gun lifts (fire_*, #219). Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
  * Saved/TrackShots/<UnitData>/<scenario>_<n>.png, and logs with each the realized side travel, each track's phase and what
  * its material has. With -RTSTrackShotsQuit on the command line (ue.ps1 -Task trackshots) the game quits when done.
  */
@@ -64,6 +65,13 @@ namespace RTSTrackShots
 	/** Fixed views for the motion scenarios, from the start place: the hull passes their middle a second after it sets off. */
 	const FView MotionSideView{ FVector(300.f, -900.f, 60.f), FVector(300.f, -132.f, 40.f), 60.f };
 	const FView MotionRTSView{ FVector(-900.f, -1200.f, 1700.f), FVector(300.f, 0.f, 0.f), 30.f };
+
+	/**
+	 * The fire scenarios (#219): seconds for the turret to come round before the shot, and the game's speed while the hull
+	 * rocks, so the pictures, one every FireSpacing real seconds, run through the whole rock until it has settled.
+	 */
+	constexpr double FireWarm = 5.0;
+	constexpr float FireTimeDilation = 0.25f;
 
 	struct FScenario
 	{
@@ -211,6 +219,7 @@ namespace RTSTrackShots
 				{
 					Place(InUnit, DriveStart, 0.f);
 					InUnit.GetUnitMovement()->SetCommandOverride(Command);
+					InUnit.SetAimOverride({});
 					return true;
 				};
 			};
@@ -244,6 +253,21 @@ namespace RTSTrackShots
 			Scenarios.Add({ TEXT("wrap_idler"), IdlerView, Drive(Ahead(150.f)) });
 			Scenarios.Add({ TEXT("far"), FarView, Drive(Ahead(300.f)), 2.0, nullptr, nullptr, 0.1, 1.f });
 			Scenarios.Add({ TEXT("back_near"), SideView, [](ARTSUnit&) { return true; }, 0.0 });
+			// Standing and firing (#219): the hull rocks up on the gun's side, and the tracks and wheels have to ride with it. The
+			// gun turned toward the camera beside the left track, ahead for the idler, behind for the sprocket.
+			const double FireSpacing = Unit->GetUnitData()->GunRecoil.HullRockSeconds / FireTimeDilation / Frames;
+			for (const TTuple<const TCHAR*, FView, float>& Fire : { MakeTuple(TEXT("fire_side"), SideView, -90.f),
+				MakeTuple(TEXT("fire_idler"), IdlerView, 0.f), MakeTuple(TEXT("fire_sprocket"), SprocketView, 180.f) })
+			{
+				const float Yaw = Fire.Get<2>();
+				auto Stand = Drive(RTSLocomotion::FCommand());
+				Scenarios.Add({ Fire.Get<0>(), Fire.Get<1>(), [Stand, Yaw](ARTSUnit& InUnit)
+				{
+					Stand(InUnit);
+					InUnit.SetAimOverride(FVector2D(Yaw, 0.f));
+					return InUnit.GetUnitData()->GunRecoil.HullRockDegrees > 0.f;
+				}, FireWarm, nullptr, [](ARTSUnit& InUnit) { InUnit.PlayGunRecoil(); }, FireSpacing, FireTimeDilation });
+			}
 			// Driving past a still camera at full speed, pictures as fast as they come, without letting a frame settle (#243).
 			for (const bool bReprojection : { false, true })
 			{
@@ -376,10 +400,12 @@ namespace RTSTrackShots
 				// What the material draws now, from the link rate it was sent (#216).
 				Unit->GetTrackMaterialPhase(TrackParts[Side], Sent[Side]);
 			}
+			// The hull's rock from a shot (#219): its front and its right side lifted, in degrees.
+			const FVector2D Rock = Unit->GetHullRock();
 			UE_LOG(LogWorldDivide, Display,
-				TEXT("rts.Debug.TrackShots: %s %02d: %s, %.0f cm/s, %.1f deg/s; travel L %.1f R %.1f cm; phase L %.4f (material %.4f) R %.4f (material %.4f)"),
+				TEXT("rts.Debug.TrackShots: %s %02d: %s, %.0f cm/s, %.1f deg/s; travel L %.1f R %.1f cm; phase L %.4f (material %.4f) R %.4f (material %.4f); rock front %.3f right %.3f deg"),
 				*Name, Shot, *UEnum::GetValueAsString(Motion.Status), Motion.ForwardSpeed, Motion.YawRate, Motion.LeftTravel, Motion.RightTravel,
-				Phase[0], Sent[0], Phase[1], Sent[1]);
+				Phase[0], Sent[0], Phase[1], Sent[1], Rock.X, Rock.Y);
 		}
 
 		bool Finish(const FString& Error)
@@ -387,6 +413,7 @@ namespace RTSTrackShots
 			if (Unit.IsValid())
 			{
 				Unit->GetUnitMovement()->SetCommandOverride({});
+				Unit->SetAimOverride({});
 			}
 			if (World.IsValid())
 			{

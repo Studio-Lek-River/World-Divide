@@ -104,6 +104,13 @@ struct WORLDDIVIDE_API FRTSGunRecoil
 	float JumpSeconds = 0.4f;
 
 	/**
+	 * How the jump settles, as the damping ratio of its spring: the stiff elevation drive at 0.45 swings back past rest by about
+	 * a fifth of the kick; nearer 1 it swings back less.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.05", ClampMax = "0.95"))
+	float JumpDamping = 0.45f;
+
+	/**
 	 * Degrees the hull rocks back at its most, lifting on the side the gun points to and pivoting on the opposite edge of
 	 * its bottom, so it never sinks into the ground; 0 leaves the hull still. Only the mesh moves: the actor, its collision
 	 * and its movement do not.
@@ -114,6 +121,13 @@ struct WORLDDIVIDE_API FRTSGunRecoil
 	/** Seconds the hull takes to settle on its suspension. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.05"))
 	float HullRockSeconds = 1.f;
+
+	/**
+	 * How the rock settles, as the damping ratio of its spring (#219): at 0.6 the hull swings back past rest by under a tenth
+	 * of its rock, a few millimetres on the M20, so it comes to rest without a visible bounce.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.05", ClampMax = "0.95"))
+	float HullRockDamping = 0.6f;
 
 	/** How far back the barrel is, in cm before MeshScale, Time seconds into a stroke that started From cm back. */
 	float OffsetAt(float Time, float From) const;

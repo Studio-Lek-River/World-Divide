@@ -390,14 +390,16 @@ def make_m20_guardian():
 
 
 def gun_recoil(distance, recoil_seconds, hold_seconds, return_seconds, jump_degrees=0.0, jump_seconds=0.4,
-               hull_rock_degrees=0.0, hull_rock_seconds=1.0):
+               jump_damping=0.45, hull_rock_degrees=0.0, hull_rock_seconds=1.0, hull_rock_damping=0.6):
     """A vehicle's reaction to its gun firing (FRTSGunRecoil, #218): the barrel's stroke in cm and its seconds back, held
-    and out again; the gun's jump and the hull's rock in degrees, and the seconds each takes to settle."""
+    and out again; the gun's jump and the hull's rock in degrees, the seconds each takes to settle and the damping ratio
+    it settles with (#219)."""
     value = unreal.RTSGunRecoil()
     for name, setting in (("distance", distance), ("recoil_seconds", recoil_seconds), ("hold_seconds", hold_seconds),
                           ("return_seconds", return_seconds), ("jump_degrees", jump_degrees),
-                          ("jump_seconds", jump_seconds), ("hull_rock_degrees", hull_rock_degrees),
-                          ("hull_rock_seconds", hull_rock_seconds)):
+                          ("jump_seconds", jump_seconds), ("jump_damping", jump_damping),
+                          ("hull_rock_degrees", hull_rock_degrees), ("hull_rock_seconds", hull_rock_seconds),
+                          ("hull_rock_damping", hull_rock_damping)):
         value.set_editor_property(name, setting)
     return value
 

@@ -91,8 +91,27 @@ namespace RTSUnitDebugCommands
 
 	/** The turned turret for the turret shot. */
 	const FVector2D TurretShotAim(60.f, 10.f);
-	/** Of FRTSGunRecoil::HullRockSeconds: when the hull has rocked back furthest (the spring's peak, #218). */
-	constexpr float HullRockPeakShare = 0.174f;
+	/**
+	 * Seconds into a shot when the hull has rocked back furthest (#218): the peak of FRTSRecoilSpring, at acos(r) / Swing for
+	 * its damping ratio r, a share of the settle time of about a sixth at the M20's 0.6.
+	 */
+	float GetHullRockPeakSeconds(const FRTSGunRecoil& Recoil)
+	{
+		const float Ratio = FMath::Clamp(Recoil.HullRockDamping, 0.05f, 0.95f);
+		return FMath::Acos(Ratio) * Ratio / (4.f * FMath::Sqrt(1.f - FMath::Square(Ratio))) * Recoil.HullRockSeconds;
+	}
+
+	/**
+	 * The rock's views (#219): from the front and from the right side, low, so the hull's lift shows against the ground, with
+	 * the gun at 0, 90 and 180 degrees. The map's other units stand off the unit's left.
+	 */
+	const TPair<const TCHAR*, FVector> RockViews[] = {
+		{ TEXT("front"), FVector(1.f, 0.f, 0.f) },
+		{ TEXT("side"), FVector(0.f, 1.f, 0.f) },
+	};
+	constexpr float RockGunYaws[] = { 0.f, 90.f, 180.f };
+	constexpr float RockViewDistance = 1100.f;
+	constexpr float RockViewElevation = 4.f;
 
 	/** The drive shot: the unit is picked along a ray from here relative to it, as from the RTS camera, and sent this far ahead. */
 	const FVector PickFrom(-1700.f, 0.f, 2500.f);
@@ -500,20 +519,37 @@ namespace RTSUnitDebugCommands
 				Run.Unit->SetGunRecoilHold(Run.Unit->GetUnitData()->GunRecoil.RecoilSeconds);
 				return true;
 			} });
-			// About when the hull has rocked back furthest: the barrel on its way out and the gun swinging back down.
-			Shots.Add({ TEXT("recoil_rock"), [](FUnitShotsRun& Run)
-			{
-				Run.Unit->SetGunRecoilHold(Run.Unit->GetUnitData()->GunRecoil.HullRockSeconds * HullRockPeakShare);
-				return true;
-			} });
 			Shots.Add({ TEXT("recoil_returned"), [](FUnitShotsRun& Run)
 			{
 				Run.Unit->SetGunRecoilHold({});
 				Run.Unit->PlayGunRecoil();
 				return true;
 			}, SettleSeconds + Unit->GetUnitData()->GunRecoil.GetSettleSeconds() });
+			// The hull's rock (#219) from the front and the side, at rest and held where it has rocked back furthest, for each
+			// way the gun points: the hull lifts on the gun's side and pivots on the edge across from it.
+			for (const float Yaw : RockGunYaws)
+			{
+				for (const TPair<const TCHAR*, FVector>& View : RockViews)
+				{
+					const FString Suffix = FString::Printf(TEXT("%s_%03.0f"), View.Key, Yaw);
+					const FVector Direction = View.Value;
+					const bool bTurn = &View == &RockViews[0];
+					Shots.Add({ TEXT("recoil_rest_") + Suffix, [Yaw, Direction](FUnitShotsRun& Run)
+					{
+						Run.Unit->SetGunRecoilHold({});
+						Run.Unit->SetAimOverride(FVector2D(Yaw, 0.f));
+						return Run.UseLODCamera(Direction, RockViewDistance, false, RockViewElevation);
+					}, bTurn ? TraverseSeconds : SettleSeconds });
+					Shots.Add({ TEXT("recoil_rock_") + Suffix, [](FUnitShotsRun& Run)
+					{
+						Run.Unit->SetGunRecoilHold(GetHullRockPeakSeconds(Run.Unit->GetUnitData()->GunRecoil));
+						return true;
+					} });
+				}
+			}
 			Shots.Add({ TEXT("driving"), [](FUnitShotsRun& Run)
 			{
+				Run.Unit->SetGunRecoilHold({});
 				Run.Unit->SetAimOverride({});
 				return Run.Drive();
 			}, DriveSeconds, false, true });
@@ -614,10 +650,10 @@ namespace RTSUnitDebugCommands
 		}
 
 		/**
-		 * The inspection camera Distance from the middle of the hull toward Direction (unit space), LODViewElevation above the
+		 * The inspection camera Distance from the middle of the hull toward Direction (unit space), ElevationDegrees above the
 		 * horizontal; with bRTSLens through the RTS camera's lens, which the LOD switches are measured with, else the close-up's.
 		 */
-		bool UseLODCamera(const FVector& Direction, float Distance, bool bRTSLens)
+		bool UseLODCamera(const FVector& Direction, float Distance, bool bRTSLens, float ElevationDegrees = LODViewElevation)
 		{
 			const UStaticMeshComponent* Hull = RTSUnitLOD::FindHull(*Unit);
 			if (!Hull || !UseCloseUpCamera())
@@ -630,7 +666,7 @@ namespace RTSUnitDebugCommands
 			Lens->SetAspectRatioAxisConstraint(EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV);
 			const FVector Centre = Hull->Bounds.Origin;
 			const FVector Across = Unit->GetActorTransform().TransformVectorNoScale(Direction).GetSafeNormal2D();
-			const float Elevation = FMath::DegreesToRadians(LODViewElevation);
+			const float Elevation = FMath::DegreesToRadians(ElevationDegrees);
 			const FVector Eye = Centre + (Across * FMath::Cos(Elevation) + FVector::UpVector * FMath::Sin(Elevation)) * Distance;
 			CloseUp->SetActorLocationAndRotation(Eye, (Centre - Eye).Rotation());
 			return true;

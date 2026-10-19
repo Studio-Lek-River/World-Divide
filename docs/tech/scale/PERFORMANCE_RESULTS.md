@@ -1978,3 +1978,28 @@ point blank the impact lands inside the neighbour's hull), so the before and aft
 
 - No long-method rows: the change is not expected to move a gate, and the short-method rows above show no regression.
 - A weaker GPU or a slower CPU spends more on the lights and the churn than this PC; the RTX 3060-class run (#152, #160) will tell.
+
+## #219 (the gun's recoil and the hull's rock, near the camera only)
+
+### What changed
+
+#218 made every shot of an M20 on screen move its barrel and gun, and rock its hull with every part on it, for about 0.75 s.
+`rts.Vehicle.RecoilDistance` (default 110 m, the M20's LOD2 switch) now skips all of it for a tank farther than that from every
+camera on the machine. At the default RTS view (170 m) the rock is under a pixel and the barrel's stroke a pixel or two.
+
+### Short method, 240 standing M20s firing (`@Battle`), one 120-frame sample each, interleaved runs
+
+`ue.ps1 -Task bench -Unit DA_TestM20Guardian@Battle -Counts 240`, RTX 4090 PC. Recoil switched off and the rock alone switched
+off by a temporary switch that was not committed.
+
+| Recoil | Runs | Frame ms (mean of runs) | Render ms | GPU ms | Game ms |
+|---|---:|---:|---:|---:|---:|
+| Barrel, gun and rock (#218) | 10 | 6.9–8.5 (7.4) | 6.9–8.5 | 6.3–7.5 | 2.5–4.9 |
+| Barrel and gun, no rock | 5 | 5.2–7.2 (6.2) | 5.2–7.1 | 4.7–6.3 | 2.7–3.6 |
+| None | 9 | 5.0–6.2 (5.6) | 5.0–6.2 | 4.4–5.6 | 2.6–3.4 |
+| Gated by distance (#219) | 2 | 5.4–6.4 (5.9) | 5.3–6.3 | 4.7–5.7 | 3.1–3.5 |
+
+- **The recoil cost the render thread and the GPU, not the game thread:** about 1.8 ms a frame at 240 firing tanks, most of it the
+  rock, which moves the hull and every part on it. Driving, every hull already moves, and the move rows did not change.
+- **Gated, the default view is back within the runs without recoil.** Zoomed in (`@Battle@Close`), every tank still recoils, as it
+  should: 7.3 ms idle in one run.

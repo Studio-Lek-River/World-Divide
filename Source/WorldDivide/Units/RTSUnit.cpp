@@ -3,6 +3,7 @@
 #include "AI/RTSAIPlayer.h"
 #include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/BoxComponent.h"
@@ -81,13 +82,6 @@ namespace
 	constexpr float FireKickPerScale = 8.f;
 	constexpr float FireKickSeconds = 0.15f;
 	/**
-	 * How the gun's jump and the hull's rock settle (FRTSRecoilSpring's damping, #218): the gun on its stiff elevation drive
-	 * swings back past rest by about a fifth of its kick, the hull on its suspension by under a tenth.
-	 */
-	constexpr float GunJumpDamping = 0.45f;
-	constexpr float HullRockDamping = 0.6f;
-
-	/**
 	 * The ground is looked for from this far above a unit's feet, enough for the steepest ramp it climbs in a frame, down to
 	 * this far below them, enough for a unit spawned above the ground.
 	 */
@@ -135,6 +129,15 @@ namespace
 	/** Below this much driving (cm) and turning (degrees) since the last frame the wheels stand still. */
 	constexpr float GearMinDistance = 0.01f;
 	constexpr float GearMinTurn = 0.001f;
+
+	/**
+	 * A vehicle's gun recoils and its hull rocks (PlayGunRecoil) only within this many cm of a camera on this machine (#219).
+	 * Past the M20's LOD2 switch at 110 m the rock is under a pixel and the barrel's stroke a pixel or two, while moving the
+	 * hull and its parts cost 240 firing M20s about 1.8 ms of render thread and GPU a frame.
+	 */
+	TAutoConsoleVariable<float> CVarRecoilDistance(
+		TEXT("rts.Vehicle.RecoilDistance"), 11000.f,
+		TEXT("cm from this machine's camera past which a vehicle's gun does not recoil nor its hull rock (#219); 0 everywhere."));
 
 	/**
 	 * Every part of a unit is movable, and the renderer gives a movable primitive its own hardware occlusion query in every
@@ -1113,9 +1116,9 @@ void ARTSUnit::PlayGunRecoil()
 	{
 		return;
 	}
-	// Nobody sees a tank off screen recoil, and moving its hull and parts for a second is most of what the recoil costs. A
-	// machine that never renders (tests under -nullrhi) has no frames to go by and plays it all.
-	if (FApp::CanEverRender() && !Mesh->WasRecentlyRendered())
+	// Nobody sees a tank off screen or far away recoil, and moving its hull and parts for a second is most of what the recoil
+	// costs. A machine that never renders (tests under -nullrhi) has no frames or views to go by and plays it all.
+	if (FApp::CanEverRender() && (!Mesh->WasRecentlyRendered() || !IsRecoilSeen(GetLocalViewLocations())))
 	{
 		return;
 	}
@@ -1127,7 +1130,7 @@ void ARTSUnit::PlayGunRecoil()
 	}
 	if (Gun && Recoil.JumpDegrees > 0.f)
 	{
-		GunJump.Kick(Recoil.JumpDegrees, Recoil.JumpSeconds, GunJumpDamping);
+		GunJump.Kick(Recoil.JumpDegrees, Recoil.JumpSeconds, Recoil.JumpDamping);
 	}
 	if (Recoil.HullRockDegrees > 0.f)
 	{
@@ -1135,10 +1138,41 @@ void ARTSUnit::PlayGunRecoil()
 		float Side = 0.f;
 		float Ahead = 1.f;
 		FMath::SinCos(&Side, &Ahead, FMath::DegreesToRadians(TurretYaw));
-		HullLift.Kick(Recoil.HullRockDegrees * Ahead, Recoil.HullRockSeconds, HullRockDamping);
-		HullSide.Kick(Recoil.HullRockDegrees * Side, Recoil.HullRockSeconds, HullRockDamping);
+		HullLift.Kick(Recoil.HullRockDegrees * Ahead, Recoil.HullRockSeconds, Recoil.HullRockDamping);
+		HullSide.Kick(Recoil.HullRockDegrees * Side, Recoil.HullRockSeconds, Recoil.HullRockDamping);
 	}
 	UpdateGunRecoil(0.f);
+}
+
+bool ARTSUnit::IsRecoilSeen(TConstArrayView<FVector> ViewLocations) const
+{
+	const float Distance = CVarRecoilDistance.GetValueOnGameThread();
+	if (Distance <= 0.f)
+	{
+		return true;
+	}
+	const FVector Location = GetActorLocation();
+	return ViewLocations.ContainsByPredicate([&Location, Distance](const FVector& View)
+	{
+		return FVector::DistSquared(View, Location) <= FMath::Square(Distance);
+	});
+}
+
+TArray<FVector, TInlineAllocator<2>> ARTSUnit::GetLocalViewLocations() const
+{
+	TArray<FVector, TInlineAllocator<2>> Locations;
+	if (const UWorld* World = GetWorld())
+	{
+		for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+		{
+			const APlayerController* Player = It->Get();
+			if (Player && Player->IsLocalController() && Player->PlayerCameraManager)
+			{
+				Locations.Add(Player->PlayerCameraManager->GetCameraLocation());
+			}
+		}
+	}
+	return Locations;
 }
 
 void ARTSUnit::SetGunRecoilHold(TOptional<float> Time)
