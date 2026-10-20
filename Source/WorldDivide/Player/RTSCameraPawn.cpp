@@ -363,20 +363,21 @@ void ARTSCameraPawn::SetZoomNow(float ArmLength)
 
 void ARTSCameraPawn::AddRotateInput(float Degrees)
 {
-	TargetYaw += Degrees;
+	YawLeft += Degrees;
 	ZoomFocus.Reset();
 }
 
 void ARTSCameraPawn::ResetYawToNorth()
 {
-	TargetYaw = GetActorRotation().Yaw + FMath::FindDeltaAngleDegrees(GetActorRotation().Yaw, 0.f);
+	YawLeft = FMath::FindDeltaAngleDegrees(GetActorRotation().Yaw, 0.f);
 	ZoomFocus.Reset();
 }
 
 void ARTSCameraPawn::SetYawNow(float Yaw)
 {
 	SetActorRotation(FRotator(0.f, Yaw, 0.f));
-	TargetYaw = AppliedYaw = GetActorRotation().Yaw;
+	AppliedYaw = GetActorRotation().Yaw;
+	YawLeft = 0.f;
 	ZoomFocus.Reset();
 	UpdateArm(true);
 	SetActorLocation(ClampToPanArea(GetActorLocation()));
@@ -446,12 +447,13 @@ void ARTSCameraPawn::Tick(float DeltaSeconds)
 	const float Yaw = GetActorRotation().Yaw;
 	if (!FMath::IsNearlyZero(FMath::FindDeltaAngleDegrees(AppliedYaw, Yaw), 0.01f))
 	{
-		TargetYaw = AppliedYaw = Yaw;
+		AppliedYaw = Yaw;
+		YawLeft = 0.f;
 	}
-	const float YawLeft = FMath::FindDeltaAngleDegrees(Yaw, TargetYaw);
 	if (!FMath::IsNearlyZero(YawLeft, 0.01f))
 	{
 		const float Step = FMath::Abs(YawLeft) < RTSCameraPawn::YawSnap ? YawLeft : YawLeft * FMath::Min(1.f, DeltaSeconds * Settings->RotateEaseSpeed);
+		YawLeft -= Step;
 		SetActorRotation(FRotator(0.f, Yaw + Step, 0.f));
 		AppliedYaw = GetActorRotation().Yaw;
 		bMoved = true;

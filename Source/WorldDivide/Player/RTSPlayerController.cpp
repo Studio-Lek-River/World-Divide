@@ -1826,7 +1826,8 @@ bool ARTSPlayerController::GetHeadquartersLocation(FVector& OutLocation) const
 		OutLocation = Start->GetActorLocation();
 		return true;
 	}
-	if (const APlayerStart* const* Spot = RTSMaps::FindStartSpots(*GetWorld()).Find(TeamId))
+	const TMap<int32, const APlayerStart*> Spots = RTSMaps::FindStartSpots(*GetWorld());
+	if (const APlayerStart* const* Spot = Spots.Find(TeamId))
 	{
 		OutLocation = (*Spot)->GetActorLocation();
 		return true;

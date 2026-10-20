@@ -63,8 +63,8 @@ public:
 	/** Sets the yaw at once, without easing to it; for scripted views. */
 	void SetYawNow(float Yaw);
 
-	/** The yaw the camera eases to. */
-	float GetTargetYaw() const { return TargetYaw; }
+	/** The yaw the camera eases to, unwrapped: past 180 degrees from the current yaw when the input turned that far. */
+	float GetTargetYaw() const { return GetActorRotation().Yaw + YawLeft; }
 
 	/** Grabs the ground under ScreenPoint (as AddZoomInput's): UpdateGrabPan then keeps it under the cursor. False over the sky. */
 	bool StartGrabPan(const FVector2D& ScreenPoint);
@@ -207,7 +207,11 @@ private:
 	/** World XY, cm/s. */
 	FVector2D PanVelocity = FVector2D::ZeroVector;
 	float TargetZoom = 0.f;
-	float TargetYaw = 0.f;
+	/**
+	 * Degrees still to turn, unwrapped, so a turn of more than 180 degrees keeps going the way the input went instead of
+	 * the short way back.
+	 */
+	float YawLeft = 0.f;
 	/** The yaw this pawn last set, to notice a SetActorRotation from elsewhere and take it as the new target. */
 	float AppliedYaw = 0.f;
 

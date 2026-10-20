@@ -517,6 +517,22 @@ namespace RTSCameraTests
 		TestTrue(TEXT("The turn to north never goes the long way"), bShortWay);
 		TestEqual(TEXT("Home turns the camera to north"), GetYaw(), 0.f, 0.05f);
 		TestEqual(TEXT("Home keeps the zoom"), Camera->GetZoom(), Zoom);
+
+		// A fast flick of 270 degrees keeps turning the way it went, not the short way back.
+		Camera->AddRotateInput(270.f);
+		bool bWayOfInput = true;
+		float Previous = 0.f;
+		float Turned = 0.f;
+		for (int32 Frame = 0; Frame < 120; ++Frame)
+		{
+			Camera->Tick(1.f / 30.f);
+			const float Step = FMath::FindDeltaAngleDegrees(Previous, GetYaw());
+			bWayOfInput &= Step >= -0.01f;
+			Turned += Step;
+			Previous = GetYaw();
+		}
+		TestTrue(TEXT("A turn past 180 degrees goes the way the input went"), bWayOfInput);
+		TestEqual(TEXT("A turn past 180 degrees turns the whole way"), Turned, 270.f, 0.05f);
 		return true;
 	}
 }
