@@ -92,6 +92,14 @@ function Find-Shot($Screen, $Profile, $Scene, $Zoom) {
 	return $Metrics | Where-Object { $_.screen -eq $Screen -and $_.profile -eq $Profile -and $_.scene -eq $Scene -and $_.zoom -eq $Zoom } | Select-Object -First 1
 }
 
+# A landscape run (-Map, #295) has only the camera as it is now: one sheet, a row per scene.
+if (-not ($Metrics | Where-Object { $_.profile -eq 'Previous' })) {
+	$Scenes = @($Metrics | ForEach-Object { $_.scene } | Select-Object -Unique)
+	$Cells = @(foreach ($Scene in $Scenes) { , @(foreach ($Zoom in @('min', 'default', 'max')) { Find-Shot '1920x1080' 'Final' $Scene $Zoom }) })
+	Write-Sheet (Join-Path $ShotDir 'Sheet_landscape.jpg') 'Camera on the landscape at 1920x1080' @('Closest zoom', 'Default zoom', 'Farthest zoom') $Scenes $Cells
+	return
+}
+
 $Profiles = @('Previous', 'Final')
 $Zooms = @('min', 'default', 'max')
 foreach ($Scene in @('vehicle', 'formation', 'base', 'battlefield')) {

@@ -77,7 +77,9 @@ DECLARE_MULTICAST_DELEGATE(FRTSSelectionChangedSignature);
  * and a click on a queued unit, or Delete for the last one, cancels it for a refund.
  * With an own superweapon selected that is ready, 1 or a click on the HUD's launch entry arms targeting: left click launches it
  * at the clicked spot, right click, Esc or a change of selection cancels it.
- * Space centres the camera on the latest attack warning, for up to AttackJumpMaxAge seconds after it.
+ * Space centres the camera on the latest attack warning, for up to AttackJumpMaxAge seconds after it; Backspace on the
+ * headquarters. The wheel zooms towards the cursor, a middle-mouse drag grabs the ground and Alt with it rotates, Q and E
+ * rotate, Home turns the camera back to north. Neither the wheel nor the screen's edge moves the camera over the HUD.
  * Once the match is over the HUD shows Victory or Defeat, and on the host a restart button.
  * Esc with nothing to cancel opens the in-game menu: Resume, or Leave match for the main menu. While it is open the
  * match runs on, the camera keys still work and every other input is ignored.
@@ -362,6 +364,15 @@ public:
 	/** Local. Centres the camera on the newest warning; false, changing nothing, without one or once it is too old. */
 	bool JumpToLatestAttack();
 
+	/**
+	 * Where the local player's headquarters stands; without one any other own standing building, else the player's start
+	 * spot. False when there is none of them.
+	 */
+	bool GetHeadquartersLocation(FVector& OutLocation) const;
+
+	/** Local. Centres the camera on GetHeadquartersLocation, keeping the zoom; false, changing nothing, without one. */
+	bool JumpToHeadquarters();
+
 	/** Alert sounds played for warnings of Kind, for tests; worlds without audio count them but stay silent. */
 	int32 GetAlertSoundCount(ERTSAttackAlert Kind) const { return ReceivedAttackAlerts[static_cast<int32>(Kind)].SoundCount; }
 
@@ -412,20 +423,9 @@ protected:
 	virtual void PlayerTick(float DeltaTime) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	/** Pixels from the viewport edge where the camera starts to scroll. */
-	UPROPERTY(EditAnywhere, Category = "RTS|Input")
-	float EdgeScrollMargin = 12.f;
-
 	/** A left-button press that moves less than this many pixels is a click, not a box. */
 	UPROPERTY(EditAnywhere, Category = "RTS|Input")
 	float DragThreshold = 6.f;
-
-	UPROPERTY(EditAnywhere, Category = "RTS|Input")
-	float KeyRotateSpeed = 90.f;
-
-	/** Degrees of yaw per pixel of middle-mouse drag. */
-	UPROPERTY(EditAnywhere, Category = "RTS|Input")
-	float DragRotateSpeed = 0.3f;
 
 private:
 	void CreateInputActions();
@@ -433,8 +433,10 @@ private:
 	void OnPan(const FInputActionValue& Value);
 	void OnZoom(const FInputActionValue& Value);
 	void OnRotate(const FInputActionValue& Value);
-	void OnRotateDragStarted();
-	void OnRotateDragCompleted();
+	void OnCameraDragStarted();
+	void OnCameraDragCompleted();
+	void OnResetNorth();
+	void OnJumpToHeadquarters();
 	void OnSelectStarted();
 	void OnSelectCompleted();
 	void OnMoveOrder();
@@ -451,6 +453,10 @@ private:
 
 	void ApplyEdgeScroll() const;
 	void ApplyDragRotate();
+	void ApplyGrabPan();
+
+	/** The cursor as the camera's screen point, the viewport's width and height as 0 to 1; false without a cursor. */
+	bool GetCursorScreenPoint(FVector2D& OutPoint) const;
 	void SelectUnderCursor(bool bAdditive);
 	void SelectInBox(const FVector2D& Start, const FVector2D& End, bool bAdditive);
 	void IssueToSelection(const FRTSCommand& Command);
@@ -478,8 +484,15 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> RotateAction;
 
+	/** Middle mouse: grabs the ground, or with Alt rotates. */
 	UPROPERTY(Transient)
-	TObjectPtr<UInputAction> RotateDragAction;
+	TObjectPtr<UInputAction> CameraDragAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ResetNorthAction;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> JumpToHeadquartersAction;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> SelectAction;
@@ -537,6 +550,7 @@ private:
 
 	bool bRotateDragging = false;
 	FVector2D LastRotateMouse = FVector2D::ZeroVector;
+	bool bGrabPanning = false;
 
 	/** Set while placing a building. */
 	UPROPERTY(Transient)

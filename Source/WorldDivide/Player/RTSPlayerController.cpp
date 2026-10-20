@@ -5,9 +5,11 @@
 #include "Buildings/RTSPlacementGhost.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Buildings/RTSSuperweaponComponent.h"
+#include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSTargetable.h"
 #include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSGameMode.h"
+#include "Core/RTSMaps.h"
 #include "Core/RTSPlayerState.h"
 #include "Core/RTSSettings.h"
 #include "Data/RTSBuilderData.h"
@@ -19,6 +21,7 @@
 #include "EngineUtils.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "GameFramework/PlayerStart.h"
 #include "InputAction.h"
 #include "InputKeyEventArgs.h"
 #include "InputMappingContext.h"
@@ -27,6 +30,7 @@
 #include "Misc/App.h"
 #include "Player/RTSAlertSound.h"
 #include "Player/RTSCameraPawn.h"
+#include "Player/RTSCameraSettings.h"
 #include "Player/RTSHUD.h"
 #include "Player/RTSLocalPlayer.h"
 #include "UI/RTSHUDWidget.h"
@@ -94,8 +98,11 @@ void ARTSPlayerController::CreateInputActions()
 	MapKey(MappingContext, RotateAction, EKeys::E);
 	MapKey(MappingContext, RotateAction, EKeys::Q, true);
 
-	RotateDragAction = MakeAction(this, TEXT("IA_RotateDrag"), EInputActionValueType::Boolean);
-	MapKey(MappingContext, RotateDragAction, EKeys::MiddleMouseButton);
+	CameraDragAction = MakeAction(this, TEXT("IA_CameraDrag"), EInputActionValueType::Boolean);
+	MapKey(MappingContext, CameraDragAction, EKeys::MiddleMouseButton);
+
+	ResetNorthAction = MakeAction(this, TEXT("IA_ResetNorth"), EInputActionValueType::Boolean);
+	MapKey(MappingContext, ResetNorthAction, EKeys::Home);
 
 	SelectAction = MakeAction(this, TEXT("IA_Select"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, SelectAction, EKeys::LeftMouseButton);
@@ -121,6 +128,9 @@ void ARTSPlayerController::CreateInputActions()
 
 	JumpToAttackAction = MakeAction(this, TEXT("IA_JumpToAttack"), EInputActionValueType::Boolean);
 	MapKey(MappingContext, JumpToAttackAction, EKeys::SpaceBar);
+
+	JumpToHeadquartersAction = MakeAction(this, TEXT("IA_JumpToHeadquarters"), EInputActionValueType::Boolean);
+	MapKey(MappingContext, JumpToHeadquartersAction, EKeys::BackSpace);
 
 	// Not the mouse wheel: that zooms the camera, also while placing.
 	RotatePlacementAction = MakeAction(this, TEXT("IA_RotatePlacement"), EInputActionValueType::Boolean);
@@ -155,8 +165,10 @@ void ARTSPlayerController::SetupInputComponent()
 	Input->BindAction(PanAction, ETriggerEvent::Triggered, this, &ThisClass::OnPan);
 	Input->BindAction(ZoomAction, ETriggerEvent::Triggered, this, &ThisClass::OnZoom);
 	Input->BindAction(RotateAction, ETriggerEvent::Triggered, this, &ThisClass::OnRotate);
-	Input->BindAction(RotateDragAction, ETriggerEvent::Started, this, &ThisClass::OnRotateDragStarted);
-	Input->BindAction(RotateDragAction, ETriggerEvent::Completed, this, &ThisClass::OnRotateDragCompleted);
+	Input->BindAction(CameraDragAction, ETriggerEvent::Started, this, &ThisClass::OnCameraDragStarted);
+	Input->BindAction(CameraDragAction, ETriggerEvent::Completed, this, &ThisClass::OnCameraDragCompleted);
+	Input->BindAction(ResetNorthAction, ETriggerEvent::Started, this, &ThisClass::OnResetNorth);
+	Input->BindAction(JumpToHeadquartersAction, ETriggerEvent::Started, this, &ThisClass::OnJumpToHeadquarters);
 	Input->BindAction(SelectAction, ETriggerEvent::Started, this, &ThisClass::OnSelectStarted);
 	Input->BindAction(SelectAction, ETriggerEvent::Completed, this, &ThisClass::OnSelectCompleted);
 	Input->BindAction(MoveOrderAction, ETriggerEvent::Started, this, &ThisClass::OnMoveOrder);
@@ -204,6 +216,7 @@ void ARTSPlayerController::PlayerTick(float DeltaTime)
 	}
 
 	ApplyDragRotate();
+	ApplyGrabPan();
 	ApplyEdgeScroll();
 	UpdatePlacement();
 }
@@ -480,9 +493,36 @@ void ARTSPlayerController::OnPan(const FInputActionValue& Value)
 	}
 }
 
+bool ARTSPlayerController::GetCursorScreenPoint(FVector2D& OutPoint) const
+{
+	FVector2D Mouse;
+	int32 ViewportX = 0;
+	int32 ViewportY = 0;
+	GetViewportSize(ViewportX, ViewportY);
+	if (ViewportX <= 0 || ViewportY <= 0 || !GetMousePosition(Mouse.X, Mouse.Y))
+	{
+		return false;
+	}
+	OutPoint = FVector2D(Mouse.X / ViewportX, Mouse.Y / ViewportY);
+	return true;
+}
+
 void ARTSPlayerController::OnZoom(const FInputActionValue& Value)
 {
-	if (ARTSCameraPawn* CameraPawn = GetCameraPawn())
+	ARTSCameraPawn* CameraPawn = GetCameraPawn();
+	FVector2D Mouse;
+	const bool bHasMouse = GetMousePosition(Mouse.X, Mouse.Y);
+	// The wheel over a panel belongs to the HUD, never the camera.
+	if (!CameraPawn || (bHasMouse && IsOnHUDPanel(Mouse)))
+	{
+		return;
+	}
+	FVector2D ScreenPoint;
+	if (GetCursorScreenPoint(ScreenPoint))
+	{
+		CameraPawn->AddZoomInput(Value.Get<float>(), ScreenPoint);
+	}
+	else
 	{
 		CameraPawn->AddZoomInput(Value.Get<float>());
 	}
@@ -492,18 +532,63 @@ void ARTSPlayerController::OnRotate(const FInputActionValue& Value)
 {
 	if (ARTSCameraPawn* CameraPawn = GetCameraPawn())
 	{
-		CameraPawn->AddRotateInput(Value.Get<float>() * KeyRotateSpeed * GetWorld()->GetDeltaSeconds());
+		CameraPawn->AddRotateInput(Value.Get<float>() * GetDefault<URTSCameraSettings>()->KeyRotateSpeed * GetWorld()->GetDeltaSeconds());
 	}
 }
 
-void ARTSPlayerController::OnRotateDragStarted()
+void ARTSPlayerController::OnCameraDragStarted()
 {
-	bRotateDragging = GetMousePosition(LastRotateMouse.X, LastRotateMouse.Y);
+	// Alt + middle mouse rotates; middle mouse alone grabs the ground, unless a box, a placement or an armed order is
+	// using the cursor.
+	if (IsInputKeyDown(EKeys::LeftAlt) || IsInputKeyDown(EKeys::RightAlt))
+	{
+		bRotateDragging = GetMousePosition(LastRotateMouse.X, LastRotateMouse.Y);
+		return;
+	}
+	ARTSCameraPawn* CameraPawn = GetCameraPawn();
+	FVector2D ScreenPoint;
+	if (!CameraPawn || bSelecting || PlacementData || bAttackMoveArmed || bSuperweaponTargeting || !GetCursorScreenPoint(ScreenPoint))
+	{
+		return;
+	}
+	bGrabPanning = CameraPawn->StartGrabPan(ScreenPoint);
 }
 
-void ARTSPlayerController::OnRotateDragCompleted()
+void ARTSPlayerController::OnCameraDragCompleted()
 {
 	bRotateDragging = false;
+	bGrabPanning = false;
+	if (ARTSCameraPawn* CameraPawn = GetCameraPawn())
+	{
+		CameraPawn->StopGrabPan();
+	}
+}
+
+void ARTSPlayerController::ApplyGrabPan()
+{
+	ARTSCameraPawn* CameraPawn = GetCameraPawn();
+	FVector2D ScreenPoint;
+	if (bGrabPanning && CameraPawn && GetCursorScreenPoint(ScreenPoint))
+	{
+		CameraPawn->UpdateGrabPan(ScreenPoint);
+	}
+}
+
+void ARTSPlayerController::OnResetNorth()
+{
+	if (ARTSCameraPawn* CameraPawn = GetCameraPawn())
+	{
+		CameraPawn->ResetYawToNorth();
+	}
+}
+
+void ARTSPlayerController::OnJumpToHeadquarters()
+{
+	if (bInGameMenuOpen)
+	{
+		return;
+	}
+	JumpToHeadquarters();
 }
 
 void ARTSPlayerController::ApplyDragRotate()
@@ -515,7 +600,7 @@ void ARTSPlayerController::ApplyDragRotate()
 	}
 	if (ARTSCameraPawn* CameraPawn = GetCameraPawn())
 	{
-		CameraPawn->AddRotateInput((Mouse.X - LastRotateMouse.X) * DragRotateSpeed);
+		CameraPawn->AddRotateInput((Mouse.X - LastRotateMouse.X) * GetDefault<URTSCameraSettings>()->DragRotateSpeed);
 	}
 	LastRotateMouse = Mouse;
 }
@@ -526,11 +611,13 @@ void ARTSPlayerController::ApplyEdgeScroll() const
 	FVector2D Mouse;
 	int32 ViewportX = 0;
 	int32 ViewportY = 0;
-	if (!CameraPawn || bRotateDragging || bInGameMenuOpen || !GetMousePosition(Mouse.X, Mouse.Y))
+	// Not over the HUD: the panels along the screen's edges are for the cursor, not for scrolling.
+	if (!CameraPawn || bRotateDragging || bGrabPanning || bInGameMenuOpen || !GetMousePosition(Mouse.X, Mouse.Y) || IsOnHUDPanel(Mouse))
 	{
 		return;
 	}
 	GetViewportSize(ViewportX, ViewportY);
+	const float EdgeScrollMargin = GetDefault<URTSCameraSettings>()->EdgeScrollMargin;
 	if (ViewportX <= 0 || ViewportY <= 0)
 	{
 		return;
@@ -1701,6 +1788,57 @@ bool ARTSPlayerController::JumpToLatestAttack()
 	FVector Location;
 	float Age = 0.f;
 	if (!CameraPawn || !GetLatestAttackAlert(Location, Age) || Age >= AttackJumpMaxAge)
+	{
+		return false;
+	}
+	CameraPawn->JumpTo(Location);
+	return true;
+}
+
+bool ARTSPlayerController::GetHeadquartersLocation(FVector& OutLocation) const
+{
+	const URTSFactionData* Faction = GetFaction();
+	const URTSBuildingData* Headquarters = Faction ? Faction->Headquarters.Get() : nullptr;
+	const int32 TeamId = GetTeamId();
+	const ARTSBuilding* Any = nullptr;
+	for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
+	{
+		const URTSHealthComponent* Health = It->GetHealthComponent();
+		if (It->GetTeamId() != TeamId || It->IsActorBeingDestroyed() || !Health || Health->IsDead())
+		{
+			continue;
+		}
+		if (Headquarters && It->GetBuildingData() == Headquarters)
+		{
+			OutLocation = It->GetActorLocation();
+			return true;
+		}
+		Any = Any ? Any : *It;
+	}
+	if (Any)
+	{
+		OutLocation = Any->GetActorLocation();
+		return true;
+	}
+	// The PlayerStart the game mode chose, known on the server; elsewhere the level's spot tagged with the team.
+	if (const AActor* Start = StartSpot.Get())
+	{
+		OutLocation = Start->GetActorLocation();
+		return true;
+	}
+	if (const APlayerStart* const* Spot = RTSMaps::FindStartSpots(*GetWorld()).Find(TeamId))
+	{
+		OutLocation = (*Spot)->GetActorLocation();
+		return true;
+	}
+	return false;
+}
+
+bool ARTSPlayerController::JumpToHeadquarters()
+{
+	ARTSCameraPawn* CameraPawn = GetCameraPawn();
+	FVector Location;
+	if (!CameraPawn || !GetHeadquartersLocation(Location))
 	{
 		return false;
 	}

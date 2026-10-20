@@ -155,7 +155,7 @@ This changes no behaviour; the existing selection, command, turret, barrel, vehi
 - Walls are one `StaticMeshActor` per piece (`Tools/Editor/setup_testmap.py:733-750`), so each has its own proxy and occlusion query; one ISM per wall is cheaper.
 - Placeholder meshes have one LOD and no test stops a heavy replacement without LODs.
 - Per-frame temporaries: `Player/RTSPlayerController.cpp:331`, `Units/RTSRunningGearSubsystem.cpp:93`, `Navigation/RTSMoveRequestSubsystem.cpp:166`.
-- The camera pawn traces every frame even when it did not move (`Player/RTSCameraPawn.cpp:134`).
+- Done (#295): the camera pawn traces only while it moves and for `TraceSettleSeconds` after; `WorldDivide.Camera.TerrainFollow` checks a still camera traces nothing.
 - `scale/RTS_MOVEMENT_PERFORMANCE.md` §1 and §3.1-3.2 still describe the scan that step 2 replaced; it is now marked superseded.
 
 ## Not applicable yet

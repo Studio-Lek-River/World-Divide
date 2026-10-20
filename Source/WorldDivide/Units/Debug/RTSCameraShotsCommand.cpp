@@ -34,6 +34,11 @@
  * field of view, the arm, the pitch, the ground across the middle of the screen and from its top to its bottom, and how
  * wide an M20, a tank and a soldier standing broadside at the view's centre appear. With -RTSCameraShotsQuit on the
  * command line the game quits when done, with exit code 1 on failure.
+ *
+ * On WD_RiverCrossing_01 (ue.ps1 -Task camerashots -Map /Game/Maps/WD_RiverCrossing_01, #295) it stages nothing and
+ * pictures the camera as it is now over the landscape at 1920x1080: the west hill, the north bridge, the west base turned
+ * 45 degrees, and the map's south-west corner straight and turned 45 degrees, each at the closest, default and farthest
+ * zoom.
  */
 namespace RTSCameraShots
 {
@@ -72,6 +77,26 @@ namespace RTSCameraShots
 	constexpr float FormationYaw = 145.f;
 	/** The battlefield view: past the formation towards the middle of the map. */
 	const FVector BattlefieldCentre(-6000.f, 0.f, 0.f);
+
+	/** River Crossing's scenes (rivercrossing_greybox.py, metres there): where, and the camera's yaw. */
+	struct FLandscapeScene
+	{
+		const TCHAR* Name;
+		FVector2D Focus;
+		float Yaw;
+	};
+	const FLandscapeScene RiverCrossingScenes[] = {
+		{ TEXT("hills"), FVector2D(-35000.f, -65000.f), 0.f },
+		{ TEXT("bridge"), FVector2D(0.f, 30000.f), 0.f },
+		{ TEXT("base_yaw45"), FVector2D(-72000.f, -22000.f), 45.f },
+		{ TEXT("edge"), FVector2D(-100000.f, -100000.f), 0.f },
+		{ TEXT("edge_yaw45"), FVector2D(-100000.f, -100000.f), 45.f },
+	};
+
+	bool IsRiverCrossing(const UWorld& World)
+	{
+		return World.GetMapName().Contains(TEXT("RiverCrossing"));
+	}
 
 	/** The units measured on every picture, standing broadside at the view's centre. */
 	const TCHAR* MeasuredUnits[] = { TEXT("DA_TestM20Guardian"), TEXT("DA_TestTank"), TEXT("DA_TestInfantry") };
@@ -157,6 +182,7 @@ namespace RTSCameraShots
 			FString Scene;
 			FVector Focus = FVector::ZeroVector;
 			EZoom Zoom = EZoom::Default;
+			float Yaw = 0.f;
 
 			FString GetName(const TArray<FProfile>& Profiles) const
 			{
@@ -242,6 +268,15 @@ namespace RTSCameraShots
 			}
 			OwnTuning = GetCameraPawn()->GetTuning();
 			Profiles = MakeProfiles(*OwnTuning);
+			if (IsRiverCrossing(*World))
+			{
+				// The landscape is the scene: only the camera as it is now.
+				Profiles = { { TEXT("Final"), *OwnTuning } };
+				MeasureUnits();
+				BuildRiverCrossingShots();
+				GoTo(EStep::Stage);
+				return true;
+			}
 			if (!StageScene())
 			{
 				return Finish(TEXT("could not stage the scene"));
@@ -318,6 +353,12 @@ namespace RTSCameraShots
 				SpawnUnit(Infantry, FVector2D(FormationCentre) + FVector2D(-Back, Side));
 			}
 
+			MeasureUnits();
+			return true;
+		}
+
+		void MeasureUnits()
+		{
 			for (const TCHAR* Name : MeasuredUnits)
 			{
 				if (const URTSUnitData* Data = LoadUnitData(Name))
@@ -325,7 +366,17 @@ namespace RTSCameraShots
 					Measured.Add({ Name, RTSUnitShape::FromData(*Data).Hull });
 				}
 			}
-			return true;
+		}
+
+		void BuildRiverCrossingShots()
+		{
+			for (const FLandscapeScene& Scene : RiverCrossingScenes)
+			{
+				for (const EZoom Zoom : { EZoom::Min, EZoom::Default, EZoom::Max })
+				{
+					Shots.Add({ Screen1080, 0, Scene.Name, FVector(Scene.Focus, GetGroundZ(Scene.Focus)), Zoom, Scene.Yaw });
+				}
+			}
 		}
 
 		void BuildShots()
@@ -393,7 +444,7 @@ namespace RTSCameraShots
 			const FShot& Shot = Shots[ShotIndex];
 			ARTSCameraPawn* Camera = GetCameraPawn();
 			Camera->ApplyTuning(Profiles[Shot.Profile].Tuning);
-			Camera->SetActorRotation(FRotator::ZeroRotator);
+			Camera->SetYawNow(Shot.Yaw);
 			Camera->JumpTo(Shot.Focus);
 			const float Zoom = Shot.Zoom == EZoom::Min ? Camera->GetMinZoom()
 				: Shot.Zoom == EZoom::Default ? Camera->GetDefaultZoom() : Camera->GetMaxZoom();

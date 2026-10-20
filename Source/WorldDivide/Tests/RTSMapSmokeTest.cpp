@@ -189,16 +189,27 @@ namespace RTSMapSmokeTest
 			}
 		}
 
-		/** The camera stands at Corner of the ground or past it, by no more than its EdgeMargin along each axis. */
+		/**
+		 * The ground the camera's view shows reaches Corner of the ground, or past it by no more than its EdgeMargin along
+		 * each axis (#295); along an axis where the view is wider than the ground and its margins, it is centred instead.
+		 */
 		void VerifyAtCorner(const ARTSCameraPawn& Camera, const FVector2D& Corner, const TCHAR* How) const
 		{
-			const FVector2D Location(Camera.GetActorLocation());
+			const FBox2D View = Camera.GetViewFootprintBounds();
 			const FVector2D Outward(FMath::Sign(Corner.X - Ground.GetCenter().X), FMath::Sign(Corner.Y - Ground.GetCenter().Y));
-			const FVector2D Past = (Location - Corner) * Outward;
+			const FVector2D Edge(Outward.X > 0.0 ? View.Max.X : View.Min.X, Outward.Y > 0.0 ? View.Max.Y : View.Min.Y);
+			const FVector2D Past = (Edge - Corner) * Outward;
 			const double MaxEdgeMargin = Camera.GetTuning().EdgeMargin;
-			Test->TestTrue(FString::Printf(TEXT("%s: %s towards corner %s reaches it, stopping at %s"), *Name, How,
-				*Corner.ToString(), *Location.ToString()),
-				Past.X >= -1.0 && Past.X <= MaxEdgeMargin && Past.Y >= -1.0 && Past.Y <= MaxEdgeMargin);
+			const FBox2D& Area = Camera.GetPanArea();
+			bool bReaches = true;
+			for (int32 Axis = 0; Axis < 2; ++Axis)
+			{
+				const bool bCentred = View.GetSize()[Axis] > Area.GetSize()[Axis] + 1.0;
+				bReaches &= bCentred ? FMath::IsNearlyEqual(View.GetCenter()[Axis], Area.GetCenter()[Axis], 1.0)
+					: Past[Axis] >= -1.0 && Past[Axis] <= MaxEdgeMargin + 1.0;
+			}
+			Test->TestTrue(FString::Printf(TEXT("%s: %s towards corner %s takes the view to it, showing %s"), *Name, How,
+				*Corner.ToString(), *View.ToString()), bReaches);
 		}
 
 		FAutomationTestBase* Test;

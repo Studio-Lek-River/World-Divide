@@ -24,6 +24,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task u
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task unitshots -Unit DA_TestM20Guardian -LODs
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task trackshots -Unit DA_TestM20Guardian
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task camerashots
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task camerashots -Map /Game/Maps/WD_RiverCrossing_01
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestTank -Counts 240 -Trace
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian -Long
@@ -609,9 +610,11 @@ function Invoke-CameraShots {
 	$ShotDir = Join-Path $RepoRoot 'Saved\CameraShots'
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\CameraShots.log'
 	Clear-ShotDir $ShotDir
+	# L_TestMap's staged base and formation by default; -Map pictures another level's landscape (WD_RiverCrossing_01, #295).
+	$ShotMap = if (-not $MapGiven) { '/Game/Maps/L_TestMap' } elseif ($Map.StartsWith('/Game')) { $Map } else { "/Game/Maps/$Map" }
 
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList @(
-		"`"$Project`"", '/Game/Maps/L_TestMap', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
+		"`"$Project`"", $ShotMap, '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
 		'"-ExecCmds=rts.Debug.CameraShots"', '-RTSCameraShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
 		'-unattended', '-nosplash', '-nosound')
 	$GameExit = $Process.ExitCode
