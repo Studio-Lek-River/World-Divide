@@ -141,6 +141,57 @@ struct WORLDDIVIDE_API FRTSGunRecoil
 };
 
 /**
+ * How a vehicle's body moves with its drive (#297), drawn on each machine that shows it: the hull squats back when it pulls
+ * away, dives when it brakes and leans out of a turn, on the same hinge as the gun's rock (FRTSGunRecoil) and on top of it;
+ * and the drawn turret trails a fast traverse and settles past its aim by a little. Only the hull mesh and the turret as
+ * drawn move: the aim, the shots, the actor, its collision and its movement do not. All 0 keeps the body still.
+ */
+USTRUCT(BlueprintType)
+struct WORLDDIVIDE_API FRTSBodyMotion
+{
+	GENERATED_BODY()
+
+	/** Degrees the hull pitches per m/s² of the drive's acceleration: the nose lifts pulling away and drops braking. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body Motion", meta = (ClampMin = "0"))
+	float SquatPerAcceleration = 0.f;
+
+	/** Degrees the hull rolls out of a turn per m/s² of the turn's sideways acceleration, its speed times its turn rate. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body Motion", meta = (ClampMin = "0"))
+	float LeanPerAcceleration = 0.f;
+
+	/** The most degrees the drive pitches or rolls the hull, either way. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body Motion", meta = (ClampMin = "0"))
+	float MaxDegrees = 1.5f;
+
+	/** Seconds the acceleration is averaged over: a client's speed comes in steps, with each update from the server. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body Motion", meta = (ClampMin = "0.01"))
+	float AccelerationSmoothing = 0.1f;
+
+	/** Seconds the hull takes to settle on its suspension once the drive's pull changes. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body Motion", meta = (ClampMin = "0.05"))
+	float SettleSeconds = 0.8f;
+
+	/** The damping ratio the hull settles with: below 1 it swings past the new pitch or roll by a little. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body Motion", meta = (ClampMin = "0.05", ClampMax = "0.95"))
+	float Damping = 0.5f;
+
+	/** The most degrees the drawn turret trails its aim while it traverses; 0 keeps it on its aim. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body Motion", meta = (ClampMin = "0"))
+	float TurretLagDegrees = 0.f;
+
+	/** Seconds the drawn turret takes to catch up with its aim; the longer, the further it trails a traverse. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body Motion", meta = (ClampMin = "0.05"))
+	float TurretLagSeconds = 0.35f;
+
+	/** The damping ratio the turret catches up with: below 1 it swings past its aim by a little when the traverse stops. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body Motion", meta = (ClampMin = "0.05", ClampMax = "0.95"))
+	float TurretLagDamping = 0.6f;
+
+	bool HasHullMotion() const { return MaxDegrees > 0.f && (SquatPerAcceleration > 0.f || LeanPerAcceleration > 0.f); }
+	bool IsEnabled() const { return HasHullMotion() || TurretLagDegrees > 0.f; }
+};
+
+/**
  * A vehicle's running engine, drawn on each machine that shows it (#222): light exhaust at its outlets, from how the hull
  * actually moves (FRTSRealizedMotion), never from its orders. Idle below IdleSpeed, accelerating while its speed climbs
  * faster than AccelerationThreshold, moving otherwise. No outlets, no exhaust.
@@ -336,6 +387,29 @@ private:
 	void Evaluate(float Elapsed, float& OutAngle, float& OutRate) const;
 };
 
+/**
+ * A damped spring that follows a target angle (FRTSBodyMotion, #297): the hull's squat, dive and lean toward what the drive
+ * pulls it to, and the drawn turret's lag back to its aim. Within its settle time it reaches a steady target, swinging past
+ * it by a little when its damping is below 1, and there it stops until the target moves.
+ */
+struct WORLDDIVIDE_API FRTSFollowSpring
+{
+	/** Runs the spring toward Target (degrees); SettleSeconds and Damping as FRTSRecoilSpring's. True when the angle moved. */
+	bool Advance(float Target, float DeltaSeconds, float SettleSeconds, float Damping);
+
+	/** Moves the angle by Degrees at its present rate, no further than Limit from zero, as when what it follows jumps. */
+	void Shift(float Degrees, float Limit);
+
+	float GetAngle() const { return Angle; }
+	/** Not at rest at zero. */
+	bool IsActive() const { return Angle != 0.f || Rate != 0.f; }
+	void Reset() { *this = FRTSFollowSpring(); }
+
+private:
+	float Angle = 0.f;
+	float Rate = 0.f;
+};
+
 /** What moves a ground unit: legs walk anywhere they face, tracks and wheels drive the hull (RTSLocomotion). */
 UENUM(BlueprintType)
 enum class ERTSLocomotionType : uint8
@@ -488,6 +562,10 @@ public:
 	/** How the gun's recoiling parts (the barrel) move on each shot. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FRTSGunRecoil GunRecoil;
+
+	/** How the hull squats, dives and leans with the drive and the turret trails its traverse (#297); still by default. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+	FRTSBodyMotion BodyMotion;
 
 	/** The engine's exhaust; none without outlets. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")

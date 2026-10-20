@@ -75,6 +75,46 @@ void FRTSRecoilSpring::Advance(float DeltaSeconds)
 	Evaluate(Time, Angle, Rate);
 }
 
+bool FRTSFollowSpring::Advance(float Target, float DeltaSeconds, float SettleSeconds, float Damping)
+{
+	// Within a thousandth of a degree and barely moving, it has arrived: a hull lifted that little stands under a tenth of a
+	// millimetre off at its nose.
+	constexpr float RestAngle = 0.001f;
+	constexpr float RestRate = 0.01f;
+	// Steps no longer than this keep the spring steady through a long frame, its stiffest at about 15 per second.
+	constexpr float MaxStep = 1.f / 120.f;
+	if (Angle == Target && Rate == 0.f)
+	{
+		return false;
+	}
+	const float From = Angle;
+	if (DeltaSeconds > 0.f)
+	{
+		// Settled once the swing has faded under 2% (e^-4), as FRTSRecoilSpring: Decay = Ratio * natural frequency.
+		const float Ratio = FMath::Clamp(Damping, 0.05f, 0.95f);
+		const float Decay = 4.f / FMath::Max(SettleSeconds, 0.05f);
+		const float Natural = Decay / Ratio;
+		const int32 Steps = FMath::CeilToInt(DeltaSeconds / MaxStep);
+		const float Step = DeltaSeconds / Steps;
+		for (int32 Index = 0; Index < Steps; ++Index)
+		{
+			Rate += (FMath::Square(Natural) * (Target - Angle) - 2.f * Decay * Rate) * Step;
+			Angle += Rate * Step;
+		}
+	}
+	if (FMath::Abs(Target - Angle) < RestAngle && FMath::Abs(Rate) < RestRate)
+	{
+		Angle = Target;
+		Rate = 0.f;
+	}
+	return Angle != From;
+}
+
+void FRTSFollowSpring::Shift(float Degrees, float Limit)
+{
+	Angle = FMath::Clamp(Angle + Degrees, -Limit, Limit);
+}
+
 float FRTSLocomotionProfile::GetMinTurnRadius() const
 {
 	const float Steered = Wheelbase / FMath::Tan(FMath::DegreesToRadians(FMath::Clamp(MaxSteerAngle, 1.f, 80.f)));

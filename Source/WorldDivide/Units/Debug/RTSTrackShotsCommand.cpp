@@ -36,7 +36,8 @@
  * far away; then driving past a still camera at full speed, beside it and from the RTS angle, plain and with the previous
  * frame's reprojection shown (motion_*, #243); and standing while its gun fires, the hull rocking on its suspension, seen from
  * beside the track the gun turns to and from the sprocket and idler the gun lifts (fire_*, #219); and its engine's exhaust
- * standing, setting off and driving, seen from behind, by day and by night (exhaust_*, #222, #325). Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
+ * standing, setting off and driving, seen from behind, by day and by night (exhaust_*, #222, #325); and its body
+ * squatting as it pulls away, diving as it brakes, leaning into a turn and its turret trailing a traverse (body_*, #297). Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
  * Saved/TrackShots/<UnitData>/<scenario>_<n>.png, and logs with each the realized side travel, each track's phase and what
  * its material has. With -RTSTrackShotsQuit on the command line (ue.ps1 -Task trackshots) the game quits when done.
  */
@@ -71,6 +72,17 @@ namespace RTSTrackShots
 	const FView MotionRTSView{ FVector(-900.f, -1200.f, 1700.f), FVector(300.f, 0.f, 0.f), 30.f };
 	/** Behind the hull at three quarters and above, on the rear grille where the exhaust leaves (#222). */
 	const FView ExhaustView{ FVector(-1100.f, -650.f, 420.f), FVector(-380.f, 0.f, 90.f), 50.f };
+	/** Square behind the hull at its height, so its lean shows against the horizon, and high over the turret for its lag (#297). */
+	const FView RearView{ FVector(-1300.f, 0.f, 180.f), FVector(0.f, 0.f, 150.f), 40.f };
+	const FView TopView{ FVector(-200.f, -500.f, 1600.f), FVector(0.f, 0.f, 200.f), 45.f };
+
+	/**
+	 * The body scenarios (#297): game seconds between pictures, through the hull's settle and the turret's traverse, at a
+	 * quarter of the game's speed.
+	 */
+	constexpr double BodySpacing = 0.1;
+	constexpr double TurretSpacing = 0.2;
+	constexpr float BodyTimeDilation = 0.25f;
 
 	/**
 	 * The exhaust scenarios (#222): real seconds for the plume to build before the first picture, game seconds between
@@ -308,6 +320,25 @@ namespace RTSTrackShots
 					Scenarios.Add(MoveTemp(Exhaust));
 				}
 			}
+			// The body with its drive (#297): squatting back as it pulls away from a stand at full power, diving under full
+			// brakes from speed, leaning out as it swings from a straight run into a turn, seen square from behind, and the
+			// turret trailing a quarter turn and settling on its aim, seen from above.
+			Scenarios.Add({ TEXT("body_pull_away"), SideView, Drive(RTSLocomotion::FCommand()), 1.0, nullptr,
+				[](ARTSUnit& InUnit) { InUnit.GetUnitMovement()->SetCommandOverride(Ahead(1.e5f)); },
+				BodySpacing / BodyTimeDilation, BodyTimeDilation });
+			Scenarios.Add({ TEXT("body_brake"), SideView, Drive(Ahead(1.e5f)), 3.0, nullptr,
+				[](ARTSUnit& InUnit) { InUnit.GetUnitMovement()->SetCommandOverride(RTSLocomotion::FCommand()); },
+				BodySpacing / BodyTimeDilation, BodyTimeDilation });
+			Scenarios.Add({ TEXT("body_turn"), RearView, Drive(Ahead(600.f)), 2.0, nullptr,
+				[Turn = Tracks(700.f, 450.f)(Limits)](ARTSUnit& InUnit) { InUnit.GetUnitMovement()->SetCommandOverride(Turn); },
+				BodySpacing / BodyTimeDilation, BodyTimeDilation });
+			Scenarios.Add({ TEXT("body_turret"), TopView, [Stand = Drive(RTSLocomotion::FCommand())](ARTSUnit& InUnit)
+			{
+				Stand(InUnit);
+				InUnit.SetAimOverride(FVector2D(0.f, 0.f));
+				return InUnit.GetUnitData()->BodyMotion.TurretLagDegrees > 0.f;
+			}, 3.0, nullptr, [](ARTSUnit& InUnit) { InUnit.SetAimOverride(FVector2D(90.f, 0.f)); },
+				TurretSpacing / BodyTimeDilation, BodyTimeDilation });
 			// Driving past a still camera at full speed, pictures as fast as they come, without letting a frame settle (#243).
 			for (const bool bReprojection : { false, true })
 			{
@@ -447,15 +478,16 @@ namespace RTSTrackShots
 				// What the material draws now, from the link rate it was sent (#216).
 				Unit->GetTrackMaterialPhase(TrackParts[Side], Sent[Side]);
 			}
-			// The hull's rock from a shot (#219): its front and its right side lifted, in degrees.
+			// The hull's rock from a shot (#219) and its sway with the drive (#297): its front and its right side lifted, in degrees.
 			const FVector2D Rock = Unit->GetHullRock();
+			const FVector2D Sway = Unit->GetHullSway();
 			// The engine's exhaust state (#222).
 			const URTSExhaustSubsystem* Exhaust = World->GetSubsystem<URTSExhaustSubsystem>();
 			const ERTSExhaustState ExhaustState = Exhaust ? Exhaust->GetState(*Unit) : ERTSExhaustState::Idle;
 			UE_LOG(LogWorldDivide, Display,
-				TEXT("rts.Debug.TrackShots: %s %02d: %s, %.0f cm/s, %.1f deg/s; travel L %.1f R %.1f cm; phase L %.4f (material %.4f) R %.4f (material %.4f); rock front %.3f right %.3f deg; exhaust %s"),
+				TEXT("rts.Debug.TrackShots: %s %02d: %s, %.0f cm/s, %.1f deg/s; travel L %.1f R %.1f cm; phase L %.4f (material %.4f) R %.4f (material %.4f); rock front %.3f right %.3f deg; sway front %.3f right %.3f deg; turret %.1f lag %.2f deg; exhaust %s"),
 				*Name, Shot, *UEnum::GetValueAsString(Motion.Status), Motion.ForwardSpeed, Motion.YawRate, Motion.LeftTravel, Motion.RightTravel,
-				Phase[0], Sent[0], Phase[1], Sent[1], Rock.X, Rock.Y, *UEnum::GetDisplayValueAsText(ExhaustState).ToString());
+				Phase[0], Sent[0], Phase[1], Sent[1], Rock.X, Rock.Y, Sway.X, Sway.Y, Unit->GetTurretYaw(), Unit->GetTurretLag(), *UEnum::GetDisplayValueAsText(ExhaustState).ToString());
 		}
 
 		bool Finish(const FString& Error)

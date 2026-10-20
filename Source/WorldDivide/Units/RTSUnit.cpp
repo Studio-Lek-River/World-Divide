@@ -141,6 +141,11 @@ namespace
 		TEXT("rts.Vehicle.RecoilDistance"), 11000.f,
 		TEXT("cm from this machine's camera past which a vehicle's gun does not recoil nor its hull rock (#219); 0 everywhere."));
 
+	/** Scales every vehicle's body motion (FRTSBodyMotion, #297) for tuning it live: 0 keeps the bodies still, 2 doubles it. */
+	TAutoConsoleVariable<float> CVarBodyMotion(
+		TEXT("rts.Vehicle.BodyMotion"), 1.f,
+		TEXT("Scales how far vehicles' hulls squat, dive and lean with their drive and their turrets trail a traverse (#297); 0 off."));
+
 	/**
 	 * Every part of a unit is movable, and the renderer gives a movable primitive its own hardware occlusion query in every
 	 * frame it is on screen: about 1,500 at 240 M20s (#214). Lit as a group under the collision box, the parts take the
@@ -352,6 +357,12 @@ void ARTSUnit::CreateParts()
 	GunJump.Reset();
 	HullLift.Reset();
 	HullSide.Reset();
+	HullSquat.Reset();
+	HullLean.Reset();
+	TurretLag.Reset();
+	BodySpeed.Reset();
+	BodyAcceleration = 0.f;
+	BodyTurretYaw.Reset();
 	LastGearPose.Reset();
 	GearHull.Reset();
 	GearTime.Reset();
@@ -1027,7 +1038,12 @@ bool ARTSUnit::GetBarrelSegment(FVector& OutStart, FVector& OutEnd) const
 
 void ARTSUnit::OnRep_TurretYaw()
 {
-	Turret->SetRelativeRotation(FRotator(0.f, TurretYaw, 0.f));
+	PlaceTurret();
+}
+
+void ARTSUnit::PlaceTurret()
+{
+	Turret->SetRelativeRotation(FRotator(0.f, TurretYaw + TurretLag.GetAngle(), 0.f));
 }
 
 void ARTSUnit::OnRep_GunPitch()
@@ -1225,6 +1241,91 @@ TArray<FVector, TInlineAllocator<2>> ARTSUnit::GetLocalViewLocations() const
 	return Locations;
 }
 
+bool ARTSUnit::ShowsBodyMotion(ENetMode NetMode, TConstArrayView<FVector> ViewLocations) const
+{
+	return NetMode != NM_DedicatedServer && IsRecoilSeen(ViewLocations);
+}
+
+bool ARTSUnit::UpdateBodyMotion(float DeltaSeconds)
+{
+	if (!UnitData || !UnitData->BodyMotion.IsEnabled() || !Movement->UsesLocomotion())
+	{
+		return false;
+	}
+	const FRTSRealizedMotion& Motion = Movement->GetRealizedMotion();
+	// Standing with the body at rest and the turret still, nothing moves: no need to ask after the cameras.
+	const bool bStill = !IsBodyMoving() && Motion.ForwardSpeed == 0.f && Motion.YawRate == 0.f && BodyAcceleration == 0.f
+		&& BodyTurretYaw && *BodyTurretYaw == TurretYaw;
+	const bool bShown = !bStill && FApp::CanEverRender() && Mesh->WasRecentlyRendered()
+		&& ShowsBodyMotion(GetNetMode(), GetLocalViewLocations());
+	return StepBodyMotion(DeltaSeconds, Motion.ForwardSpeed, Motion.YawRate, bShown);
+}
+
+bool ARTSUnit::StepBodyMotion(float DeltaSeconds, float ForwardSpeed, float YawRate, bool bShown)
+{
+	if (!UnitData)
+	{
+		return false;
+	}
+	const FRTSBodyMotion& Body = UnitData->BodyMotion;
+	// The acceleration is followed even unseen, so a vehicle that comes into view mid-drive does not jolt from a stale one.
+	if (BodySpeed && DeltaSeconds > 0.f)
+	{
+		const float Acceleration = (ForwardSpeed - *BodySpeed) / DeltaSeconds;
+		BodyAcceleration += (Acceleration - BodyAcceleration) * (1.f - FMath::Exp(-DeltaSeconds / Body.AccelerationSmoothing));
+		if (FMath::Abs(BodyAcceleration) < UE_KINDA_SMALL_NUMBER)
+		{
+			BodyAcceleration = 0.f;
+		}
+	}
+	BodySpeed = ForwardSpeed;
+	const float Traverse = BodyTurretYaw ? FMath::FindDeltaAngleDegrees(*BodyTurretYaw, TurretYaw) : 0.f;
+	BodyTurretYaw = TurretYaw;
+
+	const float Scale = FMath::Max(CVarBodyMotion.GetValueOnGameThread(), 0.f);
+	if (!bShown || Scale <= 0.f)
+	{
+		if (!IsBodyMoving())
+		{
+			return false;
+		}
+		const bool bHullMoved = HullSquat.IsActive() || HullLean.IsActive();
+		HullSquat.Reset();
+		HullLean.Reset();
+		if (TurretLag.IsActive())
+		{
+			TurretLag.Reset();
+			PlaceTurret();
+		}
+		return bHullMoved;
+	}
+
+	bool bHullMoved = false;
+	if (Body.HasHullMotion())
+	{
+		// Pulling away the drive pushes the hull's bottom ahead of its body, which sits back on its rear and lifts its nose; a
+		// turn pulls the bottom in toward its middle, so the body leans out and its inner side lifts: right in a right turn.
+		// Reversing, the turn's pull changes sides along with the speed.
+		const float Max = Body.MaxDegrees * Scale;
+		const float Sideways = ForwardSpeed * FMath::DegreesToRadians(YawRate);
+		const float Squat = FMath::Clamp(Body.SquatPerAcceleration * Scale * BodyAcceleration / 100.f, -Max, Max);
+		const float Lean = FMath::Clamp(Body.LeanPerAcceleration * Scale * Sideways / 100.f, -Max, Max);
+		bHullMoved |= HullSquat.Advance(Squat, DeltaSeconds, Body.SettleSeconds, Body.Damping);
+		bHullMoved |= HullLean.Advance(Lean, DeltaSeconds, Body.SettleSeconds, Body.Damping);
+	}
+	if (Body.TurretLagDegrees > 0.f && HasTurret())
+	{
+		// The drawn turret stays where it was as the aim moves on, then the spring brings it after: behind a traverse it
+		// trails, and once the traverse stops it swings past the aim by a little and settles on it.
+		TurretLag.Shift(-Traverse, Body.TurretLagDegrees * Scale);
+		if (TurretLag.Advance(0.f, DeltaSeconds, Body.TurretLagSeconds, Body.TurretLagDamping) || Traverse != 0.f)
+		{
+			PlaceTurret();
+		}
+	}
+	return bHullMoved;
+}
+
 void ARTSUnit::SetGunRecoilHold(TOptional<float> Time)
 {
 	bGunRecoilHeld = false;
@@ -1347,9 +1448,9 @@ void ARTSUnit::UpdateMeshTransform()
 	const FVector Pivot(0.f, 0.f, -Extent.Z);
 	FVector Hull = MeshRestLocation + Kick;
 	FQuat Rotation = FQuat::Identity;
-	// The rock from a shot (PlayGunRecoil) lifts the side the gun points to, hinged on the bottom edge across from it, so
-	// the hull rises but never sinks into the ground.
-	const FVector2D Rock = GetHullRock();
+	// The rock from a shot (PlayGunRecoil) and the drive's sway (StepBodyMotion) lift one side, hinged on the bottom edge
+	// across from it, so the hull rises but never sinks into the ground.
+	const FVector2D Rock = GetHullRock() + GetHullSway();
 	const float RockDegrees = Rock.Size();
 	if (RockDegrees > UE_KINDA_SMALL_NUMBER)
 	{
@@ -1407,7 +1508,8 @@ void ARTSUnit::Tick(float DeltaSeconds)
 	}
 	// Cosmetic, on every machine, after the server moved and grounded the unit this frame.
 	const bool bTilted = UpdateTilt(DeltaSeconds);
-	if (UpdateFireKick(DeltaSeconds) || bTilted)
+	const bool bKicked = UpdateFireKick(DeltaSeconds);
+	if (UpdateBodyMotion(DeltaSeconds) || bKicked || bTilted)
 	{
 		UpdateMeshTransform();
 	}

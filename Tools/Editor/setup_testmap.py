@@ -391,6 +391,10 @@ def make_m20_guardian(exhaust_system):
         # A 105 mm gun's stroke and run-out, its jump on the trunnions and the hull's rock on its suspension (#218).
         "gun_recoil": gun_recoil(30.0, 0.015, 0.03, 0.7, jump_degrees=1.0, jump_seconds=0.3, hull_rock_degrees=0.6,
                                  hull_rock_seconds=0.75),
+        # Its hull on its torsion bars with the drive (#297): about a degree back pulling away at 10 m/s² and leaning out of
+        # its tightest turn at 4 m/s², at most 1.2 degrees diving under its 25 m/s² brakes; the turret trails a 45°/s
+        # traverse by 1.5 degrees.
+        "body_motion": body_motion(0.1, 0.25, 1.2, turret_lag_degrees=1.5),
         "parts": parts,
         # Out of the rear grille, along its louvres (#222), from a diesel (#325).
         "exhaust": vehicle_exhaust(exhaust_system, layout["exhaust_offsets"], layout["exhaust_direction"], DIESEL_EXHAUST),
@@ -410,6 +414,21 @@ def gun_recoil(distance, recoil_seconds, hold_seconds, return_seconds, jump_degr
                           ("jump_seconds", jump_seconds), ("jump_damping", jump_damping),
                           ("hull_rock_degrees", hull_rock_degrees), ("hull_rock_seconds", hull_rock_seconds),
                           ("hull_rock_damping", hull_rock_damping)):
+        value.set_editor_property(name, setting)
+    return value
+
+
+def body_motion(squat_per_acceleration, lean_per_acceleration, max_degrees, settle_seconds=0.8, damping=0.5,
+                turret_lag_degrees=0.0, turret_lag_seconds=0.35, turret_lag_damping=0.6):
+    """How a vehicle's body moves with its drive (FRTSBodyMotion, #297): degrees of pitch and roll per m/s² of the drive's
+    acceleration and of its turn's, the most either may reach, the seconds the hull takes to settle and its damping ratio;
+    the most degrees the drawn turret trails its traverse, the seconds it takes to catch up and its damping ratio."""
+    value = unreal.RTSBodyMotion()
+    for name, setting in (("squat_per_acceleration", squat_per_acceleration),
+                          ("lean_per_acceleration", lean_per_acceleration), ("max_degrees", max_degrees),
+                          ("settle_seconds", settle_seconds), ("damping", damping),
+                          ("turret_lag_degrees", turret_lag_degrees), ("turret_lag_seconds", turret_lag_seconds),
+                          ("turret_lag_damping", turret_lag_damping)):
         value.set_editor_property(name, setting)
     return value
 

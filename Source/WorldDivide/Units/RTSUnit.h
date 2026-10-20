@@ -238,6 +238,29 @@ public:
 	bool IsRecoiling() const { return GunRecoilTime.IsSet() || GunJump.IsActive() || HullLift.IsActive() || HullSide.IsActive(); }
 
 	/**
+	 * Every machine. Whether the drive moves the body here (URTSUnitData::BodyMotion, #297): never on a dedicated server, and
+	 * elsewhere only as near a camera as the recoil (IsRecoilSeen). The machine must draw the unit as well; Tick asks that.
+	 */
+	bool ShowsBodyMotion(ENetMode NetMode, TConstArrayView<FVector> ViewLocations) const;
+
+	/**
+	 * Every machine that shows it. Runs the body motion on by DeltaSeconds from the drive's forward speed (cm/s) and turn rate
+	 * (degrees per second, positive right) and the turret's aim: the hull eases toward the pitch of the drive's acceleration
+	 * and the roll of its turn, and the drawn turret toward its aim. Not shown, the body comes to rest at once. Tick runs it
+	 * from the realized motion, public so tests can step it. True when the hull has to move.
+	 */
+	bool StepBodyMotion(float DeltaSeconds, float ForwardSpeed, float YawRate, bool bShown);
+
+	/** Every machine. Degrees the drive tilts the hull now, as GetHullRock: X lifting its front, Y lifting its right side. */
+	FVector2D GetHullSway() const { return FVector2D(HullSquat.GetAngle(), HullLean.GetAngle()); }
+
+	/** Every machine. Degrees the drawn turret is turned from its aim now, negative trailing a traverse to the right. */
+	float GetTurretLag() const { return TurretLag.GetAngle(); }
+
+	/** Every machine. True while the drive tilts the hull or the drawn turret is off its aim. */
+	bool IsBodyMoving() const { return HullSquat.IsActive() || HullLean.IsActive() || TurretLag.IsActive(); }
+
+	/**
 	 * Every machine, for inspecting a vehicle (rts.Debug.UnitShots). Holds the recoiling parts Time seconds into a stroke
 	 * from rest; unset lets them run out again.
 	 */
@@ -517,6 +540,12 @@ private:
 	/** Sets the gun's rotation from GunPitch and its jump. */
 	void PlaceGun();
 
+	/** Sets the drawn turret's rotation from TurretYaw and its lag. */
+	void PlaceTurret();
+
+	/** Runs StepBodyMotion from the realized motion, asking whether it is seen only while there is motion to show. */
+	bool UpdateBodyMotion(float DeltaSeconds);
+
 	/** Where this machine's local players look from, for IsRecoilSeen. */
 	TArray<FVector, TInlineAllocator<2>> GetLocalViewLocations() const;
 
@@ -528,7 +557,7 @@ private:
 
 	FRTSShotDelegate ShotDelegate;
 
-	/** Places the mesh from its rest location, tilt and fire kick; it leans around the bottom of the hull box. */
+	/** Places the mesh from its rest location, tilt, fire kick, rock and sway; it leans around the bottom of the hull box. */
 	void UpdateMeshTransform();
 
 	/** The hull box: picking, the movement component's updated component and the Pawn overlaps of building placement. */
@@ -750,6 +779,15 @@ private:
 	FRTSRecoilSpring GunJump;
 	FRTSRecoilSpring HullLift;
 	FRTSRecoilSpring HullSide;
+	/** The drive's tilt of the hull, lifting its front and its right side, and the drawn turret's lag, in degrees (#297). */
+	FRTSFollowSpring HullSquat;
+	FRTSFollowSpring HullLean;
+	FRTSFollowSpring TurretLag;
+	/** The forward speed StepBodyMotion last saw, and its acceleration averaged over FRTSBodyMotion::AccelerationSmoothing. */
+	TOptional<float> BodySpeed;
+	float BodyAcceleration = 0.f;
+	/** The turret's aim StepBodyMotion last saw, so a traverse leaves the drawn turret behind. */
+	TOptional<float> BodyTurretYaw;
 
 	FRotator MeshTilt = FRotator::ZeroRotator;
 

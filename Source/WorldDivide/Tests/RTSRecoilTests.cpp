@@ -534,6 +534,87 @@ bool FRTSRecoilDistanceTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("At 0, from anywhere"), Tank->IsRecoilSeen({ Far }));
 	TestTrue(TEXT("At 0, even without a camera"), Tank->IsRecoilSeen({}));
 	RecoilDistance->Set(Saved, ECVF_SetByConsole);
+
+	// The drive's body motion (#297) goes by the same distance, and a dedicated server never shows it.
+	TestTrue(TEXT("Body motion: on a client within the distance"), Tank->ShowsBodyMotion(NM_Client, { Near }));
+	TestTrue(TEXT("Body motion: on a listen server within the distance"), Tank->ShowsBodyMotion(NM_ListenServer, { Near }));
+	TestFalse(TEXT("Body motion: not beyond it"), Tank->ShowsBodyMotion(NM_Client, { Far }));
+	TestFalse(TEXT("Body motion: never on a dedicated server"), Tank->ShowsBodyMotion(NM_DedicatedServer, { Near }));
+	return true;
+}
+
+/**
+ * The hull moves with the drive (#297): it pitches with the sign of the acceleration, nose up pulling away and down braking,
+ * rolls with the sign of the turn, right side up turning right, and settles to exactly level driving straight at a steady
+ * speed. Where it is not shown (ShowsBodyMotion: a dedicated server, beyond the recoil distance) it never moves.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRecoilBodyMotionTest, "WorldDivide.Combat.Recoil.BodyMotion", RTSTests::TestFlags)
+
+bool FRTSRecoilBodyMotionTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSRecoilTests;
+
+	URTSUnitData* M20 = LoadM20(*this);
+	if (!M20 || !TestTrue(TEXT("The M20's hull moves with its drive"), M20->BodyMotion.HasHullMotion()))
+	{
+		return false;
+	}
+	const FRTSTestWorld TestWorld;
+	ARTSUnit* Tank = TestWorld.SpawnUnit(M20, 0, FVector::ZeroVector);
+	float Speed = 0.f;
+	// Drives Seconds at a steady YawRate, the speed ramping by Acceleration (cm/s²) up to Top; the extreme sway it reached.
+	auto Drive = [Tank, &Speed](float Seconds, float Acceleration, float Top, float YawRate, bool bShown = true)
+	{
+		FVector2D Most = FVector2D::ZeroVector;
+		for (float Time = 0.f; Time < Seconds; Time += Step)
+		{
+			Speed = Acceleration >= 0.f ? FMath::Min(Speed + Acceleration * Step, Top) : FMath::Max(Speed + Acceleration * Step, Top);
+			Tank->StepBodyMotion(Step, Speed, YawRate, bShown);
+			const FVector2D Sway = Tank->GetHullSway();
+			Most.X = FMath::Abs(Sway.X) > FMath::Abs(Most.X) ? Sway.X : Most.X;
+			Most.Y = FMath::Abs(Sway.Y) > FMath::Abs(Most.Y) ? Sway.Y : Most.Y;
+		}
+		return Most;
+	};
+	auto TestLevel = [this, Tank](const TCHAR* What)
+	{
+		TestTrue(FString::Printf(TEXT("%s: level"), What), Tank->GetHullSway().IsZero());
+		TestFalse(FString::Printf(TEXT("%s: at rest"), What), Tank->IsBodyMoving());
+	};
+
+	Drive(0.5f, 0.f, 0.f, 0.f);
+	TestLevel(TEXT("Standing"));
+
+	const FVector2D PullAway = Drive(0.6f, 1000.f, 600.f, 0.f);
+	TestTrue(FString::Printf(TEXT("Pulling away the nose lifts (%.3f deg)"), PullAway.X), PullAway.X > 0.1f);
+	TestEqual(TEXT("Pulling away straight it does not roll"), PullAway.Y, 0.0);
+	Drive(SettleLimit, 0.f, 600.f, 0.f);
+	TestLevel(TEXT("Driving straight at a steady speed"));
+
+	const FVector2D Braking = Drive(0.24f, -2500.f, 0.f, 0.f);
+	TestTrue(FString::Printf(TEXT("Braking the nose drops (%.3f deg)"), Braking.X), Braking.X < -0.1f);
+	TestTrue(TEXT("No further than MaxDegrees, past which it may swing by a little"), Braking.X >= -M20->BodyMotion.MaxDegrees * 1.2f);
+	Drive(SettleLimit, 0.f, 0.f, 0.f);
+	TestLevel(TEXT("Stopped"));
+
+	Drive(SettleLimit, 1000.f, 600.f, 0.f);
+	const FVector2D Right = Drive(1.f, 0.f, 600.f, 30.f);
+	TestTrue(FString::Printf(TEXT("Turning right the right side lifts (%.3f deg)"), Right.Y), Right.Y > 0.1f);
+	Drive(SettleLimit, 0.f, 600.f, 0.f);
+	TestLevel(TEXT("Straight again after the right turn"));
+	const FVector2D Left = Drive(1.f, 0.f, 600.f, -30.f);
+	TestTrue(FString::Printf(TEXT("Turning left the left side lifts (%.3f deg)"), Left.Y), Left.Y < -0.1f);
+	Drive(SettleLimit, 0.f, 600.f, 0.f);
+	TestLevel(TEXT("Straight again after the left turn"));
+
+	// Not shown: the same drive leaves the hull still, and a hull that was moving comes to rest at once.
+	Drive(SettleLimit, -2500.f, 0.f, 0.f);
+	const FVector2D Unseen = Drive(1.f, 1000.f, 600.f, 30.f, false);
+	TestTrue(TEXT("Not shown, pulling away into a turn moves nothing"), Unseen.IsZero());
+	Drive(0.3f, -2500.f, 0.f, 30.f);
+	TestTrue(TEXT("Shown, braking in a turn moves it"), Tank->IsBodyMoving());
+	Drive(Step, 0.f, 0.f, 0.f, false);
+	TestLevel(TEXT("Once it is no longer shown"));
 	return true;
 }
 
