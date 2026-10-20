@@ -53,6 +53,8 @@ FONT_POINTS_PER_PIXEL = 0.75
 MATERIAL_DIR = "/Game/Materials"
 EFFECT_DIR = "/Game/Effects"
 MAP_PATH = "/Game/Maps/L_TestMap"
+# L_TestMap by moonlight (#223), to try the vehicle lights and other night looks by hand: the same ground, bases and units.
+NIGHT_MAP_PATH = "/Game/Maps/L_TestMapNight"
 # rts.Debug.Bench's level: 300 x 300 m, team 0's headquarters at (-BENCH_CORNER, -BENCH_CORNER), team 1's opposite.
 BENCH_MAP_PATH = "/Game/Maps/L_Bench"
 BENCH_HALF_SIZE = 15000.0
@@ -1213,8 +1215,42 @@ def spawn_lighting():
     spawn(unreal.SkyAtmosphere, (0.0, 0.0, 0.0), label="SkyAtmosphere")
 
 
-def build_map(tank, infantry, builder, m20, wall, crate, ground, digest):
-    new_level(MAP_PATH)
+# The moon of L_TestMapNight: dim and cold, low enough in lux that URTSDayNightSubsystem::IsDark holds, with manual exposure
+# lifted so hulls still read as shapes against the ground while the lamps and their beams stand out.
+NIGHT_MOON_LUX = 0.6
+NIGHT_MOON_COLOR = (0.55, 0.66, 1.0)
+NIGHT_MOON_PITCH = -40.0
+NIGHT_SKY_INTENSITY = 0.25
+NIGHT_EXPOSURE_BIAS = 2.0
+
+
+def spawn_night_lighting():
+    moon = spawn(unreal.DirectionalLight, (0.0, 0.0, 2000.0), label="Sun")
+    moon.set_actor_rotation(unreal.Rotator(roll=0.0, pitch=NIGHT_MOON_PITCH, yaw=35.0), False)
+    light = moon.get_component_by_class(unreal.DirectionalLightComponent)
+    light.set_editor_property("atmosphere_sun_light", True)
+    light.set_editor_property("intensity", NIGHT_MOON_LUX)
+    red, green, blue = (round(c * 255) for c in NIGHT_MOON_COLOR)
+    light.set_editor_property("light_color", unreal.Color(r=red, g=green, b=blue, a=255))
+    sky = spawn(unreal.SkyLight, (0.0, 0.0, 1000.0), label="SkyLight")
+    sky_light = sky.get_component_by_class(unreal.SkyLightComponent)
+    sky_light.set_editor_property("real_time_capture", True)
+    sky_light.set_editor_property("intensity", NIGHT_SKY_INTENSITY)
+    spawn(unreal.SkyAtmosphere, (0.0, 0.0, 0.0), label="SkyAtmosphere")
+    volume = spawn(unreal.PostProcessVolume, (0.0, 0.0, 0.0), label="NightExposure")
+    volume.set_editor_property("unbound", True)
+    settings = volume.get_editor_property("settings")
+    settings.set_editor_property("override_auto_exposure_method", True)
+    settings.set_editor_property("auto_exposure_method", unreal.AutoExposureMethod.AEM_MANUAL)
+    settings.set_editor_property("override_auto_exposure_apply_physical_camera_exposure", True)
+    settings.set_editor_property("auto_exposure_apply_physical_camera_exposure", False)
+    settings.set_editor_property("override_auto_exposure_bias", True)
+    settings.set_editor_property("auto_exposure_bias", NIGHT_EXPOSURE_BIAS)
+    volume.set_editor_property("settings", settings)
+
+
+def build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, digest):
+    new_level(path)
     check_map_lanes(TEST_MAP)
 
     # 600 x 600 m ground, top face at z = 0.
@@ -1230,7 +1266,10 @@ def build_map(tank, infantry, builder, m20, wall, crate, ground, digest):
     # Block_: the tests take those to be the obstacles.
     spawn_hill("Hill_East", *TEST_HILL, ground)
 
-    spawn_lighting()
+    if night:
+        spawn_night_lighting()
+    else:
+        spawn_lighting()
 
     # The default volume brush is a 200 uu cube, so this covers the whole ground.
     nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
@@ -1238,7 +1277,7 @@ def build_map(tank, infantry, builder, m20, wall, crate, ground, digest):
     _, nav_extent = nav.get_actor_bounds(False)
     unreal.log(f"NavMeshBoundsVolume extent: {nav_extent}")
     if nav_extent.x < 1000.0:
-        unreal.log_warning("NavMeshBoundsVolume has no usable brush: drag one into L_TestMap by hand and save.")
+        unreal.log_warning(f"NavMeshBoundsVolume has no usable brush: drag one into {path} by hand and save.")
 
     for team_id, x, _, yaw in TEST_MAP.spots:
         start = spawn(unreal.PlayerStart, (x, 0.0, 100.0), yaw, label=f"PlayerStart_Team{team_id}")
@@ -1255,16 +1294,18 @@ def build_map(tank, infantry, builder, m20, wall, crate, ground, digest):
         spawn_supply_source((*base_source(x, 0.0, yaw), 0.0), 5000, crate)
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
-    build_navigation(world, MAP_PATH)
+    build_navigation(world, path)
     assets.set_metadata_tag(world, HASH_TAG, digest)
     if not levels.save_current_level():
-        raise RuntimeError(f"Could not save {MAP_PATH}")
+        raise RuntimeError(f"Could not save {path}")
 
 
-def make_map(tank, infantry, builder, m20, wall, crate, ground):
-    plan_rebuild(MAP_PATH, ".umap", lambda digest: build_map(tank, infantry, builder, m20, wall, crate, ground, digest),
+def make_map(path, night, tank, infantry, builder, m20, wall, crate, ground):
+    lighting = spawn_night_lighting if night else spawn_lighting
+    night_look = (NIGHT_MOON_LUX, NIGHT_MOON_COLOR, NIGHT_MOON_PITCH, NIGHT_SKY_INTENSITY, NIGHT_EXPOSURE_BIAS) if night else None
+    plan_rebuild(path, ".umap", lambda digest: build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, digest),
                  spec_hash([build_map, build_navigation, check_map_lanes, base_source, spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall,
-                            spawn_units, spawn_supply_source, spawn_ground, spawn_lighting], MAP_PATH, TEST_MAP, TEST_HILL,
+                            spawn_units, spawn_supply_source, spawn_ground, lighting], path, night_look, TEST_MAP, TEST_HILL,
                            BASE_LAYOUT, MAP_LANE_RULES, CUBE, tank, infantry, builder, m20, wall, crate, ground,
                            material_hashes[ground], ENGINE_VERSION, NAV_CONFIG))
 
@@ -2271,7 +2312,8 @@ make_ghost_material("M_PlacementGhost")
 make_shot_material("M_ShotFx")
 ground = make_surface_material("M_Ground", (0.06, 0.075, 0.04), 0.9)
 water = make_surface_material("M_Water", (0.015, 0.04, 0.08), 0.1)
-make_map(tank, infantry, builder, m20, wall_mesh, crate_mesh, ground)
+make_map(MAP_PATH, False, tank, infantry, builder, m20, wall_mesh, crate_mesh, ground)
+make_map(NIGHT_MAP_PATH, True, tank, infantry, builder, m20, wall_mesh, crate_mesh, ground)
 make_bench_map(ground)
 make_long_path_map(ground, water)
 make_thin_walls_map(ground)
