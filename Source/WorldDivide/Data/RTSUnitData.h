@@ -247,32 +247,35 @@ struct WORLDDIVIDE_API FRTSVehicleLights
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights")
 	TArray<FVector> TaillightOffsets;
 
-	/** The headlights' beam: a warm white, in candelas, reaching Radius cm, its cones' half-angles and its tilt down. */
+	/**
+	 * Each headlight cluster's beam: a warm white, in candelas, reaching Radius cm, its cones' half-angles and its tilt down.
+	 * Tilted and wide enough that the lit ground starts just in front of the lamps (#329).
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights")
 	FLinearColor HeadlightColor = FLinearColor(1.f, 0.88f, 0.72f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "0"))
-	float HeadlightIntensity = 600.f;
+	float HeadlightIntensity = 320.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "1"))
 	float HeadlightRadius = 3000.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "0", ClampMax = "80"))
-	float HeadlightInnerCone = 18.f;
+	float HeadlightInnerCone = 14.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "1", ClampMax = "80"))
-	float HeadlightOuterCone = 34.f;
+	float HeadlightOuterCone = 30.f;
 
 	/** Degrees the beam points down from level, onto the ground ahead. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "0", ClampMax = "89"))
-	float HeadlightDownPitch = 12.f;
+	float HeadlightDownPitch = 18.f;
 
-	/** The tail lamps' glow on the ground behind: red, dim and short. */
+	/** Each tail lamp cluster's glow on the ground behind it: red, dim and short. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights")
 	FLinearColor TaillightColor = FLinearColor(1.f, 0.04f, 0.02f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "0"))
-	float TaillightIntensity = 15.f;
+	float TaillightIntensity = 8.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "1"))
 	float TaillightRadius = 600.f;
@@ -288,8 +291,14 @@ struct WORLDDIVIDE_API FRTSVehicleLights
 
 	bool HasLights() const { return !HeadlightOffsets.IsEmpty() || !TaillightOffsets.IsEmpty(); }
 
-	/** The middle of the headlights or of the tail lamps, where its one spot light stands; zero without them. */
-	static FVector GetMidpoint(TConstArrayView<FVector> Offsets);
+	/**
+	 * Where the spot lights of the headlights or of the tail lamps stand (#329): the middle of each side's lamps, the left
+	 * (-Y) first, so each beam starts at the cluster it belongs to. One per side that has lamps; none without them.
+	 */
+	static TArray<FVector, TInlineAllocator<2>> GetClusterMidpoints(TConstArrayView<FVector> Offsets);
+
+	/** The real lights the vehicle lights the ground with: one per headlight cluster and one per tail lamp cluster. */
+	int32 GetLightCount() const;
 
 	/** Why the lights cannot work: a cone whose inner angle passes its outer one. True when they can. */
 	bool Validate(FString* OutError = nullptr) const;

@@ -22,9 +22,11 @@ namespace RTSVehicleLightTests
 	const TCHAR* M20Path = TEXT("/Game/Data/Units/DA_TestM20Guardian.DA_TestM20Guardian");
 	const TCHAR* LampMaterialPath = TEXT("/Game/Materials/M_VehicleLamp.M_VehicleLamp");
 
-	/** The vehicles and the budget: many more than may light the ground. */
+	/** The vehicles and the budget in real lights: many more than may light the ground. An M20 has four, one per lamp cluster. */
 	constexpr int32 Vehicles = 40;
-	constexpr int32 MaxVehicles = 8;
+	constexpr int32 MaxLights = 18;
+	constexpr int32 LightsPerM20 = 4;
+	constexpr int32 LitVehicles = MaxLights / LightsPerM20;
 
 	/** What Part's lamps were last told, RTSPrimitiveData::LampOn; -1 when never. */
 	float GetLampOn(const UStaticMeshComponent& Part)
@@ -60,10 +62,10 @@ namespace RTSVehicleLightTests
 
 /**
  * Vehicle head- and rear lights (#223). The M20's data puts its lamps at the front and the back, and M_VehicleLamp reads
- * RTSPrimitiveData::LampOn. Of 40 M20s in the dark with a budget of 8, every one's lamps are on, but only the 8 nearest the
- * camera light the ground, with a white spot at the middle of their headlights pointing ahead and a red one at the middle of
- * their tail lamps pointing back: never more than twice the budget of real lights. By day no real light is on and every
- * lamp is off. The sun decides when nothing forces it: a test world without one is day.
+ * RTSPrimitiveData::LampOn. Of 40 M20s in the dark with a budget of 18 real lights, every one's lamps are on, but only the 4
+ * nearest the camera light the ground (four lights each, 16, the fifth would pass it), with a white spot at each headlight
+ * cluster pointing ahead and a red one at each tail lamp pointing back (#329): the light starts at the lamp it belongs to.
+ * By day no real light is on and every lamp is off. The sun decides when nothing forces it: a test world without one is day.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSVehicleLightTest, "WorldDivide.Vehicle.Lights", RTSTests::TestFlags)
 
@@ -79,9 +81,17 @@ bool FRTSVehicleLightTest::RunTest(const FString& Parameters)
 	const FRTSVehicleLights& Lights = M20->Lights;
 	TestTrue(TEXT("The M20 has headlights and tail lamps"), !Lights.HeadlightOffsets.IsEmpty() && !Lights.TaillightOffsets.IsEmpty());
 	TestTrue(TEXT("Its lights are valid"), Lights.Validate());
-	const FVector Head = FRTSVehicleLights::GetMidpoint(Lights.HeadlightOffsets);
-	const FVector Tail = FRTSVehicleLights::GetMidpoint(Lights.TaillightOffsets);
-	TestTrue(TEXT("Its headlights are at the front, its tail lamps at the back"), Head.X > 0.f && Tail.X < 0.f);
+	const TArray<FVector, TInlineAllocator<2>> Heads = FRTSVehicleLights::GetClusterMidpoints(Lights.HeadlightOffsets);
+	const TArray<FVector, TInlineAllocator<2>> Tails = FRTSVehicleLights::GetClusterMidpoints(Lights.TaillightOffsets);
+	TestEqual(TEXT("Its four headlights form a left and a right cluster"), Heads.Num(), 2);
+	TestEqual(TEXT("Its two tail lamps one on each side"), Tails.Num(), 2);
+	TestEqual(TEXT("It lights the ground with four real lights"), Lights.GetLightCount(), LightsPerM20);
+	if (Heads.Num() != 2 || Tails.Num() != 2)
+	{
+		return false;
+	}
+	TestTrue(TEXT("Its headlights are at the front, its tail lamps at the back"), Heads[0].X > 0.f && Heads[1].X > 0.f && Tails[0].X < 0.f && Tails[1].X < 0.f);
+	TestTrue(TEXT("Each side's cluster on its own side, the left first"), Heads[0].Y < 0.f && Heads[1].Y > 0.f && Tails[0].Y < 0.f && Tails[1].Y > 0.f);
 
 	// The lamps' material reads the switch from where the game writes it.
 	const UMaterial* LampMaterial = LoadObject<UMaterial>(nullptr, LampMaterialPath);
@@ -96,7 +106,7 @@ bool FRTSVehicleLightTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("M_VehicleLamp reads RTSPrimitiveData::LampOn"), bReads);
 	}
 
-	const FScopedCVar Budget(TEXT("rts.Fx.VehicleLightMaxVehicles"), *FString::FromInt(MaxVehicles));
+	const FScopedCVar Budget(TEXT("rts.Fx.VehicleLightMaxLights"), *FString::FromInt(MaxLights));
 	const FRTSTestWorld TestWorld;
 	URTSVehicleLightSubsystem& VehicleLights = *TestWorld.World->GetSubsystem<URTSVehicleLightSubsystem>();
 	const URTSDayNightSubsystem& DayNight = *TestWorld.World->GetSubsystem<URTSDayNightSubsystem>();
@@ -127,27 +137,33 @@ bool FRTSVehicleLightTest::RunTest(const FString& Parameters)
 			VehicleLights.UpdateAll(1.f / 30.f);
 		}
 		TestEqual(TEXT("In the dark: every lamp on"), CountLamps(1.f), Vehicles);
-		TestEqual(TEXT("In the dark: the budget's vehicles light the ground"), VehicleLights.GetActiveVehicleCount(), MaxVehicles);
-		TestTrue(*FString::Printf(TEXT("In the dark: %d real lights, at most twice the budget"), VehicleLights.GetActiveLightCount()),
-			VehicleLights.GetActiveLightCount() <= 2 * MaxVehicles && VehicleLights.GetActiveLightCount() > 0);
+		TestEqual(TEXT("In the dark: the vehicles whose lights fit the budget light the ground"), VehicleLights.GetActiveVehicleCount(), LitVehicles);
+		TestEqual(TEXT("In the dark: four real lights each, within the budget"), VehicleLights.GetActiveLightCount(), LitVehicles * LightsPerM20);
 		for (int32 Index = 0; Index < Vehicles; ++Index)
 		{
-			const USpotLightComponent* Headlight = VehicleLights.GetHeadlight(*Units[Index]);
-			const USpotLightComponent* Taillight = VehicleLights.GetTaillight(*Units[Index]);
-			const bool bNear = Index < MaxVehicles;
-			TestEqual(*FString::Printf(TEXT("M20 %d %s the camera: lights the ground"), Index, bNear ? TEXT("near") : TEXT("far from")),
-				Headlight && Headlight->IsVisible() && Taillight && Taillight->IsVisible(), bNear);
-			if (Index == 0 && TestTrue(TEXT("The nearest has both lights"), Headlight && Taillight))
+			const TArray<USpotLightComponent*> Headlights = VehicleLights.GetHeadlights(*Units[Index]);
+			const TArray<USpotLightComponent*> Taillights = VehicleLights.GetTaillights(*Units[Index]);
+			const bool bNear = Index < LitVehicles;
+			const int32 Visible = static_cast<int32>(Algo::CountIf(Headlights, [](const USpotLightComponent* Light) { return Light && Light->IsVisible(); })
+				+ Algo::CountIf(Taillights, [](const USpotLightComponent* Light) { return Light && Light->IsVisible(); }));
+			TestEqual(*FString::Printf(TEXT("M20 %d %s the camera: its lights on the ground"), Index, bNear ? TEXT("near") : TEXT("far from")),
+				Visible, bNear ? LightsPerM20 : 0);
+			if (Index == 0 && TestTrue(TEXT("The nearest has a light at each lamp cluster"), Headlights.Num() == 2 && Taillights.Num() == 2))
 			{
 				const FTransform Hull = Units[Index]->GetMesh()->GetComponentTransform();
-				TestTrue(TEXT("Its headlight stands at the middle of its headlights"),
-					Headlight->GetComponentLocation().Equals(Hull.TransformPosition(Head), 0.5));
-				TestTrue(TEXT("and shines ahead and down"), Headlight->GetForwardVector().X > 0.5f && Headlight->GetForwardVector().Z < 0.f);
-				TestTrue(TEXT("Its tail light stands at the middle of its tail lamps"),
-					Taillight->GetComponentLocation().Equals(Hull.TransformPosition(Tail), 0.5));
-				TestTrue(TEXT("and shines back and down"), Taillight->GetForwardVector().X < -0.5f && Taillight->GetForwardVector().Z < 0.f);
-				TestTrue(TEXT("The tail light is red"), Taillight->GetLightColor().R > 0.5f && Taillight->GetLightColor().G < 0.2f);
-				TestTrue(TEXT("Neither casts shadows"), !Headlight->CastShadows && !Taillight->CastShadows);
+				for (int32 Side = 0; Side < 2; ++Side)
+				{
+					const USpotLightComponent& Headlight = *Headlights[Side];
+					const USpotLightComponent& Taillight = *Taillights[Side];
+					TestTrue(*FString::Printf(TEXT("Headlight %d stands at its cluster"), Side),
+						Headlight.GetComponentLocation().Equals(Hull.TransformPosition(Heads[Side]), 0.5));
+					TestTrue(TEXT("and shines ahead and down"), Headlight.GetForwardVector().X > 0.5f && Headlight.GetForwardVector().Z < 0.f);
+					TestTrue(*FString::Printf(TEXT("Tail light %d stands at its tail lamp"), Side),
+						Taillight.GetComponentLocation().Equals(Hull.TransformPosition(Tails[Side]), 0.5));
+					TestTrue(TEXT("and shines back and down"), Taillight.GetForwardVector().X < -0.5f && Taillight.GetForwardVector().Z < 0.f);
+					TestTrue(TEXT("The tail light is red"), Taillight.GetLightColor().R > 0.5f && Taillight.GetLightColor().G < 0.2f);
+					TestTrue(TEXT("Neither casts shadows"), !Headlight.CastShadows && !Taillight.CastShadows);
+				}
 			}
 		}
 	}

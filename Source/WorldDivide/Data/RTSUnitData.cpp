@@ -139,14 +139,31 @@ bool FRTSLocomotionProfile::Validate(FString* OutError) const
 	return true;
 }
 
-FVector FRTSVehicleLights::GetMidpoint(TConstArrayView<FVector> Offsets)
+TArray<FVector, TInlineAllocator<2>> FRTSVehicleLights::GetClusterMidpoints(TConstArrayView<FVector> Offsets)
 {
-	FVector Sum = FVector::ZeroVector;
+	// The left side (-Y) first, then the right; a lamp on the middle line counts with the right.
+	FVector Sums[2] = { FVector::ZeroVector, FVector::ZeroVector };
+	int32 Counts[2] = { 0, 0 };
 	for (const FVector& Offset : Offsets)
 	{
-		Sum += Offset;
+		const int32 Side = Offset.Y < 0.0 ? 0 : 1;
+		Sums[Side] += Offset;
+		++Counts[Side];
 	}
-	return Offsets.IsEmpty() ? FVector::ZeroVector : Sum / Offsets.Num();
+	TArray<FVector, TInlineAllocator<2>> Midpoints;
+	for (int32 Side = 0; Side < 2; ++Side)
+	{
+		if (Counts[Side] > 0)
+		{
+			Midpoints.Add(Sums[Side] / Counts[Side]);
+		}
+	}
+	return Midpoints;
+}
+
+int32 FRTSVehicleLights::GetLightCount() const
+{
+	return GetClusterMidpoints(HeadlightOffsets).Num() + GetClusterMidpoints(TaillightOffsets).Num();
 }
 
 bool FRTSVehicleLights::Validate(FString* OutError) const

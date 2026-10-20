@@ -2194,3 +2194,40 @@ lights on at each sample's end.
   with the sun dimmed. The look is checked in `ue.ps1 -Task unitshots` (`vehicle_lights_day`, `vehicle_lights_night`).
 - Vehicles beyond the 12 nearest show only their glowing lamps. If the cut shows with many vehicles close to the camera at
   night, the next step is a cheaper projected decal per vehicle rather than raising the cap.
+
+## #329 (vehicle light from the vehicle's own lamps)
+
+### What changed
+
+`URTSVehicleLightSubsystem` stood one headlight spot at the middle of all four M20 headlights and one tail spot between the
+two tail lamps, so the lit ground sat between the lamp clusters, detached from both. Now it stands a spot light at each
+side's lamps (`FRTSVehicleLights::GetClusterMidpoints`: the left, -Y, and the right): two headlight beams at the nose
+clusters and a red glow at each tail lamp, four real lights per M20. The beams point 18 degrees down with 14/30 degree
+cones, so the lit ground starts just in front of the lamps; each beam is 320 cd (the pair a little over the old 600 cd
+single beam) and each tail lamp 8 cd.
+
+The budget now counts real lights, not vehicles: `rts.Fx.VehicleLightMaxLights` (24) replaces
+`rts.Fx.VehicleLightMaxVehicles` (12). The nearest vehicles within `rts.Fx.VehicleLightDistance` light the ground while
+their lights fit, so the GPU budget is unchanged at 24 lights and 6 M20s light the ground instead of 12.
+
+### Short method, 240 standing and moving M20s, by day and at night
+
+`ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestM20Guardian@Night -Counts 240`, Ryzen 7 7800X3D, RTX 4090, one run,
+every sample valid.
+
+| Set | Scenario | Frame ms | Game ms (p95) | Render ms | GPU ms | Draw calls | Lights pass ms (max) | Real lights |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| day | idle | 3.93 | 2.98 (3.98) | 3.87 | 3.43 | 561 | - | 0 |
+| `@Night` | idle | 3.87 | 2.77 (3.64) | 3.82 | 3.36 | 577 | 0.015 (0.068) | 24 |
+| day | move | 10.35 | 10.35 (12.97) | 5.95 | 2.86 | 676 | - | 0 |
+| `@Night` | move | 10.64 | 10.63 (13.89) | 6.74 | 2.80 | 679 | 0.020 (0.026) | 24 |
+
+- **The cap holds:** 24 real lights at every sample's end, the 6 nearest of 240.
+- **No GPU cost measurable** against the day set; the lights' game thread pass stays at 0.015–0.020 ms. The render
+  thread is 0.8 ms higher driving at night in this single run, against #223's 0.2–0.6 ms with the same number of lights.
+
+### Remaining limitations
+
+- Only the 6 nearest vehicles light the ground; the rest show their glowing lamps. If the cut shows, the next step stays
+  the projected decal per vehicle beyond the cap (#223), not a higher light cap.
+- No IES profile: the cone edge is the spot light's own falloff.

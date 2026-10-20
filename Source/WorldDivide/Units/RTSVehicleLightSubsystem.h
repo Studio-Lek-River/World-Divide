@@ -26,12 +26,15 @@ struct FRTSVehicleLightEntry
 
 	TWeakObjectPtr<ARTSUnit> Unit;
 
-	/** The spot light at the middle of the headlights and the one at the middle of the tail lamps; null until first shown. */
+	/** A spot light at each headlight cluster and one at each tail lamp cluster, the left first; empty until first shown. */
 	UPROPERTY(Transient)
-	TObjectPtr<USpotLightComponent> Headlight;
+	TArray<TObjectPtr<USpotLightComponent>> Headlights;
 
 	UPROPERTY(Transient)
-	TObjectPtr<USpotLightComponent> Taillight;
+	TArray<TObjectPtr<USpotLightComponent>> Taillights;
+
+	/** The real lights it lights the ground with (FRTSVehicleLights::GetLightCount), known before they are made. */
+	int32 LightCount = 0;
 
 	/** What the lamps were last told (RTSPrimitiveData::LampOn); unset until the first update after it registered. */
 	TOptional<bool> bLampsOn;
@@ -44,9 +47,9 @@ struct FRTSVehicleLightEntry
 /**
  * Every machine that draws: the head- and rear lights of every vehicle whose data has lamps (#223), once a frame after every
  * hull has moved. In the dark (URTSDayNightSubsystem::IsDark) every such vehicle's lamps glow brighter, one primitive data
- * write per part when it changes; of them, only the rts.Fx.VehicleLightMaxVehicles nearest a camera within
- * rts.Fx.VehicleLightDistance also light the ground, through two spot lights each, so no more than twice that many real
- * lights are ever on. A dedicated server keeps none.
+ * write per part when it changes; of them, those nearest a camera within rts.Fx.VehicleLightDistance also light the
+ * ground, through a spot light at each lamp cluster (#329), as many as fit in rts.Fx.VehicleLightMaxLights real lights.
+ * A dedicated server keeps none.
  */
 UCLASS()
 class WORLDDIVIDE_API URTSVehicleLightSubsystem : public UWorldSubsystem
@@ -67,9 +70,9 @@ public:
 	/** The vehicles whose real lights are on now. */
 	int32 GetActiveVehicleCount() const;
 
-	/** The unit's spot lights, the headlight first; null until it first showed them. For the tests. */
-	USpotLightComponent* GetHeadlight(const ARTSUnit& Unit) const;
-	USpotLightComponent* GetTaillight(const ARTSUnit& Unit) const;
+	/** The unit's spot lights at its headlight and tail lamp clusters, the left first; empty until it first showed them. For the tests. */
+	TArray<USpotLightComponent*> GetHeadlights(const ARTSUnit& Unit) const;
+	TArray<USpotLightComponent*> GetTaillights(const ARTSUnit& Unit) const;
 
 	/** Makes the distance to the cameras measured from Location instead, or from the cameras again when unset. For the tests. */
 	void SetViewLocationOverride(TOptional<FVector> Location) { ViewLocationOverride = Location; }
@@ -77,8 +80,8 @@ public:
 	/** rts.Fx.VehicleLightDistance: cm from the nearest camera within which a vehicle lights the ground; 0 or less everywhere. */
 	static float GetDistance();
 
-	/** rts.Fx.VehicleLightMaxVehicles: most vehicles lighting the ground at once, the nearest a camera. */
-	static int32 GetMaxVehicles();
+	/** rts.Fx.VehicleLightMaxLights: most real lights on at once, those of the vehicles nearest a camera. */
+	static int32 GetMaxLights();
 
 	/** The game thread seconds UpdateAll took since the last call, for the bench. */
 	static double TakeSeconds();
@@ -90,7 +93,7 @@ private:
 	FRTSVehicleLightEntry* Find(const ARTSUnit& Unit);
 	const FRTSVehicleLightEntry* Find(const ARTSUnit& Unit) const;
 	void DestroyLights(FRTSVehicleLightEntry& Entry);
-	/** Makes the entry's spot lights, attached to the hull at the middle of its lamps, if it has none yet. */
+	/** Makes the entry's spot lights, attached to the hull at the middle of each lamp cluster, if it has none yet. */
 	void MakeLights(FRTSVehicleLightEntry& Entry, ARTSUnit& Unit);
 	void SetActive(FRTSVehicleLightEntry& Entry, bool bActive);
 

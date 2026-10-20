@@ -18,15 +18,20 @@ namespace
 		TEXT("rts.Fx.VehicleLightDistance"), 20000.f,
 		TEXT("cm from the nearest camera within which a vehicle lights the ground in the dark (#223), the near half of the default RTS view; 0 or less everywhere."));
 
-	TAutoConsoleVariable<int32> CVarVehicleLightMaxVehicles(
-		TEXT("rts.Fx.VehicleLightMaxVehicles"), 12,
-		TEXT("Most vehicles lighting the ground at once in the dark (#223), those nearest a camera; each has two spot lights, so at most twice this many are on."));
+	TAutoConsoleVariable<int32> CVarVehicleLightMaxLights(
+		TEXT("rts.Fx.VehicleLightMaxLights"), 24,
+		TEXT("Most real lights lighting the ground at once in the dark (#223, #329): those of the vehicles nearest a camera, one spot light per lamp cluster, as many vehicles as fit."));
 
 	/** As the exhaust's (#222): a vehicle lighting the ground stops past this share of the distance, and counts as nearer. */
 	constexpr float LightStopScale = 1.1f;
 	constexpr float LightKeepScale = 0.9f;
 
 	uint64 LightCycles = 0;
+
+	int32 GetLightCount(const ARTSUnit& Unit)
+	{
+		return Unit.GetUnitData() ? Unit.GetUnitData()->Lights.GetLightCount() : 0;
+	}
 
 	/** A spot light for one end of a vehicle, attached to its hull at Offset, pointing along Direction tilted DownPitch down. */
 	USpotLightComponent* MakeSpot(UWorld& World, UStaticMeshComponent& Hull, const FVector& Offset, float Yaw, float DownPitch,
@@ -76,9 +81,9 @@ float URTSVehicleLightSubsystem::GetDistance()
 	return CVarVehicleLightDistance.GetValueOnGameThread();
 }
 
-int32 URTSVehicleLightSubsystem::GetMaxVehicles()
+int32 URTSVehicleLightSubsystem::GetMaxLights()
 {
-	return FMath::Max(CVarVehicleLightMaxVehicles.GetValueOnGameThread(), 0);
+	return FMath::Max(CVarVehicleLightMaxLights.GetValueOnGameThread(), 0);
 }
 
 double URTSVehicleLightSubsystem::TakeSeconds()
@@ -110,10 +115,12 @@ void URTSVehicleLightSubsystem::Register(ARTSUnit& Unit)
 		// New data or new parts: the lamps are told again and the lights made again where the data puts them.
 		DestroyLights(*Entry);
 		Entry->bLampsOn.Reset();
+		Entry->LightCount = GetLightCount(Unit);
 		return;
 	}
 	FRTSVehicleLightEntry& Entry = Entries.AddDefaulted_GetRef();
 	Entry.Unit = &Unit;
+	Entry.LightCount = GetLightCount(Unit);
 }
 
 void URTSVehicleLightSubsystem::Unregister(ARTSUnit& Unit)
@@ -128,15 +135,17 @@ void URTSVehicleLightSubsystem::Unregister(ARTSUnit& Unit)
 
 void URTSVehicleLightSubsystem::DestroyLights(FRTSVehicleLightEntry& Entry)
 {
-	for (USpotLightComponent* Light : { Entry.Headlight.Get(), Entry.Taillight.Get() })
+	for (TArray<TObjectPtr<USpotLightComponent>>* Lights : { &Entry.Headlights, &Entry.Taillights })
 	{
-		if (IsValid(Light))
+		for (USpotLightComponent* Light : *Lights)
 		{
-			Light->DestroyComponent();
+			if (IsValid(Light))
+			{
+				Light->DestroyComponent();
+			}
 		}
+		Lights->Reset();
 	}
-	Entry.Headlight = nullptr;
-	Entry.Taillight = nullptr;
 	Entry.bActive = false;
 }
 
@@ -145,7 +154,7 @@ int32 URTSVehicleLightSubsystem::GetActiveLightCount() const
 	int32 Active = 0;
 	for (const FRTSVehicleLightEntry& Entry : Entries)
 	{
-		Active += Entry.bActive ? (Entry.Headlight ? 1 : 0) + (Entry.Taillight ? 1 : 0) : 0;
+		Active += Entry.bActive ? Entry.Headlights.Num() + Entry.Taillights.Num() : 0;
 	}
 	return Active;
 }
@@ -155,21 +164,21 @@ int32 URTSVehicleLightSubsystem::GetActiveVehicleCount() const
 	return static_cast<int32>(Algo::CountIf(Entries, [](const FRTSVehicleLightEntry& Entry) { return Entry.bActive; }));
 }
 
-USpotLightComponent* URTSVehicleLightSubsystem::GetHeadlight(const ARTSUnit& Unit) const
+TArray<USpotLightComponent*> URTSVehicleLightSubsystem::GetHeadlights(const ARTSUnit& Unit) const
 {
 	const FRTSVehicleLightEntry* Entry = Find(Unit);
-	return Entry ? Entry->Headlight.Get() : nullptr;
+	return Entry ? TArray<USpotLightComponent*>(Entry->Headlights) : TArray<USpotLightComponent*>();
 }
 
-USpotLightComponent* URTSVehicleLightSubsystem::GetTaillight(const ARTSUnit& Unit) const
+TArray<USpotLightComponent*> URTSVehicleLightSubsystem::GetTaillights(const ARTSUnit& Unit) const
 {
 	const FRTSVehicleLightEntry* Entry = Find(Unit);
-	return Entry ? Entry->Taillight.Get() : nullptr;
+	return Entry ? TArray<USpotLightComponent*>(Entry->Taillights) : TArray<USpotLightComponent*>();
 }
 
 void URTSVehicleLightSubsystem::MakeLights(FRTSVehicleLightEntry& Entry, ARTSUnit& Unit)
 {
-	if (Entry.Headlight || Entry.Taillight)
+	if (!Entry.Headlights.IsEmpty() || !Entry.Taillights.IsEmpty())
 	{
 		return;
 	}
@@ -178,15 +187,16 @@ void URTSVehicleLightSubsystem::MakeLights(FRTSVehicleLightEntry& Entry, ARTSUni
 	const FRTSVehicleLights& Lights = Unit.GetUnitData()->Lights;
 	UStaticMeshComponent& Hull = *Unit.GetMesh();
 	UWorld& World = *GetWorld();
-	if (!Lights.HeadlightOffsets.IsEmpty())
+	// One beam per lamp cluster, standing at it (#329): the lit ground starts at the lamps it belongs to, not between them.
+	for (const FVector& Offset : FRTSVehicleLights::GetClusterMidpoints(Lights.HeadlightOffsets))
 	{
-		Entry.Headlight = MakeSpot(World, Hull, FRTSVehicleLights::GetMidpoint(Lights.HeadlightOffsets), 0.f, Lights.HeadlightDownPitch,
-			Lights.HeadlightColor, Lights.HeadlightIntensity, Lights.HeadlightRadius, Lights.HeadlightInnerCone, Lights.HeadlightOuterCone);
+		Entry.Headlights.Add(MakeSpot(World, Hull, Offset, 0.f, Lights.HeadlightDownPitch,
+			Lights.HeadlightColor, Lights.HeadlightIntensity, Lights.HeadlightRadius, Lights.HeadlightInnerCone, Lights.HeadlightOuterCone));
 	}
-	if (!Lights.TaillightOffsets.IsEmpty())
+	for (const FVector& Offset : FRTSVehicleLights::GetClusterMidpoints(Lights.TaillightOffsets))
 	{
-		Entry.Taillight = MakeSpot(World, Hull, FRTSVehicleLights::GetMidpoint(Lights.TaillightOffsets), 180.f, Lights.TaillightDownPitch,
-			Lights.TaillightColor, Lights.TaillightIntensity, Lights.TaillightRadius, Lights.TaillightInnerCone, Lights.TaillightOuterCone);
+		Entry.Taillights.Add(MakeSpot(World, Hull, Offset, 180.f, Lights.TaillightDownPitch,
+			Lights.TaillightColor, Lights.TaillightIntensity, Lights.TaillightRadius, Lights.TaillightInnerCone, Lights.TaillightOuterCone));
 	}
 	Entry.bActive = false;
 }
@@ -198,11 +208,14 @@ void URTSVehicleLightSubsystem::SetActive(FRTSVehicleLightEntry& Entry, bool bAc
 		return;
 	}
 	Entry.bActive = bActive;
-	for (USpotLightComponent* Light : { Entry.Headlight.Get(), Entry.Taillight.Get() })
+	for (const TArray<TObjectPtr<USpotLightComponent>>* Lights : { &Entry.Headlights, &Entry.Taillights })
 	{
-		if (IsValid(Light))
+		for (USpotLightComponent* Light : *Lights)
 		{
-			Light->SetVisibility(bActive);
+			if (IsValid(Light))
+			{
+				Light->SetVisibility(bActive);
+			}
 		}
 	}
 }
@@ -226,7 +239,7 @@ void URTSVehicleLightSubsystem::UpdateAll(float DeltaSeconds)
 		}
 	}
 
-	// Every vehicle's lamps follow the dark; in it, those near enough a camera light the ground, the nearest within the budget.
+	// Every vehicle's lamps follow the dark; in it, those near enough a camera light the ground, the nearest while their lights fit the budget.
 	Nearest.Reset();
 	const float Distance = GetDistance();
 	for (int32 Index = 0; Index < Entries.Num(); ++Index)
@@ -239,7 +252,7 @@ void URTSVehicleLightSubsystem::UpdateAll(float DeltaSeconds)
 			Entry.bLampsOn = bDark;
 		}
 		Entry.bShows = false;
-		if (!bDark || !Unit.GetUnitData()->Lights.HasLights())
+		if (!bDark || Entry.LightCount == 0)
 		{
 			continue;
 		}
@@ -249,10 +262,20 @@ void URTSVehicleLightSubsystem::UpdateAll(float DeltaSeconds)
 			Nearest.Emplace(Entry.ViewDistance * (Entry.bActive ? LightKeepScale : 1.f), Index);
 		}
 	}
-	RTSNearestToView::KeepNearest(Nearest, GetMaxVehicles());
+	// Every vehicle has at least one light, so no more than the budget's count of the nearest can fit; of them, nearest first.
+	const int32 MaxLights = GetMaxLights();
+	RTSNearestToView::KeepNearest(Nearest, MaxLights);
+	Nearest.Sort([](const TPair<float, int32>& A, const TPair<float, int32>& B) { return A.Key < B.Key; });
+	int32 Lit = 0;
 	for (const TPair<float, int32>& Near : Nearest)
 	{
-		Entries[Near.Value].bShows = true;
+		FRTSVehicleLightEntry& Entry = Entries[Near.Value];
+		if (Lit + Entry.LightCount > MaxLights)
+		{
+			break;
+		}
+		Lit += Entry.LightCount;
+		Entry.bShows = true;
 	}
 
 	for (FRTSVehicleLightEntry& Entry : Entries)
