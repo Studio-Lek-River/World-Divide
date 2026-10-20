@@ -4,6 +4,7 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Core/RTSGameState.h"
+#include "Core/RTSMaps.h"
 #include "Core/RTSPlayerState.h"
 #include "Core/RTSSettings.h"
 #include "Data/RTSBuildingData.h"
@@ -22,20 +23,13 @@ namespace
 	/** How far below its PlayerStart the ground under a headquarters may lie. */
 	constexpr float GroundSearchDepth = 1000.f;
 
-	/** The team of a PlayerStart tagged "Team<id>", or INDEX_NONE for any other tag. */
-	int32 ParseTeamTag(FName Tag)
-	{
-		FString Text = Tag.ToString();
-		return Text.RemoveFromStart(TEXT("Team")) && !Text.IsEmpty() && Text.IsNumeric() ? FCString::Atoi(*Text) : INDEX_NONE;
-	}
-
 	/** The first PlayerStart tagged "Team<id>" of each team, by team id. */
 	TMap<int32, APlayerStart*> FindTaggedStarts(UWorld& World)
 	{
 		TMap<int32, APlayerStart*> Starts;
 		for (TActorIterator<APlayerStart> It(&World); It; ++It)
 		{
-			const int32 TeamId = ParseTeamTag(It->PlayerStartTag);
+			const int32 TeamId = RTSMaps::ParseTeamTag(It->PlayerStartTag);
 			if (TeamId != INDEX_NONE && !Starts.Contains(TeamId))
 			{
 				Starts.Add(TeamId, *It);
@@ -216,7 +210,7 @@ void ARTSGameMode::AssignUnitSpawners()
 	TMap<int32, int32> TeamBySpot;
 	for (const TPair<int32, TObjectPtr<APlayerStart>>& Start : TeamStarts)
 	{
-		TeamBySpot.Add(ParseTeamTag(Start.Value->PlayerStartTag), Start.Key);
+		TeamBySpot.Add(RTSMaps::ParseTeamTag(Start.Value->PlayerStartTag), Start.Key);
 	}
 	for (TActorIterator<ARTSUnitSpawner> It(GetWorld()); It; ++It)
 	{

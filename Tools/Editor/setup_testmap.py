@@ -1110,6 +1110,15 @@ def spawn(actor_class, location, yaw=0.0, label=None):
     return actor
 
 
+def spawn_start_spot(spot, location, yaw=0.0):
+    """An RTSStartSpot numbered spot (0-based); it tags itself Team<spot>, which the game mode reads."""
+    start = spawn(unreal.RTSStartSpot, location, yaw, label=f"StartSpot_{spot + 1}")
+    start.set_editor_property("spot_index", spot)
+    if str(start.get_editor_property("player_start_tag")) != f"Team{spot}":
+        unreal.log_warning(f"{start.get_actor_label()} is tagged {start.get_editor_property('player_start_tag')}, not Team{spot}")
+    return start
+
+
 def spawn_block(label, location, scale):
     block = spawn(unreal.StaticMeshActor, location, label=label)
     block.static_mesh_component.set_static_mesh(unreal.load_asset(CUBE))
@@ -1280,8 +1289,7 @@ def build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, di
         unreal.log_warning(f"NavMeshBoundsVolume has no usable brush: drag one into {path} by hand and save.")
 
     for team_id, x, _, yaw in TEST_MAP.spots:
-        start = spawn(unreal.PlayerStart, (x, 0.0, 100.0), yaw, label=f"PlayerStart_Team{team_id}")
-        start.set_editor_property("player_start_tag", f"Team{team_id}")
+        spawn_start_spot(team_id, (x, 0.0, 100.0), yaw)
         forward = 1.0 if yaw == 0.0 else -1.0
         # The army in front of the headquarters, tanks to its right and infantry to its left, and the builders behind it.
         spawn_units(tank, 6, team_id, (x + BASE_ARMY_AHEAD * forward, -BASE_ARMY_SIDE, 0.0), yaw)
@@ -1321,8 +1329,7 @@ def build_bench_map(ground, digest):
     nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
     nav.set_actor_scale3d(unreal.Vector(BENCH_HALF_SIZE / 100.0, BENCH_HALF_SIZE / 100.0, 10.0))
     for team_id, corner in ((0, -1.0), (1, 1.0)):
-        start = spawn(unreal.PlayerStart, (corner * BENCH_CORNER, corner * BENCH_CORNER, 100.0), label=f"PlayerStart_Team{team_id}")
-        start.set_editor_property("player_start_tag", f"Team{team_id}")
+        spawn_start_spot(team_id, (corner * BENCH_CORNER, corner * BENCH_CORNER, 100.0))
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     build_navigation(world, BENCH_MAP_PATH)
@@ -1395,8 +1402,7 @@ def build_long_path_map(ground, water, digest):
     nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
     nav.set_actor_scale3d(unreal.Vector(LONG_PATH_HALF_SIZE / 100.0, LONG_PATH_HALF_SIZE / 100.0, 10.0))
     for team_id, x, y, yaw in LONG_PATH_SPOTS:
-        start = spawn(unreal.PlayerStart, (x, y, 100.0), yaw, label=f"PlayerStart_Team{team_id}")
-        start.set_editor_property("player_start_tag", f"Team{team_id}")
+        spawn_start_spot(team_id, (x, y, 100.0), yaw)
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     build_navigation(world, LONG_PATH_MAP_PATH)
@@ -1440,8 +1446,7 @@ def build_thin_walls_map(ground, digest):
     nav = spawn(unreal.NavMeshBoundsVolume, (0.0, 0.0, 0.0), label="NavMeshBounds")
     nav.set_actor_scale3d(unreal.Vector(THIN_WALLS_HALF_SIZE / 100.0, THIN_WALLS_HALF_SIZE / 100.0, 10.0))
     for team_id, x, y, yaw in THIN_WALLS_SPOTS:
-        start = spawn(unreal.PlayerStart, (x, y, 100.0), yaw, label=f"PlayerStart_Team{team_id}")
-        start.set_editor_property("player_start_tag", f"Team{team_id}")
+        spawn_start_spot(team_id, (x, y, 100.0), yaw)
 
     world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
     build_navigation(world, THIN_WALLS_MAP_PATH)
@@ -1608,8 +1613,7 @@ def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
     nav.set_actor_scale3d(unreal.Vector(spec.half_size / 100.0, spec.half_size / 100.0, 10.0))
 
     for spot, x, y, yaw in spec.spots:
-        start = spawn(unreal.PlayerStart, (x, y, 100.0), yaw, label=f"PlayerStart_Team{spot}")
-        start.set_editor_property("player_start_tag", f"Team{spot}")
+        spawn_start_spot(spot, (x, y, 100.0), yaw)
         forward = (math.cos(math.radians(yaw)), math.sin(math.radians(yaw)))
         # The units of a spot carry its number; the game mode hands them to the team playing from it.
         spawn_units(builder, 2, spot, (x - BASE_BUILDERS_BEHIND * forward[0], y - BASE_BUILDERS_BEHIND * forward[1], 0.0), yaw)

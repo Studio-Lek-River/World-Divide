@@ -16,7 +16,7 @@ Each item is tagged **Verified** (checked in the project or the engine install),
 | Ground finding | `RTSGround::Trace` traces WorldStatic only; the HQ uses a WorldStatic trace with `GroundSearchDepth=1000` | `Units/RTSGround.cpp`, `Core/RTSGameMode.cpp` |
 | Placement | `RTSBuildPlacement::CanPlace`: navmesh under the centre and four corners, a WorldStatic ground trace, an empty overlap box (WorldStatic, WorldDynamic, Pawn); 1 m grid; **no slope check** | `Buildings/RTSBuildPlacement.cpp` |
 | Camera bounds | Union of all `ANavMeshBoundsVolume` plus `EdgeMargin` (500), with a fallback of ±150 m | `Player/RTSCameraPawn.cpp` |
-| Map registration | `URTSMapData` (map, `StartSpots`, preview, `PreviewArea`, `StartSpotPositions`) listed in `DefaultGame.ini` `+SkirmishMaps`; start spots are `PlayerStart`s tagged `Team<N>` | `Data/RTSMapData.h`, `Core/RTSGameMode.cpp` |
+| Map registration | `URTSMapData` (map, `StartSpots`, preview, `PreviewArea`, `StartSpotPositions`) listed in `DefaultGame.ini` `+SkirmishMaps`; start spots are `ARTSStartSpot`s numbered by `SpotIndex`, which tag themselves `Team<N>` | `Data/RTSMapData.h`, `Core/RTSStartSpot.h`, `Core/RTSMaps.h` |
 | Map tests | `Maps.LobbyMaps`, `Maps.SavedNavMesh`, `Maps.StartSpotPositions`, `Maps.PreviewCameraAlignment`, `Smoke.Maps`, `Smoke.Terrain`, `Smoke.SolidObstacles` | `Source/WorldDivide/Tests/RTSMap*.cpp`, `RTSTerrainSmokeTest.cpp`, `RTSTestMapSmokeTest.cpp` |
 | Content generation | `Tools/Editor/setup_testmap.py` builds every test and lobby map from engine cubes; run with `ue.ps1 -Task setup` | `Tools/Scripts/ue.ps1` |
 | Editor helpers | `URTSEditorScripting::BuildNavigation`, `CapturePreview` | `Core/RTSEditorScripting.h` |

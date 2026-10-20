@@ -1,5 +1,7 @@
 #include "Core/RTSEditorScripting.h"
+#include "Core/RTSMaps.h"
 #include "Core/RTSSettings.h"
+#include "Core/RTSStartSpot.h"
 #include "Data/RTSMapData.h"
 #include "Engine/Level.h"
 #include "Engine/Texture2D.h"
@@ -10,6 +12,7 @@
 #include "Navigation/RTSNavAgents.h"
 #include "Tests/RTSTestFlags.h"
 #include "Tests/RTSTestMaps.h"
+#include "Tests/RTSTestWorld.h"
 #include "UObject/Package.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -18,21 +21,65 @@ namespace
 {
 	using RTSTests::TestFlags;
 
-	/** The Team<N> PlayerStarts of a level by N. */
-	TMap<int32, FVector> FindStartSpots(const UWorld& World)
+	/** The positions of the Team<N> PlayerStarts of a level by N; its start spot problems go to OutProblems. */
+	TMap<int32, FVector> FindStartSpots(const UWorld& World, TArray<FString>* OutProblems = nullptr)
 	{
 		TMap<int32, FVector> Starts;
-		for (const AActor* Actor : World.PersistentLevel->Actors)
+		for (const TPair<int32, const APlayerStart*>& Start : RTSMaps::FindStartSpots(World, OutProblems))
 		{
-			const APlayerStart* Start = Cast<APlayerStart>(Actor);
-			const FString Tag = Start ? Start->PlayerStartTag.ToString() : FString();
-			if (Tag.StartsWith(TEXT("Team")))
-			{
-				Starts.Add(FCString::Atoi(*Tag.Mid(4)), Start->GetActorLocation());
-			}
+			Starts.Add(Start.Key, Start.Value->GetActorLocation());
 		}
 		return Starts;
 	}
+}
+
+/**
+ * An ARTSStartSpot tags itself Team<SpotIndex>, and RTSMaps::FindStartSpots reports a spot index used twice and a spot index left out.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSStartSpotActorTest, "WorldDivide.Maps.StartSpotActor", TestFlags)
+
+bool FRTSStartSpotActorTest::RunTest(const FString& Parameters)
+{
+	const RTSTests::FRTSTestWorld TestWorld;
+	UWorld& World = *TestWorld.World;
+	const auto SpawnSpot = [&World](int32 SpotIndex, const FVector& Location)
+	{
+		const FTransform Transform(Location);
+		ARTSStartSpot* Spot = World.SpawnActorDeferred<ARTSStartSpot>(ARTSStartSpot::StaticClass(), Transform);
+		Spot->SpotIndex = SpotIndex;
+		Spot->FinishSpawning(Transform);
+		return Spot;
+	};
+
+	const ARTSStartSpot* Second = SpawnSpot(1, FVector(1000.0, 0.0, 0.0));
+	const ARTSStartSpot* First = SpawnSpot(0, FVector(-1000.0, 0.0, 0.0));
+	TestEqual(TEXT("Spot index 0 is tagged Team0"), First->PlayerStartTag, FName(TEXT("Team0")));
+	TestEqual(TEXT("Spot index 1 is tagged Team1"), Second->PlayerStartTag, FName(TEXT("Team1")));
+
+	TArray<FString> Problems;
+	TMap<int32, const APlayerStart*> Starts = RTSMaps::FindStartSpots(World, &Problems);
+	TestEqual(TEXT("Two spots are found"), Starts.Num(), 2);
+	TestTrue(TEXT("Spot 0 is the actor with index 0"), Starts.FindRef(0) == First);
+	TestTrue(TEXT("Spot 1 is the actor with index 1"), Starts.FindRef(1) == Second);
+	TestEqual(TEXT("Two numbered spots have no problems"), Problems.Num(), 0);
+
+	// A second actor with index 1: the first one keeps the spot and the duplicate is reported.
+	SpawnSpot(1, FVector(0.0, 1000.0, 0.0));
+	Problems.Reset();
+	Starts = RTSMaps::FindStartSpots(World, &Problems);
+	TestTrue(TEXT("The first actor with index 1 keeps spot 1"), Starts.FindRef(1) == Second);
+	TestEqual(TEXT("A duplicate spot index is reported"), Problems.Num(), 1);
+
+	// Index 3 with no index 2: the gap is reported next to the duplicate.
+	SpawnSpot(3, FVector(0.0, -1000.0, 0.0));
+	Problems.Reset();
+	RTSMaps::FindStartSpots(World, &Problems);
+	TestEqual(TEXT("A duplicate and a gap are reported"), Problems.Num(), 2);
+	TestTrue(TEXT("The gap names spot 3 (Team2)"), Problems.ContainsByPredicate([](const FString& Problem)
+	{
+		return Problem.Contains(TEXT("Team2"));
+	}));
+	return true;
 }
 
 /**
@@ -105,7 +152,12 @@ bool FRTSMapStartSpotPositionsTest::RunTest(const FString& Parameters)
 			continue;
 		}
 
-		const TMap<int32, FVector> Starts = FindStartSpots(*World);
+		TArray<FString> Problems;
+		const TMap<int32, FVector> Starts = FindStartSpots(*World, &Problems);
+		for (const FString& Problem : Problems)
+		{
+			AddError(FString::Printf(TEXT("%s: %s"), *Name, *Problem));
+		}
 		TestEqual(FString::Printf(TEXT("%s: a PlayerStart per start spot"), *Name), Starts.Num(), Map->StartSpots);
 		TestEqual(FString::Printf(TEXT("%s: a position per start spot"), *Name), Map->StartSpotPositions.Num(), Map->StartSpots);
 		for (const TPair<int32, FVector>& Start : Starts)
