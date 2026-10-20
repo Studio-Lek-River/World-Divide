@@ -8,12 +8,15 @@
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
 #include "Engine/FontFace.h"
+#include "Engine/Level.h"
 #include "Engine/SceneCapture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerStart.h"
 #include "ImageCore.h"
 #include "ImageUtils.h"
+#include "Landscape.h"
+#include "LandscapeInfo.h"
 #include "Misc/App.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
@@ -127,7 +130,8 @@ bool URTSEditorScripting::CapturePreview(UObject* WorldContextObject, FBox2D Are
 	Capture->PostProcessSettings.AutoExposureBias = 0.0f;
 	Capture->TextureTarget = Target;
 
-	// A commandlet compiles shaders and streams textures lazily; the image must not show their placeholders.
+	// A commandlet compiles shaders and meshes and streams textures lazily; the image must not show their placeholders.
+	FAssetCompilingManager::Get().FinishAllCompilation();
 	if (GShaderCompilingManager)
 	{
 		GShaderCompilingManager->FinishAllCompilation();
@@ -190,6 +194,67 @@ void URTSEditorScripting::ReadMapLayout(UObject* WorldContextObject, FBox2D& Out
 		OutSpotLocations.SetNum(FMath::Max(OutSpotLocations.Num(), Start.Key + 1));
 		OutSpotLocations[Start.Key] = Start.Value->GetActorLocation();
 	}
+}
+
+ALandscape* URTSEditorScripting::CreateLandscape(UObject* WorldContextObject, const FString& HeightmapFileName, int32 Components,
+	int32 QuadsPerSection, FVector Location, FVector Scale, UMaterialInterface* Material)
+{
+#if WITH_EDITOR
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	if (!World || Components <= 0 || QuadsPerSection <= 0)
+	{
+		return nullptr;
+	}
+	constexpr int32 SectionsPerComponent = 2;
+	const int32 Size = Components * SectionsPerComponent * QuadsPerSection + 1;
+	TArray<uint8> Bytes;
+	if (!FFileHelper::LoadFileToArray(Bytes, *HeightmapFileName) || Bytes.Num() != Size * Size * 2)
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("CreateLandscape: %s is missing or not %d x %d 16-bit heights"), *HeightmapFileName, Size, Size);
+		return nullptr;
+	}
+	TArray<uint16> Heights;
+	Heights.SetNumUninitialized(Size * Size);
+	for (int32 Index = 0; Index < Heights.Num(); ++Index)
+	{
+		Heights[Index] = static_cast<uint16>(Bytes[Index * 2] | (Bytes[Index * 2 + 1] << 8));
+	}
+
+	// As the editor's New Landscape tool: the heights of the default edit layer and no paint layers.
+	TMap<FGuid, TArray<uint16>> HeightsPerLayer;
+	HeightsPerLayer.Add(FGuid(), MoveTemp(Heights));
+	TMap<FGuid, TArray<FLandscapeImportLayerInfo>> PaintLayersPerLayer;
+	PaintLayersPerLayer.Add(FGuid(), TArray<FLandscapeImportLayerInfo>());
+	ALandscape* Landscape = World->SpawnActor<ALandscape>(Location, FRotator::ZeroRotator);
+	Landscape->LandscapeMaterial = Material;
+	Landscape->SetActorRelativeScale3D(Scale);
+	Landscape->Import(FGuid::NewGuid(), 0, 0, Size - 1, Size - 1, SectionsPerComponent, QuadsPerSection, HeightsPerLayer, TEXT(""),
+		PaintLayersPerLayer, ELandscapeImportAlphamapType::Additive, TArrayView<const FLandscapeLayer>());
+	Landscape->SetActorLabel(TEXT("Landscape"));
+	if (ULandscapeInfo* Info = Landscape->GetLandscapeInfo())
+	{
+		Info->UpdateLayerInfoMap(Landscape);
+	}
+	return Landscape;
+#else
+	return nullptr;
+#endif
+}
+
+bool URTSEditorScripting::UseExternalActors(UObject* WorldContextObject)
+{
+#if WITH_EDITOR
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	if (!World || !World->PersistentLevel)
+	{
+		return false;
+	}
+	World->PersistentLevel->SetUseExternalActors(true);
+	World->PersistentLevel->ConvertAllActorsToPackaging(true);
+	return true;
+#else
+	return false;
+#endif
 }
 
 bool URTSEditorScripting::BuildFont(UFont* Font, UFontFace* Face)

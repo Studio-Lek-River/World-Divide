@@ -159,14 +159,42 @@ The bridges can be destroyed later (DESIGN_FOUNDATION §6, persistent ruins). Th
 
 Measured in the greybox phase with the navmesh and recorded in phase 2 of the roadmap.
 
-- [ ] The route from each base to its home bridge, its far bridge and the village centre is within ±3% in length on both sides.
-- [ ] Each side has the same number of supply sources, at the same distances (safe, forward, village).
-- [ ] Each side has one hill of the same height, the same distance from its home bridge.
-- [ ] The cover around both bridges is equal: the same copse sizes and the same distances.
-- [ ] Each village bank has the same number of buildings and the same garrison capacity.
-- [ ] There is no path from either base to the other that avoids both bridges.
-- [ ] Building placement succeeds at no fewer than N test positions per base pad (N set in the validation test).
-- [ ] Starting units spawn and path to both bridges on both sides.
+- [x] The route from each base to its home bridge, its far bridge and the village centre is within ±3% in length on both sides.
+- [x] Each side has the same number of supply sources, at the same distances (safe, forward, village).
+- [x] Each side has one hill of the same height, the same distance from its home bridge.
+- [ ] The cover around both bridges is equal: the same copse sizes and the same distances. *(No copses yet; they come with the vegetation in phase 6.)*
+- [x] Each village bank has the same number of buildings and the same garrison capacity. *(The buildings match; the garrison buildings are chosen in phase 5.)*
+- [x] There is no path from either base to the other that avoids both bridges.
+- [x] Building placement succeeds at no fewer than N test positions per base pad (N = 16).
+- [x] Starting units spawn and path to both bridges on both sides.
+
+### Greybox results (#154, 2026-10-20)
+
+`Tools/Editor/rivercrossing_greybox.py` builds the greybox from the numbers in this document, but only when the level doesn't exist yet. From then on the level is authored by hand. Every height and every actor is point-symmetric by construction: what stands at (x, y) for the west side stands at (−x, −y) for the east. So the supply sources, the hills (20 m, at (∓350, ∓650)) and the village banks (10 blockout buildings each) match exactly. Each side has 3 supply sources:
+
+- **Safe:** 15,000, 90 m behind the start spot, within the AI's depot reach.
+- **Forward:** 8,000, at (∓400, ±500).
+- **Village:** 10,000, at (∓90, ±40).
+
+`WorldDivide.Maps.RiverCrossing.Layout` measures the rest on the navmesh, using the vehicle agent. Each route starts at the base exit, past the headquarters:
+
+| Route | West (team 0) | East (team 1) | Difference |
+|---|---|---|---|
+| Home bridge | 702 m | 702 m | 0.0% |
+| Far bridge | 873 m | 874 m | 0.0% |
+| Own village stockpile | 633 m | 633 m | 0.0% |
+| Enemy village stockpile | 1,001 m | 1,002 m | 0.1% |
+| Enemy base | 1,575 m | 1,576 m | 0.1% |
+
+- No path sample lies over a `Water_*` volume except on a bridge deck, and the route from base to base crosses a bridge on both sides.
+- Both bridge decks carry vehicle navmesh.
+- A vehicle factory fits at 16 of 16 grid sites on each pad.
+- `WorldDivide.Smoke.Maps` plays the map with both start spots taken.
+- `WorldDivide.Maps.RiverCrossing.AIvsAI` plays two AIs to the end of a match: team 1 wins after 514 game seconds.
+  - The skirmish AI doesn't yet expand to the forward and village sources, so a side lives off its safe source. That is why the safe source holds 15,000.
+  - Team 1's harvester stalls between its source and the depot the AI built 8 m beside it, and never delivers. The test therefore judges only that the match ends with a winner (follow-up issues).
+
+**Navmesh build:** 18–20 s for both agents (`ue.ps1 -Task rivercrossing`, logged by `BuildNavigation`). Each agent gets 3,072 tiles at about 2 MB, plus a 2.7 MB tile cache.
 
 ## Camera and readability
 

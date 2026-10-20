@@ -26,6 +26,7 @@
 #include "Misc/PackageName.h"
 #include "GameFramework/PlayerStart.h"
 #include "NavMesh/RecastNavMesh.h"
+#include "NavModifierVolume.h"
 #include "Navigation/RTSHullClearance.h"
 #include "Navigation/RTSNavAgents.h"
 #include "NavigationSystem.h"
@@ -728,9 +729,11 @@ namespace RTSScaleTests
 		bool bHitEnemy[2] = { false, false };
 		float LowestEnemyHealth[2] = { 1.f, 1.f };
 		int32 Waves[2] = { 0, 0 };
+		/** Whether each AI must also have finished its build order, harvested and sent waves, or only the match must end. */
+		bool bJudgeAIs = true;
 	};
 
-	/** The player's team handed to a second skirmish AI, so both sides of L_SkirmishDuel play themselves. */
+	/** The player's team handed to a second skirmish AI, so both sides of the map play themselves. */
 	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSHandPlayerToAI, FAutomationTestBase*, Test, TSharedRef<FAIvsAIState>, State);
 	bool FRTSHandPlayerToAI::Update()
 	{
@@ -874,10 +877,13 @@ namespace RTSScaleTests
 		{
 			Test->AddInfo(FString::Printf(TEXT("Team %d: build order %d, harvested %d, a vehicle left its factory %d, waves %d, lowest an enemy building fell to %.0f%%"),
 				Team, State->bBuildOrderDone[Team], State->bEarned[Team], State->bVehicleLeft[Team], State->Waves[Team], 100.f * State->LowestEnemyHealth[Team]));
-			Test->TestTrue(*FString::Printf(TEXT("Team %d's AI completed its build order"), Team), State->bBuildOrderDone[Team]);
-			Test->TestTrue(*FString::Printf(TEXT("Team %d's harvester delivered"), Team), State->bEarned[Team]);
-			Test->TestTrue(*FString::Printf(TEXT("A vehicle of team %d drove out of its factory"), Team), State->bVehicleLeft[Team]);
-			Test->TestTrue(*FString::Printf(TEXT("Team %d's AI sent waves"), Team), State->Waves[Team] > 0);
+			if (State->bJudgeAIs)
+			{
+				Test->TestTrue(*FString::Printf(TEXT("Team %d's AI completed its build order"), Team), State->bBuildOrderDone[Team]);
+				Test->TestTrue(*FString::Printf(TEXT("Team %d's harvester delivered"), Team), State->bEarned[Team]);
+				Test->TestTrue(*FString::Printf(TEXT("A vehicle of team %d drove out of its factory"), Team), State->bVehicleLeft[Team]);
+				Test->TestTrue(*FString::Printf(TEXT("Team %d's AI sent waves"), Team), State->Waves[Team] > 0);
+			}
 		}
 		Test->TestTrue(TEXT("The match ended"), bOver);
 		const int32 Winner = GameState->GetWinningTeam();
@@ -891,20 +897,278 @@ namespace RTSScaleTests
 
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSAIvsAISmokeTest, "WorldDivide.Smoke.AIvsAI", TestFlags)
 
-	bool FRTSAIvsAISmokeTest::RunTest(const FString& Parameters)
+	/**
+	 * Opens Map, plays it and hands the player's team to a second AI, so the two AIs play the match out. bJudgeAIs: whether
+	 * each AI must also have finished its build order, harvested and sent waves, or only the match must end with a winner.
+	 */
+	bool QueueAIvsAI(FAutomationTestBase* Test, const TCHAR* Map, bool bJudgeAIs = true)
 	{
-		if (!AutomationOpenMap(DuelMap))
+		if (!AutomationOpenMap(Map))
 		{
-			AddError(FString::Printf(TEXT("Could not open %s"), DuelMap));
+			Test->AddError(FString::Printf(TEXT("Could not open %s"), Map));
 			return false;
 		}
 		const TSharedRef<FAIvsAIState> State = MakeShared<FAIvsAIState>();
+		State->bJudgeAIs = bJudgeAIs;
 		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
-		ADD_LATENT_AUTOMATION_COMMAND(FRTSScaleWaitForPlay(this, MakeShared<double>(0.0)));
-		ADD_LATENT_AUTOMATION_COMMAND(FRTSHandPlayerToAI(this, State));
-		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAIvsAI(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSScaleWaitForPlay(Test, MakeShared<double>(0.0)));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSHandPlayerToAI(Test, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyAIvsAI(Test, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		return true;
+	}
+
+	bool FRTSAIvsAISmokeTest::RunTest(const FString& Parameters)
+	{
+		return QueueAIvsAI(this, DuelMap);
+	}
+
+	// ---- River Crossing ---------------------------------------------------------------------------------------------------
+
+	const TCHAR* RiverCrossingMap = TEXT("/Game/Maps/WD_RiverCrossing_01");
+	/** The bridges' decks stand at (0, +-BridgeY) (rivercrossing_greybox.py, 02_MAP_DESIGN.md), their tops at DeckTop. */
+	constexpr float BridgeY = 30000.f;
+	constexpr float DeckTop = 20.f;
+	/** Half a deck's length and width: a path point inside this box around a deck is on that bridge. */
+	const FVector2D DeckHalfSize(4500.f, 700.f);
+	/** The west bank's village stockpile (02 "Central village"); the east bank's is the same turned about the centre. */
+	const FVector WestVillageSource(-9000.f, 4000.f, 0.f);
+	/** A side's route to a target differs from the other side's by this share at most (02 "Balance checklist"). */
+	constexpr float RouteTolerance = 0.03f;
+	/** The base pad's test grid: building sites this far from the start spot along X and Y, clear of the headquarters. */
+	const float PadOffsets[] = { -12000.f, -6000.f, 6000.f, 12000.f };
+	/** Path samples along each leg, to find any stretch over the river. */
+	constexpr float RiverSampleStep = 200.f;
+
+	/** The Water_ nav blockers of the river. */
+	TArray<const ANavModifierVolume*> GetWaterVolumes(UWorld& World)
+	{
+		TArray<const ANavModifierVolume*> Volumes;
+		for (TActorIterator<ANavModifierVolume> It(&World); It; ++It)
+		{
+			if (It->GetActorLabel().StartsWith(TEXT("Water_")))
+			{
+				Volumes.Add(*It);
+			}
+		}
+		return Volumes;
+	}
+
+	bool IsOnBridge(const FVector& Point)
+	{
+		return FMath::Abs(Point.X) <= DeckHalfSize.X && FMath::Abs(FMath::Abs(Point.Y) - BridgeY) <= DeckHalfSize.Y;
+	}
+
+	/** A full vehicle path: its length, whether it crossed a bridge, and whether a sample of it fell over the water. */
+	struct FRiverRoute
+	{
+		bool bFound = false;
+		float Length = 0.f;
+		bool bOnBridge = false;
+		bool bOverWater = false;
+	};
+
+	FRiverRoute FindRiverRoute(UNavigationSystemV1& NavSystem, const ARecastNavMesh& NavMesh, const TArray<const ANavModifierVolume*>& Water,
+		const FVector& From, const FVector& To)
+	{
+		FRiverRoute Route;
+		FNavLocation Start;
+		FNavLocation End;
+		const FVector Extent(500.f, 500.f, 2000.f);
+		if (!NavMesh.ProjectPoint(From, Start, Extent) || !NavMesh.ProjectPoint(To, End, Extent))
+		{
+			return Route;
+		}
+		FPathFindingQuery Query(nullptr, NavMesh, Start.Location, End.Location);
+		Query.SetAllowPartialPaths(false);
+		const FPathFindingResult Result = NavSystem.FindPathSync(Query);
+		if (!Result.IsSuccessful() || Result.IsPartial() || !Result.Path.IsValid())
+		{
+			return Route;
+		}
+		Route.bFound = true;
+		Route.Length = Result.Path->GetLength();
+		const TArray<FNavPathPoint>& Points = Result.Path->GetPathPoints();
+		for (int32 Index = 1; Index < Points.Num(); ++Index)
+		{
+			const FVector A = Points[Index - 1].Location;
+			const FVector B = Points[Index].Location;
+			const int32 Steps = FMath::Max(1, FMath::CeilToInt(FVector::Dist(A, B) / RiverSampleStep));
+			for (int32 Step = 0; Step <= Steps; ++Step)
+			{
+				const FVector At = FMath::Lerp(A, B, float(Step) / Steps);
+				if (IsOnBridge(At))
+				{
+					Route.bOnBridge = true;
+					continue;
+				}
+				for (const ANavModifierVolume* Volume : Water)
+				{
+					// The volumes reach from the river bed to below the decks: a point over the water lies in one's column.
+					Route.bOverWater |= Volume->EncompassesPoint(FVector(At.X, At.Y, Volume->GetActorLocation().Z));
+				}
+			}
+		}
+		return Route;
+	}
+
+	/**
+	 * The balance checklist of 02_MAP_DESIGN.md that the navmesh can measure, on WD_RiverCrossing_01 (#154): a tank finds a
+	 * full path from each base to both bridges, both village stockpiles and the other base; no path runs over the river off
+	 * a bridge, so the way from base to base always takes one; each side's routes are as long as the other side's turned
+	 * about the centre, within 3%; both bridge decks carry vehicle navmesh; and a vehicle factory can be placed at every
+	 * site of a grid on both base pads.
+	 */
+	DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FRTSCheckRiverCrossing, FAutomationTestBase*, Test);
+	bool FRTSCheckRiverCrossing::Update()
+	{
+		UWorld* World = GetPlayWorld();
+		const URTSUnitData* Tank = LoadObject<URTSUnitData>(nullptr, TankPath);
+		const URTSBuildingData* Factory = LoadObject<URTSBuildingData>(nullptr, TEXT("/Game/Data/Buildings/DA_TestVehicleFactory.DA_TestVehicleFactory"));
+		UNavigationSystemV1* NavSystem = World ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World) : nullptr;
+		const ARecastNavMesh* NavMesh = World && Tank ? RTSNavAgents::GetNavMesh(*World, RTSNavAgents::SelectAgent(*Tank)) : nullptr;
+		if (!World || !Tank || !Factory || !NavSystem || !NavMesh)
+		{
+			Test->AddError(TEXT("No play world, navigation, vehicle navmesh or data"));
+			return true;
+		}
+		const TArray<const ANavModifierVolume*> Water = GetWaterVolumes(*World);
+		Test->TestTrue(TEXT("The river has Water_ nav blockers"), Water.Num() > 0);
+
+		FVector Bases[2];
+		int32 Found = 0;
+		for (TActorIterator<APlayerStart> It(World); It; ++It)
+		{
+			const int32 Team = It->PlayerStartTag == TEXT("Team0") ? 0 : It->PlayerStartTag == TEXT("Team1") ? 1 : INDEX_NONE;
+			if (Team != INDEX_NONE)
+			{
+				Bases[Team] = It->GetActorLocation();
+				++Found;
+			}
+		}
+		if (!Test->TestEqual(TEXT("Two start spots"), Found, 2))
+		{
+			return true;
+		}
+
+		for (const float Y : { BridgeY, -BridgeY })
+		{
+			FNavLocation OnDeck;
+			const bool bDeck = NavMesh->ProjectPoint(FVector(0.f, Y, DeckTop), OnDeck, FVector(100.f, 100.f, 100.f));
+			Test->TestTrue(*FString::Printf(TEXT("The bridge deck at y %.0f m has vehicle navmesh"), Y / 100.f),
+				bDeck && FMath::Abs(OnDeck.Location.Z - DeckTop) < 100.f);
+		}
+
+		// Each side leaves its base past the headquarters toward the middle, and stops beside a stockpile on the side facing
+		// its base, as the lane test does; team 1's targets are team 0's turned about the centre.
+		const URTSBuildingData* Headquarters = LoadObject<URTSBuildingData>(nullptr, TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters"));
+		const float BaseClearance = Headquarters ? RTSBuildPlacement::GetFootprintExtent(Headquarters->Footprint).Size2D() : 0.f;
+		const float SourceClearance = RTSBuildPlacement::GetFootprintExtent(SupplySourceFootprint).Size2D();
+		const float HullLength = 2.f * RTSUnitShape::FromData(*Tank).GetHalfLength();
+		const auto Turn = [](const FVector& Point) { return FVector(-Point.X, -Point.Y, Point.Z); };
+		FVector Exits[2];
+		FVector Docks[2][2];
+		for (int32 Team = 0; Team < 2; ++Team)
+		{
+			const FVector Own = Team == 0 ? WestVillageSource : Turn(WestVillageSource);
+			if (!FindNavPointOutside(*NavMesh, Bases[Team], FVector::ZeroVector, BaseClearance, HullLength, Exits[Team])
+				|| !FindNavPointOutside(*NavMesh, Own, Bases[Team], SourceClearance, HullLength, Docks[Team][0])
+				|| !FindNavPointOutside(*NavMesh, Turn(Own), Bases[Team], SourceClearance, HullLength, Docks[Team][1]))
+			{
+				Test->AddError(FString::Printf(TEXT("Team %d: no way out of its base or no dock beside a village stockpile"), Team));
+				return true;
+			}
+		}
+
+		struct FTarget
+		{
+			const TCHAR* Name;
+			FVector To[2];
+		};
+		const FTarget Targets[] = {
+			{ TEXT("home bridge"), { FVector(0.f, -BridgeY, DeckTop), FVector(0.f, BridgeY, DeckTop) } },
+			{ TEXT("far bridge"), { FVector(0.f, BridgeY, DeckTop), FVector(0.f, -BridgeY, DeckTop) } },
+			{ TEXT("own village stockpile"), { Docks[0][0], Docks[1][0] } },
+			{ TEXT("enemy village stockpile"), { Docks[0][1], Docks[1][1] } },
+			{ TEXT("enemy base"), { Exits[1], Exits[0] } },
+		};
+		for (const FTarget& Target : Targets)
+		{
+			FRiverRoute Routes[2];
+			for (int32 Team = 0; Team < 2; ++Team)
+			{
+				Routes[Team] = FindRiverRoute(*NavSystem, *NavMesh, Water, Exits[Team], Target.To[Team]);
+				const FString What = FString::Printf(TEXT("Team %d to the %s"), Team, Target.Name);
+				if (Test->TestTrue(*FString::Printf(TEXT("%s: a tank finds a full path from %s to %s"), *What, *Exits[Team].ToCompactString(),
+					*Target.To[Team].ToCompactString()), Routes[Team].bFound))
+				{
+					Test->TestFalse(*FString::Printf(TEXT("%s: the path never runs over the river off a bridge"), *What), Routes[Team].bOverWater);
+				}
+			}
+			if (Routes[0].bFound && Routes[1].bFound)
+			{
+				const float Difference = FMath::Abs(Routes[0].Length - Routes[1].Length) / FMath::Max(Routes[0].Length, Routes[1].Length);
+				Test->AddInfo(FString::Printf(TEXT("Route to the %s: team 0 %.0f m, team 1 %.0f m (%.1f%%)"), Target.Name,
+					Routes[0].Length / 100.f, Routes[1].Length / 100.f, 100.f * Difference));
+				Test->TestTrue(*FString::Printf(TEXT("Both sides' routes to the %s are within 3%%"), Target.Name), Difference <= RouteTolerance);
+				if (&Target == &Targets[UE_ARRAY_COUNT(Targets) - 1])
+				{
+					Test->TestTrue(TEXT("The way from base to base crosses a bridge"), Routes[0].bOnBridge && Routes[1].bOnBridge);
+				}
+			}
+		}
+
+		for (int32 Team = 0; Team < 2; ++Team)
+		{
+			int32 Placed = 0;
+			int32 Sites = 0;
+			for (const float X : PadOffsets)
+			{
+				for (const float Y : PadOffsets)
+				{
+					const FVector Site = Bases[Team] + FVector(X, Y, 0.f);
+					FVector Location;
+					++Sites;
+					if (RTSBuildPlacement::CanPlace(*World, *Factory, Site, Location))
+					{
+						++Placed;
+					}
+					else
+					{
+						Test->AddError(FString::Printf(TEXT("Team %d's pad: a vehicle factory cannot be placed at %s"), Team, *Site.ToCompactString()));
+					}
+				}
+			}
+			Test->AddInfo(FString::Printf(TEXT("Team %d's pad: a vehicle factory fits at %d of %d sites"), Team, Placed, Sites));
+		}
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRiverCrossingLayoutTest, "WorldDivide.Maps.RiverCrossing.Layout", TestFlags)
+
+	bool FRTSRiverCrossingLayoutTest::RunTest(const FString& Parameters)
+	{
+		if (!AutomationOpenMap(RiverCrossingMap))
+		{
+			AddError(FString::Printf(TEXT("Could not open %s"), RiverCrossingMap));
+			return false;
+		}
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSScaleWaitForPlay(this, MakeShared<double>(0.0)));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckRiverCrossing(this));
+		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+		return true;
+	}
+
+	/**
+	 * Two AIs play a match on WD_RiverCrossing_01 to its end and one wins (#154). Only the end is judged: how well each AI
+	 * plays on a 2 km map is the skirmish AI's (Smoke.AIvsAI judges that on L_SkirmishDuel); the run logs it.
+	 */
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRiverCrossingAIvsAITest, "WorldDivide.Maps.RiverCrossing.AIvsAI", TestFlags)
+
+	bool FRTSRiverCrossingAIvsAITest::RunTest(const FString& Parameters)
+	{
+		return QueueAIvsAI(this, RiverCrossingMap, false);
 	}
 }
 

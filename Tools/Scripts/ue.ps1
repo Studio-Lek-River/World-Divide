@@ -15,6 +15,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task t
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup -Render
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bakemap -Map /Game/Maps/L_RiverFord -Render
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task rivercrossing
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task editor
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots -Panel ResourceBar
@@ -52,6 +53,9 @@ Setup runs without a renderer and draws the lobby's map previews; -Render gives 
 Bakemap bakes the level -Map (/Game/Maps/<Level> or <Level>) into its map data asset DA_Map<Name>, or -DataAsset DA_<Name>:
 its preview (rendered with -Render, drawn without), the area the preview covers and its start spots (Tools/Editor/bake_map.py,
 docs/world/maps/AUTHORING_A_MAP.md). It exits 3 like setup when the asset or the preview texture is read-only.
+Rivercrossing builds and saves the navmesh of /Game/Maps/WD_RiverCrossing_01, first creating its scripted greybox when the
+level does not exist yet (Tools/Editor/setup_rivercrossing.py, #154); bake it afterwards with bakemap. It exits 3 like setup
+when an actor file it must rewrite is read-only.
 Editor opens the editor with the Unreal MCP server at http://127.0.0.1:8000/mcp (docs/ui/AI_TEAM.md); test and setup run without it.
 Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in the UI test state for each faction look at
 1920x1080, 2560x1440, 3440x1440 and 1680x1050 to Saved/UIShots/HUD, or with -Panel to Saved/UIShots/<Panel> with a crop of that panel;
@@ -112,7 +116,7 @@ Packaudit reads the local marketplace packs in Content/ into Saved/PackAudit/ an
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit', 'bakemap')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit', 'bakemap', 'rivercrossing')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -276,6 +280,11 @@ function Invoke-BakeMap {
 	finally {
 		Remove-Item Env:WD_BAKE_MAP, Env:WD_BAKE_MAP_DATA -ErrorAction SilentlyContinue
 	}
+}
+
+# Builds and saves WD_RiverCrossing_01's navmesh, creating its greybox first when the level is missing (#154).
+function Invoke-RiverCrossing {
+	Invoke-EditorScript (Join-Path $RepoRoot 'Tools\Editor\setup_rivercrossing.py') 'RIVERCROSSING'
 }
 
 # The tests -Tier fast leaves out: Config/Tests/Tags.ini, which the automation framework reads itself.
@@ -1151,4 +1160,5 @@ switch ($Task) {
 	'uicheck' { Invoke-UICheck }
 	'packaudit' { Invoke-PackAudit }
 	'bakemap' { Invoke-BakeMap }
+	'rivercrossing' { Invoke-RiverCrossing }
 }

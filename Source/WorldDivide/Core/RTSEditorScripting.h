@@ -4,6 +4,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "RTSEditorScripting.generated.h"
 
+class ALandscape;
 class UFont;
 class UFontFace;
 class UMaterialInterface;
@@ -52,6 +53,24 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
 	static void ReadMapLayout(UObject* WorldContextObject, FBox2D& OutArea, TArray<FVector>& OutSpotLocations, TArray<FString>& OutProblems);
+
+	/**
+	 * Spawns a Landscape in WorldContextObject's world from the 16-bit heightmap at HeightmapFileName (raw, little endian,
+	 * row by row along +X, 32768 at the actor's Z), Components x Components components of 2 x 2 sections of QuadsPerSection
+	 * quads each, its first vertex at Location and Scale cm per quad (Z: cm per 128 height steps), drawn in Material, for a map's scripted
+	 * greybox (rivercrossing_greybox.py, #154): Python cannot import a heightmap. Returns null and logs why when the file is
+	 * missing or the wrong size.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static ALandscape* CreateLandscape(UObject* WorldContextObject, const FString& HeightmapFileName, int32 Components, int32 QuadsPerSection,
+		FVector Location, FVector Scale, UMaterialInterface* Material);
+
+	/**
+	 * Stores every actor of WorldContextObject's level in its own file (One File Per Actor), as the World Settings' "Use
+	 * External Actors" does, so actors can be LFS-locked one by one. Returns false without a level.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static bool UseExternalActors(UObject* WorldContextObject);
 
 	/**
 	 * Makes Font a runtime font whose default typeface is Face alone, for the UI fonts setup_testmap.py imports: Python

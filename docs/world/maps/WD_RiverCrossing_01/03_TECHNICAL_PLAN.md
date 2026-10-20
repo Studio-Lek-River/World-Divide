@@ -31,7 +31,7 @@ Each item is tagged **Verified** (checked in the project or the engine install),
   - Every existing level is non-WP, and game code iterates level actors at `BeginPlay`, for example the camera's `TActorIterator<ANavMeshBoundsVolume>`. That works best when everything is always loaded.
 - **One File Per Actor (OFPA)** for this level only (World Settings → *Use External Actors*).
   - Actors are stored as separate LFS-lockable files, so placing the village doesn't lock the whole `.umap`.
-  - **To validate:** that OFPA on a non-WP level saves cleanly through the existing setup and test flow.
+  - **Verified (#154):** OFPA on a non-WP level saves cleanly through `ue.ps1 -Task rivercrossing` and loads in the map tests and PIE. The actors live under `Content/__ExternalActors__/Maps/WD_RiverCrossing_01/`.
 - **Level path:** `/Game/Maps/WD_RiverCrossing_01`. Map data: `/Game/Data/Maps/DA_MapRiverCrossing01`, plus `T_Preview_WD_RiverCrossing_01`.
 - **Ownership:**
   - The level is **authored by hand**. `setup_testmap.py` must never regenerate it.
@@ -191,13 +191,12 @@ Nothing in gameplay code needs to change for the map itself. The changes needed 
 
 ## 13. Automation
 
-- **`Tools/Editor/setup_rivercrossing.py`**, a new script that follows `setup_testmap.py`'s conventions: it saves only what differs and exits 3 on read-only files. It must never create or overwrite the level's terrain or dressing. Its jobs:
-  - create or update `DA_MapRiverCrossing01` (start spots, preview area)
-  - check that the level has exactly one `NavMeshBoundsVolume` matching the playable area
-  - build and save the navmesh
-  - capture the preview
+- **`Tools/Editor/setup_rivercrossing.py`** (`ue.ps1 -Task rivercrossing`, #154) follows `setup_testmap.py`'s conventions and exits 3 on read-only files.
+  - It builds and saves the navmesh.
+  - When the level doesn't exist yet, it first creates the scripted greybox (`rivercrossing_greybox.py`). It never overwrites an existing level's terrain or dressing.
+  - `DA_MapRiverCrossing01` and the preview come from `ue.ps1 -Task bakemap -Map /Game/Maps/WD_RiverCrossing_01 -DataAsset DA_MapRiverCrossing01 -Render`.
 - **PCG graphs** are assets, so foliage regenerates the same way each time from the same inputs.
-- **A new map test, `WorldDivide.Maps.RiverCrossing`**, following `Tests/RTSMapTests.cpp`. It checks:
+- **The map tests `WorldDivide.Maps.RiverCrossing.Layout` and `.AIvsAI`** (`Tests/RTSScaleTests.cpp`, #154). `.AIvsAI` plays an AI-against-AI match to its end. `.Layout` checks:
   - a path exists from each base to both bridges and to the village
   - no path crosses the river outside the bridges (path points never inside a `Water_*` volume)
   - `CanPlace` passes at a grid of test points on both base pads
