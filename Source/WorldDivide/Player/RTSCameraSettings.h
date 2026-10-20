@@ -26,9 +26,9 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Zoom")
 	float DefaultZoom = 15000.f;
 
-	/** Close inspection of a single vehicle, the camera just outside its hull. */
+	/** Close inspection of a single vehicle: about 14 m of ground across at NearPitch (#339). */
 	UPROPERTY(Config, EditAnywhere, Category = "Zoom")
-	float MinZoom = 600.f;
+	float MinZoom = 1200.f;
 
 	/** About 520 m across: a whole base, its approaches and the middle of the map. */
 	UPROPERTY(Config, EditAnywhere, Category = "Zoom")
@@ -46,9 +46,9 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Zoom", meta = (ClampMin = "-89", ClampMax = "-10"))
 	float TopDownPitch = -55.f;
 
-	/** Pitch at MinZoom: close to the horizon, as seen from the ground. */
+	/** Pitch at MinZoom: still looking down on the ground, with no sky in the picture (#339, producer 2026-10-20). */
 	UPROPERTY(Config, EditAnywhere, Category = "Zoom", meta = (ClampMin = "-89", ClampMax = "0"))
-	float NearPitch = -8.f;
+	float NearPitch = -35.f;
 
 	/** Arm length below which the camera starts tilting from TopDownPitch towards NearPitch. */
 	UPROPERTY(Config, EditAnywhere, Category = "Zoom")

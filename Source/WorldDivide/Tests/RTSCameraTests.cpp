@@ -97,7 +97,7 @@ namespace RTSCameraTests
 
 		TestEqual(TEXT("Fully zoomed out the camera looks down at the top-down pitch"), Camera->GetPitchForZoom(MaxZoom), TopDownPitch);
 		TestEqual(TEXT("At the default zoom the camera looks down at the top-down pitch"), Camera->GetPitchForZoom(DefaultZoom), TopDownPitch);
-		TestEqual(TEXT("Fully zoomed in the camera looks almost level"), Camera->GetPitchForZoom(MinZoom), NearPitch);
+		TestEqual(TEXT("Fully zoomed in the camera looks down at the near pitch"), Camera->GetPitchForZoom(MinZoom), NearPitch);
 		TestTrue(TEXT("The near pitch is flatter than the top-down pitch"), NearPitch > TopDownPitch);
 
 		// Zooming out never makes the view flatter, and somewhere in between it is neither extreme.
@@ -130,7 +130,6 @@ namespace RTSCameraTests
 		TestEqual(TEXT("A match starts at the top-down pitch"), Arm->GetRelativeRotation().Pitch, double(GetSetting(*Camera, TEXT("TopDownPitch"))), 0.01);
 
 		ZoomFullyIn(*Camera);
-		TestTrue(TEXT("The camera zooms closer than the old 800 cm limit"), Camera->GetZoom() < 800.f);
 		TestEqual(TEXT("Zooming in stops at the minimum zoom"), Camera->GetZoom(), MinZoom, 0.5f);
 		TestEqual(TEXT("The arm tilts with the zoom it has reached"),
 			Arm->GetRelativeRotation().Pitch, double(Camera->GetPitchForZoom(Camera->GetZoom())), 0.01);
@@ -151,11 +150,11 @@ namespace RTSCameraTests
 
 		ZoomFullyIn(*Camera);
 		const FVector Open = Camera->GetCameraGoal();
-		TestTrue(TEXT("With nothing below, fully zoomed in sits under tank height"), Open.Z < MinCameraHeight);
 
+		// On a terrace just under the camera: at the near pitch (#339) the closest camera stands higher than a building.
 		URTSBuildingData* BuildingData = NewObject<URTSBuildingData>();
 		BuildingData->Footprint = FIntPoint(3, 3);
-		const ARTSBuilding* Building = TestWorld.SpawnBuilding(BuildingData, 0, FVector(Open.X, Open.Y, 0.f));
+		const ARTSBuilding* Building = TestWorld.SpawnBuilding(BuildingData, 0, FVector(Open.X, Open.Y, Open.Z - 100.f));
 		const float Roof = Building->GetComponentsBoundingBox(true).Max.Z;
 		TestTrue(TEXT("The building would swallow the camera"), Roof > Open.Z);
 
@@ -164,7 +163,7 @@ namespace RTSCameraTests
 		const FVector Lifted = Camera->GetCameraGoal();
 		TestTrue(TEXT("The camera rises clear of the roof under it"), Lifted.Z >= Roof + MinCameraHeight - 1.f);
 		TestTrue(TEXT("Rising keeps the camera above the same spot"), FVector2D(Lifted).Equals(FVector2D(Open), 1.f));
-		TestEqual(TEXT("Rising keeps the near-level pitch"),
+		TestEqual(TEXT("Rising keeps the near pitch"),
 			Camera->FindComponentByClass<USpringArmComponent>()->GetRelativeRotation().Pitch,
 			double(GetSetting(*Camera, TEXT("NearPitch"))), 0.5);
 		return true;
@@ -395,7 +394,7 @@ namespace RTSCameraTests
 
 	/**
 	 * The wheel zooms towards the cursor (#295): the ground under it stays there, to under 1 % of the view's width, while
-	 * the arm eases in, tilts and eases back out. Over the sky the zoom keeps the camera where it is.
+	 * the arm eases in, tilts and eases back out. (Since #339 no zoom shows the sky, so the zoom over it is not pictured.)
 	 */
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSCameraZoomToCursorTest, "WorldDivide.Camera.ZoomToCursor", TestFlags)
 
@@ -445,17 +444,6 @@ namespace RTSCameraTests
 			TestTrue(FString::Printf(TEXT("Scrolling on against the limit keeps the ground under the cursor: %.0f cm off, under 1 %% of %.0f"),
 				Drift, Width), Drift < 0.01f * Width);
 		}
-
-		Camera->SetZoomNow(Camera->GetMinZoom());
-		const FVector2D Place(Camera->GetActorLocation());
-		Camera->AddZoomInput(-2.f, FVector2D(0.5f, 0.f));
-		for (int32 Frame = 0; Frame < 120; ++Frame)
-		{
-			Camera->Tick(1.f / 30.f);
-		}
-		TestTrue(TEXT("Zooming out with the cursor on the sky zooms out"), Camera->GetZoom() > Camera->GetMinZoom() + 100.f);
-		TestTrue(FString::Printf(TEXT("Zooming with the cursor on the sky keeps the camera's place, not %s"),
-			*FVector2D(Camera->GetActorLocation()).ToString()), FVector2D(Camera->GetActorLocation()).Equals(Place, 1.0));
 		return true;
 	}
 

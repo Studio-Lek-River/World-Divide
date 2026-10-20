@@ -18,6 +18,8 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
+#include "Player/RTSCameraPawn.h"
+#include "Player/RTSCameraSettings.h"
 #include "Player/RTSPlayerController.h"
 #if WITH_EDITOR
 #include "ShaderCompiler.h"
@@ -93,10 +95,16 @@ namespace RTSTrackShots
 	/** Behind the hull at three quarters and well above it, on the ground behind the tracks or wheels, where the dust rises (#224). */
 	const FView DustView{ FVector(-1800.f, -1100.f, 750.f), FVector(-700.f, 0.f, 0.f), 55.f };
 	/**
-	 * The player's RTS camera behind the hull at its default zoom (Config/DefaultGame.ini, RTSCameraSettings: a 150 m arm at
-	 * 55 degrees down, 60 degrees of field, which the viewport keeps vertical), on the dust (#336).
+	 * The player's RTS camera behind the hull at its default zoom, on the dust (#336): its arm, its pitch at that arm and
+	 * its field of view, read from URTSCameraSettings through the camera pawn's defaults so they follow a retune (#339).
 	 */
-	const FView DustRTSView{ FVector(-800.f - 8604.f, 0.f, 12287.f), FVector(-800.f, 0.f, 0.f), 60.f };
+	FView MakeDustRTSView()
+	{
+		const ARTSCameraPawn* Camera = GetDefault<ARTSCameraPawn>();
+		const FVector LookAt(-800.f, 0.f, 0.f);
+		const FVector Arm = FRotator(Camera->GetPitchForZoom(Camera->GetDefaultZoom()), 0.f, 0.f).Vector() * Camera->GetDefaultZoom();
+		return { LookAt - Arm, LookAt, GetDefault<URTSCameraSettings>()->FieldOfView };
+	}
 
 	/**
 	 * The body scenarios (#297): game seconds between pictures, through the hull's settle and the turret's traverse, at a
@@ -346,7 +354,7 @@ namespace RTSTrackShots
 					{ Prefix + TEXT("fast"), DustView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
 				};
 				// From the player's camera at its default zoom (#336); and on dirt and sand by night.
-				Dusts.Add({ Prefix + TEXT("rts"), DustRTSView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f });
+				Dusts.Add({ Prefix + TEXT("rts"), MakeDustRTSView(), DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f });
 				if (Ground.Key == TEXT("dirt") || Ground.Key == TEXT("sand"))
 				{
 					FScenario& NightDust = Dusts.Add_GetRef({ Prefix + TEXT("fast_night"), DustView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm,

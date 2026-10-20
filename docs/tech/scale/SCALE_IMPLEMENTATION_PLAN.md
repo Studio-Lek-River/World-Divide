@@ -152,7 +152,7 @@ The sheet (`Saved/CameraShots/Sheet_*.jpg`, `metrics.csv`) pictures a vehicle, a
   - unitshots: 42 of 51 pictures are the same (mean difference under 0.5 of 255), including every RTS-camera view (`rts_default`, `zoom_in_max`, `zoom_out_max`, `teams_*`). The 9 that differ are muzzle flash and smoke, whose particles differ from run to run.
   - trackshots: the framing is unchanged (`motion_rts_*` side by side); the differences lie on the vehicle and its dust and exhaust, which are random per run.
   - Accepted: the new clamp and ground snap shift no framing in these scenes; they stand in the map's middle, away from its edges.
-- **Pitch at the closest zoom:** pending the producer's decision. Shots at the current -8 degrees and at -35 and -40 (River Crossing, `ue.ps1 -Task camerashots -Map /Game/Maps/WD_RiverCrossing_01`). At -35 and -40 the closest zoom shows only about 7 m across, so `MinZoom` would move with it.
+- **Pitch at the closest zoom** (producer, 2026-10-20, from the River Crossing camerashots at -8, -35 and -40 degrees): `NearPitch` **-35** (was -8), so the closest zoom looks down on the ground and shows no sky; `MinZoom` **1200** (was 600), so the closest zoom still shows about 14 m of ground across the middle of the screen (at 600 and -35 it was 7 m); `TiltStartZoom` stays **6000**: the tilt from -55 to -35 degrees now spans about 9 notches, at most about 3.5 degrees each. The trackshots' RTS view reads the camera's arm, pitch and field of view from `URTSCameraSettings`, so it follows a retune.
 
 ### Step 6: vehicle movement
 Superseded by #138, which replaced the heading-only proposal of before. Tracks and wheels decide how a vehicle moves; the navmesh decides where it goes ([vehicle locomotion](VEHICLE_LOCOMOTION.md)).

@@ -191,9 +191,9 @@ namespace RTSMapSmokeTest
 
 		/**
 		 * Towards Corner of the ground the view comes up to it at any yaw (#295, #339): the corner lies in the ground the
-		 * view shows, or no farther from it than the view's taper (its far half-width less its near half-width, which keeps
-		 * a straight view's near corners off the map's corners behind it) plus EdgeMargin. And the pivot, the screen's
-		 * centre, stays within the pan area.
+		 * view shows, or no farther from it than EdgeMargin; for a corner behind the camera, also the view's taper (its far
+		 * half-width less its near half-width, which keeps a straight view's near corners off the map's corners behind it).
+		 * And the pivot stays within the pan area.
 		 */
 		void VerifyAtCorner(const ARTSCameraPawn& Camera, const FVector2D& Corner, const TCHAR* How) const
 		{
@@ -210,7 +210,9 @@ namespace RTSMapSmokeTest
 			}
 			Distance = bInside ? 0.0 : Distance;
 			const double Taper = (FVector::Dist2D(Footprint[0], Footprint[1]) - FVector::Dist2D(Footprint[2], Footprint[3])) / 2.0;
-			const double Allowed = FMath::Max(Taper, 0.0) + Camera.GetTuning().EdgeMargin + 1.0;
+			const FVector2D Forward(FRotator(0.f, Camera.GetActorRotation().Yaw, 0.f).Vector());
+			const bool bBehind = ((Corner - Ground.GetCenter()) | Forward) < 0.0;
+			const double Allowed = (bBehind ? FMath::Max(Taper, 0.0) : 0.0) + Camera.GetTuning().EdgeMargin + 1.0;
 			Test->TestTrue(FString::Printf(TEXT("%s: %s towards corner %s takes the view to it: %.0f cm off, at most %.0f (yaw %.0f)"),
 				*Name, How, *Corner.ToString(), Distance, Allowed, Camera.GetActorRotation().Yaw), Distance <= Allowed);
 			const FBox2D& Area = Camera.GetPanArea();

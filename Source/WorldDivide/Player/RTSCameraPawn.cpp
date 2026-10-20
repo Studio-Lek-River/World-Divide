@@ -295,7 +295,8 @@ FVector ARTSCameraPawn::ClampToPanArea(const FVector& Location) const
 {
 	// Two limits on the pivot. The footprint stays within the pan area's extent along the camera's own right and forward
 	// axes, so a turned view can still bring the map's corners on screen: a rectangle turned with the camera. And the
-	// pivot, the ground at the screen's centre, stays within the pan area itself, since a turned view's axis extent reaches
+	// pivot stays within the pan area itself; it is the ground at the screen's centre while the arm is not lifted, and a
+	// little behind it while the arm clears a rise. That second limit is needed because a turned view's axis extent reaches
 	// far past the map's edges (at 45 degrees a diamond twice the map's area). Both are convex, so the pivot goes to the
 	// nearest point of their overlap: a pan slides along its edge into a corner, and turning near an edge moves the view
 	// by no more than its own size. The footprint moves with the pivot, so it is worked out once where the pawn stands.
