@@ -44,12 +44,14 @@
 #include "Units/Debug/RTSBenchGate.h"
 #include "Units/Debug/RTSBenchPlan.h"
 #include "Units/Debug/RTSBenchScene.h"
+#include "Units/Debug/RTSShotNight.h"
 #include "Units/Debug/RTSUnitLOD.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSExhaustSubsystem.h"
 #include "Units/RTSRunningGearSubsystem.h"
 #include "Units/RTSUnitMovement.h"
+#include "Units/RTSVehicleLightSubsystem.h"
 #include "WorldDivide.h"
 
 /**
@@ -118,6 +120,10 @@
  * takes the camera to the RTS camera's close zoom and pitch. A set with one of RTSBenchScene's L_TestMap viewpoints
  * (DA_TestM20Guardian@TestMapBase, ue.ps1 -Map L_TestMap) clears the map's own units and stands its grid there. Every row
  * also counts the units' parts drawn on screen at the sample's end, so a hidden unit that is drawn anyway shows.
+ *
+ * A set named with RTSBenchScene::NightSuffix (DA_TestM20Guardian@Night; #223) benches at night, the sun and the sky
+ * dimmed as the night pictures dim them: every vehicle's lamps glow and the nearest light the ground. Every row also gives
+ * the vehicle lights' pass and the real lights on at the sample's end.
  */
 namespace RTSBenchCommand
 {
@@ -202,6 +208,10 @@ namespace RTSBenchCommand
 		double ExhaustMs = 0.0;
 		double MaxExhaustMs = 0.0;
 		int32 ExhaustEmitters = 0;
+		/** The vehicle lights' pass (URTSVehicleLightSubsystem, #223), its slowest frame, and the real lights on at the sample's end. */
+		double LightsMs = 0.0;
+		double MaxLightsMs = 0.0;
+		int32 VehicleLights = 0;
 		/** What the units draw with at the sample's end (#150): primitive components, dynamic instance slots, materials. */
 		int32 Primitives = 0;
 		int32 DynamicMaterials = 0;
@@ -345,19 +355,20 @@ namespace RTSBenchCommand
 				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms,")
 				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames,p95_render_ms,p95_gpu_ms,running_gear_ms,p95_running_gear_ms,")
 				TEXT("primitives,dynamic_materials,distinct_materials,lod0_units,lod1_units,lod2_units,lod3_units,mixed_lod_units,p95_rhi_ms,drawn_primitives,")
-				TEXT("track_updates,tracks,drawn_tracks,animated_tracks,exhaust_ms,max_exhaust_ms,exhaust_emitters");
+				TEXT("track_updates,tracks,drawn_tracks,animated_tracks,exhaust_ms,max_exhaust_ms,exhaust_emitters,lights_ms,max_lights_ms,vehicle_lights");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d,%.1f,%d,%d,%d,%.3f,%.3f,%d"),
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d,%.1f,%d,%d,%d,%.3f,%.3f,%d,%.3f,%.3f,%d"),
 				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
 				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
 				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y, Mean(Solids.Updates), SolidReuseShare(),
 				Mean(Solids.Checks), Mean(Solids.ComponentQueries), Mean(Solids.BroadSeconds * 1000.0), Mean(Solids.NarrowSeconds * 1000.0),
 				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames, P95RenderMs, P95GPUMs, Mean(RunningGearMs), P95RunningGearMs,
 				Primitives, DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits, P95RHIMs, DrawnPrimitives,
-				Mean(TrackUpdates), Tracks, DrawnTracks, AnimatedTracks, Mean(ExhaustMs), MaxExhaustMs, ExhaustEmitters);
+				Mean(TrackUpdates), Tracks, DrawnTracks, AnimatedTracks, Mean(ExhaustMs), MaxExhaustMs, ExhaustEmitters,
+				Mean(LightsMs), MaxLightsMs, VehicleLights);
 		}
 
 		int32 HullLOD(int32 LOD) const { return HullLODs.IsValidIndex(LOD) ? HullLODs[LOD] : 0; }
@@ -419,8 +430,8 @@ namespace RTSBenchCommand
 
 		FString ToExhaustMarkdown() const
 		{
-			return FString::Printf(TEXT("| %d | %s | %d | %.3f (%.3f) | %d |\n"), Count, *Scenario, Sample, Mean(ExhaustMs), MaxExhaustMs,
-				ExhaustEmitters);
+			return FString::Printf(TEXT("| %d | %s | %d | %.3f (%.3f) | %d | %.3f (%.3f) | %d |\n"), Count, *Scenario, Sample, Mean(ExhaustMs),
+				MaxExhaustMs, ExhaustEmitters, Mean(LightsMs), MaxLightsMs, VehicleLights);
 		}
 
 		FString ToMaterialsMarkdown() const
@@ -442,6 +453,7 @@ namespace RTSBenchCommand
 			, bForceLOD0(InUnitName.Contains(RTSBenchScene::ForceLOD0Suffix))
 			, bOccluded(InUnitName.Contains(RTSBenchScene::OccludedSuffix))
 			, bClose(InUnitName.Contains(RTSBenchScene::CloseSuffix))
+			, bNight(InUnitName.Contains(RTSBenchScene::NightSuffix))
 			, Viewpoint(RTSBenchScene::FindViewpoint(InUnitName))
 			, CameraDistance(bClose ? RTSBenchScene::CloseCameraDistance : InUnitName.Contains(RTSBenchScene::NearSuffix) ? RTSBenchScene::NearCameraDistance
 				: InUnitName.Contains(RTSBenchScene::FarSuffix) ? RTSBenchScene::FarCameraDistance : DefaultCameraDistance)
@@ -672,6 +684,10 @@ namespace RTSBenchCommand
 			}
 			bSavedSmoothFrameRate = GEngine->bSmoothFrameRate;
 			GEngine->bSmoothFrameRate = false;
+			if (bNight)
+			{
+				Night.Set(*World, true);
+			}
 		}
 
 		void RestoreSettings()
@@ -685,6 +701,10 @@ namespace RTSBenchCommand
 			}
 			SavedCVars.Reset();
 			GEngine->bSmoothFrameRate = bSavedSmoothFrameRate;
+			if (World.IsValid())
+			{
+				Night.Set(*World, false);
+			}
 		}
 
 		void UseBenchCamera()
@@ -970,6 +990,7 @@ namespace RTSBenchCommand
 			URTSRunningGearSubsystem::TakeSeconds();
 			URTSRunningGearSubsystem::TakeTrackUpdates();
 			URTSExhaustSubsystem::TakeSeconds();
+			URTSVehicleLightSubsystem::TakeSeconds();
 			FRTSSolidStats::Take();
 			TRACE_BEGIN_REGION(*RegionName());
 			GoTo(Next);
@@ -1018,6 +1039,9 @@ namespace RTSBenchCommand
 			const double ExhaustMs = URTSExhaustSubsystem::TakeSeconds() * 1000.0;
 			Stats.ExhaustMs += ExhaustMs;
 			Stats.MaxExhaustMs = FMath::Max(Stats.MaxExhaustMs, ExhaustMs);
+			const double LightsMs = URTSVehicleLightSubsystem::TakeSeconds() * 1000.0;
+			Stats.LightsMs += LightsMs;
+			Stats.MaxLightsMs = FMath::Max(Stats.MaxLightsMs, LightsMs);
 		}
 
 		/** Takes one frame of the scenario; true once it has all of them, logged and kept. */
@@ -1046,6 +1070,8 @@ namespace RTSBenchCommand
 			CountTracks(Current);
 			const URTSExhaustSubsystem* Exhaust = World->GetSubsystem<URTSExhaustSubsystem>();
 			Current.ExhaustEmitters = Exhaust ? Exhaust->GetActiveEmitters() : 0;
+			const URTSVehicleLightSubsystem* Lights = World->GetSubsystem<URTSVehicleLightSubsystem>();
+			Current.VehicleLights = Lights ? Lights->GetActiveLightCount() : 0;
 			Results.Add(Current);
 			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.Bench: %s"), *Current.ToCsv());
 			return true;
@@ -1227,9 +1253,9 @@ namespace RTSBenchCommand
 			{
 				Markdown += Result.ToTracksMarkdown();
 			}
-			Markdown += TEXT("\nThe engine exhaust (#222): its pass per frame, and the emitters running at each sample's end:\n\n")
-				TEXT("| Units | Scenario | Sample | Exhaust ms (max) | Emitters |\n")
-				TEXT("|---:|---|---:|---:|---:|\n");
+			Markdown += TEXT("\nThe engine exhaust (#222) and the vehicle lights (#223): their passes per frame, and the emitters running and real lights on at each sample's end:\n\n")
+				TEXT("| Units | Scenario | Sample | Exhaust ms (max) | Emitters | Lights ms (max) | Real lights |\n")
+				TEXT("|---:|---|---:|---:|---:|---:|---:|\n");
 			for (const FScenarioStats& Result : Results)
 			{
 				Markdown += Result.ToExhaustMarkdown();
@@ -1369,6 +1395,11 @@ namespace RTSBenchCommand
 				: UnitName.Contains(RTSBenchScene::HZBOcclusionSuffix) ? TEXT("hzb") : nullptr)
 			{
 				Scene->SetStringField(TEXT("occlusion"), Occlusion);
+			}
+			// And a "@Night" set that it ran at night (#223).
+			if (bNight)
+			{
+				Scene->SetBoolField(TEXT("night"), true);
 			}
 			if (bOccluded)
 			{
@@ -1513,6 +1544,9 @@ namespace RTSBenchCommand
 		/** An "@Occluded" set, an "@Close" one, and the view of L_TestMap a set stands in, with its grid's middle (#214). */
 		bool bOccluded = false;
 		bool bClose = false;
+		/** A "@Night" set (#223), and the night it dims the level to. */
+		bool bNight = false;
+		FRTSShotNight Night;
 		const RTSBenchScene::FViewpoint* Viewpoint = nullptr;
 		FVector ViewGridCentre = FVector::ZeroVector;
 		float CameraDistance = DefaultCameraDistance;

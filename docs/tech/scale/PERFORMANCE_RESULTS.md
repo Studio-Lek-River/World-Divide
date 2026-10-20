@@ -2148,3 +2148,49 @@ the subsystem's own pass and the emitters running at each sample's end.
   not clump the puffs.
 - More than 48 vehicles near the camera show exhaust only on the nearest. If that shows at the RTS zoom, the next step is
   one system for all vehicles fed through a Niagara data channel, rather than a system per outlet.
+
+## #223 (vehicle head- and rear lights with a day/night policy)
+
+### What changed
+
+`URTSDayNightSubsystem::IsDark` is the one question of whether it is dark: `rts.Light.ForceDark` when set, else an
+override #318's environment director can set, else the level's sun, dark once its intensity in lux times the sine of its
+elevation falls below `rts.Light.DarkThreshold` (1.0), light again at 1.5 times that, looked at about once a second. Every
+machine works it out from its own copy of the level, so nothing is replicated. A vehicle whose data has lamps
+(`URTSUnitData::Lights`: the M20's four headlights and two red tail lamps, from `m20_guardian.json`) registers with
+`URTSVehicleLightSubsystem`, which runs once a frame in `TG_PostUpdateWork` like the exhaust. When the dark comes or goes
+it writes `RTSPrimitiveData::LampOn` (index 8) once to each part of every such vehicle, and `M_VehicleLamp` turns the
+lamps' glow from 4 to 16 times their vertex colour: white at the front, red at the back. No dynamic material instance, so
+the draws stay merged (#150). In the dark only the `rts.Fx.VehicleLightMaxVehicles` (12) vehicles nearest a camera within
+`rts.Fx.VehicleLightDistance` (200 m) also light the ground: a white spot light at the middle of the headlights, ahead and
+12 degrees down, and a small red one at the middle of the tail lamps, back and 35 degrees down. No shadows, no Lumen, no
+volumetric fog. At most 24 real lights are on. A dedicated server registers nothing. The nearest-to-camera selection is
+shared with the exhaust (`RTSNearestToView.h`).
+
+### Short method, 240 standing and moving M20s, by day and at night, interleaved runs
+
+`ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestM20Guardian@Night -Counts 240` (alternating which set runs first),
+Ryzen 7 7800X3D, RTX 4090, 5 runs each, every run valid. `@Night` dims the sun and the sky as the night pictures do
+(`FRTSShotNight`), so `IsDark` comes from the sun. The bench's exhaust table now also gives the lights' pass and the real
+lights on at each sample's end.
+
+| Set | Scenario | Frame ms (mean, range) | Game ms (p95) | Render ms | GPU ms (range) | Draw calls | Lights pass ms (max) | Real lights |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| day | idle | 4.21 (4.01–4.33) | 3.22 (4.24) | 3.99 | 3.43 (3.25–3.59) | 559 | 0.007 (0.063) | 0 |
+| `@Night` | idle | 4.35 (4.21–4.51) | 3.27 (4.38) | 4.18 | 3.52 (3.34–3.73) | 579 | 0.016 (0.127) | 24 |
+| day | move | 13.44 (13.25–14.00) | 13.44 (16.17) | 7.81 | 3.01 (2.93–3.11) | 678 | 0.010 (0.132) | 0 |
+| `@Night` | move | 12.95 (11.77–13.41) | 12.95 (15.15) | 8.40 | 2.94 (2.90–2.98) | 689 | 0.023 (0.180) | 24 |
+
+- **The cap holds:** 24 real lights at every sample's end, the 12 nearest vehicles of 240, all within the bench's 170 m camera.
+- **The lights cost about 0.1 ms of GPU standing and nothing measurable driving**, within the run-to-run spread; the game
+  thread pass is 0.01–0.02 ms. The render thread is 0.2–0.6 ms higher at night, with 10–20 more draw calls for the lights' passes.
+- The driving game thread here (13 ms) is above #222's 8 ms on the same machine for both sets alike: the machine was busier
+  during these runs, so compare the rows with each other, not with older sections.
+
+### Remaining limitations
+
+- The spot lights do not run under `-nullrhi`; `WorldDivide.Vehicle.Lights` checks their number, place, direction and colour
+  and the lamps' primitive data, and `WorldDivide.Net.Vehicle.ListenServer` the same lamp state on host and client by day and
+  with the sun dimmed. The look is checked in `ue.ps1 -Task unitshots` (`vehicle_lights_day`, `vehicle_lights_night`).
+- Vehicles beyond the 12 nearest show only their glowing lamps. If the cut shows with many vehicles close to the camera at
+  night, the next step is a cheaper projected decal per vehicle rather than raising the cap.

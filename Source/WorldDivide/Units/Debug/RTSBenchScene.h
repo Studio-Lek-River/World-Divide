@@ -109,6 +109,12 @@ namespace RTSBenchScene
 	 * grid's middle, at the pitch ARTSCameraPawn tilts to for that arm, flatter than the top-down -55.
 	 */
 	const TCHAR* const CloseSuffix = TEXT("@Close");
+
+	/**
+	 * The set name's suffix that benches at night (#223): the sun and the sky dimmed as the night pictures dim them
+	 * (FRTSShotNight), so the vehicles' lamps glow and the nearest light the ground.
+	 */
+	const TCHAR* const NightSuffix = TEXT("@Night");
 	constexpr float CloseCameraDistance = 3000.f;
 
 	/** The level the viewpoints below belong to; ue.ps1 -Task bench -Map L_TestMap plays it instead of L_Bench. */

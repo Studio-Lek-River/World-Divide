@@ -9,10 +9,13 @@
 #include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommandDispatch.h"
+#include "Components/LightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Core/RTSDayNightSubsystem.h"
 #include "Data/RTSUnitData.h"
 #include "Editor.h"
 #include "Engine/CollisionProfile.h"
+#include "Engine/DirectionalLight.h"
 #include "Engine/NetDriver.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
@@ -420,6 +423,124 @@ namespace RTSVehicleNetTests
 			if (Shooter)
 			{
 				Shooter->Destroy();
+			}
+			return true;
+		} });
+	}
+
+	/**
+	 * #223: the M20's lamps follow the dark the same on the host and on the client. By day both say it is light and the lamps
+	 * of the host's M20 and of the client's copy are off; with every world's sun dimmed as night dims it, both say it is dark
+	 * and both turn the lamps on; with the sun back, off again. Nothing about it is replicated: each works it out from its
+	 * own copy of the level.
+	 */
+	void AddLights(FAutomationTestBase& Test, const TSharedRef<FSession>& Session)
+	{
+		struct FLights
+		{
+			TWeakObjectPtr<ARTSUnit> Unit;
+			/** Each world's sun and the intensity it had. */
+			TArray<TPair<TWeakObjectPtr<ULightComponent>, float>> Suns;
+		};
+		TSharedRef<FLights> Lights = MakeShared<FLights>();
+		auto Check = [&Test, Session, Lights](const TCHAR* When, bool bDark)
+		{
+			ARTSUnit* Unit = Lights->Unit.Get();
+			if (!Test.TestNotNull(*FString::Printf(TEXT("Lights %s: the M20 lives"), When), Unit))
+			{
+				return;
+			}
+			TArray<TPair<UWorld*, const ARTSUnit*>> Copies = { { Session->ServerWorld, Unit } };
+			for (UWorld* Client : Session->ClientWorlds)
+			{
+				Copies.Add({ Client, FindCopy(*Client, *Unit) });
+			}
+			for (int32 Index = 0; Index < Copies.Num(); ++Index)
+			{
+				const TCHAR* Who = Index == 0 ? TEXT("the host") : TEXT("the client");
+				const URTSDayNightSubsystem* DayNight = Copies[Index].Key->GetSubsystem<URTSDayNightSubsystem>();
+				Test.TestEqual(*FString::Printf(TEXT("Lights %s: %s says it is dark"), When, Who), DayNight && DayNight->IsDark(), bDark);
+				const ARTSUnit* Copy = Copies[Index].Value;
+				if (!Test.TestNotNull(*FString::Printf(TEXT("Lights %s: %s has the M20"), When, Who), Copy))
+				{
+					continue;
+				}
+				const TArray<float>& Data = Copy->GetMesh()->GetCustomPrimitiveData().Data;
+				const float LampOn = Data.IsValidIndex(RTSPrimitiveData::LampOn) ? Data[RTSPrimitiveData::LampOn] : -1.f;
+				Test.TestEqual(*FString::Printf(TEXT("Lights %s: %s's lamps"), When, Who), LampOn, bDark ? 1.f : 0.f);
+			}
+		};
+		auto SetNight = [Session, Lights](bool bNight)
+		{
+			if (!bNight)
+			{
+				for (const TPair<TWeakObjectPtr<ULightComponent>, float>& Sun : Lights->Suns)
+				{
+					if (Sun.Key.IsValid())
+					{
+						Sun.Key->SetIntensity(Sun.Value);
+					}
+				}
+				Lights->Suns.Reset();
+				return;
+			}
+			TArray<UWorld*> Worlds = { Session->ServerWorld };
+			Worlds.Append(Session->ClientWorlds);
+			for (UWorld* World : Worlds)
+			{
+				for (TActorIterator<ADirectionalLight> It(World); It; ++It)
+				{
+					ULightComponent* Sun = It->GetLightComponent();
+					Sun->SetMobility(EComponentMobility::Movable);
+					Lights->Suns.Add({ Sun, Sun->Intensity });
+					Sun->SetIntensity(Sun->Intensity * 0.01f);
+				}
+			}
+		};
+		// The day/night policy looks at the sun about once a second.
+		constexpr double SettleSeconds = 2.5;
+		Session->Phases.Add({ TEXT("Lights: spawn"), [&Test, Session, Lights](double)
+		{
+			for (TActorIterator<ARTSUnit> It(Session->ServerWorld); It; ++It)
+			{
+				if (It->GetActorLocation().Y > DriveStart.Y - 8000.f)
+				{
+					It->Destroy();
+				}
+			}
+			Lights->Unit = SpawnUnit(*Session->ServerWorld, M20Path, 0, DriveStart, 0.f);
+			return Test.TestNotNull(TEXT("Lights: the M20 spawns on the server"), Lights->Unit.Get());
+		} });
+		Session->Phases.Add({ TEXT("Lights: by day"), [Check, SetNight, SettleSeconds](double Elapsed)
+		{
+			if (Elapsed < SettleSeconds)
+			{
+				return false;
+			}
+			Check(TEXT("by day"), false);
+			SetNight(true);
+			return true;
+		} });
+		Session->Phases.Add({ TEXT("Lights: at night"), [Check, SetNight, SettleSeconds](double Elapsed)
+		{
+			if (Elapsed < SettleSeconds)
+			{
+				return false;
+			}
+			Check(TEXT("at night"), true);
+			SetNight(false);
+			return true;
+		} });
+		Session->Phases.Add({ TEXT("Lights: day again"), [Check, Lights, SettleSeconds](double Elapsed)
+		{
+			if (Elapsed < SettleSeconds)
+			{
+				return false;
+			}
+			Check(TEXT("day again"), false);
+			if (Lights->Unit.IsValid())
+			{
+				Lights->Unit->Destroy();
 			}
 			return true;
 		} });
@@ -1314,6 +1435,7 @@ bool FRTSVehicleNetListenTest::RunTest(const FString& Parameters)
 	AddStuckFeedback(*this, Session);
 	AddGroupOrders(*this, Session);
 	AddShotEvents(*this, Session);
+	AddLights(*this, Session);
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSStartNetSession(false));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetWaitForSession(this, Session));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSVehicleNetRunPhases(this, Session));

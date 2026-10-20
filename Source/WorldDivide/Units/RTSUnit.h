@@ -374,6 +374,12 @@ public:
 	/** The colour of team InTeamId; units and buildings give it to their materials as RTSPrimitiveData::TeamColor. */
 	static FLinearColor GetTeamColor(int32 InTeamId);
 
+	/**
+	 * Every machine that draws. Turns the lamps of every part up for the dark, or back down (RTSPrimitiveData::LampOn, #223);
+	 * URTSVehicleLightSubsystem calls it when the dark comes or goes.
+	 */
+	void SetLampsOn(bool bOn);
+
 	/** Feet, not eye height: navmesh queries start from the ground. */
 	virtual FVector GetNavAgentLocation() const override;
 

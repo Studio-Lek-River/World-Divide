@@ -1635,6 +1635,17 @@ def unreal_cm(vector):
     return [round(vector.x * 100.0, 2), round(-vector.y * 100.0, 2), round(vector.z * 100.0, 2)]
 
 
+def headlight_faces():
+    """The front faces of the four headlights (#223), as build_nose places their lenses: two in each nose cluster."""
+    return [Vector((3.49 + 0.01 / 2.0, side * 1.36 + dy, 1.025)) for side in (1, -1) for dy in (-0.07, 0.07)]
+
+
+def tail_lamp_faces():
+    """The outer faces of the two red tail lamps (#223), as build_rear places them on the sponson corners."""
+    x = -3.30
+    return [Vector((x - 0.065, side * 1.45 - 0.045, (1.20 + 1.29) / 2.0)) for side in (1, -1)]
+
+
 def write_layout(parts):
     muzzle = Vector((MUZZLE_X, 0.0, TRUNNION.z))
     layout = {
@@ -1649,6 +1660,9 @@ def write_layout(parts):
         # Where the engine's exhaust leaves the rear grille, and which way (#222).
         "exhaust_offsets": [unreal_cm(Vector(mats.EXHAUST) + Vector((-(GRILLE_DEPTH - 0.04), 0.0, 0.0)))],
         "exhaust_direction": [round(EXHAUST_DIRECTION.x, 4), round(-EXHAUST_DIRECTION.y, 4), round(EXHAUST_DIRECTION.z, 4)],
+        # Where the headlights and the red tail lamps shine from (#223).
+        "headlight_offsets": [unreal_cm(face) for face in headlight_faces()],
+        "taillight_offsets": [unreal_cm(face) for face in tail_lamp_faces()],
         "blender_ring": list(TURRET_RING),
     }
     layout.update(running_layout())

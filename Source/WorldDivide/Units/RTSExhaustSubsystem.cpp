@@ -1,18 +1,16 @@
 #include "Units/RTSExhaustSubsystem.h"
 
-#include "Camera/PlayerCameraManager.h"
 #include "Components/StaticMeshComponent.h"
 #include "Data/RTSUnitData.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
-#include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
-#include "Misc/App.h"
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Scalability.h"
 #include "Units/RTSLocomotion.h"
+#include "Units/RTSNearestToView.h"
 #include "Units/RTSUnit.h"
 
 namespace
@@ -185,20 +183,7 @@ int32 URTSExhaustSubsystem::GetActiveEmitters() const
 
 float URTSExhaustSubsystem::GetViewDistance(const FVector& Location) const
 {
-	if (ViewLocationOverride)
-	{
-		return static_cast<float>(FVector::Dist(*ViewLocationOverride, Location));
-	}
-	if (CameraLocations.IsEmpty())
-	{
-		return 0.f;
-	}
-	double NearestSquared = TNumericLimits<double>::Max();
-	for (const FVector& Camera : CameraLocations)
-	{
-		NearestSquared = FMath::Min(NearestSquared, FVector::DistSquared(Camera, Location));
-	}
-	return static_cast<float>(FMath::Sqrt(NearestSquared));
+	return RTSNearestToView::GetDistance(CameraLocations, ViewLocationOverride, Location);
 }
 
 void URTSExhaustSubsystem::UpdateState(FRTSExhaustEntry& Entry, const ARTSUnit& Unit, float DeltaSeconds) const
@@ -339,20 +324,7 @@ void URTSExhaustSubsystem::UpdateAll(float DeltaSeconds)
 	const uint64 StartCycles = FPlatformTime::Cycles64();
 
 	const bool bEnabled = IsEnabled();
-	CameraLocations.Reset();
-	const UWorld* World = GetWorld();
-	if (World && FApp::CanEverRender())
-	{
-		for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
-		{
-			const APlayerController* Controller = It->Get();
-			if (Controller && Controller->IsLocalController() && Controller->PlayerCameraManager)
-			{
-				// The cameras were updated for this frame before TG_PostUpdateWork.
-				CameraLocations.Add(Controller->PlayerCameraManager->GetCameraLocation());
-			}
-		}
-	}
+	RTSNearestToView::GatherCameras(GetWorld(), CameraLocations);
 	const int32 EffectsQuality = Scalability::GetQualityLevels().EffectsQuality;
 
 	for (int32 Index = Entries.Num() - 1; Index >= 0; --Index)
@@ -378,12 +350,7 @@ void URTSExhaustSubsystem::UpdateAll(float DeltaSeconds)
 			Nearest.Emplace(Entry.ViewDistance * (Entry.bActive ? ExhaustKeepScale : 1.f), Index);
 		}
 	}
-	const int32 MaxVehicles = GetMaxVehicles();
-	if (Nearest.Num() > MaxVehicles)
-	{
-		Nearest.Sort([](const TPair<float, int32>& A, const TPair<float, int32>& B) { return A.Key < B.Key; });
-		Nearest.SetNum(MaxVehicles, EAllowShrinking::No);
-	}
+	RTSNearestToView::KeepNearest(Nearest, GetMaxVehicles());
 	for (const TPair<float, int32>& Near : Nearest)
 	{
 		Entries[Near.Value].bShows = true;

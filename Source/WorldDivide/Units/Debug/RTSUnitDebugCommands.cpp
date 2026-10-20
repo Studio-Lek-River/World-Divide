@@ -61,7 +61,8 @@
  * issued as the player issues it (the pick, the distance driven and the wheels' roll are logged), then with its shapes
  * drawn after driving head-on into Block_North and into a vehicle factory placed for it, along Block_North and round its
  * corner (the hull's overlap with each is logged, and the barrel's, now and at most on the way), then the unit's kind once
- * for each of four teams side by side at the default and the closest zoom and under a low sun (#150). With
+ * for each of four teams side by side at the default and the closest zoom and under a low sun (#150). The head- and rear
+ * lights (#223) are taken by day and at night from the RTS camera at its default zoom (vehicle_lights_<day|night>). With
  * StressCount, that many more of the unit stand in a grid and a last picture
  * shows them with stat unit and stat rhi; the frame time, game thread time, avoidance pass, draw calls and triangles are
  * logged. With a third argument "lods" (ue.ps1 -LODs; #149) it takes the LOD sheet instead: the unit at each LOD forced
@@ -86,6 +87,8 @@ namespace RTSUnitDebugCommands
 	/** Real seconds for the camera's lag and the turret to settle on a new view, and frames measured for the stats. */
 	constexpr double SettleSeconds = 3.0;
 	constexpr double TraverseSeconds = 5.0;
+	/** More real seconds for the lights' night picture: the day/night policy looks at the sun about once a second (#223). */
+	constexpr double LightsSettleSeconds = 2.0;
 	constexpr int32 MeasureFrames = 120;
 
 	/** The inspection camera: in front of the unit and to its left, a little above, with a narrow lens. */
@@ -570,6 +573,20 @@ namespace RTSUnitDebugCommands
 						return Run.HoldMuzzleFlash(HoldSeconds);
 					} });
 				}
+			}
+			// The head- and rear lights (#223) from the RTS camera at its default zoom, the turret to the front: the lamps dim by
+			// day; at night they glow and light the ground white ahead and red behind. The day/night policy looks at the sun
+			// about once a second, so these settle longer.
+			for (const bool bNight : { false, true })
+			{
+				Shots.Add({ FString::Printf(TEXT("vehicle_lights_%s"), bNight ? TEXT("night") : TEXT("day")), [bNight](FUnitShotsRun& Run)
+				{
+					Run.ReleaseMuzzleFlash();
+					Run.SetNight(bNight);
+					Run.Unit->SetAimOverride(FVector2D::ZeroVector);
+					Run.UseRTSCamera(Run.GetCameraPawn()->GetDefaultZoom(), 0.f);
+					return true;
+				}, bNight ? SettleSeconds + LightsSettleSeconds : TraverseSeconds });
 			}
 			// The muzzle smoke (#221) by day, the gun at TurretShotAim: from the RTS camera just after the shot, then from in
 			// front just after another one and once the turret has turned back to the front, the puff left where it was fired.

@@ -276,7 +276,8 @@ def make_art(name, source, yaw=0.0, tint=TEAM_TINT):
 def make_m20_guardian(exhaust_system):
     """Imports the M20 Guardian's parts, textures and material instances (see vehicle_art.py) and returns its unit data
     properties: the hull as Mesh at real size, the turret, the gun and every other part where m20_guardian.json puts it,
-    and the exhaust (exhaust_system) at its grille. The wheels of the right side are the exported left wheel turned round."""
+    the exhaust (exhaust_system) at its grille and the lights at its lamps. The wheels of the right side are the exported
+    left wheel turned round."""
     with open(os.path.join(M20_SOURCE_DIR, "m20_guardian.json")) as file:
         layout = json.load(file)
     texture_dir, material_dir, mesh_dir = (f"{M20_DIR}/{folder}" for folder in ("Textures", "Materials", "Meshes"))
@@ -298,7 +299,8 @@ def make_m20_guardian(exhaust_system):
                                 vehicle_art.TRACK_PHASE_HLSL, vehicle_art.TRACK_SHIFT_HLSL, vehicle_art.TRACK_TURN_HLSL,
                                 vehicle_art.TRACK_INPUTS))
     lamp = plan_now(f"{vehicle_art.MATERIAL_DIR}/{vehicle_art.LAMP_MATERIAL}", vehicle_art.build_lamp_material,
-                    spec_hash([vehicle_art.build_lamp_material]))
+                    spec_hash([vehicle_art.build_lamp_material, vehicle_art._scalar], vehicle_art.LAMP_STRENGTH,
+                              vehicle_art.LAMP_NIGHT_STRENGTH, vehicle_art.LAMP_ON_INDEX))
     slot_materials = {"M20_Emissive": lamp}
     # The tracks' instance moves their links (#151); MI_M20_Track_Static is the same without, for a track that does not
     # animate (rts.Vehicle.TrackAnimation 0) and for its far LODs (#149).
@@ -389,6 +391,8 @@ def make_m20_guardian(exhaust_system):
         "parts": parts,
         # Out of the rear grille, along its louvres (#222), from a diesel (#325).
         "exhaust": vehicle_exhaust(exhaust_system, layout["exhaust_offsets"], layout["exhaust_direction"], DIESEL_EXHAUST),
+        # Its four headlights in the nose clusters and its two red tail lamps on the rear sponsons (#223).
+        "lights": vehicle_lights(layout["headlight_offsets"], layout["taillight_offsets"]),
     }
 
 
@@ -1049,6 +1053,17 @@ def vehicle_exhaust(system, outlets, direction, engine=None):
     value.set_editor_property("outlets", [unreal.Vector(*outlet) for outlet in outlets])
     value.set_editor_property("direction", unreal.Vector(*direction))
     for name, setting in (engine or {}).items():
+        value.set_editor_property(name, unreal.LinearColor(*setting, 1.0) if name.endswith("_color") else setting)
+    return value
+
+
+def vehicle_lights(headlights, taillights, **settings):
+    """A vehicle's head- and rear lights (FRTSVehicleLights, #223): the headlights' and the tail lamps' faces in the mesh's
+    own space in cm; settings (as headlight_intensity=800.0) change the beams, the rest keep the struct's defaults."""
+    value = unreal.RTSVehicleLights()
+    value.set_editor_property("headlight_offsets", [unreal.Vector(*offset) for offset in headlights])
+    value.set_editor_property("taillight_offsets", [unreal.Vector(*offset) for offset in taillights])
+    for name, setting in settings.items():
         value.set_editor_property(name, unreal.LinearColor(*setting, 1.0) if name.endswith("_color") else setting)
     return value
 

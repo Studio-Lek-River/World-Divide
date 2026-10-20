@@ -139,6 +139,37 @@ bool FRTSLocomotionProfile::Validate(FString* OutError) const
 	return true;
 }
 
+FVector FRTSVehicleLights::GetMidpoint(TConstArrayView<FVector> Offsets)
+{
+	FVector Sum = FVector::ZeroVector;
+	for (const FVector& Offset : Offsets)
+	{
+		Sum += Offset;
+	}
+	return Offsets.IsEmpty() ? FVector::ZeroVector : Sum / Offsets.Num();
+}
+
+bool FRTSVehicleLights::Validate(FString* OutError) const
+{
+	auto Fail = [OutError](const TCHAR* Problem)
+	{
+		if (OutError)
+		{
+			*OutError = Problem;
+		}
+		return false;
+	};
+	if (!HeadlightOffsets.IsEmpty() && HeadlightInnerCone > HeadlightOuterCone)
+	{
+		return Fail(TEXT("the headlights' inner cone passes their outer one"));
+	}
+	if (!TaillightOffsets.IsEmpty() && TaillightInnerCone > TaillightOuterCone)
+	{
+		return Fail(TEXT("the tail lamps' inner cone passes their outer one"));
+	}
+	return true;
+}
+
 #if WITH_EDITOR
 EDataValidationResult URTSUnitData::IsDataValid(FDataValidationContext& Context) const
 {
@@ -152,6 +183,11 @@ EDataValidationResult URTSUnitData::IsDataValid(FDataValidationContext& Context)
 	if (!Exhaust.Outlets.IsEmpty() && !Exhaust.System)
 	{
 		Context.AddError(FText::FromString(TEXT("Exhaust: outlets without a system")));
+		Result = EDataValidationResult::Invalid;
+	}
+	if (!Lights.Validate(&Error))
+	{
+		Context.AddError(FText::FromString(FString::Printf(TEXT("Lights: %s"), *Error)));
 		Result = EDataValidationResult::Invalid;
 	}
 	return Result;

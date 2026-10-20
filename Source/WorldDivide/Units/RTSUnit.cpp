@@ -37,6 +37,7 @@
 #include "Units/RTSGround.h"
 #include "Units/RTSPrimitiveData.h"
 #include "Units/RTSRunningGearSubsystem.h"
+#include "Units/RTSVehicleLightSubsystem.h"
 #include "Units/RTSUnitAIController.h"
 #include "Units/RTSUnitMovement.h"
 #include "WorldDivide.h"
@@ -441,6 +442,18 @@ void ARTSUnit::CreateParts()
 			Gear->Register(*this);
 		}
 	}
+	// The head- and rear lights (#223), on every machine that draws.
+	if (URTSVehicleLightSubsystem* Lights = GetWorld() ? GetWorld()->GetSubsystem<URTSVehicleLightSubsystem>() : nullptr)
+	{
+		if (UnitData->Lights.HasLights())
+		{
+			Lights->Register(*this);
+		}
+		else
+		{
+			Lights->Unregister(*this);
+		}
+	}
 	// The engine's exhaust (#222), on every machine that draws.
 	if (URTSExhaustSubsystem* Exhaust = GetWorld() ? GetWorld()->GetSubsystem<URTSExhaustSubsystem>() : nullptr)
 	{
@@ -753,6 +766,20 @@ void ARTSUnit::ApplyTeamColor()
 		if (Part && Part->GetStaticMesh())
 		{
 			Part->SetCustomPrimitiveDataVector4(RTSPrimitiveData::TeamColor, Color);
+		}
+	}
+}
+
+void ARTSUnit::SetLampsOn(bool bOn)
+{
+	// As the team colour: custom primitive data, so every unit keeps the lamps' shared material and draws with the others.
+	TArray<UStaticMeshComponent*, TInlineAllocator<8>> Parts = { Mesh.Get(), Turret.Get(), Gun.Get() };
+	Parts.Append(PartComponents);
+	for (UStaticMeshComponent* Part : Parts)
+	{
+		if (Part && Part->GetStaticMesh())
+		{
+			Part->SetCustomPrimitiveDataFloat(RTSPrimitiveData::LampOn, bOn ? 1.f : 0.f);
 		}
 	}
 }
@@ -1397,6 +1424,10 @@ void ARTSUnit::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (URTSExhaustSubsystem* Exhaust = GetWorld()->GetSubsystem<URTSExhaustSubsystem>())
 	{
 		Exhaust->Unregister(*this);
+	}
+	if (URTSVehicleLightSubsystem* Lights = GetWorld()->GetSubsystem<URTSVehicleLightSubsystem>())
+	{
+		Lights->Unregister(*this);
 	}
 	Super::EndPlay(EndPlayReason);
 }

@@ -20,7 +20,11 @@ TEAM_BRIGHTNESS = 2.0
 # Where the team colour comes from: custom primitive data from this index on, RGBA (RTSPrimitiveData::TeamColor, #150), so
 # every unit keeps the shared instances below instead of a dynamic instance per slot.
 TEAM_COLOR_INDEX = 4
+# The lamps glow LAMP_STRENGTH times their vertex colour by day and LAMP_NIGHT_STRENGTH times it, into bloom, while the
+# game says they are on in the dark: custom primitive data at LAMP_ON_INDEX, 0 or 1 (RTSPrimitiveData::LampOn, #223).
 LAMP_STRENGTH = 4.0
+LAMP_NIGHT_STRENGTH = 16.0
+LAMP_ON_INDEX = 8
 
 assets = unreal.EditorAssetLibrary
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
@@ -265,16 +269,22 @@ def build_track_animation(material, normal_sample):
 
 
 def build_lamp_material():
-    """The lamps: base colour and emissive both the mesh's vertex colour, the emissive LampStrength times brighter."""
+    """The lamps: base colour and emissive both the mesh's vertex colour, the emissive LampStrength times brighter by
+    day and LampNightStrength times while LampOn (custom primitive data, LAMP_ON_INDEX) is 1 (#223). White at the front
+    and red at the back, as the mesh's LightWhite and LightRed vertex colours have them."""
     material = _material(LAMP_MATERIAL)
     editing.delete_all_material_expressions(material)
-    vertex_color = editing.create_material_expression(material, unreal.MaterialExpressionVertexColor, -600, 0)
-    strength = editing.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -600, 200)
-    strength.set_editor_property("parameter_name", "LampStrength")
-    strength.set_editor_property("default_value", LAMP_STRENGTH)
+    vertex_color = editing.create_material_expression(material, unreal.MaterialExpressionVertexColor, -800, 0)
+    day = _scalar(material, -800, 200, "LampStrength", LAMP_STRENGTH)
+    night = _scalar(material, -800, 300, "LampNightStrength", LAMP_NIGHT_STRENGTH)
+    lamp_on = _scalar(material, -800, 400, "LampOn", 0.0, LAMP_ON_INDEX)
+    strength = editing.create_material_expression(material, unreal.MaterialExpressionLinearInterpolate, -550, 250)
+    _connect(day, "", strength, "A")
+    _connect(night, "", strength, "B")
+    _connect(lamp_on, "", strength, "Alpha")
     emissive = editing.create_material_expression(material, unreal.MaterialExpressionMultiply, -300, 100)
-    editing.connect_material_expressions(vertex_color, "", emissive, "A")
-    editing.connect_material_expressions(strength, "", emissive, "B")
+    _connect(vertex_color, "", emissive, "A")
+    _connect(strength, "", emissive, "B")
     editing.connect_material_property(vertex_color, "", unreal.MaterialProperty.MP_BASE_COLOR)
     editing.connect_material_property(emissive, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     roughness = editing.create_material_expression(material, unreal.MaterialExpressionConstant, -300, 300)

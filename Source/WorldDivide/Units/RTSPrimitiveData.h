@@ -31,4 +31,10 @@ namespace RTSPrimitiveData
 
 	/** M_Vehicle and M_PlaceholderTeam: the team colour, RGBA (ARTSUnit::GetTeamColor), from 4 to 7. */
 	constexpr int32 TeamColor = 4;
+
+	/**
+	 * M_VehicleLamp: 1 while the lamps are on in the dark, 0 by day (URTSVehicleLightSubsystem; #223), at 8. Set on every part
+	 * of a vehicle with lights, as the team colour is.
+	 */
+	constexpr int32 LampOn = 8;
 }

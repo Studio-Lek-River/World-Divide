@@ -229,6 +229,73 @@ struct WORLDDIVIDE_API FRTSVehicleExhaust
 };
 
 /**
+ * A vehicle's head- and rear lights (#223). Its lamps glow on every machine that draws, brighter in the dark
+ * (RTSPrimitiveData::LampOn); in the dark the vehicles nearest a camera also light the ground: one spot light at the
+ * middle of the headlights, white and forward, and a small red one at the middle of the tail lamps, backward
+ * (URTSVehicleLightSubsystem). No lamps, no lights.
+ */
+USTRUCT(BlueprintType)
+struct WORLDDIVIDE_API FRTSVehicleLights
+{
+	GENERATED_BODY()
+
+	/** The headlights' faces, in Mesh's own space as the parts' offsets (MeshScale applies); they shine along +X. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights")
+	TArray<FVector> HeadlightOffsets;
+
+	/** The tail lamps' faces, in Mesh's own space; they shine along -X. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights")
+	TArray<FVector> TaillightOffsets;
+
+	/** The headlights' beam: a warm white, in candelas, reaching Radius cm, its cones' half-angles and its tilt down. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights")
+	FLinearColor HeadlightColor = FLinearColor(1.f, 0.88f, 0.72f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "0"))
+	float HeadlightIntensity = 600.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "1"))
+	float HeadlightRadius = 3000.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "0", ClampMax = "80"))
+	float HeadlightInnerCone = 18.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "1", ClampMax = "80"))
+	float HeadlightOuterCone = 34.f;
+
+	/** Degrees the beam points down from level, onto the ground ahead. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "0", ClampMax = "89"))
+	float HeadlightDownPitch = 12.f;
+
+	/** The tail lamps' glow on the ground behind: red, dim and short. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights")
+	FLinearColor TaillightColor = FLinearColor(1.f, 0.04f, 0.02f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "0"))
+	float TaillightIntensity = 15.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "1"))
+	float TaillightRadius = 600.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "0", ClampMax = "80"))
+	float TaillightInnerCone = 30.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "1", ClampMax = "80"))
+	float TaillightOuterCone = 60.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lights", meta = (ClampMin = "0", ClampMax = "89"))
+	float TaillightDownPitch = 35.f;
+
+	bool HasLights() const { return !HeadlightOffsets.IsEmpty() || !TaillightOffsets.IsEmpty(); }
+
+	/** The middle of the headlights or of the tail lamps, where its one spot light stands; zero without them. */
+	static FVector GetMidpoint(TConstArrayView<FVector> Offsets);
+
+	/** Why the lights cannot work: a cone whose inner angle passes its outer one. True when they can. */
+	bool Validate(FString* OutError = nullptr) const;
+};
+
+/**
  * A damped spring kicked by each shot (FRTSGunRecoil's gun jump and hull rock): an angle that rises to its peak, swings back
  * past rest by a little and settles within its settle time. A kick before it has settled adds to how it moves now, so
  * the angle never jumps.
@@ -416,6 +483,10 @@ public:
 	/** The engine's exhaust; none without outlets. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FRTSVehicleExhaust Exhaust;
+
+	/** The head- and rear lights (#223); none without lamps. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+	FRTSVehicleLights Lights;
 
 	/** Add-ons and running gear, placed on the hull, the turret or the gun. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
