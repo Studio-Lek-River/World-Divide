@@ -5,7 +5,8 @@ git-ignored and never cooked (Config/DefaultGame.ini). This script reads what is
 
 - Every top-level Content folder that is not a project folder is a pack. Its assets are read from the Asset Registry
   tags, without loading them: per static or skeletal mesh the size in cm (1 uu = 1 cm), Nanite, LODs, triangles,
-  collision and material slots; per texture its size. One CSV per pack and a summary go to Saved/PackAudit/.
+  collision and material slots; per texture its size; per asset whose class comes from a plugin this project lacks,
+  that plugin. One CSV per pack and a summary go to Saved/PackAudit/.
 - /Game/Developers/PackAudit/L_PackScale puts a sample of the packs (trees, a building, stones, a bridge, the surface
   materials on tiles) next to the Abrams and the M20 Guardian at real scale. The level references local-only assets, so
   it is git-ignored too. After saving it, every /Game package it references is checked to exist.
@@ -35,6 +36,16 @@ MIN_SENSIBLE_CM = 1.0
 ABRAMS = ["/Game/Art/Local/Meshes/SM_Abrams_Hull", "/Game/Art/Local/Meshes/SM_Abrams_Turret"]
 M20 = ["/Game/Art/USA/Vehicles/M20Guardian/Meshes/SM_M20_Hull", "/Game/Art/USA/Vehicles/M20Guardian/Meshes/SM_M20_Turret"]
 GROUND = "/Game/Materials/M_Ground"
+# Surface materials outside the packs' landscape folders: (folder, name filter, how many), checked against A in 01.
+SURFACE_SAMPLES = [
+    ("/Game/MuddyGroundPack/Materials", "MI_MuddyGround", 1),
+    ("/Game/UnrealDrive_CitySample/Materials", "MI_Asphalt_Raw", 1),
+    ("/Game/UnrealDrive_CitySample/Materials", "MI_FreewayAsphalt_Road", 1),
+    ("/Game/UnrealDrive_CitySample/Materials", "MI_Sidewalk", 1),
+    ("/Game/SM_Concrete_07/Materials", "MI_MT", 2),
+    ("/Game/SM_Tiles_02/Materials", "Granite", 1),
+    ("/Game/Materials_StoneTiles/Materials/Instances", "MI_StoneTiles", 2),
+]
 CUBE = "/Engine/BasicShapes/Cube.Cube"
 
 registry = unreal.AssetRegistryHelpers.get_asset_registry()
@@ -115,13 +126,26 @@ def texture_row(data):
 
 
 COLUMNS = ["package", "class", "size_cm", "nanite", "lods", "triangles", "collision_prims", "collision_complexity",
-           "materials", "dimensions", "format", "flags"]
+           "materials", "dimensions", "format", "needs_plugin", "flags"]
+
+
+def missing_module(data):
+    """The /Script module of the asset's class or Blueprint parent when that class is not loaded (a plugin the pack needs
+    and this project lacks, e.g. MetaRoad for UnrealDrive_CitySample), else ''."""
+    paths = [str(data.asset_class_path.package_name) + "." + class_name(data), tag(data, "ParentClass").strip("'\"")]
+    for path in paths:
+        path = path.split("'")[1] if "'" in path else path
+        # The module's package, not the class: registry class paths can be stale redirects (PhysicalMaterial).
+        module = path.split(".")[0]
+        if module.startswith("/Script/") and "." in path and unreal.find_object(None, module) is None:
+            return module[len("/Script/"):]
+    return ""
 
 
 def audit_pack(name):
     rows = []
     for data in registry.get_assets_by_path(f"/Game/{name}", recursive=True):
-        row = {"package": str(data.package_name), "class": class_name(data)}
+        row = {"package": str(data.package_name), "class": class_name(data), "needs_plugin": missing_module(data)}
         if row["class"] in ("StaticMesh", "SkeletalMesh"):
             row.update(mesh_row(data))
         elif row["class"] in ("Texture2D", "VirtualTexture2D"):
@@ -148,6 +172,10 @@ def summarize(name, rows):
              f"- Meshes: {len(meshes)}, Nanite {sum(1 for row in meshes if row.get('nanite') == 'True')}, "
              f"more than 1 LOD {sum(1 for row in meshes if row.get('lods') not in ('', '1'))}",
              "- Texture sizes: " + ", ".join(f"{size} x{sizes.count(size)}" for size in sorted(set(sizes), key=lambda s: -sizes.count(s)))]
+    plugins = sorted({row["needs_plugin"] for row in rows if row.get("needs_plugin")})
+    if plugins:
+        lines.append(f"- Needs plugin: {', '.join(plugins)} (not in this project; "
+                     f"{sum(1 for row in rows if row.get('needs_plugin'))} assets unusable without it)")
     flagged = [row for row in rows if row.get("flags")]
     if flagged:
         lines.append(f"- Flagged: {len(flagged)}")
@@ -269,14 +297,18 @@ def build_level():
     if bridges:
         put(bridges[0], (0.0, 5000.0, 0.0), "Bridge")
 
-    # Surface candidates: the material instances in the packs' landscape folders.
+    # Surface candidates: the material instances in the packs' landscape folders, then the samples of the surface packs.
     surfaces = [path for pack in pack_roots() for path in find(f"/Game/{pack}", {"MaterialInstanceConstant"})
-                if "/landscape/" in path.lower() and "/vegetation/" not in path.lower()]
-    for index, surface in enumerate(surfaces[:12]):
+                if "/landscape/" in path.lower() and "/vegetation/" not in path.lower()][:12]
+    for root, contains, count in SURFACE_SAMPLES:
+        surfaces += find(root, {"MaterialInstanceConstant"}, contains)[:count]
+    for index, surface in enumerate(surfaces):
         if missing_references(surface):
             broken[surface] = missing_references(surface)
             continue
-        spawn_tile(f"Surface_{os.path.basename(surface)}", (-6000.0 + 1100.0 * index, -5000.0, -0.5), 10.0, surface)
+        row, column = divmod(index, 12)
+        spawn_tile(f"Surface_{os.path.basename(surface)}", (-6000.0 + 1100.0 * column, -5000.0 - 1100.0 * row, -0.5), 10.0,
+                   surface)
         placed.append(surface)
 
     if not levels.save_current_level():

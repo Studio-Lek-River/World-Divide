@@ -36,6 +36,18 @@ Content/Real_Stones_Pack_01/
 Content/ProceduralBuildingGenerator/
 Content/UltimateUIMenusSFX/
 Content/HighPoly_Tree_Model/
+Content/AdvancedRealisticGlass/
+Content/Materials_StoneTiles/
+Content/MeshRift_CW_MaterialPackSample/
+Content/MuddyGroundPack/
+Content/SM_Concrete_07/
+Content/SM_Tiles_02/
+Content/StylizedSurface_Lite/
+Content/UnrealDrive_CitySample/
+# Their one-file-per-actor data from the packs' demo levels.
+Content/__ExternalActors__/AdvancedGlass/
+Content/__ExternalActors__/AdvancedRealisticGlass/
+Content/__ExternalObjects__/AdvancedRealisticGlass/
 # The pack scale level of Tools/Editor/audit_packs.py: it references the packs above.
 Content/Developers/PackAudit/
 

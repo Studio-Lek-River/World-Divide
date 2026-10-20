@@ -1,6 +1,6 @@
 # WD_RiverCrossing_01: environment asset audit
 
-Phase 1. First audit 2026-10-15 (no packs yet, from "How this was checked" down); packs imported and audited 2026-10-20 (#153, the next section). Engine: UE 5.8 (`WorldDivide.uproject`, `"EngineAssociation": "5.8"`).
+Phase 1. First audit 2026-10-15 (no packs yet, from "How this was checked" down); packs imported and audited 2026-10-20 (#153, the next section; a second batch of eight the same day). Engine: UE 5.8 (`WorldDivide.uproject`, `"EngineAssociation": "5.8"`).
 
 ## Imported packs (2026-10-20)
 
@@ -16,7 +16,7 @@ The repository is public and the pack licences do not allow sharing the files, s
 
 `Tools/Scripts/ue.ps1 -Task packaudit` runs `Tools/Editor/audit_packs.py` headless. It reads every asset's Asset Registry tags (not the file headers as on 2026-10-15) and writes:
 
-- `Saved/PackAudit/<Pack>.csv`: one row per asset, with mesh size in cm (`ApproxSize`; 1 uu = 1 cm), Nanite, LODs, triangles, collision primitives and complexity, material slots, and texture size and format.
+- `Saved/PackAudit/<Pack>.csv`: one row per asset, with mesh size in cm (`ApproxSize`; 1 uu = 1 cm), Nanite, LODs, triangles, collision primitives and complexity, material slots, texture size and format, and the plugin an asset's class needs when this project lacks it.
 - `Saved/PackAudit/summary.md`: counts and flags (textures over 4K, meshes without simple collision, meshes with neither Nanite nor LODs).
 - `/Game/Developers/PackAudit/L_PackScale` (git-ignored): a sample of each pack next to the Abrams and the M20 Guardian. The run fails if the level references a missing package; assets that reference packages their own pack lacks are left out and listed.
 
@@ -33,6 +33,14 @@ Skeletal meshes have no size tag; the Megaplant trees' heights are checked by ey
 | `Deko_MatrixDemo` | Deko Matrix Demo (Freeway) | 4.1 GB | E | Realistic, US freeway | Partly: lamps, poles, barriers, sandbags; US signs are off-setting |
 | `HighPoly_Tree_Model` | unknown | 37 MB | B | Realistic | Keep locally as a hero tree; **cannot ship** until its licence is confirmed |
 | `UltimateUIMenusSFX` | Ultimate UI Menus SFX | 35 MB | (UI audio) | — | Not environment |
+| `UnrealDrive_CitySample` | MetaRoad (UnrealDrive) city sample | 3.9 GB | E, A | Realistic, US city | **Use** the meshes and materials: asphalt, sidewalks, kerbs, barriers, bollards, guardrails, cones. Its 9 road profile assets need the **MetaRoad** plugin, not installed |
+| `MuddyGroundPack` | Muddy Ground Pack | 131 MB | A | Realistic, scanned | **Use** for mud and wet tracks |
+| `SM_Concrete_07` | Scans Matter Concrete 07 | 1.3 GB | A, D | Realistic, scanned | **Use** for concrete (quays, the HQ apron); 8K textures |
+| `SM_Tiles_02` | Scans Matter Tiles 02 | 1.6 GB | D | Realistic, scanned | Partly: granite tiles and large bricks for the village square; office ceiling tiles not; 8K textures |
+| `Materials_StoneTiles` | Stone Tiles materials | 0.3 GB | A, D | Realistic | **Use** for paving in the villages |
+| `AdvancedRealisticGlass` | Advanced Realistic Glass | 124 MB | D | Realistic | Later: windows for village buildings and the HQ |
+| `StylizedSurface_Lite` | Stylized Surface Lite | 311 MB | D | **Stylized** | Not usable |
+| `MeshRift_CW_MaterialPackSample` | Chiselled Wood Material Pack Sample | 0.8 GB | D | **Stylized** (carved wood) | Not usable |
 
 `NeonStrips`, `QuantumCharacter` and `Realistic_Starter_VFX_Pack_Vol2` are also in `Content/` but were committed to git in a7904b0; they are not environment packs (see the report of #153).
 
@@ -62,7 +70,7 @@ Skeletal meshes have no size tag; the Megaplant trees' heights are checked by ey
 - 2–3 m boulders, 8 k triangles, 3 LODs, no Nanite, simple and complex collision, one material each.
 - Textures 4096² (32). Turn on Nanite or keep the LODs; both are fine at 8 k.
 
-**StylizedBridge** (`/Game/StylizedBridge/...`)
+**StylizedBridge** (`/Game/StylizedBridge/...`; the producer's *Ready Map Vol 2 – Bridge Environment*)
 
 - 470 static meshes with LODs (464) and no Nanite. Concrete bridge kit in `StaticMesh/Bridge/ConcreteBridge/BridgeModularPrefabs/` (deck parts 9 × 14 m, pillars 22 m wide, sidewalks); roads, barriers, pipes, debris, train and vehicles.
 - Landscape: `Landscape/LandscapeMaterial/M_AutoMaterial_Master` with `MI_AutoMaterial_A1`, 5 landscape grass types (Dirt, Forest, GrassMain, Rock, RockSlope), 5 layer infos and RVTs; river and water materials in `Landscape/River/`; 8 procedural foliage types (birch, locust, bush).
@@ -86,20 +94,41 @@ Skeletal meshes have no size tag; the Megaplant trees' heights are checked by ey
 - 19.5 × 18.3 × 27.9 m, Nanite, complex-as-simple collision, two materials, 2048² textures.
 - Usable as a few hand-placed hero trees. Origin and licence are still unknown.
 
+**Megaplant_Library, plugin note.** Its 24 procedural vegetation assets (`ProceduralVegetation`, grower presets, growth data) need the ProceduralVegetation editor plugin, which this project does not enable. The tree meshes themselves do not need it.
+
+**UnrealDrive_CitySample** (`/Game/UnrealDrive_CitySample/...`, the sample content of MetaRoad)
+
+- Materials: 15 asphalt (`Materials/MI_Asphalt/MI_Asphalt_Raw`, `MI_FreewayAsphalt_*`), 15 sidewalk, 6 concrete instances; textures 2048² to 8192² (40 at 8K).
+- Meshes: concrete barrier, metal bollard, rail guard, traffic cone (with LODs); the `Maps/Meshes/Road*` meshes are baked strips of the demo map, without collision.
+- 8 `RoadLaneAttributeDescriptorBlueprint` and 1 `RoadBuildPreset` need `/Script/MetaRoad` and `MetaRoadEditor`. MetaRoad is a code plugin installed per engine; it is not in UE 5.8 here, so the procedural road tool itself is not available.
+
+**MuddyGroundPack**, **SM_Concrete_07**, **SM_Tiles_02**, **Materials_StoneTiles**
+
+- Scanned surface materials, one instance per surface (`MI_MuddyGround_4K_Inst`, `MI_MT00082_Concrete_Clean`, `MI_MT00183_Rough_Concrete`, damaged concretes, `MI_MT00022_Large_Granite_Tiles`, `MI_MT00195_New_Large_Bricks`, `MI_StoneTiles_01`–`09`).
+- MuddyGround and StoneTiles 4096²; the two Scans Matter packs ship 20 textures at 8192² each (flagged); limit them to 4K with the texture LOD group before they go on a map.
+
+**AdvancedRealisticGlass**, **StylizedSurface_Lite**, **MeshRift_CW_MaterialPackSample**
+
+- Glass: 13 glass material instances, 4096² textures; for buildings later.
+- The two others are hand-painted or carved stylized materials and do not meet the realism bar.
+
 ### Coverage against the minimum set (05 §2)
+
+The gaps below are not closed by #153; they move to the follow-up issue that fills them before #156 and #157.
+
 
 | Category | Minimum set | Now | Status |
 |---|---|---|---|
-| A. Landscape surfaces | Grass, meadow, dirt, mud, gravel, rock, sand/riverbank, asphalt; one realistic family, 2K+ | Stylized auto-material (StylizedBridge); a few loose PBG ground textures | **Missing** |
+| A. Landscape surfaces | Grass, meadow, dirt, mud, gravel, rock, sand/riverbank, asphalt; one realistic family, 2K+ | Mud (MuddyGround), asphalt (UnrealDrive), concrete and paving (Scans Matter, StoneTiles); stylized auto-material (StylizedBridge) | **Partly**: grass, meadow, dirt, gravel, rock, sand missing |
 | B. Trees | 3 deciduous + 1–2 conifers, Nanite or LODs | Black alder, hazel, cherry; Norway spruce, Baltic pine (broken bark) | **Met** |
 | B. Bushes, grass, flowers | Hedgerow bushes, shrubs, grass and wildflower cards | Spindle, beach rose; no realistic grass or flower cards | **Partly**: grass and flowers missing |
-| D. Buildings | One modern European village kit | PBG slum prefabs, broken references | **Missing** |
-| E. Infrastructure | Road bridge, road decals, kerbs, fences, power poles and lines, streetlights, signs, barriers | Stylized bridge and roads; US freeway lamps, poles, barriers | **Partly**: realistic bridge, European signs, fences, power lines missing |
+| D. Buildings | One modern European village kit | PBG slum prefabs, broken references; facade, paving and glass materials only | **Missing** |
+| E. Infrastructure | Road bridge, road decals, kerbs, fences, power poles and lines, streetlights, signs, barriers | Stylized bridge and roads; US freeway lamps, poles, barriers; UnrealDrive asphalt, kerbs, sidewalks, bollards, guardrails | **Partly**: realistic bridge, European signs, fences, power lines missing |
 | F. Natural details | Rocks, small cliffs, logs, debris, same family as A | 8 scanned stones | **Partly**: cliffs and logs missing |
 
 ### L_PackScale
 
-`/Game/Developers/PackAudit/L_PackScale` holds, on a 300 m ground: the Abrams (`/Game/Art/Local/Meshes/SM_Abrams_*`) and the M20 Guardian at the origin; one variant of each Megaplant species except the Baltic pine, and `SM_HP_Tree`, along +x; four stones; one StylizedBridge pillar base; the packs' landscape and water materials on 10 m tiles. Missing references: 0. No building is placed, because no pack has a usable one.
+`/Game/Developers/PackAudit/L_PackScale` holds, on a 300 m ground: the Abrams (`/Game/Art/Local/Meshes/SM_Abrams_*`) and the M20 Guardian at the origin; one variant of each Megaplant species except the Baltic pine, and `SM_HP_Tree`, along +x; four stones; one StylizedBridge pillar base; the packs' landscape and water materials on 10 m tiles, and a second row with the surface packs (mud, two asphalts, sidewalk, two concretes, granite tiles, two stone pavings). 36 assets placed, missing references: 0. No building is placed, because no pack has a usable one.
 
 ## How this was checked (2026-10-15)
 

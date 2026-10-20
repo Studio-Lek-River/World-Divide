@@ -17,14 +17,14 @@ What only the producer can do or decide, ordered by when it blocks work.
 
 ## 2. Assets to add from your Fab library
 
-The first packs were imported and audited on 2026-10-20 (manifest and coverage in [01_ASSET_AUDIT.md](01_ASSET_AUDIT.md), "Imported packs"). Trees are covered (Megaplant Library). These are still missing, and #153 stays open until they are in:
+Two batches of packs were imported and audited on 2026-10-20 (manifest and coverage in [01_ASSET_AUDIT.md](01_ASSET_AUDIT.md), "Imported packs"). Trees, rocks, mud, asphalt, concrete and paving are covered. #153 closed on those; these gaps moved to its follow-up issue, which comes before painting (#156) and the villages (#157):
 
 | Category | Still missing (late-summer temperate Europe, realistic) |
 |---|---|
-| Landscape surfaces | The whole set: grass, meadow, dirt, mud, gravel, rock, sand/riverbank, asphalt. One consistent scanned family (for example Megascans surfaces), 2K or more. StylizedBridge's auto-material is stylized. |
+| Landscape surfaces | Grass, meadow, dirt, gravel, rock, sand/riverbank. Megascans surface ZIPs already downloaded in `D:\Downloads\textures` (wild and lush grass, rocky soil, gravel, forest floor, leaves) are only source textures; the follow-up adds a script that imports them. Still to download: riverbank sand or silt, a rock face, a dry harvested field, a dirt track. |
 | Bushes, grass, flowers | Grass and wildflower cards for Landscape Grass; more hedgerow bushes |
-| Buildings | One modern European village kit: houses, farmhouse, barn, workshop/garage, a landmark (church or mill). The Procedural Building Generator is a slum kit with broken material references. |
-| Infrastructure | A realistic two-lane road bridge or bridge kit, road decals and kerbs, fences, power poles and lines, European signs. Freeway lamps, poles and barriers are covered by Deko_MatrixDemo. |
+| Buildings | One modern European village kit: houses, farmhouse, barn, workshop/garage, a landmark (church or mill). The Procedural Building Generator is a slum kit with broken material references. Facade materials (brick, stucco, plaster, concrete) are in the ZIPs; roof tiles and wood planks are not. |
+| Infrastructure | A realistic two-lane road bridge or bridge kit, fences, power poles and lines, European signs. Freeway lamps, poles and barriers are covered by Deko_MatrixDemo; asphalt, kerbs, sidewalks and guardrails by UnrealDrive_CitySample. The **MetaRoad** road tool needs its plugin: Epic Games Launcher → Fab Library → MetaRoad → *Install to Engine* → 5.8, if the seller offers a 5.8 build. |
 | Natural details | Small cliffs, logs, debris, ideally from the surface family. Rocks are covered (Real Stones Pack 01). |
 
 **Storage:** the repository is public, so packs are never committed. Keep each in its own `Content/<Pack>/` root, add it to `.gitignore` and to `DirectoriesToNeverCook` in `Config/DefaultGame.ini` (the cook test fails otherwise), then run `Tools\Scripts\ue.ps1 -Task packaudit` and tell me the folder name.
@@ -35,6 +35,8 @@ The first packs were imported and audited on 2026-10-20 (manifest and coverage i
 3. Sign in there, open **My Library**, and press **Add to project** on each pack. Megascans assets can also come through **Quixel Bridge**, which is installed.
 4. Alternatively, use the Epic Games Launcher → Fab Library → *Add to project* → WorldDivide (5.8).
 5. Tell me the folder names that appear under `Content/`. I will then run `ue.ps1 -Task packaudit` and update 01.
+
+**Packs listed for an older engine:** a content-only pack usually loads in 5.8. In the Launcher, use *Add to project* with **Show all projects** ticked and pick WorldDivide. A code plugin (MetaRoad, ProceduralVegetation tools) only works with a build for 5.8.
 
 **Before importing:**
 - Check each pack's licence covers use in a commercial game.
