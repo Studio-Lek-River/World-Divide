@@ -42,8 +42,8 @@
  * the dust behind its tracks standing, driving slowly and fast and pivoting, seen from behind and above with the ground it
  * leaves (dust_<ground>_*, #224), on the map's dirt and on each of its ground strips (#336). A wheeled unit takes the dust
  * scenarios only. A unit the map does not hold, such as the flak truck, is spawned for team 0 at DriveStart and removed at
- * the end. The dust is also taken from the player's camera at its default zoom (dust_<ground>_rts) and, on dirt and sand, at
- * its farthest (_rtsmax) and by night (_fast_night), and stopping and driving off again on dirt (dust_dirt_stopstart, #336).
+ * the end. The dust is also taken from the player's camera at its default zoom (dust_<ground>_rts), on dirt and sand by
+ * night (_fast_night), and stopping and driving off again on dirt (dust_dirt_stopstart, #336).
  * A second argument, prefixes joined by + (dust_dirt+dust_sand), takes only the scenarios whose names begin with one.
  * Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
  * Saved/TrackShots/<UnitData>/<scenario>_<n>.png, and logs with each the realized side travel, each track's phase and what
@@ -93,11 +93,10 @@ namespace RTSTrackShots
 	/** Behind the hull at three quarters and well above it, on the ground behind the tracks or wheels, where the dust rises (#224). */
 	const FView DustView{ FVector(-1800.f, -1100.f, 750.f), FVector(-700.f, 0.f, 0.f), 55.f };
 	/**
-	 * The player's RTS camera behind the hull at its default and its farthest zoom (Config/DefaultGame.ini, RTSCameraSettings:
-	 * 150 and 450 m arms at 55 degrees down, 60 degrees of field, which the viewport keeps vertical), on the dust (#336).
+	 * The player's RTS camera behind the hull at its default zoom (Config/DefaultGame.ini, RTSCameraSettings: a 150 m arm at
+	 * 55 degrees down, 60 degrees of field, which the viewport keeps vertical), on the dust (#336).
 	 */
 	const FView DustRTSView{ FVector(-800.f - 8604.f, 0.f, 12287.f), FVector(-800.f, 0.f, 0.f), 60.f };
-	const FView DustRTSMaxView{ FVector(-800.f - 25811.f, 0.f, 36862.f), FVector(-800.f, 0.f, 0.f), 60.f };
 
 	/**
 	 * The body scenarios (#297): game seconds between pictures, through the hull's settle and the turret's traverse, at a
@@ -346,12 +345,10 @@ namespace RTSTrackShots
 					{ Prefix + TEXT("slow"), DustView, DriveFrom(Ground.Value, Ahead(400.f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
 					{ Prefix + TEXT("fast"), DustView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
 				};
-				// From the player's camera at its default zoom (#336); and on dirt and sand at its farthest, and by night.
+				// From the player's camera at its default zoom (#336); and on dirt and sand by night.
 				Dusts.Add({ Prefix + TEXT("rts"), DustRTSView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f });
 				if (Ground.Key == TEXT("dirt") || Ground.Key == TEXT("sand"))
 				{
-					Dusts.Add({ Prefix + TEXT("rtsmax"), DustRTSMaxView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr,
-						ExhaustSpacing, 1.f });
 					FScenario& NightDust = Dusts.Add_GetRef({ Prefix + TEXT("fast_night"), DustView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm,
 						nullptr, nullptr, ExhaustSpacing, 1.f });
 					NightDust.bNight = true;

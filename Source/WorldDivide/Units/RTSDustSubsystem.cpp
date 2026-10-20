@@ -24,8 +24,8 @@ namespace RTSDust
 		TEXT("Ground vehicles raise dust behind their tracks or wheels as they drive and turn (#224); off, every emitter stops."));
 
 	TAutoConsoleVariable<float> CVarDustDistance(
-		TEXT("rts.Fx.DustDistance"), 48000.f,
-		TEXT("cm from the nearest camera within which a vehicle shows dust (#224): past the RTS camera's farthest zoom (450 m), so the dust still shows there (#336); the budget, rts.Fx.DustMaxVehicles, keeps its cost. 0 or less everywhere."));
+		TEXT("rts.Fx.DustDistance"), 20000.f,
+		TEXT("cm from the nearest camera within which a vehicle shows dust (#224): 200 m, so none at the RTS camera's farthest zoom or at the screen's edges at its default zoom (#336, the producer's choice). 0 or less everywhere."));
 
 	TAutoConsoleVariable<int32> CVarDustMaxVehicles(
 		TEXT("rts.Fx.DustMaxVehicles"), 32,

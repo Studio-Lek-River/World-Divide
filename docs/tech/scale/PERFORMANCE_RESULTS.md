@@ -2238,9 +2238,8 @@ client were running), so the runs spread by about 2 ms; compare the means with e
 
 After the visual review the haze spawns up to 70 puffs a second per contact point (SpeedScale 0.07, haze Opacity 0.45 instead of 0.6)
 and the dirt puffs live 3 s instead of 2.2, so a moving M20 at full speed keeps about 2.2 times as many live haze particles
-(70 / 44 puffs a second times 3 / 2.2 s; worked out, not counted), and more vehicles qualify now that `rts.Fx.DustDistance` is
-now 480 m, past the farthest zoom, with the budget of 32 vehicles unchanged. One interleaved pair, same command, other
-processes still using about seven cores:
+(70 / 44 puffs a second times 3 / 2.2 s; worked out, not counted), with the budget of 32 vehicles unchanged. One
+interleaved pair, same command, other processes still using about seven cores:
 
 | Scenario | Dust | Game ms (p95) | Render ms | GPU ms | Draw calls | Dust pass ms | Emitters |
 |---|---|---:|---:|---:|---:|---:|---:|
@@ -2249,6 +2248,9 @@ processes still using about seven cores:
 
 - **+0.46 ms of game thread, against #224's 0.6 ms for its dust**, from a single pair under about 1 ms of noise:
   indicative only. Re-measure on a quiet machine with five pairs and a `-Trace` run for Niagara's own tick (#225).
+- **Producer decision: `rts.Fx.DustDistance` stays at 200 m.** The fix round had raised it to 480 m (past the farthest
+  zoom) for the pair above; it is back at #224's 200 m, so there is no dust at the farthest zoom, nor at the screen's
+  edges at the default zoom (a 150 m arm), and no more vehicles qualify than in #224.
 
 ## #223 (vehicle head- and rear lights with a day/night policy)
 
