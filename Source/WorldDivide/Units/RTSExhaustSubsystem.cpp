@@ -35,6 +35,8 @@ namespace
 	const FName OpacityParameter(TEXT("User.Opacity"));
 	const FName SizeParameter(TEXT("User.Size"));
 	const FName DirectionParameter(TEXT("User.Direction"));
+	const FName LifetimeParameter(TEXT("User.Lifetime"));
+	const FName LiftParameter(TEXT("User.Lift"));
 
 	uint64 ExhaustCycles = 0;
 }
@@ -102,6 +104,8 @@ void URTSExhaustSubsystem::Register(ARTSUnit& Unit)
 		DestroyComponents(*Entry);
 		Entry->SentRate = -1.f;
 		Entry->SentOpacity = -1.f;
+		Entry->SentLifetime = -1.f;
+		Entry->SentLift = -1.f;
 		Entry->SentColor.Reset();
 		Entry->SentDirection = FVector3f::ZeroVector;
 		return;
@@ -245,6 +249,8 @@ void URTSExhaustSubsystem::UpdateEmitters(FRTSExhaustEntry& Entry, ARTSUnit& Uni
 		Entry.bActive = false;
 		Entry.SentRate = -1.f;
 		Entry.SentOpacity = -1.f;
+		Entry.SentLifetime = -1.f;
+		Entry.SentLift = -1.f;
 		Entry.SentColor.Reset();
 		Entry.SentDirection = FVector3f::ZeroVector;
 	}
@@ -255,13 +261,20 @@ void URTSExhaustSubsystem::UpdateEmitters(FRTSExhaustEntry& Entry, ARTSUnit& Uni
 		: Entry.State == ERTSExhaustState::Moving ? Exhaust.MovingOpacity : Exhaust.IdleOpacity;
 	const FLinearColor& Color = Entry.State == ERTSExhaustState::Accelerating ? Exhaust.AcceleratingColor
 		: Entry.State == ERTSExhaustState::Moving ? Exhaust.MovingColor : Exhaust.IdleColor;
+	// Cruising, the puffs live briefly and are blown up off the ground (#340), so the plume stays short behind the hull.
+	const bool bCruising = Entry.State == ERTSExhaustState::Moving;
+	const float Lifetime = Entry.State == ERTSExhaustState::Accelerating ? Exhaust.AcceleratingLifetime
+		: bCruising ? Exhaust.MovingLifetime : Exhaust.IdleLifetime;
+	const float Lift = bCruising ? Exhaust.MovingLift : 0.f;
 	// Plus the puffs that keep the trail closed as the hull drives off and leaves them behind.
-	const float Rate = GetRate(BaseRate + Entry.LastSpeed / 100.f * Exhaust.PuffsPerMetre, Entry.ViewDistance, EffectsQuality);
+	const float PuffsPerMetre = bCruising ? Exhaust.MovingPuffsPerMetre : Exhaust.PuffsPerMetre;
+	const float Rate = GetRate(BaseRate + Entry.LastSpeed / 100.f * PuffsPerMetre, Entry.ViewDistance, EffectsQuality);
 	const bool bSendRate = Entry.SentRate < 0.f || RTSNearestToView::Differs(Entry.SentRate, Rate);
 	const bool bSendOpacity = Entry.SentOpacity < 0.f || RTSNearestToView::Differs(Entry.SentOpacity, Opacity);
-	// The colour only changes with the state, so it is sent as it is.
+	// The colour, life and lift only change with the state, so they are sent as they are.
 	const bool bSendColor = !Entry.SentColor.IsSet() || !Entry.SentColor->Equals(Color);
-	if (bSendRate || bSendOpacity || bSendColor)
+	const bool bSendShape = Entry.SentLifetime != Lifetime || Entry.SentLift != Lift;
+	if (bSendRate || bSendOpacity || bSendColor || bSendShape)
 	{
 		for (UNiagaraComponent* Component : Entry.Components)
 		{
@@ -270,11 +283,15 @@ void URTSExhaustSubsystem::UpdateEmitters(FRTSExhaustEntry& Entry, ARTSUnit& Uni
 				Component->SetVariableFloat(RateParameter, Rate);
 				Component->SetVariableLinearColor(ColorParameter, Color);
 				Component->SetVariableFloat(OpacityParameter, Opacity);
+				Component->SetVariableFloat(LifetimeParameter, Lifetime);
+				Component->SetVariableFloat(LiftParameter, Lift);
 			}
 		}
 		Entry.SentRate = Rate;
 		Entry.SentOpacity = Opacity;
 		Entry.SentColor = Color;
+		Entry.SentLifetime = Lifetime;
+		Entry.SentLift = Lift;
 	}
 	// The puffs live in world space, so they are told which way the outlet faces there as the hull turns and tilts.
 	const FVector3f Direction(Hull->GetComponentTransform().TransformVectorNoScale(

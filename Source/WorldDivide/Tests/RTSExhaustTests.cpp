@@ -21,12 +21,18 @@ namespace RTSExhaustTests
 
 	constexpr double Rate = 30.0;
 
+	/** The float user parameter Name as the unit's emitters were last told, or -1 without one. */
+	float GetSentFloat(const UNiagaraComponent& Component, const TCHAR* Name)
+	{
+		const float* Value = reinterpret_cast<const float*>(Component.GetOverrideParameters().GetParameterData(
+			FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), Name)));
+		return Value ? *Value : -1.f;
+	}
+
 	/** User.Rate as the unit's emitters were last told, or -1 without one. */
 	float GetSentRate(const UNiagaraComponent& Component)
 	{
-		const float* Value = reinterpret_cast<const float*>(Component.GetOverrideParameters().GetParameterData(
-			FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), TEXT("User.Rate"))));
-		return Value ? *Value : -1.f;
+		return GetSentFloat(Component, TEXT("User.Rate"));
 	}
 
 	/** User.Direction as the unit's emitters were last told, or zero without one. */
@@ -79,7 +85,7 @@ namespace RTSExhaustTests
 /**
  * Engine exhaust follows the hull's motion, not its orders (#222): the M20 (tracked) and the flak truck (wheeled) stand,
  * set off, drive on at a steady speed and stop again, and their exhaust goes idle, accelerating, moving and idle, its
- * emitters told the rate and the colour of each state (#325). Past rts.Fx.ExhaustDistance from the camera, and with rts.Fx.Exhaust off, their
+ * emitters told the rate, the colour (#325) and the puff life and lift (#340) of each state. Past rts.Fx.ExhaustDistance from the camera, and with rts.Fx.Exhaust off, their
  * emitters stop; past rts.Fx.ExhaustMaxVehicles only the nearest show any. Niagara does not run under -nullrhi, so the
  * emitters' state and parameters are checked, not their puffs.
  */
@@ -94,7 +100,8 @@ bool FRTSVehicleExhaustTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	for (const FName User : { FName(TEXT("User.Rate")), FName(TEXT("User.Opacity")), FName(TEXT("User.Size")) })
+	for (const FName User : { FName(TEXT("User.Rate")), FName(TEXT("User.Opacity")), FName(TEXT("User.Size")), FName(TEXT("User.Lifetime")),
+		FName(TEXT("User.Lift")) })
 	{
 		TestTrue(*FString::Printf(TEXT("It takes %s"), *User.ToString()),
 			System->GetExposedParameters().IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), User)) != INDEX_NONE);
@@ -136,7 +143,8 @@ bool FRTSVehicleExhaustTest::RunTest(const FString& Parameters)
 			const float Base = State == ERTSExhaustState::Accelerating ? UnitExhaust.AcceleratingRate
 				: State == ERTSExhaustState::Moving ? UnitExhaust.MovingRate : UnitExhaust.IdleRate;
 			const float Speed = FMath::Abs(Unit->GetRealizedMotion().ForwardSpeed);
-			return URTSExhaustSubsystem::GetRate(Base + Speed / 100.f * UnitExhaust.PuffsPerMetre, 0.f, Quality);
+			const float PuffsPerMetre = State == ERTSExhaustState::Moving ? UnitExhaust.MovingPuffsPerMetre : UnitExhaust.PuffsPerMetre;
+			return URTSExhaustSubsystem::GetRate(Base + Speed / 100.f * PuffsPerMetre, 0.f, Quality);
 		};
 		auto CheckEmitters = [&](const TCHAR* When, ERTSExhaustState State)
 		{
@@ -155,6 +163,12 @@ bool FRTSVehicleExhaustTest::RunTest(const FString& Parameters)
 				const FLinearColor SentColor = Component ? GetSentColor(*Component) : FLinearColor::Transparent;
 				TestTrue(*FString::Printf(TEXT("%s %s: told the state's colour %s (%s)"), *What, When, *Color.ToString(), *SentColor.ToString()),
 					SentColor.Equals(Color));
+				// Cruising, the puffs live briefly and rise off the ground (#340).
+				const float Lifetime = State == ERTSExhaustState::Accelerating ? UnitExhaust.AcceleratingLifetime
+					: State == ERTSExhaustState::Moving ? UnitExhaust.MovingLifetime : UnitExhaust.IdleLifetime;
+				const float Lift = State == ERTSExhaustState::Moving ? UnitExhaust.MovingLift : 0.f;
+				TestTrue(*FString::Printf(TEXT("%s %s: told the state's puff life %.2f s and lift %.0f cm/s"), *What, When, Lifetime, Lift),
+					Component && GetSentFloat(*Component, TEXT("User.Lifetime")) == Lifetime && GetSentFloat(*Component, TEXT("User.Lift")) == Lift);
 				const FVector Out = Unit->GetMesh()->GetComponentTransform().TransformVectorNoScale(UnitExhaust.Direction.GetSafeNormal());
 				TestTrue(*FString::Printf(TEXT("%s %s: told the outlet's direction in the world"), *What, When),
 					Component && FVector::DotProduct(GetSentDirection(*Component), Out) > 0.99f);

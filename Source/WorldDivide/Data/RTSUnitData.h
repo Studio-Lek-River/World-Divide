@@ -203,8 +203,8 @@ struct WORLDDIVIDE_API FRTSVehicleExhaust
 	GENERATED_BODY()
 
 	/**
-	 * The engine's continuous emitter, driven by its User.Rate, User.Color, User.Opacity, User.Size and User.Direction
-	 * (URTSExhaustSubsystem).
+	 * The engine's continuous emitter, driven by its User.Rate, User.Color, User.Opacity, User.Size, User.Direction,
+	 * User.Lifetime and User.Lift (URTSExhaustSubsystem).
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust")
 	TObjectPtr<UNiagaraSystem> System;
@@ -233,6 +233,30 @@ struct WORLDDIVIDE_API FRTSVehicleExhaust
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0"))
 	float PuffsPerMetre = 5.f;
+
+	/**
+	 * The same while cruising (#340): fewer, as the puffs live briefly then and the trail they leave is short. One every
+	 * 40 cm still overlaps a puff's width.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0"))
+	float MovingPuffsPerMetre = 2.5f;
+
+	/**
+	 * Seconds a puff lives on average, standing, moving and accelerating; it keeps the life it was born with. Short while
+	 * cruising (#340), so the puffs a driving hull leaves behind do not trail along the ground like its dust.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0.05"))
+	float IdleLifetime = 1.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0.05"))
+	float MovingLifetime = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0.05"))
+	float AcceleratingLifetime = 1.5f;
+
+	/** cm/s a puff is blown upward at birth while cruising (#340), lifting the plume off the ground behind the hull. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0"))
+	float MovingLift = 120.f;
 
 	/**
 	 * The colour a puff is born with, standing, moving and accelerating (#325): the engine's character. A light diesel grey

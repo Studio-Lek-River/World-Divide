@@ -278,7 +278,7 @@ namespace RTSMuzzleFlashBuilder
 		FNiagaraEdit::SetEmitterData(FNiagaraExt_StackItemReference(System, Name), EmitterData, Context);
 	}
 
-	/** Emitter's sprites resized each update by the HLSL expression Size, a float2, which may read Particles.NormalizedAge. */
+	/** Emitter's sprites resized each update by the HLSL expression Size, a float2, which may read Particles.NormalizedAge or Particles.Age. */
 	void SetSpriteSizeOverLife(UNiagaraSystem* System, FName Emitter, const FString& Size, FNiagaraExternalEditContext& Context)
 	{
 		const FName SpriteSize(TEXT("Particles.SpriteSize"));
@@ -499,25 +499,30 @@ UNiagaraSystem* URTSEditorScripting::BuildExhaustSystem(const FString& AssetPath
 		const float DefaultOpacity = 0.45f;
 		const float DefaultSize = 60.f;
 		const FVector3f DefaultDirection(-1.f, 0.f, 0.f);
+		const float DefaultLifetime = 1.5f;
+		const float DefaultLift = 0.f;
 		AddUserParameter(System, TEXT("User.Rate"), FNiagaraTypeDefinition::GetFloatDef(), DefaultRate, Context);
 		AddUserParameter(System, TEXT("User.Direction"), FNiagaraTypeDefinition::GetVec3Def(), DefaultDirection, Context);
 		AddUserParameter(System, TEXT("User.Color"), FNiagaraTypeDefinition::GetColorDef(), DefaultColor, Context);
 		AddUserParameter(System, TEXT("User.Opacity"), FNiagaraTypeDefinition::GetFloatDef(), DefaultOpacity, Context);
 		AddUserParameter(System, TEXT("User.Size"), FNiagaraTypeDefinition::GetFloatDef(), DefaultSize, Context);
+		AddUserParameter(System, TEXT("User.Lifetime"), FNiagaraTypeDefinition::GetFloatDef(), DefaultLifetime, Context);
+		AddUserParameter(System, TEXT("User.Lift"), FNiagaraTypeDefinition::GetFloatDef(), DefaultLift, Context);
 
-		// Thin puffs in world space, so a driving hull leaves them behind, each keeping the colour it was born with: blown half
-		// a metre or so out of the outlet along User.Direction, slowed by the air within a second, rising as they cool and
-		// growing to three times their size as they thin out over 1.2 to 1.8 s. The bounds hold a plume left by a hull at full
-		// speed.
+		// Thin puffs in world space, so a driving hull leaves them behind, each keeping the colour, life and lift it was born
+		// with: blown half a metre or so out of the outlet along User.Direction and User.Lift cm/s upward, slowed by the air
+		// within a second, rising as they cool and thinning out over 0.8 to 1.2 times User.Lifetime. They grow with their age
+		// in seconds, to three times their size at 1.5 s, so a short-lived cruising puff (#340) stays narrow too. The bounds
+		// hold a plume left by a hull at full speed.
 		const FBox Bounds(FVector(-900.0, -900.0, -400.0), FVector(900.0, 900.0, 700.0));
-		AddSpriteStream(System, TEXT("Exhaust"), TEXT("User.Rate"), TEXT("1.2 + rand(0.6)"), TEXT("User.Size"),
+		AddSpriteStream(System, TEXT("Exhaust"), TEXT("User.Rate"), TEXT("User.Lifetime * (0.8 + rand(0.4))"), TEXT("User.Size"),
 			TEXT("float4(User.Color.r, User.Color.g, User.Color.b, User.Opacity)"), Material, Bounds, Context);
 		SetRandomRotation(System, TEXT("Exhaust"), Context);
 		SetSpawnSphere(System, TEXT("Exhaust"), TEXT("User.Size * 0.2"), TEXT("float3(0.0, 0.0, 0.0)"), Context);
 		SetMotion(System, TEXT("Exhaust"),
-			TEXT("User.Direction * (90.0 + rand(60.0)) + float3(rand(30.0) - 15.0, rand(30.0) - 15.0, rand(30.0) - 15.0)"), 2.f,
+			TEXT("User.Direction * (90.0 + rand(60.0)) + float3(rand(30.0) - 15.0, rand(30.0) - 15.0, rand(30.0) - 15.0 + User.Lift)"), 2.f,
 			TEXT("float3(0.0, 0.0, 50.0)"), Context);
-		SetSpriteSizeOverLife(System, TEXT("Exhaust"), TEXT("float2(1.0, 1.0) * User.Size * (1.0 + 2.0 * Particles.NormalizedAge)"),
+		SetSpriteSizeOverLife(System, TEXT("Exhaust"), TEXT("float2(1.0, 1.0) * User.Size * (1.0 + 1.33 * Particles.Age)"),
 			Context);
 	}
 	return FinishSystem(System, AssetPath, TEXT("BuildExhaustSystem"), Context);
