@@ -3,6 +3,8 @@
 #include "Engine/Level.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerStart.h"
+#include "LandscapeProxy.h"
+#include "NavMesh/NavMeshBoundsVolume.h"
 
 int32 RTSMaps::ParseTeamTag(FName Tag)
 {
@@ -59,4 +61,34 @@ TMap<int32, const APlayerStart*> RTSMaps::FindStartSpots(const UWorld& World, TA
 		}
 	}
 	return Starts;
+}
+
+FBox2D RTSMaps::FindMapArea(const UWorld& World)
+{
+	FBox2D NavArea(ForceInit);
+	FBox2D LandscapeArea(ForceInit);
+	if (World.PersistentLevel)
+	{
+		for (const AActor* Actor : World.PersistentLevel->Actors)
+		{
+			if (const ANavMeshBoundsVolume* Volume = Cast<ANavMeshBoundsVolume>(Actor))
+			{
+				const FBox Bounds = Volume->GetComponentsBoundingBox(true);
+				NavArea += FBox2D(FVector2D(Bounds.Min), FVector2D(Bounds.Max));
+			}
+			else if (const ALandscapeProxy* Landscape = Cast<ALandscapeProxy>(Actor))
+			{
+				const FBox Bounds = Landscape->GetComponentsBoundingBox(true);
+				LandscapeArea += FBox2D(FVector2D(Bounds.Min), FVector2D(Bounds.Max));
+			}
+		}
+	}
+	const FBox2D Area = NavArea.bIsValid ? NavArea : LandscapeArea;
+	if (!Area.bIsValid)
+	{
+		return Area;
+	}
+	const FVector2D Center = Area.GetCenter();
+	const double HalfSize = 0.5 * FMath::Max(Area.GetSize().X, Area.GetSize().Y);
+	return FBox2D(Center - FVector2D(HalfSize), Center + FVector2D(HalfSize));
 }

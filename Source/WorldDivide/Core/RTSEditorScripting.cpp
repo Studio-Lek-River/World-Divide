@@ -4,12 +4,14 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "ContentStreaming.h"
+#include "Core/RTSMaps.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
 #include "Engine/FontFace.h"
 #include "Engine/SceneCapture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerStart.h"
 #include "ImageCore.h"
 #include "ImageUtils.h"
 #include "Misc/App.h"
@@ -158,6 +160,36 @@ bool URTSEditorScripting::CapturePreview(UObject* WorldContextObject, FBox2D Are
 #else
 	return false;
 #endif
+}
+
+void URTSEditorScripting::ReadMapLayout(UObject* WorldContextObject, FBox2D& OutArea, TArray<FVector>& OutSpotLocations,
+	TArray<FString>& OutProblems)
+{
+	OutArea = FBox2D(ForceInit);
+	OutSpotLocations.Reset();
+	OutProblems.Reset();
+	const UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	if (!World)
+	{
+		OutProblems.Add(TEXT("No level"));
+		return;
+	}
+
+	OutArea = RTSMaps::FindMapArea(*World);
+	if (!OutArea.bIsValid)
+	{
+		OutProblems.Add(TEXT("No NavMeshBoundsVolume and no Landscape to take the map's area from"));
+	}
+	const TMap<int32, const APlayerStart*> Starts = RTSMaps::FindStartSpots(*World, &OutProblems);
+	if (Starts.IsEmpty())
+	{
+		OutProblems.Add(TEXT("No RTSStartSpot (or PlayerStart tagged Team<N>)"));
+	}
+	for (const TPair<int32, const APlayerStart*>& Start : Starts)
+	{
+		OutSpotLocations.SetNum(FMath::Max(OutSpotLocations.Num(), Start.Key + 1));
+		OutSpotLocations[Start.Key] = Start.Value->GetActorLocation();
+	}
 }
 
 bool URTSEditorScripting::BuildFont(UFont* Font, UFontFace* Face)

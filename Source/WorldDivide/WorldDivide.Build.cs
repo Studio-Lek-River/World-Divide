@@ -40,6 +40,9 @@ public class WorldDivide : ModuleRules
 		// The muzzle flash of vehicle guns (#220) is a Niagara system.
 		PrivateDependencyModuleNames.Add("Niagara");
 
+		// A map without a NavMeshBoundsVolume takes its preview area from its Landscape (RTSMaps::FindMapArea, #289).
+		PrivateDependencyModuleNames.Add("Landscape");
+
 		// The HUD reads its layout files at runtime (URTSLayoutWidget), so they ship with the game.
 		RuntimeDependencies.Add("$(ProjectDir)/UI/Layouts/...", StagedFileType.UFS);
 

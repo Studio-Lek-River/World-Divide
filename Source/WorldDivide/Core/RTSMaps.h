@@ -5,7 +5,7 @@
 class APlayerStart;
 class UWorld;
 
-/** What a level says about itself as a map: its start spots, and later (#289) what the lobby and minimap bake from it. */
+/** What a level says about itself as a map: its start spots and the area the lobby's preview and the minimap show (#289). */
 namespace RTSMaps
 {
 	/** The start spot of a PlayerStart tagged "Team<N>", or INDEX_NONE for any other tag. */
@@ -20,4 +20,11 @@ namespace RTSMaps
 	 * PlayerStart uses, goes to OutProblems: Team0..TeamN-1 must all exist once.
 	 */
 	WORLDDIVIDE_API TMap<int32, const APlayerStart*> FindStartSpots(const UWorld& World, TArray<FString>* OutProblems = nullptr);
+
+	/**
+	 * The world XY square a level's preview covers: the bounds of its NavMeshBoundsVolumes (the area the camera pans over),
+	 * else of its Landscape, squared around their centre. Reads the persistent level, as FindStartSpots. Invalid when the level
+	 * has neither.
+	 */
+	WORLDDIVIDE_API FBox2D FindMapArea(const UWorld& World);
 }

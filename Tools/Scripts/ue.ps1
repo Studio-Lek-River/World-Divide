@@ -14,6 +14,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task t
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Smoke.AIvsAI -Cvars rts.Nav.MoveRequestsPerFrame=6
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup -Render
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bakemap -Map /Game/Maps/L_RiverFord -Render
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task editor
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots -Panel ResourceBar
@@ -48,6 +49,9 @@ tests in one and the rest in the other; -Shards 1 keeps it in one editor. A watc
 -TimeoutMinutes (default 6 for fast, 15 for full), names the test it hung in and exits 5. Every run prints its slowest tests and names any test over 8 s without a [Slow] tag. The
 editor's own output goes to Saved/Logs/AutomationRun*.log.stdout; the run prints only its result.
 Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
+Bakemap bakes the level -Map (/Game/Maps/<Level> or <Level>) into its map data asset DA_Map<Name>, or -DataAsset DA_<Name>:
+its preview (rendered with -Render, drawn without), the area the preview covers and its start spots (Tools/Editor/bake_map.py,
+docs/world/maps/AUTHORING_A_MAP.md). It exits 3 like setup when the asset or the preview texture is read-only.
 Editor opens the editor with the Unreal MCP server at http://127.0.0.1:8000/mcp (docs/ui/AI_TEAM.md); test and setup run without it.
 Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in the UI test state for each faction look at
 1920x1080, 2560x1440, 3440x1440 and 1680x1050 to Saved/UIShots/HUD, or with -Panel to Saved/UIShots/<Panel> with a crop of that panel;
@@ -108,7 +112,7 @@ Packaudit reads the local marketplace packs in Content/ into Saved/PackAudit/ an
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit', 'bakemap')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -169,9 +173,15 @@ param(
 
 	[string]$Path = '',
 
-	[ValidatePattern('^L_\w+$')]
-	[string]$Map = 'L_Bench'
+	[ValidatePattern('^(L_\w+|/Game(/\w+)+)$')]
+	[string]$Map = 'L_Bench',
+
+	[ValidatePattern('^(DA_\w+)?$')]
+	[string]$DataAsset = ''
 )
+
+# Whether -Map was given; bakemap has no default level (bench's L_Bench is not one to bake by accident).
+$MapGiven = $PSBoundParameters.ContainsKey('Map')
 
 $ErrorActionPreference = 'Stop'
 
@@ -220,8 +230,9 @@ function Invoke-Build {
 	Write-Host 'BUILD SUCCEEDED'
 }
 
-function Invoke-Setup {
-	$Script = Join-Path $RepoRoot 'Tools\Editor\setup_testmap.py'
+# Runs an editor Python script as a commandlet, as setup does. $Name is the task's name in its result line. Exits 3 when the
+# script lists assets it must rewrite but cannot because they are read-only (LFS lockable, not locked).
+function Invoke-EditorScript([string]$Script, [string]$Name) {
 	# Written by the script when assets it must rewrite are read-only (LFS lockable, not locked).
 	$ReadOnlyReport = Join-Path $RepoRoot 'Saved\Setup\ReadOnlyAssets.txt'
 	if (Test-Path $ReadOnlyReport) { Remove-Item -Force $ReadOnlyReport }
@@ -231,18 +242,40 @@ function Invoke-Setup {
 	if (Test-Path $ReadOnlyReport) {
 		$Files = @(Get-Content $ReadOnlyReport | Where-Object { $_ })
 		Write-Host ''
-		Write-Host 'SETUP BLOCKED: these assets must be rewritten but are read-only (LFS lockable, not locked by you):'
+		Write-Host "$Name BLOCKED: these assets must be rewritten but are read-only (LFS lockable, not locked by you):"
 		$Files | ForEach-Object { Write-Host "  $_" }
-		Write-Host 'Nothing was written. Lock them, rerun setup, commit and push, then unlock:'
+		Write-Host "Nothing was written. Lock them, rerun $($Name.ToLower()), commit and push, then unlock:"
 		$Files | ForEach-Object { Write-Host "  git lfs lock $_" }
 		$Files | ForEach-Object { Write-Host "  git lfs unlock $_" }
 		exit 3
 	}
 	if ($LASTEXITCODE -ne 0) {
-		Write-Host "SETUP FAILED (exit $LASTEXITCODE)"
+		Write-Host "$Name FAILED (exit $LASTEXITCODE)"
 		exit $LASTEXITCODE
 	}
-	Write-Host 'SETUP SUCCEEDED'
+	Write-Host "$Name SUCCEEDED"
+}
+
+function Invoke-Setup {
+	Invoke-EditorScript (Join-Path $RepoRoot 'Tools\Editor\setup_testmap.py') 'SETUP'
+}
+
+# Bakes the preview, preview area and start spots of the level -Map (L_Name or a /Game path) into its map data asset
+# (Tools/Editor/bake_map.py, #289).
+function Invoke-BakeMap {
+	if (-not $MapGiven) {
+		Write-Host 'BAKEMAP FAILED: name the level with -Map /Game/Maps/<Level> (or -Map <Level>).'
+		exit 1
+	}
+	$LevelPath = if ($Map.StartsWith('/')) { $Map } else { "/Game/Maps/$Map" }
+	$env:WD_BAKE_MAP = $LevelPath
+	$env:WD_BAKE_MAP_DATA = $DataAsset
+	try {
+		Invoke-EditorScript (Join-Path $RepoRoot 'Tools\Editor\bake_map.py') 'BAKEMAP'
+	}
+	finally {
+		Remove-Item Env:WD_BAKE_MAP, Env:WD_BAKE_MAP_DATA -ErrorAction SilentlyContinue
+	}
 }
 
 # The tests -Tier fast leaves out: Config/Tests/Tags.ini, which the automation framework reads itself.
@@ -1117,4 +1150,5 @@ switch ($Task) {
 	'uibindings' { Invoke-UIBindings }
 	'uicheck' { Invoke-UICheck }
 	'packaudit' { Invoke-PackAudit }
+	'bakemap' { Invoke-BakeMap }
 }

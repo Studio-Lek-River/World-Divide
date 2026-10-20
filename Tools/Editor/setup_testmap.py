@@ -27,14 +27,14 @@ import inspect
 import json
 import math
 import os
-import struct
 import subprocess
 import sys
-import zlib
 
 import unreal
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import bake_map  # noqa: E402
+import map_preview  # noqa: E402
 import placeholder_art as art  # noqa: E402
 import placeholder_icons  # noqa: E402
 import ui_sources  # noqa: E402
@@ -68,8 +68,6 @@ TEAM_TINT = 0.7
 
 # Package metadata key holding the hash of the code that built the asset.
 HASH_TAG = "SetupHash"
-# Package metadata key telling whether a map preview was rendered or drawn.
-PREVIEW_SOURCE_TAG = "PreviewSource"
 # The navmesh a map is saved with is serialized for the engine it was built in, so the maps are rebuilt when the engine
 # moves to another major or minor version.
 ENGINE_VERSION = ".".join(unreal.SystemLibrary.get_engine_version().split(".")[:2])
@@ -160,18 +158,21 @@ def spec_hash(functions, *values):
     return digest.hexdigest()
 
 
-def plan_data_asset(name, directory, data_class, properties):
-    """Loads or creates a data asset and records the properties it should have; plan_data_assets queues the save."""
+def load_data_asset(name, directory, data_class):
+    """Loads or creates a data asset; returns it and whether it is already on disk."""
     path = f"{directory}/{name}"
     planned.add(path)
-    exists = assets.does_asset_exist(path)
-    if exists:
-        asset = assets.load_asset(path)
-    else:
-        factory = unreal.DataAssetFactory()
-        factory.set_editor_property("data_asset_class", data_class)
-        asset = asset_tools.create_asset(name, directory, data_class, factory)
-    data_assets[path] = (asset, exists, dict(properties))
+    if assets.does_asset_exist(path):
+        return assets.load_asset(path), True
+    factory = unreal.DataAssetFactory()
+    factory.set_editor_property("data_asset_class", data_class)
+    return asset_tools.create_asset(name, directory, data_class, factory), False
+
+
+def plan_data_asset(name, directory, data_class, properties):
+    """Loads or creates a data asset and records the properties it should have; plan_data_assets queues the save."""
+    asset, exists = load_data_asset(name, directory, data_class)
+    data_assets[f"{directory}/{name}"] = (asset, exists, dict(properties))
     return asset
 
 
@@ -1639,136 +1640,51 @@ def make_skirmish_map(spec, builder, wall, crate, ground, water):
     make_map_preview(spec, digest)
 
 
-PREVIEW_SIZE = 256
-PREVIEW_GROUND = (86, 98, 70)
-PREVIEW_OBSTACLE = (58, 58, 64)
-PREVIEW_WATER = (40, 70, 110)
-PREVIEW_SUPPLY = (214, 176, 62)
-
-
-def preview_area(spec):
-    """The world XY rectangle the map's preview covers, (min x, min y, max x, max y): its whole ground."""
-    return (-spec.half_size, -spec.half_size, spec.half_size, spec.half_size)
-
-
-def preview_position(area, x, y):
-    """Where world (x, y) is on a preview of area, from the left and from the top in 0..1, as
-    URTSMapData::ToPreviewPosition: world +X is up, world +Y is right."""
-    min_x, min_y, max_x, max_y = area
-    return (y - min_y) / (max_y - min_y), (max_x - x) / (max_x - min_x)
-
-
-def write_png(file_name, size, pixels):
-    """An 8-bit RGB PNG of size x size pixels, pixels being the rows top to bottom as bytearrays."""
-    def chunk(kind, data):
-        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
-    raw = b"".join(b"\x00" + bytes(row) for row in pixels)
-    with open(file_name, "wb") as file:
-        file.write(b"\x89PNG\r\n\x1a\n")
-        file.write(chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0)))
-        file.write(chunk(b"IDAT", zlib.compress(raw, 9)))
-        file.write(chunk(b"IEND", b""))
-
-
-def draw_map_preview(area, file_name):
-    """The loaded level as a PNG at file_name: the ground with its obstacles, water and supply sources, drawn from their
-    bounds, for runs without a renderer."""
-    pixels = [bytearray(PREVIEW_GROUND * PREVIEW_SIZE) for _ in range(PREVIEW_SIZE)]
-
-    def fill(actor, color):
-        origin, extent = actor.get_actor_bounds(False)
-        left, top = preview_position(area, origin.x + extent.x, origin.y - extent.y)
-        right, bottom = preview_position(area, origin.x - extent.x, origin.y + extent.y)
-        columns = range(max(0, int(left * PREVIEW_SIZE)), min(PREVIEW_SIZE, math.ceil(right * PREVIEW_SIZE)))
-        for row in range(max(0, int(top * PREVIEW_SIZE)), min(PREVIEW_SIZE, math.ceil(bottom * PREVIEW_SIZE))):
-            for column in columns:
-                pixels[row][column * 3:column * 3 + 3] = bytes(color)
-
-    # Sorted, so the image does not depend on the order the level lists its actors in.
-    for actor in sorted(actors.get_all_level_actors(), key=lambda actor: actor.get_actor_label()):
-        label = actor.get_actor_label()
-        if isinstance(actor, unreal.StaticMeshActor) and label.startswith(("Wall_", "Block_")):
-            fill(actor, PREVIEW_OBSTACLE)
-        elif isinstance(actor, unreal.StaticMeshActor) and label.startswith("Water_"):
-            fill(actor, PREVIEW_WATER)
-        elif isinstance(actor, unreal.RTSSupplySource):
-            fill(actor, PREVIEW_SUPPLY)
-    write_png(file_name, PREVIEW_SIZE, pixels)
-
-
-def build_map_preview(spec, texture_path, digest):
-    """A top-down image of the saved level of spec, rendered over its preview area when the run has a renderer and
-    drawn otherwise."""
-    if not levels.load_level(spec.path):
-        raise RuntimeError(f"Could not load {spec.path}")
-    directory, name = texture_path.rsplit("/", 1)
-    source = os.path.join(PROJECT_DIR, "Saved", "Setup", "Previews", f"{name}.png")
-    os.makedirs(os.path.dirname(source), exist_ok=True)
-    rendered = unreal.RTSEditorScripting.can_render()
-    if rendered:
-        world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
-        if not unreal.RTSEditorScripting.capture_preview(world, preview_box(preview_area(spec)), PREVIEW_SIZE, source):
-            raise RuntimeError(f"Could not render {spec.path}")
-    else:
-        draw_map_preview(preview_area(spec), source)
-
-    task = unreal.AssetImportTask()
-    task.filename = source
-    task.destination_path = directory
-    task.destination_name = name
-    task.automated = True
-    task.replace_existing = True
-    task.save = False
-    asset_tools.import_asset_tasks([task])
-    texture = unreal.load_asset(texture_path)
-    if not isinstance(texture, unreal.Texture2D):
-        raise RuntimeError(f"Could not import {source}")
-    # Shown as is in the lobby: no mips, no compression artefacts on the thin walls.
-    texture.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_UI)
-    texture.set_editor_property("mip_gen_settings", unreal.TextureMipGenSettings.TMGS_NO_MIPMAPS)
-    texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_EDITOR_ICON)
-    assets.set_metadata_tag(texture, HASH_TAG, digest)
-    assets.set_metadata_tag(texture, PREVIEW_SOURCE_TAG, "Rendered" if rendered else "Drawn")
-    if not assets.save_loaded_asset(texture, only_if_is_dirty=False):
-        raise RuntimeError(f"Could not save {texture_path}")
-
-
-def map_preview_path(map_path):
-    return f"{MAP_DATA_DIR}/T_Preview_{map_path.rsplit('/', 1)[1]}"
-
-
-def preview_box(area):
-    min_x, min_y, max_x, max_y = area
-    return make_struct(unreal.Box2D, {"min": unreal.Vector2D(min_x, min_y), "max": unreal.Vector2D(max_x, max_y),
-                                      "is_valid": True})
-
-
 def make_map_preview(spec, map_digest):
-    """Queued after the level, so it shows the level as just built; rebuilt whenever the level is. A drawn preview is
-    rendered again by a run that has a renderer; a run without one keeps a rendered preview of an unchanged level."""
-    texture_path = map_preview_path(spec.path)
+    """Queued after the level, so it shows the level as just built (bake_map.py); rebuilt whenever the level is. A drawn
+    preview is rendered again by a run that has a renderer; a run without one keeps a rendered preview of an unchanged level."""
+    texture_path = map_preview.map_preview_path(spec.path)
     can_render = unreal.RTSEditorScripting.can_render()
-    plan_rebuild(texture_path, ".uasset", lambda digest: build_map_preview(spec, texture_path, digest),
-                 spec_hash([build_map_preview, draw_map_preview, preview_area, preview_box, preview_position, write_png], map_digest,
-                           PREVIEW_SIZE, PREVIEW_GROUND, PREVIEW_OBSTACLE, PREVIEW_WATER, PREVIEW_SUPPLY),
-                 lambda texture: can_render and assets.get_metadata_tag(texture, PREVIEW_SOURCE_TAG) != "Rendered")
+
+    def build(digest):
+        area, _ = bake_map.read_layout(spec.path)
+        texture = map_preview.build_preview(spec.path, area, texture_path)
+        assets.set_metadata_tag(texture, HASH_TAG, digest)
+        if not assets.save_loaded_asset(texture, only_if_is_dirty=False):
+            raise RuntimeError(f"Could not save {texture_path}")
+
+    plan_rebuild(texture_path, ".uasset", build,
+                 spec_hash([make_map_preview, bake_map.read_layout, map_preview.build_preview, map_preview.draw_map_preview,
+                            map_preview.preview_box, map_preview.preview_position, map_preview.write_png], map_digest,
+                           map_preview.PREVIEW_SIZE, map_preview.PREVIEW_GROUND, map_preview.PREVIEW_OBSTACLE,
+                           map_preview.PREVIEW_WATER, map_preview.PREVIEW_SUPPLY),
+                 lambda texture: can_render and assets.get_metadata_tag(texture, map_preview.PREVIEW_SOURCE_TAG) != "Rendered")
 
 
 def make_map_data(name, display_name, spec, default_seats):
-    """default_seats: (seat type, start spot or -1 for random) pairs, at most one per start spot. The start spot positions
-    come from spec's spots, which the level's PlayerStarts tagged Team<N> are placed by."""
-    preview = map_preview_path(spec.path)
-    area = preview_area(spec)
-    return plan_data_asset(name, MAP_DATA_DIR, unreal.RTSMapData, {
+    """default_seats: (seat type, start spot or -1 for random) pairs, at most one per start spot. The preview area and the
+    start spot positions are baked from the level (bake_map.py): read now from a level this run leaves as it is, or after
+    the rebuild of one it builds again."""
+    properties = {
         "display_name": unreal.Text(display_name),
-        "map": unreal.SoftObjectPath(f"{spec.path}.{spec.path.rsplit('/', 1)[1]}"),
-        "start_spots": len(spec.spots),
         "default_seats": [make_struct(unreal.RTSSeat, {"type": seat_type, "start_spot": spot})
                           for seat_type, spot in default_seats],
-        "preview": unreal.SoftObjectPath(f"{preview}.{preview.rsplit('/', 1)[1]}"),
-        "preview_area": preview_box(area),
-        "start_spot_positions": [unreal.Vector2D(*preview_position(area, x, y)) for _, x, y, _ in spec.spots],
-    })
+    }
+    if not any(entry[0] == spec.path for entry in pending):
+        properties.update(bake_map.baked_properties(spec.path, *bake_map.read_layout(spec.path)))
+        return plan_data_asset(name, MAP_DATA_DIR, unreal.RTSMapData, properties)
+
+    asset, exists = load_data_asset(name, MAP_DATA_DIR, unreal.RTSMapData)
+    path = f"{MAP_DATA_DIR}/{name}"
+
+    def write():
+        properties.update(bake_map.baked_properties(spec.path, *bake_map.read_layout(spec.path)))
+        for key, value in properties.items():
+            asset.set_editor_property(key, value)
+        if not assets.save_loaded_asset(asset, only_if_is_dirty=False):
+            raise RuntimeError(f"Could not save {path}")
+    pending.append((path, ".uasset", exists, write))
+    return asset
 
 
 def build_menu_map(path, game_mode, digest):

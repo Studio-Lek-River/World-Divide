@@ -45,6 +45,15 @@ public:
 	static bool CapturePreview(UObject* WorldContextObject, FBox2D Area, int32 Size, const FString& FileName);
 
 	/**
+	 * What bake_map.py (#289) reads from WorldContextObject's level: OutArea, the square its preview covers
+	 * (RTSMaps::FindMapArea), and OutSpotLocations, the location of start spot N at index N (RTSMaps::FindStartSpots). Each
+	 * start spot used twice or left out, and a level with no area or no start spots, goes to OutProblems. Returns nothing:
+	 * Python drops the out parameters of a function that returns false.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static void ReadMapLayout(UObject* WorldContextObject, FBox2D& OutArea, TArray<FVector>& OutSpotLocations, TArray<FString>& OutProblems);
+
+	/**
 	 * Makes Font a runtime font whose default typeface is Face alone, for the UI fonts setup_testmap.py imports: Python
 	 * cannot set the font face of a typeface entry. Returns false without a font or a face.
 	 */

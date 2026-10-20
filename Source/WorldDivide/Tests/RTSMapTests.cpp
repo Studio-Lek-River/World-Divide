@@ -8,6 +8,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerStart.h"
 #include "Misc/AutomationTest.h"
+#include "NavMesh/NavMeshBoundsVolume.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "Navigation/RTSNavAgents.h"
 #include "Tests/RTSTestFlags.h"
@@ -224,6 +225,54 @@ bool FRTSMapPreviewCameraTest::RunTest(const FString& Parameters)
 			const FVector2D Marker = Map->StartSpotPositions[Start.Key];
 			TestTrue(FString::Printf(TEXT("%s: Team%d is at %s on the rendered preview, its marker at %s"), *Name, Start.Key,
 				*OnImage.ToString(), *Marker.ToString()), OnImage.Equals(Marker, 0.001));
+		}
+	}
+	return true;
+}
+
+/**
+ * Every lobby map and test map's preview covers its whole level, as bake_map.py bakes it (#289): its PreviewArea contains the
+ * level's NavMeshBoundsVolumes, the area the camera pans over, and every start spot.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMapPreviewAreaTest, "WorldDivide.Maps.PreviewArea", TestFlags)
+
+bool FRTSMapPreviewAreaTest::RunTest(const FString& Parameters)
+{
+	for (const TSoftObjectPtr<URTSMapData>& MapPtr : RTSTests::GetCheckedMaps())
+	{
+		const URTSMapData* Map = MapPtr.LoadSynchronous();
+		if (!TestNotNull(FString::Printf(TEXT("%s loads"), *MapPtr.ToString()), Map))
+		{
+			continue;
+		}
+		const FString Name = Map->GetName();
+		UPackage* Package = LoadPackage(nullptr, *Map->Map.GetLongPackageName(), LOAD_None);
+		const UWorld* World = Package ? UWorld::FindWorldInPackage(Package) : nullptr;
+		if (!TestNotNull(FString::Printf(TEXT("%s: its level loads"), *Name), World) || !World->PersistentLevel)
+		{
+			continue;
+		}
+
+		// A centimetre of slack for the float round trip through the data asset.
+		const FBox2D Area = Map->PreviewArea.ExpandBy(1.0);
+		bool bHasVolume = false;
+		for (const AActor* Actor : World->PersistentLevel->Actors)
+		{
+			if (const ANavMeshBoundsVolume* Volume = Cast<ANavMeshBoundsVolume>(Actor))
+			{
+				bHasVolume = true;
+				const FBox Bounds = Volume->GetComponentsBoundingBox(true);
+				TestTrue(FString::Printf(TEXT("%s: the preview area %s contains %s (%s to %s)"), *Name, *Map->PreviewArea.ToString(),
+					*Volume->GetName(), *FVector2D(Bounds.Min).ToString(), *FVector2D(Bounds.Max).ToString()),
+					Area.IsInsideOrOn(FVector2D(Bounds.Min)) && Area.IsInsideOrOn(FVector2D(Bounds.Max)));
+			}
+		}
+		TestTrue(FString::Printf(TEXT("%s: its level has a NavMeshBoundsVolume"), *Name), bHasVolume);
+
+		for (const TPair<int32, FVector>& Start : FindStartSpots(*World))
+		{
+			TestTrue(FString::Printf(TEXT("%s: the preview area %s contains Team%d at %s"), *Name, *Map->PreviewArea.ToString(), Start.Key,
+				*FVector2D(Start.Value).ToString()), Area.IsInsideOrOn(FVector2D(Start.Value)));
 		}
 	}
 	return true;
