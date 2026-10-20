@@ -34,13 +34,15 @@ namespace RTSCommandPanel
 			const FKey Own = Button.Hotkey;
 			if (Own.IsValid())
 			{
-				if (!Reserved.Contains(Own) && !Taken.Contains(Own))
+				// A modifier is never a command's key: Alt with the middle mouse button rotates the camera.
+				if (!Own.IsModifierKey() && !Reserved.Contains(Own) && !Taken.Contains(Own))
 				{
 					Taken.Add(Own);
 					continue;
 				}
 				OutWarnings.Add(FString::Printf(TEXT("Command %s: hotkey %s is %s; it falls back to its position key."),
-					*Button.Id.ToString(), *Own.ToString(), Reserved.Contains(Own) ? TEXT("reserved") : TEXT("taken by an earlier command")));
+					*Button.Id.ToString(), *Own.ToString(), Own.IsModifierKey() ? TEXT("a modifier key")
+					: Reserved.Contains(Own) ? TEXT("reserved") : TEXT("taken by an earlier command")));
 			}
 			const FKey PositionKey = GetPositionKey(Position);
 			Button.Hotkey = PositionKey.IsValid() && !Taken.Contains(PositionKey) ? PositionKey : FKey();

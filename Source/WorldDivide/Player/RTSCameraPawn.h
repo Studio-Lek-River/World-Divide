@@ -130,6 +130,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<USpringArmComponent> SpringArm;
@@ -189,7 +190,13 @@ private:
 	/** The ground's height under Location, ignoring buildings so the pivot never climbs a roof; unset over nothing. */
 	TOptional<float> TraceGround(const FVector& Location);
 
-	/** Location moved so the view footprint stays within PanArea, or centred on it along an axis where it is larger. */
+	/** Checks the ground again when a building appears, so a still camera lifts over it. */
+	void OnActorSpawned(AActor* Actor);
+
+	/**
+	 * Location moved so the view footprint stays within PanArea's extent along the camera's right and forward axes, or
+	 * centred on it along an axis where it is larger.
+	 */
 	FVector ClampToPanArea(const FVector& Location) const;
 
 	/** The view ray through ScreenPoint from the camera goal. */
@@ -227,4 +234,5 @@ private:
 	/** Seconds left to keep tracing after the camera last moved. */
 	float SettleTime = 0.f;
 	int32 TraceCount = 0;
+	FDelegateHandle BuildingSpawnedHandle;
 };

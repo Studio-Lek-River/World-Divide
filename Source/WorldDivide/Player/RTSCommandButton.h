@@ -89,8 +89,8 @@ namespace RTSCommandPanel
 
 	/**
 	 * Gives each button its key, in order: its own Hotkey as the data set it, else its position key 1-9. An own key that is
-	 * Reserved, or already taken by an earlier button, falls back to the position key and adds a warning to OutWarnings; a
-	 * position key that is taken leaves the button without one. Unit orders keep their keys, which the controller binds itself.
+	 * Reserved, a modifier key (Alt, Ctrl, Shift, Cmd: Alt+MMB rotates the camera), or already taken by an earlier button,
+	 * falls back to the position key and adds a warning to OutWarnings; a position key that is taken leaves the button without one. Unit orders keep their keys, which the controller binds itself.
 	 */
 	WORLDDIVIDE_API void ResolveHotkeys(TArray<FRTSCommandButton>& Buttons, const TSet<FKey>& Reserved, TArray<FString>& OutWarnings);
 }

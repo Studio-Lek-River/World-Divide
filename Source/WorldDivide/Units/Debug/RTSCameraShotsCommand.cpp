@@ -35,10 +35,10 @@
  * wide an M20, a tank and a soldier standing broadside at the view's centre appear. With -RTSCameraShotsQuit on the
  * command line the game quits when done, with exit code 1 on failure.
  *
- * On WD_RiverCrossing_01 (ue.ps1 -Task camerashots -Map /Game/Maps/WD_RiverCrossing_01, #295) it stages nothing and
- * pictures the camera as it is now over the landscape at 1920x1080: the west hill, the north bridge, the west base turned
- * 45 degrees, and the map's south-west corner straight and turned 45 degrees, each at the closest, default and farthest
- * zoom.
+ * On WD_RiverCrossing_01 (ue.ps1 -Task camerashots -Map /Game/Maps/WD_RiverCrossing_01, #295) it stages only an M20 by
+ * the map's south-west corner, so the edge shots show where the map ends (#339), and pictures the camera as it is now over
+ * the landscape at 1920x1080: the west hill, the north bridge, the west base turned 45 degrees, and the map's south-west
+ * corner straight and turned 45 degrees, each at the closest, default and farthest zoom.
  */
 namespace RTSCameraShots
 {
@@ -78,20 +78,27 @@ namespace RTSCameraShots
 	/** The battlefield view: past the formation towards the middle of the map. */
 	const FVector BattlefieldCentre(-6000.f, 0.f, 0.f);
 
-	/** River Crossing's scenes (rivercrossing_greybox.py, metres there): where, and the camera's yaw. */
+	/**
+	 * River Crossing's scenes (rivercrossing_greybox.py, metres there): where, and the camera's yaw. A scene on the map's
+	 * border gets a marker unit just inside it, so the picture shows where the map ends rather than plain grass.
+	 */
 	struct FLandscapeScene
 	{
 		const TCHAR* Name;
 		FVector2D Focus;
 		float Yaw;
+		bool bBorder = false;
 	};
 	const FLandscapeScene RiverCrossingScenes[] = {
 		{ TEXT("hills"), FVector2D(-35000.f, -65000.f), 0.f },
 		{ TEXT("bridge"), FVector2D(0.f, 30000.f), 0.f },
 		{ TEXT("base_yaw45"), FVector2D(-72000.f, -22000.f), 45.f },
-		{ TEXT("edge"), FVector2D(-100000.f, -100000.f), 0.f },
-		{ TEXT("edge_yaw45"), FVector2D(-100000.f, -100000.f), 45.f },
+		{ TEXT("edge"), FVector2D(-100000.f, -100000.f), 0.f, true },
+		{ TEXT("edge_yaw45"), FVector2D(-100000.f, -100000.f), 45.f, true },
 	};
+	/** How far inside the border, along each axis towards the map's middle, the marker stands. */
+	constexpr float BorderMarkerInset = 3000.f;
+	const TCHAR* BorderMarker = TEXT("DA_TestM20Guardian");
 
 	bool IsRiverCrossing(const UWorld& World)
 	{
@@ -274,6 +281,7 @@ namespace RTSCameraShots
 				Profiles = { { TEXT("Final"), *OwnTuning } };
 				MeasureUnits();
 				BuildRiverCrossingShots();
+				StageBorderMarkers();
 				GoTo(EStep::Stage);
 				return true;
 			}
@@ -379,6 +387,26 @@ namespace RTSCameraShots
 			}
 		}
 
+		/** A marker unit just inside the border at each border scene's focus; staged at runtime, the map is not changed. */
+		void StageBorderMarkers()
+		{
+			URTSUnitData* Data = LoadUnitData(BorderMarker);
+			TSet<FVector2D> Placed;
+			for (const FLandscapeScene& Scene : RiverCrossingScenes)
+			{
+				if (!Scene.bBorder || !Data || Placed.Contains(Scene.Focus))
+				{
+					continue;
+				}
+				Placed.Add(Scene.Focus);
+				const FVector2D Inward(-FMath::Sign(Scene.Focus.X), -FMath::Sign(Scene.Focus.Y));
+				if (!SpawnUnit(Data, Scene.Focus + Inward * BorderMarkerInset))
+				{
+					UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.CameraShots: could not place the border marker %s"), BorderMarker);
+				}
+			}
+		}
+
 		void BuildShots()
 		{
 			const TPair<const TCHAR*, FVector> Scenes[] = { { TEXT("vehicle"), Vehicle }, { TEXT("formation"), FormationCentre },
@@ -464,16 +492,22 @@ namespace RTSCameraShots
 			return Origin + Direction * ((Z - Origin.Z) / Direction.Z);
 		}
 
-		/** How wide Hull appears standing broadside at Centre, its length across the screen, in pixels; negative off screen. */
-		float GetBroadsideWidth(const FBox& Hull, const FVector& Centre) const
+		/**
+		 * How wide Hull appears standing broadside at Centre, its length across the screen, in pixels; negative off screen.
+		 * Broadside to the camera's yaw, so the turned shots measure the same as the straight ones.
+		 */
+		float GetBroadsideWidth(const FBox& Hull, const FVector& Centre, float Yaw) const
 		{
-			// The camera looks along +X, so world Y runs across the screen.
-			const FVector Extent(Hull.GetExtent().Y, Hull.GetExtent().X, Hull.GetExtent().Z);
-			const FVector Middle = Centre + FVector(0.f, 0.f, Extent.Z);
+			// The hull's length runs along the camera's right axis, across the screen; its width along the camera's forward.
+			const FRotator YawOnly(0.f, Yaw, 0.f);
+			const FVector Across = YawOnly.RotateVector(FVector::RightVector) * Hull.GetExtent().X;
+			const FVector Deep = YawOnly.RotateVector(FVector::ForwardVector) * Hull.GetExtent().Y;
+			const FVector Up(0.f, 0.f, Hull.GetExtent().Z);
+			const FVector Middle = Centre + Up;
 			FBox2D Rect(ForceInit);
 			for (int32 Corner = 0; Corner < 8; ++Corner)
 			{
-				const FVector Point = Middle + Extent * FVector(Corner & 1 ? 1.f : -1.f, Corner & 2 ? 1.f : -1.f, Corner & 4 ? 1.f : -1.f);
+				const FVector Point = Middle + Deep * (Corner & 1 ? 1.f : -1.f) + Across * (Corner & 2 ? 1.f : -1.f) + Up * (Corner & 4 ? 1.f : -1.f);
 				FVector2D OnScreen;
 				if (!GetController()->ProjectWorldLocationToScreen(Point, OnScreen, /*bPlayerViewportRelative*/ true))
 				{
@@ -507,7 +541,7 @@ namespace RTSCameraShots
 				Camera->GetTuning().PanSpeed * Camera->GetZoom() / Camera->GetDefaultZoom());
 			for (const TPair<FString, FBox>& Unit : Measured)
 			{
-				const float Width = GetBroadsideWidth(Unit.Value, Ground);
+				const float Width = GetBroadsideWidth(Unit.Value, Ground, Camera->GetActorRotation().Yaw);
 				Row += FString::Printf(TEXT(",%.0f,%.2f"), Width, Width >= 0.f ? 100.f * Width / Size.X : -1.f);
 			}
 			Rows.Add(Row);

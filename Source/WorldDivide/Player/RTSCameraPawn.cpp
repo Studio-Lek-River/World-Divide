@@ -70,10 +70,28 @@ void ARTSCameraPawn::BeginPlay()
 	Super::BeginPlay();
 
 	UpdatePanArea();
+	// A building placed under a still camera must lift it, without the camera tracing every tick to notice. On a client
+	// a replicated building spawns through the same world, so this hears those too.
+	BuildingSpawnedHandle = GetWorld()->AddOnActorSpawnedHandler(FOnActorSpawned::FDelegate::CreateUObject(this, &ARTSCameraPawn::OnActorSpawned));
 	TargetZoom = FMath::Clamp(DefaultZoom, MinZoom, MaxZoom);
 	SpringArm->TargetArmLength = TargetZoom;
 	SetYawNow(GetActorRotation().Yaw);
 	JumpTo(GetActorLocation());
+}
+
+void ARTSCameraPawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorld()->RemoveOnActorSpawnedHandler(BuildingSpawnedHandle);
+	BuildingSpawnedHandle.Reset();
+	Super::EndPlay(EndPlayReason);
+}
+
+void ARTSCameraPawn::OnActorSpawned(AActor* Actor)
+{
+	if (Cast<ARTSBuilding>(Actor))
+	{
+		SettleTime = FMath::Max(SettleTime, GetDefault<URTSCameraSettings>()->TraceSettleSeconds);
+	}
 }
 
 void ARTSCameraPawn::UpdatePanArea()
@@ -275,22 +293,38 @@ void ARTSCameraPawn::UpdateArm(bool bTrace)
 
 FVector ARTSCameraPawn::ClampToPanArea(const FVector& Location) const
 {
+	// Along the camera's own right and forward axes, so a turned view can still bring the map's corners on screen: the
+	// footprint must stay within the pan area's extent along each axis, not within the world box around a turned trapezoid.
 	// The footprint moves with the pivot, so it is worked out once where the pawn stands and shifted to Location.
-	const FBox2D View = GetViewFootprintBounds().ShiftBy(FVector2D(Location) - FVector2D(GetActorLocation()));
+	const FRotator YawOnly(0.f, GetActorRotation().Yaw, 0.f);
+	const FVector2D Axes[] = { FVector2D(YawOnly.RotateVector(FVector::RightVector)), FVector2D(YawOnly.RotateVector(FVector::ForwardVector)) };
+	const FVector2D Shift = FVector2D(Location) - FVector2D(GetActorLocation());
+	const TStaticArray<FVector, 4> Footprint = GetViewFootprint();
+	const FVector2D AreaCorners[] = { PanArea.Min, FVector2D(PanArea.Max.X, PanArea.Min.Y), PanArea.Max, FVector2D(PanArea.Min.X, PanArea.Max.Y) };
 	FVector2D Offset = FVector2D::ZeroVector;
-	for (int32 Axis = 0; Axis < 2; ++Axis)
+	for (const FVector2D& Axis : Axes)
 	{
-		if (View.Max[Axis] - View.Min[Axis] > PanArea.Max[Axis] - PanArea.Min[Axis])
+		FFloatInterval View;
+		for (const FVector& Corner : Footprint)
 		{
-			Offset[Axis] = PanArea.GetCenter()[Axis] - View.GetCenter()[Axis];
+			View.Include(float((FVector2D(Corner) + Shift) | Axis));
 		}
-		else if (View.Min[Axis] < PanArea.Min[Axis])
+		FFloatInterval Area;
+		for (const FVector2D& Corner : AreaCorners)
 		{
-			Offset[Axis] = PanArea.Min[Axis] - View.Min[Axis];
+			Area.Include(float(Corner | Axis));
 		}
-		else if (View.Max[Axis] > PanArea.Max[Axis])
+		if (View.Size() > Area.Size())
 		{
-			Offset[Axis] = PanArea.Max[Axis] - View.Max[Axis];
+			Offset += Axis * (Area.Interpolate(0.5f) - View.Interpolate(0.5f));
+		}
+		else if (View.Min < Area.Min)
+		{
+			Offset += Axis * (Area.Min - View.Min);
+		}
+		else if (View.Max > Area.Max)
+		{
+			Offset += Axis * (Area.Max - View.Max);
 		}
 	}
 	return Location + FVector(Offset, 0.f);
@@ -303,8 +337,13 @@ void ARTSCameraPawn::AddPanInput(const FVector2D& Input)
 
 void ARTSCameraPawn::AddZoomInput(float Steps)
 {
+	const float Before = TargetZoom;
 	TargetZoom = FMath::Clamp(TargetZoom * FMath::Pow(1.f + ZoomStepFraction, -Steps), MinZoom, MaxZoom);
-	ZoomFocus.Reset();
+	// A notch against the zoom limit changes nothing, so the focus a notch before it set keeps the cursor's point fixed.
+	if (!FMath::IsNearlyEqual(TargetZoom, Before))
+	{
+		ZoomFocus.Reset();
+	}
 }
 
 void ARTSCameraPawn::AddZoomInput(float Steps, const FVector2D& ScreenPoint)

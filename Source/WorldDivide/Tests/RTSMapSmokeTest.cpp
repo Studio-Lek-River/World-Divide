@@ -190,26 +190,50 @@ namespace RTSMapSmokeTest
 		}
 
 		/**
-		 * The ground the camera's view shows reaches Corner of the ground, or past it by no more than its EdgeMargin along
-		 * each axis (#295); along an axis where the view is wider than the ground and its margins, it is centred instead.
+		 * Along each of the camera's right and forward axes the camera moved towards Corner on (#339), the ground its view
+		 * shows reaches the pan area's extent: the ground's own extent there plus at most its EdgeMargin (#295); along an
+		 * axis where the view is wider than the pan area, it is centred instead. Straight, the axes are the world's.
 		 */
 		void VerifyAtCorner(const ARTSCameraPawn& Camera, const FVector2D& Corner, const TCHAR* How) const
 		{
-			const FBox2D View = Camera.GetViewFootprintBounds();
-			const FVector2D Outward(FMath::Sign(Corner.X - Ground.GetCenter().X), FMath::Sign(Corner.Y - Ground.GetCenter().Y));
-			const FVector2D Edge(Outward.X > 0.0 ? View.Max.X : View.Min.X, Outward.Y > 0.0 ? View.Max.Y : View.Min.Y);
-			const FVector2D Past = (Edge - Corner) * Outward;
-			const double MaxEdgeMargin = Camera.GetTuning().EdgeMargin;
+			const FRotator YawOnly(0.f, Camera.GetActorRotation().Yaw, 0.f);
+			const FVector2D Axes[] = { FVector2D(YawOnly.RotateVector(FVector::RightVector)), FVector2D(YawOnly.RotateVector(FVector::ForwardVector)) };
 			const FBox2D& Area = Camera.GetPanArea();
+			const FVector2D AreaCorners[] = { Area.Min, FVector2D(Area.Max.X, Area.Min.Y), Area.Max, FVector2D(Area.Min.X, Area.Max.Y) };
+			const double MaxEdgeMargin = Camera.GetTuning().EdgeMargin;
+			FString Shows;
 			bool bReaches = true;
-			for (int32 Axis = 0; Axis < 2; ++Axis)
+			for (const FVector2D& Axis : Axes)
 			{
-				const bool bCentred = View.GetSize()[Axis] > Area.GetSize()[Axis] + 1.0;
-				bReaches &= bCentred ? FMath::IsNearlyEqual(View.GetCenter()[Axis], Area.GetCenter()[Axis], 1.0)
-					: Past[Axis] >= -1.0 && Past[Axis] <= MaxEdgeMargin + 1.0;
+				const double Outward = (Corner - Ground.GetCenter()) | Axis;
+				if (FMath::Abs(Outward) < 1.0)
+				{
+					// The camera did not move along this axis.
+					continue;
+				}
+				FFloatInterval View;
+				for (const FVector& Point : Camera.GetViewFootprint())
+				{
+					View.Include(float(FVector2D(Point) | Axis));
+				}
+				FFloatInterval Span;
+				for (const FVector2D& Point : AreaCorners)
+				{
+					Span.Include(float(Point | Axis));
+				}
+				const double Sign = FMath::Sign(Outward);
+				const double Edge = Sign > 0.0 ? View.Max : View.Min;
+				const double AreaEdge = Sign > 0.0 ? Span.Max : Span.Min;
+				// The margin's share along this axis: the pan area's corner is EdgeMargin past the ground's along both world axes.
+				const double Margin = MaxEdgeMargin * (FMath::Abs(Axis.X) + FMath::Abs(Axis.Y));
+				const double Short = (AreaEdge - Edge) * Sign;
+				const bool bCentred = View.Size() > Span.Size() + 1.f;
+				bReaches &= bCentred ? FMath::IsNearlyEqual(View.Interpolate(0.5f), Span.Interpolate(0.5f), 1.f)
+					: Short >= -1.0 && Short <= Margin + 1.0;
+				Shows += FString::Printf(TEXT(" %.0f of %.0f"), Edge, AreaEdge);
 			}
-			Test->TestTrue(FString::Printf(TEXT("%s: %s towards corner %s takes the view to it, showing %s"), *Name, How,
-				*Corner.ToString(), *View.ToString()), bReaches);
+			Test->TestTrue(FString::Printf(TEXT("%s: %s towards corner %s takes the view to it, along the camera's axes%s"), *Name, How,
+				*Corner.ToString(), *Shows), bReaches);
 		}
 
 		FAutomationTestBase* Test;

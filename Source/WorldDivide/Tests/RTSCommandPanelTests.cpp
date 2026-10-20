@@ -312,6 +312,7 @@ namespace RTSCommandPanelTests
 			MakeButton(TEXT("Reserved"), EKeys::W),
 			MakeButton(TEXT("Second"), EKeys::G),
 			MakeButton(TEXT("Cee"), EKeys::C),
+			MakeButton(TEXT("Alt"), EKeys::LeftAlt),
 			MakeButton(TEXT("Stop"), EKeys::X, ERTSCommandCategory::Unit),
 			MakeButton(TEXT("ForceFire"), EKeys::C, ERTSCommandCategory::Unit),
 		};
@@ -323,13 +324,15 @@ namespace RTSCommandPanelTests
 		TestTrue(TEXT("A reserved key falls back to its position key"), Buttons[3].Hotkey == EKeys::Four);
 		TestTrue(TEXT("A later own hotkey is kept"), Buttons[4].Hotkey == EKeys::G);
 		TestTrue(TEXT("A data hotkey C, Force fire's key, falls back to its position key"), Buttons[5].Hotkey == EKeys::Six);
-		TestTrue(TEXT("A unit order keeps its reserved key"), Buttons[6].Hotkey == EKeys::X);
-		TestTrue(TEXT("Force fire keeps C"), Buttons[7].Hotkey == EKeys::C);
-		if (TestEqual(TEXT("The duplicate and the two reserved keys warn"), Warnings.Num(), 3))
+		TestTrue(TEXT("A data hotkey Alt, the camera's rotate modifier, falls back to its position key"), Buttons[6].Hotkey == EKeys::Seven);
+		TestTrue(TEXT("A unit order keeps its reserved key"), Buttons[7].Hotkey == EKeys::X);
+		TestTrue(TEXT("Force fire keeps C"), Buttons[8].Hotkey == EKeys::C);
+		if (TestEqual(TEXT("The duplicate, the two reserved keys and the modifier warn"), Warnings.Num(), 4))
 		{
 			TestTrue(TEXT("naming the duplicate"), Warnings[0].Contains(TEXT("Duplicate")) && Warnings[0].Contains(TEXT("taken")));
 			TestTrue(TEXT("and the reserved one"), Warnings[1].Contains(TEXT("Reserved")) && Warnings[1].Contains(TEXT("reserved")));
 			TestTrue(TEXT("and the one on C"), Warnings[2].Contains(TEXT("Cee")) && Warnings[2].Contains(TEXT("reserved")));
+			TestTrue(TEXT("and the one on Alt"), Warnings[3].Contains(TEXT("Alt")) && Warnings[3].Contains(TEXT("modifier")));
 		}
 
 		// Past the ninth button there is no position key left.

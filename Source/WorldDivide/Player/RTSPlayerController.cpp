@@ -611,8 +611,7 @@ void ARTSPlayerController::ApplyEdgeScroll() const
 	FVector2D Mouse;
 	int32 ViewportX = 0;
 	int32 ViewportY = 0;
-	// Not over the HUD: the panels along the screen's edges are for the cursor, not for scrolling.
-	if (!CameraPawn || bRotateDragging || bGrabPanning || bInGameMenuOpen || !GetMousePosition(Mouse.X, Mouse.Y) || IsOnHUDPanel(Mouse))
+	if (!CameraPawn || bRotateDragging || bGrabPanning || bInGameMenuOpen || !GetMousePosition(Mouse.X, Mouse.Y))
 	{
 		return;
 	}
@@ -641,11 +640,20 @@ void ARTSPlayerController::ApplyEdgeScroll() const
 	{
 		Pan.Y = -1.f;
 	}
-
-	if (!Pan.IsZero())
+	if (Pan.IsZero())
 	{
-		CameraPawn->AddPanInput(Pan);
+		return;
 	}
+
+	// Inside the margin over a HUD panel the cursor is for the panel, not for scrolling, except on the screen's outermost
+	// pixel row or column: there it scrolls even along an edge a HUD bar covers. The panels are only looked up inside the
+	// margin, never on the frames the cursor rests over the battlefield.
+	const bool bOnScreenEdge = Mouse.X < 1.f || Mouse.Y < 1.f || Mouse.X >= ViewportX - 1.f || Mouse.Y >= ViewportY - 1.f;
+	if (!bOnScreenEdge && IsOnHUDPanel(Mouse))
+	{
+		return;
+	}
+	CameraPawn->AddPanInput(Pan);
 }
 
 bool ARTSPlayerController::IsOnHUDPanel(const FVector2D& Point) const
