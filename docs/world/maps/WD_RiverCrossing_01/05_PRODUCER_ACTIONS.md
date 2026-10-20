@@ -11,9 +11,9 @@ What only the producer can do or decide, ordered by when it blocks work.
 | D3 | Season and biome: summer or early autumn temperate | Phase 1 pack choice | **Decided 2026-10-20: late summer, temperate** (greens with dry field tones) |
 | D4 | Do playable woods slow or block vehicles, or are they cover only? | Phase 6 | Cover only for 01 |
 | D5 | Are village buildings garrisonable at the map's launch, or only tagged for later? | Phase 5 | Tag now, garrison when the system exists |
-| D6 | Does `WD_RiverCrossing_01` join the lobby next to `L_RiverFord`, or replace it? | Phase 2 and 9 | Join; retire `L_RiverFord` once the rescale is done |
+| D6 | Does `WD_RiverCrossing_01` join the lobby next to `L_RiverFord`, or replace it? | Phase 2 and 9 | **Decided 2026-10-20: join**; retire `L_RiverFord` once the rescale is done |
 | D7 | Is Lumen hardware ray tracing allowed on the minimum spec? | Phase 7 | Software Lumen |
-| D8 | Approve enabling the **Water** and **PCG** plugins (optionally LandscapePatch and GeometryScripting) in `WorldDivide.uproject` | Phase 2 | Approve Water and PCG |
+| D8 | Approve enabling the **Water** and **PCG** plugins (optionally LandscapePatch and GeometryScripting) in `WorldDivide.uproject` | Phase 2 | **Decided 2026-10-20: approved Water and PCG** (enabled in #154) |
 
 ## 2. Assets to add from your Fab library
 
