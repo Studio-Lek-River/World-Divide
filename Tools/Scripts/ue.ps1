@@ -197,6 +197,16 @@ function Assert-EditorClosed([string]$Reason = 'Live Coding locks the module DLL
 	}
 }
 
+# Empties a shot folder of an earlier run but keeps the folders, which Explorer or a viewer may hold open (#323). A file
+# that is in use stays, with a warning; the run writes over it.
+function Clear-ShotDir([string]$Dir) {
+	if (-not (Test-Path $Dir)) { return }
+	Get-ChildItem -Path $Dir -Recurse -File | ForEach-Object {
+		try { Remove-Item -Force -LiteralPath $_.FullName -ErrorAction Stop }
+		catch { Write-Host "  could not clear $($_.TargetObject): $($_.Exception.Message)" }
+	}
+}
+
 function Invoke-Build {
 	Assert-EditorClosed
 	& $BuildBat WorldDivideEditor Win64 Development "-Project=$Project" -WaitMutex
@@ -433,7 +443,7 @@ function Invoke-UIShots {
 	$Folder = if ($Panel) { $Panel } else { 'HUD' }
 	$ShotDir = Join-Path $RepoRoot "Saved\UIShots\$Folder"
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\UIShots.log'
-	if (Test-Path $ShotDir) { Remove-Item -Recurse -Force $ShotDir }
+	Clear-ShotDir $ShotDir
 
 	# Windowed and offscreen, so no screen limits the window to its own size.
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList @(
@@ -483,7 +493,7 @@ function Invoke-UnitShots {
 	$ShotDir = Join-Path $RepoRoot "Saved\UnitShots\$Unit"
 	if ($LODs) { $ShotDir = Join-Path $ShotDir 'LODs' }
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\UnitShots.log'
-	if (Test-Path $ShotDir) { Remove-Item -Recurse -Force $ShotDir }
+	Clear-ShotDir $ShotDir
 	$TraceArgs = @()
 	if ($Trace) {
 		$TraceFile = Join-Path $RepoRoot "Saved\Traces\UnitShots_$($Unit)_$Stress.utrace"
@@ -531,7 +541,7 @@ function Invoke-TrackShots {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$ShotDir = Join-Path $RepoRoot "Saved\TrackShots\$Unit"
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\TrackShots.log'
-	if (Test-Path $ShotDir) { Remove-Item -Recurse -Force $ShotDir }
+	Clear-ShotDir $ShotDir
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
 		"`"$Project`"", '/Game/Maps/L_TestMap', '-game', '-windowed', '-RenderOffscreen', '-ResX=1280', '-ResY=720',
 		"`"-ExecCmds=rts.Debug.TrackShots $Unit`"", '-RTSTrackShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
@@ -551,7 +561,7 @@ function Invoke-CameraShots {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$ShotDir = Join-Path $RepoRoot 'Saved\CameraShots'
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\CameraShots.log'
-	if (Test-Path $ShotDir) { Remove-Item -Recurse -Force $ShotDir }
+	Clear-ShotDir $ShotDir
 
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList @(
 		"`"$Project`"", '/Game/Maps/L_TestMap', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
