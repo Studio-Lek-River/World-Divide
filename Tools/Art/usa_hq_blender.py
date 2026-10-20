@@ -200,8 +200,21 @@ GUYS = [((0.6, -12.6), 12.0), ((-3.6, -11.0), 12.0), ((-2.2, -13.6), 9.0)]  # se
 FLOOD_ARM = 1.2
 CONCRETE_TONE = 0.82  # level 3 darkens the render concrete towards the concept's grey
 
+# Ground props and wall fixtures (level 4 and up), at real sizes: 1.2 x 0.8 x 0.62 m stores crates, a 3 m (10 ft class)
+# stores container, 0.81 m jersey barriers in 2 m segments, a compact wheel loader, domed horizontal fuel tanks in a bund,
+# steel bollards, dark steel corner plates and vertical blue lamp strips at the corners.
+CRATE = (1.2, 0.8, 0.62)
+CRATE_GAP = 0.08
+CONTAINER = (4.5, 7.5)  # x span in the garage-side stack
+JERSEY = [(-0.3, 0.0), (0.3, 0.0), (0.3, 0.08), (0.18, 0.33), (0.075, 0.81), (-0.075, 0.81), (-0.18, 0.33),
+          (-0.3, 0.08)]  # profile (across, up)
+JERSEY_LENGTH = 2.0
+BOLLARDS = [(10.6, 3.2), (10.6, 6.8), (12.8, -10.0), (12.8, -10.6)]
+BUND = (11.45, 13.95, 0.55, 3.35, 0.3, 0.15)  # x0, x1, y0, y1, height, wall
+CORNER_PLATE = (0.45, 0.03)  # leg, thickness
+
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-MAX_LEVEL = 3
+MAX_LEVEL = 4
 LEVEL = int(ARGS[ARGS.index("--level") + 1]) if "--level" in ARGS else MAX_LEVEL
 SAMPLES = int(ARGS[ARGS.index("--samples") + 1]) if "--samples" in ARGS else 64
 VERIFY_ONLY = "--verify" in ARGS
@@ -618,6 +631,78 @@ def flag_cloth(m, x, y, top):
     strip("FlagBlue", top - 7 * stripe, top + 0.001, 0.4, 0.009)
 
 
+def corner_plates(m, outline, z0, z1, lamps=False, corners=None):
+    """Dark steel plates wrapping the outline's corners (and a vertical blue lamp strip beside each), proud of the
+    cladding."""
+    leg, thick = CORNER_PLATE
+    count = len(outline)
+    for k in corners if corners is not None else range(count):
+        before, after = Frame(outline[k - 1], outline[k]), Frame(outline[k], outline[(k + 1) % count])
+        m.add("ArmouredSteel", after.box(0.0, leg, 0.0, thick, z0, z1),
+              before.box(before.length - leg, before.length, 0.0, thick, z0, z1))
+        if lamps:
+            m.add("Lamp", after.box(leg + 0.08, leg + 0.08 + LAMP_STRIP, 0.0, 0.04, z0 + 0.6, z1 - 0.6))
+
+
+def jersey(m, x, y0, y1):
+    """A run of concrete jersey barriers along Y, centred on x."""
+    count = max(1, round((y1 - y0) / JERSEY_LENGTH))
+    step = (y1 - y0) / count
+    for i in range(count):
+        a, b = y0 + step * i + (0.02 if i else 0.0), y0 + step * (i + 1) - (0.02 if i < count - 1 else 0.0)
+        m.add("Concrete", loft([(x + u, a, APRON_TOP + v) for u, v in JERSEY], [(x + u, b, APRON_TOP + v) for u, v in JERSEY]))
+
+
+def hashed(*values):
+    h = 2166136261
+    for v in values:
+        h = ((h ^ (v & 0xFFFFFFFF)) * 16777619) & 0xFFFFFFFF
+    return h
+
+
+def crate(m, x0, x1, y0, y1, z0, z1):
+    """An olive stores crate: body, skids, a lid rim and a stencil plate."""
+    m.add("Olive", box(x0 + 0.03, x1 - 0.03, y0 + 0.03, y1 - 0.03, z0 + 0.06, z1 - 0.07))
+    m.add("ArmouredSteel", box(x0, x1, y0, y1, z0, z0 + 0.06), box(x0, x1, y0, y1, z1 - 0.07, z1))
+    if x1 - x0 > y1 - y0:
+        m.add("Marking", box((x0 + x1) / 2.0 - 0.18, (x0 + x1) / 2.0 + 0.18, y0 + 0.02, y0 + 0.03, z0 + 0.25, z0 + 0.4))
+    else:
+        m.add("Marking", box(x0 + 0.02, x0 + 0.03, (y0 + y1) / 2.0 - 0.18, (y0 + y1) / 2.0 + 0.18, z0 + 0.25, z0 + 0.4))
+
+
+def crates(m, x0, x1, y0, y1, height, seed):
+    """Crates on a grid over the extent, their long side along its long side, stacked one to three high."""
+    along_x = (x1 - x0) >= (y1 - y0)
+    length, width, high = CRATE
+    lx, ly = (length, width) if along_x else (width, length)
+    nx = max(1, int((x1 - x0 + CRATE_GAP) / (lx + CRATE_GAP)))
+    ny = max(1, int((y1 - y0 + CRATE_GAP) / (ly + CRATE_GAP)))
+    sx = (x1 - x0 - CRATE_GAP * (nx - 1)) / nx
+    sy = (y1 - y0 - CRATE_GAP * (ny - 1)) / ny
+    levels = max(1, int((height - APRON_TOP) / high + 1e-6))
+    for i in range(nx):
+        for j in range(ny):
+            for k in range(1 + hashed(seed, i, j) % levels):
+                a, c = x0 + i * (sx + CRATE_GAP), y0 + j * (sy + CRATE_GAP)
+                crate(m, a, a + sx, c, c + sy, APRON_TOP + k * high, APRON_TOP + (k + 1) * high)
+
+
+def container(m, x0, x1, y0, y1, z1):
+    """A stores container: corrugated sides, end doors with locking bars, corner castings."""
+    m.add("Olive", box(x0 + 0.04, x1 - 0.04, y0 + 0.04, y1 - 0.04, APRON_TOP + 0.1, z1 - 0.05))
+    for x in (x0, x1 - 0.15):
+        for y in (y0, y1 - 0.15):
+            m.add("ArmouredSteel", box(x, x + 0.15, y, y + 0.15, APRON_TOP, z1))
+    ribs = int((x1 - x0 - 0.3) / 0.28)
+    for i in range(ribs):
+        x = x0 + 0.15 + (x1 - x0 - 0.3) * (i + 0.5) / ribs
+        for y in (y0, y1 - 0.04):
+            m.add("Olive", box(x - 0.06, x + 0.06, y, y + 0.04, APRON_TOP + 0.15, z1 - 0.1))
+    m.add("ArmouredSteel", box(x0, x1, y0, y1, z1 - 0.05, z1), box(x0, x1, y0, y1, APRON_TOP, APRON_TOP + 0.1))
+    for y in (y0 + (y1 - y0) * 0.3, y0 + (y1 - y0) * 0.45, y0 + (y1 - y0) * 0.55, y0 + (y1 - y0) * 0.7):
+        m.add("BareMetal", box(x1 - 0.04, x1, y - 0.025, y + 0.025, APRON_TOP + 0.2, z1 - 0.15))
+
+
 def shrub(m, x, y, z, radius):
     m.add("Foliage", sphere((x, y, z + radius * 0.7), radius, 8, 5))
 
@@ -732,6 +817,8 @@ def build_core():
                                        head - 0.2))
         plate_w, plate_z0, plate_z1 = CORE_PLATE
         plaque(m, entrance, mid, plate_z0, plate_z1, plate_w)
+        if LEVEL >= 4:
+            corner_plates(m, outline, plate_z1 + 0.4, CORE_ROOF - COPING)
         # The drum: a ribbon of windows, a blue lamp band under its coping.
         drum = octagon(cx, cy, DRUM_APOTHEM)
         mast_base, _ = block(m, drum, deck, DRUM_ROOF, {k: DRUM_ROWS for k in range(8)}, parapet=DRUM_PARAPET)
@@ -787,10 +874,20 @@ def build_wing():
                 frame = Frame(outline[k], outline[(k + 1) % 4])
                 mid = frame.length / 2.0
                 skips[k] = [(mid - plate_w / 2.0 - 0.2, mid + plate_w / 2.0 + 0.2)]
+            front = extent is WING_FRONT
+            if front and LEVEL >= 4:
+                skips[0] = [(4.4, 5.8)]  # the door to the courtyard
             block(m, outline, APRON_TOP, roof, rows, skips)
             for k in plaques:
                 frame = Frame(outline[k], outline[(k + 1) % 4])
                 plaque(m, frame, frame.length / 2.0, plate_z0, plate_z1, plate_w)
+            if LEVEL >= 4:
+                corner_plates(m, outline, APRON_TOP + 0.6, roof - COPING, lamps=front)
+                if front:
+                    door = Frame(outline[0], outline[1])
+                    m.add("ArmouredSteel", door.box(4.6, 5.6, 0.0, 0.04, APRON_TOP, 2.3))
+                    m.add("ArmouredSteel", door.box(4.5, 5.7, 0.0, 0.3, 2.45, 2.55))
+                    m.add("Lamp", door.box(4.95, 5.25, 0.15, 0.27, 2.38, 2.45))
         deck = WING_ROOF - PARAPET
         tower = rect(*DISH_TOWER)
         block(m, tower, deck, DISH_TOWER_ROOF, {0: [(9.4, 10.4)], 3: [(9.4, 10.4)]}, coping_above=True)
@@ -920,6 +1017,19 @@ def build_garage():
     m.add("BlueAccent", box(9.6, 11.4, y1 - skin, y1 - skin + 0.05, 1.4, 4.4))
     m.add("ArmouredSteel", box(4.4, 5.4, y1 - skin, y1 - skin + 0.04, APRON_TOP, 2.3))
     m.add("BlueAccent", box(6.6, 9.2, y0 + skin - 0.05, y0 + skin, 1.4, 4.4))
+    if LEVEL >= 4:
+        # Front corners: steel plates and blue lamp strips; a lamp over the personnel door; a bay sign by the door.
+        leg, thick = CORNER_PLATE
+        for ya, yb, yl in ((y0, y0 + leg, (y0 + leg + 0.08, y0 + leg + 0.08 + LAMP_STRIP)),
+                           (y1 - leg, y1, (y1 - leg - 0.08 - LAMP_STRIP, y1 - leg - 0.08))):
+            m.add("ArmouredSteel", box(x1, x1 + thick, ya, yb, APRON_TOP + 0.6, top))
+            m.add("Lamp", box(x1, x1 + 0.04, yl[0], yl[1], 1.2, top - 0.6))
+        m.add("ArmouredSteel", box(x1 - leg, x1, y0 - thick, y0, APRON_TOP + 0.6, top),
+              box(x1 - leg, x1, y1, y1 + thick, APRON_TOP + 0.6, top))
+        m.add("ArmouredSteel", box(4.3, 5.5, y1 - skin, y1 - skin + 0.3, 2.45, 2.55))
+        m.add("Lamp", box(4.75, 5.05, y1 - skin + 0.15, y1 - skin + 0.27, 2.38, 2.45))
+        m.add("Marking", box(10.0, 11.0, y1 - skin + 0.05, y1 - skin + 0.07, 4.7, 5.3))
+        m.add("BlueAccent", box(10.0, 11.0, y1 - skin + 0.07, y1 - skin + 0.08, 4.7, 4.85))
     return m.finish()
 
 
@@ -1058,6 +1168,8 @@ def build_radar_tower():
     frame = Frame(tower[1], tower[2])  # +X face, towards the garage
     w, z0, z1 = TOWER_PLATE
     plaque(m, frame, frame.length / 2.0, z0, z1, w)
+    if LEVEL >= 4:
+        corner_plates(m, tower, APRON_TOP + 0.6, RADAR_TOWER_ROOF)
     return m.finish()
 
 
@@ -1167,9 +1279,33 @@ def build_mast():
 
 def build_checkpoints():
     m = Module("Checkpoints")
+    if LEVEL < 4:
+        for x0, x1, y0, y1 in CHECKPOINTS:
+            m.add("Concrete", box(x0, x1, y0, y1, APRON_TOP, 0.9))
+            m.add("BareMetal", post((x0 + x1) / 2.0, y1 - 0.4, 0.9, CHECKPOINT_LAMP_TIP, 0.08))
+        return m.finish()
+    # Each post: jersey barriers either side of a concrete block carrying a lamp mast with two heads, blue beacons on
+    # the barrier ends; steel bollards by the courtyard steps and the garage's -Y jamb.
     for x0, x1, y0, y1 in CHECKPOINTS:
-        m.add("Concrete", box(x0, x1, y0, y1, APRON_TOP, 0.9))
-        m.add("BareMetal", post((x0 + x1) / 2.0, y1 - 0.4, 0.9, CHECKPOINT_LAMP_TIP, 0.08))
+        xc, yc = (x0 + x1) / 2.0, (y0 + y1) / 2.0
+        jersey(m, xc, y0, yc - 0.5)
+        jersey(m, xc, yc + 0.5, y1)
+        m.add("Concrete", box(x0 + 0.05, x1 - 0.05, yc - 0.45, yc + 0.45, APRON_TOP, 0.9))
+        m.add("BareMetal", post(xc, yc, 0.9, CHECKPOINT_LAMP_TIP - 0.3, 0.08, 8, 0.05))
+        m.add("BareMetal", box(xc - 0.04, xc + 0.04, yc - 0.45, yc + 0.45, CHECKPOINT_LAMP_TIP - 0.4,
+                               CHECKPOINT_LAMP_TIP - 0.32))
+        for side in (-1.0, 1.0):
+            m.add("ArmouredSteel", box(xc - 0.15, xc + 0.15, yc + side * 0.4 - 0.12, yc + side * 0.4 + 0.12,
+                                       CHECKPOINT_LAMP_TIP - 0.6, CHECKPOINT_LAMP_TIP - 0.4))
+            m.add("Lamp", box(xc - 0.12, xc + 0.12, yc + side * 0.4 - 0.1, yc + side * 0.4 + 0.1,
+                              CHECKPOINT_LAMP_TIP - 0.62, CHECKPOINT_LAMP_TIP - 0.6))
+        beacon(m, xc, yc, CHECKPOINT_LAMP_TIP - 0.15, 0.08)
+        for y in (y0 + 0.15, y1 - 0.15):
+            m.add("BareMetal", post(xc, y, APRON_TOP + 0.81, APRON_TOP + 1.05, 0.03, 6))
+            beacon(m, xc, y, APRON_TOP + 1.1, 0.07)
+    for x, y in BOLLARDS:
+        m.add("Hazard", post(x, y, APRON_TOP, 1.0, 0.1, 10))
+        m.add("ArmouredSteel", post(x, y, 1.0, 1.06, 0.1, 10, 0.06))
     return m.finish()
 
 
@@ -1177,26 +1313,81 @@ def build_fuel_tanks():
     m = Module("FuelTanks")
     x0, x1 = FUEL_TANK_X
     for y, r in FUEL_TANKS:
-        m.add("BareMetal", cylinder(((x0 + x1) / 2.0, y, FUEL_TANK_AXIS_Z), (1.0, 0.0, 0.0), r, x1 - x0, 16))
+        if LEVEL < 4:
+            m.add("BareMetal", cylinder(((x0 + x1) / 2.0, y, FUEL_TANK_AXIS_Z), (1.0, 0.0, 0.0), r, x1 - x0, 16))
+        else:
+            half = (x1 - x0) / 2.0
+            m.add("PaintedMetal", lathe(((x0 + x1) / 2.0, y, FUEL_TANK_AXIS_Z), (1.0, 0.0, 0.0),
+                                        [(-half, 0.0), (-half + 0.05, r * 0.6), (-half + 0.15, r * 0.92), (-half + 0.3, r),
+                                         (half - 0.3, r), (half - 0.15, r * 0.92), (half - 0.05, r * 0.6), (half, 0.0)], 16))
+            for x in (x0 + 0.4, x1 - 0.4):
+                m.add("ArmouredSteel", cylinder((x, y, FUEL_TANK_AXIS_Z), (1.0, 0.0, 0.0), r + 0.012, 0.06, 16))
+            m.add("BareMetal", post(x0 + 0.7, y, FUEL_TANK_AXIS_Z + r - 0.05, FUEL_TANK_AXIS_Z + r + 0.12, 0.09, 8))
         for x in (x0 + 0.4, x1 - 0.4):
             m.add("Concrete", centred_box(x, y, 0.3, 2.0 * r, APRON_TOP, FUEL_TANK_AXIS_Z - r + 0.05))
+    if LEVEL >= 4:
+        # Spill bund round the tanks, a grated walkway over them with a hand rail.
+        bx0, bx1, by0, by1, height, wall = BUND
+        outline = rect(bx0, bx1, by0, by1)
+        m.add("Concrete", annulus(outline, inset_outline(outline, wall), APRON_TOP, APRON_TOP + height))
+        top = FUEL_TANK_AXIS_Z + FUEL_TANKS[0][1]
+        ya, yb = FUEL_TANKS[0][0] - 0.2, FUEL_TANKS[-1][0] + 0.2
+        m.add("ArmouredSteel", box(12.2, 13.2, ya, yb, top - 0.02, top + 0.03))
+        for x in (12.25, 13.15):
+            m.add("BareMetal", post(x, yb - 0.03, top + 0.03, top + 1.05, 0.025, 4))
+        m.add("BareMetal", bar((12.25, yb - 0.03, top + 1.05), (13.15, yb - 0.03, top + 1.05), 0.025, 4))
     return m.finish()
 
 
 def build_supply():
     m = Module("Supply")
-    for x0, x1, y0, y1, h in SUPPLY:
-        m.add("Olive", box(x0, x1, y0, y1, APRON_TOP, h))
+    for index, (x0, x1, y0, y1, h) in enumerate(SUPPLY):
+        if LEVEL < 4:
+            m.add("Olive", box(x0, x1, y0, y1, APRON_TOP, h))
+        elif x0 <= CONTAINER[0] < x1 and y1 < 0.0:
+            container(m, CONTAINER[0], CONTAINER[1], y0, y1, h)
+            crates(m, CONTAINER[1] + 0.2, x1, y0, y1, h, index)
+        else:
+            crates(m, x0, x1, y0, y1, h, index)
     return m.finish()
 
 
 def build_loader():
     m = Module("Loader")
     x0, x1, y0, y1, h = LOADER
-    m.add("Olive", box(x0, x1, y0, y1, APRON_TOP + 0.4, 1.5))
-    m.add("Olive", box(x0 + 0.6, x0 + 1.8, y0 + 0.2, y1 - 0.2, 1.5, h))
-    for x in (x0 + 0.5, x1 - 0.5):
-        m.add("Rubber", cylinder((x, 0.0, 0.45), (0.0, 1.0, 0.0), 0.4, y1 - y0 - 0.02, 12))
+    if LEVEL < 4:
+        m.add("Olive", box(x0, x1, y0, y1, APRON_TOP + 0.4, 1.5))
+        m.add("Olive", box(x0 + 0.6, x0 + 1.8, y0 + 0.2, y1 - 0.2, 1.5, h))
+        for x in (x0 + 0.5, x1 - 0.5):
+            m.add("Rubber", cylinder((x, 0.0, 0.45), (0.0, 1.0, 0.0), 0.4, y1 - y0 - 0.02, 12))
+        return m.finish()
+    # A compact wheel loader parked bucket-down: four tyres with rims, chassis, engine hood with a grille, a cab with
+    # glass in its ROPS frame, loader arms and the bucket at +X.
+    yc = (y0 + y1) / 2.0
+    tyre = 0.42
+    for x in (x0 + 0.55, x0 + 2.0):
+        for side in (-1.0, 1.0):
+            y = yc + side * (y1 - y0 - 0.32) / 2.0
+            m.add("Rubber", cylinder((x, y, APRON_TOP + tyre), (0.0, 1.0, 0.0), tyre, 0.3, 14))
+            m.add("Olive", cylinder((x, y + side * 0.01, APRON_TOP + tyre), (0.0, 1.0, 0.0), 0.24, 0.3, 10))
+    m.add("Olive", box(x0 + 0.2, x1 - 0.35, yc - 0.45, yc + 0.45, 0.35, 0.9))
+    m.add("Olive", box(x0, x0 + 1.0, yc - 0.6, yc + 0.6, 0.9, 1.5))
+    m.add("Rubber", box(x0, x0 + 0.02, yc - 0.45, yc + 0.45, 1.0, 1.4))
+    m.add("BareMetal", post(x0 + 0.3, yc - 0.35, 1.5, 1.9, 0.05, 6))
+    cab0, cab1 = x0 + 1.0, x0 + 2.0
+    for x in (cab0, cab1 - 0.08):
+        for y in (yc - 0.55, yc + 0.47):
+            m.add("Olive", box(x, x + 0.08, y, y + 0.08, 0.9, h - 0.1))
+    m.add("Olive", box(cab0 - 0.05, cab1 + 0.05, yc - 0.6, yc + 0.6, h - 0.1, h))
+    m.add("Glass", box(cab0 + 0.08, cab1 - 0.08, yc - 0.5, yc + 0.5, 1.3, h - 0.15))
+    m.add("Olive", box(cab0, cab1, yc - 0.55, yc + 0.55, 0.9, 1.3))
+    for side in (-1.0, 1.0):
+        y = yc + side * 0.5
+        m.add("Olive", bar((cab1 - 0.1, y, 1.55), (x1 - 0.3, y, 0.55), 0.08, 6))
+    m.add("ArmouredSteel", box(x1 - 0.35, x1, y0 + 0.02, y1 - 0.02, APRON_TOP + 0.01, APRON_TOP + 0.06))
+    m.add("Olive", box(x1 - 0.35, x1 - 0.28, y0 + 0.02, y1 - 0.02, APRON_TOP + 0.06, 0.8),
+          box(x1 - 0.35, x1, y0 + 0.02, y0 + 0.08, APRON_TOP + 0.06, 0.6),
+          box(x1 - 0.35, x1, y1 - 0.08, y1 - 0.02, APRON_TOP + 0.06, 0.6))
     return m.finish()
 
 
