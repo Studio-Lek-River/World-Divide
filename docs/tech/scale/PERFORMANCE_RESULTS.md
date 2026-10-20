@@ -2237,7 +2237,8 @@ client were running), so the runs spread by about 2 ms; compare the means with e
 ### Fix round: more, fainter puffs (MaxRate 70)
 
 After the visual review the haze spawns up to 70 puffs a second per contact point (SpeedScale 0.07, haze Opacity 0.45 instead of 0.6)
-and the dirt puffs live 3 s, so a moving M20 has about 1.4 times as many live haze particles; `rts.Fx.DustDistance` is
+and the dirt puffs live 3 s instead of 2.2, so a moving M20 at full speed keeps about 2.2 times as many live haze particles
+(70 / 44 puffs a second times 3 / 2.2 s; worked out, not counted), and more vehicles qualify now that `rts.Fx.DustDistance` is
 now 480 m, past the farthest zoom, with the budget of 32 vehicles unchanged. One interleaved pair, same command, other
 processes still using about seven cores:
 

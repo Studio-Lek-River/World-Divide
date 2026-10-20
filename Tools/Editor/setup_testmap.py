@@ -1111,12 +1111,15 @@ def build_dust_haze_material(name, rlt, bbf):
     unreal.MaterialEditingLibrary.recompile_material(material)
     return material
 
-# A dust chunk (#336): a lit clod with a ragged edge, its outline turned by the particle's random value so no two match,
-# and a domed normal (in the sprite's tangent space, +Z toward the camera) so the sun shades it as a lump.
+# A dust chunk (#336): a lit clod with a ragged edge of three lobes, their phases and the outline's turn each from the
+# particle's random value so no two match (the sprite is also turned at random and sized 0.6 to 1.4 times), and a domed
+# normal (in the sprite's tangent space, +Z toward the camera) so the sun shades it as a lump.
 DUST_CHUNK_CODE = """float2 P = UV * 2.0 - 1.0;
 float A = atan2(P.y, P.x);
 float S = Random * 6.2832;
-float R = 0.72 + 0.15 * sin(A * 3.0 + S) + 0.09 * sin(A * 5.0 + S * 2.3);
+float T = frac(Random * 7.31) * 6.2832;
+float U = frac(Random * 13.17) * 6.2832;
+float R = 0.7 + 0.14 * sin(A * 2.0 + S) + 0.09 * sin(A * 3.0 + T) + 0.06 * sin(A * 5.0 + U);
 Normal = normalize(float3(P.x, P.y, 1.4));
 return 1.0 - length(P) / R;"""
 
@@ -1185,14 +1188,14 @@ GROUND_KINDS = {
     # Dark bits of torn turf and soil and a faint brown-green haze.
     "Grass": (unreal.PhysicalSurface.SURFACE_TYPE2, {
         "rate_scale": 0.9, "color": (0.12, 0.1, 0.06), "haze_scale": 0.5, "opacity_scale": 1.0, "lifetime": 1.8, "spread": 160.0,
-        "lift": 30.0, "sink": 30.0, "size_scale": 1.0, "chunk_scale": 1.2, "chunk_size": 18.0, "chunk_color": (0.03, 0.03, 0.012)}),
+        "lift": 30.0, "sink": 30.0, "size_scale": 1.0, "chunk_scale": 1.2, "chunk_size": 20.0, "chunk_color": (0.03, 0.03, 0.012)}),
     # A thin dry haze, flat and short-lived, at a low rate, no chunks.
     "Road": (unreal.PhysicalSurface.SURFACE_TYPE3, {
         "rate_scale": 0.4, "color": (0.06, 0.058, 0.052), "haze_scale": 0.5, "opacity_scale": 0.8, "lifetime": 1.0,
         "spread": 220.0, "lift": 10.0, "sink": 20.0, "size_scale": 1.3, "chunk_scale": 0.0}),
-    # Pale, wide and fast, falling and fading quickly, a little dark grit.
+    # A sand-coloured wake, wide and fast, falling and fading quickly, a little dark grit.
     "Sand": (unreal.PhysicalSurface.SURFACE_TYPE4, {
-        "rate_scale": 1.3, "color": (0.7, 0.58, 0.42), "lifetime": 1.3, "spread": 300.0, "lift": 30.0, "sink": 40.0,
+        "rate_scale": 1.3, "color": (0.36, 0.29, 0.19), "haze_scale": 0.7, "lifetime": 1.3, "spread": 300.0, "lift": 30.0, "sink": 40.0,
         "size_scale": 1.4, "chunk_scale": 0.15, "chunk_size": 5.0, "chunk_color": (0.3, 0.24, 0.15)}),
     # Big dark clods thrown to the sides and back, little haze.
     "Mud": (unreal.PhysicalSurface.SURFACE_TYPE5, {
