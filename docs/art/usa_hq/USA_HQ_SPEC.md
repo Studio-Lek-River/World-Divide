@@ -74,7 +74,7 @@ Why the garage values hold (rows 13–16, approved 2026-10-20):
 
 ## 4. Module map (annotated reference)
 
-Positions are local cm (§2). The image proposals were confirmed or moved by #186 (rounds 6 and 7, 2026-10-20), fitting the
+Positions are local cm (§2). The image proposals were confirmed or moved by #186 (rounds 6 to 8, 2026-10-20), fitting the
 concept's apron margins: about 4 m of open slab behind and beside the buildings and an open forecourt towards the (+X, +Y)
 corner. The values below are the confirmed ones, as built by `Tools/Art/usa_hq_blender.py`. Heights are roof level unless
 "tip".
@@ -82,7 +82,7 @@ corner. The values below are the confirmed ones, as built by `Tools/Art/usa_hq_b
 | ID | Module | Image location | Local position (centre) and extent | Heights | Notes |
 |---|---|---|---|---|---|
 | M1 | **Central command core** | Centre, octagonal block with the large eagle plaque and lit entrance | centre (-350, +50), stepped: lower ring apothem 600 (12 m across; its (+X, -Y) face clears the garage's rear corner) with the equipment terrace on it, upper tier apothem 450, drum apothem 390 | lower ring roof 1000 (double-height lobby and one floor), upper tier roof 1400, drum 1650, antenna cluster **tip 2400** | Eagle plaque over the entrance on the (+X, +Y) diagonal face; blue light strips either side of the door; rooftop AC units and equipment boxes ring the drum |
-| M2 | **Left administration / communications wing** | Left, two linked blocks with eagle plates, a rooftop dish and antenna masts | along +Y round the core: rear block X -1100 … -660, Y +600 … +1150 (dish tower 3.5 × 3.5 m, X -1060 … -710, Y +640 … +990); link X -660 … +80, Y +750 … +1150; front block X +80 … +600, Y +720 … +1150 (stands back so the axis to the core portal stays open) | roof 750, two 3.5 m storeys (link 600), dish tower 950, dish top ~1300, masts tip 1700 | Panel antenna array on the rear block; windows with warm interior light; supply crates along the walls |
+| M2 | **Left administration / communications wing** | Left, two linked blocks with eagle plates, a rooftop dish and antenna masts | along +Y, running out along -X (screen left in the RTS view) from the forecourt: front block X +80 … +600, Y +720 … +1200 (stands back so the axis to the core portal stays open); long low middle section X -800 … +80, Y +750 … +1200 with the equipment terrace and a lamp band over its ground-floor glazing; end block X -1200 … -800, Y +700 … +1200 carrying the dish; 2 m from the -X and +Y slab edges | front block 750 (two 3.5 m storeys), middle section 600, end block 950 (flat roof, the dish on it), dish top ~1300, masts tip 1700 | Panel antenna array on the rear block; windows with warm interior light; supply crates along the walls |
 | M3 | **Right bulldozer garage** | Right, broad flat-roofed hall with open bay, dozer inside | X +360 … +1250 (door plane at X = +1250), Y -1100 … -100; bay X +400 … +1250 | roof 750 with a 100 cm 45° eave; door 700 × 450 clear | Hazard-striped door posts, blue light strip over the opening, interior lights, rooftop solar panels and vents, blue accent panel on the side |
 | M4 | **Central courtyard** | Front centre, between core, wing and garage | forecourt across the core's whole entrance face to X +1020, Y +100 … +900, notched round the wing's front block; raised 60 cm, steps the full width X +1020 … +1140, Y +100 … +900; flag plinth 300 × 220 × 90 cm | — | Two planters with shrubs, steps up to the core entrance, central eagle plinth with flagpole; pedestrian only |
 | M5 | **Flag (courtyard)** | Courtyard centre, on the eagle plinth | (+700, +500) | pole tip 900 | US-style flag, moving cloth (§6) |
@@ -172,7 +172,7 @@ All cosmetic and client-side; none changes gameplay state (server-authoritative 
 | Flag (×2) | Cloth wave | pole tops M5, M6 | World-position-offset material (no simulation) | Always on |
 | Main radar array (M7) | Yaw, slow full turn (~6 s per rev) | tower top (-100, -800, 1100) | Separate movable mesh | #196 |
 | Satcom radome (M8) | **Static** (a radome hides its dish) | — | In the root | — |
-| Wing dish (M2) | Slow yaw sweep ±40° | dish base on the wing tower (-885, 815, 950) | Separate movable mesh | #196 |
+| Wing dish (M2) | Slow yaw sweep ±40° | dish base on the wing's end block (-1000, 950, 950) | Separate movable mesh | #196 |
 | Rooftop fans | Spin | each fan hub | Rotator material (WPO), no component | Always on, off when unpowered (#196) |
 | Warning beacons | Blink / rotate | beacon bodies | Emissive material parameter | #196 |
 | Mast lights | Slow blink (aviation) | mast tips | Emissive material parameter | #196 |
@@ -215,7 +215,7 @@ One static root mesh plus separate movable parts. A JSON next to the mesh lists 
   "parts": {
     "USA_HQ_GarageDoor": { "pivot": [1250.0, -600.0, 470.0], "motion": "translate_z", "travel_cm": 450.0 },
     "USA_HQ_Radar":      { "pivot": [-100.0, -800.0, 1100.0], "motion": "yaw" },
-    "USA_HQ_WingDish":   { "pivot": [-885.0, 815.0, 950.0], "motion": "yaw_sweep", "range_deg": 40.0 }
+    "USA_HQ_WingDish":   { "pivot": [-1000.0, 950.0, 950.0], "motion": "yaw_sweep", "range_deg": 40.0 }
   },
   "sockets": {
     "Spawn_Garage": [825.0, -600.0, 0.0],
@@ -303,7 +303,7 @@ scope.
 | 2026-10-20 | Q6: keep the second flag and the loader as drawn |
 | 2026-10-20 | Q7: display name "Headquarters" (#121) |
 | 2026-10-20 | Q8: the budgets in §9 |
-| 2026-10-20 | Implementation change, pending producer confirmation at gate 2 (#186 rounds 6 and 7): §4 positions confirmed or moved to the concept's apron margins (wing pulled in with 7.5 m roofs and 5 m-deep blocks, stepped core 12 m across at the decided ~14 m roof, forecourt with full-width steps, satcom and mast inboard, 4 m connectors under a 5.2 m roof); door, bay, lane, 24 m tip and footprint unchanged; wing dish pivot (-885, 815, 950) |
+| 2026-10-20 | Implementation change, pending producer confirmation at gate 2 (#186 rounds 6 to 8): §4 positions confirmed or moved to the concept's apron margins (wing pulled in with 7.5 m roofs and 5 m-deep blocks, stepped core 12 m across at the decided ~14 m roof, forecourt with full-width steps, satcom and mast inboard, 4 m connectors under a 5.2 m roof); round 8, on the producer's request to extend the left wing so it is more spaced: the wing runs out along -X to a 9.5 m end block carrying the dish (no separate tower), with a long low middle section and an equipment terrace between it and the front block; door, bay, lane, 24 m tip and footprint unchanged; wing dish pivot (-1000, 950, 950) |
 
 ## 15. Open questions
 

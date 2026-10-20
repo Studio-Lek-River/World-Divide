@@ -64,15 +64,19 @@ CORE_MAST_TIP = TOTAL_HEIGHT
 # M2 administration / communications wing along the +Y side, wrapping the core: rear block (dish tower on it), link,
 # front block beside the forecourt. Boxes are (x0, x1, y0, y1).
 # Round 7: two 3.5 m storeys (link one lower), blocks at least 5 m across, the front block's -Y face pulled back to
-# +7.2 so the axis to the core's portal stays open.
-WING_REAR = (-11.0, -6.6, 6.0, 11.5)
-WING_LINK = (-6.6, 0.8, 7.5, 11.5)
-WING_FRONT = (0.8, 6.0, 7.2, 11.5)
+# +7.2 so the axis to the core's portal stays open. Round 8 (producer): the wing runs out along -X (screen left in the
+# RTS view) as in the concept: the front block by the forecourt, a long low middle section with the equipment terrace,
+# and a taller end block carrying the dish at the far end, 2 m off the -X and +Y slab edges and clear of the core.
+WING_REAR = (-12.0, -8.0, 7.0, 12.0)  # the end block
+WING_LINK = (-8.0, 0.8, 7.5, 12.0)  # the middle section, 8.8 m long
+WING_FRONT = (0.8, 6.0, 7.2, 12.0)
+WING_END_ROOF = 9.5  # the end block stands a storey over the wing; the dish sits on its flat roof
 WING_ROOF = 7.5
 WING_LINK_ROOF = 6.0
-DISH_TOWER = (-10.6, -7.1, 6.4, 9.9)  # 3.5 x 3.5 m
-DISH_TOWER_ROOF = 9.5
-DISH_PIVOT = (-8.85, 8.15, DISH_TOWER_ROOF)
+DISH_TOWER = None  # round 8: the end block itself carries the dish (rounds 1 to 7 had a tower on the rear block)
+DISH_TOWER_ROOF = WING_END_ROOF
+DISH_PIVOT = ((WING_REAR[0] + WING_REAR[1]) / 2.0, (WING_REAR[2] + WING_REAR[3]) / 2.0, DISH_TOWER_ROOF)
+END_ROWS = [(1.0, 2.9), (4.3, 6.2), (7.2, 8.7)]
 DISH_RADIUS = 1.25
 WING_MAST_TIP = 17.0
 
@@ -143,7 +147,7 @@ FUEL_TANKS = [(1.35, 0.55), (2.6, 0.55)]  # (y centre, radius); axis along X
 FUEL_TANK_X = (11.6, 13.8)
 FUEL_TANK_AXIS_Z = 0.95
 LOADER = (7.0, 9.8, -0.85, 0.85, 2.5)
-SUPPLY = [(6.4, 11.2, 9.4, 11.0, 2.4), (4.5, 11.5, -13.6, -11.4, 2.5), (-9.5, 4.6, 11.8, 12.7, 2.0),
+SUPPLY = [(6.4, 11.2, 9.4, 11.0, 2.4), (4.5, 11.5, -13.6, -11.4, 2.5), (-12.0, -10.0, 3.8, 6.2, 1.9),
           (-11.0, -9.3, -12.4, -10.4, 2.2)]
 LIGHT_MASTS = [(-13.2, 13.2, 8.0), (13.3, 13.3, 8.0), (-13.2, -13.2, 8.0), (13.3, -13.3, 8.0)]
 
@@ -254,8 +258,7 @@ SUPPLY_CLUSTERS = [  # inside the level 1 supply extents, gaps between them
     ("pallets", 6.4, 8.0, 9.4, 10.6, 1.5), ("crates", 8.3, 9.9, 9.4, 11.0, 2.4), ("drums", 10.1, 11.2, 9.4, 10.6, 0.0),
     ("container", 4.5, 7.5, -13.6, -11.4, 2.5), ("crates", 8.3, 9.9, -13.6, -11.6, 1.9),
     ("drums", 10.4, 11.5, -13.4, -12.1, 0.0),
-    ("crates", -9.5, -7.0, 11.8, 12.7, 1.9), ("pallets", -5.0, -2.8, 11.8, 12.7, 1.3), ("drums", -1.4, 0.0, 11.85, 12.7, 0.0),
-    ("crates", 1.6, 4.6, 11.8, 12.7, 1.3),
+    ("crates", -12.0, -10.0, 3.8, 6.2, 1.9), ("drums", -9.6, -8.4, 4.8, 6.2, 0.0), ("pallets", -7.6, -6.2, 6.6, 7.3, 1.3),
     ("pallets", -11.0, -9.3, -12.4, -10.4, 1.4), ("crates", -11.0, -9.6, -9.9, -8.4, 2.2)]
 # Round 6: two storeys on the core (a double-height lobby, one office floor), the drum's windows in one band.
 CORE_ROWS_R6 = [(1.5, 5.4), (8.0, 11.6)]
@@ -276,7 +279,7 @@ M20_SPOT = (19.5, DOOR_CENTRE_Y, 0.0)
 TRIANGLE_BUDGET = (60000, 10000)  # root, movable parts (spec section 9)
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-MAX_LEVEL = 7
+MAX_LEVEL = 8
 LEVEL = int(ARGS[ARGS.index("--level") + 1]) if "--level" in ARGS else MAX_LEVEL
 SAMPLES = int(ARGS[ARGS.index("--samples") + 1]) if "--samples" in ARGS else 64
 VERIFY_ONLY = "--verify" in ARGS
@@ -1117,15 +1120,14 @@ def core_masts(m, mast_base):
 def build_wing():
     m = Module("Wing")
     if LEVEL < 2:
-        for extent, roof in ((WING_REAR, WING_ROOF), (WING_LINK, WING_LINK_ROOF), (WING_FRONT, WING_ROOF)):
+        for extent, roof in ((WING_REAR, WING_END_ROOF), (WING_LINK, WING_LINK_ROOF), (WING_FRONT, WING_ROOF)):
             m.add("Concrete", box(*extent, APRON_TOP, roof))
-        m.add("Concrete", box(*DISH_TOWER, WING_ROOF, DISH_TOWER_ROOF))
         deck = WING_ROOF
     else:
         # Edges of a rect outline: 0 faces -Y, 1 faces +X, 2 faces +Y, 3 faces -X. Faces against another block stay
         # blank; the +Y faces carry the eagle plaques.
         plate_w, plate_z0, plate_z1 = WING_PLATE
-        for extent, roof, rows, plaques in ((WING_REAR, WING_ROOF, {0: WING_ROWS, 2: WING_ROWS, 3: WING_ROWS}, (2,)),
+        for extent, roof, rows, plaques in ((WING_REAR, WING_END_ROOF, {0: END_ROWS, 2: END_ROWS, 3: END_ROWS}, (2,)),
                                             (WING_LINK, WING_LINK_ROOF, {0: LINK_ROWS, 2: LINK_ROWS}, ()),
                                             (WING_FRONT, WING_ROOF, {0: WING_ROWS, 1: WING_ROWS, 2: WING_ROWS}, (1, 2))):
             outline = rect(*extent)
@@ -1135,6 +1137,7 @@ def build_wing():
                 mid = frame.length / 2.0
                 skips[k] = [(mid - plate_w / 2.0 - 0.2, mid + plate_w / 2.0 + 0.2)]
             front = extent is WING_FRONT
+            end = extent is WING_REAR  # flat roof with the coping on its edge, the dish's pivot on the deck
             door_mid = Frame(outline[0], outline[1]).length / 2.0
             if front and LEVEL >= 4:
                 skips[0] = [(door_mid - 0.7, door_mid + 0.7)]  # the door to the courtyard
@@ -1144,10 +1147,10 @@ def build_wing():
                 shape = chamfer(outline, WING_CHAMFER)
                 block(m, shape, APRON_TOP, roof, {2 * k + 1: r for k, r in rows.items()},
                       {2 * k + 1: [(a - WING_CHAMFER, b - WING_CHAMFER) for a, b in v] for k, v in skips.items()},
-                      flush=(1,) if extent is WING_LINK else (), ribbons={2 * k + 1 for k in rows})
+                      flush=(1,) if extent is WING_LINK else (), ribbons={2 * k + 1 for k in rows}, coping_above=end)
                 outline_plates = shape
             else:
-                block(m, outline, APRON_TOP, roof, rows, skips)
+                block(m, outline, APRON_TOP, roof, rows, skips, coping_above=end)
                 outline_plates = outline
             for k in plaques:
                 frame = Frame(outline[k], outline[(k + 1) % 4])
@@ -1155,7 +1158,7 @@ def build_wing():
             if LEVEL >= 4:
                 # Not on the link's corners either side of the connector's face (chamfered: corners 1 and 2).
                 skip = (1, 2) if extent is WING_LINK and LEVEL >= 5 else ()
-                corner_plates(m, outline_plates, APRON_TOP + 0.6, roof - COPING, lamps=front,
+                corner_plates(m, outline_plates, APRON_TOP + 0.6, roof - (0.0 if end else COPING), lamps=front or end,
                               corners=[k for k in range(len(outline_plates)) if k not in skip])
                 if front:
                     door = Frame(outline[0], outline[1])
@@ -1163,11 +1166,12 @@ def build_wing():
                     m.add("ArmouredSteel", door.box(door_mid - 0.6, door_mid + 0.6, 0.0, 0.3, 2.45, 2.55))
                     m.add("Lamp", door.box(door_mid - 0.15, door_mid + 0.15, 0.15, 0.27, 2.38, 2.45))
         deck = WING_ROOF - PARAPET
-        tower = rect(*DISH_TOWER)
-        block(m, tower, deck, DISH_TOWER_ROOF, {0: [(7.8, 8.9)], 3: [(7.8, 8.9)]}, coping_above=True)
-        frame = Frame(tower[2], tower[3])
-        w, z0, z1 = DISH_TOWER_PLATE
-        plaque(m, frame, frame.length / 2.0, z0, z1, w)
+        if DISH_TOWER:
+            tower = rect(*DISH_TOWER)
+            block(m, tower, deck, DISH_TOWER_ROOF, {0: [(7.8, 8.9)], 3: [(7.8, 8.9)]}, coping_above=True)
+            frame = Frame(tower[2], tower[3])
+            w, z0, z1 = DISH_TOWER_PLATE
+            plaque(m, frame, frame.length / 2.0, z0, z1, w)
         deck += ROOF_MEMBRANE
     wing_roofs(m, deck)
     return m.finish()
@@ -1219,7 +1223,22 @@ def wing_roofs(m, deck):
     whip_cluster(m, fx1 - 0.45, fy0 + 0.5, deck)
     whip_cluster(m, lx1 - 1.5, ly1 - 0.4, link_deck)
     whip_cluster(m, lx0 + 3.0, ly0 + 0.5, link_deck)
-    ladder(m, WING_REAR[1], WING_REAR[1] + 0.2, (ly0 + ly1) / 2.0, link_deck, WING_ROOF + 0.9)
+    ladder(m, WING_REAR[1], WING_REAR[1] + 0.2, (ly0 + ly1) / 2.0, link_deck,
+           (WING_END_ROOF if DISH_TOWER is None else WING_ROOF) + 0.9)
+    if LEVEL < 8:
+        return
+    # Round 8: the middle section's terrace packed with plant, a lamp band over its ground-floor glazing.
+    hvac(m, lx0 + 3.6, ly1 - 1.1, 0.0, 1.2, 1.0, link_deck, 0.75)
+    hvac(m, lx1 - 2.4, ly1 - 1.4, 0.0, 1.2, 1.0, link_deck, 0.75)
+    for x, y in ((lx1 - 1.0, ly1 - 1.4), (lx0 + 2.3, ly1 - 0.5)):
+        m.add("PaintedMetal", centred_box(x, y, 0.6, 0.6, link_deck, link_deck + 1.0))
+        m.add("ArmouredSteel", centred_box(x, y, 0.66, 0.66, link_deck + 1.0, link_deck + 1.04))
+    vent(m, lx0 + 4.8, ly0 + 0.4, link_deck)
+    cut = WING_CHAMFER if LEVEL >= 5 else 0.0
+    x0, x1, y0, y1 = WING_LINK
+    m.add("Lamp", box(x0 + cut + 0.2, x1 - cut - 0.2, y1, y1 + 0.03, LINK_ROWS[0][1] + 0.2, LINK_ROWS[0][1] + 0.3))
+    m.add("Lamp", box(x0 + cut + 0.2, CONNECTOR_WING[0] - 0.3, y0 - 0.03, y0, LINK_ROWS[0][1] + 0.2,
+                      LINK_ROWS[0][1] + 0.3))
 
 
 def garage_shell(m):
