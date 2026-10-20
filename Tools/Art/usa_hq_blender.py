@@ -186,8 +186,22 @@ CORRIDOR = (0.8, 0.6, 0.15, 1.5)  # glazed links: plinth height, roof fascia, gl
 MARKING = (0.4, 0.15, 0.001)  # apron edge line: inset, width, thickness
 LANE_LINE = 0.15
 
+# Roof equipment, masts and flags (level 3 and up). HVAC condensers ~1.2 x 1.0 x 0.8 m on steel rails, 0.3 m mushroom
+# vents, 1.0 x 1.6 m photovoltaic modules tilted ~15 degrees, a 1.9:1 flag, floodlight masts with two heads, apron
+# slabs cut every 4 m with sawn joints.
+CORE_UNIT = (0.8, 1.1, 0.75)  # radial depth, width, height of the condensers ringing the drum
+FLAG = (1.9, 1.0, 0.25)  # length, height, gap from the top of the pole
+FINIAL = 0.07
+APRON_JOINT = (4.0, 0.015)  # spacing, width
+SOLAR_ROWS = [6.6, 8.25, 9.9]  # x centres on the garage roof
+SOLAR = (1.2, 1.6, 0.25, 0.7, 0.04)  # depth (x), module length (y), low and high edge over the deck, thickness
+SOLAR_Y = (-9.0, -4.0)
+GUYS = [((0.6, -12.6), 12.0), ((-3.6, -11.0), 12.0), ((-2.2, -13.6), 9.0)]  # secondary mast: anchor, height on the mast
+FLOOD_ARM = 1.2
+CONCRETE_TONE = 0.82  # level 3 darkens the render concrete towards the concept's grey
+
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-MAX_LEVEL = 2
+MAX_LEVEL = 3
 LEVEL = int(ARGS[ARGS.index("--level") + 1]) if "--level" in ARGS else MAX_LEVEL
 SAMPLES = int(ARGS[ARGS.index("--samples") + 1]) if "--samples" in ARGS else 64
 VERIFY_ONLY = "--verify" in ARGS
@@ -215,6 +229,9 @@ MATERIALS = {
     "Marking": ((0.70, 0.70, 0.67), 0.75, 0.0, 0.0),
     "Foliage": ((0.07, 0.11, 0.04), 0.8, 0.0, 0.0),
     "Soil": ((0.11, 0.08, 0.05), 0.95, 0.0, 0.0),
+    "Solar": ((0.02, 0.03, 0.07), 0.12, 0.3, 0.0),
+    "FlagRed": ((0.45, 0.03, 0.04), 0.7, 0.0, 0.0),
+    "FlagBlue": ((0.03, 0.05, 0.20), 0.7, 0.0, 0.0),
 }
 # Weathering for the render materials from level 2: noise scale, colour variation, bump strength, grime height (m).
 WEATHERED = {"Concrete": (0.9, 0.18, 0.25, 1.6), "Apron": (0.35, 0.22, 0.2, 0.0), "PaintedMetal": (2.0, 0.08, 0.05, 1.0),
@@ -487,12 +504,12 @@ def block(m, outline, z0, roof, rows=None, skips=None, spans=None, doors=(), par
         piece = [corner + before * (back - corner).dot(before), corner, corner + frame.e * (back - corner).dot(frame.e), back]
         m.add("Concrete", plan_prism([tuple(p) for p in piece], z0, top))
     if coping_above:
-        m.add("PaintedMetal", annulus(outline, inset_outline(outline, REVEAL + 0.3), roof, roof + COPING))
+        m.add(trim(), annulus(outline, inset_outline(outline, REVEAL + 0.3), roof, roof + COPING))
         return deck, inset_outline(outline, REVEAL + 0.3)
     wall = inset_outline(outline, REVEAL + PARAPET_WALL)
     m.add("Concrete", annulus(inner, wall, deck, top))
     m.add("Roofing", plan_prism(wall, deck, deck + ROOF_MEMBRANE))
-    m.add("PaintedMetal", annulus(outline, inset_outline(outline, REVEAL + PARAPET_WALL + 0.03), top, roof))
+    m.add(trim(), annulus(outline, inset_outline(outline, REVEAL + PARAPET_WALL + 0.03), top, roof))
     return deck, wall
 
 
@@ -527,6 +544,78 @@ def plaque(m, frame, s_centre, z0, z1, width, d0=0.0):
     m.add("EaglePlate", frame.box(s_centre - width / 2.0 + 0.06, s_centre + width / 2.0 - 0.06, d0, d0 + PLATE_DEPTH,
                                   z0 + 0.06, z1 - 0.06))
     emblem(m, frame, s_centre, (z0 + z1) / 2.0, min(width, (z1 - z0) * 1.4) * 0.9, d0 + PLATE_DEPTH)
+
+
+def trim():
+    return "ArmouredSteel" if LEVEL >= 3 else "PaintedMetal"
+
+
+def local_point(cx, cy, angle, u, v):
+    a = math.radians(angle)
+    return (cx + u * math.cos(a) - v * math.sin(a), cy + u * math.sin(a) + v * math.cos(a))
+
+
+def obox(cx, cy, angle, sx, sy, z0, z1, u=0.0, v=0.0):
+    """A box sx (along angle) by sy, centred at local (u, v) of a frame at (cx, cy) turned by angle degrees."""
+    return plan_prism([local_point(cx, cy, angle, u + a * sx / 2.0, v + b * sy / 2.0)
+                       for a, b in ((-1, -1), (1, -1), (1, 1), (-1, 1))], z0, z1)
+
+
+def box3(centre, u, v, w, hu, hv, hw):
+    """A box on three orthogonal axes: tilted plates and arms."""
+    c = Vector(centre)
+    u, v, w = Vector(u), Vector(v), Vector(w)
+
+    def face(sign):
+        return [c + u * a * hu + v * b * hv + w * sign * hw for a, b in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    return loft(face(-1), face(1))
+
+
+def hvac(m, cx, cy, angle, sx, sy, z, h):
+    """A packaged condenser on two steel rails: casing, a fan disc on top, a grille panel on one side."""
+    for v in (-sy / 2.0 + 0.12, sy / 2.0 - 0.12):
+        m.add("ArmouredSteel", obox(cx, cy, angle, sx + 0.1, 0.1, z, z + 0.1, v=v))
+    m.add("PaintedMetal", obox(cx, cy, angle, sx, sy, z + 0.1, z + h))
+    m.add("Rubber", obox(cx, cy, angle, 0.02, sy - 0.2, z + 0.2, z + h - 0.1, u=sx / 2.0 + 0.01))
+    fan = local_point(cx, cy, angle, 0.0, 0.0)
+    m.add("Rubber", post(fan[0], fan[1], z + h, z + h + 0.05, min(sx, sy) * 0.36, 12))
+    m.add("PaintedMetal", post(fan[0], fan[1], z + h, z + h + 0.09, 0.06, 6))
+
+
+def vent(m, x, y, z, radius=0.15):
+    """A mushroom roof vent."""
+    m.add("PaintedMetal", post(x, y, z, z + 0.45, radius * 0.6, 8))
+    m.add("PaintedMetal", post(x, y, z + 0.45, z + 0.55, radius * 1.3, 8, radius * 0.7))
+
+
+def hatch(m, x, y, z):
+    m.add("PaintedMetal", centred_box(x, y, 0.9, 0.9, z, z + 0.35))
+    m.add("ArmouredSteel", centred_box(x, y, 1.0, 1.0, z + 0.35, z + 0.4))
+
+
+def beacon(m, x, y, z, radius=0.08):
+    m.add("Lamp", sphere((x, y, z), radius, 8, 4))
+
+
+def flag_cloth(m, x, y, top):
+    """A flag of thirteen stripes with a blue canton, waving gently off the pole towards +X."""
+    length, height, _ = FLAG
+    columns = 8
+    stripe = height / 13.0
+
+    def wave(t):
+        return 0.12 * math.sin(t * math.pi * 1.7) * t
+
+    def strip(material, z0, z1, t_end, half):
+        for j in range(columns):
+            t0, t1 = j / columns * t_end, (j + 1) / columns * t_end
+            xa, xb = x + 0.09 + length * t0, x + 0.09 + length * t1
+            ya, yb = y + wave(t0), y + wave(t1)
+            corners = ((xa, ya - half), (xb, yb - half), (xb, yb + half), (xa, ya + half))
+            m.add(material, loft([(a, b, z0) for a, b in corners], [(a, b, z1) for a, b in corners]))
+    for i in range(13):
+        strip("FlagRed" if i % 2 == 0 else "EmblemWhite", top - (i + 1) * stripe, top - i * stripe, 1.0, 0.006)
+    strip("FlagBlue", top - 7 * stripe, top + 0.001, 0.4, 0.009)
 
 
 def shrub(m, x, y, z, radius):
@@ -599,6 +688,15 @@ def build_apron():
         x0 = DOOR_PLANE + DOOR_POST[1] + 0.05
         for y in (DOOR_CENTRE_Y - LANE_WIDTH / 2.0, DOOR_CENTRE_Y + LANE_WIDTH / 2.0):
             m.add("Hazard", box(x0, a - 0.05, y - LANE_LINE / 2.0, y + LANE_LINE / 2.0, z0, z1))
+        if LEVEL >= 3:
+            # Sawn joints between the 4 m slab bays, 0.5 mm under the paint so the lines stay on top.
+            spacing, joint = APRON_JOINT
+            reach = a - 0.05
+            k = int(reach / spacing)
+            for i in range(-k, k + 1):
+                c = i * spacing
+                m.add("Rubber", box(c - joint / 2.0, c + joint / 2.0, -reach, reach, z0, APRON_TOP + 0.0005),
+                      box(-reach, reach, c - joint / 2.0, c + joint / 2.0, z0, APRON_TOP + 0.0005))
         lane0 = DOOR_CENTRE_Y - LANE_WIDTH / 2.0 + 0.2
         for i in range(7):
             y = lane0 + i * 0.9
@@ -642,10 +740,30 @@ def build_core():
             m.add("Lamp", frame.box(0.35, frame.length - 0.35, 0.0, 0.03, DRUM_ROOF - 0.42, DRUM_ROOF - 0.32))
         mast_base += ROOF_MEMBRANE
     # The antenna cluster: a lattice mast on the drum to the 24 m tip, whips round it.
-    m.add("BareMetal", *lattice_tower(cx, cy, mast_base, CORE_MAST_TIP - 1.5, 0.45, 0.2, 4))
-    m.add("BareMetal", post(cx, cy, CORE_MAST_TIP - 1.5, CORE_MAST_TIP, 0.06))
+    mast = "ArmouredSteel" if LEVEL >= 3 else "BareMetal"
+    m.add(mast, *lattice_tower(cx, cy, mast_base, CORE_MAST_TIP - 1.5, 0.45, 0.2, 4))
+    m.add(mast, post(cx, cy, CORE_MAST_TIP - 1.5, CORE_MAST_TIP, 0.06))
     for dx, dy, tip in ((1.6, 1.6, 20.5), (-1.6, 1.6, 19.5), (1.6, -1.6, 19.0), (-1.6, -1.6, 20.0)):
-        m.add("BareMetal", post(cx + dx, cy + dy, mast_base, tip, 0.05))
+        m.add(mast, post(cx + dx, cy + dy, mast_base, tip, 0.05))
+        if LEVEL >= 3:
+            beacon(m, cx + dx, cy + dy, tip - 0.25)
+            m.add("PaintedMetal", post(cx + dx, cy + dy, tip - 1.6, tip - 0.6, 0.09, 8))  # whip antenna radome
+    if LEVEL >= 3:
+        deck = CORE_ROOF - PARAPET + ROOF_MEMBRANE
+        depth, width, height = CORE_UNIT
+        ring = (DRUM_APOTHEM + CORE_APOTHEM - REVEAL - PARAPET_WALL) / 2.0
+        for k in range(8):
+            angle = 45.0 * k
+            ux, uy = local_point(cx, cy, angle, ring, 0.0)
+            hvac(m, ux, uy, angle, depth, width, deck, height)
+        # Sector antennas on the lattice, cabinets round its foot, beacons up the mast.
+        for k in range(3):
+            angle = 90.0 + 120.0 * k
+            m.add("PaintedMetal", obox(cx, cy, angle, 0.12, 0.32, 19.2, 20.5, u=0.45))
+        for k in range(4):
+            m.add("PaintedMetal", obox(cx, cy, 90.0 * k, 0.5, 0.7, mast_base, mast_base + 1.0, u=2.15))
+        for z in (CORE_MAST_TIP - 0.2, 21.0):
+            beacon(m, cx + (0.0 if z > 23 else 0.25), cy, z, 0.07)
     return m.finish()
 
 
@@ -683,7 +801,27 @@ def build_wing():
     # Panel antenna array on the rear block and its masts.
     m.add("PaintedMetal", box(-11.0, -9.0, 5.5, 6.0, deck, deck + 2.0))
     for x, y in ((-11.0, 12.0), (-10.0, 12.0)):
-        m.add("BareMetal", post(x, y, deck, WING_MAST_TIP, 0.06))
+        m.add("ArmouredSteel" if LEVEL >= 3 else "BareMetal", post(x, y, deck, WING_MAST_TIP, 0.06))
+        if LEVEL >= 3:
+            beacon(m, x, y, WING_MAST_TIP - 0.3)
+    if LEVEL >= 3:
+        # Panel array frame and its feeder tray; condensers, vents and a hatch on the blocks; a cable tray on the link.
+        for x in (-10.8, -9.2):
+            m.add("ArmouredSteel", box(x - 0.05, x + 0.05, 6.0, 6.6, deck, deck + 1.6))
+        m.add("ArmouredSteel", box(-11.0, -9.0, 6.0, 6.6, deck + 1.55, deck + 1.65))
+        hvac(m, -10.0, 8.8, 0.0, 1.2, 1.6, deck, 0.85)
+        vent(m, -7.0, 6.2, deck)
+        vent(m, -9.2, 11.3, deck)
+        hvac(m, 2.6, 10.3, 90.0, 1.2, 1.4, deck, 0.8)
+        hvac(m, 4.8, 10.3, 90.0, 1.2, 1.4, deck, 0.8)
+        hatch(m, 5.8, 9.1, deck)
+        vent(m, 1.6, 9.1, deck)
+        link_deck = WING_LINK_ROOF - PARAPET + ROOF_MEMBRANE
+        for x in (-4.6, -2.6, -0.6):
+            m.add("ArmouredSteel", box(x - 0.04, x + 0.04, 10.45, 10.55, link_deck, link_deck + 0.35))
+        m.add("PaintedMetal", box(-4.8, -0.2, 10.3, 10.7, link_deck + 0.35, link_deck + 0.45))
+        vent(m, -3.6, 11.6, link_deck)
+        vent(m, -1.4, 9.4, link_deck)
     return m.finish()
 
 
@@ -739,8 +877,30 @@ def build_garage():
     wall = inset_outline(shell, PARAPET_WALL)
     m.add("Concrete", annulus(shell, wall, deck, top))
     m.add("Roofing", plan_prism(wall, deck, deck + ROOF_MEMBRANE))
-    m.add("PaintedMetal", annulus(outline, inset_outline(outline, skin + PARAPET_WALL + 0.03), top, GARAGE_ROOF))
-    m.add("Glass", box(6.0, 10.5, -9.0, -4.0, deck + ROOF_MEMBRANE, deck + 0.4))  # solar panels (detailed later)
+    m.add(trim(), annulus(outline, inset_outline(outline, skin + PARAPET_WALL + 0.03), top, GARAGE_ROOF))
+    roof = deck + ROOF_MEMBRANE
+    if LEVEL < 3:
+        m.add("Glass", box(6.0, 10.5, -9.0, -4.0, roof, deck + 0.4))  # solar panels (detailed later)
+    else:
+        # Photovoltaic rows on steel racks, a condenser, two roof exhaust fans and vents.
+        depth, length, low, high, thick = SOLAR
+        count = max(1, round((SOLAR_Y[1] - SOLAR_Y[0]) / length))
+        step = (SOLAR_Y[1] - SOLAR_Y[0]) / count
+        for xc in SOLAR_ROWS:
+            for yr in (SOLAR_Y[0] + 0.2, SOLAR_Y[1] - 0.2):
+                m.add("ArmouredSteel", box(xc - depth / 2.0, xc - depth / 2.0 + 0.08, yr - 0.04, yr + 0.04, roof, roof + high),
+                      box(xc + depth / 2.0 - 0.08, xc + depth / 2.0, yr - 0.04, yr + 0.04, roof, roof + low))
+            for i in range(count):
+                ya, yb = SOLAR_Y[0] + step * i + 0.03, SOLAR_Y[0] + step * (i + 1) - 0.03
+                corners = [(xc + depth / 2.0, ya, roof + low), (xc - depth / 2.0, ya, roof + high),
+                           (xc - depth / 2.0, yb, roof + high), (xc + depth / 2.0, yb, roof + low)]
+                m.add("Solar", loft(corners, [(a, b, c + thick) for a, b, c in corners]))
+        hvac(m, 4.9, -2.7, 0.0, 1.0, 1.3, roof, 0.8)
+        for yf in (-2.5, -9.5):
+            m.add("PaintedMetal", post(11.3, yf, roof, roof + 0.5, 0.42, 12))
+            m.add("ArmouredSteel", post(11.3, yf, roof + 0.5, roof + 0.62, 0.48, 12, 0.3))
+        vent(m, 5.0, -9.6, roof)
+        vent(m, 7.4, -2.4, roof)
     # The door frame: hazard-striped steel posts and a steel header, a blue lamp strip over the opening.
     front0, front1 = x1 - 0.1, x1 + DOOR_POST[1]
     post_w = DOOR_POST[0]
@@ -830,8 +990,15 @@ def build_courtyard():
 
 def build_flag(key, x, y, z0, tip):
     m = Module(key)
-    m.add("BareMetal", post(x, y, z0, tip, 0.07, 8, 0.04))
-    m.add("BlueAccent", box(x + 0.08, x + 1.98, y - 0.02, y + 0.02, tip - 1.3, tip - 0.1))
+    if LEVEL < 3:
+        m.add("BareMetal", post(x, y, z0, tip, 0.07, 8, 0.04))
+        m.add("BlueAccent", box(x + 0.08, x + 1.98, y - 0.02, y + 0.02, tip - 1.3, tip - 0.1))
+        return m.finish()
+    # Tapered pole on a collar, a ball finial at the tip, the flag hoisted to the top.
+    m.add("BareMetal", post(x, y, z0, z0 + 0.25, 0.14, 12))
+    m.add("BareMetal", post(x, y, z0 + 0.25, tip - 2.0 * FINIAL, 0.07, 10, 0.04))
+    m.add("BareMetal", sphere((x, y, tip - FINIAL), FINIAL, 10, 5))
+    flag_cloth(m, x, y, tip - FLAG[2])
     return m.finish()
 
 
@@ -897,18 +1064,56 @@ def build_radar_tower():
 def build_radar():
     m = Module("Radar")
     x, y, z = RADAR_PIVOT
-    m.add("PaintedMetal", post(x, y, z, z + 0.8, 0.45))
-    m.add("PaintedMetal", box(x - 0.25, x + 0.25, y - 1.6, y + 1.6, z + 0.8, RADAR_TOP))
+    if LEVEL < 3:
+        m.add("PaintedMetal", post(x, y, z, z + 0.8, 0.45))
+        m.add("PaintedMetal", box(x - 0.25, x + 0.25, y - 1.6, y + 1.6, z + 0.8, RADAR_TOP))
+        return m.finish(RADAR_PIVOT)
+    # Pedestal, turntable, a yoke and the phased-array face leaning back 20 degrees, tiled with its modules.
+    m.add("PaintedMetal", post(x, y, z, z + 0.5, 0.45, 16))
+    m.add("ArmouredSteel", post(x, y, z + 0.5, z + 0.65, 0.6, 16))
+    tilt = math.radians(20.0)
+    normal = Vector((math.cos(tilt), 0.0, math.sin(tilt)))
+    up = Vector((-math.sin(tilt), 0.0, math.cos(tilt)))
+    across = Vector((0.0, 1.0, 0.0))
+    centre = Vector((x, y, RADAR_TOP - 0.8 * math.cos(tilt) - 0.12 * math.sin(tilt) - 0.02))
+    for side in (-1.0, 1.0):
+        m.add("ArmouredSteel", box(x - 0.15, x + 0.15, y + side * 1.0 - 0.08, y + side * 1.0 + 0.08, z + 0.65,
+                                   centre.z - 0.3))
+    m.add("PaintedMetal", box3(centre, across, up, normal, 1.6, 0.8, 0.12))
+    m.add("ArmouredSteel", box3(centre - normal * 0.16, across, up, normal, 1.5, 0.6, 0.04))
+    for i in range(8):
+        for j in range(3):
+            tile = centre + normal * 0.135 + across * (-1.4 + 0.4 * i) + up * (-0.52 + 0.52 * j)
+            m.add("ArmouredSteel", box3(tile, across, up, normal, 0.18, 0.24, 0.015))
     return m.finish(RADAR_PIVOT)
 
 
 def build_wing_dish():
     m = Module("WingDish")
     x, y, z = DISH_PIVOT
-    m.add("PaintedMetal", post(x, y, z, z + 1.0, 0.3))
-    centre = Vector((x, y, z + 1.0 + DISH_RADIUS))
-    m.add("PaintedMetal", cylinder(centre + Vector((0.35, 0.0, 0.0)), (1.0, 0.0, 0.3), DISH_RADIUS, 0.35, 16,
-                                   DISH_RADIUS * 0.4))
+    if LEVEL < 3:
+        m.add("PaintedMetal", post(x, y, z, z + 1.0, 0.3))
+        centre = Vector((x, y, z + 1.0 + DISH_RADIUS))
+        m.add("PaintedMetal", cylinder(centre + Vector((0.35, 0.0, 0.0)), (1.0, 0.0, 0.3), DISH_RADIUS, 0.35, 16,
+                                       DISH_RADIUS * 0.4))
+        return m.finish(DISH_PIVOT)
+    # Pedestal, an elevation head, a parabolic reflector looking 30 degrees up towards +X, the feed on three struts.
+    m.add("PaintedMetal", post(x, y, z, z + 0.9, 0.3, 12))
+    m.add("ArmouredSteel", box(x - 0.35, x + 0.25, y - 0.3, y + 0.3, z + 0.9, z + 1.5))
+    axis = Vector((math.cos(math.radians(30.0)), 0.0, math.sin(math.radians(30.0))))
+    centre = Vector((x - 0.15, y, z + 1.0 + DISH_RADIUS))
+    r = DISH_RADIUS
+    m.add("PaintedMetal", lathe(centre, axis, [(0.0, 0.05), (0.03, r * 0.36), (0.11, r * 0.68), (0.26, r), (0.21, r),
+                                               (0.06, r * 0.68), (-0.03, r * 0.36), (-0.06, 0.05)], 20))
+    m.add("ArmouredSteel", box3(centre - axis * 0.1, Vector((0.0, 1.0, 0.0)), axis.cross(Vector((0.0, 1.0, 0.0))), axis,
+                                0.3, 0.3, 0.12))
+    focus = centre + axis * 0.95
+    _, u, v = axis_frame(axis)
+    for k in range(3):
+        a = math.radians(90.0 + 120.0 * k)
+        rim = centre + axis * 0.24 + (u * math.cos(a) + v * math.sin(a)) * r * 0.97
+        m.add("ArmouredSteel", bar(rim, focus, 0.02, 4))
+    m.add("ArmouredSteel", cylinder(focus + axis * 0.05, axis, 0.08, 0.25, 8, 0.05))
     return m.finish(DISH_PIVOT)
 
 
@@ -924,6 +1129,24 @@ def build_satcom():
     m.add("PaintedMetal", sphere((x, y, centre_z), RADOME_RADIUS, 20, 10))
     m.add("BareMetal", post(x + half - 0.1, y + half - 0.1, deck + 0.2, SATCOM_MAST_TIP, 0.05))
     m.add("BareMetal", post(x - half + 0.1, y + half - 0.1, deck + 0.2, SATCOM_MAST_TIP - 1.0, 0.05))
+    if LEVEL >= 3:
+        beacon(m, x + half - 0.1, y + half - 0.1, SATCOM_MAST_TIP - 0.3)
+        beacon(m, x - half + 0.1, y + half - 0.1, SATCOM_MAST_TIP - 1.3)
+        # Guard rail round the platform (posts and a top rail), a caged ladder up the +X face.
+        for i in range(4):
+            a, b = [(x - half + 0.05, y - half + 0.05), (x + half - 0.05, y - half + 0.05),
+                    (x + half - 0.05, y + half - 0.05), (x - half + 0.05, y + half - 0.05)][i], \
+                   [(x + half - 0.05, y - half + 0.05), (x + half - 0.05, y + half - 0.05),
+                    (x - half + 0.05, y + half - 0.05), (x - half + 0.05, y - half + 0.05)][i]
+            m.add("BareMetal", bar((a[0], a[1], deck + 1.25), (b[0], b[1], deck + 1.25), 0.025, 4))
+            m.add("BareMetal", bar((a[0], a[1], deck + 0.7), (b[0], b[1], deck + 0.7), 0.02, 4))
+            m.add("BareMetal", post(a[0], a[1], deck + 0.2, deck + 1.25, 0.025, 4))
+        lx = x + half - 0.25
+        for ly in (y - 0.25, y + 0.25):
+            m.add("BareMetal", post(lx, ly, 0.3, deck - 0.1, 0.025, 4))
+        for k in range(int((deck - 0.6) / 0.6)):
+            zr = 0.6 + 0.6 * k
+            m.add("BareMetal", bar((lx, y - 0.25, zr), (lx, y + 0.25, zr), 0.015, 4))
     return m.finish()
 
 
@@ -931,7 +1154,14 @@ def build_mast():
     m = Module("Mast")
     x, y = MAST_CENTRE
     m.add("Concrete", centred_box(x, y, 1.0, 1.0, APRON_TOP, 0.4))
-    m.add("BareMetal", post(x, y, 0.4, MAST_TIP, 0.12, 8, 0.05))
+    m.add("ArmouredSteel" if LEVEL >= 3 else "BareMetal", post(x, y, 0.4, MAST_TIP, 0.12, 8, 0.05))
+    if LEVEL >= 3:
+        for z in (MAST_TIP - 0.15, 12.2, 8.0):
+            beacon(m, x, y, z, 0.1 if z > 9.0 else 0.09)
+        for (ax, ay), height in GUYS:
+            m.add("Concrete", centred_box(ax, ay, 0.4, 0.4, APRON_TOP, 0.25))
+            m.add("BareMetal", bar((ax, ay, 0.25), (x, y, height), 0.012, 4))
+        m.add("PaintedMetal", centred_box(x + 0.7, y, 0.5, 0.6, APRON_TOP, 1.1))  # equipment cabinet
     return m.finish()
 
 
@@ -974,8 +1204,19 @@ def build_light_masts():
     m = Module("LightMasts")
     for x, y, tip in LIGHT_MASTS:
         m.add("Concrete", centred_box(x, y, 0.8, 0.8, APRON_TOP, 0.4))
-        m.add("BareMetal", post(x, y, 0.4, tip - 0.4, 0.1, 8, 0.06))
-        m.add("Lamp", centred_box(x, y, 0.6, 0.6, tip - 0.4, tip))
+        if LEVEL < 3:
+            m.add("BareMetal", post(x, y, 0.4, tip - 0.4, 0.1, 8, 0.06))
+            m.add("Lamp", centred_box(x, y, 0.6, 0.6, tip - 0.4, tip))
+            continue
+        # Tapered pole on a base plate, a crossarm square to the slab's centre with two floodlight heads aimed down.
+        m.add("ArmouredSteel", centred_box(x, y, 0.5, 0.5, 0.4, 0.45))
+        m.add("BareMetal", post(x, y, 0.45, tip - 0.3, 0.11, 10, 0.06))
+        angle = math.degrees(math.atan2(-y, -x)) + 90.0
+        m.add("BareMetal", obox(x, y, angle, FLOOD_ARM, 0.08, tip - 0.75, tip - 0.65))
+        for side in (-1.0, 1.0):
+            m.add("ArmouredSteel", obox(x, y, angle, 0.42, 0.34, tip - 1.0, tip - 0.75, u=side * FLOOD_ARM * 0.4))
+            m.add("Lamp", obox(x, y, angle, 0.36, 0.28, tip - 1.02, tip - 1.0, u=side * FLOOD_ARM * 0.4))
+        beacon(m, x, y, tip - 0.2, 0.08)
     return m.finish()
 
 
@@ -1001,6 +1242,8 @@ def build_clearance(collection):
 
 def make_materials():
     for name, (colour, roughness, metallic, emission) in MATERIALS.items():
+        if name == "Concrete" and LEVEL >= 3:
+            colour = tuple(c * CONCRETE_TONE for c in colour)
         material = bpy.data.materials.new(name)
         material.use_nodes = True
         shader = material.node_tree.nodes["Principled BSDF"]
