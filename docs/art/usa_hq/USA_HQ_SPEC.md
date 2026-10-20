@@ -1,11 +1,12 @@
 # USA Default HQ: visual reference and technical spec
 
-Status: **draft for producer approval** (#185). Once approved, this is the single source for the USA HQ's look, size, modules and
+Status: **approved** by the producer at gate 2 (2026-10-20, #185). This is the single source for the USA HQ's look, size, modules and
 UE5 setup; every downstream issue (#121, #186 to #192, #196) builds to it. A deviation from the image or from a number marked
 *decided* needs a recorded producer decision in §14.
 
-Values marked *proposal* are mine and wait for the producer's approval at gate 2. Values marked *decided* are producer
-decisions (2026-10-20) or come from the [world scale standard](../../tech/scale/WORLD_SCALE_STANDARD.md).
+Values marked *decided* are producer decisions (2026-10-18 and 2026-10-20, §14) or come from the
+[world scale standard](../../tech/scale/WORLD_SCALE_STANDARD.md). Values marked *proposal* are working positions that the
+issue named next to them confirms; changing one beyond its stated tolerance needs a producer decision.
 
 ## 1. Approved reference
 
@@ -44,29 +45,29 @@ Each line names the rule it is checked against. "Test" means `Source/WorldDivide
 | 4 | How height is measured | Whole root-mesh bounding box Z × `MeshScale.Z` (`GetMeshHeight`), so mast tips count | decided | Test `GetMeshHeight` | The 24 m mast **must be in the static root mesh** (see §11) |
 | 5 | Command core roof | ~14.0 m (upper drum to ~16.5 m) | decided (~) | Proportion only | — |
 | 6 | Compression | Modelled at compressed size, about 0.6–0.7× a real HQ campus | decided | Standard §2, rule 5 | OK |
-| 7 | `MeshScale` | **(1, 1, 1)**: the final mesh is modelled at size; no `building_fit` stretch | proposal | Standard rule 5; `setup_testmap.py` `building_fit` stretches placeholders only | #191 must not run the fit on the final mesh |
-| 8 | Built mass inside footprint | Mesh plus apron props within ±1400 cm on X and Y; paved slab edge = footprint edge | proposal | Footprint box of test `GetFootprintBox` | Q1 in §15 |
+| 7 | `MeshScale` | **(1, 1, 1)**: the final mesh is modelled at size; no `building_fit` stretch | decided (rule 5) | Standard rule 5; `setup_testmap.py` `building_fit` stretches placeholders only | #191 must not run the fit on the final mesh |
+| 8 | Built mass inside footprint | Mesh plus apron props within ±1400 cm on X and Y; **the paved slab edge is the 28 m footprint edge** | decided | Test "mesh fills its footprint" (`RTSScaleTests.cpp:314`): mesh X and Y ≤ footprint + 1 cm, and the mesh spans **≥ 0.9 of the footprint on at least one axis (≥ 2520 cm)** | OK: the slab spans 2800 cm on both axes |
 | 9 | Design vehicle | Engineering vehicle **6.5 × 3.0 × 3.2 m** (L × W × H) | decided | Standard §3 engineering vehicle | Envelope for every garage number |
 | 10 | Current builder mesh (measured) | 446.2 × 300.0 × 273.2 cm (see §5) | measured | Test `UnitStandards` builder width 300 ± 10 % | Smaller than the envelope on L and H; same W |
 | 11 | Exit lane width | **≥ 7.0 m** (3.0 + 2 × 2 m) | decided | Standard rule 1; test `ExitLaneMargin` 200 | Proposed lane 7.0 m centred on the door (§5) |
 | 12 | Vehicle nav gap | **≥ 6.0 m** (agent r 190 cm → 3.8 m + ~2 m) | decided | Standard rule 4; agent radius 190, height 350 | Door 7.0 m clear ≥ 6.0 m; lane 7.0 m ≥ 6.0 m |
-| 13 | Garage door clear width | **7.0 m** | proposal | Rules 1 and 4 | OK: meets both with the same 7 m |
-| 14 | Garage door clear height | **≥ 4.5 m** (proposed 4.5 m) | proposal | 3.2 m vehicle; nav agent height 3.5 m | 1.3 m over the vehicle, 1.0 m over the agent height |
-| 15 | Garage bay depth | **≥ 8.5 m** (proposed 8.5 m clear, door plane to back wall) | proposal | 6.5 m vehicle | 1.0 m at the back + 1.0 m behind the door leaf |
-| 16 | Garage bay interior clear height | 5.0 m (roof module ~7.5 m) | proposal | Door + 0.5 m for the rolled door leaf | — |
-| 17 | Garage lateral position | Door centre at **local Y = -600 cm** from the footprint centreline | proposal (offset decided to exist) | `GetExitLocation` has no lateral term | #192 adds the offset (§5) |
+| 13 | Garage door clear width | **7.0 m** | decided | Rules 1 and 4 | OK: meets both with the same 7 m |
+| 14 | Garage door clear height | **4.5 m** | decided | 3.2 m vehicle; nav agent height 3.5 m | 1.3 m over the vehicle, 1.0 m over the agent height |
+| 15 | Garage bay depth | **8.5 m** clear, door plane to back wall | decided | 6.5 m vehicle | 1.0 m at the back + 1.0 m behind the door leaf |
+| 16 | Garage bay interior clear height | 5.0 m (roof module ~7.5 m) | decided | Door + 0.5 m for the rolled door leaf | — |
+| 17 | Garage lateral position | Door centre at **local Y = -600 cm** from the footprint centreline | decided (#186 confirms to ±1 m) | `GetExitLocation` has no lateral term | #192 adds the offset (§5) |
 | 18 | Exit clearance | 200 cm beyond the footprint edge + the unit's longer half | code | `RTSBuildPlacement::ExitClearance = 200`; test lane checks | Unchanged |
 | 19 | Exit lane length | 3 × half length + 200: **1175 cm** for the 6.5 m envelope, **869 cm** for today's builder mesh | code | `RTSBuildPlacement::GetExitLaneLength` | §5 |
 | 20 | Gaps between modules meant for vehicles | none: only the garage is vehicle-accessible; the courtyard is pedestrian | proposal | Rule 4 | Courtyard has no nav requirement for vehicles |
 
-Why the garage proposals hold (rows 13–16):
+Why the garage values hold (rows 13–16, approved 2026-10-20):
 
 - **Width 7.0 m.** The dozer is 3.0 m wide; rule 1 asks 2 m either side for the lane and rule 4 asks ≥ 6 m for any vehicle gap.
   Making the door as wide as the lane means the hull never narrows its clearance on the way out, and the vehicle nav agent
   (3.8 m) passes the door with 1.6 m each side. The image's door reads about this wide against the garage block.
 - **Height 4.5 m.** 3.2 m vehicle + 1.3 m for the raised blade, roof clutter and camera readability; it also clears the
-  350 cm nav agent height by 1.0 m, so the navmesh can be generated through the doorway if #192 lets units drive out
-  on nav (Q4).
+  350 cm nav agent height by 1.0 m. No navmesh is generated inside the bay: the building's collision covers the whole
+  footprint, so the dozer leaves the bay on a scripted drive-out path (§5), not on navigation.
 - **Depth 8.5 m.** 6.5 m vehicle + 1.0 m to the back wall + 1.0 m between the blade and the door leaf when closed. The
   concept shows the dozer fully inside the bay with the door open; 8.5 m keeps that true for the envelope, not only for
   today's smaller mesh.
@@ -92,16 +93,34 @@ level unless "tip".
 | M12 | Checkpoint posts | Two low barrier blocks with lamp masts, front of the apron | on the +X apron, clear of the exit lane | lamp tips ~400 | Blue beacons; jersey barriers |
 | M13 | Fuel tanks | Twin horizontal tanks next to the right checkpoint | +X apron, +Y of the exit lane | ~250 | Must stay outside the 7 m lane |
 | M14 | Supply stacks | Olive crates and containers around wing and garage | along walls | ≤ 250 | Static, merged into the root |
-| M15 | Loader | Small olive loader beside the garage | front of M3, +Y of the door | ~250 | Static prop in the root, outside the lane; Q6 |
+| M15 | Loader | Small olive loader beside the garage | front of M3, +Y of the door | ~250 | Static prop in the root, outside the lane; kept as drawn (§14) |
 | M16 | Light masts | Floodlight masts at the wing corners and on the apron | corners | tips ~600–900 | Lamp heads emissive |
 
 ## 5. Garage, spawn point and exit path
 
 ### Builder bounds, measured
 
-Read on 2026-10-20 from the imported assets, editor closed, with the read-only commandlet
-`UnrealEditor-Cmd.exe WorldDivide.uproject -run=pythonscript -script=<read_bounds.py> -unattended -nosplash -nullrhi -nosound`.
-The script loads each data asset and prints `Mesh.get_bounding_box()` and `mesh_scale`.
+Read on 2026-10-20 from the imported assets with the editor pythonscript commandlet, editor closed (read-only, saves
+nothing). To reproduce, save the script below outside the repo and run:
+
+```
+"D:\Program Files\Epic Games\UE_5.8\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "<repo>\WorldDivide.uproject" -run=pythonscript "-script=<abs path>\read_bounds.py" -DisablePlugins=ModelContextProtocol,EditorToolset,SlateInspectorToolset,WorldDivideMCP -unattended -nosplash -nullrhi -nosound -stdout -FullStdOutLogOutput
+```
+
+```python
+import unreal
+for path in ["/Game/Data/Units/DA_TestBuilder", "/Game/Data/Buildings/DA_TestHeadquarters"]:
+    da = unreal.load_asset(path)
+    mesh = da.get_editor_property("mesh")
+    sc = da.get_editor_property("mesh_scale")
+    bb = mesh.get_bounding_box()
+    size = bb.max - bb.min
+    unreal.log_warning("HQBOUNDS %s mesh=%s size=(%.2f,%.2f,%.2f) scale=(%.4f,%.4f,%.4f) scaled=(%.1f,%.1f,%.1f)" % (
+        path, mesh.get_path_name(), size.x, size.y, size.z, sc.x, sc.y, sc.z,
+        size.x * sc.x, size.y * sc.y, size.z * sc.z))
+```
+
+The results are the log lines starting with `HQBOUNDS`.
 
 | Asset | Mesh | Mesh bounds (cm) | `MeshScale` | In the world (L × W × H, cm) |
 |---|---|---|---|---|
@@ -112,7 +131,7 @@ The script loads each data asset and prints `Mesh.get_bounding_box()` and `mesh_
 The garage is sized to the **envelope**, which bounds today's mesh on every axis (it is 2.04 m shorter and 0.47 m lower;
 the width binds at 300). The placeholder HQ is 26.6 m (28 m less the 5 % `building_fit` border) and 22 m high.
 
-### Positions (proposals)
+### Positions (decided; #186 confirms to ±1 m)
 
 | Point | Local (X, Y, Z) cm | How |
 |---|---|---|
@@ -122,16 +141,24 @@ the width binds at 300). The placeholder HQ is 26.6 m (28 m less the 5 % `buildi
 | Footprint exit edge | X = +1400, Y = -600 | `GetFootprintExtent(...).X` |
 | Spawn location today (`GetExitLocation`) | (1400 + halfLength + 200, **0**, 0): **(1925, 0, 0)** envelope, (1823, 0, 0) today's mesh | No lateral term today |
 | Spawn location with #192's offset | **(1925, -600, 0)** | Lateral offset -600 cm |
-| Lane end / rally (`GetExitLaneLength`) | X = 1400 + 1175 = **2575**, Y = -600 (envelope); 1400 + 869 = 2269 with today's mesh | Rally at the lane end (`RTSBuilding.cpp`) |
+| Lane end / rally (`GetExitLaneLength`) | X = 1400 + 1175 = **2575** (envelope); 1400 + 869 = 2269 with today's mesh. **Y = 0 today**; Y = -600 only once #192 adds the offset | Rally at the lane end (`RTSBuilding.cpp`) |
 
-**Exit path.** The dozer appears at `Spawn_Garage`, drives straight +X through the open door (door clear 7.0 m), crosses
-the 1.5 m apron, leaves the footprint at X = +1400, and continues along Y = -600 to the lane end. The lane is 7.0 m wide
+**Exit path (decided).** The door opens first; then the dozer appears at `Spawn_Garage` and follows a **scripted
+drive-out path** (not navigation: there is no navmesh inside the bay, since the building's collision covers the whole
+footprint) straight +X through the door (7.0 m clear), across the 1.5 m apron, out of the footprint at X = +1400 and
+along Y = -600 to the lane end, where it returns to normal navigation. The lane is 7.0 m wide
 (Y -950 … -250), the same width as the door, and nothing in the mesh or the props stands in it from X = +400 to the
 footprint edge (M12, M13 and M15 sit at Y > -250 or Y < -950).
 
 **Lateral exit offset for #192: -600 cm on local Y**, read from the image (the door centre sits about 6 m from the face
 centre towards the right corner, ±1 m); #186's blockout confirms the value. #192 adds it to `GetExitLocation` (and the
-placement check `CanUnitsLeave` and the lane test must use the same offset), rotated with the building's yaw.
+placement check `CanUnitsLeave` and the lane test must use the same offset), rotated with the building's yaw. Two code
+facts #192 must handle:
+
+- `CanUnitsLeave` returns `true` early when the widest exit unit uses the narrowest nav agent, so it checks nothing for
+  such units; the offset check must not rely on it alone.
+- `GetExitLocation` snaps the exit point's XY to the navmesh (`ProjectPoint`, extent 200 × 200 cm), which can pull an
+  offset point sideways towards the nearest nav polygon; the offset lane end must be checked after the snap.
 
 ## 6. Animated parts
 
@@ -139,7 +166,7 @@ All cosmetic and client-side; none changes gameplay state (server-authoritative 
 
 | Part | Motion | Pivot (local cm, proposal) | How (proposal) | Driven by |
 |---|---|---|---|---|
-| Garage door | Rolls up: the leaf translates +Z 0 → 450 and rolls into a drum, ~1.5 s | hinge line X +1250, Z 470, Y -600 | Separate movable mesh | #196 state controller, timed with #192's spawn |
+| Garage door | Rolls up: the leaf translates +Z 0 → 450 and rolls into a drum, ~1.5 s | hinge line X +1250, Z 470, Y -600 | Separate movable mesh | #196 state controller; opens before #192 spawns the dozer |
 | Flag (×2) | Cloth wave | pole tops M5, M6 | World-position-offset material (no simulation) | Always on |
 | Main radar array (M7) | Yaw, slow full turn (~6 s per rev) | tower top (-100, -800, 1100) | Separate movable mesh | #196 |
 | Satcom radome (M8) | **Static** (a radome hides its dish) | — | In the root | — |
@@ -173,8 +200,10 @@ carry no team-colour slot.
 
 ## 8. UE5 hierarchy
 
-One static root mesh plus separate movable parts, in the `m20_guardian.json` shape: a JSON next to the mesh lists the parts
-and sockets by name with `[x, y, z]` offsets in cm in the local frame of §2 (+X = garage face). Proposed file
+One static root mesh plus separate movable parts. A JSON next to the mesh lists the parts and sockets by name with
+`[x, y, z]` offsets in cm in the local frame of §2 (+X = garage face). This is a **new layout** (`root_mesh`, `parts`,
+`sockets`) modelled on `m20_guardian.json`, not identical to it: the M20 file holds flat named offsets (`turret_offset`,
+`wheels`, ...) read by the M20 importer, so #191 needs a reader for this layout. Proposed file
 `Art/USA/buildings/usa_hq/usa_hq.json` (#191):
 
 ```json
@@ -202,9 +231,9 @@ and sockets by name with `[x, y, z]` offsets in cm in the local frame of §2 (+X
 - Pivots and sockets are proposals; #186 confirms positions, #191 writes the final JSON and checks the 2400 cm reference
   length on import (standard rule 5).
 
-## 9. Budgets (proposals for the producer)
+## 9. Budgets (approved 2026-10-20)
 
-| Budget | Proposal |
+| Budget | Limit |
 |---|---|
 | Triangles, LOD0 | ≤ 60k root + ≤ 10k for all movable parts |
 | LOD1 / LOD2 / LOD3 | ≤ 25k / ≤ 8k / ≤ 2k (LOD3 a silhouette block-out, masts as cards) |
@@ -233,16 +262,16 @@ generic eagle-and-star emblem and the flag.
 
 | Issue | Constraint |
 |---|---|
-| #121 USA faction data | Name "USA Headquarters" (Q7), footprint (28, 28), mesh `SM_USA_HQ`, `MeshScale` (1, 1, 1), max_count 1, build time 12 s, produces the builder; the widest exit unit is the 6.5 × 3.0 m engineering vehicle |
+| #121 USA faction data | Display name **"Headquarters"**, footprint (28, 28), mesh `SM_USA_HQ`, `MeshScale` (1, 1, 1), max_count 1, build time 12 s, produces the builder; the widest exit unit is the 6.5 × 3.0 m engineering vehicle |
 | #186 Blockout | Confirm every §4 position and the -600 cm door offset to ±0.5 m; keep the 24 m tip and 14 m core roof; mass within ±1400 |
 | #187 Structure | Static modules and props in one root mesh, modelled at size (rule 5) |
 | #188 Garage | Door 7.0 × 4.5 m clear, bay 8.5 m deep, 5.0 m interior height, door plane X = +1250; door leaf a separate part with the §8 pivot; lane area free of props |
 | #189 Materials | §7 categories, team-colour strength 1 only on blue accent and eagle plates, emissive never tinted; §9 texture budget |
 | #190 Rooftop equipment | Radar and wing dish as separate parts with their pivots; satcom radome static; core mast in the root, tip at 2400 |
 | #191 Import | `usa_hq.json` per §8; reference length 2400 cm on Z; no `building_fit`; `GetMeshHeight` must read 2400 ± 10 %; LODs and collision per §9 |
-| #192 Garage production | Add the lateral offset **-600 cm on local Y** to `GetExitLocation`, `CanUnitsLeave` and the lane test; spawn inside at `Spawn_Garage` and drive out, or keep spawning at the exit (Q4); open the door before the unit appears |
+| #192 Garage production | Add the lateral offset **-600 cm on local Y** to `GetExitLocation`, `CanUnitsLeave` and the lane test; open the door first, spawn inside at `Spawn_Garage` and drive the scripted path to the lane end (no navmesh in the bay); `CanUnitsLeave` returns early for the narrowest nav agent and `GetExitLocation` snaps XY to the navmesh (§5) |
 | #196 State controller | One ticking component per HQ; sets team colour on the movable parts; drives door, radar, dish, beacons, lights |
-| #191 / #196 construction | `ApplyConstructionVisual` scales the mesh component in Z with build progress. Parts attached to sockets on that component scale with it (squashed while building); parts on the actor root would float. Decide: attach to the mesh and accept the squash, or hide the parts until construction completes (Q5) |
+| #191 / #196 construction | `ApplyConstructionVisual` scales the mesh component in Z with build progress. **Decided:** the movable parts (door, radar, flag, satcom) scale with the mesh during construction, so they attach to sockets on the mesh component, not the actor root (where they would float) |
 
 ## 12. Cosmetic parts and the server
 
@@ -263,21 +292,20 @@ scope.
 | 2026-10-20 | Local +X = the garage face (lower-right face in the image); garage off-centre, so #192 adds a lateral exit offset |
 | 2026-10-20 | Design envelope 6.5 × 3.0 × 3.2 m; measured `DA_TestBuilder` bounds recorded as evidence |
 | 2026-10-20 | Team colour on blue accent panels and eagle plates only; lamps and every other slot none |
-| 2026-10-20 | Door ≥ 4.5 m and bay ≥ 8.5 m are proposals; budgets are proposals |
+| 2026-10-20 | The dozer in the bay in the image is the produced unit, not part of the HQ mesh |
+| 2026-10-20 | Q1: the paved slab edge is the 28 m footprint edge |
+| 2026-10-20 | Q2: lateral exit offset -600 cm on local Y; #186's blockout confirms it to ±1 m |
+| 2026-10-20 | Q3: garage door 7.0 × 4.5 m clear, bay 8.5 m deep, 5.0 m interior height |
+| 2026-10-20 | Q4: the dozer spawns inside the bay at `Spawn_Garage` and leaves by a scripted drive-out path to the lane end, the door opening first (#192); no navmesh inside the bay |
+| 2026-10-20 | Q5: movable parts (door, radar, flag, satcom) scale with the mesh during construction (#191 / #196) |
+| 2026-10-20 | Q6: keep the second flag and the loader as drawn |
+| 2026-10-20 | Q7: display name "Headquarters" (#121) |
+| 2026-10-20 | Q8: the budgets in §9 |
 
 ## 15. Open questions
 
-| # | Question | Routed to |
-|---|---|---|
-| Q1 | Is the paved slab with its edge markings the footprint edge (proposed), or a ground decal beyond the 28 m footprint? | Producer, then #186 |
-| Q2 | Lateral offset -600 cm: approve the value, to be confirmed in the blockout | Producer, then #186 / #192 |
-| Q3 | Garage door 7.0 × 4.5 m clear and bay 8.5 m deep: approve | Producer, then #188 |
-| Q4 | Does the dozer spawn inside the bay at `Spawn_Garage` and drive out on the navmesh, or spawn at the exit as today with the door animation only? | #192 |
-| Q5 | During construction: movable parts squash with the Z-scaled mesh, or stay hidden until complete? | #191 / #196 |
-| Q6 | The loader beside the garage and the second flag: keep both as drawn (proposed)? | Producer, then #190 |
-| Q7 | Display name of the building | #121 |
-| Q8 | Budgets in §9: approve | Producer |
+None. Q1 to Q8 were answered at gate 2 on 2026-10-20 and are recorded in §14.
 
 ---
 
-Approved by producer: ____ date ____
+Approved by producer (TemplarGeneral) on 2026-10-20 at gate 2; decisions in §14.
