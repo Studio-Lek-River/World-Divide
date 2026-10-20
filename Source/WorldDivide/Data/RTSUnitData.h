@@ -424,6 +424,13 @@ struct WORLDDIVIDE_API FRTSVehicleDust
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
 	FLinearColor Color = FLinearColor(0.13f, 0.12f, 0.07f);
 
+	/**
+	 * Share of every ground's haze and chunk colour kept in the dark (URTSDayNightSubsystem::IsDark, #341): the dust takes in
+	 * more of the moon and sky than the ground beneath it, so this keeps it darker than the ground. 1 by day.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0", ClampMax = "1"))
+	float NightBrightness = 0.6f;
+
 	/** Each kind of ground's rate, colour and shape. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
 	TArray<FRTSDustSurface> Surfaces;

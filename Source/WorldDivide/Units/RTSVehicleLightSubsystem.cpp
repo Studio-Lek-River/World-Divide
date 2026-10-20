@@ -33,9 +33,13 @@ namespace
 		return Unit.GetUnitData() ? Unit.GetUnitData()->Lights.GetLightCount() : 0;
 	}
 
-	/** A spot light for one end of a vehicle, attached to its hull at Offset, pointing along Direction tilted DownPitch down. */
+	/**
+	 * A spot light for one end of a vehicle, attached to its hull at Offset, pointing along Direction tilted DownPitch down.
+	 * bLightsDust: it lights the dust (lighting channel 1, URTSDustSubsystem) as well as the rest, as the headlights; the tail
+	 * lights do not, or the dust behind a vehicle turns red at night (#341).
+	 */
 	USpotLightComponent* MakeSpot(UWorld& World, UStaticMeshComponent& Hull, const FVector& Offset, float Yaw, float DownPitch,
-		const FLinearColor& Color, float Intensity, float Radius, float InnerCone, float OuterCone)
+		const FLinearColor& Color, float Intensity, float Radius, float InnerCone, float OuterCone, bool bLightsDust)
 	{
 		USpotLightComponent* Light = NewObject<USpotLightComponent>(&World);
 		Light->SetMobility(EComponentMobility::Movable);
@@ -53,6 +57,7 @@ namespace
 		Light->SetInnerConeAngle(FMath::Min(InnerCone, OuterCone));
 		Light->SetOuterConeAngle(OuterCone);
 		Light->SetCanEverAffectNavigation(false);
+		Light->LightingChannels.bChannel1 = bLightsDust;
 		// The hull's scale stays out of the light; its place on the hull does not.
 		Light->SetUsingAbsoluteScale(true);
 		Light->SetupAttachment(&Hull);
@@ -191,12 +196,14 @@ void URTSVehicleLightSubsystem::MakeLights(FRTSVehicleLightEntry& Entry, ARTSUni
 	for (const FVector& Offset : FRTSVehicleLights::GetClusterMidpoints(Lights.HeadlightOffsets))
 	{
 		Entry.Headlights.Add(MakeSpot(World, Hull, Offset, 0.f, Lights.HeadlightDownPitch,
-			Lights.HeadlightColor, Lights.HeadlightIntensity, Lights.HeadlightRadius, Lights.HeadlightInnerCone, Lights.HeadlightOuterCone));
+			Lights.HeadlightColor, Lights.HeadlightIntensity, Lights.HeadlightRadius, Lights.HeadlightInnerCone, Lights.HeadlightOuterCone,
+			true));
 	}
 	for (const FVector& Offset : FRTSVehicleLights::GetClusterMidpoints(Lights.TaillightOffsets))
 	{
 		Entry.Taillights.Add(MakeSpot(World, Hull, Offset, 180.f, Lights.TaillightDownPitch,
-			Lights.TaillightColor, Lights.TaillightIntensity, Lights.TaillightRadius, Lights.TaillightInnerCone, Lights.TaillightOuterCone));
+			Lights.TaillightColor, Lights.TaillightIntensity, Lights.TaillightRadius, Lights.TaillightInnerCone, Lights.TaillightOuterCone,
+			false));
 	}
 	Entry.bActive = false;
 }

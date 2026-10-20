@@ -1,10 +1,14 @@
 #include "Units/RTSDustSubsystem.h"
 
+#include "Components/LightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Core/RTSDayNightSubsystem.h"
 #include "Data/RTSUnitData.h"
+#include "Engine/DirectionalLight.h"
 #include "Engine/Level.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "HAL/IConsoleManager.h"
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
@@ -344,6 +348,10 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 			Component->SetAutoDestroy(false);
 			Component->SetCastShadow(false);
 			Component->SetCanEverAffectNavigation(false);
+			// Lighting channel 1 only (#341): lit by the sun or moon (OnWorldBeginPlay), the sky and the headlights, never by
+			// the red tail lights, which turned the dust behind a vehicle into a red cloud at night.
+			Component->LightingChannels.bChannel0 = false;
+			Component->LightingChannels.bChannel1 = true;
 			Component->SetAsset(Dust.System);
 			// The hull's scale stays out of the dust.
 			Component->SetUsingAbsoluteScale(true);
@@ -392,14 +400,20 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 		Entry.SentOpacity = Dust.Opacity;
 	}
 	// The ground's colour and shape, on the same system: a vehicle driving from one ground onto another keeps the dust it
-	// raised on the first, which settles as it was born.
-	if (Entry.SentSurface != static_cast<int32>(Entry.Surface))
+	// raised on the first, which settles as it was born. In the dark both colours are dimmed (#341), sent again at dusk and dawn.
+	const URTSDayNightSubsystem* DayNight = GetWorld()->GetSubsystem<URTSDayNightSubsystem>();
+	const bool bDark = DayNight && DayNight->IsDark();
+	if (Entry.SentSurface != static_cast<int32>(Entry.Surface) || Entry.bSentDark != bDark)
 	{
+		const float Brightness = bDark ? FMath::Clamp(Dust.NightBrightness, 0.f, 1.f) : 1.f;
+		const FLinearColor Color(Ground.Color.R * Brightness, Ground.Color.G * Brightness, Ground.Color.B * Brightness, Ground.Color.A);
+		const FLinearColor ChunkColor(Ground.ChunkColor.R * Brightness, Ground.ChunkColor.G * Brightness,
+			Ground.ChunkColor.B * Brightness, Ground.ChunkColor.A);
 		for (UNiagaraComponent* Component : Entry.Components)
 		{
 			if (IsValid(Component))
 			{
-				Component->SetVariableLinearColor(ColorParameter, Ground.Color);
+				Component->SetVariableLinearColor(ColorParameter, Color);
 				Component->SetVariableFloat(HazeScaleParameter, Ground.HazeScale);
 				Component->SetVariableFloat(OpacityScaleParameter, Ground.OpacityScale);
 				Component->SetVariableFloat(LifetimeParameter, Ground.Lifetime);
@@ -409,10 +423,11 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 				Component->SetVariableFloat(SizeScaleParameter, Ground.SizeScale);
 				Component->SetVariableFloat(ChunkScaleParameter, Ground.ChunkScale);
 				Component->SetVariableFloat(ChunkSizeParameter, Ground.ChunkSize);
-				Component->SetVariableLinearColor(ChunkColorParameter, Ground.ChunkColor);
+				Component->SetVariableLinearColor(ChunkColorParameter, ChunkColor);
 			}
 		}
 		Entry.SentSurface = static_cast<int32>(Entry.Surface);
+		Entry.bSentDark = bDark;
 	}
 	// The dust is thrown off the way the tracks or wheels leave the ground behind: backward driving forward, and ahead in reverse.
 	const float Away = Unit.GetRealizedMotion().ForwardSpeed < 0.f ? 1.f : -1.f;
@@ -509,6 +524,21 @@ void URTSDustSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	TickFunction.bCanEverTick = true;
 	TickFunction.bTickEvenWhenPaused = false;
 	TickFunction.RegisterTickFunction(InWorld.PersistentLevel);
+
+	// The dust is on lighting channel 1 only (#341), so the sun or moon lights that channel too, on every map. Turned on in
+	// place, as rts.Debug's night shots (FRTSShotNight) change the level's lights.
+	if (DrawsOn(InWorld.GetNetMode()))
+	{
+		for (TActorIterator<ADirectionalLight> It(&InWorld); It; ++It)
+		{
+			ULightComponent* Light = It->GetLightComponent();
+			if (Light && !Light->LightingChannels.bChannel1)
+			{
+				Light->LightingChannels.bChannel1 = true;
+				Light->MarkRenderStateDirty();
+			}
+		}
+	}
 }
 
 void URTSDustSubsystem::Deinitialize()

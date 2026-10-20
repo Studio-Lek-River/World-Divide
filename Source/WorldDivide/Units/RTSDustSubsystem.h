@@ -54,6 +54,8 @@ struct FRTSDustEntry
 	float SentRate = -1.f;
 	float SentOpacity = -1.f;
 	int32 SentSurface = INDEX_NONE;
+	/** Whether the colours sent were the dark ones (FRTSVehicleDust::NightBrightness). */
+	bool bSentDark = false;
 	FVector3f SentDirection = FVector3f::ZeroVector;
 };
 
