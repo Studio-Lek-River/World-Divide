@@ -295,34 +295,42 @@ namespace RTSMuzzleFlashBuilder
 		SetExpression(ModuleInput(System, Emitter, ParticleUpdate, Topology.ModuleName, SpriteSize), Size, Context);
 	}
 
-	/** Sets the colour attribute Name of Emitter's particles to the HLSL expression Value, a float4, in Script after the module After. */
-	void SetColorAttribute(UNiagaraSystem* System, FName Emitter, FName Script, FName After, FName Name, const FString& Value,
-		FNiagaraExternalEditContext& Context)
+	/**
+	 * Sets the attribute Name of Emitter's particles, of Type with Default, to the HLSL expression Value in Script after the
+	 * module After.
+	 */
+	template <typename TValue>
+	void SetAttribute(UNiagaraSystem* System, FName Emitter, FName Script, FName After, FName Name, const FNiagaraTypeDefinition& Type,
+		const TValue& Default, const FString& Value, FNiagaraExternalEditContext& Context)
 	{
 		FNiagaraExt_SetParameterEntry Entry;
 		Entry.Variable.Name = Name;
-		Entry.Variable.Type = FNiagaraTypeDefinition::GetColorDef();
-		const FLinearColor DefaultColor(FLinearColor::White);
-		Entry.DefaultValue.Set(Entry.Variable.Type, FNiagaraVariant(&DefaultColor, sizeof(DefaultColor)));
+		Entry.Variable.Type = Type;
+		Entry.DefaultValue.Set(Type, FNiagaraVariant(&Default, sizeof(TValue)));
 		FNiagaraExt_ModuleTopology Topology;
 		FNiagaraEdit::AddSetParametersModule(FNiagaraExt_StackItemReference(System, Emitter, Script, After), { Entry }, Topology, Context);
 		SetExpression(ModuleInput(System, Emitter, Script, Topology.ModuleName, Name), Value, Context);
 	}
 
 	/**
-	 * Emitter's particles keep the colour of the HLSL expression BirthColor, a float3, from their birth (as Particles.BirthColor,
-	 * since a module setting Particles.Color reads none of its own), and are recoloured each update by the HLSL expression Color,
-	 * a float4, which may read it and Particles.NormalizedAge.
+	 * Emitter's particles keep what the HLSL expression Value gives at their birth as the attribute Name (such as
+	 * Particles.BirthColor), so that what they do later does not change with the user parameters it reads (#336). Their own
+	 * attributes will not do: a module setting Particles.Color reads none of its own.
 	 */
-	void SetColorOverLife(UNiagaraSystem* System, FName Emitter, const FString& BirthColor, const FString& Color,
-		FNiagaraExternalEditContext& Context)
+	template <typename TValue>
+	void SetBirthAttribute(UNiagaraSystem* System, FName Emitter, FName Name, const FNiagaraTypeDefinition& Type, const TValue& Default,
+		const FString& Value, FNiagaraExternalEditContext& Context)
 	{
-		SetColorAttribute(System, Emitter, ParticleSpawn, TEXT("InitializeParticle"), TEXT("Particles.BirthColor"),
-			FString::Printf(TEXT("float4(%s, 1.0)"), *BirthColor), Context);
+		SetAttribute(System, Emitter, ParticleSpawn, TEXT("InitializeParticle"), Name, Type, Default, Value, Context);
+	}
+
+	/** Emitter's particles recoloured each update by the HLSL expression Color, a float4, which may read their birth attributes. */
+	void SetColorOverLife(UNiagaraSystem* System, FName Emitter, const FString& Color, FNiagaraExternalEditContext& Context)
+	{
 		FNiagaraExt_ScriptStackTopology Stack;
 		FNiagaraEdit::GetScriptStackTopology(FNiagaraExt_StackItemReference(System, Emitter, ParticleUpdate), Stack, Context);
-		SetColorAttribute(System, Emitter, ParticleUpdate, Stack.Modules.IsEmpty() ? NAME_None : Stack.Modules.Last().ModuleName,
-			TEXT("Particles.Color"), Color, Context);
+		SetAttribute(System, Emitter, ParticleUpdate, Stack.Modules.IsEmpty() ? NAME_None : Stack.Modules.Last().ModuleName,
+			TEXT("Particles.Color"), FNiagaraTypeDefinition::GetColorDef(), FLinearColor::White, Color, Context);
 	}
 
 	/** Compiles System and returns it, or logs each error and returns null. */
@@ -545,6 +553,7 @@ UNiagaraSystem* URTSEditorScripting::BuildDustSystem(const FString& AssetPath, U
 		AddUserParameter(System, TEXT("User.Side"), FNiagaraTypeDefinition::GetVec3Def(), DefaultSide, Context);
 		AddUserParameter(System, TEXT("User.Color"), FNiagaraTypeDefinition::GetColorDef(), Ground.Color, Context);
 		AddUserParameter(System, TEXT("User.HazeScale"), FNiagaraTypeDefinition::GetFloatDef(), Ground.HazeScale, Context);
+		AddUserParameter(System, TEXT("User.OpacityScale"), FNiagaraTypeDefinition::GetFloatDef(), Ground.OpacityScale, Context);
 		AddUserParameter(System, TEXT("User.Lifetime"), FNiagaraTypeDefinition::GetFloatDef(), Ground.Lifetime, Context);
 		AddUserParameter(System, TEXT("User.Spread"), FNiagaraTypeDefinition::GetFloatDef(), Ground.Spread, Context);
 		AddUserParameter(System, TEXT("User.Lift"), FNiagaraTypeDefinition::GetFloatDef(), Ground.Lift, Context);
@@ -561,7 +570,8 @@ UNiagaraSystem* URTSEditorScripting::BuildDustSystem(const FString& AssetPath, U
 		// The haze: low, heavy dust, not smoke. Each puff is born low and is thrown out flat along the ground, behind and to
 		// the sides at about User.Spread, with a short rise of User.Lift that the air brakes within half a second; then it
 		// sinks at User.Sink and spreads out wide rather than up, so its lower half stays in the ground and fades against it
-		// (the material's depth fade). No spin. It keeps the colour it was born with and thins out over about User.Lifetime.
+		// (the material's depth fade). No spin. It keeps the colour, opacity, size and sink of the ground it was born on, so a
+		// trail does not change as the vehicle drives onto other ground, and thins out over about User.Lifetime.
 		AddSpriteStream(System, TEXT("Haze"), TEXT("User.Rate * User.Points * User.HazeScale"), TEXT("User.Lifetime * (0.7 + rand(0.6))"),
 			TEXT("User.Size * User.SizeScale"), TEXT("float4(User.Color.r, User.Color.g, User.Color.b, User.Opacity)"), HazeMaterial,
 			Bounds, Context);
@@ -569,11 +579,15 @@ UNiagaraSystem* URTSEditorScripting::BuildDustSystem(const FString& AssetPath, U
 			TEXT("User.Side * sign(rand(2.0) - 1.0) + float3(0.0, 0.0, User.Size * User.SizeScale * 0.12)"), Context, TEXT("Local"));
 		SetMotion(System, TEXT("Haze"),
 			TEXT("User.Direction * (User.Spread * (0.5 + rand(0.7))) + float3((rand(2.0) - 1.0) * User.Spread * 0.7, (rand(2.0) - 1.0) * User.Spread * 0.7, User.Lift * (0.5 + rand(1.0)))"),
-			2.f, TEXT("float3(0.0, 0.0, -User.Sink)"), Context);
+			2.f, TEXT("float3(0.0, 0.0, -Particles.BirthShape.y)"), Context);
+		SetBirthAttribute(System, TEXT("Haze"), TEXT("Particles.BirthColor"), FNiagaraTypeDefinition::GetColorDef(), FLinearColor::White,
+			TEXT("float4(User.Color.r, User.Color.g, User.Color.b, User.OpacityScale)"), Context);
+		SetBirthAttribute(System, TEXT("Haze"), TEXT("Particles.BirthShape"), FNiagaraTypeDefinition::GetVec2Def(), FVector2f(1.f, 0.f),
+			TEXT("float2(User.SizeScale, User.Sink)"), Context);
 		SetSpriteSizeOverLife(System, TEXT("Haze"),
-			TEXT("float2(1.2 + 2.4 * Particles.NormalizedAge, 0.8 + 1.0 * Particles.NormalizedAge) * (User.Size * User.SizeScale)"), Context);
-		SetColorOverLife(System, TEXT("Haze"), TEXT("float3(User.Color.r, User.Color.g, User.Color.b)"),
-			TEXT("float4(Particles.BirthColor.r, Particles.BirthColor.g, Particles.BirthColor.b, User.Opacity * saturate(Particles.NormalizedAge * 10.0) * (1.0 - Particles.NormalizedAge * Particles.NormalizedAge))"),
+			TEXT("float2(1.2 + 2.4 * Particles.NormalizedAge, 0.8 + 1.0 * Particles.NormalizedAge) * (User.Size * Particles.BirthShape.x)"), Context);
+		SetColorOverLife(System, TEXT("Haze"),
+			TEXT("float4(Particles.BirthColor.r, Particles.BirthColor.g, Particles.BirthColor.b, User.Opacity * Particles.BirthColor.a * saturate(Particles.NormalizedAge * 10.0) * (1.0 - Particles.NormalizedAge * Particles.NormalizedAge))"),
 			Context);
 
 		// The chunks: clods, bits of torn grass and grit, User.ChunkSize across, thrown back off the tracks or wheels and out

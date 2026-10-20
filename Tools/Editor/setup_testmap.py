@@ -1095,10 +1095,11 @@ def vehicle_lights(headlights, taillights, **settings):
     return value
 
 
-# The dust's haze (#224, #336): the muzzle smoke's flipbook from its early billows on, eroded so a puff thins from its edges
-# as it settles; it fades over most of a metre where it meets the ground, so a low puff's lower half melts into it rather
-# than ending in a line. Brightness brings the haze down until FRTSDustSurface's colours read as dust of the ground's.
-DUST_LOOK = {"FrameFirst": 10.0, "FrameLast": 56.0, "Erosion": 0.55, "FadeDistance": 80.0, "Brightness": 0.42}
+# The dust's haze (#224, #336): the muzzle smoke's flipbook from its thinned, dissipating frames only, eroded hard so a puff
+# has no billowing rim and many faint ones run together into a low sheet; it fades over most of a metre where it meets the
+# ground, so a low puff's lower half melts into it rather than ending in a line. Lit per pixel as the ground is, so at a
+# Brightness of 1 FRTSDustSurface's colours are the dust's own.
+DUST_LOOK = {"FrameFirst": 28.0, "FrameLast": 56.0, "Erosion": 0.75, "FadeDistance": 80.0, "Brightness": 1.0}
 
 
 def build_dust_haze_material(name, rlt, bbf):
@@ -1174,29 +1175,30 @@ def make_dust():
 # The kinds of ground (#224): the surface type of each one's physical material, as Config/DefaultEngine.ini names it, and
 # the dust a vehicle raises on it (FRTSDustSurface, #336), whatever it leaves out the struct's default, which suits dry dirt:
 # rate_scale times FRTSVehicleDust's rate (water raises none); the haze's colour (r, g, b) in linear space, its share of the
-# rate (haze_scale), its life in s, how fast it spreads along the ground and rises in cm/s, how fast it sinks in cm/s² and
-# its size_scale; the chunks' share of the rate, their size in cm and colour. Dirt is the ground of every map; the others
-# lie in strips in a corner of L_TestMap (TEST_GROUND_STRIPS).
+# rate (haze_scale) and of the opacity (opacity_scale), its life in s, how fast it spreads along the ground and rises in
+# cm/s, how fast it sinks in cm/s² and its size_scale; the chunks' share of the rate, their size in cm and colour. Dirt is
+# the ground of every map; the others lie in strips in a corner of L_TestMap (TEST_GROUND_STRIPS).
 PHYSICAL_DIR = f"{MATERIAL_DIR}/Physical"
 GROUND_KINDS = {
-    # Tan, fine and spreading, a few clods.
-    "Dirt": (unreal.PhysicalSurface.SURFACE_TYPE1, {"rate_scale": 1.0, "spread": 240.0, "size_scale": 1.15}),
-    # Green-brown bits of torn turf and a faint haze.
+    # An olive-tan wake, a step lighter than the ground, wide and long, a few clods.
+    "Dirt": (unreal.PhysicalSurface.SURFACE_TYPE1, {"rate_scale": 1.0, "color": (0.11, 0.1, 0.06)}),
+    # Dark bits of torn turf and soil and a faint brown-green haze.
     "Grass": (unreal.PhysicalSurface.SURFACE_TYPE2, {
-        "rate_scale": 0.6, "color": (0.17, 0.18, 0.1), "haze_scale": 0.3, "lifetime": 1.6, "spread": 140.0, "lift": 30.0,
-        "sink": 30.0, "size_scale": 0.85, "chunk_scale": 0.8, "chunk_size": 9.0, "chunk_color": (0.035, 0.08, 0.018)}),
-    # A thin dry haze at a low rate, no chunks.
+        "rate_scale": 0.9, "color": (0.12, 0.1, 0.06), "haze_scale": 0.5, "opacity_scale": 1.0, "lifetime": 1.8, "spread": 160.0,
+        "lift": 30.0, "sink": 30.0, "size_scale": 1.0, "chunk_scale": 1.2, "chunk_size": 18.0, "chunk_color": (0.03, 0.03, 0.012)}),
+    # A thin dry haze, flat and short-lived, at a low rate, no chunks.
     "Road": (unreal.PhysicalSurface.SURFACE_TYPE3, {
-        "rate_scale": 0.25, "color": (0.13, 0.13, 0.12), "lifetime": 1.5, "spread": 220.0, "lift": 25.0, "sink": 20.0,
-        "size_scale": 0.9, "chunk_scale": 0.0}),
-    # Pale, wide and fast, falling and fading quickly, a little grit.
+        "rate_scale": 0.4, "color": (0.06, 0.058, 0.052), "haze_scale": 0.5, "opacity_scale": 0.8, "lifetime": 1.0,
+        "spread": 220.0, "lift": 10.0, "sink": 20.0, "size_scale": 1.3, "chunk_scale": 0.0}),
+    # Pale, wide and fast, falling and fading quickly, a little dark grit.
     "Sand": (unreal.PhysicalSurface.SURFACE_TYPE4, {
-        "rate_scale": 1.3, "color": (0.6, 0.5, 0.36), "lifetime": 1.3, "spread": 300.0, "lift": 30.0, "sink": 40.0,
-        "size_scale": 1.4, "chunk_scale": 0.15, "chunk_size": 5.0, "chunk_color": (0.36, 0.28, 0.17)}),
-    # Dark clods and spray thrown to the sides and back, little haze.
+        "rate_scale": 1.3, "color": (0.7, 0.58, 0.42), "lifetime": 1.3, "spread": 300.0, "lift": 30.0, "sink": 40.0,
+        "size_scale": 1.4, "chunk_scale": 0.15, "chunk_size": 5.0, "chunk_color": (0.3, 0.24, 0.15)}),
+    # Big dark clods thrown to the sides and back, little haze.
     "Mud": (unreal.PhysicalSurface.SURFACE_TYPE5, {
-        "rate_scale": 1.0, "color": (0.09, 0.075, 0.055), "haze_scale": 0.12, "lifetime": 1.2, "spread": 100.0, "lift": 20.0,
-        "sink": 40.0, "size_scale": 0.7, "chunk_scale": 1.4, "chunk_size": 18.0, "chunk_color": (0.022, 0.016, 0.011)}),
+        "rate_scale": 1.0, "color": (0.09, 0.075, 0.055), "haze_scale": 0.12, "opacity_scale": 0.5, "lifetime": 1.2,
+        "spread": 100.0, "lift": 20.0, "sink": 40.0, "size_scale": 0.7, "chunk_scale": 2.0, "chunk_size": 32.0,
+        "chunk_color": (0.012, 0.009, 0.006)}),
     # None.
     "Water": (unreal.PhysicalSurface.SURFACE_TYPE6, {"rate_scale": 0.0, "color": (0.3, 0.3, 0.3)}),
 }
@@ -2430,8 +2432,8 @@ water = make_surface_material("M_Water", (0.015, 0.04, 0.08), 0.1, physical["Wat
 ground_strips = {
     "Grass": make_surface_material("M_Grass", (0.03, 0.09, 0.015), 0.95, physical["Grass"]),
     "Road": make_surface_material("M_Road", (0.03, 0.03, 0.03), 0.8, physical["Road"]),
-    "Sand": make_surface_material("M_Sand", (0.38, 0.3, 0.19), 1.0, physical["Sand"]),
-    "Mud": make_surface_material("M_Mud", (0.03, 0.022, 0.014), 0.35, physical["Mud"]),
+    "Sand": make_surface_material("M_Sand", (0.26, 0.2, 0.13), 1.0, physical["Sand"]),
+    "Mud": make_surface_material("M_Mud", (0.045, 0.032, 0.02), 0.6, physical["Mud"]),
     "Water": water,
 }
 make_map(MAP_PATH, False, tank, infantry, builder, m20, wall_mesh, crate_mesh, ground, ground_strips)

@@ -300,19 +300,23 @@ struct WORLDDIVIDE_API FRTSDustSurface
 
 	/** The haze's colour, the ground's, lit by the scene. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
-	FLinearColor Color = FLinearColor(0.24f, 0.2f, 0.14f);
+	FLinearColor Color = FLinearColor(0.13f, 0.12f, 0.07f);
 
 	/** Haze puffs for each puff of the rate: low on ground that throws chunks rather than haze, as mud. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0"))
 	float HazeScale = 1.f;
 
+	/** Times FRTSVehicleDust's Opacity for a haze puff: a thin haze, as off a road, without fewer and harder puffs. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0", ClampMax = "1"))
+	float OpacityScale = 1.f;
+
 	/** Seconds a haze puff lives, about; short on ground whose dust falls fast, as sand. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0.1"))
-	float Lifetime = 2.2f;
+	float Lifetime = 3.f;
 
 	/** cm/s a haze puff is thrown out along the ground, behind and to the sides, before the air brakes it. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0"))
-	float Spread = 180.f;
+	float Spread = 320.f;
 
 	/** cm/s a haze puff rises as it is thrown: a short rise, never a column. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0"))
@@ -324,7 +328,7 @@ struct WORLDDIVIDE_API FRTSDustSurface
 
 	/** Times FRTSVehicleDust's Size for a haze puff: wide on fine ground, as sand. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0.1"))
-	float SizeScale = 1.f;
+	float SizeScale = 1.6f;
 
 	/** Chunks for each puff of the rate: none on a road, many in mud. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Chunks", meta = (ClampMin = "0"))
@@ -369,9 +373,9 @@ struct WORLDDIVIDE_API FRTSVehicleDust
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0"))
 	float MinSpeed = 150.f;
 
-	/** Puffs a second from each contact point for each cm/s driven past MinSpeed: 44 at 12.5 m/s. */
+	/** Puffs a second from each contact point for each cm/s driven past MinSpeed: 70 at about 11.5 m/s (#336: many faint puffs). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0"))
-	float SpeedScale = 0.04f;
+	float SpeedScale = 0.07f;
 
 	/** Puffs a second from each contact point for each degree a second the hull turns, so a pivot on the spot raises dust too. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0"))
@@ -379,7 +383,7 @@ struct WORLDDIVIDE_API FRTSVehicleDust
 
 	/** The most puffs a second from a contact point, before the ground and the effects quality scale them. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0"))
-	float MaxRate = 50.f;
+	float MaxRate = 70.f;
 
 	/** How wide a puff is born in cm; it grows as it drifts. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "1"))
@@ -387,14 +391,14 @@ struct WORLDDIVIDE_API FRTSVehicleDust
 
 	/** How opaque a puff is born. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0", ClampMax = "1"))
-	float Opacity = 0.6f;
+	float Opacity = 0.45f;
 
 	/**
 	 * The colour on ground whose surface type Surfaces does not list, or without a physical material; the rate and the shape
 	 * there are FRTSDustSurface's defaults.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
-	FLinearColor Color = FLinearColor(0.24f, 0.2f, 0.14f);
+	FLinearColor Color = FLinearColor(0.13f, 0.12f, 0.07f);
 
 	/** Each kind of ground's rate, colour and shape. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")

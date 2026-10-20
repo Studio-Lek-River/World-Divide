@@ -2234,6 +2234,21 @@ client were running), so the runs spread by about 2 ms; compare the means with e
   128 emitters); GPU emitters were worse still (1.6 ms and 50 ms hitches). Hence one system per two contact points.
 - The chunks' second material adds about 50 draw calls; the render thread and the GPU stay within the noise.
 
+### Fix round: more, fainter puffs (MaxRate 70)
+
+After the visual review the haze spawns up to 70 puffs a second per contact point (SpeedScale 0.07, haze Opacity 0.45 instead of 0.6)
+and the dirt puffs live 3 s, so a moving M20 has about 1.4 times as many live haze particles; `rts.Fx.DustDistance` is
+now 480 m, past the farthest zoom, with the budget of 32 vehicles unchanged. One interleaved pair, same command, other
+processes still using about seven cores:
+
+| Scenario | Dust | Game ms (p95) | Render ms | GPU ms | Draw calls | Dust pass ms | Emitters |
+|---|---|---:|---:|---:|---:|---:|---:|
+| move | on | 14.57 (17.63) | 8.62 | 3.46 | 814 | 0.069 | 32 |
+| move | off | 14.11 (16.84) | 8.09 | 3.47 | 757 | 0.027 | 0 |
+
+- **+0.46 ms of game thread, against #224's 0.6 ms for its dust**, from a single pair under about 1 ms of noise:
+  indicative only. Re-measure on a quiet machine with five pairs and a `-Trace` run for Niagara's own tick (#225).
+
 ## #223 (vehicle head- and rear lights with a day/night policy)
 
 ### What changed

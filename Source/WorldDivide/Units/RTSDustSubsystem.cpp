@@ -24,8 +24,8 @@ namespace RTSDust
 		TEXT("Ground vehicles raise dust behind their tracks or wheels as they drive and turn (#224); off, every emitter stops."));
 
 	TAutoConsoleVariable<float> CVarDustDistance(
-		TEXT("rts.Fx.DustDistance"), 20000.f,
-		TEXT("cm from the nearest camera within which a vehicle shows dust (#224), as the exhaust's; 0 or less everywhere."));
+		TEXT("rts.Fx.DustDistance"), 48000.f,
+		TEXT("cm from the nearest camera within which a vehicle shows dust (#224): past the RTS camera's farthest zoom (450 m), so the dust still shows there (#336); the budget, rts.Fx.DustMaxVehicles, keeps its cost. 0 or less everywhere."));
 
 	TAutoConsoleVariable<int32> CVarDustMaxVehicles(
 		TEXT("rts.Fx.DustMaxVehicles"), 32,
@@ -51,6 +51,7 @@ namespace RTSDust
 	const FName SideParameter(TEXT("User.Side"));
 	// The ground's look (FRTSDustSurface, #336), sent when the ground changes.
 	const FName HazeScaleParameter(TEXT("User.HazeScale"));
+	const FName OpacityScaleParameter(TEXT("User.OpacityScale"));
 	const FName LifetimeParameter(TEXT("User.Lifetime"));
 	const FName SpreadParameter(TEXT("User.Spread"));
 	const FName LiftParameter(TEXT("User.Lift"));
@@ -400,6 +401,7 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 			{
 				Component->SetVariableLinearColor(ColorParameter, Ground.Color);
 				Component->SetVariableFloat(HazeScaleParameter, Ground.HazeScale);
+				Component->SetVariableFloat(OpacityScaleParameter, Ground.OpacityScale);
 				Component->SetVariableFloat(LifetimeParameter, Ground.Lifetime);
 				Component->SetVariableFloat(SpreadParameter, Ground.Spread);
 				Component->SetVariableFloat(LiftParameter, Ground.Lift);

@@ -41,7 +41,11 @@
  * squatting as it pulls away, diving as it brakes, leaning into a turn and its turret trailing a traverse (body_*, #297); and
  * the dust behind its tracks standing, driving slowly and fast and pivoting, seen from behind and above with the ground it
  * leaves (dust_<ground>_*, #224), on the map's dirt and on each of its ground strips (#336). A wheeled unit takes the dust
- * scenarios only. A unit the map does not hold, such as the flak truck, is spawned for team 0 on the open strip. Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
+ * scenarios only. A unit the map does not hold, such as the flak truck, is spawned for team 0 at DriveStart and removed at
+ * the end. The dust is also taken from the player's camera at its default zoom (dust_<ground>_rts) and, on dirt and sand, at
+ * its farthest (_rtsmax) and by night (_fast_night), and stopping and driving off again on dirt (dust_dirt_stopstart, #336).
+ * A second argument, prefixes joined by + (dust_dirt+dust_sand), takes only the scenarios whose names begin with one.
+ * Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
  * Saved/TrackShots/<UnitData>/<scenario>_<n>.png, and logs with each the realized side travel, each track's phase and what
  * its material has. With -RTSTrackShotsQuit on the command line (ue.ps1 -Task trackshots) the game quits when done.
  */
@@ -88,6 +92,12 @@ namespace RTSTrackShots
 	const FView TopView{ FVector(-200.f, -500.f, 1600.f), FVector(0.f, 0.f, 200.f), 45.f };
 	/** Behind the hull at three quarters and well above it, on the ground behind the tracks or wheels, where the dust rises (#224). */
 	const FView DustView{ FVector(-1800.f, -1100.f, 750.f), FVector(-700.f, 0.f, 0.f), 55.f };
+	/**
+	 * The player's RTS camera behind the hull at its default and its farthest zoom (Config/DefaultGame.ini, RTSCameraSettings:
+	 * 150 and 450 m arms at 55 degrees down, 60 degrees of field, which the viewport keeps vertical), on the dust (#336).
+	 */
+	const FView DustRTSView{ FVector(-800.f - 8604.f, 0.f, 12287.f), FVector(-800.f, 0.f, 0.f), 60.f };
+	const FView DustRTSMaxView{ FVector(-800.f - 25811.f, 0.f, 36862.f), FVector(-800.f, 0.f, 0.f), 60.f };
 
 	/**
 	 * The body scenarios (#297): game seconds between pictures, through the hull's settle and the turret's traverse, at a
@@ -145,6 +155,8 @@ namespace RTSTrackShots
 		double FixedStep = 0.0;
 		/** At night (FRTSShotNight): the sun and the sky dimmed, the exposure held at the daylight one. */
 		bool bNight = false;
+		/** Run just before the picture halfway through, such as driving off again after a stop (#336). */
+		TFunction<void(ARTSUnit&)> AtHalf;
 	};
 
 	RTSLocomotion::FCommand Ahead(float Speed)
@@ -157,9 +169,10 @@ namespace RTSTrackShots
 	class FTrackShotsRun : public TSharedFromThis<FTrackShotsRun>
 	{
 	public:
-		FTrackShotsRun(UWorld& InWorld, const FString& InUnitName)
+		FTrackShotsRun(UWorld& InWorld, const FString& InUnitName, const FString& InOnly)
 			: World(&InWorld), UnitName(InUnitName)
 		{
+			InOnly.ParseIntoArray(Only, TEXT("+"));
 		}
 
 		static bool IsRunning() { return Active.IsValid(); }
@@ -210,8 +223,13 @@ namespace RTSTrackShots
 			ARTSPlayerController* Controller = Cast<ARTSPlayerController>(World->GetFirstPlayerController());
 			if (!Unit.IsValid() && World->HasBegunPlay() && Controller && World->GetNetMode() != NM_Client)
 			{
-				// A unit the map does not hold, such as the flak truck (#336): one of team 0's, on the open strip.
-				Unit = SpawnUnit();
+				// A unit the map does not hold, such as the flak truck (#336): one of team 0's at DriveStart, tried once.
+				Spawned = SpawnUnit();
+				if (!Spawned.IsValid())
+				{
+					return Finish(FString::Printf(TEXT("no unit data /Game/Data/Units/%s"), *UnitName));
+				}
+				Unit = Spawned;
 			}
 			if (!World->HasBegunPlay() || !Controller || !Unit.IsValid())
 			{
@@ -261,6 +279,14 @@ namespace RTSTrackShots
 			Stop.Type = ERTSCommandType::Stop;
 			Unit->ExecuteCommand(Stop);
 			BuildScenarios();
+			if (!Only.IsEmpty())
+			{
+				// Only the scenarios whose names begin with one of the prefixes given.
+				Scenarios.RemoveAll([this](const FScenario& Scenario)
+				{
+					return !Only.ContainsByPredicate([&Scenario](const FString& Prefix) { return Scenario.Name.StartsWith(Prefix); });
+				});
+			}
 			return StartScenario();
 		}
 
@@ -269,16 +295,16 @@ namespace RTSTrackShots
 		{
 			URTSUnitData* Data = LoadObject<URTSUnitData>(nullptr, *FString::Printf(TEXT("/Game/Data/Units/%s.%s"), *UnitName, *UnitName));
 			const FTransform Transform(DriveStart);
-			ARTSUnit* Spawned = Data ? World->SpawnActorDeferred<ARTSUnit>(ARTSUnit::StaticClass(), Transform, nullptr, nullptr,
+			ARTSUnit* NewUnit = Data ? World->SpawnActorDeferred<ARTSUnit>(ARTSUnit::StaticClass(), Transform, nullptr, nullptr,
 				ESpawnActorCollisionHandlingMethod::AlwaysSpawn) : nullptr;
-			if (!Spawned)
+			if (!NewUnit)
 			{
 				return nullptr;
 			}
-			Spawned->InitFromData(Data, 0);
-			Spawned->FinishSpawning(Transform);
-			Spawned->SetActorLocation(Transform.GetLocation() + FVector(0.f, 0.f, Spawned->GetGroundOffset()));
-			return Spawned;
+			NewUnit->InitFromData(Data, 0);
+			NewUnit->FinishSpawning(Transform);
+			NewUnit->SetActorLocation(Transform.GetLocation() + FVector(0.f, 0.f, NewUnit->GetGroundOffset()));
+			return NewUnit;
 		}
 
 		void Place(ARTSUnit& InUnit, const FVector& Location, float Yaw)
@@ -320,6 +346,24 @@ namespace RTSTrackShots
 					{ Prefix + TEXT("slow"), DustView, DriveFrom(Ground.Value, Ahead(400.f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
 					{ Prefix + TEXT("fast"), DustView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
 				};
+				// From the player's camera at its default zoom (#336); and on dirt and sand at its farthest, and by night.
+				Dusts.Add({ Prefix + TEXT("rts"), DustRTSView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f });
+				if (Ground.Key == TEXT("dirt") || Ground.Key == TEXT("sand"))
+				{
+					Dusts.Add({ Prefix + TEXT("rtsmax"), DustRTSMaxView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr,
+						ExhaustSpacing, 1.f });
+					FScenario& NightDust = Dusts.Add_GetRef({ Prefix + TEXT("fast_night"), DustView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm,
+						nullptr, nullptr, ExhaustSpacing, 1.f });
+					NightDust.bNight = true;
+				}
+				// Stopping from full speed and driving off again within the dust's life: the cloud raised before the stop settles on.
+				if (Ground.Key == TEXT("dirt"))
+				{
+					FScenario& StopStart = Dusts.Add_GetRef({ Prefix + TEXT("stopstart"), DustView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm,
+						nullptr, [](ARTSUnit& InUnit) { InUnit.GetUnitMovement()->SetCommandOverride(RTSLocomotion::FCommand()); }, ExhaustSpacing, 1.f });
+					StopStart.AtHalf = [](ARTSUnit& InUnit) { InUnit.GetUnitMovement()->SetCommandOverride(Ahead(1.e5f)); };
+				}
+				// The pivot last: the hull is still turning as the next scenario places it.
 				if (bTracked)
 				{
 					Dusts.Add({ Prefix + TEXT("pivot"), DustView, DriveFrom(Ground.Value, Tracks(-250.f, 250.f)(Limits)), ExhaustWarm, nullptr, nullptr,
@@ -479,7 +523,9 @@ namespace RTSTrackShots
 		{
 			const FScenario& Scenario = Scenarios[Index];
 			const double Elapsed = Scenario.FixedStep > 0.0 ? World->GetTimeSeconds() - WarmStartGame : FPlatformTime::Seconds() - StepStart;
-			const bool bReady = Scenario.Until ? (Scenario.Until(*Unit) || Elapsed > Scenario.Warm) : Elapsed >= Scenario.Warm;
+			// Game seconds on a fixed step, but never longer than ReadyTimeout real seconds, should the game's clock stall.
+			const bool bTimedOut = FPlatformTime::Seconds() - StepStart > FMath::Max(Scenario.Warm, ReadyTimeout);
+			const bool bReady = bTimedOut || (Scenario.Until ? (Scenario.Until(*Unit) || Elapsed > Scenario.Warm) : Elapsed >= Scenario.Warm);
 			if (!bReady)
 			{
 				return true;
@@ -535,6 +581,10 @@ namespace RTSTrackShots
 			LastShotTime = Now;
 			if (++Shot < Frames)
 			{
+				if (Shot == Frames / 2 && Scenario.AtHalf)
+				{
+					Scenario.AtHalf(*Unit);
+				}
 				Request();
 				return true;
 			}
@@ -589,6 +639,10 @@ namespace RTSTrackShots
 			{
 				Camera->Destroy();
 			}
+			if (Spawned.IsValid())
+			{
+				Spawned->Destroy();
+			}
 			if (Error.IsEmpty())
 			{
 				UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.TrackShots: done"));
@@ -611,6 +665,10 @@ namespace RTSTrackShots
 		TWeakObjectPtr<UWorld> World;
 		FString UnitName;
 		TWeakObjectPtr<ARTSUnit> Unit;
+		/** The unit when the run spawned it, destroyed at the end. */
+		TWeakObjectPtr<ARTSUnit> Spawned;
+		/** Prefixes of the scenarios to take; empty takes all. */
+		TArray<FString> Only;
 		TWeakObjectPtr<ACameraActor> Camera;
 		FBox Block = FBox(ForceInit);
 		/** The map's strips of other ground by kind, lower case, and their boxes. */
@@ -645,12 +703,12 @@ namespace RTSTrackShots
 			return;
 		}
 		Output.Logf(TEXT("rts.Debug.TrackShots: %s to %s"), *Args[0], *FPaths::ConvertRelativePathToFull(FTrackShotsRun::GetShotDir(Args[0])));
-		FTrackShotsRun::Start(MakeShared<FTrackShotsRun>(*World, Args[0]));
+		FTrackShotsRun::Start(MakeShared<FTrackShotsRun>(*World, Args[0], Args.Num() > 1 ? Args[1] : FString()));
 	}
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice TrackShotsCommand(
 		TEXT("rts.Debug.TrackShots"),
-		TEXT("rts.Debug.TrackShots <UnitData>: saves close-up frame sequences of a tracked unit's running gear driving, turning, ")
+		TEXT("rts.Debug.TrackShots <UnitData> [prefix+prefix]: saves close-up frame sequences of a tracked unit's running gear driving, turning, ")
 		TEXT("pivoting, ramping, stopped and blocked to Saved/TrackShots (#151)."),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunTrackShotsCommand));
 }

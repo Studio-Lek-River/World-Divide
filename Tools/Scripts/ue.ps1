@@ -187,6 +187,8 @@ param(
 
 # Whether -Map was given; bakemap has no default level (bench's L_Bench is not one to bake by accident).
 $MapGiven = $PSBoundParameters.ContainsKey('Map')
+# Whether -Filter was given; trackshots takes it as scenario prefixes, and its default is the tests'.
+$FilterGiven = $PSBoundParameters.ContainsKey('Filter')
 
 $ErrorActionPreference = 'Stop'
 
@@ -591,9 +593,13 @@ function Invoke-TrackShots {
 	$ShotDir = Join-Path $RepoRoot "Saved\TrackShots\$Unit"
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\TrackShots.log'
 	Clear-ShotDir $ShotDir
+	# L_TestMap by default; -Map another level with the same open strip and ground strips (L_TestMapNight, #336). -Filter,
+	# scenario name prefixes joined by + (dust_dirt+dust_sand), takes only those.
+	$ShotMap = if (-not $MapGiven) { '/Game/Maps/L_TestMap' } elseif ($Map.StartsWith('/Game')) { $Map } else { "/Game/Maps/$Map" }
+	$Only = if ($FilterGiven) { " $Filter" } else { '' }
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
-		"`"$Project`"", '/Game/Maps/L_TestMap', '-game', '-windowed', '-RenderOffscreen', '-ResX=1280', '-ResY=720',
-		"`"-ExecCmds=rts.Debug.TrackShots $Unit`"", '-RTSTrackShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		"`"$Project`"", $ShotMap, '-game', '-windowed', '-RenderOffscreen', '-ResX=1280', '-ResY=720',
+		"`"-ExecCmds=rts.Debug.TrackShots $Unit$Only`"", '-RTSTrackShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
 		'-unattended', '-nosplash', '-nosound') + @(if ($Cvars) { "-dpcvars=$Cvars" }))
 	if (Test-Path $LogFile) {
 		Select-String -Path $LogFile -Pattern 'rts.Debug.TrackShots: \S+ \d\d:' | ForEach-Object { $_.Line -replace '^.*rts.Debug.TrackShots: ', '  ' }

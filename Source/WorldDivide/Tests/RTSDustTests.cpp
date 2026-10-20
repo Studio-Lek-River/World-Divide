@@ -121,15 +121,25 @@ bool FRTSVehicleDustTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	for (const FName User : { FName(TEXT("User.Rate")), FName(TEXT("User.Opacity")), FName(TEXT("User.Size")) })
+	// The ground's look and the contact points are sent by name too (#336): a name the system lacks is dropped without a word.
+	for (const FName User : { FName(TEXT("User.Rate")), FName(TEXT("User.Opacity")), FName(TEXT("User.Size")), FName(TEXT("User.Points")),
+		FName(TEXT("User.HazeScale")), FName(TEXT("User.OpacityScale")), FName(TEXT("User.Lifetime")), FName(TEXT("User.Spread")),
+		FName(TEXT("User.Lift")), FName(TEXT("User.Sink")), FName(TEXT("User.SizeScale")), FName(TEXT("User.ChunkScale")),
+		FName(TEXT("User.ChunkSize")) })
 	{
 		TestTrue(*FString::Printf(TEXT("It takes %s"), *User.ToString()),
 			System->GetExposedParameters().IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), User)) != INDEX_NONE);
 	}
-	TestTrue(TEXT("It takes User.Color"),
-		System->GetExposedParameters().IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetColorDef(), TEXT("User.Color"))) != INDEX_NONE);
-	TestTrue(TEXT("It takes User.Direction"),
-		System->GetExposedParameters().IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(), TEXT("User.Direction"))) != INDEX_NONE);
+	for (const FName User : { FName(TEXT("User.Color")), FName(TEXT("User.ChunkColor")) })
+	{
+		TestTrue(*FString::Printf(TEXT("It takes %s"), *User.ToString()),
+			System->GetExposedParameters().IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetColorDef(), User)) != INDEX_NONE);
+	}
+	for (const FName User : { FName(TEXT("User.Direction")), FName(TEXT("User.Side")) })
+	{
+		TestTrue(*FString::Printf(TEXT("It takes %s"), *User.ToString()),
+			System->GetExposedParameters().IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(), User)) != INDEX_NONE);
+	}
 	TestEqual(TEXT("Two layers of dust, the haze and the chunks (#336)"), System->GetEmitterHandles().Num(), 2);
 	for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
 	{
@@ -333,6 +343,57 @@ bool FRTSVehicleDustTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("One vehicle within a budget of one"), Dust.GetActiveEmitters(), (Contacts.Num() + 1) / 2);
 		TestEqual(TEXT("The one by the camera"), Dust.GetComponents(*Near).Num(), (Contacts.Num() + 1) / 2);
 		TestEqual(TEXT("None for the other"), Dust.GetComponents(*Far).Num(), 0);
+		MaxVehicles->Set(Budget, ECVF_SetByCode);
+	}
+
+	// A vehicle fording water takes no place in the budget from one on dirt (#336; it did in #224): of an M20 driving on water
+	// by the camera and one on dirt farther off, with a budget of one, the one on dirt shows dust. The one on water asks for
+	// the ground only every rts.Fx.DustNoneInterval, so it finds out when it is out of the water.
+	if (MaxVehicles && M20 && WaterSurface)
+	{
+		const int32 Budget = MaxVehicles->GetInt();
+		MaxVehicles->Set(1, ECVF_SetByCode);
+		const FRTSTestWorld TestWorld;
+		SpawnFloor(TestWorld, Ground);
+		// A 40 m pool of water 1 cm above the dirt, around x 20000.
+		const float PoolX = 20000.f;
+		AStaticMeshActor* Pool = SpawnFloor(TestWorld, Water, 1.f);
+		Pool->SetActorLocation(FVector(PoolX, 0.f, 1.f - 50.f));
+		Pool->SetActorScale3D(FVector(40.f, 40.f, 1.f));
+		URTSDustSubsystem& Dust = *TestWorld.World->GetSubsystem<URTSDustSubsystem>();
+		ARTSUnit* Fording = SpawnOnFloor(TestWorld, M20, PoolX - 1500.f);
+		ARTSUnit* OnDirt = TestWorld.SpawnUnit(M20, 0, Fording->GetActorLocation() + FVector(0.f, 4000.f, 0.f));
+		Dust.SetViewLocationOverride(Fording->GetActorLocation() + FVector(0.f, 0.f, 2000.f));
+		Fording->GetUnitMovement()->SetCommandOverride(Ahead(0.5f * M20->MoveSpeed));
+		OnDirt->GetUnitMovement()->SetCommandOverride(Ahead(0.5f * M20->MoveSpeed));
+		auto RunBoth = [&](double Seconds)
+		{
+			const int32 Steps = FMath::RoundToInt32(Seconds * Rate);
+			for (int32 Index = 0; Index < Steps; ++Index)
+			{
+				const float Dt = static_cast<float>(1.0 / Rate);
+				TestWorld.World->TimeSeconds += Dt;
+				Fording->GetUnitMovement()->TickComponent(Dt, LEVELTICK_All, nullptr);
+				OnDirt->GetUnitMovement()->TickComponent(Dt, LEVELTICK_All, nullptr);
+				Dust.UpdateAll(Dt);
+			}
+		};
+		RunBoth(1.0);
+		TArray<FVector> Contacts;
+		URTSDustSubsystem::GetContactPoints(*M20, Contacts);
+		TestTrue(TEXT("Fording: the ground is water"), Dust.GetSurface(*Fording) == WaterSurface->SurfaceType);
+		TestEqual(TEXT("Fording: the one on dirt, farther off, shows dust"), Dust.GetComponents(*OnDirt).Num(), (Contacts.Num() + 1) / 2);
+		TestEqual(TEXT("Fording: only its emitters run"), Dust.GetActiveEmitters(), (Contacts.Num() + 1) / 2);
+		const int32 Before = Dust.GetSurfaceQueries(*Fording);
+		const double Seconds = 3.0;
+		RunBoth(Seconds);
+		const int32 Queries = Dust.GetSurfaceQueries(*Fording) - Before;
+		const float NoneInterval = URTSDustSubsystem::GetNoneInterval();
+		AddInfo(FString::Printf(TEXT("Fording: %d traces in %.1f s, rts.Fx.DustNoneInterval %.2f s"), Queries, Seconds, NoneInterval));
+		TestTrue(*FString::Printf(TEXT("Fording: the ground under it is still asked for (%d)"), Queries), Queries >= 1);
+		TestTrue(*FString::Printf(TEXT("Fording: at most one trace per rts.Fx.DustNoneInterval (%d)"), Queries),
+			NoneInterval > 0.f && Queries <= FMath::FloorToInt32(Seconds / NoneInterval) + 1);
+		TestEqual(TEXT("Fording: the one on dirt still shows dust"), Dust.GetComponents(*OnDirt).Num(), (Contacts.Num() + 1) / 2);
 		MaxVehicles->Set(Budget, ECVF_SetByCode);
 	}
 	return true;
