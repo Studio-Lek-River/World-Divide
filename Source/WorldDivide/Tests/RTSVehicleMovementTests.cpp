@@ -411,6 +411,80 @@ namespace RTSVehicleMovementTests
 					FVector::Dist2D(Unit.GetActorLocation(), Target) <= 100.f);
 			};
 		}
+
+		// Ordered ahead with nothing else waiting: it moves within two frames of the order, reaches 90 % of its top speed and,
+		// told to stop, stands within the times its profile is tuned to (#296).
+		{
+			FScenario& Scenario = State->Scenarios.AddDefaulted_GetRef();
+			Scenario.Name = TEXT("Start and stop");
+			Scenario.Start = FVector(-11000.f, 15000.f, 0.f);
+			Scenario.Yaw = 0.f;
+			Scenario.Timeout = 15.0;
+			Scenario.bPlayerTeam = true;
+			struct FData
+			{
+				uint64 OrderFrame = 0;
+				double OrderTime = 0.0;
+				TOptional<uint64> MovingFrame;
+				TOptional<double> FastTime;
+				TOptional<double> StandTime;
+				float TopSpeed = 0.f;
+			};
+			TSharedRef<FData> Data = MakeShared<FData>();
+			Scenario.Begin = [](ARTSUnit&, ARTSPlayerController&) {};
+			Scenario.Tick = [Data](ARTSUnit& Unit, double Elapsed)
+			{
+				ARTSPlayerController* Controller = GetController();
+				// Settled on the ground first, so the order finds the queue idle and the unit standing.
+				if (Data->OrderFrame == 0)
+				{
+					if (Elapsed < 0.5 || !Controller)
+					{
+						return false;
+					}
+					Data->TopSpeed = Unit.GetUnitMovement()->GetLimits().ForwardSpeed;
+					Data->OrderFrame = GFrameCounter;
+					Data->OrderTime = Elapsed;
+					IssueMove(*Controller, Unit, FVector(-3000.f, 15000.f, 0.f));
+					return false;
+				}
+				const float Speed = Unit.GetRealizedMotion().ForwardSpeed;
+				if (!Data->MovingFrame && Speed > 1.f)
+				{
+					Data->MovingFrame = GFrameCounter;
+				}
+				if (!Data->FastTime && Speed >= 0.9f * Data->TopSpeed)
+				{
+					Data->FastTime = Elapsed;
+					FRTSCommand Stop;
+					Stop.Type = ERTSCommandType::Stop;
+					Controller->Server_IssueCommand({ &Unit }, Stop);
+					return false;
+				}
+				if (Data->FastTime && !Data->StandTime && FMath::Abs(Speed) < 1.f)
+				{
+					Data->StandTime = Elapsed;
+				}
+				return Data->StandTime.IsSet() || (!Data->MovingFrame && GFrameCounter - Data->OrderFrame > 10);
+			};
+			Scenario.End = [Data](ARTSUnit& Unit, FAutomationTestBase& Test)
+			{
+				// 90 % of top speed in 1.1 s at the M20's 1000 cm/s2 and a stop in 0.5 s at its 2500, with one 30 Hz update to spare.
+				constexpr double ReachSeconds = 1.25;
+				constexpr double StopSeconds = 0.6;
+				const int64 Frames = Data->MovingFrame ? static_cast<int64>(*Data->MovingFrame - Data->OrderFrame) : -1;
+				Test.TestTrue(*FString::Printf(TEXT("Start and stop: it moves within 2 frames of the order (%lld)"), Frames),
+					Data->MovingFrame.IsSet() && Frames <= 2);
+				const double Reach = Data->FastTime ? *Data->FastTime - Data->OrderTime : -1.0;
+				Test.TestTrue(*FString::Printf(TEXT("reaches 90 %% of its top speed within %.2f s (%.2f s)"), ReachSeconds, Reach),
+					Data->FastTime.IsSet() && Reach <= ReachSeconds);
+				const double Stop = Data->StandTime ? *Data->StandTime - *Data->FastTime : -1.0;
+				Test.AddInfo(FString::Printf(TEXT("Start and stop: moving %lld frames after the order, 90 %% of top speed after %.2f s, standing %.2f s after the stop"),
+					Frames, Reach, Stop));
+				Test.TestTrue(*FString::Printf(TEXT("and stands within %.2f s of the stop (%.2f s)"), StopSeconds, Stop),
+					Data->StandTime.IsSet() && Stop <= StopSeconds);
+			};
+		}
 	}
 }
 
@@ -418,7 +492,8 @@ namespace RTSVehicleMovementTests
  * The M20 driven by its tracks on L_TestMap at 30, 60 and 120 game updates a second: flat out into Block_North it stops
  * at the face, no more than 1 cm in, and drives no further the update after it touched; toward the edge of the ground it
  * stops where its navmesh ends; it climbs over the ridge; ordered far behind itself it pivots first and never drives
- * sideways faster than 50 cm/s; a little behind itself it reverses. Narrow passages, pivots at corners and other vehicles
+ * sideways faster than 50 cm/s; a little behind itself it reverses; ordered ahead it moves within two frames, gets up to
+ * speed and stops crisply (#296). Narrow passages, pivots at corners and other vehicles
  * are driven by WorldDivide.Navigation.VehicleAgent, HullClearance.Drive and the avoidance tests.
  */
 IMPLEMENT_COMPLEX_AUTOMATION_TEST(FRTSVehicleCollisionTest, "WorldDivide.Navigation.VehicleCollision", RTSTests::TestFlags)

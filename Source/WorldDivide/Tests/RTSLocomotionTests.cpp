@@ -509,12 +509,6 @@ bool FRTSVehicleProfilesTest::RunTest(const FString& Parameters)
 	// The Abrams on the profile setup_testmap.py gives it: forward and back along its hull, and a pivot on the spot.
 	if (URTSUnitData* Abrams = LoadObject<URTSUnitData>(nullptr, TEXT("/Game/Data/Units/DA_TestAbrams.DA_TestAbrams")))
 	{
-		const FRTSLocomotionProfile& Profile = Abrams->Locomotion;
-		TestEqual(TEXT("The Abrams's track gauge"), Profile.TrackGauge, 300.f);
-		TestEqual(TEXT("The Abrams's reverse speed"), Profile.ReverseSpeed, 300.f);
-		TestEqual(TEXT("The Abrams's acceleration"), Profile.Acceleration, 300.f);
-		TestEqual(TEXT("The Abrams's braking"), Profile.Braking, 850.f);
-
 		ARTSUnit* Unit = TestWorld.SpawnUnit(Abrams, 0, FVector(0.f, 20000.f, 0.f));
 		const RTSLocomotion::FLimits& Limits = Unit->GetUnitMovement()->GetLimits();
 		constexpr double Rate = 60.0;

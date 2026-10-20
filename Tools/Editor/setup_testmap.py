@@ -2173,17 +2173,20 @@ def locomotion(kind, reverse_speed, acceleration, braking, lateral_acceleration,
 
 # Tracks drive the tanks: the gauge is the distance between the middles of the tracks, about 0.75 of the hull's width
 # (the M20's from its track parts, 264 cm). They reverse at about a third of their top speed and pivot on the spot.
+# Tuned to start and stop crisply (#296): the M20 and the tank reach 90 % of top speed in about 1.1 s and stop in 0.5 s,
+# the heavier Abrams in about 1.4 s and 0.55 s.
 TRACKED = unreal.RTSLocomotionType.TRACKED
-add_properties(m20, {"locomotion": locomotion(TRACKED, 400.0, 400.0, 1000.0, 400.0, track_gauge=264.0)})
-add_properties(tank, {"locomotion": locomotion(TRACKED, 350.0, 350.0, 900.0, 400.0, track_gauge=290.0)})
-add_properties(abrams, {"locomotion": locomotion(TRACKED, 300.0, 300.0, 850.0, 400.0, track_gauge=300.0)})
+add_properties(m20, {"locomotion": locomotion(TRACKED, 450.0, 1000.0, 2500.0, 400.0, track_gauge=264.0)})
+add_properties(tank, {"locomotion": locomotion(TRACKED, 400.0, 850.0, 2200.0, 400.0, track_gauge=290.0)})
+add_properties(abrams, {"locomotion": locomotion(TRACKED, 350.0, 650.0, 1800.0, 400.0, track_gauge=300.0)})
 # Wheels drive the trucks and the builder: 35 degrees of steering on a wheelbase of about 0.6 of the hull's length (the van
-# mesh is about 5.4 m long), so the trucks turn no tighter than about 4.7 m and the builder 5.7 m.
+# mesh is about 5.4 m long), so the trucks turn no tighter than about 4.7 m and the builder 5.7 m. They reach 90 % of top
+# speed in about 1.1 s and stop in about 0.5 s (#296).
 WHEELED = unreal.RTSLocomotionType.WHEELED
 for truck in (flak_truck, harvester):
-    add_properties(truck, {"locomotion": locomotion(WHEELED, 500.0, 350.0, 900.0, 350.0, wheelbase=330.0, axle_track=210.0,
+    add_properties(truck, {"locomotion": locomotion(WHEELED, 550.0, 1100.0, 2600.0, 350.0, wheelbase=330.0, axle_track=210.0,
                                                     max_steer_angle=35.0, steer_rate=60.0)})
-add_properties(builder, {"locomotion": locomotion(WHEELED, 400.0, 300.0, 900.0, 350.0, wheelbase=400.0, axle_track=250.0,
+add_properties(builder, {"locomotion": locomotion(WHEELED, 450.0, 1000.0, 2500.0, 350.0, wheelbase=400.0, axle_track=250.0,
                                                   max_steer_angle=35.0, steer_rate=60.0)})
 # A harvester needs a depot to deliver to, so the factory only offers one once a depot stands.
 add_properties(harvester, {"prerequisites": [supply_depot]})
