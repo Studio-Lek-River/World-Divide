@@ -195,7 +195,8 @@ private:
 
 	/**
 	 * Location moved so the view footprint stays within PanArea's extent along the camera's right and forward axes, or
-	 * centred on it along an axis where it is larger.
+	 * centred on it along an axis where it is larger, and so the pivot, the ground at the screen's centre, stays within
+	 * PanArea itself.
 	 */
 	FVector ClampToPanArea(const FVector& Location) const;
 

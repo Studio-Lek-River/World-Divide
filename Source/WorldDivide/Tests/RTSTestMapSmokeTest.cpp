@@ -3406,6 +3406,27 @@ bool FRTSCheckHUDWidget::Update()
 	}
 
 	Test->TestFalse(TEXT("The middle of the battlefield is no HUD panel"), Controller->IsOnHUDPanel(HUDGeometry.GetAbsoluteSize() * 0.5f));
+
+	// Edge scroll (#339): outside its margin it never walks the panels; inside it a panel keeps the cursor, except on the
+	// screen's outermost pixel row, which scrolls even under the bottom bar.
+	const FIntPoint Screen(FMath::RoundToInt(HUDGeometry.GetAbsoluteSize().X), FMath::RoundToInt(HUDGeometry.GetAbsoluteSize().Y));
+	int32 Lookups = Controller->GetHUDPanelLookups();
+	Test->TestTrue(TEXT("The middle of the screen does not edge scroll"), Controller->GetEdgeScrollPan(FVector2D(Screen) * 0.5, Screen).IsZero());
+	Test->TestTrue(TEXT("on the bar just above the margin neither"), Controller->GetEdgeScrollPan(FVector2D(BarPixel.X, Screen.Y - 60.0), Screen).IsZero());
+	Test->TestEqual(TEXT("A cursor outside the edge margin walks no HUD panel"), Controller->GetHUDPanelLookups(), Lookups);
+	FBox2D Commands;
+	if (Widget->GetElementRect(TEXT("CommandsFrame"), Commands))
+	{
+		const FVector2D BottomRow(Commands.GetCenter().X, Screen.Y - 1.0);
+		const FVector2D InMargin(Commands.GetCenter().X, Screen.Y - 4.0);
+		Test->TestTrue(TEXT("The bottom bar covers the screen's bottom row there"), Controller->IsOnHUDPanel(BottomRow) && Controller->IsOnHUDPanel(InMargin));
+		Test->TestTrue(TEXT("Inside the margin over the bottom bar the cursor does not scroll"), Controller->GetEdgeScrollPan(InMargin, Screen).IsZero());
+		Test->TestEqual(TEXT("On the bottom row under the bottom bar the cursor scrolls back"), Controller->GetEdgeScrollPan(BottomRow, Screen).Y, -1.0);
+	}
+	else
+	{
+		Test->AddError(TEXT("The HUD has no CommandsFrame laid out"));
+	}
 	return true;
 }
 

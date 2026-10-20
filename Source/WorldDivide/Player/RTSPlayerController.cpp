@@ -616,10 +616,21 @@ void ARTSPlayerController::ApplyEdgeScroll() const
 		return;
 	}
 	GetViewportSize(ViewportX, ViewportY);
+	const FVector2D Pan = GetEdgeScrollPan(Mouse, FIntPoint(ViewportX, ViewportY));
+	if (!Pan.IsZero())
+	{
+		CameraPawn->AddPanInput(Pan);
+	}
+}
+
+FVector2D ARTSPlayerController::GetEdgeScrollPan(const FVector2D& Mouse, const FIntPoint& ViewportSize) const
+{
+	const int32 ViewportX = ViewportSize.X;
+	const int32 ViewportY = ViewportSize.Y;
 	const float EdgeScrollMargin = GetDefault<URTSCameraSettings>()->EdgeScrollMargin;
 	if (ViewportX <= 0 || ViewportY <= 0)
 	{
-		return;
+		return FVector2D::ZeroVector;
 	}
 
 	FVector2D Pan = FVector2D::ZeroVector;
@@ -642,7 +653,7 @@ void ARTSPlayerController::ApplyEdgeScroll() const
 	}
 	if (Pan.IsZero())
 	{
-		return;
+		return Pan;
 	}
 
 	// Inside the margin over a HUD panel the cursor is for the panel, not for scrolling, except on the screen's outermost
@@ -651,13 +662,14 @@ void ARTSPlayerController::ApplyEdgeScroll() const
 	const bool bOnScreenEdge = Mouse.X < 1.f || Mouse.Y < 1.f || Mouse.X >= ViewportX - 1.f || Mouse.Y >= ViewportY - 1.f;
 	if (!bOnScreenEdge && IsOnHUDPanel(Mouse))
 	{
-		return;
+		return FVector2D::ZeroVector;
 	}
-	CameraPawn->AddPanInput(Pan);
+	return Pan;
 }
 
 bool ARTSPlayerController::IsOnHUDPanel(const FVector2D& Point) const
 {
+	++HUDPanelLookups;
 	const ARTSHUD* RTSHUD = GetHUD<ARTSHUD>();
 	const URTSHUDWidget* Widget = RTSHUD ? RTSHUD->GetHUDWidget() : nullptr;
 	return Widget && Widget->IsOnPanel(Point);

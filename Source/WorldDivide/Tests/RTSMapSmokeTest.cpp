@@ -190,50 +190,33 @@ namespace RTSMapSmokeTest
 		}
 
 		/**
-		 * Along each of the camera's right and forward axes the camera moved towards Corner on (#339), the ground its view
-		 * shows reaches the pan area's extent: the ground's own extent there plus at most its EdgeMargin (#295); along an
-		 * axis where the view is wider than the pan area, it is centred instead. Straight, the axes are the world's.
+		 * Towards Corner of the ground the view comes up to it at any yaw (#295, #339): the corner lies in the ground the
+		 * view shows, or no farther from it than the view's taper (its far half-width less its near half-width, which keeps
+		 * a straight view's near corners off the map's corners behind it) plus EdgeMargin. And the pivot, the screen's
+		 * centre, stays within the pan area.
 		 */
 		void VerifyAtCorner(const ARTSCameraPawn& Camera, const FVector2D& Corner, const TCHAR* How) const
 		{
-			const FRotator YawOnly(0.f, Camera.GetActorRotation().Yaw, 0.f);
-			const FVector2D Axes[] = { FVector2D(YawOnly.RotateVector(FVector::RightVector)), FVector2D(YawOnly.RotateVector(FVector::ForwardVector)) };
-			const FBox2D& Area = Camera.GetPanArea();
-			const FVector2D AreaCorners[] = { Area.Min, FVector2D(Area.Max.X, Area.Min.Y), Area.Max, FVector2D(Area.Min.X, Area.Max.Y) };
-			const double MaxEdgeMargin = Camera.GetTuning().EdgeMargin;
-			FString Shows;
-			bool bReaches = true;
-			for (const FVector2D& Axis : Axes)
+			const TStaticArray<FVector, 4> Footprint = Camera.GetViewFootprint();
+			double Distance = TNumericLimits<double>::Max();
+			bool bInside = true;
+			for (int32 Index = 0; Index < 4; ++Index)
 			{
-				const double Outward = (Corner - Ground.GetCenter()) | Axis;
-				if (FMath::Abs(Outward) < 1.0)
-				{
-					// The camera did not move along this axis.
-					continue;
-				}
-				FFloatInterval View;
-				for (const FVector& Point : Camera.GetViewFootprint())
-				{
-					View.Include(float(FVector2D(Point) | Axis));
-				}
-				FFloatInterval Span;
-				for (const FVector2D& Point : AreaCorners)
-				{
-					Span.Include(float(Point | Axis));
-				}
-				const double Sign = FMath::Sign(Outward);
-				const double Edge = Sign > 0.0 ? View.Max : View.Min;
-				const double AreaEdge = Sign > 0.0 ? Span.Max : Span.Min;
-				// The margin's share along this axis: the pan area's corner is EdgeMargin past the ground's along both world axes.
-				const double Margin = MaxEdgeMargin * (FMath::Abs(Axis.X) + FMath::Abs(Axis.Y));
-				const double Short = (AreaEdge - Edge) * Sign;
-				const bool bCentred = View.Size() > Span.Size() + 1.f;
-				bReaches &= bCentred ? FMath::IsNearlyEqual(View.Interpolate(0.5f), Span.Interpolate(0.5f), 1.f)
-					: Short >= -1.0 && Short <= Margin + 1.0;
-				Shows += FString::Printf(TEXT(" %.0f of %.0f"), Edge, AreaEdge);
+				const FVector2D From(Footprint[Index]);
+				const FVector2D To(Footprint[(Index + 1) % 4]);
+				// Top left, top right, bottom right, bottom left: clockwise seen from above, the inside on the right.
+				bInside &= ((To - From) ^ (Corner - From)) >= 0.0;
+				Distance = FMath::Min(Distance, FVector2D::Distance(Corner, FMath::ClosestPointOnSegment2D(Corner, From, To)));
 			}
-			Test->TestTrue(FString::Printf(TEXT("%s: %s towards corner %s takes the view to it, along the camera's axes%s"), *Name, How,
-				*Corner.ToString(), *Shows), bReaches);
+			Distance = bInside ? 0.0 : Distance;
+			const double Taper = (FVector::Dist2D(Footprint[0], Footprint[1]) - FVector::Dist2D(Footprint[2], Footprint[3])) / 2.0;
+			const double Allowed = FMath::Max(Taper, 0.0) + Camera.GetTuning().EdgeMargin + 1.0;
+			Test->TestTrue(FString::Printf(TEXT("%s: %s towards corner %s takes the view to it: %.0f cm off, at most %.0f (yaw %.0f)"),
+				*Name, How, *Corner.ToString(), Distance, Allowed, Camera.GetActorRotation().Yaw), Distance <= Allowed);
+			const FBox2D& Area = Camera.GetPanArea();
+			Test->TestTrue(FString::Printf(TEXT("%s: %s towards corner %s keeps the camera's pivot %s in the pan area %s"), *Name, How,
+				*Corner.ToString(), *FVector2D(Camera.GetActorLocation()).ToString(), *Area.ToString()),
+				Area.ExpandBy(1.0).IsInside(FVector2D(Camera.GetActorLocation())));
 		}
 
 		FAutomationTestBase* Test;

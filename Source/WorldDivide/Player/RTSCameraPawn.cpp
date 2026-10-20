@@ -293,41 +293,98 @@ void ARTSCameraPawn::UpdateArm(bool bTrace)
 
 FVector ARTSCameraPawn::ClampToPanArea(const FVector& Location) const
 {
-	// Along the camera's own right and forward axes, so a turned view can still bring the map's corners on screen: the
-	// footprint must stay within the pan area's extent along each axis, not within the world box around a turned trapezoid.
-	// The footprint moves with the pivot, so it is worked out once where the pawn stands and shifted to Location.
+	// Two limits on the pivot. The footprint stays within the pan area's extent along the camera's own right and forward
+	// axes, so a turned view can still bring the map's corners on screen: a rectangle turned with the camera. And the
+	// pivot, the ground at the screen's centre, stays within the pan area itself, since a turned view's axis extent reaches
+	// far past the map's edges (at 45 degrees a diamond twice the map's area). Both are convex, so the pivot goes to the
+	// nearest point of their overlap: a pan slides along its edge into a corner, and turning near an edge moves the view
+	// by no more than its own size. The footprint moves with the pivot, so it is worked out once where the pawn stands.
 	const FRotator YawOnly(0.f, GetActorRotation().Yaw, 0.f);
 	const FVector2D Axes[] = { FVector2D(YawOnly.RotateVector(FVector::RightVector)), FVector2D(YawOnly.RotateVector(FVector::ForwardVector)) };
-	const FVector2D Shift = FVector2D(Location) - FVector2D(GetActorLocation());
+	const FVector2D Here(GetActorLocation());
 	const TStaticArray<FVector, 4> Footprint = GetViewFootprint();
 	const FVector2D AreaCorners[] = { PanArea.Min, FVector2D(PanArea.Max.X, PanArea.Min.Y), PanArea.Max, FVector2D(PanArea.Min.X, PanArea.Max.Y) };
-	FVector2D Offset = FVector2D::ZeroVector;
-	for (const FVector2D& Axis : Axes)
+
+	// The pivot's range along each axis that keeps the footprint within the area's extent; one value where it is wider.
+	double Low[2];
+	double High[2];
+	for (int32 Axis = 0; Axis < 2; ++Axis)
 	{
 		FFloatInterval View;
 		for (const FVector& Corner : Footprint)
 		{
-			View.Include(float((FVector2D(Corner) + Shift) | Axis));
+			View.Include(float((FVector2D(Corner) - Here) | Axes[Axis]));
 		}
 		FFloatInterval Area;
 		for (const FVector2D& Corner : AreaCorners)
 		{
-			Area.Include(float(Corner | Axis));
+			Area.Include(float(Corner | Axes[Axis]));
 		}
-		if (View.Size() > Area.Size())
+		Low[Axis] = Area.Min - View.Min;
+		High[Axis] = Area.Max - View.Max;
+		if (Low[Axis] > High[Axis])
 		{
-			Offset += Axis * (Area.Interpolate(0.5f) - View.Interpolate(0.5f));
-		}
-		else if (View.Min < Area.Min)
-		{
-			Offset += Axis * (Area.Min - View.Min);
-		}
-		else if (View.Max > Area.Max)
-		{
-			Offset += Axis * (Area.Max - View.Max);
+			Low[Axis] = High[Axis] = Area.Interpolate(0.5f) - View.Interpolate(0.5f);
 		}
 	}
-	return Location + FVector(Offset, 0.f);
+
+	const FVector2D Wanted(Location);
+	const double WantedRight = Wanted | Axes[0];
+	const double WantedForward = Wanted | Axes[1];
+	if (WantedRight >= Low[0] && WantedRight <= High[0] && WantedForward >= Low[1] && WantedForward <= High[1] && PanArea.IsInside(Wanted))
+	{
+		return Location;
+	}
+
+	// The turned rectangle, clipped by the pan area's four sides.
+	TArray<FVector2D, TInlineAllocator<8>> Shape = {
+		Axes[0] * Low[0] + Axes[1] * Low[1], Axes[0] * High[0] + Axes[1] * Low[1],
+		Axes[0] * High[0] + Axes[1] * High[1], Axes[0] * Low[0] + Axes[1] * High[1] };
+	for (int32 Side = 0; Side < 4 && !Shape.IsEmpty(); ++Side)
+	{
+		const int32 Axis = Side % 2;
+		const double Bound = Side < 2 ? PanArea.Min[Axis] : PanArea.Max[Axis];
+		const double Sign = Side < 2 ? 1.0 : -1.0;
+		const auto Inside = [Axis, Bound, Sign](const FVector2D& Point) { return (Point[Axis] - Bound) * Sign >= 0.0; };
+		TArray<FVector2D, TInlineAllocator<8>> Clipped;
+		for (int32 Index = 0; Index < Shape.Num(); ++Index)
+		{
+			const FVector2D& From = Shape[Index];
+			const FVector2D& To = Shape[(Index + 1) % Shape.Num()];
+			if (Inside(From))
+			{
+				Clipped.Add(From);
+			}
+			if (Inside(From) != Inside(To))
+			{
+				Clipped.Add(From + (To - From) * ((Bound - From[Axis]) / (To[Axis] - From[Axis])));
+			}
+		}
+		Shape = MoveTemp(Clipped);
+	}
+
+	FVector2D Pivot = Wanted;
+	if (Shape.IsEmpty())
+	{
+		// The limits do not overlap, a view wider than the map's turned extent: the screen's centre on the map wins.
+		Pivot = Axes[0] * FMath::Clamp(WantedRight, Low[0], High[0]) + Axes[1] * FMath::Clamp(WantedForward, Low[1], High[1]);
+		Pivot = FVector2D(FMath::Clamp(Pivot.X, PanArea.Min.X, PanArea.Max.X), FMath::Clamp(Pivot.Y, PanArea.Min.Y, PanArea.Max.Y));
+	}
+	else
+	{
+		double Nearest = TNumericLimits<double>::Max();
+		for (int32 Index = 0; Index < Shape.Num(); ++Index)
+		{
+			const FVector2D Point = FMath::ClosestPointOnSegment2D(Wanted, Shape[Index], Shape[(Index + 1) % Shape.Num()]);
+			const double Distance = FVector2D::DistSquared(Point, Wanted);
+			if (Distance < Nearest)
+			{
+				Nearest = Distance;
+				Pivot = Point;
+			}
+		}
+	}
+	return FVector(Pivot, Location.Z);
 }
 
 void ARTSCameraPawn::AddPanInput(const FVector2D& Input)
@@ -340,6 +397,7 @@ void ARTSCameraPawn::AddZoomInput(float Steps)
 	const float Before = TargetZoom;
 	TargetZoom = FMath::Clamp(TargetZoom * FMath::Pow(1.f + ZoomStepFraction, -Steps), MinZoom, MaxZoom);
 	// A notch against the zoom limit changes nothing, so the focus a notch before it set keeps the cursor's point fixed.
+	// While the arm still eases that is the earlier notch's point, even if the cursor has moved since.
 	if (!FMath::IsNearlyEqual(TargetZoom, Before))
 	{
 		ZoomFocus.Reset();

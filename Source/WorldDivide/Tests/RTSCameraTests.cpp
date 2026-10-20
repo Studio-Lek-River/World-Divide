@@ -188,32 +188,43 @@ namespace RTSCameraTests
 		TestTrue(FString::Printf(TEXT("The pan area is %s, not %s"), *Expected.ToString(), *Camera->GetPanArea().ToString()),
 			Camera->GetPanArea().Min.Equals(Expected.Min) && Camera->GetPanArea().Max.Equals(Expected.Max));
 
-		// Forward and left: the farthest the view reaches ahead is the area's farthest ahead, and to the left its leftmost.
-		const auto VerifyViewInCorner = [this, Camera, &Expected](const FString& How)
+		// Towards a corner of the pan area, the view reaches it along each of the camera's axes it lies off the middle on:
+		// straight, the corner ahead and to the left, along both; turned 45 degrees, the corner straight ahead, along forward.
+		const auto VerifyViewInCorner = [this, Camera, &Expected](const FVector2D& Corner, const FString& How)
 		{
 			const TStaticArray<FVector2D, 2> Axes = GetViewAxes(*Camera);
-			const FVector2D Right = GetSpan(GetFootprint(*Camera), Axes[0]);
-			const FVector2D Forward = GetSpan(GetFootprint(*Camera), Axes[1]);
-			const FVector2D AreaRight = GetSpan(GetCorners(Expected), Axes[0]);
-			const FVector2D AreaForward = GetSpan(GetCorners(Expected), Axes[1]);
-			TestTrue(FString::Printf(TEXT("%s stops with the view in the pan area's corner: ahead %.0f of %.0f, left %.0f of %.0f"), *How,
-				Forward.Y, AreaForward.Y, Right.X, AreaRight.X),
-				FMath::IsNearlyEqual(Forward.Y, AreaForward.Y, 1.0) && FMath::IsNearlyEqual(Right.X, AreaRight.X, 1.0));
+			bool bReaches = true;
+			FString Shows;
+			for (int32 Axis = 0; Axis < 2; ++Axis)
+			{
+				const double Outward = (Corner - Expected.GetCenter()) | Axes[Axis];
+				if (FMath::Abs(Outward) < 1.0)
+				{
+					continue;
+				}
+				const FVector2D View = GetSpan(GetFootprint(*Camera), Axes[Axis]);
+				const double Edge = Outward > 0.0 ? View.Y : View.X;
+				bReaches &= FMath::IsNearlyEqual(Edge, Corner | Axes[Axis], 1.0);
+				Shows += FString::Printf(TEXT(" %s %.0f of %.0f"), Axis == 0 ? TEXT("right") : TEXT("forward"), Edge, Corner | Axes[Axis]);
+			}
+			TestTrue(FString::Printf(TEXT("%s stops with the view in the pan area's corner %s:%s"), *How, *Corner.ToString(), *Shows), bReaches);
 		};
-		for (const float Yaw : { 0.f, 45.f })
+		const TPair<float, FVector2D> Cases[] = { { 0.f, FVector2D(Expected.Max.X, Expected.Min.Y) }, { 45.f, Expected.Max } };
+		for (const TPair<float, FVector2D>& Case : Cases)
 		{
-			Camera->SetYawNow(Yaw);
+			Camera->SetYawNow(Case.Key);
 			const TStaticArray<FVector2D, 2> Axes = GetViewAxes(*Camera);
-			Camera->JumpTo(FVector((Axes[1] - Axes[0]) * 1000000.0, 0.0));
-			VerifyViewInCorner(FString::Printf(TEXT("Yaw %.0f: JumpTo far away"), Yaw));
+			const FVector2D Towards = (Case.Value - Expected.GetCenter()).GetSafeNormal();
+			Camera->JumpTo(FVector(Towards * 1000000.0, 0.0));
+			VerifyViewInCorner(Case.Value, FString::Printf(TEXT("Yaw %.0f: JumpTo far away"), Case.Key));
 
 			Camera->JumpTo(FVector::ZeroVector);
 			for (int32 Frame = 0; Frame < 600; ++Frame)
 			{
-				Camera->AddPanInput(FVector2D(-1.0, 1.0));
+				Camera->AddPanInput(FVector2D(Towards | Axes[0], Towards | Axes[1]) * 2.0);
 				Camera->Tick(1.f / 10.f);
 			}
-			VerifyViewInCorner(FString::Printf(TEXT("Yaw %.0f: panning far out"), Yaw));
+			VerifyViewInCorner(Case.Value, FString::Printf(TEXT("Yaw %.0f: panning far out"), Case.Key));
 		}
 		return true;
 	}
@@ -518,7 +529,9 @@ namespace RTSCameraTests
 	 * default and farthest zoom, turned 0, 45 and 135 degrees, jumped past each corner of the map and panned into one, no
 	 * corner of the screen looks past the area's extent along them; straight that is the area itself. And the view can come
 	 * to the map's corners: turned 45 degrees at the farthest zoom every corner of the map can be brought on screen, which a
-	 * clamp on the view's world box stops short of for the corners ahead and behind; straight, the corners ahead can.
+	 * clamp on the view's world box stops short of for the corners ahead and behind; straight, the corners ahead can. Turned
+	 * 45 and 135 degrees, jumped past every edge and corner, the screen's centre still shows the pan area, and turning back
+	 * to north by an edge moves the camera by no more than its view, not by the map (#339 review).
 	 */
 	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSCameraViewClampTest, "WorldDivide.Camera.ViewClamp", TestFlags)
 
@@ -571,16 +584,49 @@ namespace RTSCameraTests
 			Camera->Tick(1.f / 10.f);
 		}
 		VerifyView(TEXT("Farthest zoom, yaw 45, panned into a corner"));
+		// Forward and right at 45 degrees is world +Y: the pan stops with the screen's centre on the pan area's north edge.
+		TestEqual(TEXT("Panning forward and right turned 45 degrees takes the pivot to the pan area's edge"),
+			Camera->GetActorLocation().Y, Area.Max.Y, 1.0);
+
+		// Jumped past each corner and each edge's middle, turned, at every zoom: the screen's centre stays over the pan area.
+		for (const float Zoom : { Camera->GetMinZoom(), Camera->GetDefaultZoom(), Camera->GetMaxZoom() })
 		{
-			const TStaticArray<FVector2D, 2> Axes = GetViewAxes(*Camera);
-			const FVector2D Right = GetSpan(GetFootprint(*Camera), Axes[0]);
-			const FVector2D Forward = GetSpan(GetFootprint(*Camera), Axes[1]);
-			TestTrue(FString::Printf(TEXT("Panning forward and right takes the view to the pan area's extent along both: right %.0f of %.0f, ahead %.0f of %.0f"),
-				Right.Y, GetSpan(GetCorners(Area), Axes[0]).Y, Forward.Y, GetSpan(GetCorners(Area), Axes[1]).Y),
-				FMath::IsNearlyEqual(Right.Y, GetSpan(GetCorners(Area), Axes[0]).Y, 1.0)
-				&& FMath::IsNearlyEqual(Forward.Y, GetSpan(GetCorners(Area), Axes[1]).Y, 1.0));
+			for (const float Yaw : { 45.f, 135.f })
+			{
+				Camera->SetZoomNow(Zoom);
+				Camera->SetYawNow(Yaw);
+				for (const FVector2D Far : { FVector2D(1.0, 1.0), FVector2D(-1.0, 1.0), FVector2D(-1.0, -1.0), FVector2D(1.0, -1.0),
+					FVector2D(1.0, 0.0), FVector2D(-1.0, 0.0), FVector2D(0.0, 1.0), FVector2D(0.0, -1.0) })
+				{
+					Camera->JumpTo(FVector(Far * 1000000.0, 0.0));
+					Camera->Tick(1.f / 30.f);
+					const FVector2D Centre(GetGoalView(*Camera).GetGround(FVector2D(Screen1080) * 0.5, Camera->GetActorLocation().Z));
+					TestTrue(FString::Printf(TEXT("Zoom %.0f, yaw %.0f, jumped towards %s: the screen's centre shows %s, inside the pan area %s"),
+						Zoom, Yaw, *Far.ToString(), *Centre.ToString(), *Area.ToString()), Area.ExpandBy(1.0).IsInside(Centre));
+				}
+			}
 		}
 
+		// Turned 45 degrees and jumped past the west edge's middle, turning back to north keeps the camera near where it was.
+		for (const float Zoom : { Camera->GetDefaultZoom(), Camera->GetMaxZoom() })
+		{
+			Camera->SetZoomNow(Zoom);
+			Camera->SetYawNow(45.f);
+			Camera->JumpTo(FVector(-1000000.0, 0.0, 0.0));
+			Camera->Tick(1.f / 30.f);
+			const FVector2D Start(Camera->GetActorLocation());
+			const FVector2D ViewSize = Camera->GetViewFootprintBounds().GetSize();
+			Camera->AddRotateInput(-45.f);
+			for (int32 Frame = 0; Frame < 120; ++Frame)
+			{
+				Camera->Tick(1.f / 30.f);
+			}
+			const double Moved = FVector2D::Distance(Start, FVector2D(Camera->GetActorLocation()));
+			TestTrue(FString::Printf(TEXT("Zoom %.0f: turning from 45 to 0 degrees by the west edge moves the camera %.0f cm, within its view's %.0f"),
+				Zoom, Moved, ViewSize.GetMax()), Moved <= ViewSize.GetMax());
+		}
+
+		Camera->SetZoomNow(Camera->GetMaxZoom());
 		// Each map corner: the view's point farthest towards it is put a little past it, so the corner lies just inside the
 		// view, as a player panning into the corner would have it; the clamp must leave it there.
 		const FBox2D* Fallback = ARTSCameraPawn::StaticClass()->FindPropertyByName(TEXT("FallbackMapArea"))

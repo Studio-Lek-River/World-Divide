@@ -36,9 +36,10 @@
  * command line the game quits when done, with exit code 1 on failure.
  *
  * On WD_RiverCrossing_01 (ue.ps1 -Task camerashots -Map /Game/Maps/WD_RiverCrossing_01, #295) it stages only an M20 by
- * the map's south-west corner, so the edge shots show where the map ends (#339), and pictures the camera as it is now over
- * the landscape at 1920x1080: the west hill, the north bridge, the west base turned 45 degrees, and the map's south-west
- * corner straight and turned 45 degrees, each at the closest, default and farthest zoom.
+ * the map's south-west corner, so the edge shots show where the map ends, and removes it when done (#339); it pictures the camera as it is now over
+ * the landscape at 1920x1080: the west hill, the north bridge, the west base turned 45 degrees, the map's south-west
+ * corner straight and turned 45 degrees, and a jump past the middle of its west edge turned 45 degrees, which the camera's
+ * clamp stops with the screen's centre on the map, each at the closest, default and farthest zoom.
  */
 namespace RTSCameraShots
 {
@@ -95,8 +96,10 @@ namespace RTSCameraShots
 		{ TEXT("base_yaw45"), FVector2D(-72000.f, -22000.f), 45.f },
 		{ TEXT("edge"), FVector2D(-100000.f, -100000.f), 0.f, true },
 		{ TEXT("edge_yaw45"), FVector2D(-100000.f, -100000.f), 45.f, true },
+		{ TEXT("past_west_yaw45"), FVector2D(-160000.f, 0.f), 45.f, true },
 	};
-	/** How far inside the border, along each axis towards the map's middle, the marker stands. */
+	/** The playable ground's half-size (rivercrossing_greybox.py's PLAYABLE_HALF), and how far inside it the markers stand. */
+	constexpr float PlayableHalf = 100000.f;
 	constexpr float BorderMarkerInset = 3000.f;
 	const TCHAR* BorderMarker = TEXT("DA_TestM20Guardian");
 
@@ -391,16 +394,27 @@ namespace RTSCameraShots
 		void StageBorderMarkers()
 		{
 			URTSUnitData* Data = LoadUnitData(BorderMarker);
+			if (!Data)
+			{
+				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.CameraShots: %s did not load; the edge shots show no border marker"), BorderMarker);
+				return;
+			}
 			TSet<FVector2D> Placed;
 			for (const FLandscapeScene& Scene : RiverCrossingScenes)
 			{
-				if (!Scene.bBorder || !Data || Placed.Contains(Scene.Focus))
+				if (!Scene.bBorder || Placed.Contains(Scene.Focus))
 				{
 					continue;
 				}
 				Placed.Add(Scene.Focus);
-				const FVector2D Inward(-FMath::Sign(Scene.Focus.X), -FMath::Sign(Scene.Focus.Y));
-				if (!SpawnUnit(Data, Scene.Focus + Inward * BorderMarkerInset))
+				// Just inside the border nearest the focus, which may lie past it.
+				const float Inside = PlayableHalf - BorderMarkerInset;
+				const FVector2D Location(FMath::Clamp(Scene.Focus.X, -Inside, Inside), FMath::Clamp(Scene.Focus.Y, -Inside, Inside));
+				if (ARTSUnit* Marker = SpawnUnit(Data, Location))
+				{
+					Markers.Add(Marker);
+				}
+				else
 				{
 					UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.CameraShots: could not place the border marker %s"), BorderMarker);
 				}
@@ -600,6 +614,15 @@ namespace RTSCameraShots
 			{
 				GetCameraPawn()->ApplyTuning(*OwnTuning);
 			}
+			// The border markers were only for the pictures; a playtest goes on without them.
+			for (const TWeakObjectPtr<AActor>& Marker : Markers)
+			{
+				if (Marker.IsValid())
+				{
+					Marker->Destroy();
+				}
+			}
+			Markers.Reset();
 			if (Problem.IsEmpty())
 			{
 				UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.CameraShots: wrote %d pictures and %s"), Written,
@@ -629,6 +652,8 @@ namespace RTSCameraShots
 		/** The units measured on each picture and their hulls. */
 		TArray<TPair<FString, FBox>> Measured;
 		FVector Vehicle = FVector::ZeroVector;
+		/** River Crossing's border markers, removed when done. */
+		TArray<TWeakObjectPtr<AActor>> Markers;
 		TArray<FString> Rows;
 		int32 ShotIndex = 0;
 		EStep Step = EStep::WaitForGame;

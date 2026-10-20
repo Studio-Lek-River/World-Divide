@@ -143,6 +143,17 @@ The work is split into seven issues, each built, tested and committed on its own
 
 The sheet (`Saved/CameraShots/Sheet_*.jpg`, `metrics.csv`) pictures a vehicle, a mixed formation, a base and the battlefield on L_TestMap at the closest, default and farthest zoom, and the base at 2560 x 1440 and 3440 x 1440. Infantry measures 7 px broadside at the default zoom and 2 px at the farthest: readable through the HUD (brackets, health bars), as planned.
 
+#### Camera polish (#339)
+
+- **Clamp.** The pivot goes to the nearest point where two limits overlap. First, the view footprint stays within the pan area's extent along the camera's own right and forward axes, so a turned view can bring the map's corners on screen (at 45 degrees and the farthest zoom, all four). Second, the pivot, the ground at the screen's centre, stays within the pan area itself, so a turned view never drifts off the map and turning back to north by an edge moves the camera by less than its own view. Straight at the farthest zoom, the map's corners behind the camera stay just off screen: the view is a trapezoid whose near edge is narrower than its far one.
+- **Ground snap.** A building spawning, also a replicated one on a client, makes a still camera check the ground again, so it lifts over the building.
+- **Edge scroll.** The outermost pixel row and column always scroll, even under a HUD bar. The HUD panels are only looked up inside the margin ([HUD spec](../../ui/specs/HUD.md#4-interaction)).
+- **Shots after the change** (`ue.ps1 -Task unitshots` and `-Task trackshots`, DA_TestM20Guardian, compared pixel by pixel with the sets of just before):
+  - unitshots: 42 of 51 pictures are the same (mean difference under 0.5 of 255), including every RTS-camera view (`rts_default`, `zoom_in_max`, `zoom_out_max`, `teams_*`). The 9 that differ are muzzle flash and smoke, whose particles differ from run to run.
+  - trackshots: the framing is unchanged (`motion_rts_*` side by side); the differences lie on the vehicle and its dust and exhaust, which are random per run.
+  - Accepted: the new clamp and ground snap shift no framing in these scenes; they stand in the map's middle, away from its edges.
+- **Pitch at the closest zoom:** pending the producer's decision. Shots at the current -8 degrees and at -35 and -40 (River Crossing, `ue.ps1 -Task camerashots -Map /Game/Maps/WD_RiverCrossing_01`). At -35 and -40 the closest zoom shows only about 7 m across, so `MinZoom` would move with it.
+
 ### Step 6: vehicle movement
 Superseded by #138, which replaced the heading-only proposal of before. Tracks and wheels decide how a vehicle moves; the navmesh decides where it goes ([vehicle locomotion](VEHICLE_LOCOMOTION.md)).
 - `Units/RTSUnitMovement.h/.cpp`: `URTSUnitMovement : UFloatingPawnMovement`. Legs pass through to the floating pawn. Vehicles are driven by their gear on the server, with collision-checked moves and a realized-motion state for presentation.

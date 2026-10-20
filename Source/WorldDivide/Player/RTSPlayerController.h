@@ -316,6 +316,17 @@ public:
 	/** Point, in viewport pixels, lies on a panel of the UMG HUD, where clicks never select, order or place. */
 	bool IsOnHUDPanel(const FVector2D& Point) const;
 
+	/** How many times IsOnHUDPanel has walked the HUD's panels; edge scroll asks only inside its margin (#339). */
+	int32 GetHUDPanelLookups() const { return HUDPanelLookups; }
+
+	/**
+	 * Local. The edge-scroll pan, as ARTSCameraPawn::AddPanInput takes it, for the cursor at Mouse on a viewport of
+	 * ViewportSize, in viewport pixels. Inside EdgeScrollMargin of an edge it scrolls towards it, except over a HUD panel;
+	 * on the screen's outermost pixel row or column it scrolls even over one (#339). The panels are looked up only inside
+	 * the margin.
+	 */
+	FVector2D GetEdgeScrollPan(const FVector2D& Mouse, const FIntPoint& ViewportSize) const;
+
 	/** Local. What Esc does: cancels placement, attack-move, force fire or superweapon targeting while one is armed, else opens or closes the in-game menu. */
 	void HandleEscape();
 
@@ -580,6 +591,7 @@ private:
 
 	/** Hotkey clashes already logged by GetCommandButtons. */
 	mutable TSet<FString> LoggedHotkeyWarnings;
+	mutable int32 HUDPanelLookups = 0;
 
 	/** Set by Esc with nothing to cancel, until Esc again or the menu's Resume. */
 	bool bInGameMenuOpen = false;
