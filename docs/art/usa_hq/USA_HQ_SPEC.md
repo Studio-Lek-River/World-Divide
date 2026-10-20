@@ -303,7 +303,7 @@ scope.
 | 2026-10-20 | Q6: keep the second flag and the loader as drawn |
 | 2026-10-20 | Q7: display name "Headquarters" (#121) |
 | 2026-10-20 | Q8: the budgets in §9 |
-| 2026-10-20 | Implementation change, pending producer confirmation at gate 2 (#186 rounds 6 to 8): §4 positions confirmed or moved to the concept's apron margins (wing pulled in with 7.5 m roofs and 5 m-deep blocks, stepped core 12 m across at the decided ~14 m roof, forecourt with full-width steps, satcom and mast inboard, 4 m connectors under a 5.2 m roof); round 8, on the producer's request to extend the left wing so it is more spaced: the wing runs out along -X to a 9.5 m end block carrying the dish (no separate tower), with a long low middle section and an equipment terrace between it and the front block; door, bay, lane, 24 m tip and footprint unchanged; wing dish pivot (-1000, 950, 950) |
+| 2026-10-20 | Silhouette and massing approved by the producer at gate 2 (#186 rounds 6 to 8, approved on round8_concept_compare): §4 positions confirmed or moved to the concept's apron margins (wing pulled in with 7.5 m roofs and 5 m-deep blocks, stepped core 12 m across at the decided ~14 m roof, forecourt with full-width steps, satcom and mast inboard, 4 m connectors under a 5.2 m roof); round 8, on the producer's request to extend the left wing so it is more spaced: the wing runs out along -X to a 9.5 m end block carrying the dish (no separate tower), with a long low middle section and an equipment terrace between it and the front block; door, bay, lane, 24 m tip and footprint unchanged; wing dish pivot (-1000, 950, 950) |
 
 ## 15. Open questions
 
