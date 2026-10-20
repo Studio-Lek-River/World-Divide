@@ -50,24 +50,27 @@ TOTAL_HEIGHT = 24.0  # to the core mast tip, whole mesh
 HEIGHT_TOLERANCE = 0.01
 FOOTPRINT_TOLERANCE = 0.01
 
-# M1 command core: an octagon, flats on the axes and the diagonals.
-CORE_CENTRE = (-1.5, 1.5)
-CORE_APOTHEM = 5.0  # 10 m across the flats
+# Positions confirmed by #186 round 6 against the concept's apron margins (about 4 m of open slab behind and beside the
+# buildings, an open forecourt towards the (+X, +Y) corner); spec section 4 records them.
+# M1 command core: a broad, squat octagon, flats on the axes and the diagonals. Its (+X, -Y) face clears the garage's
+# rear corner (3.6, -1.0), which sets the centre.
+CORE_CENTRE = (-3.5, 0.5)
+CORE_APOTHEM = 6.0  # 12 m across the flats
 CORE_ROOF = 14.0
-DRUM_APOTHEM = 3.25
+DRUM_APOTHEM = 3.9
 DRUM_ROOF = 16.5
 CORE_MAST_TIP = TOTAL_HEIGHT
 
-# M2 administration / communications wing, an L: rear block (dish tower on it), link, front block. Boxes are
-# (x0, x1, y0, y1).
-WING_REAR = (-11.5, -5.5, 5.0, 12.5)
-WING_LINK = (-5.5, 0.5, 8.5, 12.5)
-WING_FRONT = (0.5, 7.0, 8.0, 12.5)
+# M2 administration / communications wing along the +Y side, wrapping the core: rear block (dish tower on it), link,
+# front block beside the forecourt. Boxes are (x0, x1, y0, y1).
+WING_REAR = (-10.0, -5.5, 7.0, 10.5)
+WING_LINK = (-5.5, 0.8, 7.5, 10.5)
+WING_FRONT = (0.8, 5.0, 6.4, 10.5)
 WING_ROOF = 9.0
 WING_LINK_ROOF = 7.0
-DISH_TOWER = (-8.5, -5.5, 7.0, 11.0)
+DISH_TOWER = (-9.05, -6.45, 7.7, 9.8)
 DISH_TOWER_ROOF = 11.0
-DISH_PIVOT = (-7.0, 9.0, DISH_TOWER_ROOF)
+DISH_PIVOT = (-7.75, 8.75, DISH_TOWER_ROOF)
 DISH_RADIUS = 1.25
 WING_MAST_TIP = 17.0
 
@@ -96,35 +99,38 @@ CLEAR_REAR = 0.5
 CLEAR_FLOOR = 0.05  # above the apron
 LANE_WIDTH = 7.0  # spec section 5: nothing stands in it from the bay's back wall to the footprint edge
 
-# M4 courtyard, raised with steps on its front edge; M5 flag on its plinth.
-COURTYARD_X = (3.5, 10.0)
-COURTYARD_Y = (1.0, 7.5)
+# M4 forecourt, raised with steps on its front edge, from the core's +X flat and entrance face (x0 follows the core)
+# to x1, notched round the wing's front block; M5 flag on its plinth.
+COURTYARD_X = (CORE_CENTRE[0] + CORE_APOTHEM, 11.0)
+COURTYARD_Y = (1.0, 9.0)
+COURTYARD_GAP = 0.2  # to the wing's front block
 COURTYARD_TOP = 0.6
 STEPS = (3, 0.4)  # risers, tread
 STEPS_Y = (3.5, 6.5)
-FLAG_COURTYARD = (6.5, 4.5)
+FLAG_COURTYARD = (7.0, 5.0)
 FLAG_COURTYARD_TIP = 9.0
 PLINTH = (2.4, 1.6, 0.8)  # x, y, height over the courtyard
 
 # M6 flag on the core's rear annex; M10 connectors.
-FLAG_CORE = (-5.0, -3.5)
+ANNEX_DEPTH = 1.6  # rear annex off the core's (-X, -Y) face
+FLAG_CORE = (CORE_CENTRE[0] - (CORE_APOTHEM + ANNEX_DEPTH / 2.0) * math.sqrt(0.5),
+             CORE_CENTRE[1] - (CORE_APOTHEM + ANNEX_DEPTH / 2.0) * math.sqrt(0.5))  # the annex's centre
 FLAG_CORE_TIP = 16.0
-ANNEX_DEPTH = 2.0  # rear annex off the core's (-X, -Y) face
 CONNECTOR_ROOF = 6.0
-CONNECTOR_WING = (-2.5, -0.5)  # x span, from the core's +Y flat to the wing link
-CONNECTOR_GARAGE_Y = (-3.0, -1.0)  # from the core's (+X, -Y) face to the garage's rear wall
+CONNECTOR_WING = (-5.0, -1.1)  # x span, from the core's +Y flat to the wing link (about 4 m wide)
+CONNECTOR_GARAGE_Y = (-5.4, -2.0)  # from the core's (+X, -Y) face to the garage's rear wall
 
 # M7 radar tower and its array (a part), M8 satcom lattice and radome, M9 secondary mast.
 RADAR_TOWER = (-3.0, 1.0, -10.0, -6.0)
 RADAR_TOWER_ROOF = 11.0
 RADAR_PIVOT = (-1.0, -8.0, RADAR_TOWER_ROOF)
 RADAR_TOP = 13.5
-SATCOM_CENTRE = (-6.5, -10.5)
+SATCOM_CENTRE = (-6.5, -8.5)
 SATCOM_BASE = 3.0
 RADOME_RADIUS = 1.5
 RADOME_TOP = 18.0
 SATCOM_MAST_TIP = 20.0
-MAST_CENTRE = (-2.0, -12.5)
+MAST_CENTRE = (-3.5, -11.0)
 MAST_TIP = 17.0
 
 # M12 checkpoints, M13 fuel tanks, M14 supply stacks, M15 loader, M16 light masts; all outside the exit lane.
@@ -134,8 +140,8 @@ FUEL_TANKS = [(1.35, 0.55), (2.6, 0.55)]  # (y centre, radius); axis along X
 FUEL_TANK_X = (11.6, 13.8)
 FUEL_TANK_AXIS_Z = 0.95
 LOADER = (7.0, 9.8, -0.85, 0.85, 2.5)
-SUPPLY = [(7.6, 10.8, 8.6, 12.2, 2.4), (4.5, 11.5, -13.6, -11.4, 2.5), (-9.5, 5.5, 12.8, 13.7, 2.0),
-          (-12.6, -9.0, -13.6, -11.6, 2.2)]
+SUPPLY = [(7.6, 10.9, 9.4, 11.0, 2.4), (4.5, 11.5, -13.6, -11.4, 2.5), (-9.5, 4.6, 10.8, 11.7, 2.0),
+          (-11.0, -9.3, -12.4, -10.4, 2.2)]
 LIGHT_MASTS = [(-13.2, 13.2, 8.0), (13.3, 13.3, 8.0), (-13.2, -13.2, 8.0), (13.3, -13.3, 8.0)]
 
 # Overlap check: these pairs may touch (shared faces), checked with each mesh shrunk by this much.
@@ -170,7 +176,7 @@ TOWER_ROWS = [(1.2, 3.0), (5.0, 6.6)]
 ANNEX_ROWS = [(1.2, 3.0)]
 ANNEX_PARAPET = 0.6
 ENTRANCE = (3.2, 3.9)  # core doors: width, head (threshold at the courtyard)
-CANOPY = (4.4, 1.3, 4.0, 0.25)  # width, depth, underside, thickness
+CANOPY = (3.8, 0.9, 4.0, 0.25)  # width, depth, underside, thickness
 CORE_PLATE = (3.8, 5.0, 8.4)  # eagle plaque over the entrance: width, bottom, top
 WING_PLATE = (3.0, 2.4, 5.0)  # width, bottom, top
 TOWER_PLATE = (2.6, 7.4, 10.0)
@@ -196,7 +202,7 @@ APRON_JOINT = (4.0, 0.015)  # spacing, width
 SOLAR_ROWS = [6.6, 8.25, 9.9]  # x centres on the garage roof
 SOLAR = (1.2, 1.6, 0.25, 0.7, 0.04)  # depth (x), module length (y), low and high edge over the deck, thickness
 SOLAR_Y = (-9.0, -4.0)
-GUYS = [((0.6, -12.6), 12.0), ((-3.6, -11.0), 12.0), ((-2.2, -13.6), 9.0)]  # secondary mast: anchor, height on the mast
+GUYS = [((2.5, -0.6), 12.0), ((-1.9, -1.2), 9.0), ((-0.7, 1.6), 12.0)]  # secondary mast: anchor offset, height on it
 FLOOD_ARM = 1.2
 CONCRETE_TONE = 0.82  # level 3 darkens the render concrete towards the concept's grey
 
@@ -209,7 +215,7 @@ CONTAINER = (4.5, 7.5)  # x span in the garage-side stack
 JERSEY = [(-0.3, 0.0), (0.3, 0.0), (0.3, 0.08), (0.18, 0.33), (0.075, 0.81), (-0.075, 0.81), (-0.18, 0.33),
           (-0.3, 0.08)]  # profile (across, up)
 JERSEY_LENGTH = 2.0
-BOLLARDS = [(10.6, 3.2), (10.6, 6.8), (12.8, -10.0), (12.8, -10.6)]
+BOLLARDS = [(12.4, 6.8), (12.8, -10.0), (12.8, -10.6)]
 BUND = (11.45, 13.95, 0.55, 3.35, 0.3, 0.15)  # x0, x1, y0, y1, height, wall
 CORNER_PLATE = (0.45, 0.03)  # leg, thickness
 
@@ -224,7 +230,7 @@ SILL_PROJECTION = 0.08
 PLINTH_COURSE = (0.6, 0.05)  # height, projection
 WING_CHAMFER = 0.55
 RIBBON_MULLION = 1.5
-PORTAL = (3.2, 5.5, 0.8)  # clear width (the 4.14 m entrance face allows no more with its jambs), height, recess
+PORTAL = (3.6, 5.5, 0.8)  # clear width (held to the forecourt in front of the 4.97 m entrance face), height, recess
 PORTAL_FRAME = (0.3, 0.3, 0.4)  # jamb width, projection, lintel depth
 PORTAL_PLATE = (3.6, 0.6, 3.6)  # plaque width, gap over the lintel, height
 CORE_FLUSH = (0, 1, 2, 5, 7)  # core faces with a neighbour against them: no base course, flush sills
@@ -238,29 +244,33 @@ WHIP_CLUSTER = (0.6, (2.2, 3.0, 3.6))  # base, whip heights
 GUARD_POSTS = [((12.65, 13.85, -1.85, 0.35), (12.25, -0.9, 0.45)),  # guard block (x0, x1, y0, y1), barrier run (x, y0, y1)
                ((12.65, 13.85, 8.15, 10.65), (12.25, 7.8, 11.0))]
 GUARD_HEIGHT = 1.2
-BOLLARDS_R5 = [(10.6, 3.2), (10.6, 6.8), (13.3, -10.2), (13.3, -10.9)]
+BOLLARDS_R5 = [(12.4, 6.8), (13.3, -10.2), (13.3, -10.9)]
 DRUM = (0.58, 0.88)  # diameter, height
 PALLET = (1.2, 1.0, 0.15)
 SUPPLY_CLUSTERS = [  # inside the level 1 supply extents, gaps between them
-    ("crates", 7.6, 9.4, 8.6, 10.2, 2.4), ("drums", 9.7, 10.8, 8.6, 9.9, 0.0), ("pallets", 8.2, 10.8, 10.9, 12.2, 1.5),
+    ("pallets", 5.6, 7.2, 9.4, 10.6, 1.5), ("crates", 7.6, 9.4, 9.4, 11.0, 2.4), ("drums", 9.8, 10.9, 9.4, 10.6, 0.0),
     ("container", 4.5, 7.5, -13.6, -11.4, 2.5), ("crates", 8.3, 9.9, -13.6, -11.6, 1.9),
     ("drums", 10.4, 11.5, -13.4, -12.1, 0.0),
-    ("crates", -9.5, -7.0, 12.8, 13.7, 1.9), ("pallets", -5.6, -3.2, 12.8, 13.7, 1.3), ("drums", -1.6, -0.2, 12.85, 13.7, 0.0),
-    ("crates", 2.0, 5.5, 12.8, 13.7, 1.3),
-    ("pallets", -12.6, -10.9, -13.6, -11.6, 1.4), ("crates", -10.5, -9.0, -13.6, -11.6, 2.2)]
+    ("crates", -9.5, -7.0, 10.8, 11.7, 1.9), ("pallets", -5.0, -2.8, 10.8, 11.7, 1.3), ("drums", -1.4, 0.0, 10.85, 11.7, 0.0),
+    ("crates", 1.6, 4.6, 10.8, 11.7, 1.3),
+    ("pallets", -11.0, -9.3, -12.4, -10.4, 1.4), ("crates", -11.0, -9.6, -9.9, -8.4, 2.2)]
+# Round 6: two storeys on the core (a double-height lobby, one office floor), the drum's windows in one band.
+CORE_ROWS_R6 = [(1.5, 5.4), (8.0, 11.6)]
 # The scale proof: the M20 Guardian from its own .blend, parked on the exit lane past the slab, facing +X.
 M20_BLEND = os.path.join(PROJECT_DIR, "Art", "USA", "vehicles", "m20_guardian", "source", "M20_Guardian_V5.blend")
 M20_SPOT = (19.5, DOOR_CENTRE_Y, 0.0)
 TRIANGLE_BUDGET = (60000, 10000)  # root, movable parts (spec section 9)
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-MAX_LEVEL = 5
+MAX_LEVEL = 6
 LEVEL = int(ARGS[ARGS.index("--level") + 1]) if "--level" in ARGS else MAX_LEVEL
 SAMPLES = int(ARGS[ARGS.index("--samples") + 1]) if "--samples" in ARGS else 64
 VERIFY_ONLY = "--verify" in ARGS
 RENDER = "--no-render" not in ARGS
 if LEVEL >= 5:  # deeper reveals, heavier frames and wider joints from round 5 (the builders read these at call time)
     REVEAL, (FRAME, FRAME_DEPTH), PANEL_JOINT = BLAST_REVEAL, BLAST_FRAME, BLAST_JOINT
+if LEVEL >= 6:
+    CORE_ROWS = CORE_ROWS_R6
 
 PREFIX = "USA_HQ_"
 
@@ -1093,8 +1103,9 @@ def build_wing():
                 mid = frame.length / 2.0
                 skips[k] = [(mid - plate_w / 2.0 - 0.2, mid + plate_w / 2.0 + 0.2)]
             front = extent is WING_FRONT
+            door_mid = Frame(outline[0], outline[1]).length / 2.0
             if front and LEVEL >= 4:
-                skips[0] = [(4.4, 5.8)]  # the door to the courtyard
+                skips[0] = [(door_mid - 0.7, door_mid + 0.7)]  # the door to the courtyard
             if LEVEL >= 5:
                 # Chamfered corners (edge k becomes 2k + 1, s shifts by the cut), ribbon glazing, the link's face against
                 # the connector kept flush.
@@ -1110,12 +1121,15 @@ def build_wing():
                 frame = Frame(outline[k], outline[(k + 1) % 4])
                 plaque(m, frame, frame.length / 2.0, plate_z0, plate_z1, plate_w)
             if LEVEL >= 4:
-                corner_plates(m, outline_plates, APRON_TOP + 0.6, roof - COPING, lamps=front)
+                # Not on the link's corners either side of the connector's face (chamfered: corners 1 and 2).
+                skip = (1, 2) if extent is WING_LINK and LEVEL >= 5 else ()
+                corner_plates(m, outline_plates, APRON_TOP + 0.6, roof - COPING, lamps=front,
+                              corners=[k for k in range(len(outline_plates)) if k not in skip])
                 if front:
                     door = Frame(outline[0], outline[1])
-                    m.add("ArmouredSteel", door.box(4.6, 5.6, 0.0, 0.04, APRON_TOP, 2.3))
-                    m.add("ArmouredSteel", door.box(4.5, 5.7, 0.0, 0.3, 2.45, 2.55))
-                    m.add("Lamp", door.box(4.95, 5.25, 0.15, 0.27, 2.38, 2.45))
+                    m.add("ArmouredSteel", door.box(door_mid - 0.5, door_mid + 0.5, 0.0, 0.04, APRON_TOP, 2.3))
+                    m.add("ArmouredSteel", door.box(door_mid - 0.6, door_mid + 0.6, 0.0, 0.3, 2.45, 2.55))
+                    m.add("Lamp", door.box(door_mid - 0.15, door_mid + 0.15, 0.15, 0.27, 2.38, 2.45))
         deck = WING_ROOF - PARAPET
         tower = rect(*DISH_TOWER)
         block(m, tower, deck, DISH_TOWER_ROOF, {0: [(9.4, 10.4)], 3: [(9.4, 10.4)]}, coping_above=True)
@@ -1123,67 +1137,39 @@ def build_wing():
         w, z0, z1 = DISH_TOWER_PLATE
         plaque(m, frame, frame.length / 2.0, z0, z1, w)
         deck += ROOF_MEMBRANE
-    if LEVEL >= 5:
-        wing_roofs(m, deck)
-        return m.finish()
-    # Panel antenna array on the rear block and its masts.
-    m.add("PaintedMetal", box(-11.0, -9.0, 5.5, 6.0, deck, deck + 2.0))
-    for x, y in ((-11.0, 12.0), (-10.0, 12.0)):
-        m.add("ArmouredSteel" if LEVEL >= 3 else "BareMetal", post(x, y, deck, WING_MAST_TIP, 0.06))
-        if LEVEL >= 3:
-            beacon(m, x, y, WING_MAST_TIP - 0.3)
-    if LEVEL >= 3:
-        # Panel array frame and its feeder tray; condensers, vents and a hatch on the blocks; a cable tray on the link.
-        for x in (-10.8, -9.2):
-            m.add("ArmouredSteel", box(x - 0.05, x + 0.05, 6.0, 6.6, deck, deck + 1.6))
-        m.add("ArmouredSteel", box(-11.0, -9.0, 6.0, 6.6, deck + 1.55, deck + 1.65))
-        hvac(m, -10.0, 8.8, 0.0, 1.2, 1.6, deck, 0.85)
-        vent(m, -7.0, 6.2, deck)
-        vent(m, -9.2, 11.3, deck)
-        hvac(m, 2.6, 10.3, 90.0, 1.2, 1.4, deck, 0.8)
-        hvac(m, 4.8, 10.3, 90.0, 1.2, 1.4, deck, 0.8)
-        hatch(m, 5.8, 9.1, deck)
-        vent(m, 1.6, 9.1, deck)
-        link_deck = WING_LINK_ROOF - PARAPET + ROOF_MEMBRANE
-        for x in (-4.6, -2.6, -0.6):
-            m.add("ArmouredSteel", box(x - 0.04, x + 0.04, 10.45, 10.55, link_deck, link_deck + 0.35))
-        m.add("PaintedMetal", box(-4.8, -0.2, 10.3, 10.7, link_deck + 0.35, link_deck + 0.45))
-        vent(m, -3.6, 11.6, link_deck)
-        vent(m, -1.4, 9.4, link_deck)
+    wing_roofs(m, deck)
     return m.finish()
 
 
 def wing_roofs(m, deck):
-    """Level 5 roof kit, placed from the blocks' extents: panel array and masts, a condenser, four whip clusters and a
-    ladder up from the link on the rear block; condensers, a hatch and a vent on the front block; a cable tray and
-    vents on the link."""
-    edge = REVEAL + PARAPET_WALL
-    rx0, rx1, ry0, ry1 = WING_REAR[0] + edge, WING_REAR[1] - edge, WING_REAR[2] + edge, WING_REAR[3] - edge
-    tx0 = DISH_TOWER[0]
-    m.add("PaintedMetal", box(rx0, rx0 + 2.0, ry0, ry0 + 0.4, deck, deck + 2.0))
-    for x in (rx0 + 0.2, rx0 + 1.8):
-        m.add("ArmouredSteel", box(x - 0.05, x + 0.05, ry0 + 0.4, ry0 + 1.0, deck, deck + 1.6))
-    m.add("ArmouredSteel", box(rx0, rx0 + 2.0, ry0 + 0.4, ry0 + 1.0, deck + 1.55, deck + 1.65))
-    for x in (rx0 + 0.5, rx0 + 1.5):
-        m.add("ArmouredSteel", post(x, ry1 - 0.5, deck, WING_MAST_TIP, 0.06))
-        beacon(m, x, ry1 - 0.5, WING_MAST_TIP - 0.3)
-    hvac(m, rx0 + 1.0, (ry0 + ry1) / 2.0, 0.0, 1.2, 1.6, deck, 0.85)
-    for x, y in ((tx0 + 0.8, ry0 + 0.6), (rx1 - 0.5, ry0 + 0.6), (tx0 + 0.8, ry1 - 0.45), (rx0 + 0.6, ry1 - 1.5)):
-        whip_cluster(m, x, y, deck)
-    link_deck = WING_LINK_ROOF - PARAPET + ROOF_MEMBRANE
+    """The wing's roof kit, placed from the blocks' extents: the masts and the panel antenna array on the link (the dish
+    tower fills the rear block); from level 3 condensers, a hatch, vents; from level 5 whip clusters and a ladder up
+    from the link to the rear block's roof."""
+    edge = REVEAL + PARAPET_WALL if LEVEL >= 2 else 0.3
+    link_deck = WING_LINK_ROOF - (PARAPET - ROOF_MEMBRANE if LEVEL >= 2 else 0.0)
     lx0, lx1, ly0, ly1 = WING_LINK[0] + edge, WING_LINK[1] - edge, WING_LINK[2] + edge, WING_LINK[3] - edge
-    ladder(m, WING_REAR[1], WING_REAR[1] + 0.2, (ly0 + ly1) / 2.0 + 0.6, link_deck, WING_ROOF + 0.9)
     fx0, fx1, fy0, fy1 = WING_FRONT[0] + edge, WING_FRONT[1] - edge, WING_FRONT[2] + edge, WING_FRONT[3] - edge
-    for x in (fx0 + 1.5, fx0 + 3.7):
-        hvac(m, x, (fy0 + fy1) / 2.0 + 0.2, 90.0, 1.2, 1.4, deck, 0.8)
-    hatch(m, fx1 - 0.6, fy0 + 0.6, deck)
-    vent(m, fx0 + 0.45, fy0 + 0.45, deck)
-    ym = (ly0 + ly1) / 2.0 - 0.4
-    for x in (lx0 + 0.4, (lx0 + lx1) / 2.0, lx1 - 0.4):
-        m.add("ArmouredSteel", box(x - 0.04, x + 0.04, ym - 0.05, ym + 0.05, link_deck, link_deck + 0.35))
-    m.add("PaintedMetal", box(lx0 + 0.2, lx1 - 0.2, ym - 0.2, ym + 0.2, link_deck + 0.35, link_deck + 0.45))
-    vent(m, lx0 + 1.4, ly1 - 0.4, link_deck)
-    vent(m, lx1 - 1.0, ly0 + 0.4, link_deck)
+    mast = "ArmouredSteel" if LEVEL >= 3 else "BareMetal"
+    m.add("PaintedMetal", box(lx0 + 0.3, lx0 + 2.3, ly0 + 0.05, ly0 + 0.45, link_deck, link_deck + 2.0))
+    for x in (lx0 + 0.4, lx0 + 1.4):
+        m.add(mast, post(x, ly1 - 0.3, link_deck, WING_MAST_TIP, 0.06))
+        if LEVEL >= 3:
+            beacon(m, x, ly1 - 0.3, WING_MAST_TIP - 0.3)
+    if LEVEL < 3:
+        return
+    for x in (lx0 + 0.5, lx0 + 2.1):
+        m.add("ArmouredSteel", box(x - 0.05, x + 0.05, ly0 + 0.45, ly0 + 1.05, link_deck, link_deck + 1.6))
+    m.add("ArmouredSteel", box(lx0 + 0.3, lx0 + 2.3, ly0 + 0.45, ly0 + 1.05, link_deck + 1.55, link_deck + 1.65))
+    vent(m, lx1 - 0.5, ly0 + 0.4, link_deck)
+    hvac(m, fx0 + 1.2, fy0 + 0.95, 0.0, 1.2, 1.4, deck, 0.8)
+    hatch(m, fx1 - 0.55, fy1 - 0.55, deck)
+    vent(m, fx0 + 0.4, fy1 - 0.4, deck)
+    if LEVEL < 5:
+        return
+    whip_cluster(m, fx1 - 0.45, fy0 + 0.5, deck)
+    whip_cluster(m, lx1 - 1.5, ly1 - 0.4, link_deck)
+    whip_cluster(m, lx0 + 3.0, ly0 + 0.5, link_deck)
+    ladder(m, WING_REAR[1], WING_REAR[1] + 0.2, (ly0 + ly1) / 2.0, link_deck, WING_ROOF + 0.9)
 
 
 def garage_shell(m):
@@ -1345,9 +1331,11 @@ def build_courtyard():
     m = Module("Courtyard")
     x0, x1 = COURTYARD_X
     y0, y1 = COURTYARD_Y
-    # Against the core's +X flat (x0) and its (+X, +Y) face, where the entrance is.
-    corner_a, corner_b = on_core_face(45.0, -1.0), on_core_face(45.0, 1.0)
-    outline = [(x0, y0), (x1, y0), (x1, y1), (corner_b[0], y1), corner_b, corner_a]
+    # Against the core's +X flat (x0) and its (+X, +Y) face, where the entrance is, notched round the wing's front block.
+    corner = on_core_face(45.0, -1.0)
+    reach = sum(CORE_CENTRE) + CORE_APOTHEM * math.sqrt(2.0)  # x + y along the entrance face
+    nx, ny = WING_FRONT[1] + COURTYARD_GAP, WING_FRONT[2] - COURTYARD_GAP
+    outline = [(x0, y0), (x1, y0), (x1, y1), (nx, y1), (nx, ny), (reach - ny, ny), corner]
     m.add("Concrete", plan_prism(outline, APRON_TOP, COURTYARD_TOP))
     risers, tread = STEPS
     rise = (COURTYARD_TOP - APRON_TOP) / risers
@@ -1414,6 +1402,10 @@ def corridor(m, outline, roof, exposed):
             m.add("PaintedMetal", frame.box(s - 0.05, s + 0.05, -setback, 0.0, plinth, roof - fascia))
         if k in exposed:
             m.add("Lamp", frame.box(0.2, frame.length - 0.2, 0.0, 0.03, roof - fascia + 0.1, roof - fascia + 0.18))
+            if LEVEL >= 6:  # a transom over the glazing band and a lamp strip along the plinth
+                m.add("PaintedMetal", frame.box(0.25, frame.length - 0.25, -setback, 0.0, roof - fascia - 1.0,
+                                                roof - fascia - 0.92))
+                m.add("Lamp", frame.box(0.2, frame.length - 0.2, 0.0, 0.03, plinth - 0.12, plinth - 0.06))
 
 
 def build_connectors():
@@ -1559,7 +1551,8 @@ def build_mast():
     if LEVEL >= 3:
         for z in (MAST_TIP - 0.15, 12.2, 8.0):
             beacon(m, x, y, z, 0.1 if z > 9.0 else 0.09)
-        for (ax, ay), height in GUYS:
+        for (dx, dy), height in GUYS:
+            ax, ay = x + dx, y + dy
             m.add("Concrete", centred_box(ax, ay, 0.4, 0.4, APRON_TOP, 0.25))
             m.add("BareMetal", bar((ax, ay, 0.25), (x, y, height), 0.012, 4))
         m.add("PaintedMetal", centred_box(x + 0.7, y, 0.5, 0.6, APRON_TOP, 1.1))  # equipment cabinet
