@@ -28,6 +28,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task b
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestTank -Quick -Compare
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestTank -Long -SaveBaseline
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task packaudit
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate -Scope broad -Baseline 4a2a706
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uibindings
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uicheck -Path Saved/UIIntake/HUD_2026-10-14/staging/UI
@@ -102,10 +103,12 @@ See docs/tech/scale/PERFORMANCE_RESULTS.md, "Performance gate for a full roster"
 Uibindings writes every binding key, list and action with its panels, and the widgets, colours, fonts and sprites a layout
 may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck validates the layouts of the UI folder -Path
 (an unpacked delivery, for /ui-intake) and prints each problem. -Out and -Path are relative to the repository root.
+Packaudit reads the local marketplace packs in Content/ into Saved/PackAudit/ and builds the git-ignored scale level
+/Game/Developers/PackAudit/L_PackScale (Tools/Editor/audit_packs.py, #153); it fails when that level misses a reference.
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'bench', 'gate', 'uibindings', 'uicheck')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -1083,6 +1086,23 @@ function Invoke-UICheck {
 	Write-Host 'UICHECK SUCCEEDED'
 }
 
+function Invoke-PackAudit {
+	$Script = Join-Path $RepoRoot 'Tools\Editor\audit_packs.py'
+	$Summary = Join-Path $RepoRoot 'Saved\PackAudit\summary.md'
+	if (Test-Path $Summary) { Remove-Item -Force $Summary }
+	& $EditorCmd $Project -run=pythonscript "-script=$Script" $NoMCPPlugins -unattended -nosplash -nullrhi -nosound -stdout -FullStdOutLogOutput | Out-Null
+	if (-not (Test-Path $Summary)) {
+		Write-Host "PACKAUDIT FAILED (exit $LASTEXITCODE): no summary written. See Saved\Logs\WorldDivide.log."
+		exit 1
+	}
+	$Missing = Select-String -Path $Summary -Pattern '^- Missing references: (\d+)' | ForEach-Object { [int]$_.Matches[0].Groups[1].Value }
+	if ($Missing -ne 0) {
+		Write-Host "PACKAUDIT FAILED: L_PackScale misses $Missing reference(s). See $Summary"
+		exit 1
+	}
+	Write-Host "PACKAUDIT SUCCEEDED: $Summary"
+}
+
 switch ($Task) {
 	'build' { Invoke-Build }
 	'test' { Invoke-Test }
@@ -1096,4 +1116,5 @@ switch ($Task) {
 	'gate' { Invoke-Gate }
 	'uibindings' { Invoke-UIBindings }
 	'uicheck' { Invoke-UICheck }
+	'packaudit' { Invoke-PackAudit }
 }

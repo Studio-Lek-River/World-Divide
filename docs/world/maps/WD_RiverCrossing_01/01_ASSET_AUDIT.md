@@ -1,8 +1,107 @@
 # WD_RiverCrossing_01: environment asset audit
 
-Phase 1, investigation only. Date: 2026-10-15. Engine: UE 5.8 (`WorldDivide.uproject`, `"EngineAssociation": "5.8"`).
+Phase 1. First audit 2026-10-15 (no packs yet, from "How this was checked" down); packs imported and audited 2026-10-20 (#153, the next section). Engine: UE 5.8 (`WorldDivide.uproject`, `"EngineAssociation": "5.8"`).
 
-## How this was checked
+## Imported packs (2026-10-20)
+
+### Storage rule
+
+The repository is public and the pack licences do not allow sharing the files, so the packs are **not** in git:
+
+- Each pack stays in its own `Content/<Pack>/` root, as Fab installs it. Moving them to `/Game/World/Packs/` would only rewrite references in files nobody else has.
+- Each is git-ignored (`.gitignore`) and never cooked (`Config/DefaultGame.ini`, `DirectoriesToNeverCook`; `WorldDivide.Config.Cook` checks it). Cooking what the map uses is decided with #154 onwards.
+- Every machine adds the packs in the manifest below from Fab (*My Library → Add to project*, see [05_PRODUCER_ACTIONS.md](05_PRODUCER_ACTIONS.md) §2) and then runs `ue.ps1 -Task packaudit`.
+
+### How this was checked
+
+`Tools/Scripts/ue.ps1 -Task packaudit` runs `Tools/Editor/audit_packs.py` headless. It reads every asset's Asset Registry tags (not the file headers as on 2026-10-15) and writes:
+
+- `Saved/PackAudit/<Pack>.csv`: one row per asset, with mesh size in cm (`ApproxSize`; 1 uu = 1 cm), Nanite, LODs, triangles, collision primitives and complexity, material slots, and texture size and format.
+- `Saved/PackAudit/summary.md`: counts and flags (textures over 4K, meshes without simple collision, meshes with neither Nanite nor LODs).
+- `/Game/Developers/PackAudit/L_PackScale` (git-ignored): a sample of each pack next to the Abrams and the M20 Guardian. The run fails if the level references a missing package; assets that reference packages their own pack lacks are left out and listed.
+
+Skeletal meshes have no size tag; the Megaplant trees' heights are checked by eye in `L_PackScale`.
+
+### Manifest
+
+| Pack root | Fab title (as installed) | Size | Category | Style | Verdict |
+|---|---|---|---|---|---|
+| `Megaplant_Library` | Megaplant Library | 3.9 GB | B trees, bushes | Realistic, scanned | **Use.** 9 species, Nanite skeletal (PVE) |
+| `Real_Stones_Pack_01` | Real Stones Pack 01 | 0.7 GB | F natural details | Realistic, scanned | **Use** for rocks |
+| `StylizedBridge` | Stylized Bridge | 1.2 GB | C, E, A | **Stylized** | Reference only; clashes with the M20 bar |
+| `ProceduralBuildingGenerator` | Procedural Building Generator | 0.7 GB | D | Urban slum / ghost city | **Not usable as is**: broken material references, wrong style |
+| `Deko_MatrixDemo` | Deko Matrix Demo (Freeway) | 4.1 GB | E | Realistic, US freeway | Partly: lamps, poles, barriers, sandbags; US signs are off-setting |
+| `HighPoly_Tree_Model` | unknown | 37 MB | B | Realistic | Keep locally as a hero tree; **cannot ship** until its licence is confirmed |
+| `UltimateUIMenusSFX` | Ultimate UI Menus SFX | 35 MB | (UI audio) | — | Not environment |
+
+`NeonStrips`, `QuantumCharacter` and `Realistic_Starter_VFX_Pack_Vol2` are also in `Content/` but were committed to git in a7904b0; they are not environment packs (see the report of #153).
+
+### Per pack
+
+**Megaplant_Library** (`/Game/Megaplant_Library/<Species>/<Species>_01/<Species>_01_A`, variants `_B`, `_C`, ...)
+
+| Species | Kind | Fit for late-summer temperate Europe |
+|---|---|---|
+| `Tree_Black_Alder` | Deciduous | Yes, riverbanks |
+| `Tree_Common_Hazel` | Deciduous (small) | Yes, hedgerows and wood edges |
+| `Tree_Yoshino_Cherry` | Deciduous | Villages and gardens only |
+| `Tree_Ginkgo` | Deciduous | No (East Asian, park tree) |
+| `Tree_Norway_Spruce` | Conifer | Yes |
+| `Tree_Baltic_Pine` | Conifer | Yes, **but its bark material references 4 missing textures** (`/Game/Developers/simonbarle/...`, `/Game/Megaplant_Library/Tree_Aleppo_Pine/...`): a pack defect |
+| `Shrub_European_Spindle` | Bush | Yes, hedgerows |
+| `Shrub_Beach_Rose` | Bush | Partly (coastal) |
+| `Shrub_Greasewood` | Bush | No (desert) |
+
+- All 148 skeletal and 159 static meshes are Nanite with 1 LOD, which is how Nanite foliage is meant to work in 5.8. Tree LOD0: 2–4 k triangles in the skeletal skin.
+- Textures: 4096² (37), 2048×4096 (11); one 4096×8192 displacement map.
+- The 10 `Decoration_Norway_Spruce_*` meshes (cones, twigs) have no simple collision, which is right for decoration.
+- Open for #158: cost of Nanite skeletal trees at RTS densities is not measured yet.
+
+**Real_Stones_Pack_01** (`/Game/Real_Stones_Pack_01/Meshes/SM_Stone_01`–`08`)
+
+- 2–3 m boulders, 8 k triangles, 3 LODs, no Nanite, simple and complex collision, one material each.
+- Textures 4096² (32). Turn on Nanite or keep the LODs; both are fine at 8 k.
+
+**StylizedBridge** (`/Game/StylizedBridge/...`)
+
+- 470 static meshes with LODs (464) and no Nanite. Concrete bridge kit in `StaticMesh/Bridge/ConcreteBridge/BridgeModularPrefabs/` (deck parts 9 × 14 m, pillars 22 m wide, sidewalks); roads, barriers, pipes, debris, train and vehicles.
+- Landscape: `Landscape/LandscapeMaterial/M_AutoMaterial_Master` with `MI_AutoMaterial_A1`, 5 landscape grass types (Dirt, Forest, GrassMain, Rock, RockSlope), 5 layer infos and RVTs; river and water materials in `Landscape/River/`; 8 procedural foliage types (birch, locust, bush).
+- Textures 2048² (111), 4096² (48).
+- All of it is hand-painted stylized. Useful as a **layout reference** for a two-lane road bridge, not as final art next to the M20.
+
+**ProceduralBuildingGenerator** (`/Game/ProceduralBuildingGenerator/...`)
+
+- 262 static meshes: no Nanite, 28 with more than 1 LOD; 235 flagged. 13 Blueprints including the prefabs `Prefabs/PBG_Building_2F_2R`, `_2F_3R`, `_3F_3R`.
+- All three prefabs reference 18 textures under `/Game/ModularCity/ProceduralBuildingGenerator/...`, a folder the pack does not contain (a pack defect), so they are left out of `L_PackScale`.
+- The style is slum / ghost city (tin roofs, scaffolding), not a European village.
+
+**Deko_MatrixDemo** (`/Game/Deko_MatrixDemo/Freeway/Meshes/...`)
+
+- 168 Nanite static meshes: freeway lamps (4), ground and mounted poles (12), barriers (8), US signs (73), billboards (7), trash (24), sandbags (40).
+- 148 textures at 4096², six at 8192 (billboards, signs, a metal normal); the eight trash meshes have no simple collision.
+- Usable: lamps, poles, barriers, sandbags. Not usable: the US freeway signs and billboards.
+
+**HighPoly_Tree_Model** (`/Game/HighPoly_Tree_Model/Meshes/SM_HP_Tree`)
+
+- 19.5 × 18.3 × 27.9 m, Nanite, complex-as-simple collision, two materials, 2048² textures.
+- Usable as a few hand-placed hero trees. Origin and licence are still unknown.
+
+### Coverage against the minimum set (05 §2)
+
+| Category | Minimum set | Now | Status |
+|---|---|---|---|
+| A. Landscape surfaces | Grass, meadow, dirt, mud, gravel, rock, sand/riverbank, asphalt; one realistic family, 2K+ | Stylized auto-material (StylizedBridge); a few loose PBG ground textures | **Missing** |
+| B. Trees | 3 deciduous + 1–2 conifers, Nanite or LODs | Black alder, hazel, cherry; Norway spruce, Baltic pine (broken bark) | **Met** |
+| B. Bushes, grass, flowers | Hedgerow bushes, shrubs, grass and wildflower cards | Spindle, beach rose; no realistic grass or flower cards | **Partly**: grass and flowers missing |
+| D. Buildings | One modern European village kit | PBG slum prefabs, broken references | **Missing** |
+| E. Infrastructure | Road bridge, road decals, kerbs, fences, power poles and lines, streetlights, signs, barriers | Stylized bridge and roads; US freeway lamps, poles, barriers | **Partly**: realistic bridge, European signs, fences, power lines missing |
+| F. Natural details | Rocks, small cliffs, logs, debris, same family as A | 8 scanned stones | **Partly**: cliffs and logs missing |
+
+### L_PackScale
+
+`/Game/Developers/PackAudit/L_PackScale` holds, on a 300 m ground: the Abrams (`/Game/Art/Local/Meshes/SM_Abrams_*`) and the M20 Guardian at the origin; one variant of each Megaplant species except the Baltic pine, and `SM_HP_Tree`, along +x; four stones; one StylizedBridge pillar base; the packs' landscape and water materials on 10 m tiles. Missing references: 0. No building is placed, because no pack has a usable one.
+
+## How this was checked (2026-10-15)
 
 The Unreal MCP server (`unreal`, `http://127.0.0.1:8000/mcp`) was not running, so the Asset Registry could not be queried. Every finding below comes from one of three sources:
 

@@ -8,7 +8,7 @@ What only the producer can do or decide, ordered by when it blocks work.
 |---|---|---|---|
 | D1 | **Real-scale target values** for units, buildings, ranges and the camera. The direction is decided (2026-10-15); the numbers are not. | Phase 0 and every map number | Start from the planning envelope in [02_MAP_DESIGN.md](02_MAP_DESIGN.md) |
 | D2 | Minimum spec PC and fps target (for example, 60 fps at 1080p with 200 units) | Phases 6–8 | Name a GPU class |
-| D3 | Season and biome: summer or early autumn temperate | Phase 1 pack choice | Late summer (greens with dry field tones) |
+| D3 | Season and biome: summer or early autumn temperate | Phase 1 pack choice | **Decided 2026-10-20: late summer, temperate** (greens with dry field tones) |
 | D4 | Do playable woods slow or block vehicles, or are they cover only? | Phase 6 | Cover only for 01 |
 | D5 | Are village buildings garrisonable at the map's launch, or only tagged for later? | Phase 5 | Tag now, garrison when the system exists |
 | D6 | Does `WD_RiverCrossing_01` join the lobby next to `L_RiverFord`, or replace it? | Phase 2 and 9 | Join; retire `L_RiverFord` once the rescale is done |
@@ -17,23 +17,24 @@ What only the producer can do or decide, ordered by when it blocks work.
 
 ## 2. Assets to add from your Fab library
 
-Nothing from your Fab library is on this machine yet: the launcher's vault cache is empty and no pack is imported (see [01_ASSET_AUDIT.md](01_ASSET_AUDIT.md)). I can't see your account library, so please check which of your packs cover these categories:
+The first packs were imported and audited on 2026-10-20 (manifest and coverage in [01_ASSET_AUDIT.md](01_ASSET_AUDIT.md), "Imported packs"). Trees are covered (Megaplant Library). These are still missing, and #153 stays open until they are in:
 
-| Category | Minimum set |
+| Category | Still missing (late-summer temperate Europe, realistic) |
 |---|---|
-| Landscape surfaces | Grass, meadow, dirt, mud, gravel, rock, sand/riverbank, asphalt. One consistent (ideally scanned) family, 2K or more. |
-| Trees | At least 3 deciduous and 1–2 conifer species with Nanite foliage or LODs and impostors, real-scale |
-| Bushes, grass, flowers | Hedgerow bushes, shrubs, grass and wildflower cards for Landscape Grass |
-| Buildings | One modern European village kit: houses, farmhouse, barn, workshop/garage, a landmark (church or mill) |
-| Infrastructure | Two-lane road bridge or modular bridge kit, road decals and kerbs, fences, power poles and lines, streetlights, signs, concrete barriers |
-| Natural details | Rocks, small cliffs, logs, debris, from the same family as the surfaces |
+| Landscape surfaces | The whole set: grass, meadow, dirt, mud, gravel, rock, sand/riverbank, asphalt. One consistent scanned family (for example Megascans surfaces), 2K or more. StylizedBridge's auto-material is stylized. |
+| Bushes, grass, flowers | Grass and wildflower cards for Landscape Grass; more hedgerow bushes |
+| Buildings | One modern European village kit: houses, farmhouse, barn, workshop/garage, a landmark (church or mill). The Procedural Building Generator is a slum kit with broken material references. |
+| Infrastructure | A realistic two-lane road bridge or bridge kit, road decals and kerbs, fences, power poles and lines, European signs. Freeway lamps, poles and barriers are covered by Deko_MatrixDemo. |
+| Natural details | Small cliffs, logs, debris, ideally from the surface family. Rocks are covered (Real Stones Pack 01). |
+
+**Storage:** the repository is public, so packs are never committed. Keep each in its own `Content/<Pack>/` root, add it to `.gitignore` and to `DirectoriesToNeverCook` in `Config/DefaultGame.ini` (the cook test fails otherwise), then run `Tools\Scripts\ue.ps1 -Task packaudit` and tell me the folder name.
 
 **How to add a pack** (no purchase is needed for packs already in your library):
 1. Open the project: `Tools\Scripts\ue.ps1 -Task editor`.
 2. In the editor, open the **Fab** window (Window → Fab, or the Content Browser's *Add → Add Fab content*). The Fab plugin is installed in the engine.
 3. Sign in there, open **My Library**, and press **Add to project** on each pack. Megascans assets can also come through **Quixel Bridge**, which is installed.
 4. Alternatively, use the Epic Games Launcher → Fab Library → *Add to project* → WorldDivide (5.8).
-5. Tell me the folder names that appear under `Content/`. I will then check them through the Asset Registry and update 01.
+5. Tell me the folder names that appear under `Content/`. I will then run `ue.ps1 -Task packaudit` and update 01.
 
 **Before importing:**
 - Check each pack's licence covers use in a commercial game.
@@ -41,10 +42,9 @@ Nothing from your Fab library is on this machine yet: the launcher's vault cache
 
 ## 3. Existing files to resolve
 
-- **`Content/HighPoly_Tree_Model/`** (untracked).
-  - Confirm where it came from and that its licence allows shipping it.
-  - Then decide whether to commit it (37 MB, LFS) or delete it.
-  - It is fine as a hero tree but too heavy for forests.
+- **`Content/HighPoly_Tree_Model/`** (git-ignored, kept locally since 2026-10-20).
+  - The audit shows it usable as a hand-placed hero tree (Nanite, 28 m, complex collision), not for forests.
+  - It cannot ship until you confirm where it came from and that its licence allows it.
 - **`Content/Art/Local/` Abrams** is git-ignored on purpose. It is the only real-scale MBT besides the M20 Guardian; keep that in mind for the scale checks in phase 1.
 
 ## 4. Editor and settings

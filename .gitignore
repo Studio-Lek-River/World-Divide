@@ -27,7 +27,8 @@ __pycache__/
 # Blender's automatic backups (.blend1, .blend2, ...)
 *.blend[0-9]
 
-# Third-party marketplace packs: kept on each machine until the Fab audit (#153) decides how they are stored, never in this public repository
+# Third-party marketplace packs: the repository is public and their licences forbid sharing the files, so each machine adds
+# them from Fab and keeps them here (#153). The manifest is docs/world/maps/WD_RiverCrossing_01/01_ASSET_AUDIT.md.
 Content/Deko_MatrixDemo/
 Content/Megaplant_Library/
 Content/StylizedBridge/
@@ -35,6 +36,8 @@ Content/Real_Stones_Pack_01/
 Content/ProceduralBuildingGenerator/
 Content/UltimateUIMenusSFX/
 Content/HighPoly_Tree_Model/
+# The pack scale level of Tools/Editor/audit_packs.py: it references the packs above.
+Content/Developers/PackAudit/
 
 # A tryout model ripped from CryEngine content: Crytek's, kept on this machine only, never committed or shipped
 Art/Source/Local/Crytek/
