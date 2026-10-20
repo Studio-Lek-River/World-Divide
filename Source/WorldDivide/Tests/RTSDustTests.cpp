@@ -130,7 +130,7 @@ bool FRTSVehicleDustTest::RunTest(const FString& Parameters)
 		System->GetExposedParameters().IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetColorDef(), TEXT("User.Color"))) != INDEX_NONE);
 	TestTrue(TEXT("It takes User.Direction"),
 		System->GetExposedParameters().IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(), TEXT("User.Direction"))) != INDEX_NONE);
-	TestEqual(TEXT("One stream of dust"), System->GetEmitterHandles().Num(), 1);
+	TestEqual(TEXT("Two layers of dust, the haze and the chunks (#336)"), System->GetEmitterHandles().Num(), 2);
 	for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
 	{
 		const FVersionedNiagaraEmitterData* Emitter = Handle.GetEmitterData();
@@ -212,10 +212,12 @@ bool FRTSVehicleDustTest::RunTest(const FString& Parameters)
 			const TConstArrayView<TObjectPtr<UNiagaraComponent>> Components = Dust.GetComponents(*Unit);
 			return Components.IsEmpty() || !Components[0] ? -1.f : GetSentRate(*Components[0]);
 		};
+		// One emitter for both contact points (#336).
+		const int32 Emitters = (Contacts.Num() + 1) / 2;
 		auto CheckRunning = [&](const TCHAR* When)
 		{
-			TestEqual(*FString::Printf(TEXT("%s %s: an emitter per contact point"), *What, When), Dust.GetComponents(*Unit).Num(), Contacts.Num());
-			TestEqual(*FString::Printf(TEXT("%s %s: all running"), *What, When), Dust.GetActiveEmitters(), Contacts.Num());
+			TestEqual(*FString::Printf(TEXT("%s %s: an emitter per two contact points"), *What, When), Dust.GetComponents(*Unit).Num(), Emitters);
+			TestEqual(*FString::Printf(TEXT("%s %s: all running"), *What, When), Dust.GetActiveEmitters(), Emitters);
 			for (const UNiagaraComponent* Component : Dust.GetComponents(*Unit))
 			{
 				TestTrue(*FString::Printf(TEXT("%s %s: on the hull"), *What, When), Component && Component->GetAttachParent() == Unit->GetMesh());
@@ -328,8 +330,8 @@ bool FRTSVehicleDustTest::RunTest(const FString& Parameters)
 		}
 		TArray<FVector> Contacts;
 		URTSDustSubsystem::GetContactPoints(*M20, Contacts);
-		TestEqual(TEXT("One vehicle within a budget of one"), Dust.GetActiveEmitters(), Contacts.Num());
-		TestEqual(TEXT("The one by the camera"), Dust.GetComponents(*Near).Num(), Contacts.Num());
+		TestEqual(TEXT("One vehicle within a budget of one"), Dust.GetActiveEmitters(), (Contacts.Num() + 1) / 2);
+		TestEqual(TEXT("The one by the camera"), Dust.GetComponents(*Near).Num(), (Contacts.Num() + 1) / 2);
 		TestEqual(TEXT("None for the other"), Dust.GetComponents(*Far).Num(), 0);
 		MaxVehicles->Set(Budget, ECVF_SetByCode);
 	}

@@ -33,7 +33,11 @@ namespace RTSDust
 
 	TAutoConsoleVariable<float> CVarDustSurfaceInterval(
 		TEXT("rts.Fx.DustSurfaceInterval"), 0.25f,
-		TEXT("Seconds between two traces for the ground under one vehicle showing dust (#224), its physical material choosing the dust's rate and colour; 0 every frame."));
+		TEXT("Seconds between two traces for the ground under one vehicle showing dust (#224), its physical material choosing the dust's rate, colour and shape; 0 every frame."));
+
+	TAutoConsoleVariable<float> CVarDustNoneInterval(
+		TEXT("rts.Fx.DustNoneInterval"), 1.f,
+		TEXT("Seconds between two traces for the ground under a moving vehicle on ground that raises no dust, such as water (#336): it takes no place in rts.Fx.DustMaxVehicles, and raises dust again once a trace finds other ground."));
 
 	/** The hull's back is sent again once it has turned by more than about 2.5 degrees: the cosine of that. */
 	constexpr float ResendDirectionDot = 0.999f;
@@ -43,6 +47,18 @@ namespace RTSDust
 	const FName OpacityParameter(TEXT("User.Opacity"));
 	const FName SizeParameter(TEXT("User.Size"));
 	const FName DirectionParameter(TEXT("User.Direction"));
+	const FName PointsParameter(TEXT("User.Points"));
+	const FName SideParameter(TEXT("User.Side"));
+	// The ground's look (FRTSDustSurface, #336), sent when the ground changes.
+	const FName HazeScaleParameter(TEXT("User.HazeScale"));
+	const FName LifetimeParameter(TEXT("User.Lifetime"));
+	const FName SpreadParameter(TEXT("User.Spread"));
+	const FName LiftParameter(TEXT("User.Lift"));
+	const FName SinkParameter(TEXT("User.Sink"));
+	const FName SizeScaleParameter(TEXT("User.SizeScale"));
+	const FName ChunkScaleParameter(TEXT("User.ChunkScale"));
+	const FName ChunkSizeParameter(TEXT("User.ChunkSize"));
+	const FName ChunkColorParameter(TEXT("User.ChunkColor"));
 
 	uint64 DustCycles = 0;
 
@@ -84,6 +100,23 @@ int32 URTSDustSubsystem::GetMaxVehicles()
 float URTSDustSubsystem::GetSurfaceInterval()
 {
 	return FMath::Max(RTSDust::CVarDustSurfaceInterval.GetValueOnGameThread(), 0.f);
+}
+
+float URTSDustSubsystem::GetNoneInterval()
+{
+	return FMath::Max(RTSDust::CVarDustNoneInterval.GetValueOnGameThread(), 0.f);
+}
+
+FRTSDustSurface URTSDustSubsystem::GetGround(const FRTSVehicleDust& Dust, EPhysicalSurface Surface)
+{
+	if (const FRTSDustSurface* Listed = Dust.FindSurface(Surface))
+	{
+		return *Listed;
+	}
+	FRTSDustSurface Unlisted;
+	Unlisted.Surface = Surface;
+	Unlisted.Color = Dust.Color;
+	return Unlisted;
 }
 
 float URTSDustSubsystem::GetRate(const FRTSVehicleDust& Dust, float ForwardSpeed, float YawRate, float SurfaceScale)
@@ -156,7 +189,7 @@ void URTSDustSubsystem::Register(ARTSUnit& Unit)
 		DestroyComponents(*Entry);
 		Entry->SentRate = -1.f;
 		Entry->SentOpacity = -1.f;
-		Entry->SentColor.Reset();
+		Entry->SentSurface = INDEX_NONE;
 		Entry->SentDirection = FVector3f::ZeroVector;
 		return;
 	}
@@ -231,8 +264,9 @@ void URTSDustSubsystem::SetActive(FRTSDustEntry& Entry, bool bActive)
 		}
 		if (bActive)
 		{
-			// A machine that never renders (tests under -nullrhi) keeps the emitter active, but Niagara does not run it.
-			Component->Activate(true);
+			// Not reset: dust raised before a stop still settles when the vehicle drives off again (#336). A machine that
+			// never renders (tests under -nullrhi) keeps the emitter active, but Niagara does not run it.
+			Component->Activate(false);
 		}
 		else
 		{
@@ -262,6 +296,11 @@ void URTSDustSubsystem::UpdateSurface(FRTSDustEntry& Entry, const ARTSUnit& Unit
 	}
 	const UStaticMeshComponent* Hull = Unit.GetMesh();
 	const UWorld* World = GetWorld();
+	if (Entry.Contacts.IsEmpty())
+	{
+		// A vehicle on water has no emitters yet, or none since its data changed, but still looks for the ground under them.
+		GetContactPoints(*Unit.GetUnitData(), Entry.Contacts);
+	}
 	if (!Hull || !World || Entry.Contacts.IsEmpty())
 	{
 		return;
@@ -290,10 +329,15 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 	if (Entry.Components.IsEmpty())
 	{
 		// Made the first time the vehicle shows dust near a camera, and kept: one driving in and out of view starts and stops
-		// them. Owned by no actor and attached to the hull, so they follow its tilt over the ground, and are not its parts.
+		// them. Owned by no actor and attached to the hull, so they follow its tilt over the ground, and are not its parts. One
+		// serves two contact points, as both tracks (#336): half the systems for Niagara to tick.
 		GetContactPoints(*Unit.GetUnitData(), Entry.Contacts);
-		for (const FVector& Contact : Entry.Contacts)
+		for (int32 First = 0; First < Entry.Contacts.Num(); First += 2)
 		{
+			const bool bPair = First + 1 < Entry.Contacts.Num();
+			const FVector Middle = bPair ? 0.5 * (Entry.Contacts[First] + Entry.Contacts[First + 1]) : Entry.Contacts[First];
+			// From the middle to the second point in cm, in the component's space, which keeps none of the hull's scale.
+			const FVector Side = bPair ? 0.5 * (Entry.Contacts[First + 1] - Entry.Contacts[First]) * Hull->GetComponentScale() : FVector::ZeroVector;
 			UNiagaraComponent* Component = NewObject<UNiagaraComponent>(GetWorld());
 			Component->SetAutoActivate(false);
 			Component->SetAutoDestroy(false);
@@ -303,15 +347,17 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 			// The hull's scale stays out of the dust.
 			Component->SetUsingAbsoluteScale(true);
 			Component->SetupAttachment(Hull);
-			Component->SetRelativeLocation(Contact);
+			Component->SetRelativeLocation(Middle);
 			Component->SetVariableFloat(SizeParameter, Dust.Size);
+			Component->SetVariableFloat(PointsParameter, bPair ? 2.f : 1.f);
+			Component->SetVariableVec3(SideParameter, Side);
 			Component->RegisterComponentWithWorld(GetWorld());
 			Entry.Components.Add(Component);
 		}
 		Entry.bActive = false;
 		Entry.SentRate = -1.f;
 		Entry.SentOpacity = -1.f;
-		Entry.SentColor.Reset();
+		Entry.SentSurface = INDEX_NONE;
 		Entry.SentDirection = FVector3f::ZeroVector;
 	}
 	if (Entry.Components.IsEmpty())
@@ -320,10 +366,8 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 	}
 
 	UpdateSurface(Entry, Unit, GetSurfaceInterval());
-	const FRTSDustSurface* Ground = Dust.FindSurface(Entry.Surface);
-	const float SurfaceScale = Ground ? Ground->RateScale : 1.f;
-	const FLinearColor& Color = Ground ? Ground->Color : Dust.Color;
-	const float Rate = Entry.MotionRate * FMath::Max(SurfaceScale, 0.f)
+	const FRTSDustSurface Ground = GetGround(Dust, Entry.Surface);
+	const float Rate = Entry.MotionRate * FMath::Max(Ground.RateScale, 0.f)
 		* RTSNearestToView::GetRateScale(Entry.ViewDistance, GetDistance(), EffectsQuality);
 	if (Rate <= 0.f)
 	{
@@ -333,21 +377,40 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 	}
 	const bool bSendRate = Entry.SentRate < 0.f || RTSNearestToView::Differs(Entry.SentRate, Rate);
 	const bool bSendOpacity = Entry.SentOpacity < 0.f || RTSNearestToView::Differs(Entry.SentOpacity, Dust.Opacity);
-	const bool bSendColor = !Entry.SentColor.IsSet() || !Entry.SentColor->Equals(Color);
-	if (bSendRate || bSendOpacity || bSendColor)
+	if (bSendRate || bSendOpacity)
 	{
 		for (UNiagaraComponent* Component : Entry.Components)
 		{
 			if (IsValid(Component))
 			{
 				Component->SetVariableFloat(RateParameter, Rate);
-				Component->SetVariableLinearColor(ColorParameter, Color);
 				Component->SetVariableFloat(OpacityParameter, Dust.Opacity);
 			}
 		}
 		Entry.SentRate = Rate;
 		Entry.SentOpacity = Dust.Opacity;
-		Entry.SentColor = Color;
+	}
+	// The ground's colour and shape, on the same system: a vehicle driving from one ground onto another keeps the dust it
+	// raised on the first, which settles as it was born.
+	if (Entry.SentSurface != static_cast<int32>(Entry.Surface))
+	{
+		for (UNiagaraComponent* Component : Entry.Components)
+		{
+			if (IsValid(Component))
+			{
+				Component->SetVariableLinearColor(ColorParameter, Ground.Color);
+				Component->SetVariableFloat(HazeScaleParameter, Ground.HazeScale);
+				Component->SetVariableFloat(LifetimeParameter, Ground.Lifetime);
+				Component->SetVariableFloat(SpreadParameter, Ground.Spread);
+				Component->SetVariableFloat(LiftParameter, Ground.Lift);
+				Component->SetVariableFloat(SinkParameter, Ground.Sink);
+				Component->SetVariableFloat(SizeScaleParameter, Ground.SizeScale);
+				Component->SetVariableFloat(ChunkScaleParameter, Ground.ChunkScale);
+				Component->SetVariableFloat(ChunkSizeParameter, Ground.ChunkSize);
+				Component->SetVariableLinearColor(ChunkColorParameter, Ground.ChunkColor);
+			}
+		}
+		Entry.SentSurface = static_cast<int32>(Entry.Surface);
 	}
 	// The dust is thrown off the way the tracks or wheels leave the ground behind: backward driving forward, and ahead in reverse.
 	const float Away = Unit.GetRealizedMotion().ForwardSpeed < 0.f ? 1.f : -1.f;
@@ -386,19 +449,32 @@ void URTSDustSubsystem::UpdateAll(float DeltaSeconds)
 	}
 
 	// Every vehicle's dust from its motion, and those raising some near enough a camera; of them, the nearest within the
-	// budget show it. A vehicle at rest takes no place in the budget.
+	// budget show it. A vehicle at rest takes no place in the budget, nor one on ground that raised none when it was last
+	// asked (water, #336): that one asks again now and then, outside the budget, and comes back once it is out.
 	Nearest.Reset();
+	const float NoneInterval = GetNoneInterval();
 	for (int32 Index = 0; Index < Entries.Num(); ++Index)
 	{
 		FRTSDustEntry& Entry = Entries[Index];
 		const ARTSUnit& Unit = *Entry.Unit.Get();
+		const FRTSVehicleDust& Dust = Unit.GetUnitData()->Dust;
 		const FRTSRealizedMotion& Motion = Unit.GetRealizedMotion();
-		Entry.MotionRate = GetRate(Unit.GetUnitData()->Dust, Motion.ForwardSpeed, Motion.YawRate);
+		Entry.MotionRate = GetRate(Dust, Motion.ForwardSpeed, Motion.YawRate);
 		Entry.SurfaceAge += DeltaSeconds;
 		Entry.bShows = false;
-		if (bEnabled && Entry.MotionRate > 0.f && Unit.GetUnitData()->Dust.HasDust() && IsNear(Entry, Unit))
+		if (bEnabled && Entry.MotionRate > 0.f && Dust.HasDust() && IsNear(Entry, Unit))
 		{
-			Nearest.Emplace(Entry.ViewDistance * (Entry.bActive ? RTSNearestToView::KeepScale : 1.f), Index);
+			const FRTSDustSurface* Ground = Dust.FindSurface(Entry.Surface);
+			const float Scale = (Ground ? Ground->RateScale : 1.f)
+				* RTSNearestToView::GetRateScale(Entry.ViewDistance, GetDistance(), EffectsQuality);
+			if (Scale > 0.f)
+			{
+				Nearest.Emplace(Entry.ViewDistance * (Entry.bActive ? RTSNearestToView::KeepScale : 1.f), Index);
+			}
+			else
+			{
+				UpdateSurface(Entry, Unit, NoneInterval);
+			}
 		}
 	}
 	RTSNearestToView::KeepNearest(Nearest, GetMaxVehicles());

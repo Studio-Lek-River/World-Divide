@@ -10,6 +10,7 @@ class ARTSUnit;
 class UNiagaraComponent;
 class URTSDustSubsystem;
 class URTSUnitData;
+struct FRTSDustSurface;
 struct FRTSVehicleDust;
 
 /** Runs URTSDustSubsystem::UpdateAll once a frame, in TG_PostUpdateWork. */
@@ -29,7 +30,7 @@ struct FRTSDustEntry
 
 	TWeakObjectPtr<ARTSUnit> Unit;
 
-	/** One per contact point, attached to the hull; empty until the unit first shows dust. */
+	/** One per two contact points (#336), between them and attached to the hull; empty until the unit first shows dust. */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UNiagaraComponent>> Components;
 
@@ -49,20 +50,21 @@ struct FRTSDustEntry
 	float SurfaceAge = 0.f;
 	int32 SurfaceQueries = 0;
 
-	/** What the emitters were last sent, so they are only sent again when it changes. */
+	/** What the emitters were last sent, so they are only sent again when it changes: the ground's look by its surface type. */
 	float SentRate = -1.f;
 	float SentOpacity = -1.f;
-	TOptional<FLinearColor> SentColor;
+	int32 SentSurface = INDEX_NONE;
 	FVector3f SentDirection = FVector3f::ZeroVector;
 };
 
 /**
  * Every machine that draws: the dust behind every ground vehicle whose data has a dust system (#224), once a frame after
  * every hull has moved. Its rate comes from the vehicle's realized speed and yaw rate, the same on every machine, so nothing
- * more replicates; the ground's physical material, asked once per vehicle every rts.Fx.DustSurfaceInterval, scales and
- * colours it. The emitters are made only near a camera, run only while the vehicle raises dust, stop past
- * rts.Fx.DustDistance or beyond the rts.Fx.DustMaxVehicles nearest, and thin out with the effects quality. A dedicated
- * server keeps none.
+ * more replicates; the ground's physical material, asked once per vehicle every rts.Fx.DustSurfaceInterval, scales,
+ * colours and shapes it (FRTSDustSurface, #336). The emitters are made only near a camera, run only while the vehicle raises
+ * dust, stop past rts.Fx.DustDistance or beyond the rts.Fx.DustMaxVehicles nearest, and thin out with the effects quality.
+ * A vehicle on ground that raises none (water) takes no place among those nearest and asks for the ground only every
+ * rts.Fx.DustNoneInterval, so it raises dust again once it is out. A dedicated server keeps none.
  */
 UCLASS()
 class WORLDDIVIDE_API URTSDustSubsystem : public UWorldSubsystem
@@ -77,7 +79,7 @@ public:
 	/** Works out every registered unit's dust and drives its emitters, DeltaSeconds after the last time. Public for the tests. */
 	void UpdateAll(float DeltaSeconds);
 
-	/** The unit's emitters, one per contact point; empty until it first showed dust. For the tests. */
+	/** The unit's emitters, one per two contact points; empty until it first showed dust. For the tests. */
 	TConstArrayView<TObjectPtr<UNiagaraComponent>> GetComponents(const ARTSUnit& Unit) const;
 
 	/** The ground under the unit when it was last asked; SurfaceType_Default before that or for a unit without dust. */
@@ -107,6 +109,12 @@ public:
 	/** rts.Fx.DustSurfaceInterval: seconds between two questions for the ground under one vehicle. */
 	static float GetSurfaceInterval();
 
+	/** rts.Fx.DustNoneInterval: the same for a moving vehicle on ground that raises no dust, outside the budget. */
+	static float GetNoneInterval();
+
+	/** Dust's look on the ground Surface: its entry in Surfaces, or else the struct's defaults in Dust's own colour. */
+	static FRTSDustSurface GetGround(const FRTSVehicleDust& Dust, EPhysicalSurface Surface);
+
 	/**
 	 * Puffs a second from one of Dust's contact points on a hull driving at ForwardSpeed cm/s and turning at YawRate degrees
 	 * a second, on ground of SurfaceScale (FRTSDustSurface::RateScale): 0 at rest, rising with speed and with turning.
@@ -131,7 +139,7 @@ private:
 	void DestroyComponents(FRTSDustEntry& Entry);
 	/** Measures the entry's distance to the cameras; whether it is within rts.Fx.DustDistance. */
 	bool IsNear(FRTSDustEntry& Entry, const ARTSUnit& Unit) const;
-	/** Asks for the ground under the unit when the interval has passed since it last did. */
+	/** Asks for the ground under the unit when the interval has passed since it last did; finds its contact points first. */
 	void UpdateSurface(FRTSDustEntry& Entry, const ARTSUnit& Unit, float Interval);
 	void UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int32 EffectsQuality);
 	void SetActive(FRTSDustEntry& Entry, bool bActive);

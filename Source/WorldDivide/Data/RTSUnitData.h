@@ -280,7 +280,11 @@ struct WORLDDIVIDE_API FRTSVehicleExhaust
 	bool HasExhaust() const { return System != nullptr && !Outlets.IsEmpty(); }
 };
 
-/** How much dust one kind of ground gives under a vehicle and its colour (#224), by the surface type of its physical material. */
+/**
+ * How much dust one kind of ground gives under a vehicle, its colour (#224) and its shape (#336), by the surface type of its
+ * physical material. The dust has two layers: a low haze that spreads along the ground and settles, and chunks (clods, bits
+ * of grass, grit) thrown back and to the sides that fall again. The defaults suit dry dirt.
+ */
 USTRUCT(BlueprintType)
 struct WORLDDIVIDE_API FRTSDustSurface
 {
@@ -294,8 +298,45 @@ struct WORLDDIVIDE_API FRTSDustSurface
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0"))
 	float RateScale = 1.f;
 
+	/** The haze's colour, the ground's, lit by the scene. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
-	FLinearColor Color = FLinearColor(0.33f, 0.27f, 0.2f);
+	FLinearColor Color = FLinearColor(0.24f, 0.2f, 0.14f);
+
+	/** Haze puffs for each puff of the rate: low on ground that throws chunks rather than haze, as mud. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0"))
+	float HazeScale = 1.f;
+
+	/** Seconds a haze puff lives, about; short on ground whose dust falls fast, as sand. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0.1"))
+	float Lifetime = 2.2f;
+
+	/** cm/s a haze puff is thrown out along the ground, behind and to the sides, before the air brakes it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0"))
+	float Spread = 180.f;
+
+	/** cm/s a haze puff rises as it is thrown: a short rise, never a column. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0"))
+	float Lift = 40.f;
+
+	/** cm/s² a haze puff sinks back toward the ground as it settles. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0"))
+	float Sink = 25.f;
+
+	/** Times FRTSVehicleDust's Size for a haze puff: wide on fine ground, as sand. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Haze", meta = (ClampMin = "0.1"))
+	float SizeScale = 1.f;
+
+	/** Chunks for each puff of the rate: none on a road, many in mud. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Chunks", meta = (ClampMin = "0"))
+	float ChunkScale = 0.3f;
+
+	/** How wide a chunk is in cm, about. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Chunks", meta = (ClampMin = "1"))
+	float ChunkSize = 10.f;
+
+	/** The chunks' colour, lit by the scene: darker than the haze, or green for torn grass. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust|Chunks")
+	FLinearColor ChunkColor = FLinearColor(0.07f, 0.06f, 0.04f);
 };
 
 /**
@@ -309,7 +350,11 @@ struct WORLDDIVIDE_API FRTSVehicleDust
 {
 	GENERATED_BODY()
 
-	/** The continuous emitter at each contact point, driven by its User.Rate, User.Color, User.Opacity, User.Size and User.Direction. */
+	/**
+	 * The continuous emitter between each two contact points (User.Points, User.Side), driven by its User.Rate, User.Opacity,
+	 * User.Size and User.Direction, and by the ground's FRTSDustSurface (User.Color, User.HazeScale, User.Lifetime and the
+	 * rest, URTSDustSubsystem).
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
 	TObjectPtr<UNiagaraSystem> System;
 
@@ -344,11 +389,14 @@ struct WORLDDIVIDE_API FRTSVehicleDust
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0", ClampMax = "1"))
 	float Opacity = 0.6f;
 
-	/** The colour and the rate on ground whose surface type Surfaces does not list, or without a physical material. */
+	/**
+	 * The colour on ground whose surface type Surfaces does not list, or without a physical material; the rate and the shape
+	 * there are FRTSDustSurface's defaults.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
-	FLinearColor Color = FLinearColor(0.33f, 0.27f, 0.2f);
+	FLinearColor Color = FLinearColor(0.24f, 0.2f, 0.14f);
 
-	/** Each kind of ground's rate and colour. */
+	/** Each kind of ground's rate, colour and shape. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
 	TArray<FRTSDustSurface> Surfaces;
 

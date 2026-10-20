@@ -194,8 +194,9 @@ void URTSExhaustSubsystem::SetActive(FRTSExhaustEntry& Entry, bool bActive)
 		}
 		if (bActive)
 		{
-			// A machine that never renders (tests under -nullrhi) keeps the emitter active, but Niagara does not run it.
-			Component->Activate(true);
+			// Not reset, as the dust (#336): the puffs out before a stop drift on. A machine that never renders (tests under
+			// -nullrhi) keeps the emitter active, but Niagara does not run it.
+			Component->Activate(false);
 		}
 		else
 		{

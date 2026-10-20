@@ -40,7 +40,8 @@
  * standing, setting off and driving, seen from behind, by day and by night (exhaust_*, #222, #325); and its body
  * squatting as it pulls away, diving as it brakes, leaning into a turn and its turret trailing a traverse (body_*, #297); and
  * the dust behind its tracks standing, driving slowly and fast and pivoting, seen from behind and above with the ground it
- * leaves (dust_*, #224). A wheeled unit takes the dust scenarios only. Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
+ * leaves (dust_<ground>_*, #224), on the map's dirt and on each of its ground strips (#336). A wheeled unit takes the dust
+ * scenarios only. A unit the map does not hold, such as the flak truck, is spawned for team 0 on the open strip. Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
  * Saved/TrackShots/<UnitData>/<scenario>_<n>.png, and logs with each the realized side travel, each track's phase and what
  * its material has. With -RTSTrackShotsQuit on the command line (ue.ps1 -Task trackshots) the game quits when done.
  */
@@ -54,6 +55,13 @@ namespace RTSTrackShots
 	/** The empty strip north of Block_North in L_TestMap, where the unit drives; Block_North is driven into from the north. */
 	const FVector DriveStart(-8000.f, 20000.f, 0.f);
 	const TCHAR* BlockLabel = TEXT("Block_North");
+
+	/**
+	 * L_TestMap's strips of other ground (setup_testmap.py, TEST_GROUND_STRIPS), labelled Ground_<Kind> and running along x:
+	 * the dust scenarios drive along each from this far in from its west end (#336).
+	 */
+	const TCHAR* StripPrefix = TEXT("Ground_");
+	constexpr float StripRunIn = 1500.f;
 
 	/**
 	 * Where the camera rides, in the hull's frame from the ground under its middle (as m20_guardian.json places the wheels):
@@ -90,7 +98,7 @@ namespace RTSTrackShots
 	constexpr float BodyTimeDilation = 0.25f;
 
 	/**
-	 * The exhaust scenarios (#222): real seconds for the plume to build before the first picture, game seconds between
+	 * The exhaust scenarios (#222): game seconds for the plume to build before the first picture, game seconds between
 	 * pictures, and the game's step while they run. Each picture holds the game for a long frame, which would show the puffs
 	 * of that frame all at one place: a fixed 30 fps step shows the trail as a game running at 30 fps leaves it.
 	 */
@@ -111,7 +119,10 @@ namespace RTSTrackShots
 		FView View;
 		/** Set up the unit, its place and its command; false when it cannot. */
 		TFunction<bool(ARTSUnit&)> Setup;
-		/** Real seconds the gear runs before the first picture; or, with Until, at most this long until it holds. */
+		/**
+		 * Real seconds the gear runs before the first picture, game seconds with a FixedStep, so a fast machine does not drive
+		 * the unit off its ground first; or, with Until, at most this long until it holds.
+		 */
 		double Warm = 2.0;
 		TFunction<bool(const ARTSUnit&)> Until;
 		/** Run just before the first picture, such as a new command to brake on. */
@@ -197,6 +208,11 @@ namespace RTSTrackShots
 				}
 			}
 			ARTSPlayerController* Controller = Cast<ARTSPlayerController>(World->GetFirstPlayerController());
+			if (!Unit.IsValid() && World->HasBegunPlay() && Controller && World->GetNetMode() != NM_Client)
+			{
+				// A unit the map does not hold, such as the flak truck (#336): one of team 0's, on the open strip.
+				Unit = SpawnUnit();
+			}
 			if (!World->HasBegunPlay() || !Controller || !Unit.IsValid())
 			{
 				return FPlatformTime::Seconds() - StepStart > ReadyTimeout ? Finish(TEXT("no player or unit in time")) : true;
@@ -219,7 +235,12 @@ namespace RTSTrackShots
 				{
 					Block = It->GetComponentsBoundingBox();
 				}
+				else if (It->GetActorLabel().StartsWith(StripPrefix))
+				{
+					Strips.Emplace(It->GetActorLabel().RightChop(FCString::Strlen(StripPrefix)).ToLower(), It->GetComponentsBoundingBox());
+				}
 			}
+			Strips.Sort([](const TPair<FString, FBox>& A, const TPair<FString, FBox>& B) { return A.Key < B.Key; });
 			for (int32 PartIndex = 0; PartIndex < Unit->GetUnitData()->Parts.Num(); ++PartIndex)
 			{
 				const FRTSVehiclePart& Part = Unit->GetUnitData()->Parts[PartIndex];
@@ -243,6 +264,23 @@ namespace RTSTrackShots
 			return StartScenario();
 		}
 
+		/** A unit of the data UnitName (in /Game/Data/Units) for team 0 at DriveStart, on the ground; null without such data. */
+		ARTSUnit* SpawnUnit() const
+		{
+			URTSUnitData* Data = LoadObject<URTSUnitData>(nullptr, *FString::Printf(TEXT("/Game/Data/Units/%s.%s"), *UnitName, *UnitName));
+			const FTransform Transform(DriveStart);
+			ARTSUnit* Spawned = Data ? World->SpawnActorDeferred<ARTSUnit>(ARTSUnit::StaticClass(), Transform, nullptr, nullptr,
+				ESpawnActorCollisionHandlingMethod::AlwaysSpawn) : nullptr;
+			if (!Spawned)
+			{
+				return nullptr;
+			}
+			Spawned->InitFromData(Data, 0);
+			Spawned->FinishSpawning(Transform);
+			Spawned->SetActorLocation(Transform.GetLocation() + FVector(0.f, 0.f, Spawned->GetGroundOffset()));
+			return Spawned;
+		}
+
 		void Place(ARTSUnit& InUnit, const FVector& Location, float Yaw)
 		{
 			InUnit.SetActorLocationAndRotation(FVector(Location.X, Location.Y, InUnit.GetActorLocation().Z), FRotator(0.f, Yaw, 0.f));
@@ -250,36 +288,48 @@ namespace RTSTrackShots
 
 		void BuildScenarios()
 		{
-			auto Drive = [this](RTSLocomotion::FCommand Command)
+			auto DriveFrom = [this](const FVector& Start, RTSLocomotion::FCommand Command)
 			{
-				return [this, Command](ARTSUnit& InUnit)
+				return [this, Start, Command](ARTSUnit& InUnit)
 				{
-					Place(InUnit, DriveStart, 0.f);
+					Place(InUnit, Start, 0.f);
 					InUnit.GetUnitMovement()->SetCommandOverride(Command);
 					InUnit.SetAimOverride({});
 					return true;
 				};
 			};
+			auto Drive = [DriveFrom](RTSLocomotion::FCommand Command) { return DriveFrom(DriveStart, Command); };
 			auto Tracks = [](float Left, float Right)
 			{
 				return [Left, Right](const RTSLocomotion::FLimits& Limits) { return RTSLocomotion::FCommand::FromTracks(Limits, Left, Right); };
 			};
 			const RTSLocomotion::FLimits& Limits = Unit->GetUnitMovement()->GetLimits();
 			// The dust behind the tracks or wheels (#224) at the game's own speed, as it rises and settles: none standing, a
-			// little at a slow drive, a trail at full speed, and some from a pivot on the spot; stepped like the exhaust.
-			TArray<FScenario> Dusts = {
-				{ TEXT("dust_idle"), DustView, Drive(RTSLocomotion::FCommand()), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
-				{ TEXT("dust_slow"), DustView, Drive(Ahead(400.f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
-				{ TEXT("dust_fast"), DustView, Drive(Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
-			};
-			if (bTracked)
+			// little at a slow drive, a trail at full speed, and some from a pivot on the spot; stepped like the exhaust. On the
+			// map's dirt, then along each strip of other ground (#336).
+			TArray<TPair<FString, FVector>> Grounds = { { TEXT("dirt"), DriveStart } };
+			for (const TPair<FString, FBox>& Strip : Strips)
 			{
-				Dusts.Add({ TEXT("dust_pivot"), DustView, Drive(Tracks(-250.f, 250.f)(Limits)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f });
+				Grounds.Emplace(Strip.Key, FVector(Strip.Value.Min.X + StripRunIn, Strip.Value.GetCenter().Y, 0.f));
 			}
-			for (FScenario& Dust : Dusts)
+			for (const TPair<FString, FVector>& Ground : Grounds)
 			{
-				Dust.FixedStep = ExhaustStep;
-				Scenarios.Add(MoveTemp(Dust));
+				const FString Prefix = FString::Printf(TEXT("dust_%s_"), *Ground.Key);
+				TArray<FScenario> Dusts = {
+					{ Prefix + TEXT("idle"), DustView, DriveFrom(Ground.Value, RTSLocomotion::FCommand()), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
+					{ Prefix + TEXT("slow"), DustView, DriveFrom(Ground.Value, Ahead(400.f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
+					{ Prefix + TEXT("fast"), DustView, DriveFrom(Ground.Value, Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
+				};
+				if (bTracked)
+				{
+					Dusts.Add({ Prefix + TEXT("pivot"), DustView, DriveFrom(Ground.Value, Tracks(-250.f, 250.f)(Limits)), ExhaustWarm, nullptr, nullptr,
+						ExhaustSpacing, 1.f });
+				}
+				for (FScenario& Dust : Dusts)
+				{
+					Dust.FixedStep = ExhaustStep;
+					Scenarios.Add(MoveTemp(Dust));
+				}
 			}
 			if (!bTracked)
 			{
@@ -420,6 +470,7 @@ namespace RTSTrackShots
 			Night.Set(*World, Scenario.bNight);
 			Step = EStep::Warm;
 			StepStart = FPlatformTime::Seconds();
+			WarmStartGame = World->GetTimeSeconds();
 			Shot = 0;
 			return true;
 		}
@@ -427,7 +478,7 @@ namespace RTSTrackShots
 		bool Warm()
 		{
 			const FScenario& Scenario = Scenarios[Index];
-			const double Elapsed = FPlatformTime::Seconds() - StepStart;
+			const double Elapsed = Scenario.FixedStep > 0.0 ? World->GetTimeSeconds() - WarmStartGame : FPlatformTime::Seconds() - StepStart;
 			const bool bReady = Scenario.Until ? (Scenario.Until(*Unit) || Elapsed > Scenario.Warm) : Elapsed >= Scenario.Warm;
 			if (!bReady)
 			{
@@ -562,6 +613,8 @@ namespace RTSTrackShots
 		TWeakObjectPtr<ARTSUnit> Unit;
 		TWeakObjectPtr<ACameraActor> Camera;
 		FBox Block = FBox(ForceInit);
+		/** The map's strips of other ground by kind, lower case, and their boxes. */
+		TArray<TPair<FString, FBox>> Strips;
 		int32 TrackParts[2] = { INDEX_NONE, INDEX_NONE };
 		/** The actor's height over the ground it stands on, which the views are given from. */
 		float GroundOffset = 0.f;
@@ -574,6 +627,8 @@ namespace RTSTrackShots
 		int32 Shot = 0;
 		EStep Step = EStep::WaitForUnit;
 		double StepStart = 0.0;
+		/** The game's time as the warm-up began, for the scenarios on a fixed step. */
+		double WarmStartGame = 0.0;
 		double LastShotTime = 0.0;
 		TArray<FColor> Pixels;
 		FIntPoint PixelsSize = FIntPoint::ZeroValue;

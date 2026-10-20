@@ -1095,43 +1095,110 @@ def vehicle_lights(headlights, taillights, **settings):
     return value
 
 
-# The dust's look (#224): the muzzle smoke's flipbook from its early billows on, eroded less than the exhaust so a cloud
-# reads as dust rather than haze; it fades over half a metre where it meets the ground it is born on. Brightness, as the
-# exhaust's (#325), brings the lit smoke down until FRTSDustSurface's colours read as the ground's.
-DUST_LOOK = {"FrameFirst": 10.0, "FrameLast": 56.0, "Erosion": 0.45, "FadeDistance": 50.0, "Brightness": 0.35}
+# The dust's haze (#224, #336): the muzzle smoke's flipbook from its early billows on, eroded so a puff thins from its edges
+# as it settles; it fades over most of a metre where it meets the ground, so a low puff's lower half melts into it rather
+# than ending in a line. Brightness brings the haze down until FRTSDustSurface's colours read as dust of the ground's.
+DUST_LOOK = {"FrameFirst": 10.0, "FrameLast": 56.0, "Erosion": 0.55, "FadeDistance": 80.0, "Brightness": 0.42}
+
+
+def build_dust_haze_material(name, rlt, bbf):
+    """The muzzle smoke's material (build_muzzle_smoke_material) for the dust's haze (#336), lit per pixel as the ground
+    is rather than from the translucency lighting volume: the volume's cells are a metre and more across at RTS distance,
+    and those that reach under the ground are in its shadow, which turned a haze lying low on the ground near black."""
+    material = build_muzzle_smoke_material(name, rlt, bbf)
+    material.set_editor_property("translucency_lighting_mode", unreal.TranslucencyLightingMode.TLM_SURFACE_PER_PIXEL_LIGHTING)
+    unreal.MaterialEditingLibrary.recompile_material(material)
+    return material
+
+# A dust chunk (#336): a lit clod with a ragged edge, its outline turned by the particle's random value so no two match,
+# and a domed normal (in the sprite's tangent space, +Z toward the camera) so the sun shades it as a lump.
+DUST_CHUNK_CODE = """float2 P = UV * 2.0 - 1.0;
+float A = atan2(P.y, P.x);
+float S = Random * 6.2832;
+float R = 0.72 + 0.15 * sin(A * 3.0 + S) + 0.09 * sin(A * 5.0 + S * 2.3);
+Normal = normalize(float3(P.x, P.y, 1.4));
+return 1.0 - length(P) / R;"""
+
+
+def build_dust_chunk_material(name):
+    """Lit masked sprite material for the chunks of the dust (#336): the particle colour, the ground's chunk colour, on a
+    ragged clod (DUST_CHUNK_CODE) that the scene's light shades."""
+    material = new_material(name)
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
+    material.set_editor_property("opacity_mask_clip_value", 0.05)
+    material.set_editor_property("used_with_niagara_sprites", True)
+
+    shape = custom_node(material, -400, 200, DUST_CHUNK_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT1, ["UV", "Random"],
+                        ["Normal"])
+    connect(expression(material, unreal.MaterialExpressionTextureCoordinate, -700, 200), "", shape, "UV")
+    connect(expression(material, unreal.MaterialExpressionParticleRandom, -700, 300), "", shape, "Random")
+    color = expression(material, unreal.MaterialExpressionParticleColor, -400, 0)
+    roughness = expression(material, unreal.MaterialExpressionConstant, -400, 400)
+    roughness.set_editor_property("r", 1.0)
+    editing = unreal.MaterialEditingLibrary
+    editing.connect_material_property(color, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
+    editing.connect_material_property(shape, "", unreal.MaterialProperty.MP_OPACITY_MASK)
+    editing.connect_material_property(shape, "Normal", unreal.MaterialProperty.MP_NORMAL)
+    editing.connect_material_property(roughness, "", unreal.MaterialProperty.MP_ROUGHNESS)
+    editing.recompile_material(material)
+    return material
 
 
 def make_dust():
-    """The Niagara dust ground vehicles raise behind their tracks or wheels (#224) and its material, an instance of the
-    muzzle smoke's (make_muzzle_smoke builds the parent first). Built in C++ like the muzzle flash
-    (URTSEditorScripting::BuildDustSystem, RTSMuzzleFlashBuilder.cpp)."""
-    parent = assets.load_asset(f"{MATERIAL_DIR}/M_MuzzleSmoke")
+    """The Niagara dust ground vehicles raise behind their tracks or wheels (#224, #336): its haze material, an instance of
+    the muzzle smoke's graph lit per pixel (M_DustHaze, from the flipbooks make_muzzle_smoke imports), and its chunk
+    material. Built in C++ like the muzzle flash (URTSEditorScripting::BuildDustSystem, RTSMuzzleFlashBuilder.cpp)."""
+    rlt = make_effect_texture("T_MuzzleSmoke_RLT")
+    bbf = make_effect_texture("T_MuzzleSmoke_BBF")
+    parent = plan_now(f"{MATERIAL_DIR}/M_DustHaze", lambda: build_dust_haze_material("M_DustHaze", rlt, bbf),
+                      spec_hash([build_dust_haze_material, build_muzzle_smoke_material, custom_node, flipbook_frame, flipbook_sample,
+                                 blended_sample, scalar_parameter, component_mask], FLIPBOOK_CODE, SMOKE_CODE, "M_DustHaze", rlt, bbf))
     look = plan_now(f"{MATERIAL_DIR}/MI_Dust", lambda: build_material_instance("MI_Dust", parent, DUST_LOOK),
                     spec_hash([build_material_instance], "MI_Dust", parent, sorted(DUST_LOOK.items())))
+    chunk = plan_now(f"{MATERIAL_DIR}/M_DustChunk", lambda: build_dust_chunk_material("M_DustChunk"),
+                     spec_hash([build_dust_chunk_material, custom_node], DUST_CHUNK_CODE, "M_DustChunk"))
     path = f"{EFFECT_DIR}/NS_Dust"
 
     def build():
         if not unreal.RTSEditorScripting.load_editor_module("NiagaraEditor"):
             raise RuntimeError("Could not load the NiagaraEditor module")
-        system = unreal.RTSEditorScripting.build_dust_system(path, look)
+        system = unreal.RTSEditorScripting.build_dust_system(path, look, chunk)
         if not system:
             raise RuntimeError(f"Could not build {path}; the log says why")
         return system
     builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSMuzzleFlashBuilder.cpp"))
-    return plan_now(path, build, spec_hash([make_dust], path, look, builder_source))
+    return plan_now(path, build, spec_hash([make_dust], path, look, chunk, builder_source))
 
 
 # The kinds of ground (#224): the surface type of each one's physical material, as Config/DefaultEngine.ini names it, and
-# the dust a vehicle raises on it: times FRTSVehicleDust's rate, in its colour (r, g, b) in linear space. Water raises
-# none. Dirt has the struct's own colour; it is the ground of every map for now.
+# the dust a vehicle raises on it (FRTSDustSurface, #336), whatever it leaves out the struct's default, which suits dry dirt:
+# rate_scale times FRTSVehicleDust's rate (water raises none); the haze's colour (r, g, b) in linear space, its share of the
+# rate (haze_scale), its life in s, how fast it spreads along the ground and rises in cm/s, how fast it sinks in cm/s² and
+# its size_scale; the chunks' share of the rate, their size in cm and colour. Dirt is the ground of every map; the others
+# lie in strips in a corner of L_TestMap (TEST_GROUND_STRIPS).
 PHYSICAL_DIR = f"{MATERIAL_DIR}/Physical"
 GROUND_KINDS = {
-    "Dirt": (unreal.PhysicalSurface.SURFACE_TYPE1, 1.0, (0.33, 0.27, 0.2)),
-    "Grass": (unreal.PhysicalSurface.SURFACE_TYPE2, 0.35, (0.27, 0.26, 0.18)),
-    "Road": (unreal.PhysicalSurface.SURFACE_TYPE3, 0.25, (0.34, 0.33, 0.31)),
-    "Sand": (unreal.PhysicalSurface.SURFACE_TYPE4, 1.3, (0.55, 0.47, 0.34)),
-    "Mud": (unreal.PhysicalSurface.SURFACE_TYPE5, 0.3, (0.19, 0.15, 0.11)),
-    "Water": (unreal.PhysicalSurface.SURFACE_TYPE6, 0.0, (0.3, 0.3, 0.3)),
+    # Tan, fine and spreading, a few clods.
+    "Dirt": (unreal.PhysicalSurface.SURFACE_TYPE1, {"rate_scale": 1.0, "spread": 240.0, "size_scale": 1.15}),
+    # Green-brown bits of torn turf and a faint haze.
+    "Grass": (unreal.PhysicalSurface.SURFACE_TYPE2, {
+        "rate_scale": 0.6, "color": (0.17, 0.18, 0.1), "haze_scale": 0.3, "lifetime": 1.6, "spread": 140.0, "lift": 30.0,
+        "sink": 30.0, "size_scale": 0.85, "chunk_scale": 0.8, "chunk_size": 9.0, "chunk_color": (0.035, 0.08, 0.018)}),
+    # A thin dry haze at a low rate, no chunks.
+    "Road": (unreal.PhysicalSurface.SURFACE_TYPE3, {
+        "rate_scale": 0.25, "color": (0.13, 0.13, 0.12), "lifetime": 1.5, "spread": 220.0, "lift": 25.0, "sink": 20.0,
+        "size_scale": 0.9, "chunk_scale": 0.0}),
+    # Pale, wide and fast, falling and fading quickly, a little grit.
+    "Sand": (unreal.PhysicalSurface.SURFACE_TYPE4, {
+        "rate_scale": 1.3, "color": (0.6, 0.5, 0.36), "lifetime": 1.3, "spread": 300.0, "lift": 30.0, "sink": 40.0,
+        "size_scale": 1.4, "chunk_scale": 0.15, "chunk_size": 5.0, "chunk_color": (0.36, 0.28, 0.17)}),
+    # Dark clods and spray thrown to the sides and back, little haze.
+    "Mud": (unreal.PhysicalSurface.SURFACE_TYPE5, {
+        "rate_scale": 1.0, "color": (0.09, 0.075, 0.055), "haze_scale": 0.12, "lifetime": 1.2, "spread": 100.0, "lift": 20.0,
+        "sink": 40.0, "size_scale": 0.7, "chunk_scale": 1.4, "chunk_size": 18.0, "chunk_color": (0.022, 0.016, 0.011)}),
+    # None.
+    "Water": (unreal.PhysicalSurface.SURFACE_TYPE6, {"rate_scale": 0.0, "color": (0.3, 0.3, 0.3)}),
 }
 
 
@@ -1149,22 +1216,22 @@ def make_physical_materials():
     """PM_<kind> for every kind of ground, built now so the surface materials can point at theirs; by kind."""
     return {kind: plan_now(f"{PHYSICAL_DIR}/PM_{kind}", lambda n=f"PM_{kind}", t=surface: build_physical_material(n, t),
                            spec_hash([build_physical_material], f"PM_{kind}", str(surface)))
-            for kind, (surface, _, _) in GROUND_KINDS.items()}
+            for kind, (surface, _) in GROUND_KINDS.items()}
 
 
 def vehicle_dust(system, contact_points=None):
-    """A ground vehicle's dust (FRTSVehicleDust, #224): the system, every kind of ground's rate and colour from GROUND_KINDS,
-    and the contact points in the mesh's own space in cm, on the ground; none leaves them to the locomotion and the hull
-    (URTSDustSubsystem::GetContactPoints). The rate's curve keeps the struct's defaults."""
+    """A ground vehicle's dust (FRTSVehicleDust, #224): the system, every kind of ground's rate, colour and shape from
+    GROUND_KINDS (#336), and the contact points in the mesh's own space in cm, on the ground; none leaves them to the
+    locomotion and the hull (URTSDustSubsystem::GetContactPoints). The rate's curve keeps the struct's defaults."""
     value = unreal.RTSVehicleDust()
     value.set_editor_property("system", system)
     value.set_editor_property("contact_points", [unreal.Vector(*point) for point in contact_points or []])
     surfaces = []
-    for surface, rate_scale, color in GROUND_KINDS.values():
+    for surface, dust in GROUND_KINDS.values():
         entry = unreal.RTSDustSurface()
         entry.set_editor_property("surface", surface)
-        entry.set_editor_property("rate_scale", rate_scale)
-        entry.set_editor_property("color", unreal.LinearColor(*color, 1.0))
+        for name, setting in dust.items():
+            entry.set_editor_property(name, unreal.LinearColor(*setting, 1.0) if name.endswith("color") else setting)
         surfaces.append(entry)
     value.set_editor_property("surfaces", surfaces)
     return value
@@ -1359,12 +1426,22 @@ def spawn_night_lighting():
     volume.set_editor_property("settings", settings)
 
 
-def build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, digest):
+def spawn_ground_strips(strips):
+    """L_TestMap's strips of other ground (TEST_GROUND_STRIPS), 1 cm proud of the dirt, each on its kind's material (strips,
+    by kind). Labelled Ground_<Kind>, neither Wall_ nor Block_: they are no obstacles, and units drive over them."""
+    (west, east), width = TEST_GROUND_STRIP_SPAN
+    for kind, y in TEST_GROUND_STRIPS:
+        strip = spawn_block(f"Ground_{kind}", ((west + east) / 2.0, y, -49.0), ((east - west) / 100.0, width / 100.0, 1.0))
+        strip.static_mesh_component.set_material(0, unreal.load_asset(strips[kind]))
+
+
+def build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, strips, digest):
     new_level(path)
     check_map_lanes(TEST_MAP)
 
-    # 600 x 600 m ground, top face at z = 0.
+    # 600 x 600 m ground, top face at z = 0, with the strips of other ground in its south-west.
     spawn_ground(TEST_MAP.half_size, ground)
+    spawn_ground_strips(strips)
 
     # Obstacles between the two bases so pathfinding has something to do.
     for kind, label, location, scale in TEST_MAP.obstacles:
@@ -1409,14 +1486,15 @@ def build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, di
         raise RuntimeError(f"Could not save {path}")
 
 
-def make_map(path, night, tank, infantry, builder, m20, wall, crate, ground):
+def make_map(path, night, tank, infantry, builder, m20, wall, crate, ground, strips):
     lighting = spawn_night_lighting if night else spawn_lighting
     night_look = (NIGHT_MOON_LUX, NIGHT_MOON_COLOR, NIGHT_MOON_PITCH, NIGHT_SKY_INTENSITY, NIGHT_EXPOSURE_BIAS) if night else None
-    plan_rebuild(path, ".umap", lambda digest: build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, digest),
+    plan_rebuild(path, ".umap", lambda digest: build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, strips, digest),
                  spec_hash([build_map, build_navigation, check_map_lanes, base_source, spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall,
-                            spawn_units, spawn_supply_source, spawn_ground, lighting], path, night_look, TEST_MAP, TEST_HILL,
-                           BASE_LAYOUT, MAP_LANE_RULES, CUBE, tank, infantry, builder, m20, wall, crate, ground,
-                           material_hashes[ground], ENGINE_VERSION, NAV_CONFIG))
+                            spawn_units, spawn_supply_source, spawn_ground, spawn_ground_strips, lighting], path, night_look, TEST_MAP,
+                           TEST_HILL, TEST_GROUND_STRIPS, TEST_GROUND_STRIP_SPAN, BASE_LAYOUT, MAP_LANE_RULES, CUBE, tank, infantry,
+                           builder, m20, wall, crate, ground, material_hashes[ground], sorted(strips.items()),
+                           [material_hashes[strip] for _, strip in sorted(strips.items())], ENGINE_VERSION, NAV_CONFIG))
 
 
 def build_bench_map(ground, digest):
@@ -1646,6 +1724,12 @@ TEST_SPOTS = ((0, -18000.0, 0.0, 0.0), (1, 18000.0, 0.0, 180.0), (2, 0.0, -21000
 TEST_MAP = SkirmishMap(MAP_PATH, 30000.0, TEST_SPOTS[:2], TEST_OBSTACLES, ())
 # L_TestMap's ridge: x, top width, length along y, height and ramp slope in degrees (spawn_hill).
 TEST_HILL = (13500.0, 900.0, 12000.0, 300.0, 15.0)
+# L_TestMap's strips of other ground than dirt (#336), so rts.Debug.TrackShots shows the dust on each: the kind (GROUND_KINDS)
+# and its middle along y, all running along x between the span's west and east ends and as wide as it says, in cm. In the
+# south-west, 85 m and more south of team 0's start spot, south of its army and its M20s and west of Block_South: no
+# obstacle, base or lane comes near. Long enough for a vehicle at full speed to show its trail on its own ground.
+TEST_GROUND_STRIP_SPAN = ((-28000.0, -2000.0), 2500.0)
+TEST_GROUND_STRIPS = (("Grass", -13500.0), ("Road", -16500.0), ("Sand", -19500.0), ("Mud", -22500.0), ("Water", -25500.0))
 SKIRMISH_MAP = SkirmishMap("/Game/Maps/L_Skirmish", 30000.0, TEST_SPOTS, TEST_OBSTACLES, ())
 DUEL_MAP = SkirmishMap("/Game/Maps/L_SkirmishDuel", 30000.0, TEST_SPOTS[:2], TEST_OBSTACLES, ())
 
@@ -2338,12 +2422,20 @@ for entity, icon, hotkey, description in (
 add_properties(m20, {"hero_art_sprite": unreal.Name("Art.M20Guardian"), "role_text": unreal.Text("Main battle tank")})
 make_ghost_material("M_PlacementGhost")
 make_shot_material("M_ShotFx")
-# The maps' ground is dirt and their water water, for the dust behind vehicles (#224).
+# The maps' ground is dirt and their water water, for the dust behind vehicles (#224); L_TestMap has a strip of every other
+# kind of ground too (#336).
 physical = make_physical_materials()
 ground = make_surface_material("M_Ground", (0.06, 0.075, 0.04), 0.9, physical["Dirt"])
 water = make_surface_material("M_Water", (0.015, 0.04, 0.08), 0.1, physical["Water"])
-make_map(MAP_PATH, False, tank, infantry, builder, m20, wall_mesh, crate_mesh, ground)
-make_map(NIGHT_MAP_PATH, True, tank, infantry, builder, m20, wall_mesh, crate_mesh, ground)
+ground_strips = {
+    "Grass": make_surface_material("M_Grass", (0.03, 0.09, 0.015), 0.95, physical["Grass"]),
+    "Road": make_surface_material("M_Road", (0.03, 0.03, 0.03), 0.8, physical["Road"]),
+    "Sand": make_surface_material("M_Sand", (0.38, 0.3, 0.19), 1.0, physical["Sand"]),
+    "Mud": make_surface_material("M_Mud", (0.03, 0.022, 0.014), 0.35, physical["Mud"]),
+    "Water": water,
+}
+make_map(MAP_PATH, False, tank, infantry, builder, m20, wall_mesh, crate_mesh, ground, ground_strips)
+make_map(NIGHT_MAP_PATH, True, tank, infantry, builder, m20, wall_mesh, crate_mesh, ground, ground_strips)
 make_bench_map(ground)
 make_long_path_map(ground, water)
 make_thin_walls_map(ground)

@@ -122,9 +122,10 @@ public:
 
 	/**
 	 * Builds the dust ground vehicles raise behind their tracks or wheels (#224) as the Niagara system AssetPath (such as
-	 * /Game/Effects/NS_Dust), new, in place of the one there, as BuildMuzzleFlashSystem: a continuous stream of low clouds in
-	 * Material, at User.Rate a second. Returns null and logs why when it fails.
+	 * /Game/Effects/NS_Dust), new, in place of the one there, as BuildMuzzleFlashSystem: at User.Rate a second, a low haze
+	 * in HazeMaterial that spreads along the ground and settles, and chunks in ChunkMaterial thrown back and falling again,
+	 * each shaped by the ground's look (FRTSDustSurface, #336). Returns null and logs why when it fails.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
-	static UNiagaraSystem* BuildDustSystem(const FString& AssetPath, UMaterialInterface* Material);
+	static UNiagaraSystem* BuildDustSystem(const FString& AssetPath, UMaterialInterface* HazeMaterial, UMaterialInterface* ChunkMaterial);
 };

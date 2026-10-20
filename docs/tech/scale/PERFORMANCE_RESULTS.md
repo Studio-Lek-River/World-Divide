@@ -2206,6 +2206,34 @@ the subsystem's own pass and the emitters running at each sample's end.
 - The ground of every map is dirt for now. Grass, road, sand and mud have physical materials but no map surface yet
   (#156, #330), and bridges and fords need theirs once #155 builds them.
 
+## #336 (vehicle dust with a ground-coloured look per surface)
+
+### What changed
+
+`NS_Dust` has two CPU emitters, a low haze (`M_DustHaze`, the muzzle smoke's graph lit per pixel) and chunks
+(`M_DustChunk`, lit masked clods), shaped per ground by `FRTSDustSurface` (life, spread, lift, sink, size, chunk share,
+size and colour) as user parameters sent when the ground changes. Each system now serves both contact points of a vehicle
+(`User.Points`, `User.Side`), so a vehicle runs one system instead of two: 32 systems for the 32 vehicles of
+`rts.Fx.DustMaxVehicles`, instead of #224's 64. A vehicle on ground of rate scale 0 (water) takes no budget place and
+traces the ground only every `rts.Fx.DustNoneInterval` (1 s).
+
+### Short method, 240 moving M20s, dust on and off, interleaved runs
+
+`ue.ps1 -Task bench -Unit DA_TestM20Guardian@Battle -Counts 240`, "off" with `-Cvars rts.Fx.Dust=0`, Ryzen 7 7800X3D,
+RTX 4090, five runs each, every run valid. Other processes used about six cores during every run (a game and a torrent
+client were running), so the runs spread by about 2 ms; compare the means with each other, not with older sections.
+
+| Scenario | Dust | Game ms (mean of 5, range) | Render ms | GPU ms | Draw calls | Dust pass ms | Emitters |
+|---|---|---:|---:|---:|---:|---:|---:|
+| move | on | 13.21 (12.64–14.45) | 7.79 | 3.18 | ~807 | 0.070 | 32 |
+| move | off | 13.23 (12.36–14.51) | 7.72 | 3.30 | ~755 | 0.027 | 0 |
+
+- **No worse than #224:** on and off agree within the noise (0.0 ms of game thread), against #224's 0.6 ms for 64
+  single-emitter systems. The subsystem's own pass is 0.07 ms, as in #224.
+- A first try with one system per contact point and two emitters each cost about 1.1 ms of game thread (64 systems,
+  128 emitters); GPU emitters were worse still (1.6 ms and 50 ms hitches). Hence one system per two contact points.
+- The chunks' second material adds about 50 draw calls; the render thread and the GPU stay within the noise.
+
 ## #223 (vehicle head- and rear lights with a day/night policy)
 
 ### What changed

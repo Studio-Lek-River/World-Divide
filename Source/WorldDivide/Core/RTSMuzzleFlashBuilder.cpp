@@ -5,6 +5,7 @@
 
 #if WITH_EDITOR
 #include "Combat/RTSShotSubsystem.h"
+#include "Data/RTSUnitData.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/PackageName.h"
 #include "NiagaraEmitter.h"
@@ -209,14 +210,21 @@ namespace RTSMuzzleFlashBuilder
 		SetEnum(ModuleInput(System, Emitter, ParticleSpawn, TEXT("InitializeParticle"), TEXT("Sprite Rotation Mode")), TEXT("Random"), Context);
 	}
 
-	/** Emitter's particles are born in a sphere of Radius cm (an expression) around Offset from the system (an expression). */
+	/**
+	 * Emitter's particles are born in a sphere of Radius cm (an expression) around Offset from the system (an expression), in
+	 * the module's own coordinate space or, with Space ("Local"), in that one: Local turns and tilts with the component.
+	 */
 	void SetSpawnSphere(UNiagaraSystem* System, FName Emitter, const FString& Radius, const FString& Offset,
-		FNiagaraExternalEditContext& Context)
+		FNiagaraExternalEditContext& Context, const TCHAR* Space = nullptr)
 	{
 		const FName Sphere = AddModule(System, Emitter, ParticleSpawn, TEXT("InitializeParticle"),
 			TEXT("/Niagara/Modules/Spawn/Location/SphereLocation.SphereLocation"), Context);
 		SetExpression(ModuleInput(System, Emitter, ParticleSpawn, Sphere, TEXT("Sphere Radius")), Radius, Context);
 		SetExpression(ModuleInput(System, Emitter, ParticleSpawn, Sphere, TEXT("Offset")), Offset, Context);
+		if (Space)
+		{
+			SetEnum(ModuleInput(System, Emitter, ParticleSpawn, Sphere, TEXT("Coordinate Space")), Space, Context);
+		}
 	}
 
 	/**
@@ -285,6 +293,36 @@ namespace RTSMuzzleFlashBuilder
 		FNiagaraEdit::AddSetParametersModule(FNiagaraExt_StackItemReference(System, Emitter, ParticleUpdate,
 			Stack.Modules.IsEmpty() ? NAME_None : Stack.Modules.Last().ModuleName), { Entry }, Topology, Context);
 		SetExpression(ModuleInput(System, Emitter, ParticleUpdate, Topology.ModuleName, SpriteSize), Size, Context);
+	}
+
+	/** Sets the colour attribute Name of Emitter's particles to the HLSL expression Value, a float4, in Script after the module After. */
+	void SetColorAttribute(UNiagaraSystem* System, FName Emitter, FName Script, FName After, FName Name, const FString& Value,
+		FNiagaraExternalEditContext& Context)
+	{
+		FNiagaraExt_SetParameterEntry Entry;
+		Entry.Variable.Name = Name;
+		Entry.Variable.Type = FNiagaraTypeDefinition::GetColorDef();
+		const FLinearColor DefaultColor(FLinearColor::White);
+		Entry.DefaultValue.Set(Entry.Variable.Type, FNiagaraVariant(&DefaultColor, sizeof(DefaultColor)));
+		FNiagaraExt_ModuleTopology Topology;
+		FNiagaraEdit::AddSetParametersModule(FNiagaraExt_StackItemReference(System, Emitter, Script, After), { Entry }, Topology, Context);
+		SetExpression(ModuleInput(System, Emitter, Script, Topology.ModuleName, Name), Value, Context);
+	}
+
+	/**
+	 * Emitter's particles keep the colour of the HLSL expression BirthColor, a float3, from their birth (as Particles.BirthColor,
+	 * since a module setting Particles.Color reads none of its own), and are recoloured each update by the HLSL expression Color,
+	 * a float4, which may read it and Particles.NormalizedAge.
+	 */
+	void SetColorOverLife(UNiagaraSystem* System, FName Emitter, const FString& BirthColor, const FString& Color,
+		FNiagaraExternalEditContext& Context)
+	{
+		SetColorAttribute(System, Emitter, ParticleSpawn, TEXT("InitializeParticle"), TEXT("Particles.BirthColor"),
+			FString::Printf(TEXT("float4(%s, 1.0)"), *BirthColor), Context);
+		FNiagaraExt_ScriptStackTopology Stack;
+		FNiagaraEdit::GetScriptStackTopology(FNiagaraExt_StackItemReference(System, Emitter, ParticleUpdate), Stack, Context);
+		SetColorAttribute(System, Emitter, ParticleUpdate, Stack.Modules.IsEmpty() ? NAME_None : Stack.Modules.Last().ModuleName,
+			TEXT("Particles.Color"), Color, Context);
 	}
 
 	/** Compiles System and returns it, or logs each error and returns null. */
@@ -477,7 +515,8 @@ UNiagaraSystem* URTSEditorScripting::BuildExhaustSystem(const FString& AssetPath
 	return FinishSystem(System, AssetPath, TEXT("BuildExhaustSystem"), Context);
 }
 
-UNiagaraSystem* URTSEditorScripting::BuildDustSystem(const FString& AssetPath, UMaterialInterface* Material)
+UNiagaraSystem* URTSEditorScripting::BuildDustSystem(const FString& AssetPath, UMaterialInterface* HazeMaterial,
+	UMaterialInterface* ChunkMaterial)
 {
 	using namespace RTSMuzzleFlashBuilder;
 	TOptional<FNiagaraExternalEditContext> Edit;
@@ -485,33 +524,69 @@ UNiagaraSystem* URTSEditorScripting::BuildDustSystem(const FString& AssetPath, U
 	FNiagaraExternalEditContext& Context = *Edit;
 	if (System)
 	{
-		// Set by URTSDustSubsystem from the unit's FRTSVehicleDust: puffs a second for the speed, the turn, the ground, the
-		// quality and the distance, the ground's colour, how opaque and how wide in cm a puff is born, and which way the tracks
-		// or wheels throw it in world space.
+		// Set by URTSDustSubsystem from the unit's FRTSVehicleDust: puffs a second from each contact point for the speed, the
+		// turn, the ground, the quality and the distance, how opaque and how wide in cm a haze puff is born, and which way the
+		// tracks or wheels throw the dust in world space. One system serves User.Points contact points (#336): itself, or two
+		// at User.Side and its opposite from it in its own space, in cm, as the two tracks or the two rear wheels. Then the ground's look (FRTSDustSurface, #336), sent when the ground changes, by
+		// default as on dry dirt: the haze's colour, its share of the rate, life, spread, lift, sink and size, and the chunks'
+		// share of the rate, size and colour.
 		const float DefaultRate = 10.f;
-		const FLinearColor DefaultColor(0.33f, 0.27f, 0.2f);
 		const float DefaultOpacity = 0.6f;
 		const float DefaultSize = 140.f;
 		const FVector3f DefaultDirection(-1.f, 0.f, 0.f);
+		const float DefaultPoints = 2.f;
+		const FVector3f DefaultSide(0.f, 150.f, 0.f);
+		const FRTSDustSurface Ground;
 		AddUserParameter(System, TEXT("User.Rate"), FNiagaraTypeDefinition::GetFloatDef(), DefaultRate, Context);
 		AddUserParameter(System, TEXT("User.Direction"), FNiagaraTypeDefinition::GetVec3Def(), DefaultDirection, Context);
-		AddUserParameter(System, TEXT("User.Color"), FNiagaraTypeDefinition::GetColorDef(), DefaultColor, Context);
 		AddUserParameter(System, TEXT("User.Opacity"), FNiagaraTypeDefinition::GetFloatDef(), DefaultOpacity, Context);
 		AddUserParameter(System, TEXT("User.Size"), FNiagaraTypeDefinition::GetFloatDef(), DefaultSize, Context);
+		AddUserParameter(System, TEXT("User.Points"), FNiagaraTypeDefinition::GetFloatDef(), DefaultPoints, Context);
+		AddUserParameter(System, TEXT("User.Side"), FNiagaraTypeDefinition::GetVec3Def(), DefaultSide, Context);
+		AddUserParameter(System, TEXT("User.Color"), FNiagaraTypeDefinition::GetColorDef(), Ground.Color, Context);
+		AddUserParameter(System, TEXT("User.HazeScale"), FNiagaraTypeDefinition::GetFloatDef(), Ground.HazeScale, Context);
+		AddUserParameter(System, TEXT("User.Lifetime"), FNiagaraTypeDefinition::GetFloatDef(), Ground.Lifetime, Context);
+		AddUserParameter(System, TEXT("User.Spread"), FNiagaraTypeDefinition::GetFloatDef(), Ground.Spread, Context);
+		AddUserParameter(System, TEXT("User.Lift"), FNiagaraTypeDefinition::GetFloatDef(), Ground.Lift, Context);
+		AddUserParameter(System, TEXT("User.Sink"), FNiagaraTypeDefinition::GetFloatDef(), Ground.Sink, Context);
+		AddUserParameter(System, TEXT("User.SizeScale"), FNiagaraTypeDefinition::GetFloatDef(), Ground.SizeScale, Context);
+		AddUserParameter(System, TEXT("User.ChunkScale"), FNiagaraTypeDefinition::GetFloatDef(), Ground.ChunkScale, Context);
+		AddUserParameter(System, TEXT("User.ChunkSize"), FNiagaraTypeDefinition::GetFloatDef(), Ground.ChunkSize, Context);
+		AddUserParameter(System, TEXT("User.ChunkColor"), FNiagaraTypeDefinition::GetColorDef(), Ground.ChunkColor, Context);
 
-		// Low clouds in world space, born on the ground at the contact point, so a driving hull leaves a trail of them: thrown
-		// back off the tracks and out to the sides, braked by the air within a second, lifting slowly and spreading to three
-		// and a half times their size as they settle and thin out over 1.8 to 2.8 s. The bounds hold a trail left at full speed.
+		// All in world space, born on the ground at the contact point, so a driving hull leaves a trail. The bounds hold a
+		// trail left at full speed and the chunks' arcs.
 		const FBox Bounds(FVector(-1500.0, -1500.0, -300.0), FVector(1500.0, 1500.0, 900.0));
-		AddSpriteStream(System, TEXT("Dust"), TEXT("User.Rate"), TEXT("1.8 + rand(1.0)"), TEXT("User.Size"),
-			TEXT("float4(User.Color.r, User.Color.g, User.Color.b, User.Opacity)"), Material, Bounds, Context);
-		SetRandomRotation(System, TEXT("Dust"), Context);
-		SetSpawnSphere(System, TEXT("Dust"), TEXT("User.Size * 0.25"), TEXT("float3(0.0, 0.0, User.Size * 0.2)"), Context);
-		SetMotion(System, TEXT("Dust"),
-			TEXT("User.Direction * (60.0 + rand(100.0)) + float3(rand(80.0) - 40.0, rand(80.0) - 40.0, 20.0 + rand(40.0))"), 1.5f,
-			TEXT("float3(0.0, 0.0, 12.0)"), Context);
-		SetSpriteSizeOverLife(System, TEXT("Dust"), TEXT("float2(1.0, 1.0) * User.Size * (1.0 + 2.5 * Particles.NormalizedAge)"),
+
+		// The haze: low, heavy dust, not smoke. Each puff is born low and is thrown out flat along the ground, behind and to
+		// the sides at about User.Spread, with a short rise of User.Lift that the air brakes within half a second; then it
+		// sinks at User.Sink and spreads out wide rather than up, so its lower half stays in the ground and fades against it
+		// (the material's depth fade). No spin. It keeps the colour it was born with and thins out over about User.Lifetime.
+		AddSpriteStream(System, TEXT("Haze"), TEXT("User.Rate * User.Points * User.HazeScale"), TEXT("User.Lifetime * (0.7 + rand(0.6))"),
+			TEXT("User.Size * User.SizeScale"), TEXT("float4(User.Color.r, User.Color.g, User.Color.b, User.Opacity)"), HazeMaterial,
+			Bounds, Context);
+		SetSpawnSphere(System, TEXT("Haze"), TEXT("User.Size * User.SizeScale * 0.2"),
+			TEXT("User.Side * sign(rand(2.0) - 1.0) + float3(0.0, 0.0, User.Size * User.SizeScale * 0.12)"), Context, TEXT("Local"));
+		SetMotion(System, TEXT("Haze"),
+			TEXT("User.Direction * (User.Spread * (0.5 + rand(0.7))) + float3((rand(2.0) - 1.0) * User.Spread * 0.7, (rand(2.0) - 1.0) * User.Spread * 0.7, User.Lift * (0.5 + rand(1.0)))"),
+			2.f, TEXT("float3(0.0, 0.0, -User.Sink)"), Context);
+		SetSpriteSizeOverLife(System, TEXT("Haze"),
+			TEXT("float2(1.2 + 2.4 * Particles.NormalizedAge, 0.8 + 1.0 * Particles.NormalizedAge) * (User.Size * User.SizeScale)"), Context);
+		SetColorOverLife(System, TEXT("Haze"), TEXT("float3(User.Color.r, User.Color.g, User.Color.b)"),
+			TEXT("float4(Particles.BirthColor.r, Particles.BirthColor.g, Particles.BirthColor.b, User.Opacity * saturate(Particles.NormalizedAge * 10.0) * (1.0 - Particles.NormalizedAge * Particles.NormalizedAge))"),
 			Context);
+
+		// The chunks: clods, bits of torn grass and grit, User.ChunkSize across, thrown back off the tracks or wheels and out
+		// to the sides in short arcs, and falling back to the ground within a second. Turned at random, as clods lie.
+		AddSpriteStream(System, TEXT("Chunks"), TEXT("User.Rate * User.Points * User.ChunkScale"), TEXT("0.45 + rand(0.4)"),
+			TEXT("User.ChunkSize * (0.6 + rand(0.8))"), TEXT("float4(User.ChunkColor.r, User.ChunkColor.g, User.ChunkColor.b, 1.0)"),
+			ChunkMaterial, Bounds, Context);
+		SetRandomRotation(System, TEXT("Chunks"), Context);
+		SetSpawnSphere(System, TEXT("Chunks"), TEXT("20.0"), TEXT("User.Side * sign(rand(2.0) - 1.0) + float3(0.0, 0.0, 10.0)"), Context,
+			TEXT("Local"));
+		SetMotion(System, TEXT("Chunks"),
+			TEXT("User.Direction * (150.0 + rand(250.0)) + float3((rand(2.0) - 1.0) * 180.0, (rand(2.0) - 1.0) * 180.0, 120.0 + rand(260.0))"),
+			0.6f, TEXT("float3(0.0, 0.0, -980.0)"), Context);
 	}
 	return FinishSystem(System, AssetPath, TEXT("BuildDustSystem"), Context);
 }
@@ -533,7 +608,8 @@ UNiagaraSystem* URTSEditorScripting::BuildExhaustSystem(const FString& AssetPath
 	return nullptr;
 }
 
-UNiagaraSystem* URTSEditorScripting::BuildDustSystem(const FString& AssetPath, UMaterialInterface* Material)
+UNiagaraSystem* URTSEditorScripting::BuildDustSystem(const FString& AssetPath, UMaterialInterface* HazeMaterial,
+	UMaterialInterface* ChunkMaterial)
 {
 	return nullptr;
 }
