@@ -1,6 +1,7 @@
 #include "Units/RTSGround.h"
 
 #include "Engine/World.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 
 namespace RTSGround
 {
@@ -21,6 +22,22 @@ namespace RTSGround
 		{
 			*OutNormal = Hit.ImpactNormal;
 		}
+		return true;
+	}
+
+	bool TraceSurface(const UWorld& World, const FVector& Location, float Up, float Down, EPhysicalSurface& OutSurface)
+	{
+		static const FName TraceTag(TEXT("RTSGroundSurface"));
+		FCollisionQueryParams Params(TraceTag);
+		Params.bReturnPhysicalMaterial = true;
+		FHitResult Hit;
+		if (!World.LineTraceSingleByObjectType(Hit, Location + FVector(0.f, 0.f, Up), Location - FVector(0.f, 0.f, Down),
+			FCollisionObjectQueryParams(ECC_WorldStatic), Params))
+		{
+			return false;
+		}
+		const UPhysicalMaterial* Material = Hit.PhysMaterial.Get();
+		OutSurface = Material ? UPhysicalMaterial::DetermineSurfaceType(Material) : SurfaceType_Default;
 		return true;
 	}
 }

@@ -2149,6 +2149,63 @@ the subsystem's own pass and the emitters running at each sample's end.
 - More than 48 vehicles near the camera show exhaust only on the nearest. If that shows at the RTS zoom, the next step is
   one system for all vehicles fed through a Niagara data channel, rather than a system per outlet.
 
+## #224 (dust behind moving vehicles by speed and surface)
+
+### What changed
+
+Every tracked and wheeled ground vehicle raises dust from `NS_Dust` (`URTSUnitData::Dust`, `FRTSVehicleDust`): one
+continuous CPU sprite emitter per contact point, fixed bounds, world space, built by `setup_testmap.py` through
+`URTSEditorScripting::BuildDustSystem`. The contact points are the M20's track ends behind its sprockets, from
+`m20_guardian.json`, and for every other vehicle the rear of each track or the rear wheels, worked out from its locomotion
+and hull box. The rate comes from the hull's realized motion, the same on every machine, so nothing more replicates:
+`max(0, |speed| - 150) * 0.04 + |yaw rate| * 0.2` puffs a second, at most 50, so it is 0 at rest and a pivot raises dust
+too. That is multiplied by the ground's `RateScale` and coloured by it. The ground comes from one trace per vehicle every
+`rts.Fx.DustSurfaceInterval` (0.25 s), staggered across vehicles, that returns the physical material: `PM_Dirt`, `PM_Grass`,
+`PM_Road`, `PM_Sand`, `PM_Mud` and `PM_Water` (no dust), with their surface types in `DefaultEngine.ini`. `M_Ground` is dirt
+and `M_Water` water. `URTSDustSubsystem` runs once a frame in `TG_PostUpdateWork`, like the exhaust. It shares the
+exhaust's distance hysteresis, nearest-N budget, effects-quality table and resend-on-change (`RTSNearestToView.h`). Only
+moving vehicles take a place in the budget: `rts.Fx.DustMaxVehicles` (32) within `rts.Fx.DustDistance` (200 m). A
+dedicated server registers nothing, and `rts.Fx.Dust 0` stops every emitter.
+
+### Short method, 240 standing and moving M20s, dust on and off, interleaved runs
+
+`ue.ps1 -Task bench -Unit DA_TestM20Guardian@Battle,DA_TestM20Guardian@Battle@Far -Counts 240`, Ryzen 7 7800X3D,
+RTX 4090. Five runs each, "on" and "off" interleaved, every run valid. One "on" run crashed in the engine's HTTP thread
+at startup and was run again after the fifth "off". "Off" is `-Cvars rts.Fx.Dust=0`. The bench's new dust table gives
+the subsystem's own pass and the emitters running at each sample's end.
+
+| Set | Scenario | Dust | Frame ms (mean, range) | Game ms | Render ms | GPU ms | Dust pass ms (max) | Emitters |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| `@Battle` | idle | on | 5.74 (4.4–7.1) | 3.47 | 5.71 | 5.15 | 0.017 (0.091) | 0 |
+| `@Battle` | idle | off | 5.64 (5.2–6.1) | 3.48 | 5.60 | 5.04 | 0.018 (0.468) | 0 |
+| `@Battle` | move | on | 12.78 (12.2–13.6) | 12.77 | 7.51 | 5.96 | 0.074 (0.623) | 64 |
+| `@Battle` | move | off | 12.19 (11.6–12.8) | 12.18 | 6.96 | 5.51 | 0.024 (0.118) | 0 |
+| `@Battle@Far` | idle | on | 4.73 (4.2–5.1) | 3.04 | 4.65 | 3.93 | 0.017 (0.149) | 0 |
+| `@Battle@Far` | idle | off | 4.39 (3.8–4.8) | 2.85 | 4.37 | 3.78 | 0.016 (0.411) | 0 |
+| `@Battle@Far` | move | on | 11.80 (11.5–12.1) | 11.78 | 6.50 | 3.83 | 0.032 (0.265) | 0 |
+| `@Battle@Far` | move | off | 11.65 (10.8–12.5) | 11.63 | 6.43 | 3.75 | 0.023 (0.262) | 0 |
+
+- **Standing, the dust costs nothing:** no vehicle at rest raises any, so no emitter runs and the on and off rows agree.
+- **Driving at 170 m, about 0.6 ms of game thread for 32 vehicles showing dust (64 emitters)**, inside the on and off
+  ranges, which overlap. The subsystem's own pass is 0.07 ms. The rest is Niagara ticking the running systems, about
+  8 µs each, as #222 found for the exhaust. The render thread is 0.5 ms higher and the GPU 0.45 ms higher.
+- **Distant dust is culled:** at 450 m no emitter runs and the driving rows agree within 0.15 ms.
+- Other processes used about five cores during every run (the bench's environment check), so the driving game thread is
+  12 ms here against #222's 8 ms on the same machine. Compare the rows with each other, not with older sections.
+- **The gate (`ue.ps1 -Task gate`) was not run to completion for this issue.** Both screen passes were INCONCLUSIVE
+  because other processes used about five cores (at most 1 is allowed), and no baseline is stored for 31f32a4. The long
+  method was stopped before its verdict. Run it again on an idle machine.
+
+### Remaining limitations
+
+- Niagara does not run under `-nullrhi`, so `WorldDivide.Vehicle.Dust` checks the rate, the emitters' activity and
+  parameters, the surface found under the vehicle and how often it is traced, not pixels. The look is checked in
+  `ue.ps1 -Task trackshots` (`dust_idle`, `dust_slow`, `dust_fast`, `dust_pivot`).
+- Each vehicle runs two systems, one per contact point. If the cost shows, the next step is one system per vehicle with
+  two spawn locations, or one system for all vehicles fed through a Niagara data channel, as for the exhaust.
+- The ground of every map is dirt for now. Grass, road, sand and mud have physical materials but no map surface yet
+  (#156, #330), and bridges and fords need theirs once #155 builds them.
+
 ## #223 (vehicle head- and rear lights with a day/night policy)
 
 ### What changed

@@ -24,6 +24,7 @@
 #endif
 #include "UnrealClient.h"
 #include "Units/Debug/RTSShotNight.h"
+#include "Units/RTSDustSubsystem.h"
 #include "Units/RTSExhaustSubsystem.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitMovement.h"
@@ -37,7 +38,9 @@
  * frame's reprojection shown (motion_*, #243); and standing while its gun fires, the hull rocking on its suspension, seen from
  * beside the track the gun turns to and from the sprocket and idler the gun lifts (fire_*, #219); and its engine's exhaust
  * standing, setting off and driving, seen from behind, by day and by night (exhaust_*, #222, #325); and its body
- * squatting as it pulls away, diving as it brakes, leaning into a turn and its turret trailing a traverse (body_*, #297). Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
+ * squatting as it pulls away, diving as it brakes, leaning into a turn and its turret trailing a traverse (body_*, #297); and
+ * the dust behind its tracks standing, driving slowly and fast and pivoting, seen from behind and above with the ground it
+ * leaves (dust_*, #224). A wheeled unit takes the dust scenarios only. Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
  * Saved/TrackShots/<UnitData>/<scenario>_<n>.png, and logs with each the realized side travel, each track's phase and what
  * its material has. With -RTSTrackShotsQuit on the command line (ue.ps1 -Task trackshots) the game quits when done.
  */
@@ -75,6 +78,8 @@ namespace RTSTrackShots
 	/** Square behind the hull at its height, so its lean shows against the horizon, and high over the turret for its lag (#297). */
 	const FView RearView{ FVector(-1300.f, 0.f, 180.f), FVector(0.f, 0.f, 150.f), 40.f };
 	const FView TopView{ FVector(-200.f, -500.f, 1600.f), FVector(0.f, 0.f, 200.f), 45.f };
+	/** Behind the hull at three quarters and well above it, on the ground behind the tracks or wheels, where the dust rises (#224). */
+	const FView DustView{ FVector(-1800.f, -1100.f, 750.f), FVector(-700.f, 0.f, 0.f), 55.f };
 
 	/**
 	 * The body scenarios (#297): game seconds between pictures, through the hull's settle and the turret's traverse, at a
@@ -203,10 +208,11 @@ namespace RTSTrackShots
 				return true;
 			}
 #endif
-			if (!Unit->HasAuthority() || !Unit->GetUnitMovement()->GetLimits().IsTracked())
+			if (!Unit->HasAuthority() || !Unit->GetUnitData()->Locomotion.IsVehicle())
 			{
-				return Finish(TEXT("the unit must be tracked, on the server"));
+				return Finish(TEXT("the unit must be a vehicle, on the server"));
 			}
+			bTracked = Unit->GetUnitMovement()->GetLimits().IsTracked();
 			for (TActorIterator<AStaticMeshActor> It(World.Get()); It; ++It)
 			{
 				if (It->GetActorLabel() == BlockLabel)
@@ -259,6 +265,26 @@ namespace RTSTrackShots
 				return [Left, Right](const RTSLocomotion::FLimits& Limits) { return RTSLocomotion::FCommand::FromTracks(Limits, Left, Right); };
 			};
 			const RTSLocomotion::FLimits& Limits = Unit->GetUnitMovement()->GetLimits();
+			// The dust behind the tracks or wheels (#224) at the game's own speed, as it rises and settles: none standing, a
+			// little at a slow drive, a trail at full speed, and some from a pivot on the spot; stepped like the exhaust.
+			TArray<FScenario> Dusts = {
+				{ TEXT("dust_idle"), DustView, Drive(RTSLocomotion::FCommand()), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
+				{ TEXT("dust_slow"), DustView, Drive(Ahead(400.f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
+				{ TEXT("dust_fast"), DustView, Drive(Ahead(1.e5f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f },
+			};
+			if (bTracked)
+			{
+				Dusts.Add({ TEXT("dust_pivot"), DustView, Drive(Tracks(-250.f, 250.f)(Limits)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing, 1.f });
+			}
+			for (FScenario& Dust : Dusts)
+			{
+				Dust.FixedStep = ExhaustStep;
+				Scenarios.Add(MoveTemp(Dust));
+			}
+			if (!bTracked)
+			{
+				return;
+			}
 			Scenarios.Add({ TEXT("forward"), SideView, Drive(Ahead(300.f)) });
 			Scenarios.Add({ TEXT("reverse"), SideView, Drive(Ahead(-250.f)) });
 			Scenarios.Add({ TEXT("turn_left"), SideView, Drive(Tracks(150.f, 350.f)(Limits)) });
@@ -484,10 +510,14 @@ namespace RTSTrackShots
 			// The engine's exhaust state (#222).
 			const URTSExhaustSubsystem* Exhaust = World->GetSubsystem<URTSExhaustSubsystem>();
 			const ERTSExhaustState ExhaustState = Exhaust ? Exhaust->GetState(*Unit) : ERTSExhaustState::Idle;
+			// The dust's rate from the motion and the ground under it (#224).
+			const URTSDustSubsystem* Dust = World->GetSubsystem<URTSDustSubsystem>();
+			const float DustRate = URTSDustSubsystem::GetRate(Unit->GetUnitData()->Dust, Motion.ForwardSpeed, Motion.YawRate);
 			UE_LOG(LogWorldDivide, Display,
-				TEXT("rts.Debug.TrackShots: %s %02d: %s, %.0f cm/s, %.1f deg/s; travel L %.1f R %.1f cm; phase L %.4f (material %.4f) R %.4f (material %.4f); rock front %.3f right %.3f deg; sway front %.3f right %.3f deg; turret %.1f lag %.2f deg; exhaust %s"),
+				TEXT("rts.Debug.TrackShots: %s %02d: %s, %.0f cm/s, %.1f deg/s; travel L %.1f R %.1f cm; phase L %.4f (material %.4f) R %.4f (material %.4f); rock front %.3f right %.3f deg; sway front %.3f right %.3f deg; turret %.1f lag %.2f deg; exhaust %s; dust %.1f/s on surface %d, %d emitters"),
 				*Name, Shot, *UEnum::GetValueAsString(Motion.Status), Motion.ForwardSpeed, Motion.YawRate, Motion.LeftTravel, Motion.RightTravel,
-				Phase[0], Sent[0], Phase[1], Sent[1], Rock.X, Rock.Y, Sway.X, Sway.Y, Unit->GetTurretYaw(), Unit->GetTurretLag(), *UEnum::GetDisplayValueAsText(ExhaustState).ToString());
+				Phase[0], Sent[0], Phase[1], Sent[1], Rock.X, Rock.Y, Sway.X, Sway.Y, Unit->GetTurretYaw(), Unit->GetTurretLag(), *UEnum::GetDisplayValueAsText(ExhaustState).ToString(),
+				DustRate, Dust ? static_cast<int32>(Dust->GetSurface(*Unit)) : 0, Dust ? Dust->GetActiveEmitters() : 0);
 		}
 
 		bool Finish(const FString& Error)
@@ -536,6 +566,8 @@ namespace RTSTrackShots
 		/** The actor's height over the ground it stands on, which the views are given from. */
 		float GroundOffset = 0.f;
 		TArray<FScenario> Scenarios;
+		/** Whether the unit runs on tracks; a wheeled one takes the dust scenarios only. */
+		bool bTracked = false;
 		/** The night of the night scenarios. */
 		FRTSShotNight Night;
 		int32 Index = 0;

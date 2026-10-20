@@ -1,6 +1,6 @@
-// URTSEditorScripting::BuildMuzzleFlashSystem (#220, #294), BuildMuzzleSmokeSystem (#221, #303) and BuildExhaustSystem
-// (#222), on their own so that setup_testmap.py rebuilds NS_MuzzleFlash, NS_MuzzleSmoke and NS_Exhaust only when this file
-// changes.
+// URTSEditorScripting::BuildMuzzleFlashSystem (#220, #294), BuildMuzzleSmokeSystem (#221, #303), BuildExhaustSystem (#222)
+// and BuildDustSystem (#224), on their own so that setup_testmap.py rebuilds NS_MuzzleFlash, NS_MuzzleSmoke, NS_Exhaust and
+// NS_Dust only when this file changes.
 #include "Core/RTSEditorScripting.h"
 
 #if WITH_EDITOR
@@ -476,6 +476,45 @@ UNiagaraSystem* URTSEditorScripting::BuildExhaustSystem(const FString& AssetPath
 	}
 	return FinishSystem(System, AssetPath, TEXT("BuildExhaustSystem"), Context);
 }
+
+UNiagaraSystem* URTSEditorScripting::BuildDustSystem(const FString& AssetPath, UMaterialInterface* Material)
+{
+	using namespace RTSMuzzleFlashBuilder;
+	TOptional<FNiagaraExternalEditContext> Edit;
+	UNiagaraSystem* System = CreateSystem(AssetPath, Edit);
+	FNiagaraExternalEditContext& Context = *Edit;
+	if (System)
+	{
+		// Set by URTSDustSubsystem from the unit's FRTSVehicleDust: puffs a second for the speed, the turn, the ground, the
+		// quality and the distance, the ground's colour, how opaque and how wide in cm a puff is born, and which way the tracks
+		// or wheels throw it in world space.
+		const float DefaultRate = 10.f;
+		const FLinearColor DefaultColor(0.33f, 0.27f, 0.2f);
+		const float DefaultOpacity = 0.6f;
+		const float DefaultSize = 140.f;
+		const FVector3f DefaultDirection(-1.f, 0.f, 0.f);
+		AddUserParameter(System, TEXT("User.Rate"), FNiagaraTypeDefinition::GetFloatDef(), DefaultRate, Context);
+		AddUserParameter(System, TEXT("User.Direction"), FNiagaraTypeDefinition::GetVec3Def(), DefaultDirection, Context);
+		AddUserParameter(System, TEXT("User.Color"), FNiagaraTypeDefinition::GetColorDef(), DefaultColor, Context);
+		AddUserParameter(System, TEXT("User.Opacity"), FNiagaraTypeDefinition::GetFloatDef(), DefaultOpacity, Context);
+		AddUserParameter(System, TEXT("User.Size"), FNiagaraTypeDefinition::GetFloatDef(), DefaultSize, Context);
+
+		// Low clouds in world space, born on the ground at the contact point, so a driving hull leaves a trail of them: thrown
+		// back off the tracks and out to the sides, braked by the air within a second, lifting slowly and spreading to three
+		// and a half times their size as they settle and thin out over 1.8 to 2.8 s. The bounds hold a trail left at full speed.
+		const FBox Bounds(FVector(-1500.0, -1500.0, -300.0), FVector(1500.0, 1500.0, 900.0));
+		AddSpriteStream(System, TEXT("Dust"), TEXT("User.Rate"), TEXT("1.8 + rand(1.0)"), TEXT("User.Size"),
+			TEXT("float4(User.Color.r, User.Color.g, User.Color.b, User.Opacity)"), Material, Bounds, Context);
+		SetRandomRotation(System, TEXT("Dust"), Context);
+		SetSpawnSphere(System, TEXT("Dust"), TEXT("User.Size * 0.25"), TEXT("float3(0.0, 0.0, User.Size * 0.2)"), Context);
+		SetMotion(System, TEXT("Dust"),
+			TEXT("User.Direction * (60.0 + rand(100.0)) + float3(rand(80.0) - 40.0, rand(80.0) - 40.0, 20.0 + rand(40.0))"), 1.5f,
+			TEXT("float3(0.0, 0.0, 12.0)"), Context);
+		SetSpriteSizeOverLife(System, TEXT("Dust"), TEXT("float2(1.0, 1.0) * User.Size * (1.0 + 2.5 * Particles.NormalizedAge)"),
+			Context);
+	}
+	return FinishSystem(System, AssetPath, TEXT("BuildDustSystem"), Context);
+}
 #else
 UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* GlowMaterial,
 	UMaterialInterface* FireMaterial)
@@ -490,6 +529,11 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& Asset
 }
 
 UNiagaraSystem* URTSEditorScripting::BuildExhaustSystem(const FString& AssetPath, UMaterialInterface* Material)
+{
+	return nullptr;
+}
+
+UNiagaraSystem* URTSEditorScripting::BuildDustSystem(const FString& AssetPath, UMaterialInterface* Material)
 {
 	return nullptr;
 }

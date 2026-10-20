@@ -119,4 +119,12 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
 	static UNiagaraSystem* BuildExhaustSystem(const FString& AssetPath, UMaterialInterface* Material);
+
+	/**
+	 * Builds the dust ground vehicles raise behind their tracks or wheels (#224) as the Niagara system AssetPath (such as
+	 * /Game/Effects/NS_Dust), new, in place of the one there, as BuildMuzzleFlashSystem: a continuous stream of low clouds in
+	 * Material, at User.Rate a second. Returns null and logs why when it fails.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
+	static UNiagaraSystem* BuildDustSystem(const FString& AssetPath, UMaterialInterface* Material);
 };

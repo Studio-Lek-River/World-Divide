@@ -48,6 +48,7 @@
 #include "Units/Debug/RTSUnitLOD.h"
 #include "Units/RTSAvoidanceSubsystem.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSDustSubsystem.h"
 #include "Units/RTSExhaustSubsystem.h"
 #include "Units/RTSRunningGearSubsystem.h"
 #include "Units/RTSUnitMovement.h"
@@ -208,6 +209,10 @@ namespace RTSBenchCommand
 		double ExhaustMs = 0.0;
 		double MaxExhaustMs = 0.0;
 		int32 ExhaustEmitters = 0;
+		/** The dust pass (URTSDustSubsystem, #224), its slowest frame, and its emitters running at the sample's end. */
+		double DustMs = 0.0;
+		double MaxDustMs = 0.0;
+		int32 DustEmitters = 0;
 		/** The vehicle lights' pass (URTSVehicleLightSubsystem, #223), its slowest frame, and the real lights on at the sample's end. */
 		double LightsMs = 0.0;
 		double MaxLightsMs = 0.0;
@@ -355,12 +360,12 @@ namespace RTSBenchCommand
 				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms,")
 				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames,p95_render_ms,p95_gpu_ms,running_gear_ms,p95_running_gear_ms,")
 				TEXT("primitives,dynamic_materials,distinct_materials,lod0_units,lod1_units,lod2_units,lod3_units,mixed_lod_units,p95_rhi_ms,drawn_primitives,")
-				TEXT("track_updates,tracks,drawn_tracks,animated_tracks,exhaust_ms,max_exhaust_ms,exhaust_emitters,lights_ms,max_lights_ms,vehicle_lights");
+				TEXT("track_updates,tracks,drawn_tracks,animated_tracks,exhaust_ms,max_exhaust_ms,exhaust_emitters,lights_ms,max_lights_ms,vehicle_lights,dust_ms,max_dust_ms,dust_emitters");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d,%.1f,%d,%d,%d,%.3f,%.3f,%d,%.3f,%.3f,%d"),
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d,%.1f,%d,%d,%d,%.3f,%.3f,%d,%.3f,%.3f,%d,%.3f,%.3f,%d"),
 				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
 				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
 				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y, Mean(Solids.Updates), SolidReuseShare(),
@@ -368,7 +373,7 @@ namespace RTSBenchCommand
 				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames, P95RenderMs, P95GPUMs, Mean(RunningGearMs), P95RunningGearMs,
 				Primitives, DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits, P95RHIMs, DrawnPrimitives,
 				Mean(TrackUpdates), Tracks, DrawnTracks, AnimatedTracks, Mean(ExhaustMs), MaxExhaustMs, ExhaustEmitters,
-				Mean(LightsMs), MaxLightsMs, VehicleLights);
+				Mean(LightsMs), MaxLightsMs, VehicleLights, Mean(DustMs), MaxDustMs, DustEmitters);
 		}
 
 		int32 HullLOD(int32 LOD) const { return HullLODs.IsValidIndex(LOD) ? HullLODs[LOD] : 0; }
@@ -432,6 +437,11 @@ namespace RTSBenchCommand
 		{
 			return FString::Printf(TEXT("| %d | %s | %d | %.3f (%.3f) | %d | %.3f (%.3f) | %d |\n"), Count, *Scenario, Sample, Mean(ExhaustMs),
 				MaxExhaustMs, ExhaustEmitters, Mean(LightsMs), MaxLightsMs, VehicleLights);
+		}
+
+		FString ToDustMarkdown() const
+		{
+			return FString::Printf(TEXT("| %d | %s | %d | %.3f (%.3f) | %d |\n"), Count, *Scenario, Sample, Mean(DustMs), MaxDustMs, DustEmitters);
 		}
 
 		FString ToMaterialsMarkdown() const
@@ -990,6 +1000,7 @@ namespace RTSBenchCommand
 			URTSRunningGearSubsystem::TakeSeconds();
 			URTSRunningGearSubsystem::TakeTrackUpdates();
 			URTSExhaustSubsystem::TakeSeconds();
+			URTSDustSubsystem::TakeSeconds();
 			URTSVehicleLightSubsystem::TakeSeconds();
 			FRTSSolidStats::Take();
 			TRACE_BEGIN_REGION(*RegionName());
@@ -1039,6 +1050,9 @@ namespace RTSBenchCommand
 			const double ExhaustMs = URTSExhaustSubsystem::TakeSeconds() * 1000.0;
 			Stats.ExhaustMs += ExhaustMs;
 			Stats.MaxExhaustMs = FMath::Max(Stats.MaxExhaustMs, ExhaustMs);
+			const double DustMs = URTSDustSubsystem::TakeSeconds() * 1000.0;
+			Stats.DustMs += DustMs;
+			Stats.MaxDustMs = FMath::Max(Stats.MaxDustMs, DustMs);
 			const double LightsMs = URTSVehicleLightSubsystem::TakeSeconds() * 1000.0;
 			Stats.LightsMs += LightsMs;
 			Stats.MaxLightsMs = FMath::Max(Stats.MaxLightsMs, LightsMs);
@@ -1070,6 +1084,8 @@ namespace RTSBenchCommand
 			CountTracks(Current);
 			const URTSExhaustSubsystem* Exhaust = World->GetSubsystem<URTSExhaustSubsystem>();
 			Current.ExhaustEmitters = Exhaust ? Exhaust->GetActiveEmitters() : 0;
+			const URTSDustSubsystem* Dust = World->GetSubsystem<URTSDustSubsystem>();
+			Current.DustEmitters = Dust ? Dust->GetActiveEmitters() : 0;
 			const URTSVehicleLightSubsystem* Lights = World->GetSubsystem<URTSVehicleLightSubsystem>();
 			Current.VehicleLights = Lights ? Lights->GetActiveLightCount() : 0;
 			Results.Add(Current);
@@ -1259,6 +1275,13 @@ namespace RTSBenchCommand
 			for (const FScenarioStats& Result : Results)
 			{
 				Markdown += Result.ToExhaustMarkdown();
+			}
+			Markdown += TEXT("\nThe dust behind the vehicles (#224): its pass per frame, and the emitters running at each sample's end:\n\n")
+				TEXT("| Units | Scenario | Sample | Dust ms (max) | Emitters |\n")
+				TEXT("|---:|---|---:|---:|---:|\n");
+			for (const FScenarioStats& Result : Results)
+			{
+				Markdown += Result.ToDustMarkdown();
 			}
 			return FFileHelper::SaveStringToFile(Csv, *FPaths::Combine(Dir, TEXT("bench.csv")))
 				&& FFileHelper::SaveStringToFile(Markdown, *FPaths::Combine(Dir, TEXT("bench.md")))

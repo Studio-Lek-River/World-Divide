@@ -33,6 +33,7 @@
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSApproach.h"
 #include "Units/RTSBarrelClearance.h"
+#include "Units/RTSDustSubsystem.h"
 #include "Units/RTSExhaustSubsystem.h"
 #include "Units/RTSGround.h"
 #include "Units/RTSPrimitiveData.h"
@@ -475,6 +476,18 @@ void ARTSUnit::CreateParts()
 		else
 		{
 			Exhaust->Unregister(*this);
+		}
+	}
+	// The dust behind the tracks or wheels (#224), on every machine that draws.
+	if (URTSDustSubsystem* Dust = GetWorld() ? GetWorld()->GetSubsystem<URTSDustSubsystem>() : nullptr)
+	{
+		if (UnitData->Dust.HasDust())
+		{
+			Dust->Register(*this);
+		}
+		else
+		{
+			Dust->Unregister(*this);
 		}
 	}
 }
@@ -1526,6 +1539,10 @@ void ARTSUnit::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (URTSExhaustSubsystem* Exhaust = GetWorld()->GetSubsystem<URTSExhaustSubsystem>())
 	{
 		Exhaust->Unregister(*this);
+	}
+	if (URTSDustSubsystem* Dust = GetWorld()->GetSubsystem<URTSDustSubsystem>())
+	{
+		Dust->Unregister(*this);
 	}
 	if (URTSVehicleLightSubsystem* Lights = GetWorld()->GetSubsystem<URTSVehicleLightSubsystem>())
 	{

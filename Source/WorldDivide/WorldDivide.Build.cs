@@ -26,6 +26,8 @@ public class WorldDivide : ModuleRules
 			"CommonInput",
 			"Projects",
 			"Json",
+			// The ground's physical materials and their surface types, for the dust behind vehicles (#224).
+			"PhysicsCore",
 		});
 
 		// The HUD screenshots of rts.UI.Screenshot write their PNGs from an image view.

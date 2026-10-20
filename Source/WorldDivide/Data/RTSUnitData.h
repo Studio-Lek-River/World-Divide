@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Chaos/ChaosEngineInterface.h"
 #include "Data/RTSEntityData.h"
 #include "RTSUnitData.generated.h"
 
@@ -277,6 +278,87 @@ struct WORLDDIVIDE_API FRTSVehicleExhaust
 	float AccelerationHold = 0.4f;
 
 	bool HasExhaust() const { return System != nullptr && !Outlets.IsEmpty(); }
+};
+
+/** How much dust one kind of ground gives under a vehicle and its colour (#224), by the surface type of its physical material. */
+USTRUCT(BlueprintType)
+struct WORLDDIVIDE_API FRTSDustSurface
+{
+	GENERATED_BODY()
+
+	/** The surface type, named in the project's physics settings (Config/DefaultEngine.ini). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
+	TEnumAsByte<EPhysicalSurface> Surface = SurfaceType_Default;
+
+	/** Times FRTSVehicleDust's rate on this ground: 0 raises none, as on water. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0"))
+	float RateScale = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
+	FLinearColor Color = FLinearColor(0.33f, 0.27f, 0.2f);
+};
+
+/**
+ * The dust a ground vehicle raises behind its tracks or wheels (#224), drawn on each machine that shows it, from how the
+ * hull actually moves (FRTSRealizedMotion), never from its orders: none at rest, more with speed and with turning, pivoting
+ * included. Each contact point emits Rate = (max(0, |speed| - MinSpeed) * SpeedScale + |yaw rate| * TurnScale), at most
+ * MaxRate, times the RateScale of the ground under the vehicle (URTSDustSubsystem). No system, no dust.
+ */
+USTRUCT(BlueprintType)
+struct WORLDDIVIDE_API FRTSVehicleDust
+{
+	GENERATED_BODY()
+
+	/** The continuous emitter at each contact point, driven by its User.Rate, User.Color, User.Opacity, User.Size and User.Direction. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
+	TObjectPtr<UNiagaraSystem> System;
+
+	/**
+	 * Where the tracks or wheels raise dust, on the ground, in Mesh's own space as the parts' offsets (MeshScale applies).
+	 * Empty takes them from the locomotion and the hull: the rear of each track, or the rear wheels (URTSDustSubsystem::GetContactPoints).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
+	TArray<FVector> ContactPoints;
+
+	/** cm/s of driving under which the tracks or wheels raise no dust. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0"))
+	float MinSpeed = 150.f;
+
+	/** Puffs a second from each contact point for each cm/s driven past MinSpeed: 44 at 12.5 m/s. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0"))
+	float SpeedScale = 0.04f;
+
+	/** Puffs a second from each contact point for each degree a second the hull turns, so a pivot on the spot raises dust too. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0"))
+	float TurnScale = 0.2f;
+
+	/** The most puffs a second from a contact point, before the ground and the effects quality scale them. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0"))
+	float MaxRate = 50.f;
+
+	/** How wide a puff is born in cm; it grows as it drifts. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "1"))
+	float Size = 140.f;
+
+	/** How opaque a puff is born. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust", meta = (ClampMin = "0", ClampMax = "1"))
+	float Opacity = 0.6f;
+
+	/** The colour and the rate on ground whose surface type Surfaces does not list, or without a physical material. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
+	FLinearColor Color = FLinearColor(0.33f, 0.27f, 0.2f);
+
+	/** Each kind of ground's rate and colour. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dust")
+	TArray<FRTSDustSurface> Surfaces;
+
+	bool HasDust() const { return System != nullptr; }
+
+	/** Surfaces' entry for Surface; null for one it does not list. */
+	const FRTSDustSurface* FindSurface(EPhysicalSurface Surface) const
+	{
+		return Surfaces.FindByPredicate([Surface](const FRTSDustSurface& Entry) { return Entry.Surface == Surface; });
+	}
 };
 
 /**
@@ -570,6 +652,10 @@ public:
 	/** The engine's exhaust; none without outlets. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FRTSVehicleExhaust Exhaust;
+
+	/** The dust behind the tracks or wheels (#224); none without a system. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
+	FRTSVehicleDust Dust;
 
 	/** The head- and rear lights (#223); none without lamps. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")

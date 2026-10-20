@@ -27,24 +27,6 @@ namespace
 		TEXT("rts.Fx.ExhaustMaxVehicles"), 48,
 		TEXT("Most vehicles showing exhaust at once (#222), those nearest a camera; each running system costs the game thread several microseconds."));
 
-	/** A vehicle showing exhaust stops only this much past the distance, so one at the edge does not start and stop. */
-	constexpr float ExhaustStopScale = 1.1f;
-
-	/**
-	 * A vehicle showing exhaust counts as this much nearer when the nearest take the rts.Fx.ExhaustMaxVehicles places, so two
-	 * at about the same distance do not swap them every frame.
-	 */
-	constexpr float ExhaustKeepScale = 0.9f;
-
-	/** The share of an outlet's rate at each effects quality, low to epic; cinematic is epic. As the muzzle smoke's (#221). */
-	constexpr float ExhaustQualityScale[] = { 0.3f, 0.5f, 0.75f, 1.f };
-
-	/** The share of the rate left at rts.Fx.ExhaustDistance, falling off from 1 at the camera. */
-	constexpr float ExhaustFarScale = 0.5f;
-
-	/** A rate or an opacity is sent to the emitters again once it differs by this share from what they have. */
-	constexpr float ResendShare = 0.05f;
-
 	/** The outlet's direction is sent again once it has turned by more than about 2.5 degrees: the cosine of that. */
 	constexpr float ResendDirectionDot = 0.999f;
 
@@ -55,11 +37,6 @@ namespace
 	const FName DirectionParameter(TEXT("User.Direction"));
 
 	uint64 ExhaustCycles = 0;
-
-	bool Differs(float Sent, float Value)
-	{
-		return FMath::Abs(Value - Sent) > ResendShare * FMath::Max(FMath::Abs(Sent), KINDA_SMALL_NUMBER);
-	}
 }
 
 void FRTSExhaustTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
@@ -92,10 +69,7 @@ int32 URTSExhaustSubsystem::GetMaxVehicles()
 
 float URTSExhaustSubsystem::GetRate(float BaseRate, float ViewDistance, int32 EffectsQuality)
 {
-	const float Quality = ExhaustQualityScale[FMath::Clamp(EffectsQuality, 0, static_cast<int32>(UE_ARRAY_COUNT(ExhaustQualityScale)) - 1)];
-	const float Distance = GetDistance();
-	const float Far = Distance > 0.f ? FMath::Lerp(1.f, ExhaustFarScale, FMath::Clamp(ViewDistance / Distance, 0.f, 1.f)) : 1.f;
-	return FMath::Max(BaseRate, 0.f) * Quality * Far;
+	return FMath::Max(BaseRate, 0.f) * RTSNearestToView::GetRateScale(ViewDistance, GetDistance(), EffectsQuality);
 }
 
 double URTSExhaustSubsystem::TakeSeconds()
@@ -240,7 +214,7 @@ bool URTSExhaustSubsystem::IsNear(FRTSExhaustEntry& Entry, const ARTSUnit& Unit)
 	}
 	const float Distance = GetDistance();
 	Entry.ViewDistance = GetViewDistance(Hull->GetComponentLocation());
-	return Distance <= 0.f || Entry.ViewDistance <= Distance * (Entry.bActive ? ExhaustStopScale : 1.f);
+	return Distance <= 0.f || Entry.ViewDistance <= Distance * (Entry.bActive ? RTSNearestToView::StopScale : 1.f);
 }
 
 void URTSExhaustSubsystem::UpdateEmitters(FRTSExhaustEntry& Entry, ARTSUnit& Unit, int32 EffectsQuality)
@@ -282,8 +256,8 @@ void URTSExhaustSubsystem::UpdateEmitters(FRTSExhaustEntry& Entry, ARTSUnit& Uni
 		: Entry.State == ERTSExhaustState::Moving ? Exhaust.MovingColor : Exhaust.IdleColor;
 	// Plus the puffs that keep the trail closed as the hull drives off and leaves them behind.
 	const float Rate = GetRate(BaseRate + Entry.LastSpeed / 100.f * Exhaust.PuffsPerMetre, Entry.ViewDistance, EffectsQuality);
-	const bool bSendRate = Entry.SentRate < 0.f || Differs(Entry.SentRate, Rate);
-	const bool bSendOpacity = Entry.SentOpacity < 0.f || Differs(Entry.SentOpacity, Opacity);
+	const bool bSendRate = Entry.SentRate < 0.f || RTSNearestToView::Differs(Entry.SentRate, Rate);
+	const bool bSendOpacity = Entry.SentOpacity < 0.f || RTSNearestToView::Differs(Entry.SentOpacity, Opacity);
 	// The colour only changes with the state, so it is sent as it is.
 	const bool bSendColor = !Entry.SentColor.IsSet() || !Entry.SentColor->Equals(Color);
 	if (bSendRate || bSendOpacity || bSendColor)
@@ -347,7 +321,7 @@ void URTSExhaustSubsystem::UpdateAll(float DeltaSeconds)
 		Entry.bShows = false;
 		if (bEnabled && IsNear(Entry, Unit))
 		{
-			Nearest.Emplace(Entry.ViewDistance * (Entry.bActive ? ExhaustKeepScale : 1.f), Index);
+			Nearest.Emplace(Entry.ViewDistance * (Entry.bActive ? RTSNearestToView::KeepScale : 1.f), Index);
 		}
 	}
 	RTSNearestToView::KeepNearest(Nearest, GetMaxVehicles());

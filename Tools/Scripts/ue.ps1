@@ -581,7 +581,9 @@ function Invoke-UnitShots {
 # Close-up frame sequences of a tracked unit's running gear (#151; rts.Debug.TrackShots) to Saved\TrackShots\<Unit>, with
 # the gear's travel and each track's phase logged per frame. The motion_* sequences drive past a still camera at full speed,
 # motion_*_reprojection with the previous frame's reprojection shown, for smearing under the temporal upscaler (#243). The
-# fire_* sequences stand and fire, through the whole of the hull's rock, with the hull's rock logged per frame (#219).
+# fire_* sequences stand and fire, through the whole of the hull's rock, with the hull's rock logged per frame (#219). The
+# dust_* sequences stand, drive slowly and fast and pivot, from behind and above, with the dust's rate, the ground's surface
+# type and the emitters logged per frame (#224); a wheeled unit (DA_TestBuilder) takes those only.
 function Invoke-TrackShots {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$ShotDir = Join-Path $RepoRoot "Saved\TrackShots\$Unit"

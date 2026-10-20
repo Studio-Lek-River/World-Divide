@@ -276,11 +276,11 @@ def make_art(name, source, yaw=0.0, tint=TEAM_TINT):
                               sorted((slot, object_path(instance)) for slot, instance in slot_materials.items())))
 
 
-def make_m20_guardian(exhaust_system):
+def make_m20_guardian(exhaust_system, dust_system):
     """Imports the M20 Guardian's parts, textures and material instances (see vehicle_art.py) and returns its unit data
     properties: the hull as Mesh at real size, the turret, the gun and every other part where m20_guardian.json puts it,
-    the exhaust (exhaust_system) at its grille and the lights at its lamps. The wheels of the right side are the exported
-    left wheel turned round."""
+    the exhaust (exhaust_system) at its grille, the dust (dust_system) behind its tracks and the lights at its lamps. The
+    wheels of the right side are the exported left wheel turned round."""
     with open(os.path.join(M20_SOURCE_DIR, "m20_guardian.json")) as file:
         layout = json.load(file)
     texture_dir, material_dir, mesh_dir = (f"{M20_DIR}/{folder}" for folder in ("Textures", "Materials", "Meshes"))
@@ -400,6 +400,11 @@ def make_m20_guardian(exhaust_system):
         "exhaust": vehicle_exhaust(exhaust_system, layout["exhaust_offsets"], layout["exhaust_direction"], DIESEL_EXHAUST),
         # Its four headlights in the nose clusters and its two red tail lamps on the rear sponsons (#223).
         "lights": vehicle_lights(layout["headlight_offsets"], layout["taillight_offsets"]),
+        # Where each track leaves the ground behind the sprocket (#224): the sprocket's middle less its radius, on the ground
+        # (z 0 is the ground under the hull's middle in the layout), in the line of the track.
+        "dust": vehicle_dust(dust_system, [
+            (layout["wheels"][f"M20_Sprocket_{side}"][0] - layout["roll_radii"]["Sprocket"],
+             layout["track_offsets"][f"M20_Track_{side}"][1], 0.0) for side in ("L", "R")]),
     }
 
 
@@ -1090,8 +1095,83 @@ def vehicle_lights(headlights, taillights, **settings):
     return value
 
 
-def build_surface_material(name, color, roughness, digest):
-    """Opaque lit material of one colour, for the ground and the water of the maps."""
+# The dust's look (#224): the muzzle smoke's flipbook from its early billows on, eroded less than the exhaust so a cloud
+# reads as dust rather than haze; it fades over half a metre where it meets the ground it is born on. Brightness, as the
+# exhaust's (#325), brings the lit smoke down until FRTSDustSurface's colours read as the ground's.
+DUST_LOOK = {"FrameFirst": 10.0, "FrameLast": 56.0, "Erosion": 0.45, "FadeDistance": 50.0, "Brightness": 0.35}
+
+
+def make_dust():
+    """The Niagara dust ground vehicles raise behind their tracks or wheels (#224) and its material, an instance of the
+    muzzle smoke's (make_muzzle_smoke builds the parent first). Built in C++ like the muzzle flash
+    (URTSEditorScripting::BuildDustSystem, RTSMuzzleFlashBuilder.cpp)."""
+    parent = assets.load_asset(f"{MATERIAL_DIR}/M_MuzzleSmoke")
+    look = plan_now(f"{MATERIAL_DIR}/MI_Dust", lambda: build_material_instance("MI_Dust", parent, DUST_LOOK),
+                    spec_hash([build_material_instance], "MI_Dust", parent, sorted(DUST_LOOK.items())))
+    path = f"{EFFECT_DIR}/NS_Dust"
+
+    def build():
+        if not unreal.RTSEditorScripting.load_editor_module("NiagaraEditor"):
+            raise RuntimeError("Could not load the NiagaraEditor module")
+        system = unreal.RTSEditorScripting.build_dust_system(path, look)
+        if not system:
+            raise RuntimeError(f"Could not build {path}; the log says why")
+        return system
+    builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSMuzzleFlashBuilder.cpp"))
+    return plan_now(path, build, spec_hash([make_dust], path, look, builder_source))
+
+
+# The kinds of ground (#224): the surface type of each one's physical material, as Config/DefaultEngine.ini names it, and
+# the dust a vehicle raises on it: times FRTSVehicleDust's rate, in its colour (r, g, b) in linear space. Water raises
+# none. Dirt has the struct's own colour; it is the ground of every map for now.
+PHYSICAL_DIR = f"{MATERIAL_DIR}/Physical"
+GROUND_KINDS = {
+    "Dirt": (unreal.PhysicalSurface.SURFACE_TYPE1, 1.0, (0.33, 0.27, 0.2)),
+    "Grass": (unreal.PhysicalSurface.SURFACE_TYPE2, 0.35, (0.27, 0.26, 0.18)),
+    "Road": (unreal.PhysicalSurface.SURFACE_TYPE3, 0.25, (0.34, 0.33, 0.31)),
+    "Sand": (unreal.PhysicalSurface.SURFACE_TYPE4, 1.3, (0.55, 0.47, 0.34)),
+    "Mud": (unreal.PhysicalSurface.SURFACE_TYPE5, 0.3, (0.19, 0.15, 0.11)),
+    "Water": (unreal.PhysicalSurface.SURFACE_TYPE6, 0.0, (0.3, 0.3, 0.3)),
+}
+
+
+def build_physical_material(name, surface):
+    path = f"{PHYSICAL_DIR}/{name}"
+    if assets.does_asset_exist(path):
+        material = assets.load_asset(path)
+    else:
+        material = asset_tools.create_asset(name, PHYSICAL_DIR, unreal.PhysicalMaterial, unreal.PhysicalMaterialFactoryNew())
+    material.set_editor_property("surface_type", surface)
+    return material
+
+
+def make_physical_materials():
+    """PM_<kind> for every kind of ground, built now so the surface materials can point at theirs; by kind."""
+    return {kind: plan_now(f"{PHYSICAL_DIR}/PM_{kind}", lambda n=f"PM_{kind}", t=surface: build_physical_material(n, t),
+                           spec_hash([build_physical_material], f"PM_{kind}", str(surface)))
+            for kind, (surface, _, _) in GROUND_KINDS.items()}
+
+
+def vehicle_dust(system, contact_points=None):
+    """A ground vehicle's dust (FRTSVehicleDust, #224): the system, every kind of ground's rate and colour from GROUND_KINDS,
+    and the contact points in the mesh's own space in cm, on the ground; none leaves them to the locomotion and the hull
+    (URTSDustSubsystem::GetContactPoints). The rate's curve keeps the struct's defaults."""
+    value = unreal.RTSVehicleDust()
+    value.set_editor_property("system", system)
+    value.set_editor_property("contact_points", [unreal.Vector(*point) for point in contact_points or []])
+    surfaces = []
+    for surface, rate_scale, color in GROUND_KINDS.values():
+        entry = unreal.RTSDustSurface()
+        entry.set_editor_property("surface", surface)
+        entry.set_editor_property("rate_scale", rate_scale)
+        entry.set_editor_property("color", unreal.LinearColor(*color, 1.0))
+        surfaces.append(entry)
+    value.set_editor_property("surfaces", surfaces)
+    return value
+
+
+def build_surface_material(name, color, roughness, physical, digest):
+    """Opaque lit material of one colour, for the ground and the water of the maps, on the physical material physical."""
     path = f"{MATERIAL_DIR}/{name}"
     if assets.does_asset_exist(path):
         material = assets.load_asset(path)
@@ -1106,6 +1186,7 @@ def build_surface_material(name, color, roughness, digest):
     rough = editing.create_material_expression(material, unreal.MaterialExpressionConstant, -400, 200)
     rough.set_editor_property("r", roughness)
     editing.connect_material_property(rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
+    material.set_editor_property("phys_material", physical)
 
     editing.recompile_material(material)
     assets.set_metadata_tag(material, HASH_TAG, digest)
@@ -1113,12 +1194,12 @@ def build_surface_material(name, color, roughness, digest):
         raise RuntimeError(f"Could not save {path}")
 
 
-def make_surface_material(name, color, roughness):
+def make_surface_material(name, color, roughness, physical):
     """Queued before the maps, which load it by path when they are built. Returns its path; its hash goes in
     material_hashes, so the maps and their previews are rebuilt when it changes."""
     path = f"{MATERIAL_DIR}/{name}"
-    digest = spec_hash([build_surface_material], name, color, roughness)
-    plan_rebuild(path, ".uasset", lambda digest: build_surface_material(name, color, roughness, digest), digest)
+    digest = spec_hash([build_surface_material], name, color, roughness, physical)
+    plan_rebuild(path, ".uasset", lambda digest: build_surface_material(name, color, roughness, physical, digest), digest)
     material_hashes[path] = digest
     return path
 
@@ -2089,6 +2170,8 @@ muzzle_flash = make_muzzle_flash()
 muzzle_smoke = make_muzzle_smoke()
 # Vehicles' engine exhaust (#222): the M20 from its model, the flak truck from a tailpipe placed on its van.
 exhaust = make_exhaust()
+# The dust behind every ground vehicle (#224): the M20's from its tracks in its model, the others' from their locomotion.
+dust = make_dust()
 cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 30000.0, 1.6, (1.0, 0.45, 0.1), muzzle_flash=muzzle_flash,
                      muzzle_smoke=muzzle_smoke, splash_radius=250.0, muzzle_brake=True)
 rifle = make_weapon("DA_TestRifle", 3500.0, 8.0, 0.5, 45000.0, 0.4, (1.0, 0.85, 0.3))
@@ -2104,7 +2187,7 @@ abrams = make_unit("DA_TestAbrams", "Test Abrams", tank_mesh, fit_scale(tank_mes
 # The M20 Guardian at its real size (7.1 m hull), to try the Blender to Unreal pipeline out: the heavy tank's weapon and
 # cost, a light tank's speed and turn rate, and a turret that traverses at 45 degrees a second. No building offers it;
 # two stand in L_TestMap.
-m20_mesh, m20_parts = make_m20_guardian(exhaust)
+m20_mesh, m20_parts = make_m20_guardian(exhaust, dust)
 m20 = make_unit("DA_TestM20Guardian", "Test M20 Guardian", m20_mesh, (1.0, 1.0, 1.0), 350.0, heavy_cannon, 1250.0, 100.0,
                 1100, 14.0)
 add_properties(m20, dict(m20_parts, turret_turn_rate=45.0))
@@ -2172,9 +2255,12 @@ superweapon = make_building("DA_TestSuperweapon", "Test Superweapon", tower_mesh
 buildings = [power_plant, tower, supply_depot, barracks, vehicle_factory, headquarters, airfield, superweapon]
 # The headquarters produces the builder, which builds the rest.
 add_properties(builder, {"buildings": buildings})
-# Vehicles lean with the slope; infantry stays upright.
+# Vehicles lean with the slope; infantry stays upright. Those without a model of their own raise dust where their
+# locomotion puts the rear of the tracks or the rear wheels (#224).
 for vehicle in (tank, abrams, m20, harvester, builder, flak_truck):
     add_properties(vehicle, {"tilts_to_ground": True})
+for vehicle in (tank, abrams, harvester, builder, flak_truck):
+    add_properties(vehicle, {"dust": vehicle_dust(dust)})
 
 
 def locomotion(kind, reverse_speed, acceleration, braking, lateral_acceleration, **geometry):
@@ -2252,8 +2338,10 @@ for entity, icon, hotkey, description in (
 add_properties(m20, {"hero_art_sprite": unreal.Name("Art.M20Guardian"), "role_text": unreal.Text("Main battle tank")})
 make_ghost_material("M_PlacementGhost")
 make_shot_material("M_ShotFx")
-ground = make_surface_material("M_Ground", (0.06, 0.075, 0.04), 0.9)
-water = make_surface_material("M_Water", (0.015, 0.04, 0.08), 0.1)
+# The maps' ground is dirt and their water water, for the dust behind vehicles (#224).
+physical = make_physical_materials()
+ground = make_surface_material("M_Ground", (0.06, 0.075, 0.04), 0.9, physical["Dirt"])
+water = make_surface_material("M_Water", (0.015, 0.04, 0.08), 0.1, physical["Water"])
 make_map(MAP_PATH, False, tank, infantry, builder, m20, wall_mesh, crate_mesh, ground)
 make_map(NIGHT_MAP_PATH, True, tank, infantry, builder, m20, wall_mesh, crate_mesh, ground)
 make_bench_map(ground)
