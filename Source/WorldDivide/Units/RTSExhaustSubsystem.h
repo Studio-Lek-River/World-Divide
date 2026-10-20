@@ -52,6 +52,7 @@ struct FRTSExhaustEntry
 	/** What the emitters were last sent, so they are only sent again when it changes. */
 	float SentRate = -1.f;
 	float SentOpacity = -1.f;
+	TOptional<FLinearColor> SentColor;
 	FVector3f SentDirection = FVector3f::ZeroVector;
 };
 

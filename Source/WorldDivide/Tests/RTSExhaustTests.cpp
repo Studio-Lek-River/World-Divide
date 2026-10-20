@@ -37,6 +37,14 @@ namespace RTSExhaustTests
 		return Value ? FVector(*Value) : FVector::ZeroVector;
 	}
 
+	/** User.Color as the unit's emitters were last told, or transparent black without one. */
+	FLinearColor GetSentColor(const UNiagaraComponent& Component)
+	{
+		const FLinearColor* Value = reinterpret_cast<const FLinearColor*>(Component.GetOverrideParameters().GetParameterData(
+			FNiagaraVariable(FNiagaraTypeDefinition::GetColorDef(), TEXT("User.Color"))));
+		return Value ? *Value : FLinearColor::Transparent;
+	}
+
 	/** One update of the unit's gear, as the engine ticks it, then of the exhaust, as the frame's end does. */
 	void Step(ARTSUnit& Unit, URTSExhaustSubsystem& Exhaust, float Dt)
 	{
@@ -71,7 +79,7 @@ namespace RTSExhaustTests
 /**
  * Engine exhaust follows the hull's motion, not its orders (#222): the M20 (tracked) and the flak truck (wheeled) stand,
  * set off, drive on at a steady speed and stop again, and their exhaust goes idle, accelerating, moving and idle, its
- * emitters told the rate of each state. Past rts.Fx.ExhaustDistance from the camera, and with rts.Fx.Exhaust off, their
+ * emitters told the rate and the colour of each state (#325). Past rts.Fx.ExhaustDistance from the camera, and with rts.Fx.Exhaust off, their
  * emitters stop; past rts.Fx.ExhaustMaxVehicles only the nearest show any. Niagara does not run under -nullrhi, so the
  * emitters' state and parameters are checked, not their puffs.
  */
@@ -91,6 +99,8 @@ bool FRTSVehicleExhaustTest::RunTest(const FString& Parameters)
 		TestTrue(*FString::Printf(TEXT("It takes %s"), *User.ToString()),
 			System->GetExposedParameters().IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), User)) != INDEX_NONE);
 	}
+	TestTrue(TEXT("It takes User.Color"),
+		System->GetExposedParameters().IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetColorDef(), TEXT("User.Color"))) != INDEX_NONE);
 	TestTrue(TEXT("It takes User.Direction"),
 		System->GetExposedParameters().IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetVec3Def(), TEXT("User.Direction"))) != INDEX_NONE);
 	TestEqual(TEXT("One stream of puffs"), System->GetEmitterHandles().Num(), 1);
@@ -140,6 +150,11 @@ bool FRTSVehicleExhaustTest::RunTest(const FString& Parameters)
 				const float Sent = Component ? GetSentRate(*Component) : -1.f;
 				TestTrue(*FString::Printf(TEXT("%s %s: told %.2f puffs a second (%.2f)"), *What, When, Rates(State), Sent),
 					FMath::IsNearlyEqual(Sent, Rates(State), 0.06f * Rates(State) + 0.01f));
+				const FLinearColor& Color = State == ERTSExhaustState::Accelerating ? UnitExhaust.AcceleratingColor
+					: State == ERTSExhaustState::Moving ? UnitExhaust.MovingColor : UnitExhaust.IdleColor;
+				const FLinearColor SentColor = Component ? GetSentColor(*Component) : FLinearColor::Transparent;
+				TestTrue(*FString::Printf(TEXT("%s %s: told the state's colour %s (%s)"), *What, When, *Color.ToString(), *SentColor.ToString()),
+					SentColor.Equals(Color));
 				const FVector Out = Unit->GetMesh()->GetComponentTransform().TransformVectorNoScale(UnitExhaust.Direction.GetSafeNormal());
 				TestTrue(*FString::Printf(TEXT("%s %s: told the outlet's direction in the world"), *What, When),
 					Component && FVector::DotProduct(GetSentDirection(*Component), Out) > 0.99f);

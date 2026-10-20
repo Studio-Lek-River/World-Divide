@@ -10,7 +10,6 @@
 #include "Combat/RTSShotSubsystem.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/LightComponent.h"
-#include "Components/SkyLightComponent.h"
 #include "Components/BoxComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Containers/Ticker.h"
@@ -21,8 +20,6 @@
 #include "Engine/Engine.h"
 #include "Engine/StaticMeshActor.h"
 #include "Engine/GameViewportClient.h"
-#include "Engine/PostProcessVolume.h"
-#include "Engine/SkyLight.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/WorldSettings.h"
@@ -44,6 +41,7 @@
 #include "Units/RTSBarrelClearance.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
+#include "Units/Debug/RTSShotNight.h"
 #include "Units/Debug/RTSUnitLOD.h"
 #include "WorldDivide.h"
 
@@ -117,8 +115,6 @@ namespace RTSUnitDebugCommands
 
 	/** The step a held firing's Niagara systems are advanced to its moment by. */
 	constexpr float FlashHoldStep = 1.f / 240.f;
-	/** The share of their brightness the sun and the sky keep for the night pictures. */
-	constexpr float NightLightShare = 0.01f;
 	/**
 	 * Seconds into a shot when the hull has rocked back furthest (#218): the peak of FRTSRecoilSpring, at acos(r) / Swing for
 	 * its damping ratio r, a share of the settle time of about a sixth at the M20's 0.6.
@@ -937,59 +933,12 @@ namespace RTSUnitDebugCommands
 			}
 		}
 
-		/**
-		 * Dims the sun and the sky to a share of their brightness for the night pictures, or brings them back. The exposure
-		 * is held at the daylight one (manual, no bias, as the map previews), so the eye does not adapt the night away.
-		 */
+		/** Dims the sun and the sky for the night pictures, or brings them back (FRTSShotNight). */
 		void SetNight(bool bNight)
 		{
-			if (bNight == NightExposure.IsValid())
+			if (World.IsValid())
 			{
-				return;
-			}
-			if (!bNight)
-			{
-				NightExposure->Destroy();
-				NightExposure.Reset();
-				for (const TPair<TWeakObjectPtr<ULightComponentBase>, float>& Light : NightLights)
-				{
-					if (ULightComponent* Direct = Cast<ULightComponent>(Light.Key.Get()))
-					{
-						Direct->SetIntensity(Light.Value);
-					}
-					else if (USkyLightComponent* Sky = Cast<USkyLightComponent>(Light.Key.Get()))
-					{
-						Sky->SetIntensity(Light.Value);
-					}
-				}
-				NightLights.Reset();
-				return;
-			}
-			FActorSpawnParameters Params;
-			Params.ObjectFlags |= RF_Transient;
-			NightExposure = World->SpawnActor<APostProcessVolume>(Params);
-			NightExposure->bUnbound = true;
-			NightExposure->Priority = 1000.f;
-			FPostProcessSettings& Exposure = NightExposure->Settings;
-			Exposure.bOverride_AutoExposureMethod = true;
-			Exposure.AutoExposureMethod = AEM_Manual;
-			Exposure.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
-			Exposure.AutoExposureApplyPhysicalCameraExposure = false;
-			Exposure.bOverride_AutoExposureBias = true;
-			Exposure.AutoExposureBias = 0.f;
-			for (TActorIterator<ADirectionalLight> It(World.Get()); It; ++It)
-			{
-				ULightComponent* Light = It->GetLightComponent();
-				Light->SetMobility(EComponentMobility::Movable);
-				NightLights.Add({ Light, Light->Intensity });
-				Light->SetIntensity(Light->Intensity * NightLightShare);
-			}
-			for (TActorIterator<ASkyLight> It(World.Get()); It; ++It)
-			{
-				USkyLightComponent* Sky = It->GetLightComponent();
-				Sky->SetMobility(EComponentMobility::Movable);
-				NightLights.Add({ Sky, Sky->Intensity });
-				Sky->SetIntensity(Sky->Intensity * NightLightShare);
+				Night.Set(*World, bNight);
 			}
 		}
 
@@ -1416,12 +1365,8 @@ namespace RTSUnitDebugCommands
 		/** The team shots' units, and the sun's rotation while it is lowered. */
 		TArray<TWeakObjectPtr<ARTSUnit>> TeamRow;
 		TOptional<FRotator> SunRotation;
-		/**
-		 * The sun and sky dimmed for the night pictures with the brightness they had, the exposure held for them, and whether a
-		 * muzzle flash is held.
-		 */
-		TArray<TPair<TWeakObjectPtr<ULightComponentBase>, float>> NightLights;
-		TWeakObjectPtr<APostProcessVolume> NightExposure;
+		/** The night for the night pictures, and whether a muzzle flash is held. */
+		FRTSShotNight Night;
 		bool bHoldingFlash = false;
 		int32 Written = 0;
 		FFrameStats Stats;

@@ -51,6 +51,7 @@ namespace
 	constexpr float ResendDirectionDot = 0.999f;
 
 	const FName RateParameter(TEXT("User.Rate"));
+	const FName ColorParameter(TEXT("User.Color"));
 	const FName OpacityParameter(TEXT("User.Opacity"));
 	const FName SizeParameter(TEXT("User.Size"));
 	const FName DirectionParameter(TEXT("User.Direction"));
@@ -129,6 +130,7 @@ void URTSExhaustSubsystem::Register(ARTSUnit& Unit)
 		DestroyComponents(*Entry);
 		Entry->SentRate = -1.f;
 		Entry->SentOpacity = -1.f;
+		Entry->SentColor.Reset();
 		Entry->SentDirection = FVector3f::ZeroVector;
 		return;
 	}
@@ -283,6 +285,7 @@ void URTSExhaustSubsystem::UpdateEmitters(FRTSExhaustEntry& Entry, ARTSUnit& Uni
 		Entry.bActive = false;
 		Entry.SentRate = -1.f;
 		Entry.SentOpacity = -1.f;
+		Entry.SentColor.Reset();
 		Entry.SentDirection = FVector3f::ZeroVector;
 	}
 
@@ -290,22 +293,28 @@ void URTSExhaustSubsystem::UpdateEmitters(FRTSExhaustEntry& Entry, ARTSUnit& Uni
 		: Entry.State == ERTSExhaustState::Moving ? Exhaust.MovingRate : Exhaust.IdleRate;
 	const float Opacity = Entry.State == ERTSExhaustState::Accelerating ? Exhaust.AcceleratingOpacity
 		: Entry.State == ERTSExhaustState::Moving ? Exhaust.MovingOpacity : Exhaust.IdleOpacity;
+	const FLinearColor& Color = Entry.State == ERTSExhaustState::Accelerating ? Exhaust.AcceleratingColor
+		: Entry.State == ERTSExhaustState::Moving ? Exhaust.MovingColor : Exhaust.IdleColor;
 	// Plus the puffs that keep the trail closed as the hull drives off and leaves them behind.
 	const float Rate = GetRate(BaseRate + Entry.LastSpeed / 100.f * Exhaust.PuffsPerMetre, Entry.ViewDistance, EffectsQuality);
 	const bool bSendRate = Entry.SentRate < 0.f || Differs(Entry.SentRate, Rate);
 	const bool bSendOpacity = Entry.SentOpacity < 0.f || Differs(Entry.SentOpacity, Opacity);
-	if (bSendRate || bSendOpacity)
+	// The colour only changes with the state, so it is sent as it is.
+	const bool bSendColor = !Entry.SentColor.IsSet() || !Entry.SentColor->Equals(Color);
+	if (bSendRate || bSendOpacity || bSendColor)
 	{
 		for (UNiagaraComponent* Component : Entry.Components)
 		{
 			if (IsValid(Component))
 			{
 				Component->SetVariableFloat(RateParameter, Rate);
+				Component->SetVariableLinearColor(ColorParameter, Color);
 				Component->SetVariableFloat(OpacityParameter, Opacity);
 			}
 		}
 		Entry.SentRate = Rate;
 		Entry.SentOpacity = Opacity;
+		Entry.SentColor = Color;
 	}
 	// The puffs live in world space, so they are told which way the outlet faces there as the hull turns and tilts.
 	const FVector3f Direction(Hull->GetComponentTransform().TransformVectorNoScale(

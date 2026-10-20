@@ -387,8 +387,8 @@ def make_m20_guardian(exhaust_system):
         "gun_recoil": gun_recoil(30.0, 0.015, 0.03, 0.7, jump_degrees=1.0, jump_seconds=0.3, hull_rock_degrees=0.6,
                                  hull_rock_seconds=0.75),
         "parts": parts,
-        # Out of the rear grille, along its louvres (#222).
-        "exhaust": vehicle_exhaust(exhaust_system, layout["exhaust_offsets"], layout["exhaust_direction"]),
+        # Out of the rear grille, along its louvres (#222), from a diesel (#325).
+        "exhaust": vehicle_exhaust(exhaust_system, layout["exhaust_offsets"], layout["exhaust_direction"], DIESEL_EXHAUST),
     }
 
 
@@ -905,12 +905,12 @@ def make_muzzle_flash():
 
 
 # A smoke sprite's normal from its six-way light, so the side it is lit from most faces that way, in the sprite's tangent
-# space (+X right, +Y down the flipbook, +Z toward the camera); its albedo brighter where it is lit through; its opacity
-# thinned from the edges inward by Erosion as it ages.
+# space (+X right, +Y down the flipbook, +Z toward the camera); its albedo brighter where it is lit through and scaled by
+# Brightness; its opacity thinned from the edges inward by Erosion as it ages.
 SMOKE_CODE = """float3 N = float3(RLT.r - RLT.g, BBF.r - RLT.b, (BBF.b - BBF.g) * 0.5 + 0.6);
 Normal = normalize(N);
 float Light = (RLT.r + RLT.g + RLT.b + BBF.r + BBF.g + BBF.b) / 6.0;
-Albedo = Color.rgb * lerp(0.55, 1.15, saturate(Light * 1.6));
+Albedo = Color.rgb * lerp(0.55, 1.15, saturate(Light * 1.6)) * Brightness;
 float Thin = saturate(Age) * Erosion;
 return saturate((RLT.a - Thin) / max(1.0 - Thin, 0.05)) * Color.a;"""
 
@@ -921,7 +921,7 @@ def build_muzzle_smoke_material(name, rlt, bbf):
     the particle's life. The six views give each pixel a normal, so the sun, the sky and the muzzle light shade the cloud
     from wherever they are; the particle colour tints it. It thins from its edges inward by Erosion as it ages and fades
     over FadeDistance cm where it meets the ground or a hull. The instances (SMOKE_LOOKS) set the frames and the erosion of the blast cloud, the drifting
-    cloud and the dust."""
+    cloud and the dust; Brightness scales the albedo (1 for the muzzle smoke)."""
     material = new_material(name)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
     material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
@@ -932,12 +932,13 @@ def build_muzzle_smoke_material(name, rlt, bbf):
     rlt_sample = blended_sample(material, -1000, 0, rlt, frame)
     bbf_sample = blended_sample(material, -1000, 600, bbf, frame)
     shade = custom_node(material, -300, 200, SMOKE_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT1,
-                        ["RLT", "BBF", "Color", "Age", "Erosion"], ["Normal", "Albedo"])
+                        ["RLT", "BBF", "Color", "Age", "Erosion", "Brightness"], ["Normal", "Albedo"])
     connect(rlt_sample, "", shade, "RLT")
     connect(bbf_sample, "", shade, "BBF")
     connect(expression(material, unreal.MaterialExpressionParticleColor, -600, 400), "RGBA", shade, "Color")
     connect(expression(material, unreal.MaterialExpressionParticleRelativeTime, -600, 500), "", shade, "Age")
     connect(scalar_parameter(material, -600, 600, "Erosion", 0.5), "", shade, "Erosion")
+    connect(scalar_parameter(material, -600, 700, "Brightness", 1.0), "", shade, "Brightness")
 
     fade = expression(material, unreal.MaterialExpressionDepthFade, 0, 300)
     connect(shade, "", fade, "Opacity")
@@ -1004,8 +1005,10 @@ def make_muzzle_smoke():
 
 
 # The exhaust's look (#222): the later, thinner frames of the muzzle smoke's flipbook, eroded, so a puff reads as a light
-# haze rather than smoke; it fades over a few cm only, so a puff shows right at the grille it leaves.
-EXHAUST_LOOK = {"FrameFirst": 24.0, "FrameLast": 63.0, "Erosion": 0.4, "FadeDistance": 10.0}
+# haze rather than smoke; it fades over a few cm only, so a puff shows right at the grille it leaves. The smoke material
+# takes in far more light than an opaque surface of the same colour, which turned a dark grey exhaust white (#325), so
+# Brightness brings it down until FRTSVehicleExhaust's colours read as the colours they are next to the ground and hull.
+EXHAUST_LOOK = {"FrameFirst": 24.0, "FrameLast": 63.0, "Erosion": 0.4, "FadeDistance": 10.0, "Brightness": 0.2}
 
 
 def make_exhaust():
@@ -1028,13 +1031,25 @@ def make_exhaust():
     return plan_now(path, build, spec_hash([make_exhaust], path, look, builder_source))
 
 
-def vehicle_exhaust(system, outlets, direction):
-    """A vehicle's engine exhaust (FRTSVehicleExhaust, #222): the system, the outlets in the mesh's own space in cm and
-    the way the exhaust leaves them; the rates, opacities and thresholds keep the struct's defaults."""
+# A diesel's exhaust per engine state (#325): a faint blue-grey haze at idle, light grey on the move and a dark puff, near
+# black, while it accelerates under load. Colours as (r, g, b) in linear space.
+DIESEL_EXHAUST = {
+    "idle_color": (0.36, 0.4, 0.46), "idle_opacity": 0.3,
+    "moving_color": (0.42, 0.42, 0.41), "moving_opacity": 0.4,
+    "accelerating_color": (0.04, 0.04, 0.04), "accelerating_opacity": 0.7,
+}
+
+
+def vehicle_exhaust(system, outlets, direction, engine=None):
+    """A vehicle's engine exhaust (FRTSVehicleExhaust, #222): the system, the outlets in the mesh's own space in cm, the
+    way the exhaust leaves them and the engine's colours and opacities per state (engine, as DIESEL_EXHAUST); the rest,
+    and whatever engine leaves out, keep the struct's defaults."""
     value = unreal.RTSVehicleExhaust()
     value.set_editor_property("system", system)
     value.set_editor_property("outlets", [unreal.Vector(*outlet) for outlet in outlets])
     value.set_editor_property("direction", unreal.Vector(*direction))
+    for name, setting in (engine or {}).items():
+        value.set_editor_property(name, unreal.LinearColor(*setting, 1.0) if name.endswith("_color") else setting)
     return value
 
 
@@ -2118,7 +2133,7 @@ flak = make_weapon("DA_TestFlak", 8000.0, 25.0, 0.6, 40000.0, 0.8, (0.9, 0.9, 0.
 # An air-defence truck, 7.0 x 2.5 m; the van's proportions let the width bind.
 flak_truck = make_unit("DA_TestFlakTruck", "Test Flak Truck", truck_mesh, fit_scale(truck_mesh, 700.0, 250.0), 250.0,
                        flak, 1400.0, 75.0, 800, 8.0)
-# A tailpipe under the van's rear, toward its right side, blowing out backward.
+# A tailpipe under the van's rear, toward its right side, blowing out backward, in the struct's light diesel grey.
 truck_box = truck_mesh.get_bounding_box()
 add_properties(flak_truck, {"exhaust": vehicle_exhaust(exhaust, [(
     truck_box.min.x, truck_box.min.y + 0.75 * (truck_box.max.y - truck_box.min.y),

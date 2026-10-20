@@ -446,22 +446,26 @@ UNiagaraSystem* URTSEditorScripting::BuildExhaustSystem(const FString& AssetPath
 	if (System)
 	{
 		// Set by URTSExhaustSubsystem from the unit's FRTSVehicleExhaust: puffs a second for the engine's state, the quality
-		// and the distance, how opaque a puff is born, how wide in cm, and which way the outlet faces in world space.
+		// and the distance, the colour and how opaque a puff is born (#325), how wide in cm, and which way the outlet faces in
+		// world space.
 		const float DefaultRate = 10.f;
+		const FLinearColor DefaultColor(0.42f, 0.41f, 0.4f);
 		const float DefaultOpacity = 0.45f;
 		const float DefaultSize = 60.f;
 		const FVector3f DefaultDirection(-1.f, 0.f, 0.f);
 		AddUserParameter(System, TEXT("User.Rate"), FNiagaraTypeDefinition::GetFloatDef(), DefaultRate, Context);
 		AddUserParameter(System, TEXT("User.Direction"), FNiagaraTypeDefinition::GetVec3Def(), DefaultDirection, Context);
+		AddUserParameter(System, TEXT("User.Color"), FNiagaraTypeDefinition::GetColorDef(), DefaultColor, Context);
 		AddUserParameter(System, TEXT("User.Opacity"), FNiagaraTypeDefinition::GetFloatDef(), DefaultOpacity, Context);
 		AddUserParameter(System, TEXT("User.Size"), FNiagaraTypeDefinition::GetFloatDef(), DefaultSize, Context);
 
-		// Thin grey-brown puffs in world space, so a driving hull leaves them behind: blown half a metre or so out of the outlet
-		// along User.Direction, slowed by the air within a second, rising as they cool and growing to three times their size as
-		// they thin out over 1.2 to 1.8 s. The bounds hold a plume left by a hull at full speed.
+		// Thin puffs in world space, so a driving hull leaves them behind, each keeping the colour it was born with: blown half
+		// a metre or so out of the outlet along User.Direction, slowed by the air within a second, rising as they cool and
+		// growing to three times their size as they thin out over 1.2 to 1.8 s. The bounds hold a plume left by a hull at full
+		// speed.
 		const FBox Bounds(FVector(-900.0, -900.0, -400.0), FVector(900.0, 900.0, 700.0));
 		AddSpriteStream(System, TEXT("Exhaust"), TEXT("User.Rate"), TEXT("1.2 + rand(0.6)"), TEXT("User.Size"),
-			TEXT("float4(0.2, 0.19, 0.18, User.Opacity)"), Material, Bounds, Context);
+			TEXT("float4(User.Color.r, User.Color.g, User.Color.b, User.Opacity)"), Material, Bounds, Context);
 		SetRandomRotation(System, TEXT("Exhaust"), Context);
 		SetSpawnSphere(System, TEXT("Exhaust"), TEXT("User.Size * 0.2"), TEXT("float3(0.0, 0.0, 0.0)"), Context);
 		SetMotion(System, TEXT("Exhaust"),

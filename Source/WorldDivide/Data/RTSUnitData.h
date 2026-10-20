@@ -151,7 +151,7 @@ struct WORLDDIVIDE_API FRTSVehicleExhaust
 	GENERATED_BODY()
 
 	/**
-	 * The engine's continuous emitter, driven by its User.Rate, User.Opacity, User.Size and User.Direction
+	 * The engine's continuous emitter, driven by its User.Rate, User.Color, User.Opacity, User.Size and User.Direction
 	 * (URTSExhaustSubsystem).
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust")
@@ -181,6 +181,19 @@ struct WORLDDIVIDE_API FRTSVehicleExhaust
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0"))
 	float PuffsPerMetre = 5.f;
+
+	/**
+	 * The colour a puff is born with, standing, moving and accelerating (#325): the engine's character. A light diesel grey
+	 * by default; a puff keeps its colour as the state changes.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust")
+	FLinearColor IdleColor = FLinearColor(0.42f, 0.41f, 0.4f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust")
+	FLinearColor MovingColor = FLinearColor(0.42f, 0.41f, 0.4f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust")
+	FLinearColor AcceleratingColor = FLinearColor(0.42f, 0.41f, 0.4f);
 
 	/** How opaque a puff is born, standing, moving and accelerating: light in normal running. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exhaust", meta = (ClampMin = "0", ClampMax = "1"))

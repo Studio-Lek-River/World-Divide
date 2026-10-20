@@ -23,6 +23,7 @@
 #include "ShaderCompiler.h"
 #endif
 #include "UnrealClient.h"
+#include "Units/Debug/RTSShotNight.h"
 #include "Units/RTSExhaustSubsystem.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitMovement.h"
@@ -35,7 +36,7 @@
  * far away; then driving past a still camera at full speed, beside it and from the RTS angle, plain and with the previous
  * frame's reprojection shown (motion_*, #243); and standing while its gun fires, the hull rocking on its suspension, seen from
  * beside the track the gun turns to and from the sprocket and idler the gun lifts (fire_*, #219); and its engine's exhaust
- * standing, setting off and driving, seen from behind (exhaust_*, #222). Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
+ * standing, setting off and driving, seen from behind, by day and by night (exhaust_*, #222, #325). Each scenario runs the gear on a command as the server does, then saves Frames pictures one after another to
  * Saved/TrackShots/<UnitData>/<scenario>_<n>.png, and logs with each the realized side travel, each track's phase and what
  * its material has. With -RTSTrackShotsQuit on the command line (ue.ps1 -Task trackshots) the game quits when done.
  */
@@ -114,6 +115,8 @@ namespace RTSTrackShots
 		bool bReprojection = false;
 		/** Game seconds each frame steps while the scenario runs, whatever the frame took; zero steps by real time. */
 		double FixedStep = 0.0;
+		/** At night (FRTSShotNight): the sun and the sky dimmed, the exposure held at the daylight one. */
+		bool bNight = false;
 	};
 
 	RTSLocomotion::FCommand Ahead(float Speed)
@@ -285,13 +288,26 @@ namespace RTSTrackShots
 				}, FireWarm, nullptr, [](ARTSUnit& InUnit) { InUnit.PlayGunRecoil(); }, FireSpacing, FireTimeDilation });
 			}
 			// The engine's exhaust (#222) at the game's own speed, as the puffs drift and fade: standing, setting off from a stand
-			// for full speed (the pictures run through 2.4 s of the climb, to about 1,000 cm/s), and driving on at a steady speed.
-			Scenarios.Add_GetRef({ TEXT("exhaust_idle"), ExhaustView, Drive(RTSLocomotion::FCommand()), ExhaustWarm, nullptr, nullptr,
-				ExhaustSpacing, 1.f }).FixedStep = ExhaustStep;
-			Scenarios.Add_GetRef({ TEXT("exhaust_accelerate"), ExhaustView, Drive(RTSLocomotion::FCommand()), ExhaustWarm, nullptr,
-				[](ARTSUnit& InUnit) { InUnit.GetUnitMovement()->SetCommandOverride(Ahead(1.e5f)); }, ExhaustSpacing, 1.f }).FixedStep = ExhaustStep;
-			Scenarios.Add_GetRef({ TEXT("exhaust_moving"), ExhaustView, Drive(Ahead(300.f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing,
-				1.f }).FixedStep = ExhaustStep;
+			// for full speed (the pictures run through 2.4 s of the climb, to about 1,000 cm/s), and driving on at a steady speed;
+			// by day, then by night, where its colours must hold too (#325).
+			for (const bool bNight : { false, true })
+			{
+				const TCHAR* Suffix = bNight ? TEXT("_night") : TEXT("");
+				FScenario Exhausts[] = {
+					{ FString(TEXT("exhaust_idle")) + Suffix, ExhaustView, Drive(RTSLocomotion::FCommand()), ExhaustWarm, nullptr, nullptr,
+						ExhaustSpacing, 1.f },
+					{ FString(TEXT("exhaust_accelerate")) + Suffix, ExhaustView, Drive(RTSLocomotion::FCommand()), ExhaustWarm, nullptr,
+						[](ARTSUnit& InUnit) { InUnit.GetUnitMovement()->SetCommandOverride(Ahead(1.e5f)); }, ExhaustSpacing, 1.f },
+					{ FString(TEXT("exhaust_moving")) + Suffix, ExhaustView, Drive(Ahead(300.f)), ExhaustWarm, nullptr, nullptr, ExhaustSpacing,
+						1.f },
+				};
+				for (FScenario& Exhaust : Exhausts)
+				{
+					Exhaust.FixedStep = ExhaustStep;
+					Exhaust.bNight = bNight;
+					Scenarios.Add(MoveTemp(Exhaust));
+				}
+			}
 			// Driving past a still camera at full speed, pictures as fast as they come, without letting a frame settle (#243).
 			for (const bool bReprojection : { false, true })
 			{
@@ -344,6 +360,7 @@ namespace RTSTrackShots
 				FApp::SetFixedDeltaTime(Scenario.FixedStep);
 			}
 			Camera->GetCameraComponent()->SetFieldOfView(Scenario.View.FOV);
+			Night.Set(*World, Scenario.bNight);
 			Step = EStep::Warm;
 			StepStart = FPlatformTime::Seconds();
 			Shot = 0;
@@ -453,6 +470,7 @@ namespace RTSTrackShots
 			{
 				World->GetWorldSettings()->SetTimeDilation(1.f);
 				GEngine->Exec(World.Get(), TEXT("ShowFlag.VisualizeReprojection 0"));
+				Night.Set(*World, false);
 			}
 			if (Camera.IsValid())
 			{
@@ -486,6 +504,8 @@ namespace RTSTrackShots
 		/** The actor's height over the ground it stands on, which the views are given from. */
 		float GroundOffset = 0.f;
 		TArray<FScenario> Scenarios;
+		/** The night of the night scenarios. */
+		FRTSShotNight Night;
 		int32 Index = 0;
 		int32 Shot = 0;
 		EStep Step = EStep::WaitForUnit;
