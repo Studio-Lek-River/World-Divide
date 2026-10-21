@@ -107,7 +107,8 @@ namespace RTSScaleTests
 	};
 
 	const FBuildingStandard BuildingStandards[] = {
-		{ TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters"), FIntPoint(28, 28), 1800.f, 2500.f },
+		// The USA HQ at real size (#191): 38 x 56 m, its central tower 17.98 m.
+		{ TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters"), FIntPoint(38, 56), 1700.f, 1900.f },
 		{ TEXT("/Game/Data/Buildings/DA_TestVehicleFactory.DA_TestVehicleFactory"), FIntPoint(24, 24), 1200.f, 1400.f },
 		{ TEXT("/Game/Data/Buildings/DA_TestPowerPlant.DA_TestPowerPlant"), FIntPoint(20, 20), 1200.f, 1600.f },
 		{ TEXT("/Game/Data/Buildings/DA_TestBarracks.DA_TestBarracks"), FIntPoint(16, 16), 600.f, 800.f },

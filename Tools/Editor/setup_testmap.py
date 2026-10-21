@@ -34,6 +34,7 @@ import unreal
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bake_map  # noqa: E402
+import building_art  # noqa: E402
 import map_preview  # noqa: E402
 import placeholder_art as art  # noqa: E402
 import placeholder_icons  # noqa: E402
@@ -98,6 +99,9 @@ ART_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Source", "Placeholder")
 # The M20 Guardian as Tools/Art/m20_guardian_blender.py exported it, and where its assets go.
 M20_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "USA", "vehicles", "m20_guardian")
 M20_DIR = "/Game/Art/USA/Vehicles/M20Guardian"
+# The USA HQ as delivered (#187-#191): its layout usa_hq.json (Tools/Art/usa_hq_recipe.py), and where its assets go.
+USA_HQ_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "USA", "buildings", "usa_hq")
+USA_HQ_DIR = "/Game/Art/USA/Buildings/USAHQ"
 
 assets = unreal.EditorAssetLibrary
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
@@ -405,6 +409,113 @@ def make_m20_guardian(exhaust_system, dust_system):
         "dust": vehicle_dust(dust_system, [
             (layout["wheels"][f"M20_Sprocket_{side}"][0] - layout["roll_radii"]["Sprocket"],
              layout["track_offsets"][f"M20_Track_{side}"][1], 0.0) for side in ("L", "R")]),
+    }
+
+
+# The USA HQ's masters (building_art.py): name -> how to build it from the HQ's textures.
+USA_HQ_MASTERS = {
+    "M_HQ17_Surface": lambda d, n, t: building_art.build_surface_material(d, n, "surface"),
+    "M_HQ17_Glass": lambda d, n, t: building_art.build_surface_material(d, n, "glass"),
+    "M_HQ_Final_Operational": lambda d, n, t: building_art.build_surface_material(d, n, "operational"),
+    "M_HQ_Final_Ownership": lambda d, n, t: building_art.build_surface_material(d, n, "ownership"),
+    "M_HQ17_Coating": lambda d, n, t: building_art.build_coating_material(d, n, {
+        "CoatingBaseColor": t["T_HQ17_Coating_2m_BaseColor"], "CoatingRoughness": t["T_HQ17_Coating_2m_Roughness"],
+        "CoatingNormal": t["T_HQ17_Coating_2m_Normal"]}),
+    "M_HQ21_FlagWind": lambda d, n, t: building_art.build_flag_material(d, n),
+    "M_HQ20_FloorWear": lambda d, n, t: building_art.build_ground_material(
+        d, n, t["T_HQ20_Floor_BaseColor"], t["T_HQ20_Floor_Roughness"], False),
+    "M_HQ21_PavingWear": lambda d, n, t: building_art.build_ground_material(
+        d, n, t["T_HQ21_Paving_BaseColor"], t["T_HQ21_Paving_Roughness"], False),
+    "M_HQ21_Soil": lambda d, n, t: building_art.build_ground_material(
+        d, n, t["T_HQ21_Soil_BaseColor"], t["T_HQ21_Soil_Normal"], True),
+}
+
+
+def make_usa_hq():
+    """Imports the USA HQ (building_art.py) as usa_hq.json lays it out and returns its root mesh, its footprint and its
+    building data properties: the architecture is Mesh at real size, every other mesh a part where the delivery placed
+    it with the garage door closed, the collision boxes go around its blocks with the garage bay a box of its own, and
+    the sockets give the garage's spawn and exit."""
+    layout = building_art.read_layout(os.path.join(USA_HQ_SOURCE_DIR, "usa_hq.json"))
+    texture_dir, material_dir, mesh_dir = (f"{USA_HQ_DIR}/{folder}" for folder in ("Textures", "Materials", "Meshes"))
+
+    textures = {}
+    for name, settings in sorted(layout["textures"].items()):
+        source = os.path.join(USA_HQ_SOURCE_DIR, "textures", f"{name}.png")
+        textures[name] = plan_now(
+            f"{texture_dir}/{name}",
+            lambda s=source, n=name, t=settings: building_art.import_texture(s, texture_dir, n, t),
+            spec_hash([building_art.import_texture], texture_dir, name, sorted(settings.items()), file_hash(source)))
+
+    builders = [building_art.build_surface_material, building_art.build_coating_material,
+                building_art.build_ground_material, building_art.build_flag_material, building_art._material,
+                building_art._vector, building_art._scalar, building_art._multiply, building_art._add]
+    constants = (vehicle_art.TEAM_COLOR_INDEX, vehicle_art.LAMP_ON_INDEX, building_art.COATING_ROUGHNESS_MEAN,
+                 building_art.COATING_ROUGHNESS_RANGE, building_art.FLAG_WAVE, building_art.FLAG_SPEED,
+                 building_art.FLAG_RIPPLE, building_art.FLAG_AMPLITUDE, building_art.FLAG_DIRECTION,
+                 building_art.FLAG_ROUGHNESS, building_art.SOIL_ROUGHNESS)
+    masters = {}
+    for name, build in USA_HQ_MASTERS.items():
+        masters[name] = plan_now(
+            f"{material_dir}/{name}", lambda b=build, n=name: b(material_dir, n, textures),
+            spec_hash(builders + [build], material_dir, name, constants, sorted(map(object_path, textures.values()))))
+
+    instances = {}
+    for name, record in sorted(layout["material_instances"].items()):
+        parent = masters[record["parent"]]
+        instances[name] = plan_now(
+            f"{material_dir}/{name}",
+            lambda n=name, p=parent, r=record: building_art.build_material_instance(material_dir, n, p, r["scalars"],
+                                                                                     r["vectors"]),
+            spec_hash([building_art.build_material_instance], material_dir, name, parent,
+                      sorted(record["scalars"].items()), sorted(record["vectors"].items())))
+
+    meshes = {}
+    for name, record in sorted(layout["meshes"].items()):
+        source = os.path.join(USA_HQ_SOURCE_DIR, *record["fbx"].split("/"))
+        slots = {slot: instances[instance] for slot, instance in record["slots"].items()}
+        meshes[name] = plan_now(
+            f"{mesh_dir}/{name}",
+            lambda s=source, n=name, m=slots, r=record: building_art.import_mesh(
+                s, mesh_dir, n, m, r["bounds"], r["triangles"], r["lods"]),
+            spec_hash([building_art.import_mesh, vehicle_art.import_part, vehicle_art.build_lods,
+                       vehicle_art.lod_screen_sizes], mesh_dir, name, file_hash(source),
+                      sorted((slot, object_path(material)) for slot, material in slots.items()), record["bounds"],
+                      record["triangles"], record["lods"], vehicle_art.LOD_DISTANCES, vehicle_art.SCREEN_MULTIPLE))
+
+    def part(record):
+        value = unreal.RTSBuildingPart()
+        value.set_editor_property("name", record["name"])
+        value.set_editor_property("mesh", meshes[record["mesh"]])
+        pitch, yaw, roll = record["rotation"]
+        value.set_editor_property("transform", unreal.Transform(
+            unreal.Vector(*record["location"]), unreal.Rotator(roll=roll, pitch=pitch, yaw=yaw),
+            unreal.Vector(*record["scale"])))
+        value.set_editor_property("movable", record["movable"])
+        value.set_editor_property("cast_shadow", record["cast_shadow"])
+        value.set_editor_property("bounds_scale", record["bounds_scale"])
+        value.set_editor_property("max_draw_distance", record["max_draw_distance"])
+        return value
+
+    def collision_box(record):
+        value = unreal.RTSBuildingCollisionBox()
+        value.set_editor_property("name", record["name"])
+        value.set_editor_property("min", unreal.Vector(*record["min"]))
+        value.set_editor_property("max", unreal.Vector(*record["max"]))
+        value.set_editor_property("garage", record["garage"])
+        return value
+
+    def socket(name, location):
+        value = unreal.RTSBuildingSocket()
+        value.set_editor_property("name", name)
+        value.set_editor_property("location", unreal.Vector(*location))
+        return value
+
+    root = next(p for p in layout["parts"] if p["name"] == layout["root_part"])
+    return meshes[root["mesh"]], tuple(layout["footprint_cells"]), {
+        "parts": [part(p) for p in layout["parts"] if p is not root],
+        "collision_boxes": [collision_box(b) for b in layout["collision_boxes"]],
+        "sockets": [socket(name, location) for name, location in sorted(layout["sockets"].items())],
     }
 
 
@@ -1668,17 +1779,18 @@ SkirmishMap = collections.namedtuple("SkirmishMap", "path half_size spots obstac
 SUPPLY_FOOTPRINT = (12, 12)
 SUPPLY_HEIGHT = 300.0
 # What stands by each start spot, in cm along the spot's facing and to its left: the army (L_TestMap only) ahead of the
-# 28 m headquarters, the builders behind it and the base's own supply source beside it.
+# headquarters, the builders behind it and the base's own supply source beside it. The headquarters stands unturned, 38 m
+# along x and 56 m along y (#191), so the builders keep clear of its 28 m half length whichever way the spot faces.
 BASE_ARMY_AHEAD = 3000.0
 BASE_ARMY_SIDE = 2700.0
-BASE_BUILDERS_BEHIND = 2400.0
+BASE_BUILDERS_BEHIND = 3600.0
 BASE_SOURCE_BEHIND = 150.0
 BASE_SOURCE_SIDE = 7650.0
 BASE_LAYOUT = (BASE_ARMY_AHEAD, BASE_ARMY_SIDE, BASE_BUILDERS_BEHIND, BASE_SOURCE_BEHIND, BASE_SOURCE_SIDE, SUPPLY_FOOTPRINT,
                SUPPLY_HEIGHT)
 # check_map_lanes: a gap between two obstacles, or between an obstacle and the ground's edge, is closed or at least
 # VEHICLE_LANE wide (standard rule 4: 8 m carriageways), and every base keeps BASE_CLEARANCE around its spot free: the
-# headquarters' half size (14 m), its exit and the builders behind it.
+# headquarters' half length (28 m), its exit and the builders behind it.
 VEHICLE_LANE = 800.0
 BASE_CLEARANCE = 4000.0
 MAP_LANE_RULES = (VEHICLE_LANE, BASE_CLEARANCE)
@@ -2230,7 +2342,6 @@ supply_depot_mesh = make_art("SupplyDepot", "Kenney/CityKitIndustrial/building-j
 tower_mesh = make_art("Tower", "Kenney/TowerDefenseKit/tower-round-build-c.glb")
 barracks_mesh = make_art("Barracks", "Kenney/SurvivalKit/tent-canvas.glb")
 vehicle_factory_mesh = make_art("VehicleFactory", "Kenney/CityKitIndustrial/building-l.glb")
-headquarters_mesh = make_art("Headquarters", "Kenney/CityKitCommercial/building-skyscraper-a.glb")
 wall_mesh = make_art("Wall", "Kenney/CastleKit/wall.glb", tint=0.0)
 crate_mesh = make_art("SupplyCrate", "Kenney/FactoryKit/box-wide.glb", tint=0.0)
 # The Quaternius jet faces +Y once imported like the Kenney vehicles; the airfield is the crate flattened into a slab.
@@ -2332,10 +2443,12 @@ vehicle_factory = make_building("DA_TestVehicleFactory", "Test Vehicle Factory",
 # Four pads of 12 x 24 m side by side on a low slab; each jet it produces parks on one.
 airfield = make_building("DA_TestAirfield", "Test Airfield", airfield_mesh, building_fit(airfield_mesh, (24, 48), 100.0),
                          (24, 48), 1500.0, None, 1000, 10.0, 0, 2, units=[jet], airfield_pads=4)
-# Every team starts with one at its PlayerStart and may own only one; a team that lost it builds it again.
-headquarters = make_building("DA_TestHeadquarters", "Test Headquarters", headquarters_mesh,
-                             building_fit(headquarters_mesh, (28, 28), 2200.0), (28, 28), 3000.0, None, 2500, 12.0, 0, 0,
-                             units=[builder], max_count=1)
+# Every team starts with one at its PlayerStart and may own only one; a team that lost it builds it again. The USA HQ
+# at real size (#191): 38 x 56 m, its meshes as parts, its blocks as collision boxes.
+headquarters_mesh, headquarters_footprint, headquarters_layout = make_usa_hq()
+headquarters = make_building("DA_TestHeadquarters", "Test Headquarters", headquarters_mesh, (1.0, 1.0, 1.0),
+                             headquarters_footprint, 3000.0, None, 2500, 12.0, 0, 0, units=[builder], max_count=1)
+add_properties(headquarters, headquarters_layout)
 # The tower's spire scaled up. Two minutes to charge; three seconds after launch the strike lands, 80 m across at full
 # damage near the centre and a quarter of it at the edge. One per team.
 superweapon = make_building("DA_TestSuperweapon", "Test Superweapon", tower_mesh, building_fit(tower_mesh, (24, 24), 3200.0),

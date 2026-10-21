@@ -114,8 +114,8 @@ The static-mesh FBX rules near the end apply even without skeletons.
 ## In World Divide
 
 - The game has no skeletal meshes, Animation Blueprints or root motion today. Vehicle tracks move by material WPO driven from `UpdateRunningGear` through custom primitive data ([`../tech/scale/VEHICLE_TRACK_ANIMATION.md`](../tech/scale/VEHICLE_TRACK_ANIMATION.md)); turrets, wheels and recoil are transforms set in C++.
-- Building and unit meshes come from Blender scripts in `Tools/Art/`. `usa_hq_blender.py` exports FBX with `axis_forward="X"`, `axis_up="Z"`, `apply_unit_scale`, `FBX_SCALE_UNITS`, `use_mesh_modifiers`, `add_leaf_bones=False`, `bake_anim=False`. The M20 track bake writes extra UV channels pre-flipped in V.
-- Import is scripted, never by hand. `Tools/Editor/placeholder_art.py` and `vehicle_art.py` build an `InterchangeGenericAssetsPipeline` override (static mesh only, no collision, no Nanite, no materials, no animations); `setup_testmap.py` re-imports when a source changes. M20 LODs arrive as separate `_LOD<n>.fbx` files.
+- Unit meshes come from Blender scripts in `Tools/Art/`. `m20_guardian_blender.py` exports FBX with `axis_forward="X"`, `axis_up="Z"`, `FBX_SCALE_UNITS`, `add_leaf_bones=False`, `bake_anim=False`. The M20 track bake writes extra UV channels pre-flipped in V. The USA HQ's FBX files are the final art delivery in `Art/USA/buildings/usa_hq/fbx/`, laid out by `usa_hq.json`.
+- Import is scripted, never by hand. `Tools/Editor/placeholder_art.py`, `vehicle_art.py` and `building_art.py` build an `InterchangeGenericAssetsPipeline` override (static mesh only, no collision, no Nanite, no materials, no animations); `setup_testmap.py` re-imports when a source changes. M20 LODs arrive as separate `_LOD<n>.fbx` files.
 - Art candidates go under `/Game/Art/Candidates/` only ([`../ui/AI_TEAM.md`](../ui/AI_TEAM.md)). Mesh budgets: [`../tech/PERFORMANCE_GUIDELINES.md`](../tech/PERFORMANCE_GUIDELINES.md) rules 19–23 and 25. Project docs win on conflict.
 
 ## Sources

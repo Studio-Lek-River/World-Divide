@@ -4,6 +4,7 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
+#include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Dom/JsonObject.h"
 #include "Engine/StaticMesh.h"
@@ -13,6 +14,8 @@
 #include "Algo/AnyOf.h"
 #include "Engine/Texture2D.h"
 #include "Materials/Material.h"
+#include "Materials/MaterialExpressionScalarParameter.h"
+#include "Materials/MaterialExpressionVectorParameter.h"
 #include "Materials/MaterialInstance.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -21,6 +24,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "StaticMeshResources.h"
 #include "Tests/RTSTestFlags.h"
+#include "Units/RTSPrimitiveData.h"
 #include "Units/RTSUnit.h"
 
 /**
@@ -33,7 +37,7 @@ namespace
 
 	const FName PlaceholderMeshDir(TEXT("/Game/Art/Placeholder/Meshes"));
 	const TCHAR* TeamMaterialPath = TEXT("/Game/Materials/M_PlaceholderTeam.M_PlaceholderTeam");
-	constexpr int32 PlaceholderMeshCount = 14;
+	constexpr int32 PlaceholderMeshCount = 13;
 
 	const TCHAR* M20DataPath = TEXT("/Game/Data/Units/DA_TestM20Guardian.DA_TestM20Guardian");
 	const TCHAR* M20Dir = TEXT("/Game/Art/USA/Vehicles/M20Guardian");
@@ -54,6 +58,15 @@ namespace
 	const FInt32Interval M20LODBudgets[] = { { 25000, 35000 }, { 6000, 10000 }, { 1000, 2500 } };
 	const double M20LODDistances[] = { 3500.0, 11000.0, 26000.0 };
 	const double RTSLensScreenMultiple = 0.5 / (FMath::Tan(FMath::DegreesToRadians(30.0)) / (16.0 / 9.0));
+
+	const TCHAR* HeadquartersDataPath = TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters");
+	const TCHAR* HeadquartersMaterialDir = TEXT("/Game/Art/USA/Buildings/USAHQ/Materials");
+	/** The USA HQ's layout (Tools/Art/usa_hq_recipe.py), which setup_testmap.py builds it from. */
+	const TCHAR* HeadquartersLayoutFile = TEXT("Art/USA/buildings/usa_hq/usa_hq.json");
+	/** The slab: 38 x 56 m, 17.98 m to the top of its central tower. */
+	const FVector HeadquartersSize(3800.0, 5600.0, 1798.0);
+	/** The whole HQ's triangles at LOD1, 2 and 3, every part counted each time it is drawn (#191). */
+	const int32 HeadquartersLODBudgets[] = { 450000, 150000, 40000 };
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSPlaceholderWithoutNaniteTest, "WorldDivide.Art.PlaceholderWithoutNanite", TestFlags)
@@ -193,6 +206,153 @@ bool FRTSM20GuardianArtTest::RunTest(const FString& Parameters)
 		TestTrue(*FString::Printf(TEXT("%s normals are a normal map, green as exported"), Set),
 			!Normal->SRGB && Normal->CompressionSettings == TC_Normalmap && !Normal->bFlipGreenChannel);
 		TestTrue(*FString::Printf(TEXT("%s masks are linear"), Set), !Masks->SRGB && Masks->CompressionSettings == TC_Masks);
+	}
+	return true;
+}
+
+/**
+ * The USA HQ as setup_testmap.py imports it (#191): the architecture at real size on a 38 x 56 m footprint, every other
+ * mesh of usa_hq.json a part of it, each mesh with every triangle the delivery exported, without Nanite or collision of its
+ * own, and its LODs switching at the vehicles' distances within the HQ's budget. Its slots use the delivery's masters, the
+ * owner's colour and the operational glow read from the custom primitive data the building writes, and the flag keeps its
+ * wind. Simple boxes collide instead, and the garage bay is one of its own; the garage's sockets are in the data.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSUSAHeadquartersArtTest, "WorldDivide.Art.USAHeadquarters", TestFlags)
+
+bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
+{
+	const URTSBuildingData* Data = LoadObject<URTSBuildingData>(nullptr, HeadquartersDataPath);
+	FString LayoutText;
+	TSharedPtr<FJsonObject> Layout;
+	if (!TestNotNull(TEXT("DA_TestHeadquarters loads"), Data) || !TestNotNull(TEXT("It has a mesh"), Data->Mesh.Get())
+		|| !TestTrue(TEXT("usa_hq.json is readable"),
+			FFileHelper::LoadFileToString(LayoutText, *FPaths::Combine(FPaths::ProjectDir(), HeadquartersLayoutFile))
+			&& FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(LayoutText), Layout) && Layout.IsValid()))
+	{
+		return false;
+	}
+	TestTrue(TEXT("It is at real size"), Data->MeshScale.Equals(FVector::OneVector));
+	TestEqual(TEXT("It stands on 38 x 56 cells"), Data->Footprint, FIntPoint(38, 56));
+	TestTrue(*FString::Printf(TEXT("The architecture is %s cm"), *Data->Mesh->GetBoundingBox().GetSize().ToString()),
+		Data->Mesh->GetBoundingBox().GetSize().Equals(HeadquartersSize, 2.0));
+	TestEqual(TEXT("Every other mesh of the layout is a part"), Data->Parts.Num() + 1, Layout->GetArrayField(TEXT("parts")).Num());
+
+	// Every mesh the HQ draws, once per time it is drawn.
+	TArray<const UStaticMesh*> Drawn = { Data->Mesh };
+	for (const FRTSBuildingPart& Part : Data->Parts)
+	{
+		TestNotNull(*FString::Printf(TEXT("Part %s has a mesh"), *Part.Name.ToString()), Part.Mesh.Get());
+		Drawn.Add(Part.Mesh);
+	}
+	const TSharedPtr<FJsonObject>& Meshes = Layout->GetObjectField(TEXT("meshes"));
+	int32 Totals[4] = {};
+	TSet<const UStaticMesh*> Checked;
+	for (const UStaticMesh* Mesh : Drawn)
+	{
+		const FStaticMeshRenderData* RenderData = Mesh ? Mesh->GetRenderData() : nullptr;
+		if (!RenderData)
+		{
+			continue;
+		}
+		for (int32 LOD = 0; LOD < 4; ++LOD)
+		{
+			Totals[LOD] += Mesh->GetNumTriangles(FMath::Min(LOD, Mesh->GetNumLODs() - 1));
+		}
+		if (Checked.Contains(Mesh))
+		{
+			continue;
+		}
+		Checked.Add(Mesh);
+
+		const TSharedPtr<FJsonObject>* Record = nullptr;
+		if (!TestTrue(*FString::Printf(TEXT("%s is in the layout"), *Mesh->GetName()), Meshes->TryGetObjectField(Mesh->GetName(), Record)))
+		{
+			continue;
+		}
+		const int32 Exported = static_cast<int32>((*Record)->GetNumberField(TEXT("triangles")));
+		const int32 Imported = Mesh->GetNumTriangles(0);
+		TestTrue(*FString::Printf(TEXT("%s keeps its triangles (%d of %d)"), *Mesh->GetName(), Imported, Exported),
+			Imported <= Exported && Imported >= Exported - FMath::Max(Exported / 100, 30));
+		TestFalse(*FString::Printf(TEXT("%s has Nanite off"), *Mesh->GetName()), Mesh->IsNaniteEnabled());
+		const UBodySetup* Body = Mesh->GetBodySetup();
+		TestTrue(*FString::Printf(TEXT("%s has no collision of its own"), *Mesh->GetName()), !Body || Body->AggGeom.GetElementCount() == 0);
+
+		const int32 LODs = (*Record)->GetArrayField(TEXT("lods")).Num() + 1;
+		TestEqual(*FString::Printf(TEXT("%s has its LODs"), *Mesh->GetName()), Mesh->GetNumLODs(), LODs);
+		const double Radius = Mesh->GetBounds().SphereRadius;
+		for (int32 LOD = 1; LOD < Mesh->GetNumLODs(); ++LOD)
+		{
+			const float ScreenSize = RenderData->ScreenSize[LOD].GetValue();
+			TestTrue(*FString::Printf(TEXT("%s: fewer triangles at LOD%d than at LOD%d"), *Mesh->GetName(), LOD, LOD - 1),
+				Mesh->GetNumTriangles(LOD) < Mesh->GetNumTriangles(LOD - 1));
+			// The vehicles' distances, unless the mesh is so large that its screen size there is past 1, the most the engine
+			// keeps: the architecture, roofs and courtyard keep full detail to about 108 m and then switch.
+			const double Wanted = 2.0 * RTSLensScreenMultiple * Radius / M20LODDistances[LOD - 1];
+			TestTrue(*FString::Printf(TEXT("%s switches to LOD%d at screen size %.4f, with the vehicles (%.4f)"), *Mesh->GetName(), LOD,
+				ScreenSize, Wanted), Wanted >= 0.97 ? ScreenSize >= 0.97f : FMath::IsNearlyEqual(ScreenSize, Wanted, Wanted * 0.01));
+		}
+
+		for (const FStaticMaterial& Slot : Mesh->GetStaticMaterials())
+		{
+			const UMaterialInstance* Instance = Cast<UMaterialInstance>(Slot.MaterialInterface);
+			const UMaterialInterface* Parent = Instance ? Instance->Parent.Get() : nullptr;
+			TestTrue(*FString::Printf(TEXT("%s slot %s is an instance of an HQ master"), *Mesh->GetName(), *Slot.MaterialSlotName.ToString()),
+				Parent && Parent->GetPathName().StartsWith(HeadquartersMaterialDir));
+		}
+	}
+	AddInfo(FString::Printf(TEXT("Triangles per HQ by LOD: %d, %d, %d, %d"), Totals[0], Totals[1], Totals[2], Totals[3]));
+	for (int32 LOD = 1; LOD < 4; ++LOD)
+	{
+		TestTrue(*FString::Printf(TEXT("LOD%d is %d triangles per HQ, within %d"), LOD, Totals[LOD], HeadquartersLODBudgets[LOD - 1]),
+			Totals[LOD] <= HeadquartersLODBudgets[LOD - 1]);
+	}
+
+	auto LoadMaster = [](const TCHAR* Name)
+	{
+		return LoadObject<UMaterial>(nullptr, *FString::Printf(TEXT("%s/%s.%s"), HeadquartersMaterialDir, Name, Name));
+	};
+	auto ReadsPrimitiveData = [](const UMaterial* Material, FName Parameter, int32 Index)
+	{
+		return Material && Algo::AnyOf(Material->GetExpressions(), [Parameter, Index](const TObjectPtr<UMaterialExpression>& Expression)
+		{
+			if (const UMaterialExpressionVectorParameter* Vector = Cast<UMaterialExpressionVectorParameter>(Expression))
+			{
+				return Vector->ParameterName == Parameter && Vector->bUseCustomPrimitiveData && Vector->PrimitiveDataIndex == Index;
+			}
+			const UMaterialExpressionScalarParameter* Scalar = Cast<UMaterialExpressionScalarParameter>(Expression);
+			return Scalar && Scalar->ParameterName == Parameter && Scalar->bUseCustomPrimitiveData && Scalar->PrimitiveDataIndex == Index;
+		});
+	};
+	TestTrue(TEXT("The ownership master reads the owner's colour"),
+		ReadsPrimitiveData(LoadMaster(TEXT("M_HQ_Final_Ownership")), TEXT("PlayerColor"), RTSPrimitiveData::TeamColor));
+	TestTrue(TEXT("The operational master reads whether the HQ is operational"),
+		ReadsPrimitiveData(LoadMaster(TEXT("M_HQ_Final_Operational")), TEXT("Operational"), RTSPrimitiveData::LampOn));
+	const UMaterial* Flag = LoadMaster(TEXT("M_HQ21_FlagWind"));
+	TestTrue(TEXT("The flag is two-sided and waves"), Flag && Flag->IsTwoSided()
+		&& Flag->GetEditorOnlyData()->WorldPositionOffset.IsConnected());
+	const UMaterialInstance* TeamPanel = LoadObject<UMaterialInstance>(nullptr,
+		*FString::Printf(TEXT("%s/MI_HQ17_TeamPanel.MI_HQ17_TeamPanel"), HeadquartersMaterialDir));
+	TestTrue(TEXT("The team panels take the owner's colour"), TeamPanel && TeamPanel->Parent == LoadMaster(TEXT("M_HQ_Final_Ownership")));
+
+	// Simple boxes block instead of the meshes: inside the footprint, the garage bay one of its own.
+	const FVector Half = FVector(HeadquartersSize.X, HeadquartersSize.Y, 0.0) * 0.5;
+	TestTrue(TEXT("It has collision boxes"), Data->CollisionBoxes.Num() > 1);
+	for (const FRTSBuildingCollisionBox& Box : Data->CollisionBoxes)
+	{
+		TestTrue(*FString::Printf(TEXT("Box %s lies in the footprint"), *Box.Name.ToString()),
+			Box.Min.X >= -Half.X - 1.0 && Box.Min.Y >= -Half.Y - 1.0 && Box.Max.X <= Half.X + 1.0 && Box.Max.Y <= Half.Y + 1.0
+			&& Box.Min.Z >= 0.0 && Box.Max.Z > Box.Min.Z);
+	}
+	TestEqual(TEXT("The garage bay is one box"),
+		Data->CollisionBoxes.FilterByPredicate([](const FRTSBuildingCollisionBox& Box) { return Box.bGarage; }).Num(), 1);
+	const FVector* Spawn = Data->FindSocket(TEXT("GarageSpawn"));
+	const FVector* Exit = Data->FindSocket(TEXT("GarageExit"));
+	if (TestNotNull(TEXT("The garage has a spawn socket"), Spawn) && TestNotNull(TEXT("The garage has an exit socket"), Exit))
+	{
+		TestTrue(TEXT("The garage exit lies ahead of its spawn, on the same lane"),
+			Exit->X > Spawn->X && FMath::IsNearlyEqual(Exit->Y, Spawn->Y, 1.0));
+		TestFalse(TEXT("No solid box but the garage bay covers the exit"), Algo::AnyOf(Data->CollisionBoxes,
+			[Exit](const FRTSBuildingCollisionBox& Box) { return !Box.bGarage && FBox(Box.Min, Box.Max).IsInsideOrOnXY(*Exit); }));
 	}
 	return true;
 }

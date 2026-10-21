@@ -1,68 +1,77 @@
-# USA HQ — Candidate 11 layout specification
+# USA HQ: as-built specification
 
-Status: **Candidate 11 layout approved by the producer on 2026-10-20**. This revision supersedes the old 28 × 28 m and Candidate 9/10 40 × 40 m layouts, the 24 m height, diagonal entrance and mandatory 8 m connectors. Producer authorized the new dimensions and Image #2 precedence in this chat on 2026-10-20. The producer subsequently confirmed: "the layouts now is correct".
+Status, 2026-10-21: the final art (Candidate22) is accepted by the producer, and #187–#190 are closed against it. #191 imports it through setup. The garage sequence (#192), flag variation (#193), equipment motion (#194), lighting (#195), state controller (#196), VFX/audio (#197), icon (#198) and sign-off (#199) build on this.
 
-## Reference authority and coordinates
+## Sources
 
-- Image #2 top view governs horizontal layout, elevations guide heights, 3/4 view checks spatial reading. Image #1 only supplies compatible information.
-- 56 m width × 38 m depth × 18 m tallest mast. Origin is ground-centred. Unreal +X is front and garage exit; +Y is west; Z up. Bounds X ±19 m, Y ±28 m, Z 0…18 m. Blender mirrors Y as in earlier candidates.
-- West band Y +10…+28 m; central band −10…+10 m; east band −28…−10 m. Entrance, plinth and courtyard flag share Y=0; both entrance and garage face +X.
-- Raw reference calibration is the full slab rectangle at pixels (873,74)…(1506,505) in the unmodified 1536 × 1024 sheet. Pixel-to-metre transform: X=(v−74)×38/431−19; Y=28−(u−873)×56/633. The concept aspect differs from 56/38 by approximately 0.3%; this global calibration is applied once, never per building.
+| What | Where |
+|---|---|
+| Blender source | `Art/USA/buildings/usa_hq/source/USA_HQ_Final.blend` |
+| 22 FBX meshes, 9 textures | `Art/USA/buildings/usa_hq/fbx/`, `textures/` |
+| Layout the game is built from | `Art/USA/buildings/usa_hq/usa_hq.json`, written by `Tools/Art/usa_hq_recipe.py` from the delivery's engine records in `recipe/` |
+| Door curves, equipment motion | `Art/USA/buildings/usa_hq/animation/` (`CT_HQ20_DoorMotion.csv`, `door_motion.json`, `equipment_motion.json`) |
+| Unreal import | `Tools/Editor/building_art.py`, `make_usa_hq` in `Tools/Editor/setup_testmap.py`, into `/Game/Art/USA/Buildings/USAHQ/{Textures,Materials,Meshes}` |
+| Data | `DA_TestHeadquarters` (asset and id unchanged) |
+| Final review captures (preview level, before integration) | `Art/USA/buildings/usa_hq/renders/final_*.png`, `animation/*.webp` |
+| Import report | `Art/USA/buildings/usa_hq/report_ue5.md` |
 
-## Explicit departures and uncertainty
+Earlier candidates, recovery archives and the blockout are gone from the repository. They are in git history and the producer's local backups only.
 
-The picture is internally inconsistent. These adjustments implement the producer's confirmed dimensions and centred axis; they are not a claim that every source silhouette matches within 0.5 m.
+## Dimensions and coordinates
 
-1. Core/courtyard axis at source u=1172 is shifted right 17.5 pixels / **1.548 m** to the slab centre. Core tiers, plinth, steps, planters and inner link ends follow together.
-2. Source garage inner edge u=1280 crosses the central band. Its inner edge moves **1.994 m east** to Y=−10, retaining the outer edge. This narrows the hall; the clear door remains 12.6 m wide.
-3. Two occluded connector terminals extend into their host walls to remove disconnected point contacts. The overlay distinguishes these from raw traced outlines.
-4. Radar tower position behind the garage is inferred from the 3/4 view. The top sheet does not resolve it reliably. West block and east-rear outlines are traced without shifts; rear service clutter and wall thickness beneath overhanging roofs are not authoritative measurements.
-5. Roof elevations are estimates anchored to the confirmed 18 m tip, not dimensions supplied by the reference. Core tiers: 8.2 / 11.5 / 12.3 m. Garage: 7.6 m. The 15 mm roof membranes sit above scheduled parapets.
+- Slab 38 m along Unreal X × 56 m along Y, 17.98 m to the top of the central tower. Origin on the ground at the slab's centre; +X is the front and the garage exit, +Y is west.
+- Footprint 38 × 56 cells on the 100 cm grid. MeshScale (1, 1, 1): no fit stretch.
+- Garage opening 12.6 × 5.6 m, a 7 m clear vehicle lane, bay 15.044 m deep. Sockets (cm, building frame):
 
-## Primary coordinate schedule
+| Socket | Location |
+|---|---|
+| GarageSpawn | (742.2, −1758.5, 5) |
+| GarageExit | (1494.4, −1758.5, 5) |
+| GarageDoorPivot | (1474.4, −1758.5, 565) |
+| FlagCourtyard / FlagCore / MastTip | (1115.3, 0, 1700) / (−1238.7, −694.5, 1210) / (−1080.0, 0, 1800) |
+| RadarPivot, WingDish pivots, DriveShaftPivot | see `usa_hq.json` |
 
-All numbers in metres. Bounds do not replace polygon outlines: exact traced vertices, raw pixels, normalized pixels and notes live in `Art/USA/buildings/usa_hq/candidate11_manifest.json`.
+## Assembly
 
-| Module | Local X bounds | Local Y bounds | Base … roof |
+- Mesh: `SM_HQ20_Architecture_WallCorrected`. The other 37 components are `URTSBuildingData::Parts`, attached to Mesh so they rise and scale with the construction visual and the rebuild.
+- The 16 door sections, bottom seal, top rollers, lift cables and drive shaft stand at the closed pose of the delivered door cycle (time 0). The radar, wing dish and four fans stand at rest. They are flagged movable for #192 and #194.
+- Small parts (fan rotors, lift cables, rollers, seal, drive shaft) stop drawing beyond 120 m. The four fan rotors cast no shadow. The flag's bounds scale is 1.2 for its wind.
+
+## Materials
+
+The 10 delivery masters are rebuilt by `building_art.py` (the unused `HQ14_Paving` is dropped), with the 49 instances at the delivery's exact values (`usa_hq.json` → `material_instances`):
+
+- `M_HQ_Final_Ownership`: PlayerColor from custom primitive data 4–7 (`RTSPrimitiveData::TeamColor`). Only `MI_HQ17_TeamPanel` uses it.
+- `M_HQ_Final_Operational`: EmissionColor × Operational from custom primitive data 8 (`RTSPrimitiveData::LampOn`), 1 on and 0 off. `ARTSBuilding` writes 1 for now; #196 drives it from power.
+- `M_HQ17_Coating`: roughness clamp(Roughness + CoatingRoughness.R − 0.67, 0.06, 0.98), with the 2 m coating texture set.
+- `M_HQ21_FlagWind`: world position offset wind (two waves, speed 1.55, 18 cm, pinned by UV0.U²). It is two-sided, with a derivative normal. The national colours are fixed and never the owner's.
+- `ARTSBuilding::ApplyTeamColor` writes the same custom primitive data to Mesh and every part. Every HQ shares the same instances, so there are no dynamic instances.
+
+## Collision, navigation and selection
+
+Simple boxes in `URTSBuildingData::CollisionBoxes`, BlockAllDynamic with a NavArea_Null cut. The meshes have no collision. Values in metres, building frame:
+
+| Box | X | Y | Z |
 |---|---|---|---|
-| CoreBase | -16.355 … -1.719 | -7.785 … 7.785 | 0.050 … 8.200 |
-| CoreUpper | -17.060 … -5.070 | -6.104 … 6.104 | 8.215 … 11.500 |
-| CoreDrum | -13.798 … -7.803 | -3.008 … 3.008 | 11.515 … 12.300 |
-| WingRear | -14.768 … -4.805 | 14.464 … 25.434 | 0.050 … 8.400 |
-| WingMiddle | -3.483 … 3.659 | 15.172 … 24.992 | 0.050 … 6.800 |
-| WingFront | 4.981 … 14.592 | 12.253 … 24.373 | 0.050 … 7.200 |
-| WingLinkRear | -4.805 … -3.483 | 16.057 … 23.754 | 0.050 … 4.900 |
-| WingLinkFront | 3.659 … 4.981 | 16.145 … 23.223 | 0.050 … 4.900 |
-| EastRear | -14.768 … -4.452 | -23.754 … -11.899 | 0.050 … 7.800 |
-| WestRearLink | -11.682 … -1.367 | 3.627 … 14.464 | 0.050 … 4.800 |
-| WestFrontLink | -3.747 … 5.863 | 5.750 … 15.172 | 0.050 … 4.800 |
-| EastRearLink | -11.682 … -1.014 | -11.899 … -3.804 | 0.050 … 4.800 |
-| EastFrontLink | -5.422 … 2.954 | -10.660 … -3.804 | 0.050 … 4.800 |
-| Garage | -0.749 … 14.944 | -25.169 … -10.000 | 0.050 … 7.600 |
-| Courtyard | -1.719 … 16.619 | -9.555 … 9.555 | 0.050 … 0.600 |
-| Plinth | 9.742 … 14.680 | -3.893 … 3.893 | 0.600 … 1.800 |
-| Step0 | 16.619 … 17.060 | -4.777 … 4.777 | 0.050 … 0.450 |
-| Step1 | 17.060 … 17.501 | -5.043 … 5.043 | 0.050 … 0.300 |
-| Step2 | 17.501 … 17.942 | -5.308 … 5.308 | 0.050 … 0.150 |
-| WestPlanter | 2.865 … 7.009 | 4.512 … 8.139 | 0.600 … 1.400 |
-| EastPlanter | 2.865 … 7.009 | -8.139 … -4.512 | 0.600 … 1.400 |
-| RadarTower | -3.835 … -0.749 | -14.022 … -10.572 | 0.050 … 9.200 |
+| Rear | −19 … −0.749 | −28 … 28 | 0 … 18 |
+| FrontWest | −0.749 … 19 | −10 … 28 | 0 … 8.4 |
+| FrontEast | −0.749 … 19 | −28 … −25.169 | 0 … 7.6 |
+| GarageBay (garage) | −0.749 … 14.944 | −25.169 … −10 | 0 … 7.6 |
 
-## Garage and integration handoff
+- The apron in front of the garage door (X 14.944 … 19, Y −25.169 … −10) has no box, so the navmesh reaches the door.
+- The garage bay is solid in #191. #192 opens it for the vehicle leaving.
+- Selection and placement keep the 38 × 56 footprint. The placement ghost shows the architecture mesh only.
+- Units still leave at the centre of the +X edge until #192 routes them through the garage.
 
-- Clear opening **12.6 × 5.6 m**, clear bay depth **15.044 m**, ceiling **6.65 m** above slab. These exceed the retained minima 7 × 4.5 × 8.5 m. A 7 m wide swept exit path is checked through the full bay to X=19 m.
-- Spawn socket: (7.4224, -17.5845, 0.0500) m. Door exit: (14.9443, -17.5845, 0.0500) m. All eight helpers are in the FBX and manifest; door, radar and dish retain separate pivots.
-- Claude must update the gameplay footprint to **38 × 56 cells in local X/Y**, width/depth handling in placement, the lateral exit offset to **-1758.45 cm**, and spawn/rally tests. At yaw zero the 6.5 m vehicle's previous clearance formula gives an external spawn X=2425 cm and lane end X=3075 cm; rotate these with building yaw. Audit nav projection and narrow-agent early returns.
-- Import at MeshScale (1,1,1), no fitting stretch. Mast tip remains in static geometry. Production geometry, collision, LODs, animation and runtime materials are not changed here.
-- The combined FBX is a modular review export, not an engine-ready merged root. Claude must rebuild collision/LODs and integrate the final accepted structure. The door is stored closed and hidden for open-bay review renders; roll-up mechanics remain unresolved from Candidate 10.
+## LODs and budgets
 
-## Acceptance evidence and preserved work
+- LODs are made at import with the vehicles' switch distances (`vehicle_art.LOD_DISTANCES`: 35, 110 and 260 m from the RTS camera).
+- The architecture, roofs, courtyard and garage interior are so large that the engine caps their screen sizes. They keep full detail up to about 108 m and draw LOD2 at the default zoom (150 m).
+- Meshes under 2,000 triangles keep one LOD. Nanite is off.
 
-- Source checks: 36 passed. Independent FBX re-import checks: 128 passed. Bounds tolerance 1 cm; module/pivot checks 1 mm. Root triangles 5,488; movable triangles 460.
-- Raw trace agreement ≤0.5 m applies only to the six unadjusted west/east-rear outlines. Adjusted and inferred geometry is explicitly listed above. This is manual tracing, not a photogrammetric reconstruction.
-- Review the top overlay, matched review sheet, orthographic elevations and actual RTS views. The 30 m close RTS camera intentionally crops this large building; the full campus is assessed in the orthographic and dedicated 3/4 views.
-- Candidate 10 sources were copied from the existing usa-hq-realism worktree; Candidate 11 is a separate generator branch. Historic round 8 model, FBX and renders in this checkout remain intact, and Candidates 9/10 in the original worktree remain unchanged. Hash audit protects 360 files. Before-change generator/spec copies are under `source/candidate11_baseline/`.
-- Existing Candidate 10 4K maps, cloth animation, LODs and material work remain preserved in that worktree for the later detail pass. Candidate 11 uses simple materials and static flag poses only. No texture downgrade or overwrite was applied to Candidate 10.
-- Existing material/team-colour policy and triangle ceilings remain applicable to the final asset. The prior complete spec is archived under `source/candidate11_baseline/main_round8/docs/art/usa_hq/USA_HQ_SPEC.md` for historical non-layout requirements.
+| | LOD0 | LOD1 | LOD2 | LOD3 |
+|---|---|---|---|---|
+| Whole HQ, triangles (every part counted) | 3,241,808 | 428,225 | 118,123 | 26,753 |
+| Budget asserted by `WorldDivide.Art.USAHeadquarters` | n/a | ≤ 450k | ≤ 150k | ≤ 40k |
 
-No Unreal asset, Source/, Data/, gameplay code, commit, push or PR was changed. Layout acceptance is recorded. Candidate 12 begins the wall-material pass; its finish remains under review. See `Art/USA/buildings/usa_hq/candidate12_README.md`.
+The full-detail model is kept for close-ups. Performance acceptance with several HQs is #199.

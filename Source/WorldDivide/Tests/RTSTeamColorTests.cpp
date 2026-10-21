@@ -28,6 +28,7 @@ namespace RTSTeamColorTests
 
 	const TCHAR* M20DataPath = TEXT("/Game/Data/Units/DA_TestM20Guardian.DA_TestM20Guardian");
 	const TCHAR* FactoryDataPath = TEXT("/Game/Data/Buildings/DA_TestVehicleFactory.DA_TestVehicleFactory");
+	const TCHAR* HeadquartersDataPath = TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters");
 	const TCHAR* VehicleMaterialPath = TEXT("/Game/Materials/M_Vehicle.M_Vehicle");
 	const TCHAR* TeamMaterialPath = TEXT("/Game/Materials/M_PlaceholderTeam.M_PlaceholderTeam");
 
@@ -202,6 +203,19 @@ bool FRTSBuildingTeamColorTest::RunTest(const FString& Parameters)
 	ReplicateTeam(*Green, 3);
 	TestColored(*this, TEXT("After its team became 3"), *Green, 3);
 	TestColored(*this, TEXT("The other factory, unchanged"), *Blue, 0);
+
+	// A building of several meshes, the USA HQ (#191), colours every one of them and keeps sharing their materials.
+	URTSBuildingData* Headquarters = LoadObject<URTSBuildingData>(nullptr, HeadquartersDataPath);
+	if (TestNotNull(TEXT("The headquarters' data loads"), Headquarters))
+	{
+		ARTSBuilding* BlueHQ = TestWorld.SpawnBuilding(Headquarters, 0, FVector(20000.f, 0.f, 0.f));
+		ARTSBuilding* GreenHQ = TestWorld.SpawnBuilding(Headquarters, 2, FVector(20000.f, 10000.f, 0.f));
+		TestEqual(TEXT("The headquarters draws its mesh and every part in its team's colour"),
+			TestColored(*this, TEXT("HQ team 0"), *BlueHQ, 0), 1 + Headquarters->Parts.Num());
+		TestSharesMaterials(*this, TEXT("Two headquarters of different teams"), *BlueHQ, *GreenHQ);
+		ReplicateTeam(*GreenHQ, 3);
+		TestColored(*this, TEXT("HQ after its team became 3"), *GreenHQ, 3);
+	}
 	return true;
 }
 
