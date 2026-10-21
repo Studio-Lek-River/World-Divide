@@ -10,8 +10,10 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
+#include "Components/StaticMeshComponent.h"
 #include "Containers/Ticker.h"
 #include "Data/RTSAircraftData.h"
+#include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "DynamicRHI.h"
 #include "DynamicResolutionState.h"
@@ -31,6 +33,7 @@
 #include "Misc/Paths.h"
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSPlayerController.h"
+#include "ProfilingDebugging/CsvProfiler.h"
 #include "ProfilingDebugging/MiscTrace.h"
 #include "RHI.h"
 #include "StaticMeshResources.h"
@@ -125,6 +128,14 @@
  * A set named with RTSBenchScene::NightSuffix (DA_TestM20Guardian@Night; #223) benches at night, the sun and the sky
  * dimmed as the night pictures dim them: every vehicle's lamps glow and the nearest light the ground. Every row also gives
  * the vehicle lights' pass and the real lights on at the sample's end.
+ *
+ * A set named with RTSBenchScene::NaniteHQSuffix or LodHQSuffix (DA_TestM20Guardian@NaniteHQ; #349) stands four of the
+ * bench's HQs beside the grid (RTSBenchScene::BenchBuildings), built and finished before the warm-up, against the set
+ * without the suffix; RTSBenchScene::VSMSuffix turns virtual shadow maps on while it runs. Every row of such a set also
+ * gives the HQs' primitives, those drawn on screen, their distinct meshes, those with Nanite, one HQ's LOD0 triangles and
+ * the meshes' resource size at the sample's end. -RTSBenchPasses records a CSV profile of every sample (r.GPUCsvStatsEnabled
+ * and the VSM category) to passes/<sample>.csv beside bench.csv, for the GPU passes and the virtual shadow map pages, which
+ * ue.ps1 -Passes sums into bench.md; -RTSBenchShots saves the view near the end of the move's warm-up as view_<count>.png.
  */
 namespace RTSBenchCommand
 {
@@ -144,6 +155,10 @@ namespace RTSBenchCommand
 	constexpr int32 LongFrameCapacity = 32768;
 
 	const TCHAR* FramesParam = TEXT("RTSBenchFrames");
+	const TCHAR* PassesParam = TEXT("RTSBenchPasses");
+	const TCHAR* ShotsParam = TEXT("RTSBenchShots");
+	/** Real seconds before the move's warm-up ends that -RTSBenchShots takes its picture. */
+	constexpr double ShotBeforeMeasure = 2.0;
 	const TCHAR* SampleSecondsParam = TEXT("RTSBenchSampleSeconds=");
 
 	using RTSBenchScene::GridCentre;
@@ -177,6 +192,7 @@ namespace RTSBenchCommand
 		{ RTSBenchScene::ExactOcclusionSuffix, TEXT("rts.Render.GroupPartOcclusion"), TEXT("0") },
 		{ RTSBenchScene::NoOcclusionSuffix, TEXT("r.AllowOcclusionQueries"), TEXT("0") },
 		{ RTSBenchScene::HZBOcclusionSuffix, TEXT("r.HZBOcclusion"), TEXT("1") },
+		{ RTSBenchScene::VSMSuffix, TEXT("r.Shadow.Virtual.Enable"), TEXT("1") },
 	};
 
 	struct FScenarioStats
@@ -239,6 +255,18 @@ namespace RTSBenchCommand
 		int32 Tracks = 0;
 		int32 DrawnTracks = 0;
 		int32 AnimatedTracks = 0;
+		/**
+		 * The bench HQs at the sample's end (#349): the buildings, their primitive components and those drawn on screen, their
+		 * distinct meshes and those with Nanite, the LOD0 triangles of one HQ and its meshes' resource size (exclusive, the
+		 * Nanite data included).
+		 */
+		int32 Buildings = 0;
+		int32 BuildingPrimitives = 0;
+		int32 DrawnBuildingPrimitives = 0;
+		int32 BuildingMeshes = 0;
+		int32 NaniteBuildingMeshes = 0;
+		int64 BuildingTriangles = 0;
+		double BuildingMeshMB = 0.0;
 		/**
 		 * Each frame's game thread, locomotion, render thread, GPU and running gear time, kept for the percentiles; reserved
 		 * up front so measuring never allocates.
@@ -448,6 +476,12 @@ namespace RTSBenchCommand
 			return FString::Printf(TEXT("| %d | %s | %d | %.3f (%.3f) | %d | %d |\n"), Count, *Scenario, Sample, Mean(DustMs), MaxDustMs, DustEmitters, DustHeld);
 		}
 
+		FString ToBuildingsMarkdown() const
+		{
+			return FString::Printf(TEXT("| %d | %s | %d | %d | %d | %d | %d / %d | %lld | %.1f |\n"), Count, *Scenario, Sample, Buildings,
+				BuildingPrimitives, DrawnBuildingPrimitives, NaniteBuildingMeshes, BuildingMeshes, BuildingTriangles, BuildingMeshMB);
+		}
+
 		FString ToMaterialsMarkdown() const
 		{
 			return FString::Printf(TEXT("| %d | %s | %d | %d | %d | %d | %d | %d / %d / %d / %d | %d |\n"), Count, *Scenario, Sample, Primitives,
@@ -472,6 +506,8 @@ namespace RTSBenchCommand
 			, CameraDistance(bClose ? RTSBenchScene::CloseCameraDistance : InUnitName.Contains(RTSBenchScene::NearSuffix) ? RTSBenchScene::NearCameraDistance
 				: InUnitName.Contains(RTSBenchScene::FarSuffix) ? RTSBenchScene::FarCameraDistance : DefaultCameraDistance)
 		{
+			BuildingDataName = InUnitName.Contains(RTSBenchScene::NaniteHQSuffix) ? RTSBenchScene::NaniteHQData
+				: InUnitName.Contains(RTSBenchScene::LodHQSuffix) ? RTSBenchScene::LodHQData : nullptr;
 		}
 
 		static bool IsRunning() { return Active.IsValid(); }
@@ -556,6 +592,14 @@ namespace RTSBenchCommand
 				// The order's own frame is the dispatch; its cost shows in the slowest game thread frame of the move.
 				TakeFrame(Lead);
 				KeepMoving();
+				if (bShots && !bShotTaken && FPlatformTime::Seconds() - StepStart >= Plan.MoveWarmupSeconds - ShotBeforeMeasure)
+				{
+					// Before the samples, so the picture's frame is not among the measured ones.
+					const FString Shot = FPaths::ConvertRelativePathToFull(FPaths::Combine(GetOutputDir(UnitName),
+						FString::Printf(TEXT("view_%d.png"), Counts[CountIndex])));
+					FScreenshotRequest::RequestScreenshot(Shot, /*bInShowUI*/ false, /*bAddFilenameSuffix*/ false);
+					bShotTaken = true;
+				}
 				if (FPlatformTime::Seconds() - StepStart >= Plan.MoveWarmupSeconds)
 				{
 					BeginMeasure(TEXT("move"), EStep::MeasureMove);
@@ -644,6 +688,15 @@ namespace RTSBenchCommand
 			{
 				return Finish(TEXT("no unit named"));
 			}
+			if (BuildingDataName)
+			{
+				const FString Path = FString::Printf(TEXT("%s/%s.%s"), RTSBenchScene::BenchHQDir, BuildingDataName, BuildingDataName);
+				BuildingData.Reset(LoadObject<URTSBuildingData>(nullptr, *Path));
+				if (!BuildingData)
+				{
+					return Finish(FString::Printf(TEXT("no building data at %s: build it with ue.ps1 -Task setup -BenchHQ"), *Path));
+				}
+			}
 			TeamId = Controller->GetTeamId();
 			if (Viewpoint)
 			{
@@ -695,6 +748,12 @@ namespace RTSBenchCommand
 					SavedCVars.Add(Setting.Get<1>(), CVar->GetString());
 					CVar->Set(Setting.Get<2>(), ECVF_SetByConsole);
 				}
+			}
+			// The GPU passes in the CSV profile of each sample (#349).
+			if (IConsoleVariable* CVar = bPasses ? IConsoleManager::Get().FindConsoleVariable(TEXT("r.GPUCsvStatsEnabled")) : nullptr)
+			{
+				SavedCVars.Add(TEXT("r.GPUCsvStatsEnabled"), CVar->GetString());
+				CVar->Set(TEXT("1"), ECVF_SetByConsole);
 			}
 			bSavedSmoothFrameRate = GEngine->bSmoothFrameRate;
 			GEngine->bSmoothFrameRate = false;
@@ -872,6 +931,35 @@ namespace RTSBenchCommand
 			{
 				SpawnCover();
 			}
+			return !BuildingData || SpawnBuildings();
+		}
+
+		/** The bench HQs of an "@NaniteHQ" or "@LodHQ" set beside the grid, finished at once and cleared with its units (#349). */
+		bool SpawnBuildings()
+		{
+			for (const RTSBenchScene::FBenchBuilding& Spot : RTSBenchScene::BenchBuildings)
+			{
+				const FTransform Transform(FRotator(0.f, Spot.Yaw, 0.f), GetGridCentre() + FVector(Spot.X, Spot.Y, 0.f));
+				ARTSBuilding* Building = World->SpawnActorDeferred<ARTSBuilding>(ARTSBuilding::StaticClass(), Transform, nullptr,
+					nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+				if (!Building)
+				{
+					return false;
+				}
+				Building->InitFromData(BuildingData.Get(), TeamId);
+				Building->FinishSpawning(Transform);
+				// Its build time over and again, so it is finished whatever its team's production rate.
+				for (int32 Attempt = 0; Attempt < 10 && !Building->IsConstructed(); ++Attempt)
+				{
+					Building->UpdateConstruction(FMath::Max(BuildingData->BuildTime, 1.f) * 10.f);
+				}
+				Buildings.Add(Building);
+				if (!Building->IsConstructed())
+				{
+					return false;
+				}
+			}
+			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.Bench: %d x %s beside the grid"), Buildings.Num(), *BuildingData->GetName());
 			return true;
 		}
 
@@ -974,6 +1062,14 @@ namespace RTSBenchCommand
 				}
 			}
 			Units.Reset();
+			for (const TWeakObjectPtr<ARTSBuilding>& Building : Buildings)
+			{
+				if (Building.IsValid())
+				{
+					Building->Destroy();
+				}
+			}
+			Buildings.Reset();
 			for (const TWeakObjectPtr<AActor>& Solid : SolidActors)
 			{
 				if (Solid.IsValid())
@@ -1008,7 +1104,44 @@ namespace RTSBenchCommand
 			URTSVehicleLightSubsystem::TakeSeconds();
 			FRTSSolidStats::Take();
 			TRACE_BEGIN_REGION(*RegionName());
+			bPassCapturePending = bPasses;
 			GoTo(Next);
+		}
+
+		/**
+		 * -RTSBenchPasses: starts the sample's CSV profile once the last one is written (the samples of the long method follow
+		 * each other at once), with the VSM category on, to passes/<sample>.csv.
+		 */
+		void StartPassCapture()
+		{
+#if CSV_PROFILER
+			FCsvProfiler* Profiler = FCsvProfiler::Get();
+			if (!bPassCapturePending || FCsvProfiler::IsCapturing() || Profiler->IsWritingFile() || Profiler->IsEndCapturePending())
+			{
+				return;
+			}
+			Profiler->EnableCategoryByString(TEXT("VSM"));
+			Profiler->BeginCapture(-1, FPaths::ConvertRelativePathToFull(FPaths::Combine(GetOutputDir(UnitName), TEXT("passes"))),
+				RegionName() + TEXT(".csv"));
+			bPassCapturePending = false;
+			bPassCapturing = true;
+#endif
+		}
+
+		void EndPassCapture()
+		{
+#if CSV_PROFILER
+			if (bPassCapturing)
+			{
+				FCsvProfiler::Get()->EndCapture();
+				bPassCapturing = false;
+			}
+			else if (bPassCapturePending)
+			{
+				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.Bench: %s: no CSV profile, the last one was still being written"), *RegionName());
+			}
+			bPassCapturePending = false;
+#endif
 		}
 
 		FString RegionName() const
@@ -1036,6 +1169,7 @@ namespace RTSBenchCommand
 				Current.KeptFrames.Reserve(LongFrameCapacity);
 			}
 			TRACE_BEGIN_REGION(*RegionName());
+			bPassCapturePending = bPasses;
 			GoTo(MeasureStep);
 			return true;
 		}
@@ -1065,6 +1199,7 @@ namespace RTSBenchCommand
 		/** Takes one frame of the scenario; true once it has all of them, logged and kept. */
 		bool Measure()
 		{
+			StartPassCapture();
 			TakeFrame(Current);
 			const double Elapsed = FPlatformTime::Seconds() - StepStart;
 			if (bKeepFrames && Current.KeptFrames.Num() < LongFrameCapacity)
@@ -1076,6 +1211,7 @@ namespace RTSBenchCommand
 				return false;
 			}
 			TRACE_END_REGION(*RegionName());
+			EndPassCapture();
 			Current.SampleSeconds = Elapsed;
 			Current.TakePercentiles();
 			Current.Units = Units.Num();
@@ -1086,6 +1222,7 @@ namespace RTSBenchCommand
 			CountMaterials(Current);
 			CountLODs(Current);
 			CountTracks(Current);
+			CountBuildings(Current);
 			const URTSExhaustSubsystem* Exhaust = World->GetSubsystem<URTSExhaustSubsystem>();
 			Current.ExhaustEmitters = Exhaust ? Exhaust->GetActiveEmitters() : 0;
 			Current.ExhaustHeld = Exhaust ? Exhaust->GetHeldEmitters() : 0;
@@ -1218,6 +1355,45 @@ namespace RTSBenchCommand
 			}
 		}
 
+		/** The bench HQs at the sample's end (#349): see FScenarioStats::Buildings. */
+		void CountBuildings(FScenarioStats& Stats) const
+		{
+			const float DrawnSince = World->GetTimeSeconds() - DrawnSeconds;
+			TSet<UStaticMesh*> Meshes;
+			for (const TWeakObjectPtr<ARTSBuilding>& Building : Buildings)
+			{
+				if (!Building.IsValid())
+				{
+					continue;
+				}
+				++Stats.Buildings;
+				for (const UStaticMeshComponent* Component : TInlineComponentArray<UStaticMeshComponent*>(Building.Get()))
+				{
+					UStaticMesh* Mesh = Component->GetStaticMesh();
+					if (!Mesh)
+					{
+						continue;
+					}
+					++Stats.BuildingPrimitives;
+					Stats.DrawnBuildingPrimitives += Component->GetLastRenderTimeOnScreen() >= DrawnSince ? 1 : 0;
+					// One HQ's triangles: its parts at LOD0, a mesh several parts share once per part.
+					if (Stats.Buildings == 1)
+					{
+						Stats.BuildingTriangles += Mesh->GetNumTriangles(0);
+					}
+					Meshes.Add(Mesh);
+				}
+			}
+			int64 Bytes = 0;
+			for (UStaticMesh* Mesh : Meshes)
+			{
+				Bytes += Mesh->GetResourceSizeBytes(EResourceSizeMode::Exclusive);
+				Stats.NaniteBuildingMeshes += Mesh->IsNaniteEnabled() ? 1 : 0;
+			}
+			Stats.BuildingMeshes = Meshes.Num();
+			Stats.BuildingMeshMB = Bytes / (1024.0 * 1024.0);
+		}
+
 		/** The resolution the scene renders at before any upscale. */
 		FIntPoint GetRenderSize() const
 		{
@@ -1288,6 +1464,16 @@ namespace RTSBenchCommand
 			for (const FScenarioStats& Result : Results)
 			{
 				Markdown += Result.ToDustMarkdown();
+			}
+			if (BuildingData)
+			{
+				Markdown += FString::Printf(TEXT("\nThe bench HQs (#349, %s) at each sample's end; triangles are one HQ's at LOD0, memory the distinct meshes' resource size:\n\n"), *BuildingData->GetName())
+					+ TEXT("| Units | Scenario | Sample | HQs | Primitive components | Drawn on screen | Nanite / distinct meshes | Triangles | Mesh MB |\n")
+					TEXT("|---:|---|---:|---:|---:|---:|---:|---:|---:|\n");
+				for (const FScenarioStats& Result : Results)
+				{
+					Markdown += Result.ToBuildingsMarkdown();
+				}
 			}
 			return FFileHelper::SaveStringToFile(Csv, *FPaths::Combine(Dir, TEXT("bench.csv")))
 				&& FFileHelper::SaveStringToFile(Markdown, *FPaths::Combine(Dir, TEXT("bench.md")))
@@ -1430,6 +1616,16 @@ namespace RTSBenchCommand
 			{
 				Scene->SetBoolField(TEXT("night"), true);
 			}
+			// And the bench HQs of an "@NaniteHQ" or "@LodHQ" set and an "@VSM" set's shadows (#349).
+			if (BuildingData)
+			{
+				Scene->SetStringField(TEXT("buildings"), BuildingData->GetName());
+				Scene->SetNumberField(TEXT("building_count"), UE_ARRAY_COUNT(RTSBenchScene::BenchBuildings));
+			}
+			if (UnitName.Contains(RTSBenchScene::VSMSuffix))
+			{
+				Scene->SetBoolField(TEXT("virtual_shadow_maps"), true);
+			}
 			if (bOccluded)
 			{
 				Scene->SetNumberField(TEXT("cover_share"), RTSBenchScene::CoverShare);
@@ -1455,6 +1651,7 @@ namespace RTSBenchCommand
 			Run->SetStringField(TEXT("end"), FDateTime::UtcNow().ToIso8601());
 			Run->SetStringField(TEXT("engine"), FEngineVersion::Current().ToString());
 			Run->SetBoolField(TEXT("trace"), IsTracing());
+			Run->SetBoolField(TEXT("csv_profile"), bPasses);
 			const TArray<FString> Flags = GetFlags();
 			Run->SetBoolField(TEXT("valid"), Flags.IsEmpty());
 			TArray<TSharedPtr<FJsonValue>> FlagValues;
@@ -1493,6 +1690,7 @@ namespace RTSBenchCommand
 
 		bool Finish(FString Error)
 		{
+			EndPassCapture();
 			if (World.IsValid())
 			{
 				ClearUnits();
@@ -1576,6 +1774,17 @@ namespace RTSBenchCommand
 		/** A "@Night" set (#223), and the night it dims the level to. */
 		bool bNight = false;
 		FRTSShotNight Night;
+		/** An "@NaniteHQ" or "@LodHQ" set's building data, held like the units', and its HQs (#349). */
+		const TCHAR* BuildingDataName = nullptr;
+		TStrongObjectPtr<URTSBuildingData> BuildingData;
+		TArray<TWeakObjectPtr<ARTSBuilding>> Buildings;
+		/** -RTSBenchPasses: a CSV profile per sample, the next one waiting to start, and one recording. */
+		bool bPasses = FParse::Param(FCommandLine::Get(), PassesParam);
+		bool bPassCapturePending = false;
+		bool bPassCapturing = false;
+		/** -RTSBenchShots: the view saved once per run, near the end of the first move's warm-up. */
+		bool bShots = FParse::Param(FCommandLine::Get(), ShotsParam);
+		bool bShotTaken = false;
 		const RTSBenchScene::FViewpoint* Viewpoint = nullptr;
 		FVector ViewGridCentre = FVector::ZeroVector;
 		float CameraDistance = DefaultCameraDistance;

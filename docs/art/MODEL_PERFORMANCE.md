@@ -20,9 +20,13 @@ by authoring each asset for the RTS camera, cheap enough to draw at full detail 
    - Detail smaller than about 10 cm (bolts, seams, panel lines, small bevels) lives in the normal and AO maps, not in the
      geometry. No microscopic bevels.
    - The dense visual-review master stays in the source folder only. It is never the game mesh.
-2. **Two LODs: LOD0 and LOD1.**
+2. **Two LODs: LOD0 and LOD1, no Nanite.**
+   - Building shells do not use Nanite: at 240 units a Nanite HQ cost more than twice an HQ with LODs, and its fallback
+     breaks up without Nanite (#349, `docs/tech/scale/PERFORMANCE_RESULTS.md`).
    - LOD1 switches in at 260 m, the same far distance the vehicles use (`vehicle_art.LOD_DISTANCES`), where a building is
      small on screen.
+   - The whole building switches at once: one switch distance measured from the building's bounds, not from each mesh's
+     own, so its pieces never switch one after another.
    - LOD1 keeps the exact silhouette and uses the same material slots, in the same order, and the same textures, so the
      switch cannot be seen.
    - Buildings have no LOD2 or LOD3.
@@ -30,19 +34,26 @@ by authoring each asset for the RTS camera, cheap enough to draw at full detail 
 
    | Building | LOD0 | LOD1 | Material slots |
    |---|---:|---:|---:|
-   | Large (HQ, factory, airfield) | ≤ 60,000 | ≤ 15,000 | ≤ 8 |
+   | Large (HQ, factory, airfield) | ≤ 150,000 | ≤ 40,000 | ≤ 8 |
    | Small (power plant, barracks, defences) | ≤ 25,000 | ≤ 6,000 | ≤ 8 |
 
+   - The large budget is the one #349 benched with the USA HQ: about 0.2 ms of GPU per HQ among 240 units.
+   - Share the budget out per mesh by what reads at the RTS camera, not by triangle count. Small details that show at
+     150 m (solar cells, grilles, door lights, planters) keep their own triangles; a flat cut lost the HQ's solar cells
+     at LOD0.
    - Each moving part (door, radar, dish, fan, flag) is at most 10,000 triangles at LOD0. Its triangles count towards the
      building's budget.
-   - Every material is an instance of the project's master material (`M_Vehicle` for the faction art).
+   - Far fewer material sections than the current HQ (172): each slot is one section per mesh where possible.
+   - Glass is its own mesh, or at least its own slot, so it can be drawn translucent or opaque without touching the rest.
+   - Every material slot becomes an instance of a project master material in setup (`M_Vehicle` for vehicles). Name the
+     slots after their surface (concrete, metal, glass) so Claude can map them.
 4. **Nothing vanishes or appears.** Between LOD0 and LOD1 no part is removed. Antennas, railings, ladders, flags and
    grilles get a simpler mesh with the same outline. Build it by hand where the engine's reduction would shrink it into
    gaps (anything made of many small separate pieces), and deliver it as `<mesh>_LOD1.fbx` next to the LOD0 FBX.
 5. **Few pieces.**
    - All static geometry is merged into one mesh, or into as few as the material limit allows.
    - Only moving parts are separate meshes, each with its own named pivot.
-   - Small parts cast no shadow. No Nanite.
+   - Small parts cast no shadow. No Nanite (rule 2).
    - Collision is Claude's. Do not deliver collision meshes beyond what the building's handoff asks for.
 6. **Textures that never pop.**
    - At most 2K (2048 × 2048) per texture set. 4K only with the producer's approval.

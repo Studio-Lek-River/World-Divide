@@ -50,6 +50,8 @@ Content/__ExternalActors__/AdvancedRealisticGlass/
 Content/__ExternalObjects__/AdvancedRealisticGlass/
 # The pack scale level of Tools/Editor/audit_packs.py: it references the packs above.
 Content/Developers/PackAudit/
+# The bench's HQ shells of #349 (ue.ps1 -Task setup -BenchHQ): large, rebuilt from Art/USA/buildings/usa_hq on each machine.
+Content/Bench/
 
 # A tryout model ripped from CryEngine content: Crytek's, kept on this machine only, never committed or shipped
 Art/Source/Local/Crytek/

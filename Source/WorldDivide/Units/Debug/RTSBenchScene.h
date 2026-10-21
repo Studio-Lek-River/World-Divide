@@ -117,6 +117,42 @@ namespace RTSBenchScene
 	const TCHAR* const NightSuffix = TEXT("@Night");
 	constexpr float CloseCameraDistance = 3000.f;
 
+	/**
+	 * The set name's suffixes that stand four of the bench's HQs beside the grid (#349): "@NaniteHQ" the HQ whose static
+	 * shell draws with Nanite (DA_BenchHQ_Nanite), "@LodHQ" the same shell without Nanite at LOD0 and LOD1 (DA_BenchHQ_Lod).
+	 * Both are built only by ue.ps1 -Task setup -BenchHQ, under BenchHQDir; the set without the suffix is the baseline.
+	 */
+	const TCHAR* const NaniteHQSuffix = TEXT("@NaniteHQ");
+	const TCHAR* const LodHQSuffix = TEXT("@LodHQ");
+	const TCHAR* const BenchHQDir = TEXT("/Game/Bench/USAHQ");
+	const TCHAR* const NaniteHQData = TEXT("DA_BenchHQ_Nanite");
+	const TCHAR* const LodHQData = TEXT("DA_BenchHQ_Lod");
+
+	/**
+	 * Where the four HQs stand, from the grid's middle, and their yaw: two on each side of the long scene's 240-unit grid
+	 * (121 x 121 m), their long side along its drive and 5 m clear of its outer columns, side by side 2 m apart. The grid
+	 * fills the middle of the view, so at the default camera about three quarters of each HQ is in frame, at @Far all of
+	 * them, and at @Close none: there only their shadows and culling cost.
+	 */
+	struct FBenchBuilding
+	{
+		float X = 0.f;
+		float Y = 0.f;
+		float Yaw = 0.f;
+	};
+	inline constexpr FBenchBuilding BenchBuildings[] = {
+		{ -1000.f, 8600.f, -90.f },
+		{ 4800.f, 8600.f, -90.f },
+		{ -1000.f, -8600.f, 90.f },
+		{ 4800.f, -8600.f, 90.f },
+	};
+
+	/**
+	 * The set name's suffix that benches with virtual shadow maps (r.Shadow.Virtual.Enable 1 while it runs; #349). The
+	 * project sets no shadow method, so it otherwise draws the code default, conventional shadow maps.
+	 */
+	const TCHAR* const VSMSuffix = TEXT("@VSM");
+
 	/** The level the viewpoints below belong to; ue.ps1 -Task bench -Map L_TestMap plays it instead of L_Bench. */
 	const TCHAR* const TestMapName = TEXT("L_TestMap");
 

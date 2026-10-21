@@ -2334,3 +2334,105 @@ every sample valid.
 - Only the 6 nearest vehicles light the ground; the rest show their glowing lamps. If the cut shows, the next step stays
   the projected decal per vehicle beyond the cap (#223), not a higher light cap.
 - No IES profile: the cone edge is the spot light's own falloff.
+
+## #349 (Nanite building shells against LOD0 + LOD1)
+
+### What changed
+
+Bench tooling only; no game code or production asset changes.
+
+- `ue.ps1 -Task setup -BenchHQ` builds two bench HQs under the git-ignored `/Game/Bench/USAHQ` from the USA HQ delivery
+  (`Art/USA/buildings/usa_hq`). Both share the HQ's data and its production moving parts; only the 9 static shell meshes
+  (2.98 M triangles) differ:
+  - **A, `DA_BenchHQ_Nanite`:** the shell as delivered, Nanite on, no LODs.
+  - **B, `DA_BenchHQ_Lod`:** the shell without Nanite, LOD0 149,994 and LOD1 39,995 triangles over the whole shell (each
+    mesh its share by triangle count, engine reduction), LOD1 from 260 m.
+  - Both draw with bench copies of the HQ's masters that carry the Nanite usage flag. The production masters lack it, and
+    outside the editor a Nanite mesh on them silently draws its fallback ("missing usage flag Nanite"). Glass is opaque on
+    the surface master in both, since Nanite draws no translucency.
+- `rts.Debug.Bench` set suffixes: `@NaniteHQ` and `@LodHQ` stand four of these HQs beside the 240-unit grid
+  (`RTSBenchScene::BenchBuildings`); `@VSM` turns virtual shadow maps on (`r.Shadow.Virtual.Enable 1`). The project sets
+  no shadow method, so without `@VSM` it draws the engine default, conventional shadow maps.
+- `ue.ps1 -Passes` records a CSV profile per sample (`r.GPUCsvStatsEnabled`, the `VSM` category) and adds the GPU passes
+  and VSM pages to `bench.md` and `passes.json`. `-Shots` saves the view near the end of the warm-up (`view_<count>.png`).
+  Neither run can be a baseline.
+- `ue.ps1 -Task buildingshots -Building <DA>` (`rts.Debug.BuildingShots`) pictures one building at the RTS pitch from
+  12, 150 and 450 m and at 249.6 and 270.4 m, logging every part's LOD and whether it draws with Nanite; `-Cvars r.Nanite=0`
+  takes the same views with the Nanite fallback.
+
+### Quick method, 240 moving M20s, 4 HQs, with and without VSM
+
+`ue.ps1 -Task bench -Unit <18 sets> -Quick -Passes -Shots`, Ryzen 7 7800X3D, RTX 4090, D3D12 SM6, 1920x1080, one run.
+
+**Caveat:** another session built and tested on the same machine throughout: other processes used 4.5 to 6.5 cores in
+every set (the validity limit is 1). Every sample is internally valid, but the GPU, render and game thread means carry
+about ±0.5 ms of noise (`@LodHQ@Far` came out faster than its baseline). The per-pass GPU times are the firmer evidence.
+Cost per HQ is (set − baseline) / 4.
+
+| Set | GPU ms (p95) | Render ms (p95) | Game ms (p95) | Nanite passes | Base pass | Prepass | Shadow depths | Draw calls | GPU per HQ | Render per HQ |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| baseline | 4.76 (9.26) | 5.70 (9.09) | 5.52 (12.80) | - | 0.69 | 0.19 | 0.57 | 971 | | |
+| `@NaniteHQ` | 6.90 (11.84) | 7.65 (10.67) | 6.67 (14.23) | 1.09 | 0.69 | 0.16 | 1.50 | 1144 | +0.54 | +0.49 |
+| `@LodHQ` | 5.69 (9.96) | 6.32 (9.53) | 6.12 (13.69) | - | 0.88 | 0.35 | 0.72 | 1367 | +0.23 | +0.16 |
+| `@Close` | 6.27 (12.22) | 6.47 (9.97) | 6.32 (13.86) | - | 0.31 | 0.08 | 2.80 | 661 | | |
+| `@NaniteHQ@Close` | 7.53 (12.49) | 7.44 (10.99) | 6.87 (14.29) | 0.50 | 0.30 | 0.08 | 3.63 | 723 | +0.32 | +0.24 |
+| `@LodHQ@Close` | 7.42 (13.28) | 8.13 (12.36) | 8.53 (19.09) | - | 0.33 | 0.11 | 3.43 | 842 | +0.29 | +0.42 |
+| `@Far` | 3.92 (8.49) | 5.41 (9.28) | 5.45 (13.96) | - | 0.28 | 0.08 | 0.10 | 593 | | |
+| `@NaniteHQ@Far` | 5.50 (10.05) | 7.01 (10.68) | 6.08 (13.33) | 0.98 | 0.27 | 0.10 | 0.96 | 696 | +0.40 | +0.40 |
+| `@LodHQ@Far` | 3.30 (5.25) | 3.83 (6.81) | 4.62 (11.67) | - | 0.29 | 0.09 | 0.08 | 782 | noise | noise |
+| `@VSM` | 4.63 (9.27) | 5.21 (9.46) | 5.29 (13.13) | - | 0.56 | 0.16 | 0.65 | 930 | | |
+| `@NaniteHQ@VSM` | 6.50 (11.83) | 7.17 (11.94) | 6.38 (13.89) | 0.97 | 0.62 | 0.16 | 1.11 | 1086 | +0.47 | +0.49 |
+| `@LodHQ@VSM` | 5.21 (10.04) | 5.76 (9.87) | 5.79 (13.47) | - | 0.75 | 0.27 | 0.71 | 1327 | +0.15 | +0.14 |
+| `@Close@VSM` | 4.51 (8.49) | 5.04 (8.70) | 5.54 (13.46) | - | 0.29 | 0.08 | 0.77 | 532 | | |
+| `@NaniteHQ@Close@VSM` | 5.91 (11.53) | 6.71 (10.23) | 6.77 (14.64) | 0.56 | 0.33 | 0.08 | 1.20 | 574 | +0.35 | +0.42 |
+| `@LodHQ@Close@VSM` | 4.82 (8.99) | 5.51 (8.96) | 6.03 (13.98) | - | 0.30 | 0.08 | 0.86 | 608 | +0.08 | +0.12 |
+| `@Far@VSM` | 4.22 (9.33) | 5.47 (9.79) | 5.28 (12.70) | - | 0.23 | 0.08 | 0.43 | 586 | | |
+| `@NaniteHQ@Far@VSM` | 4.75 (8.00) | 5.70 (9.13) | 5.29 (12.74) | 0.84 | 0.21 | 0.06 | 0.67 | 686 | +0.13 | +0.06 |
+| `@LodHQ@Far@VSM` | 3.82 (7.64) | 4.51 (8.50) | 4.82 (12.81) | - | 0.28 | 0.11 | 0.34 | 779 | noise | noise |
+
+The Nanite passes are NaniteVisBuffer, NaniteBasePass and NaniteReadback together, in ms like the other passes. The grid
+fills the default view, so about three quarters of each HQ is in frame there, none at `@Close` (only their shadows and
+culling cost) and all four at `@Far`.
+
+- **Nanite has a fixed cost the LOD shell does not:** 0.5 to 1.1 ms of Nanite passes for 4 HQs, on screen or not, on top
+  of a units-only scene that never pays it.
+- **Under conventional shadows Nanite doubles the shadow depths** (0.57 → 1.50 ms at the default camera, +0.9 ms at
+  `@Far`). The LOD shell adds 0.15 ms there.
+- **The LOD shell costs about +0.2 ms GPU per HQ at the default camera** (for all four: +0.2 base pass, +0.15 prepass,
+  +0.15 shadow depths) and 170 to 400 more draw calls than the baseline. A costs about +0.5 ms per HQ.
+- **VSM narrows Nanite's shadow cost** (shadow depths 0.65 → 1.11 instead of 0.57 → 1.50) but not its passes. Of the
+  4,096-page pool about 800 pages are in use in the baseline, 820 with A and 870 with B at the default camera, and 890 to
+  920 with A at `@Close` and `@Far`. The moving units invalidate 370 to 440 dynamic pages a frame in every set.
+
+### Memory, disk and captures
+
+- Resource size of one HQ's 22 distinct meshes (the 9 shell meshes and 13 shared moving-part meshes): A 13.3 MB, B 18.2 MB.
+  For Nanite this is the engine's estimate and may leave out streamed pages. One HQ's LOD0 triangles: A 369,440 (its Nanite
+  fallback is about 108,000 for the shell), B 410,846.
+- Disk: the shells' editor packages are 94.6 MB each, both dominated by the source mesh; the built data lives in the DDC,
+  so they do not compare A and B. The cooked size was not measured.
+- Captures in `Saved/BuildingShots/DA_BenchHQ_Nanite`, `DA_BenchHQ_Lod` and `DA_BenchHQ_Nanite/r_Nanite_0`, and each set's
+  `view_240.png`:
+  - A keeps every detail at every distance: lit door strips, drain grilles, planter leaves, the solar array's cells.
+  - A with `r.Nanite 0` (DX11, or hardware without Nanite) breaks up close: faceted paving, torn facade, no flagpole, bare
+    planters. At 150 m and beyond it is close to A.
+  - B at 12 m loses some leaves, the grille stripes and the door light strips. At 150 m, still LOD0, the top-left roof's
+    solar array has lost its cells: the flat share of 150k cut that small detail.
+  - B's switch at 260 m is staggered: each mesh switches by its own bounds, so five small shell meshes are already at LOD1
+    in the 249.6 m shot. At that size the change (railings, walkpads, courtyard paving) is subtle; the silhouette holds.
+
+### Decision
+
+**Building shells do not use Nanite.** They get LOD0 + LOD1, budgeted per mesh so that small details that read at the
+RTS camera keep their triangles, and switch at one distance for the whole building, taken from the building's bounds
+(`docs/art/MODEL_PERFORMANCE.md`, Buildings).
+
+- At 240 units an LOD HQ costs about +0.2 ms GPU, a Nanite HQ about +0.5 ms plus Nanite's 0.5 to 1 ms fixed cost, which
+  the units-only game never pays.
+- VSM does not change the answer: it narrows Nanite's shadow cost, not its passes.
+- Nanite's fallback is unusable for players without Nanite, and every Nanite building would need the material usage flag
+  above.
+- The approved dense master stays in the source folder, so Nanite can be revisited if #233 picks VSM with Nanite for the
+  environment.
+- These are quick-method numbers on a busy machine. One `-Long` run of `@NaniteHQ` and `@LodHQ` against the baseline, on
+  an idle machine, is still to come with the producer's approval.

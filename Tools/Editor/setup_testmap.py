@@ -104,6 +104,14 @@ M20_DIR = "/Game/Art/USA/Vehicles/M20Guardian"
 # The USA HQ as delivered (#187-#191): its layout usa_hq.json (Tools/Art/usa_hq_recipe.py), and where its assets go.
 USA_HQ_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "USA", "buildings", "usa_hq")
 USA_HQ_DIR = "/Game/Art/USA/Buildings/USAHQ"
+# The bench's HQ shells (#349), built only with ue.ps1 -Task setup -BenchHQ (WD_SETUP_BENCH_HQ=1) and never committed
+# (Content/Bench/ is git-ignored): A, the static shell with Nanite, and B, the same without Nanite at LOD0 and LOD1 within
+# these triangle budgets over the whole shell, LOD1 from BENCH_HQ_SWITCH_DISTANCE cm.
+BENCH_HQ = os.environ.get("WD_SETUP_BENCH_HQ") == "1"
+BENCH_HQ_DIR = "/Game/Bench/USAHQ"
+BENCH_HQ_LOD0_TRIANGLES = 150000
+BENCH_HQ_LOD1_TRIANGLES = 40000
+BENCH_HQ_SWITCH_DISTANCE = 26000.0
 
 assets = unreal.EditorAssetLibrary
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
@@ -544,6 +552,82 @@ def make_usa_hq():
     }
 
 
+def make_bench_hq(footprint, layout):
+    """The bench's two HQs (#349, rts.Debug.Bench @NaniteHQ / @LodHQ): DA_BenchHQ_Nanite and DA_BenchHQ_Lod in BENCH_HQ_DIR,
+    the production HQ's data (footprint, collision boxes, sockets, parts in place; layout as make_usa_hq returns it) with
+    its static shell, the meshes that never move, swapped for SM_BenchHQ_Nanite_<part> (Nanite, as delivered) or
+    SM_BenchHQ_Lod_<part> (no Nanite, BENCH_HQ_LOD0/LOD1_TRIANGLES shared out by each mesh's share of the shell's
+    triangles). Both shells draw with copies of the HQ's masters that allow Nanite, and draw the glass opaque,
+    MI_BenchHQ_CoolGlass and MI_BenchHQ_WarmGlass on M_HQ17_Surface with the delivery's tints, since Nanite draws no
+    translucency. The moving parts and the flag stay the production meshes.
+    The bench HQs produce nothing."""
+    hq = building_art.read_layout(os.path.join(USA_HQ_SOURCE_DIR, "usa_hq.json"))
+    material_dir, mesh_dir = f"{BENCH_HQ_DIR}/Materials", f"{BENCH_HQ_DIR}/Meshes"
+    shell = [p for p in hq["parts"] if not p["movable"] and "Flag" not in p["mesh"]]
+
+    # The shell's masters and instances again in BENCH_HQ_DIR, the masters with the Nanite usage (building_art.allow_nanite),
+    # which the production ones lack; A and B both draw with them. The glass is opaque on the surface master.
+    textures = {name: unreal.load_asset(f"{USA_HQ_DIR}/Textures/{name}") for name in hq["textures"]}
+    glass = {"MI_HQ17_CoolGlass": "MI_BenchHQ_CoolGlass", "MI_HQ17_WarmGlass": "MI_BenchHQ_WarmGlass"}
+    used = sorted({instance for p in shell for instance in hq["meshes"][p["mesh"]]["slots"].values()})
+    parents = sorted({"M_HQ17_Surface" if name in glass else hq["material_instances"][name]["parent"] for name in used})
+    masters = {}
+    for name in parents:
+        build = USA_HQ_MASTERS[name]
+        masters[name] = plan_now(
+            f"{material_dir}/{name}", lambda b=build, n=name: building_art.allow_nanite(b(material_dir, n, textures)),
+            spec_hash([building_art.allow_nanite, build, building_art.build_surface_material,
+                       building_art.build_coating_material, building_art.build_ground_material], material_dir, name,
+                      sorted(map(object_path, textures.values()))))
+    instances = {}
+    for production in used:
+        record = hq["material_instances"][production]
+        name = glass.get(production, production)
+        parent = masters["M_HQ17_Surface" if production in glass else record["parent"]]
+        scalars = {key: value for key, value in record["scalars"].items() if key != "GlassOpacity"}
+        instances[production] = plan_now(
+            f"{material_dir}/{name}",
+            lambda n=name, p=parent, s=scalars, v=record["vectors"]: building_art.build_material_instance(material_dir, n, p, s, v),
+            spec_hash([building_art.build_material_instance], material_dir, name, parent, sorted(scalars.items()),
+                      sorted(record["vectors"].items())))
+
+    total = sum(hq["meshes"][p["mesh"]]["triangles"] for p in shell)
+    variants = {}
+    for kind, nanite in (("Nanite", True), ("Lod", False)):
+        meshes = {}
+        for part in shell:
+            record = hq["meshes"][part["mesh"]]
+            source = os.path.join(USA_HQ_SOURCE_DIR, *record["fbx"].split("/"))
+            slots = {slot: instances[instance] for slot, instance in record["slots"].items()}
+            share = record["triangles"] / total
+            lod0, lod1 = (None, None) if nanite else (
+                int(BENCH_HQ_LOD0_TRIANGLES * share), max(1, int(BENCH_HQ_LOD1_TRIANGLES * share)))
+            name = f"SM_BenchHQ_{kind}_{part['name']}"
+            meshes[part["name"]] = plan_now(
+                f"{mesh_dir}/{name}",
+                lambda s=source, n=name, m=slots, r=record, a=lod0, b=lod1, x=nanite: building_art.import_bench_shell(
+                    s, mesh_dir, n, m, r["bounds"], r["triangles"], x, a, b, BENCH_HQ_SWITCH_DISTANCE),
+                spec_hash([building_art.import_bench_shell, vehicle_art.import_part, vehicle_art.lod_radius,
+                           vehicle_art._mesh_editing], mesh_dir, name, file_hash(source),
+                          sorted((slot, object_path(material)) for slot, material in slots.items()), record["bounds"],
+                          record["triangles"], nanite, lod0, lod1, BENCH_HQ_SWITCH_DISTANCE, vehicle_art.SCREEN_MULTIPLE))
+        variants[kind] = meshes
+
+    def bench_part(part, mesh):
+        value = unreal.RTSBuildingPart()
+        for key in ("name", "transform", "movable", "cast_shadow", "bounds_scale", "max_draw_distance"):
+            value.set_editor_property(key, part.get_editor_property(key))
+        value.set_editor_property("mesh", mesh)
+        return value
+
+    for kind, meshes in variants.items():
+        data = make_building(f"DA_BenchHQ_{kind}", f"Bench HQ ({kind})", meshes[hq["root_part"]], (1.0, 1.0, 1.0), footprint,
+                             3000.0, None, 2500, 12.0, 0, 0, directory=BENCH_HQ_DIR)
+        parts = [bench_part(p, meshes.get(str(p.get_editor_property("name")), p.get_editor_property("mesh")))
+                 for p in layout["parts"]]
+        add_properties(data, dict(layout, parts=parts))
+
+
 def gun_recoil(stroke_fraction, recoil_seconds, hold_seconds, return_seconds, jump_degrees=0.0, jump_seconds=0.4,
                jump_damping=0.45, hull_rock_degrees=0.0, hull_rock_seconds=1.0, hull_rock_damping=0.6, max_distance=0.0):
     """A vehicle's reaction to its gun firing (FRTSGunRecoil, #218): the barrel's stroke as a share of its length, capped
@@ -698,8 +782,8 @@ def make_aircraft(name, display_name, mesh, scale, health, weapon, speed, turn_r
 
 def make_building(name, display_name, mesh, scale, footprint, health, weapon, cost, build_time, power_output, power_draw,
                   spawn_on_complete=None, accepts_supply=False, requires_power=False, units=(), upgrades=(), defense=False,
-                  max_count=0, airfield_pads=0, superweapon=None):
-    return plan_data_asset(name, BUILDING_DIR, unreal.RTSBuildingData, {
+                  max_count=0, airfield_pads=0, superweapon=None, directory=BUILDING_DIR):
+    return plan_data_asset(name, directory, unreal.RTSBuildingData, {
         "display_name": unreal.Text(display_name),
         "mesh": mesh,
         "mesh_scale": unreal.Vector(*scale),
@@ -2476,6 +2560,8 @@ headquarters_mesh, headquarters_footprint, headquarters_layout = make_usa_hq()
 headquarters = make_building("DA_TestHeadquarters", "Test Headquarters", headquarters_mesh, (1.0, 1.0, 1.0),
                              headquarters_footprint, 3000.0, None, 2500, 12.0, 0, 0, units=[builder], max_count=1)
 add_properties(headquarters, headquarters_layout)
+if BENCH_HQ:
+    make_bench_hq(headquarters_footprint, headquarters_layout)
 # The tower's spire scaled up. Two minutes to charge; three seconds after launch the strike lands, 80 m across at full
 # damage near the centre and a quarter of it at the edge. One per team.
 superweapon = make_building("DA_TestSuperweapon", "Test Superweapon", tower_mesh, building_fit(tower_mesh, (24, 24), 3200.0),

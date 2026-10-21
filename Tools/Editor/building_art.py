@@ -315,3 +315,62 @@ def import_mesh(source, directory, name, slot_materials, bounds, expected_triang
     if triangles:
         vehicle_art.build_lods(mesh, triangles)
     return mesh
+
+
+def allow_nanite(material):
+    """Gives a master the Nanite usage, which a game outside the editor needs to draw a Nanite mesh with it: without it
+    the mesh falls back to its non-Nanite proxy with the default material ("missing usage flag Nanite", #349)."""
+    # Its result is not whether the flag is set (in the editor it sets the flag and returns false); ask afterwards.
+    editing.set_material_usage(material, unreal.MaterialUsage.MATUSAGE_NANITE)
+    if not editing.has_material_usage(material, unreal.MaterialUsage.MATUSAGE_NANITE):
+        raise RuntimeError(f"{material.get_name()}: could not set the Nanite usage")
+    return _finish(material)
+
+
+def import_bench_shell(source, directory, name, slot_materials, bounds, expected_triangles, nanite, lod0=None, lod1=None,
+                       switch_distance=None):
+    """One mesh of the bench's HQ shell (#349), imported as import_mesh does but kept apart from the production HQ: with
+    Nanite on and no LODs (nanite), or without Nanite, LOD0 reduced to lod0 triangles and one LOD1 of lod1 triangles at
+    switch_distance cm from the camera (vehicle_art.lod_screen_sizes' measure), both by the engine's quadric reduction."""
+    size = bounds[1][0] - bounds[0][0]
+    mesh = vehicle_art.import_part(source, directory, name, slot_materials, size)
+    # A reimport keeps the reduction an earlier run gave LOD0: back to LOD0 alone, at full detail.
+    mesh_editing = vehicle_art._mesh_editing()
+    if mesh.get_num_lods() > 1 or mesh.get_num_triangles(0) < expected_triangles * 0.99:
+        options = unreal.StaticMeshReductionOptions()
+        whole = unreal.StaticMeshReductionSettings()
+        whole.set_editor_property("percent_triangles", 1.0)
+        whole.set_editor_property("screen_size", 1.0)
+        options.set_editor_property("reduction_settings", [whole])
+        mesh_editing.set_lods(mesh, options)
+    imported = mesh.get_num_triangles(0)
+    if imported < expected_triangles * 0.99:
+        raise RuntimeError(f"{source} imported {imported} triangles instead of {expected_triangles}")
+    if nanite:
+        settings = mesh.get_editor_property("nanite_settings")
+        settings.enabled = True
+        mesh.set_editor_property("nanite_settings", settings)
+        if not mesh.get_editor_property("nanite_settings").enabled:
+            raise RuntimeError(f"{name}: Nanite did not stay on")
+        unreal.log(f"building_art: {name} Nanite on, {imported} triangles")
+        return mesh
+
+    radius = vehicle_art.lod_radius(mesh, False)
+    screen_sizes = [1.0, 2.0 * vehicle_art.SCREEN_MULTIPLE * radius / switch_distance]
+    options = unreal.StaticMeshReductionOptions()
+    options.set_editor_property("auto_compute_lod_screen_size", False)
+    settings = []
+    # The engine reduces LOD1 from LOD0 once LOD0 is itself reduced, so its share is of lod0.
+    for target, base, screen_size in zip((lod0, lod1), (imported, lod0), screen_sizes):
+        setting = unreal.StaticMeshReductionSettings()
+        setting.set_editor_property("percent_triangles", min(1.0, target / base))
+        setting.set_editor_property("screen_size", screen_size)
+        settings.append(setting)
+    options.set_editor_property("reduction_settings", settings)
+    if mesh_editing.set_lods(mesh, options) != len(settings):
+        raise RuntimeError(f"{name}: could not make its LODs")
+    if not mesh_editing.set_lod_screen_sizes(mesh, screen_sizes):
+        raise RuntimeError(f"{name}: could not set its LOD screen sizes")
+    unreal.log(f"building_art: {name} LODs " + ", ".join(f"{mesh.get_num_triangles(i)}" for i in range(mesh.get_num_lods())) +
+               f" triangles (of {imported}), screen sizes {[round(s, 4) for s in mesh_editing.get_lod_screen_sizes(mesh)]}")
+    return mesh

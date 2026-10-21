@@ -31,6 +31,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task b
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian -Long
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestTank -Quick -Compare
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestTank -Long -SaveBaseline
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup -BenchHQ
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestM20Guardian@NaniteHQ,DA_TestM20Guardian@LodHQ -Quick -Passes -Shots
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task buildingshots -Building DA_BenchHQ_Nanite
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task buildingshots -Building DA_BenchHQ_Nanite -Cvars r.Nanite=0
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task packaudit
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate -Scope broad -Baseline 4a2a706
@@ -54,7 +58,9 @@ editor's own output goes to Saved/Logs/AutomationRun*.log.stdout; the run prints
 Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
 Setup stops before its slow imports when an asset it must rewrite is read-only and lists them all in
 Saved/Setup/ReadOnlyAssets.txt (#350). -Lock (setup, bakemap, rivercrossing) then git lfs locks the listed files, clears a
-read-only flag the lock left and runs once more; unlock them after the push.
+read-only flag the lock left and runs once more; unlock them after the push. -BenchHQ also builds the bench's two HQ shells
+(#349) under the git-ignored Content/Bench/USAHQ: DA_BenchHQ_Nanite, the HQ's static shell with Nanite, and DA_BenchHQ_Lod,
+the same without Nanite at LOD0 and LOD1 (150k and 40k triangles, LOD1 from 260 m); about 15 minutes the first time.
 Bakemap bakes the level -Map (/Game/Maps/<Level> or <Level>) into its map data asset DA_Map<Name>, or -DataAsset DA_<Name>:
 its preview (rendered with -Render, drawn without), the area the preview covers and its start spots (Tools/Editor/bake_map.py,
 docs/world/maps/AUTHORING_A_MAP.md). It exits 3 like setup when the asset or the preview texture is read-only.
@@ -97,8 +103,14 @@ navmesh leaves out (trunks, boulders, low walls; RTSBenchScene), in its own fold
 (#150) spreads the units over four teams; @RigidTracks (#151) draws the tracks without the link shift and @AllTracks (#212)
 animates every track at any distance, and every row counts the tracks' phase updates and the tracks animated on screen. Every row also counts the units' primitives, those drawn on screen, dynamic material
 slots and materials. @ExactOcclusion, @NoOcclusion and @HZB (#214) change the occlusion queries, @Occluded roofs most of the
-grid and @Close takes the camera to the RTS close zoom; -Map L_TestMap plays L_TestMap instead, for the sets with its viewpoints
-(@TestMapOpen, @TestMapBase, @TestMapWall; RTSBenchScene). bench.json
+grid and @Close takes the camera to the RTS close zoom, @Near (#149) to 60 m and @Far to its farthest, 450 m; -Map L_TestMap plays L_TestMap instead, for the sets with its viewpoints
+(@TestMapOpen, @TestMapBase, @TestMapWall; RTSBenchScene). @NaniteHQ and @LodHQ (#349) stand four of the bench HQs that
+setup -BenchHQ builds beside the grid (DA_BenchHQ_Nanite, DA_BenchHQ_Lod), against the same set without them, and add a table
+of their meshes, triangles and memory, and the meshes' disk size; @VSM turns virtual shadow maps on while the set runs (the
+project draws conventional shadow maps otherwise).
+-Passes records a CSV profile of every sample (r.GPUCsvStatsEnabled and the VSM category) and adds to bench.md and passes.json
+the mean of the GPU passes (Nanite, base pass, shadow depths, ...) and the virtual shadow map pages; -Shots saves the view near
+the end of the move's warm-up as view_<count>.png. Neither run is ever a baseline. bench.json
 beside the table records the method, scene, machine, commit and content hashes.
 -SaveBaseline (clean worktree only) stores each set's run under Saved/Bench/Baselines/<commit>/<method>/<set>; -Compare reads
 the run against the baseline of HEAD, or of the ancestor -Baseline <commit> (marked OUTDATED), refuses one of another
@@ -113,6 +125,11 @@ which representatives to bench with the long method (-Scope broad: every unit), 
 method, and judges every set against Saved/Bench/Baselines/<commit> and the budgets: Saved/Bench/Gate/gate.md and gate.json,
 exit 0 PASS, 1 FAIL, 4 INCONCLUSIVE. With -SaveBaseline (clean worktree) it also stores every valid run as HEAD's baseline.
 See docs/tech/scale/PERFORMANCE_RESULTS.md, "Performance gate for a full roster".
+Buildingshots plays L_Bench with a renderer (a GPU is needed) at 1920x1080 and pictures one finished building of the data
+asset -Building (rts.Debug.BuildingShots, #349; the bench HQs or any of Content/Data/Buildings) at the RTS camera's pitch from
+12, 150 and 450 m and at 249.6 and 270.4 m, 4 % either side of the bench's LOD1 switch, with every part's LOD printed, to
+Saved/BuildingShots/<Building>. -Cvars runs it with console variables into a folder named after them (r.Nanite=0 into
+r_Nanite_0, what hardware without Nanite draws).
 Uibindings writes every binding key, list and action with its panels, and the widgets, colours, fonts and sprites a layout
 may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck validates the layouts of the UI folder -Path
 (an unpacked delivery, for /ui-intake) and prints each problem. -Out and -Path are relative to the repository root.
@@ -121,7 +138,7 @@ Packaudit reads the local marketplace packs in Content/ into Saved/PackAudit/ an
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit', 'bakemap', 'rivercrossing')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'buildingshots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit', 'bakemap', 'rivercrossing')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -147,6 +164,15 @@ param(
 	[switch]$Render,
 
 	[switch]$Lock,
+
+	[switch]$BenchHQ,
+
+	[ValidatePattern('^DA_\w+$')]
+	[string]$Building = 'DA_BenchHQ_Nanite',
+
+	[switch]$Passes,
+
+	[switch]$Shots,
 
 	[string]$Panel = '',
 
@@ -295,7 +321,14 @@ function Invoke-EditorScript([string]$Script, [string]$Name) {
 }
 
 function Invoke-Setup {
-	Invoke-EditorScript (Join-Path $RepoRoot 'Tools\Editor\setup_testmap.py') 'SETUP'
+	# The bench's HQ shells (#349) only when asked: setup_testmap.py reads WD_SETUP_BENCH_HQ.
+	if ($BenchHQ) { $env:WD_SETUP_BENCH_HQ = '1' }
+	try {
+		Invoke-EditorScript (Join-Path $RepoRoot 'Tools\Editor\setup_testmap.py') 'SETUP'
+	}
+	finally {
+		Remove-Item Env:WD_SETUP_BENCH_HQ -ErrorAction SilentlyContinue
+	}
 }
 
 # Bakes the preview, preview area and start spots of the level -Map (L_Name or a /Game path) into its map data asset
@@ -643,6 +676,33 @@ function Invoke-TrackShots {
 	Write-Host "TRACKSHOTS SUCCEEDED: $ShotDir"
 }
 
+# One finished building pictured from the RTS camera at 12, 150 and 450 m and either side of the bench HQ's 260 m LOD switch
+# (#349; rts.Debug.BuildingShots), to Saved\BuildingShots\<Building>, or with -Cvars to a folder named after them.
+function Invoke-BuildingShots {
+	Assert-EditorClosed 'the game run loads the same project.'
+	$Folder = if ($Cvars) { $Cvars -replace '[^A-Za-z0-9]+', '_' } else { '' }
+	$ShotDir = Join-Path $RepoRoot "Saved\BuildingShots\$Building"
+	if ($Folder) { $ShotDir = Join-Path $ShotDir $Folder }
+	$LogFile = Join-Path $RepoRoot 'Saved\Logs\BuildingShots.log'
+	Clear-ShotDir $ShotDir
+	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
+		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
+		"`"-ExecCmds=rts.Debug.BuildingShots $Building $Folder`"", '-RTSBuildingShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		'-unattended', '-nosplash', '-nosound') + @(if ($Cvars) { "-dpcvars=$Cvars" }))
+	$Names = @('close_12m', 'default_150m', 'far_450m', 'lod_before_249.6m', 'lod_after_270.4m')
+	$Problems = @($Names | Where-Object { -not (Test-Path (Join-Path $ShotDir "$_.png")) } | ForEach-Object { "missing $_.png" })
+	if (Test-Path $LogFile) {
+		Select-String -Path $LogFile -Pattern 'rts.Debug.BuildingShots: \S+ (from|at) ' | ForEach-Object { $_.Line -replace '^.*rts.Debug.BuildingShots: ', '  ' }
+	}
+	if ($Process.ExitCode -ne 0 -or $Problems.Count -gt 0) {
+		$Problems | ForEach-Object { Write-Host "  $_" }
+		if (Test-Path $LogFile) { Select-String -Path $LogFile -Pattern 'rts.Debug|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line } }
+		Write-Host "BUILDINGSHOTS FAILED (game exit $($Process.ExitCode)). Log: $LogFile"
+		exit 1
+	}
+	Write-Host "BUILDINGSHOTS SUCCEEDED: $ShotDir"
+}
+
 function Invoke-CameraShots {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$ShotDir = Join-Path $RepoRoot 'Saved\CameraShots'
@@ -841,6 +901,7 @@ function Invoke-Bench {
 	}
 
 	if ($SaveBaseline -and $SampleSeconds -gt 0) { Write-Host 'BENCH FAILED: -SampleSeconds is for method studies; such a run is never a baseline.'; exit 1 }
+	if ($SaveBaseline -and ($Passes -or $Shots)) { Write-Host 'BENCH FAILED: -Passes and -Shots add their own cost to the frames; such a run is never a baseline.'; exit 1 }
 
 	# -ExecCmds splits its commands at commas: one rts.Debug.Bench per set, which the game queues, and the counts joined by '+'.
 	$BenchCounts = ($Counts -split '[,\s+]+' | Where-Object { $_ }) -join '+'
@@ -859,6 +920,8 @@ function Invoke-Bench {
 	$Refused = @()
 	foreach ($Set in $Sets) {
 		$OutDir = Join-Path $RepoRoot "Saved\Bench\$Set"
+		Add-BenchPasses $Set
+		Add-BenchHQDisk $Set
 		Get-Content (Join-Path $OutDir 'bench.md') | ForEach-Object { Write-Host $_ }
 		Write-Host ''
 		if ($SaveBaseline -and -not (Save-BenchBaseline $Set $Method)) { $Refused += $Set }
@@ -875,6 +938,72 @@ function Invoke-Bench {
 		exit 1
 	}
 	Write-Host "BENCH SUCCEEDED: $(($Sets | ForEach-Object { Join-Path $RepoRoot "Saved\Bench\$_" }) -join ', ')"
+}
+
+# The GPU passes and virtual shadow map pages of each sample's CSV profile (-Passes, #349): the means of every GPU/ and VSM/
+# column and of the frame's own times, to passes.json, and to bench.md the passes over 0.05 ms and the pages.
+function Add-BenchPasses([string]$Set) {
+	$OutDir = Join-Path $RepoRoot "Saved\Bench\$Set"
+	$Files = @(Get-ChildItem (Join-Path $OutDir 'passes') -Filter '*.csv' -ErrorAction SilentlyContinue | Sort-Object Name)
+	if (-not $Files) { return }
+	$Culture = [Globalization.CultureInfo]::InvariantCulture
+	$Samples = [ordered]@{}
+	foreach ($File in $Files) {
+		$Lines = [IO.File]::ReadAllLines($File.FullName)
+		$Header = $Lines[0].Split(',')
+		$Wanted = @(for ($Index = 0; $Index -lt $Header.Count; $Index++) {
+			$Name = $Header[$Index]
+			if ($Name -like 'GPU/*' -or $Name -like 'VSM/*' -or $Name -in 'FrameTime', 'GameThreadTime', 'RenderThreadTime', 'RHIThreadTime', 'GPUTime') { $Index }
+		})
+		$Sums = @{}; $Seen = @{}
+		$Rows = 0
+		foreach ($Line in $Lines[1..($Lines.Count - 1)]) {
+			if ($Line.StartsWith('[') -or $Line -eq $Lines[0]) { break }
+			$Cells = $Line.Split(',')
+			$Rows++
+			foreach ($Index in $Wanted) {
+				$Value = 0.0
+				if ($Index -lt $Cells.Count -and [double]::TryParse($Cells[$Index], [Globalization.NumberStyles]::Float, $Culture, [ref]$Value)) {
+					$Sums[$Index] = $Sums[$Index] + $Value
+					$Seen[$Index] = $Seen[$Index] + 1
+				}
+			}
+		}
+		$Means = [ordered]@{ frames = $Rows }
+		foreach ($Index in $Wanted) {
+			if ($Seen[$Index]) { $Means[$Header[$Index]] = [Math]::Round($Sums[$Index] / $Seen[$Index], 4) }
+		}
+		$Samples[[IO.Path]::GetFileNameWithoutExtension($File.Name)] = $Means
+	}
+	Write-Json (Join-Path $OutDir 'passes.json') $Samples
+	$Lines = @('', 'GPU passes and virtual shadow map pages (-Passes, #349), the mean over each sample''s CSV profile; passes over 0.05 ms:', '')
+	foreach ($Sample in $Samples.Keys) {
+		$Means = $Samples[$Sample]
+		$Lines += "**$Sample** ($($Means.frames) frames): frame $($Means.FrameTime) ms, GPU $($Means.GPUTime) ms, render thread $($Means.RenderThreadTime) ms"
+		$Lines += ''
+		$Lines += '| GPU pass | ms |'
+		$Lines += '|---|---:|'
+		$Gpu = @($Means.Keys | Where-Object { $_ -like 'GPU/*' -and $Means[$_] -ge 0.05 } | Sort-Object { -[double]$Means[$_] })
+		$Gpu | ForEach-Object { $Lines += "| $($_.Substring(4)) | $($Means[$_].ToString('0.000', $Culture)) |" }
+		$Vsm = @($Means.Keys | Where-Object { $_ -like 'VSM/*' })
+		if ($Vsm) {
+			$Lines += ''
+			$Lines += '| VSM | mean |'
+			$Lines += '|---|---:|'
+			$Vsm | ForEach-Object { $Lines += "| $($_.Substring(4)) | $($Means[$_].ToString('0.#', $Culture)) |" }
+		}
+		$Lines += ''
+	}
+	[IO.File]::AppendAllLines((Join-Path $OutDir 'bench.md'), [string[]]$Lines, (New-Object Text.UTF8Encoding $false))
+}
+
+# The disk size of the bench HQ shell an @NaniteHQ or @LodHQ set stood (#349): its SM_BenchHQ_<kind>_* packages, to bench.md.
+function Add-BenchHQDisk([string]$Set) {
+	$Kind = if ($Set -like '*@NaniteHQ*') { 'Nanite' } elseif ($Set -like '*@LodHQ*') { 'Lod' } else { return }
+	$Files = @(Get-ChildItem (Join-Path $RepoRoot 'Content\Bench\USAHQ\Meshes') -Filter "SM_BenchHQ_$($Kind)_*.uasset" -ErrorAction SilentlyContinue)
+	$Bytes = ($Files | Measure-Object -Property Length -Sum).Sum
+	$Line = [string]::Format([Globalization.CultureInfo]::InvariantCulture, 'Disk (#349): the {0} shell''s {1} mesh packages take {2:0.0} MB in Content/Bench/USAHQ/Meshes.', $Kind, $Files.Count, $Bytes / 1MB)
+	[IO.File]::AppendAllLines((Join-Path $RepoRoot "Saved\Bench\$Set\bench.md"), [string[]]@('', $Line), (New-Object Text.UTF8Encoding $false))
 }
 
 # Mean cores the other processes of the machine used, kept equal to RTSBenchGate::Validity::MaxOtherCores (#171).
@@ -942,6 +1071,8 @@ function Invoke-BenchSession([string[]]$Sets, [string]$Method, [string]$BenchCou
 	# Console variables for a diagnostic run, such as rts.Vehicle.TrackAnimationDistance=0 (#151); never stored as a baseline.
 	if ($Cvars) { $ExtraArgs += "-dpcvars=$Cvars" }
 	if ($Frames) { $ExtraArgs += '-RTSBenchFrames' }
+	if ($Passes) { $ExtraArgs += '-RTSBenchPasses' }
+	if ($Shots) { $ExtraArgs += '-RTSBenchShots' }
 	if ($SampleSeconds -gt 0) { $ExtraArgs += [string]::Format([Globalization.CultureInfo]::InvariantCulture, '-RTSBenchSampleSeconds={0}', $SampleSeconds) }
 
 	$BenchMethod = if ($Method -eq 'short') { '' } else { " $Method" }
@@ -1197,6 +1328,7 @@ switch ($Task) {
 	'unitshots' { Invoke-UnitShots }
 	'trackshots' { Invoke-TrackShots }
 	'camerashots' { Invoke-CameraShots }
+	'buildingshots' { Invoke-BuildingShots }
 	'bench' { Invoke-Bench }
 	'gate' { Invoke-Gate }
 	'uibindings' { Invoke-UIBindings }
