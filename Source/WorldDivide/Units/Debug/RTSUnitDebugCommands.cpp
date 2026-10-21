@@ -110,6 +110,12 @@ namespace RTSUnitDebugCommands
 	/** The close muzzle smoke pictures look from in front of the unit, this far and this many degrees up, across the turned gun. */
 	constexpr float SmokeViewDistance = 2200.f;
 	constexpr float SmokeViewElevation = 12.f;
+	/**
+	 * The muzzle smoke's own pictures (#361) look from further back at where a shot's clouds stop, this far down the bore from
+	 * the muzzle, so the whole cloud and the gun it left are in view.
+	 */
+	constexpr float SmokeCloudViewDistance = 3200.f;
+	constexpr float SmokeFocusAhead = 700.f;
 	/** How slowly the world runs while a muzzle flash is held for its picture (#220): as still as the engine allows. */
 	constexpr float FlashHoldDilation = 0.0001f;
 
@@ -617,7 +623,8 @@ namespace RTSUnitDebugCommands
 			Shots.Add({ TEXT("muzzle_smoke_leaving"), [](FUnitShotsRun& Run)
 			{
 				Run.World->GetSubsystem<URTSShotSubsystem>()->AdvanceEffects(10.f);
-				return Run.UseLODCamera(FVector::ForwardVector, SmokeViewDistance, false, SmokeViewElevation) && Run.FireGun();
+				return Run.UseLODCamera(FVector::ForwardVector, SmokeCloudViewDistance, false, SmokeViewElevation, Run.GetSmokeFocus())
+					&& Run.FireGun();
 			}, SmokeLeavingSeconds });
 			// World in Conflict's smoke over its life (#355), from in front with the gun at TurretShotAim, held 0.15, 0.4, 1.2 and
 			// 3 s after the shot: two dark clouds a tank-length out, turning grey, swelling, then a thin haze.
@@ -626,7 +633,8 @@ namespace RTSUnitDebugCommands
 				Shots.Add({ FString::Printf(TEXT("muzzle_smoke_%04.0f"), HoldSeconds * 1000.f), [HoldSeconds](FUnitShotsRun& Run)
 				{
 					Run.Unit->SetAimOverride(TurretShotAim);
-					return Run.UseLODCamera(FVector::ForwardVector, SmokeViewDistance, false, SmokeViewElevation) && Run.HoldMuzzleFlash(HoldSeconds);
+					return Run.UseLODCamera(FVector::ForwardVector, SmokeCloudViewDistance, false, SmokeViewElevation, Run.GetSmokeFocus())
+						&& Run.HoldMuzzleFlash(HoldSeconds);
 				} });
 			}
 			Shots.Add({ TEXT("muzzle_smoke_turned"), [](FUnitShotsRun& Run)
@@ -776,8 +784,10 @@ namespace RTSUnitDebugCommands
 		/**
 		 * The inspection camera Distance from the middle of the hull toward Direction (unit space), ElevationDegrees above the
 		 * horizontal; with bRTSLens through the RTS camera's lens, which the LOD switches are measured with, else the close-up's.
+		 * Focus (world space) moves the point it looks at, and the camera with it, away from the middle of the hull.
 		 */
-		bool UseLODCamera(const FVector& Direction, float Distance, bool bRTSLens, float ElevationDegrees = LODViewElevation)
+		bool UseLODCamera(const FVector& Direction, float Distance, bool bRTSLens, float ElevationDegrees = LODViewElevation,
+			const FVector& Focus = FVector::ZeroVector)
 		{
 			const UStaticMeshComponent* Hull = RTSUnitLOD::FindHull(*Unit);
 			if (!Hull || !UseCloseUpCamera())
@@ -788,12 +798,20 @@ namespace RTSUnitDebugCommands
 			Lens->SetFieldOfView(bRTSLens ? RTSLensFOV : CloseUpFOV);
 			Lens->bOverrideAspectRatioAxisConstraint = bRTSLens;
 			Lens->SetAspectRatioAxisConstraint(EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV);
-			const FVector Centre = Hull->Bounds.Origin;
+			const FVector Centre = Hull->Bounds.Origin + Focus;
 			const FVector Across = Unit->GetActorTransform().TransformVectorNoScale(Direction).GetSafeNormal2D();
 			const float Elevation = FMath::DegreesToRadians(ElevationDegrees);
 			const FVector Eye = Centre + (Across * FMath::Cos(Elevation) + FVector::UpVector * FMath::Sin(Elevation)) * Distance;
 			CloseUp->SetActorLocationAndRotation(Eye, (Centre - Eye).Rotation());
 			return true;
+		}
+
+		/** For the muzzle smoke's pictures: from the middle of the hull to SmokeFocusAhead cm down the bore from the muzzle (#361). */
+		FVector GetSmokeFocus() const
+		{
+			const UStaticMeshComponent* Hull = RTSUnitLOD::FindHull(*Unit);
+			const FTransform Muzzle = Unit->GetMuzzleTransform();
+			return Hull ? Muzzle.GetLocation() + Muzzle.GetUnitAxis(EAxis::X) * SmokeFocusAhead - Hull->Bounds.Origin : FVector::ZeroVector;
 		}
 
 		/**

@@ -306,7 +306,7 @@ bool FRTSMuzzleSmokeEveryShotTest::RunTest(const FString& Parameters)
 		const FNiagaraParameterStore& Values = Smoke->GetOverrideParameters();
 		const int32* Count = reinterpret_cast<const int32*>(Values.GetParameterData(FNiagaraVariable(FNiagaraTypeDefinition::GetIntDef(), TEXT("User.Count"))));
 		const float* Ground = reinterpret_cast<const float*>(Values.GetParameterData(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), TEXT("User.GroundHeight"))));
-		TestTrue(*FString::Printf(TEXT("Shot %d: particles to show"), Fired), Count && *Count >= 2);
+		TestTrue(*FString::Printf(TEXT("Shot %d: particles to show"), Fired), Count && *Count >= 6);
 		TestTrue(*FString::Printf(TEXT("Shot %d: the muzzle is above the ground (%.0f cm)"), Fired, Ground ? *Ground : -1.f),
 			Ground && *Ground > 100.f && *Ground < 400.f);
 	});
@@ -337,16 +337,16 @@ bool FRTSMuzzleSmokeCullTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	TestEqual(TEXT("Ten particles up close at epic"), URTSShotSubsystem::GetMuzzleSmokeCount(0.f, 3), 10);
-	TestEqual(TEXT("Cinematic is epic"), URTSShotSubsystem::GetMuzzleSmokeCount(0.f, 4), 10);
-	TestEqual(TEXT("Half at the cull distance"), URTSShotSubsystem::GetMuzzleSmokeCount(30000.f, 3), 5);
+	TestEqual(TEXT("Forty particles up close at epic"), URTSShotSubsystem::GetMuzzleSmokeCount(0.f, 3), 40);
+	TestEqual(TEXT("Cinematic is epic"), URTSShotSubsystem::GetMuzzleSmokeCount(0.f, 4), 40);
+	TestEqual(TEXT("Half at the cull distance"), URTSShotSubsystem::GetMuzzleSmokeCount(30000.f, 3), 20);
 	for (int32 Quality = 1; Quality <= 3; ++Quality)
 	{
 		TestTrue(FString::Printf(TEXT("Quality %d has more than quality %d"), Quality, Quality - 1),
 			URTSShotSubsystem::GetMuzzleSmokeCount(0.f, Quality) > URTSShotSubsystem::GetMuzzleSmokeCount(0.f, Quality - 1));
 	}
 	TestTrue(TEXT("Fewer further away"), URTSShotSubsystem::GetMuzzleSmokeCount(20000.f, 2) < URTSShotSubsystem::GetMuzzleSmokeCount(2000.f, 2));
-	TestEqual(TEXT("At least two at low quality far away"), URTSShotSubsystem::GetMuzzleSmokeCount(30000.f, 0), 2);
+	TestEqual(TEXT("At least six at low quality far away"), URTSShotSubsystem::GetMuzzleSmokeCount(30000.f, 0), 6);
 
 	const FRTSTestWorld TestWorld;
 	URTSShotSubsystem* Shots = TestWorld.World->GetSubsystem<URTSShotSubsystem>();

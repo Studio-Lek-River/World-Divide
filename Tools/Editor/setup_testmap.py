@@ -1189,14 +1189,15 @@ def make_muzzle_flash():
 
 
 # A smoke sprite's normal from its six-way light, so the side it is lit from most faces that way, in the sprite's tangent
-# space (+X right, +Y down the flipbook, +Z toward the camera); its albedo brighter where it is lit through and scaled by
-# Brightness; its opacity thinned from the edges inward by Erosion as it ages.
-SMOKE_CODE = """float3 N = float3(RLT.r - RLT.g, BBF.r - RLT.b, (BBF.b - BBF.g) * 0.5 + 0.6);
+# space (+X right, +Y down the flipbook, +Z toward the camera): only a little toward the camera, so the sun shades the
+# cloud's sides rather than lighting it flat (#361). Its albedo a little brighter where it is lit through, scaled by
+# Brightness; its opacity eaten from the edges inward by Erosion as it ages, over a soft ramp rather than a hard edge.
+SMOKE_CODE = """float3 N = float3(RLT.r - RLT.g, BBF.r - RLT.b, (BBF.b - BBF.g) * 0.5 + 0.25);
 Normal = normalize(N);
 float Light = (RLT.r + RLT.g + RLT.b + BBF.r + BBF.g + BBF.b) / 6.0;
-Albedo = Color.rgb * lerp(0.55, 1.15, saturate(Light * 1.6)) * Brightness;
+Albedo = Color.rgb * lerp(0.8, 1.05, saturate(Light * 1.6)) * Brightness;
 float Thin = saturate(Age) * Erosion;
-return saturate((RLT.a - Thin) / max(1.0 - Thin, 0.05)) * Color.a;"""
+return smoothstep(Thin, min(Thin + 0.45, 1.0), RLT.a) * Color.a;"""
 
 
 def build_muzzle_smoke_material(name, rlt, bbf):
@@ -1209,7 +1210,8 @@ def build_muzzle_smoke_material(name, rlt, bbf):
     material = new_material(name)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
     material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
-    material.set_editor_property("translucency_lighting_mode", unreal.TranslucencyLightingMode.TLM_VOLUMETRIC_DIRECTIONAL)
+    # Lit per pixel, not from the coarse translucency volume, so the sun shades each sprite by its six-way normal (#361).
+    material.set_editor_property("translucency_lighting_mode", unreal.TranslucencyLightingMode.TLM_SURFACE_PER_PIXEL_LIGHTING)
     material.set_editor_property("used_with_niagara_sprites", True)
 
     frame = flipbook_frame(material, -1400, 0, 0.0, FLIPBOOK_LAST_FRAME)

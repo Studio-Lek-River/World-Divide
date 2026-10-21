@@ -42,8 +42,8 @@ namespace
 		TEXT("cm from the nearest camera within which a shot leaves muzzle smoke (#221), past the default RTS view; 0 or less leaves it on every one."));
 
 	/** Particles of a puff up close at epic effects quality, and the fewest any puff has. */
-	constexpr int32 MuzzleSmokeMaxCount = 10;
-	constexpr int32 MuzzleSmokeMinCount = 2;
+	constexpr int32 MuzzleSmokeMaxCount = 40;
+	constexpr int32 MuzzleSmokeMinCount = 6;
 
 	/** The share of MuzzleSmokeMaxCount at each effects quality, low to epic; cinematic is epic. */
 	constexpr float MuzzleSmokeQualityScale[] = { 0.3f, 0.5f, 0.75f, 1.f };
@@ -304,10 +304,15 @@ void URTSShotSubsystem::PlayMuzzleSmoke(AActor& Shooter, const URTSWeaponData& W
 	Component.SetVariableFloat(SmokeGroundHeightParameter, FMath::Max(Muzzle.GetLocation().Z - GroundZ, 0.f));
 	// A machine that never renders (tests under -nullrhi) places the puff but Niagara does not run it. A full reset, not
 	// ActivateSystem: once a reused component's last puff has played out, ActivateSystem wakes the system but none of its
-	// one-shot emitters, as it did the pooled muzzle flash (#354, #355).
+	// one-shot emitters, as it did the pooled muzzle flash (#354, #355). A slot taken back while its puff still drifts is
+	// cleared first: ResetSystem leaves its particles alive, which would let the caps be passed (#361).
+	FMuzzleSmoke& Smoke = Smokes[Index];
+	if (Smoke.bLive)
+	{
+		Component.DeactivateImmediate();
+	}
 	Component.ResetSystem();
 
-	FMuzzleSmoke& Smoke = Smokes[Index];
 	LiveMuzzleSmokes += Smoke.bLive ? 0 : 1;
 	Smoke.Shooter = &Shooter;
 	Smoke.Age = 0.f;

@@ -333,6 +333,28 @@ namespace RTSMuzzleFlashBuilder
 			TEXT("Particles.Color"), FNiagaraTypeDefinition::GetColorDef(), FLinearColor::White, Color, Context);
 	}
 
+	/**
+	 * Emitter's particles churn as smoke does (#361): each turns at its own rate of up to Spin degrees a second, slowing as it
+	 * ages, and curl noise of Strength (an expression, which may read Particles.Age) pushes them unevenly, before the solver
+	 * SetMotion added.
+	 */
+	void SetChurn(UNiagaraSystem* System, FName Emitter, float Spin, const FString& Strength, FNiagaraExternalEditContext& Context)
+	{
+		SetBirthAttribute(System, Emitter, TEXT("Particles.SpinRate"), FNiagaraTypeDefinition::GetFloatDef(), 0.f,
+			FString::Printf(TEXT("(rand(2.0) - 1.0) * %g"), Spin), Context);
+		bool bHasSolver = false;
+		const FName Before = ModuleBefore(System, Emitter, ParticleUpdate, TEXT("SolveForcesAndVelocity"), bHasSolver, Context);
+		const FName Curl = AddModule(System, Emitter, ParticleUpdate, Before, TEXT("/Niagara/Modules/Update/Forces/CurlNoiseForce.CurlNoiseForce"),
+			Context);
+		SetExpression(ModuleInput(System, Emitter, ParticleUpdate, Curl, TEXT("Noise Strength")), Strength, Context);
+		FNiagaraExt_ScriptStackTopology Stack;
+		FNiagaraEdit::GetScriptStackTopology(FNiagaraExt_StackItemReference(System, Emitter, ParticleUpdate), Stack, Context);
+		const FName Rotation = AddModule(System, Emitter, ParticleUpdate, Stack.Modules.IsEmpty() ? NAME_None : Stack.Modules.Last().ModuleName,
+			TEXT("/Niagara/Modules/Update/Orientation/SpriteRotationRate.SpriteRotationRate"), Context);
+		SetExpression(ModuleInput(System, Emitter, ParticleUpdate, Rotation, TEXT("Rotation Rate")),
+			TEXT("Particles.SpinRate * exp(-Particles.Age * 0.6)"), Context);
+	}
+
 	/** Compiles System and returns it, or logs each error and returns null. */
 	UNiagaraSystem* FinishSystem(UNiagaraSystem* System, const FString& AssetPath, const TCHAR* Builder, FNiagaraExternalEditContext& Context)
 	{
@@ -482,7 +504,7 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& Asset
 		AddUserParameter(System, TEXT("User.Scale"), FNiagaraTypeDefinition::GetFloatDef(), DefaultScale, Context);
 		AddUserParameter(System, TEXT("User.GroundHeight"), FNiagaraTypeDefinition::GetFloatDef(), DefaultGroundHeight, Context);
 
-		// World in Conflict's tank smoke as its data and a 60 fps recording show it (#355): a few large clouds thrown fast
+		// World in Conflict's tank smoke as its data and a 60 fps recording show it (#355): clouds thrown fast
 		// down the bore that stop almost at once, dark at first, swelling and turning grey, then rising and thinning out over
 		// 3 to 7 s. All in world space, so the smoke stays where the shot was fired as the turret turns. Sizes and speeds are
 		// for a scale of 1, twice them on the M20's gun; the bounds hold the heaviest gun's clouds and their rise.
@@ -502,37 +524,46 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& Asset
 		// Dense while dark, thinner as it swells, faded out over the end of its life.
 		const FString Thinning(TEXT("lerp(1.0, 0.55, saturate((Particles.Age - 0.2) / 1.5)) * saturate(Particles.Age * 30.0) * (1.0 - Particles.NormalizedAge * Particles.NormalizedAge)"));
 
-		// The blast clouds: two, thrown 17.5 to 50 m/s a unit of scale along the bore and a little sideways, 2 to 3 m across
-		// under the flash and hull-sized by 0.1 s, swelling to 4 to 7.5 m. Gone after 3 to 7 s.
-		AddSpriteBurst(System, TEXT("Blast"), TEXT("2"), LoopSeconds, TEXT("3.0 + rand(4.0)"), TEXT("User.Scale * 250.0"),
-			TEXT("float4(0.3, 0.22, 0.14, 0.95)"), BlastMaterial, Bounds, false, Context);
+		// Many smaller, thinner sprites rather than a few large ones (#361), sorted back to front so their overlaps blend into
+		// one rolling cloud, each churning (SetChurn) from about 0.3 s on as the blast's push dies.
+		const FString Sorted(TEXT(", \"SortMode\": \"ViewDepth\""));
+		const FString Churn(TEXT("User.Scale * 90.0 * saturate((Particles.Age - 0.3) / 0.6)"));
+
+		// The blast clouds: four in ten of User.Count (16 at epic up close), thrown 6 to 36 m/s a unit of scale along the bore
+		// and spread sideways, so the air stops them anywhere from 0.5 to 3 m out and they overlap into one cloud a tank-length
+		// long on the M20. 2 to 3 m across under the flash, swelling to 4.5 to 7 m. Gone after 3 to 7 s.
+		AddSpriteBurst(System, TEXT("Blast"), TEXT("max(User.Count * 4 / 10, 2)"), LoopSeconds, TEXT("3.0 + rand(4.0)"),
+			TEXT("User.Scale * 250.0"), TEXT("float4(0.3, 0.22, 0.14, 0.6)"), BlastMaterial, Bounds, false, Context, Sorted);
 		SetRandomRotation(System, TEXT("Blast"), Context);
-		SetSpawnSphere(System, TEXT("Blast"), TEXT("User.Scale * 20.0"), TEXT("User.Direction * (User.Scale * 60.0)"), Context);
+		SetSpawnSphere(System, TEXT("Blast"), TEXT("User.Scale * 30.0"), TEXT("User.Direction * (User.Scale * 60.0)"), Context);
 		SetMotion(System, TEXT("Blast"),
-			TEXT("User.Direction * (User.Scale * (1750.0 + rand(3250.0))) + float3(rand(200.0) - 100.0, rand(200.0) - 100.0, rand(100.0) - 50.0) * User.Scale"),
+			TEXT("User.Direction * (User.Scale * (600.0 + rand(3000.0))) + float3(rand(500.0) - 250.0, rand(500.0) - 250.0, rand(240.0) - 100.0) * User.Scale"),
 			Brake, Rise, Context);
-		SetBirthAttribute(System, TEXT("Blast"), TEXT("Particles.CloudSize"), FNiagaraTypeDefinition::GetVec2Def(), FVector2f(250.f, 600.f),
-			TEXT("float2(200.0 + rand(100.0), 400.0 + rand(350.0)) * User.Scale"), Context);
+		SetBirthAttribute(System, TEXT("Blast"), TEXT("Particles.CloudSize"), FNiagaraTypeDefinition::GetVec2Def(), FVector2f(250.f, 575.f),
+			TEXT("float2(200.0 + rand(100.0), 450.0 + rand(250.0)) * User.Scale"), Context);
 		SetSpriteSizeOverLife(System, TEXT("Blast"),
 			TEXT("float2(1.0, 1.0) * (Particles.CloudSize.x * lerp(0.6, 1.0, saturate(Particles.Age / 0.1)) + (Particles.CloudSize.y - Particles.CloudSize.x) * (1.0 - exp(-Particles.Age * 1.6)))"),
 			Context);
-		SetColorOverLife(System, TEXT("Blast"), FString::Printf(TEXT("float4(%s, 0.95 * %s)"), *Greys(0.1f, 0.2f, 1.2f), *Thinning), Context);
+		SetColorOverLife(System, TEXT("Blast"), FString::Printf(TEXT("float4(%s, 0.6 * %s)"), *Greys(0.1f, 0.2f, 1.2f), *Thinning), Context);
+		SetChurn(System, TEXT("Blast"), 35.f, Churn, Context);
 
-		// The bore puffs: three at full quality and at least one, born along the first 3 m of the bore a unit of scale and thrown 12.5 to 50 m/s
-		// down it, 0.5 m growing to 1.5 m by 0.06 s and 1.9 m by 0.16 s, then swelling to 3.5 to 4 m. Gone after about 5 s.
+		// The bore puffs: three in ten of User.Count (12 at epic up close) and at least one, born along the first 3 m of the bore
+		// a unit of scale and thrown 2 to 20 m/s down it, so they fill the way from the muzzle to the blast clouds. 0.5 m
+		// growing to 1.5 m by 0.06 s and 1.7 to 2 m by 0.16 s, then swelling to 3.5 to 4.5 m. Gone after about 5 s.
 		AddSpriteBurst(System, TEXT("Puffs"), TEXT("max(User.Count * 3 / 10, 1)"), LoopSeconds, TEXT("4.5 + rand(0.5)"), TEXT("User.Scale * 50.0"),
-			TEXT("float4(0.3, 0.22, 0.14, 0.9)"), BlastMaterial, Bounds, false, Context);
+			TEXT("float4(0.3, 0.22, 0.14, 0.6)"), BlastMaterial, Bounds, false, Context, Sorted);
 		SetRandomRotation(System, TEXT("Puffs"), Context);
-		SetSpawnSphere(System, TEXT("Puffs"), TEXT("User.Scale * 15.0"), TEXT("User.Direction * (User.Scale * (30.0 + rand(300.0)))"), Context);
+		SetSpawnSphere(System, TEXT("Puffs"), TEXT("User.Scale * 20.0"), TEXT("User.Direction * (User.Scale * (30.0 + rand(300.0)))"), Context);
 		SetMotion(System, TEXT("Puffs"),
-			TEXT("User.Direction * (User.Scale * (1250.0 + rand(3750.0))) + float3(rand(100.0) - 50.0, rand(100.0) - 50.0, rand(100.0) - 50.0) * User.Scale"),
+			TEXT("User.Direction * (User.Scale * (200.0 + rand(1800.0))) + float3(rand(200.0) - 100.0, rand(200.0) - 100.0, rand(160.0) - 60.0) * User.Scale"),
 			Brake, Rise, Context);
-		SetBirthAttribute(System, TEXT("Puffs"), TEXT("Particles.CloudSize"), FNiagaraTypeDefinition::GetVec2Def(), FVector2f(190.f, 375.f),
-			TEXT("float2(190.0, 350.0 + rand(50.0)) * User.Scale"), Context);
+		SetBirthAttribute(System, TEXT("Puffs"), TEXT("Particles.CloudSize"), FNiagaraTypeDefinition::GetVec2Def(), FVector2f(185.f, 400.f),
+			TEXT("float2(170.0 + rand(30.0), 350.0 + rand(100.0)) * User.Scale"), Context);
 		SetSpriteSizeOverLife(System, TEXT("Puffs"),
 			TEXT("float2(1.0, 1.0) * lerp(lerp(lerp(50.0 * User.Scale, 150.0 * User.Scale, saturate(Particles.Age / 0.06)), Particles.CloudSize.x, saturate((Particles.Age - 0.06) / 0.1)), Particles.CloudSize.y, 1.0 - exp(-max(Particles.Age - 0.16, 0.0) * 1.2))"),
 			Context);
-		SetColorOverLife(System, TEXT("Puffs"), FString::Printf(TEXT("float4(%s, 0.9 * %s)"), *Greys(0.06f, 0.16f, 1.2f), *Thinning), Context);
+		SetColorOverLife(System, TEXT("Puffs"), FString::Printf(TEXT("float4(%s, 0.6 * %s)"), *Greys(0.06f, 0.16f, 1.2f), *Thinning), Context);
+		SetChurn(System, TEXT("Puffs"), 25.f, Churn, Context);
 
 		// The veil: one wide, thin grey sheet over the gun and the view close to it, there from 0.1 to 0.6 s after the shot,
 		// thickest at about 0.2 s. Left out far away at the lowest quality.
@@ -546,9 +577,9 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& Asset
 
 		// The ground blast: when the muzzle is less than 3 m a unit of scale above the ground, the pressure wave kicks dust off
 		// it under and ahead of the muzzle, thrown out flat along the bore and to the sides, settling in 0.6 to 1 s.
-		AddSpriteBurst(System, TEXT("Dust"), TEXT("User.GroundHeight < 300.0 * User.Scale ? max(User.Count * 6 / 10, 2) : 0"),
-			LoopSeconds, TEXT("0.6 + rand(0.4)"), TEXT("User.Scale * (120.0 + rand(80.0))"),
-			TEXT("float4(0.6, 0.5, 0.38, 0.75)"), DustMaterial, Bounds, false, Context);
+		AddSpriteBurst(System, TEXT("Dust"), TEXT("User.GroundHeight < 300.0 * User.Scale ? max(User.Count * 4 / 10, 2) : 0"),
+			LoopSeconds, TEXT("0.6 + rand(0.4)"), TEXT("User.Scale * (100.0 + rand(70.0))"),
+			TEXT("float4(0.6, 0.5, 0.38, 0.6)"), DustMaterial, Bounds, false, Context, Sorted);
 		SetRandomRotation(System, TEXT("Dust"), Context);
 		SetSpawnSphere(System, TEXT("Dust"), TEXT("User.Scale * 40.0"),
 			TEXT("float3(User.Direction.x, User.Direction.y, 0.0) * (User.Scale * 120.0) + float3(0.0, 0.0, 30.0 - User.GroundHeight)"), Context);
