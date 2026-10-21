@@ -34,8 +34,8 @@ namespace
 		TEXT("Most muzzle smoke puffs drifting at once (#221); past it the oldest is started again."));
 
 	TAutoConsoleVariable<int32> CVarMuzzleSmokePerShooter(
-		TEXT("rts.Fx.MuzzleSmokePerShooter"), 2,
-		TEXT("Most muzzle smoke puffs of one shooter drifting at once (#221); past it its oldest is started again."));
+		TEXT("rts.Fx.MuzzleSmokePerShooter"), 3,
+		TEXT("Most muzzle smoke puffs of one shooter drifting at once (#221); past it its oldest is started again. Three outlast a tank gun's reload (#355)."));
 
 	TAutoConsoleVariable<float> CVarMuzzleSmokeDistance(
 		TEXT("rts.Fx.MuzzleSmokeDistance"), 30000.f,
@@ -302,8 +302,10 @@ void URTSShotSubsystem::PlayMuzzleSmoke(AActor& Shooter, const URTSWeaponData& W
 	const INavAgentInterface* Agent = Cast<INavAgentInterface>(&Shooter);
 	const float GroundZ = Agent ? Agent->GetNavAgentLocation().Z : Shooter.GetActorLocation().Z;
 	Component.SetVariableFloat(SmokeGroundHeightParameter, FMath::Max(Muzzle.GetLocation().Z - GroundZ, 0.f));
-	// A machine that never renders (tests under -nullrhi) places the puff but Niagara does not run it.
-	Component.ActivateSystem(true);
+	// A machine that never renders (tests under -nullrhi) places the puff but Niagara does not run it. A full reset, not
+	// ActivateSystem: once a reused component's last puff has played out, ActivateSystem wakes the system but none of its
+	// one-shot emitters, as it did the pooled muzzle flash (#354, #355).
+	Component.ResetSystem();
 
 	FMuzzleSmoke& Smoke = Smokes[Index];
 	LiveMuzzleSmokes += Smoke.bLive ? 0 : 1;

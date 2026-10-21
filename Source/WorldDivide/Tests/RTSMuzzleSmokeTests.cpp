@@ -73,9 +73,9 @@ namespace RTSMuzzleSmokeTests
 }
 
 /**
- * The muzzle smoke the setup builds (#221, #303): NS_MuzzleSmoke with the user parameters URTSShotSubsystem sets, its blast
- * cloud, drifting cloud and ground blast (#294) all simulated in world space and drawn with the translucent M_MuzzleSmoke,
- * and the M20's gun pointing at it.
+ * The muzzle smoke the setup builds (#221, #303, #355): NS_MuzzleSmoke with the user parameters URTSShotSubsystem sets,
+ * its blast clouds, bore puffs, veil and ground blast (#294) all simulated in world space and drawn with the translucent
+ * M_MuzzleSmoke, and the M20's gun pointing at it.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMuzzleSmokeAssetTest, "WorldDivide.Combat.MuzzleSmoke.Asset", RTSTests::TestFlags)
 
@@ -97,7 +97,12 @@ bool FRTSMuzzleSmokeAssetTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("It takes User.Scale"), User.IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), TEXT("User.Scale"))) != INDEX_NONE);
 	TestTrue(TEXT("It takes User.GroundHeight"),
 		User.IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), TEXT("User.GroundHeight"))) != INDEX_NONE);
-	TestEqual(TEXT("A blast cloud, a drifting cloud and a ground blast"), System->GetEmitterHandles().Num(), 3);
+	TArray<FString> Emitters;
+	for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+	{
+		Emitters.Add(Handle.GetName().ToString());
+	}
+	TestEqual(TEXT("Blast clouds, bore puffs, the veil and a ground blast"), FString::Join(Emitters, TEXT(",")), FString(TEXT("Blast,Puffs,Veil,Dust")));
 	for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
 	{
 		const FVersionedNiagaraEmitterData* Emitter = Handle.GetEmitterData();

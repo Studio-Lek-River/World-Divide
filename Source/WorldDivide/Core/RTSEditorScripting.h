@@ -105,12 +105,13 @@ public:
 		UMaterialInterface* GlareMaterial);
 
 	/**
-	 * Builds the muzzle smoke of vehicle cannons (#221, #303) and the ground blast (#294) as the Niagara system AssetPath
-	 * (such as /Game/Effects/NS_MuzzleSmoke), new, in place of the one there, as BuildMuzzleFlashSystem: the blast cloud in
-	 * BlastMaterial, the drifting cloud in DriftMaterial and the dust in DustMaterial. Returns null and logs why when it fails.
+	 * Builds the muzzle smoke of vehicle cannons (#221, #303, #355) and the ground blast (#294) as the Niagara system AssetPath
+	 * (such as /Game/Effects/NS_MuzzleSmoke), new, in place of the one there, as BuildMuzzleFlashSystem: the blast clouds and
+	 * bore puffs in BlastMaterial, the veil over the gun in VeilMaterial and the dust in DustMaterial. Returns null and logs
+	 * why when it fails.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
-	static UNiagaraSystem* BuildMuzzleSmokeSystem(const FString& AssetPath, UMaterialInterface* BlastMaterial, UMaterialInterface* DriftMaterial,
+	static UNiagaraSystem* BuildMuzzleSmokeSystem(const FString& AssetPath, UMaterialInterface* BlastMaterial, UMaterialInterface* VeilMaterial,
 		UMaterialInterface* DustMaterial);
 
 	/**

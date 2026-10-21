@@ -116,6 +116,9 @@ namespace RTSUnitDebugCommands
 	/** The moments after the shot the firing is held at for its pictures (#294), in seconds; the last just after it is gone (#354). */
 	constexpr float MuzzleFlashHolds[] = { 0.f, 0.03f, 0.08f, 0.15f, 0.21f };
 
+	/** The moments after the shot the muzzle smoke is held at for its pictures (#355), in seconds. */
+	constexpr float MuzzleSmokeHolds[] = { 0.15f, 0.4f, 1.2f, 3.f };
+
 	/** The step a held firing's Niagara systems are advanced to its moment by. */
 	constexpr float FlashHoldStep = 1.f / 240.f;
 	/**
@@ -616,11 +619,34 @@ namespace RTSUnitDebugCommands
 				Run.World->GetSubsystem<URTSShotSubsystem>()->AdvanceEffects(10.f);
 				return Run.UseLODCamera(FVector::ForwardVector, SmokeViewDistance, false, SmokeViewElevation) && Run.FireGun();
 			}, SmokeLeavingSeconds });
+			// World in Conflict's smoke over its life (#355), from in front with the gun at TurretShotAim, held 0.15, 0.4, 1.2 and
+			// 3 s after the shot: two dark clouds a tank-length out, turning grey, swelling, then a thin haze.
+			for (const float HoldSeconds : MuzzleSmokeHolds)
+			{
+				Shots.Add({ FString::Printf(TEXT("muzzle_smoke_%04.0f"), HoldSeconds * 1000.f), [HoldSeconds](FUnitShotsRun& Run)
+				{
+					Run.Unit->SetAimOverride(TurretShotAim);
+					return Run.UseLODCamera(FVector::ForwardVector, SmokeViewDistance, false, SmokeViewElevation) && Run.HoldMuzzleFlash(HoldSeconds);
+				} });
+			}
 			Shots.Add({ TEXT("muzzle_smoke_turned"), [](FUnitShotsRun& Run)
 			{
+				Run.ReleaseMuzzleFlash();
 				Run.Unit->SetAimOverride(FVector2D::ZeroVector);
 				return true;
 			}, SmokeTurnedSeconds });
+			// A second puff from the same pooled component once the first has played out in real time (#355, as the flash's
+			// #354): it has to smoke again, not only the first time.
+			Shots.Add({ TEXT("muzzle_smoke_repeat_first"), [](FUnitShotsRun& Run)
+			{
+				Run.ReleaseMuzzleFlash();
+				Run.Unit->SetAimOverride(TurretShotAim);
+				return Run.FireGun();
+			}, URTSShotSubsystem::MuzzleSmokeSeconds + 0.5 });
+			Shots.Add({ TEXT("muzzle_smoke_repeat_0400"), [](FUnitShotsRun& Run)
+			{
+				return Run.HoldMuzzleFlash(0.4f);
+			} });
 			// The hull's rock (#219) from the front and the side, at rest and held where it has rocked back furthest, for each
 			// way the gun points: the hull lifts on the gun's side and pivots on the edge across from it.
 			for (const float Yaw : RockGunYaws)
@@ -910,7 +936,12 @@ namespace RTSUnitDebugCommands
 				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.UnitShots: %s's weapon has no Niagara muzzle flash"), *UnitName);
 			}
 			ReleaseMuzzleFlash();
-			// The last shot's effect plays out first, so only this one shows.
+			// The last shot's effect plays out first, so only this one shows; its smoke, which a new puff in the same component
+			// would leave drifting, is cleared (#355).
+			if (UNiagaraComponent* LastSmoke = World->GetSubsystem<URTSShotSubsystem>()->GetLatestMuzzleSmoke(*Unit))
+			{
+				LastSmoke->DeactivateImmediate();
+			}
 			World->GetSubsystem<URTSShotSubsystem>()->AdvanceEffects(10.f);
 			if (!FireGun())
 			{

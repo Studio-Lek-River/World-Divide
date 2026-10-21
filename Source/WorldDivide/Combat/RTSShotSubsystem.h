@@ -86,7 +86,7 @@ public:
 	static int32 GetMuzzleSmokePerShooter();
 
 	/** Seconds a puff drifts: NS_MuzzleSmoke's longest particle lifetime. */
-	static constexpr float MuzzleSmokeSeconds = 3.f;
+	static constexpr float MuzzleSmokeSeconds = 7.f;
 
 	/** Moves every shot effect DeltaSeconds on and takes those that are over back into the pool. Public so tests can step it. */
 	void AdvanceEffects(float DeltaSeconds);

@@ -1204,8 +1204,8 @@ def build_muzzle_smoke_material(name, rlt, bbf):
     flipbooks Tools/Art/muzzle_fx_blender.py bakes (T_MuzzleSmoke_RLT and _BBF), played from FrameFirst to FrameLast over
     the particle's life. The six views give each pixel a normal, so the sun, the sky and the muzzle light shade the cloud
     from wherever they are; the particle colour tints it. It thins from its edges inward by Erosion as it ages and fades
-    over FadeDistance cm where it meets the ground or a hull. The instances (SMOKE_LOOKS) set the frames and the erosion of the blast cloud, the drifting
-    cloud and the dust; Brightness scales the albedo (1 for the muzzle smoke)."""
+    over FadeDistance cm where it meets the ground or a hull. The instances (SMOKE_LOOKS) set the frames, the erosion and
+    the Brightness, which scales the albedo, of the blast clouds, the veil and the dust."""
     material = new_material(name)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
     material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
@@ -1238,12 +1238,14 @@ def build_muzzle_smoke_material(name, rlt, bbf):
     return material
 
 
-# The smoke instances: the frames of the flipbook each plays and how much it erodes. The blast cloud plays the dense
-# billow, the drifting cloud and the dust the later, larger and thinner frames.
+# The smoke instances: the frames of the flipbook each plays, how much it erodes and how bright it is. The blast clouds
+# and bore puffs play the dense billow, the veil over the gun and the dust the later, larger and thinner frames. The
+# material takes in far more light than an opaque surface of the same colour (#325), so Brightness brings the clouds'
+# colours down until they read as the charcoal and greys of World in Conflict's smoke and the dust as brown (#327, #355).
 SMOKE_LOOKS = {
-    "MI_MuzzleSmoke_Blast": {"FrameFirst": 0.0, "FrameLast": 40.0, "Erosion": 0.35},
-    "MI_MuzzleSmoke_Drift": {"FrameFirst": 18.0, "FrameLast": 63.0, "Erosion": 0.6},
-    "MI_MuzzleSmoke_Dust": {"FrameFirst": 6.0, "FrameLast": 50.0, "Erosion": 0.7},
+    "MI_MuzzleSmoke_Blast": {"FrameFirst": 0.0, "FrameLast": 40.0, "Erosion": 0.35, "Brightness": 0.2},
+    "MI_MuzzleSmoke_Veil": {"FrameFirst": 18.0, "FrameLast": 63.0, "Erosion": 0.6, "Brightness": 0.2},
+    "MI_MuzzleSmoke_Dust": {"FrameFirst": 6.0, "FrameLast": 50.0, "Erosion": 0.7, "Brightness": 0.2},
 }
 
 
@@ -1263,7 +1265,7 @@ def build_material_instance(name, parent, scalars):
 
 
 def make_muzzle_smoke():
-    """The Niagara muzzle smoke of vehicle cannons (#221, #303) with its ground blast (#294), the smoke material, its
+    """The Niagara muzzle smoke of vehicle cannons (#221, #303, #355) with its ground blast (#294), the smoke material, its
     instances and the six-way flipbooks, built now so the weapons can point at it. Built in C++ like the muzzle flash
     (URTSEditorScripting::BuildMuzzleSmokeSystem, RTSMuzzleFlashBuilder.cpp)."""
     rlt = make_effect_texture("T_MuzzleSmoke_RLT")
@@ -1280,7 +1282,7 @@ def make_muzzle_smoke():
         if not unreal.RTSEditorScripting.load_editor_module("NiagaraEditor"):
             raise RuntimeError("Could not load the NiagaraEditor module")
         system = unreal.RTSEditorScripting.build_muzzle_smoke_system(
-            path, looks["MI_MuzzleSmoke_Blast"], looks["MI_MuzzleSmoke_Drift"], looks["MI_MuzzleSmoke_Dust"])
+            path, looks["MI_MuzzleSmoke_Blast"], looks["MI_MuzzleSmoke_Veil"], looks["MI_MuzzleSmoke_Dust"])
         if not system:
             raise RuntimeError(f"Could not build {path}; the log says why")
         return system
