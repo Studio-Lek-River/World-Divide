@@ -385,11 +385,19 @@ void ARTSShotEffect::UpdateShell()
 	};
 	const float Alpha = Age / FlightTime;
 	const FVector Position = PositionAt(Alpha);
-	const FVector Heading = PositionAt(FMath::Min(Alpha + 0.02f, 1.f)) - Position;
 
+	// The streak trails the shell along its arc and never reaches back past the muzzle, so it grows out of the barrel (#311).
 	const float Thickness = ShellThickness * Weapon->EffectScale;
-	const float Length = Thickness + Weapon->ShellSpeed * ShellStreakPerSpeed * Weapon->EffectScale;
-	Shell->SetWorldLocationAndRotation(Position, Heading.IsNearlyZero() ? FRotator::ZeroRotator : Heading.Rotation());
+	const float Streak = Weapon->ShellSpeed * ShellStreakPerSpeed * Weapon->EffectScale;
+	const float Range = FVector::Dist(Muzzle, End);
+	const FVector Tail = PositionAt(Range > UE_KINDA_SMALL_NUMBER ? FMath::Max(Alpha - Streak / Range, 0.f) : 0.f);
+	FVector Heading = Position - Tail;
+	if (Heading.IsNearlyZero())
+	{
+		Heading = PositionAt(FMath::Min(Alpha + 0.02f, 1.f)) - Position;
+	}
+	const float Length = Thickness + FVector::Dist(Tail, Position);
+	Shell->SetWorldLocationAndRotation((Tail + Position) * 0.5f, Heading.IsNearlyZero() ? FRotator::ZeroRotator : Heading.Rotation());
 	Shell->SetWorldScale3D(FVector(Length, Thickness, Thickness) / MeshDiameter);
 	SetGlow(*Shell, 1.f);
 }
