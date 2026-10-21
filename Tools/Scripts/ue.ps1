@@ -14,6 +14,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task t
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task test -Filter WorldDivide.Smoke.AIvsAI -Cvars rts.Nav.MoveRequestsPerFrame=6
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup -Render
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup -Lock
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bakemap -Map /Game/Maps/L_RiverFord -Render
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task rivercrossing
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task editor
@@ -51,6 +52,9 @@ tests in one and the rest in the other; -Shards 1 keeps it in one editor. A watc
 -TimeoutMinutes (default 6 for fast, 15 for full), names the test it hung in and exits 5. Every run prints its slowest tests and names any test over 8 s without a [Slow] tag. The
 editor's own output goes to Saved/Logs/AutomationRun*.log.stdout; the run prints only its result.
 Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
+Setup stops before its slow imports when an asset it must rewrite is read-only and lists them all in
+Saved/Setup/ReadOnlyAssets.txt (#350). -Lock (setup, bakemap, rivercrossing) then git lfs locks the listed files, clears a
+read-only flag the lock left and runs once more; unlock them after the push.
 Bakemap bakes the level -Map (/Game/Maps/<Level> or <Level>) into its map data asset DA_Map<Name>, or -DataAsset DA_<Name>:
 its preview (rendered with -Render, drawn without), the area the preview covers and its start spots (Tools/Editor/bake_map.py,
 docs/world/maps/AUTHORING_A_MAP.md). It exits 3 like setup when the asset or the preview texture is read-only.
@@ -141,6 +145,8 @@ param(
 	[string]$Cvars = '',
 
 	[switch]$Render,
+
+	[switch]$Lock,
 
 	[string]$Panel = '',
 
@@ -238,23 +244,48 @@ function Invoke-Build {
 }
 
 # Runs an editor Python script as a commandlet, as setup does. $Name is the task's name in its result line. Exits 3 when the
-# script lists assets it must rewrite but cannot because they are read-only (LFS lockable, not locked).
+# script lists assets it must rewrite but cannot because they are read-only (LFS lockable, not locked). With -Lock it locks
+# them instead, clears a read-only flag the lock left behind and runs the script once more (#350).
 function Invoke-EditorScript([string]$Script, [string]$Name) {
 	# Written by the script when assets it must rewrite are read-only (LFS lockable, not locked).
 	$ReadOnlyReport = Join-Path $RepoRoot 'Saved\Setup\ReadOnlyAssets.txt'
-	if (Test-Path $ReadOnlyReport) { Remove-Item -Force $ReadOnlyReport }
-
 	$RenderArgs = if ($Render) { @('-AllowCommandletRendering', '-RenderOffscreen') } else { @('-nullrhi') }
-	& $EditorCmd $Project -run=pythonscript "-script=$Script" $NoMCPPlugins -unattended -nosplash @RenderArgs -nosound -stdout -FullStdOutLogOutput
-	if (Test-Path $ReadOnlyReport) {
+	$Locked = @()
+	foreach ($Attempt in 1..2) {
+		if (Test-Path $ReadOnlyReport) { Remove-Item -Force $ReadOnlyReport }
+		& $EditorCmd $Project -run=pythonscript "-script=$Script" $NoMCPPlugins -unattended -nosplash @RenderArgs -nosound -stdout -FullStdOutLogOutput
+		if (-not (Test-Path $ReadOnlyReport)) { break }
+
 		$Files = @(Get-Content $ReadOnlyReport | Where-Object { $_ })
 		Write-Host ''
 		Write-Host "$Name BLOCKED: these assets must be rewritten but are read-only (LFS lockable, not locked by you):"
 		$Files | ForEach-Object { Write-Host "  $_" }
-		Write-Host "Nothing was written. Lock them, rerun $($Name.ToLower()), commit and push, then unlock:"
-		$Files | ForEach-Object { Write-Host "  git lfs lock $_" }
-		$Files | ForEach-Object { Write-Host "  git lfs unlock $_" }
-		exit 3
+		if (-not $Lock -or $Attempt -eq 2) {
+			Write-Host "Nothing was written. Rerun with -Lock to lock them and run again, or lock them yourself, rerun"
+			Write-Host "$($Name.ToLower()), commit and push, then unlock:"
+			$Files | ForEach-Object { Write-Host "  git lfs lock $_" }
+			$Files | ForEach-Object { Write-Host "  git lfs unlock $_" }
+			Write-Host "From bash: git lfs lock `$(cat Saved/Setup/ReadOnlyAssets.txt). A file still read-only after its lock:"
+			Write-Host "  attrib -R <file> (cmd) or chmod u+w <file> (bash)"
+			exit 3
+		}
+
+		Write-Host "Nothing was written. Locking them (-Lock):"
+		foreach ($File in $Files) {
+			& git -C $RepoRoot lfs lock $File
+			if ($LASTEXITCODE -ne 0) {
+				Write-Host "$Name BLOCKED: could not lock $File (git lfs locks shows who holds it)."
+				exit 3
+			}
+			$Locked += $File
+			$Item = Get-Item -LiteralPath (Join-Path $RepoRoot $File)
+			if ($Item.IsReadOnly) { $Item.IsReadOnly = $false }
+		}
+		Write-Host "Locked. Running $($Name.ToLower()) again."
+	}
+	if ($Locked) {
+		Write-Host "Locked by this run; unlock them after the push:"
+		$Locked | ForEach-Object { Write-Host "  git lfs unlock $_" }
 	}
 	if ($LASTEXITCODE -ne 0) {
 		Write-Host "$Name FAILED (exit $LASTEXITCODE)"

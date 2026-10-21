@@ -96,7 +96,7 @@ def bake_map(level_path, data_asset_name=None):
     read_only = read_only_files([texture_path, data_path])
     if read_only:
         os.makedirs(os.path.dirname(READ_ONLY_REPORT), exist_ok=True)
-        with open(READ_ONLY_REPORT, "w", encoding="utf-8") as report:
+        with open(READ_ONLY_REPORT, "w", encoding="utf-8", newline="\n") as report:
             report.write("\n".join(read_only) + "\n")
         for file in read_only:
             unreal.log_error(f"bake_map: {file} must be rewritten but is read-only (git lfs lock it)")

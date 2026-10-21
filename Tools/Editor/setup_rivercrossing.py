@@ -72,7 +72,7 @@ def main():
     read_only = read_only_files(dirty)
     if read_only:
         os.makedirs(os.path.dirname(READ_ONLY_REPORT), exist_ok=True)
-        with open(READ_ONLY_REPORT, "w", encoding="utf-8") as report:
+        with open(READ_ONLY_REPORT, "w", encoding="utf-8", newline="\n") as report:
             report.write("\n".join(read_only) + "\n")
         for file in read_only:
             unreal.log_error(f"setup_rivercrossing: {file} must be rewritten but is read-only (git lfs lock it)")

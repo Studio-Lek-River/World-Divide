@@ -119,6 +119,6 @@ Setup runs without a renderer, so it draws the lobby's map previews from the obs
 
 Because the assets are LFS lockable, Git LFS checks them out read-only. If setup has to rewrite one, it writes nothing and `ue.ps1` exits 3 listing the files. Then:
 
-1. `git lfs lock <file>` for each listed file
+1. `git lfs lock <file>` for each listed file, or rerun with `ue.ps1 -Task setup -Lock`, which locks them and runs setup again
 2. rerun setup, commit and push
 3. `git lfs unlock <file>`

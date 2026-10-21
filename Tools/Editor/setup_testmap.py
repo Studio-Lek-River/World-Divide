@@ -11,7 +11,9 @@ source files that build them and are rebuilt only when those change. UI assets b
 is gone are deleted.
 
 The assets are LFS lockable and therefore read-only unless locked. If an asset that must change is read-only, nothing
-is written: the files are listed in Saved/Setup/ReadOnlyAssets.txt and the run stops. Lock them (git lfs lock) and rerun.
+is written: the files are listed in Saved/Setup/ReadOnlyAssets.txt and the run stops. Lock them (git lfs lock, or ue.ps1
+-Task setup -Lock) and rerun. The first such asset is found before it is built, and from then on no existing asset is
+rebuilt, so a blocked run skips the slow imports and LOD reduction and still lists every asset it would rewrite.
 Assets marked skip-worktree, such as DA_TestTank swapped for local art by import_local_art.py, are left as they are.
 
 Run from the repo root (adjust the engine path), or use Tools/Scripts/ue.ps1 -Task setup:
@@ -117,6 +119,13 @@ planned = set()
 # Package paths of the generated UI assets queued for deletion by plan_stale_ui_assets.
 stale = set()
 
+# Repo paths of the existing assets this run must rewrite but cannot because they are read-only. Once one is found, the run
+# writes nothing, so plan_now no longer rebuilds existing assets.
+read_only = []
+
+# Repo files marked skip-worktree, read before the first asset is planned; see skip_worktree_files.
+skip_worktree = set()
+
 # Hashes of the surface materials by package path.
 material_hashes = {}
 
@@ -204,14 +213,28 @@ def plan_rebuild(path, extension, build, digest, stale=None):
     pending.append((path, extension, exists, lambda: build(digest)))
 
 
+def blocked_by(path, extension):
+    """True when the existing file of an asset that must be rewritten is read-only; records it in read_only."""
+    file = repo_file(path, extension)
+    if file in skip_worktree or os.access(asset_file(path, extension), os.W_OK):
+        return False
+    if file not in read_only:
+        read_only.append(file)
+    return True
+
+
 def plan_now(path, build, digest):
     """Builds an asset in memory right away, so assets planned after it can use it, and queues its save. Returns the
-    asset on disk instead when it was built from the same hash."""
+    asset on disk instead when it was built from the same hash, or when the run writes nothing anyway because an asset
+    it must rewrite is read-only."""
     planned.add(path)
     exists = assets.does_asset_exist(path)
     if exists:
         asset = assets.load_asset(path)
         if assets.get_metadata_tag(asset, HASH_TAG) == digest:
+            return asset
+        if blocked_by(path, ".uasset") or read_only:
+            unreal.log_warning(f"setup_testmap: not rebuilding {path}, the run is blocked by read-only assets")
             return asset
     asset = build()
     assets.set_metadata_tag(asset, HASH_TAG, digest)
@@ -2302,20 +2325,20 @@ def skip_worktree_files():
 def write_pending():
     """Writes every queued asset, or nothing at all when one of the existing files is read-only. Assets marked
     skip-worktree keep their local version."""
-    local = skip_worktree_files()
     for path, extension, _, _ in pending:
-        if repo_file(path, extension) in local:
+        if repo_file(path, extension) in skip_worktree:
             unreal.log_warning(f"setup_testmap: {repo_file(path, extension)} is marked skip-worktree, keeping the local version")
-    pending[:] = [entry for entry in pending if repo_file(entry[0], entry[1]) not in local]
+    pending[:] = [entry for entry in pending if repo_file(entry[0], entry[1]) not in skip_worktree]
 
-    read_only = [asset_file(path, extension) for path, extension, exists, _ in pending
-                 if exists and not os.access(asset_file(path, extension), os.W_OK)]
+    for path, extension, exists, _ in pending:
+        if exists:
+            blocked_by(path, extension)
     if read_only:
-        files = [os.path.relpath(file, PROJECT_DIR).replace("\\", "/") for file in read_only]
+        # LF line endings, so git lfs lock $(cat Saved/Setup/ReadOnlyAssets.txt) from bash gets clean paths.
         os.makedirs(os.path.dirname(READ_ONLY_REPORT), exist_ok=True)
-        with open(READ_ONLY_REPORT, "w", encoding="utf-8") as report:
-            report.write("\n".join(files) + "\n")
-        for file in files:
+        with open(READ_ONLY_REPORT, "w", encoding="utf-8", newline="\n") as report:
+            report.write("\n".join(read_only) + "\n")
+        for file in read_only:
             unreal.log_error(f"setup_testmap: {file} must be rewritten or deleted but is read-only (git lfs lock it)")
         unreal.log_error("setup_testmap: nothing written")
         return
@@ -2328,6 +2351,7 @@ def write_pending():
 
 if os.path.exists(READ_ONLY_REPORT):
     os.remove(READ_ONLY_REPORT)
+skip_worktree = skip_worktree_files()
 
 # Placeholder models (CC0, see Art/Source/Placeholder/CREDITS.md). The Kenney vehicles face +Y once imported; yaw turns
 # them to face +X. The tank and the soldier are our own (Tools/Art/build_usa_tank_blender.py, build_soldier_blender.py) and
