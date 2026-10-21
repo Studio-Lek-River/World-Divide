@@ -1642,20 +1642,29 @@ void ARTSUnit::UpdateBlockedMove()
 	const bool bStuckAgain = Now - BlockedReplanTime < BlockedGiveUpSeconds;
 	const bool bMoveOrder = !CommandQueue.IsEmpty()
 		&& (CommandQueue[0].Type == ERTSCommandType::Move || CommandQueue[0].Type == ERTSCommandType::AttackMove);
-	if (!bOutOfReach && !bStuckAgain && bMoveOrder)
+	if (!bOutOfReach && !bStuckAgain)
 	{
-		// A fresh path from where it stands, with whatever moved into its way since.
+		// A fresh path from where it stands, with whatever moved into its way since. Attacks, harvests and builds back off
+		// too and start their own moves again once this one stops: a wheeled builder nosed into the building it just put up
+		// would otherwise drive into its wall again and again (#357).
 		UE_LOG(LogWorldDivide, Verbose, TEXT("%s is stuck, backs off and paths again"), *GetName());
 		BlockedReplanTime = Now;
 		Movement->BackOff(BlockedBackOffSeconds);
-		StartNextCommand();
+		if (bMoveOrder)
+		{
+			StartNextCommand();
+		}
+		else
+		{
+			AI->StopMovement();
+		}
 		return;
 	}
 	// Stuck again, or a goal its steering cannot reach: the move ends where the unit stands. Attacks, harvests and builds
-	// start their own moves again. A given-up move is a refused order: its issuer hears of it, before the stop pops it, and
-	// the order after it may back off once of its own.
+	// start their own moves again. A given-up move is a refused order: its issuer hears of it, before the stop pops it. The
+	// next move, of this order or the one after it, may back off once of its own.
 	UE_LOG(LogWorldDivide, Verbose, TEXT("%s gives up its move: %s"), *GetName(), bOutOfReach ? TEXT("out of reach") : TEXT("stuck"));
-	BlockedReplanTime = bMoveOrder ? -1.0e9 : Now;
+	BlockedReplanTime = -1.0e9;
 	if (bMoveOrder)
 	{
 		ARTSPlayerController::NotifyOrderRefused(CommandQueue[0].Issuer, GetActorLocation());
