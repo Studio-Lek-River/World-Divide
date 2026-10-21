@@ -1103,12 +1103,14 @@ def build_muzzle_flash_material(name):
     return material
 
 
-# The fireball's colour by its heat as it cools: dark red, orange, white-yellow, white; as bright as the shot's colour.
-FIRE_CODE = """float H = Heat * (1.0 - 0.75 * saturate(Age));
+# The fireball's colour by its heat: dark red, orange, white-yellow, white; as bright as the shot's colour, but held below
+# the point where it all burns out to white, so it reads as a ball of fire, not a flash. It cools only from white-yellow
+# to yellow over its short life and dims a little, then is gone in a frame (#354).
+FIRE_CODE = """float H = Heat * (1.0 - 0.35 * saturate(Age));
 float3 C = lerp(float3(0.35, 0.03, 0.0), float3(1.0, 0.36, 0.05), smoothstep(0.05, 0.45, H));
 C = lerp(C, float3(1.0, 0.86, 0.5), smoothstep(0.45, 0.85, H));
 C = lerp(C, float3(1.0, 0.98, 0.9), smoothstep(0.85, 1.0, H));
-return C * Heat * max(max(Color.r, Color.g), Color.b) * Color.a * 0.6;"""
+return C * Heat * (1.0 - 0.4 * saturate(Age)) * max(max(Color.r, Color.g), Color.b) * Color.a * 0.2;"""
 
 
 def build_muzzle_fire_material(name, fire):
@@ -1133,27 +1135,57 @@ def build_muzzle_fire_material(name, fire):
     return material
 
 
+# The glare's and the sparks' soft round glow: the particle colour, brightest at the centre and falling off wide and
+# smooth to nothing at the sprite's edge. Unlike GLOW_CODE it does not fade with age; Niagara sets the brightness over life.
+GLARE_CODE = """float Falloff = saturate(1.0 - length(UV - 0.5) * 2.0);
+return Color.rgb * Color.a * Falloff * Falloff * Falloff;"""
+
+
+def build_muzzle_glare_material(name):
+    """Unlit additive sprite material for the glare and the sparks of the muzzle flash (#354): the particle colour in a soft
+    round glow, faded out over the last few metres in front of whatever lies behind it, so the wide glare washes over the
+    hull and the ground without the hard line where a sprite cuts into them."""
+    material = new_material(name)
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    material.set_editor_property("used_with_niagara_sprites", True)
+
+    glow = custom_node(material, -500, 100, GLARE_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT3, ["Color", "UV"])
+    connect(expression(material, unreal.MaterialExpressionParticleColor, -800, 0), "RGBA", glow, "Color")
+    connect(expression(material, unreal.MaterialExpressionTextureCoordinate, -800, 200), "", glow, "UV")
+    fade = expression(material, unreal.MaterialExpressionDepthFade, -500, 300)
+    fade.set_editor_property("fade_distance_default", 400.0)
+    blend = expression(material, unreal.MaterialExpressionMultiply, -200, 100)
+    connect(glow, "", blend, "A")
+    connect(fade, "", blend, "B")
+    unreal.MaterialEditingLibrary.connect_material_property(blend, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    unreal.MaterialEditingLibrary.recompile_material(material)
+    return material
+
+
 def make_muzzle_flash():
-    """The Niagara muzzle flash of vehicle guns (#220, #294), its glow and fire materials and the fire flipbook, built now
-    so the weapons can point at it. The system is built in C++ (URTSEditorScripting::BuildMuzzleFlashSystem,
-    RTSMuzzleFlashBuilder.cpp), so its hash covers that source too."""
+    """The Niagara muzzle flash of vehicle guns (#220, #294, #354), its glow, fire and glare materials and the fire
+    flipbook, built now so the weapons can point at it. The system is built in C++
+    (URTSEditorScripting::BuildMuzzleFlashSystem, RTSMuzzleFlashBuilder.cpp), so its hash covers that source too."""
     glow = plan_now(f"{MATERIAL_DIR}/M_MuzzleFlash", lambda: build_muzzle_flash_material("M_MuzzleFlash"),
                     spec_hash([build_muzzle_flash_material, custom_node], GLOW_CODE, "M_MuzzleFlash"))
     fire_texture = make_effect_texture("T_MuzzleFire")
     fire = plan_now(f"{MATERIAL_DIR}/M_MuzzleFire", lambda: build_muzzle_fire_material("M_MuzzleFire", fire_texture),
                     spec_hash([build_muzzle_fire_material, custom_node, flipbook_frame, flipbook_sample, blended_sample, component_mask],
                               FLIPBOOK_CODE, FIRE_CODE, "M_MuzzleFire", fire_texture))
+    glare = plan_now(f"{MATERIAL_DIR}/M_MuzzleGlare", lambda: build_muzzle_glare_material("M_MuzzleGlare"),
+                     spec_hash([build_muzzle_glare_material, custom_node], GLARE_CODE, "M_MuzzleGlare"))
     path = f"{EFFECT_DIR}/NS_MuzzleFlash"
 
     def build():
         if not unreal.RTSEditorScripting.load_editor_module("NiagaraEditor"):
             raise RuntimeError("Could not load the NiagaraEditor module")
-        system = unreal.RTSEditorScripting.build_muzzle_flash_system(path, glow, fire)
+        system = unreal.RTSEditorScripting.build_muzzle_flash_system(path, glow, fire, glare)
         if not system:
             raise RuntimeError(f"Could not build {path}; the log says why")
         return system
     builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSMuzzleFlashBuilder.cpp"))
-    return plan_now(path, build, spec_hash([make_muzzle_flash], path, glow, fire, builder_source))
+    return plan_now(path, build, spec_hash([make_muzzle_flash], path, glow, fire, glare, builder_source))
 
 
 # A smoke sprite's normal from its six-way light, so the side it is lit from most faces that way, in the sprite's tangent

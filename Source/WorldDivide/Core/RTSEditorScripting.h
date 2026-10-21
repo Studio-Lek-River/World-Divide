@@ -96,12 +96,13 @@ public:
 
 	/**
 	 * Builds the muzzle flash of vehicle guns (#220, #294) as the Niagara system AssetPath (such as
-	 * /Game/Effects/NS_MuzzleFlash), new, in place of the one there: Python cannot edit a Niagara system's modules. The core,
-	 * the blast cone and the brake jets glow in GlowMaterial, the fireball burns in FireMaterial. Returns null and logs why
-	 * when it fails.
+	 * /Game/Effects/NS_MuzzleFlash), new, in place of the one there: Python cannot edit a Niagara system's modules. The
+	 * tongue, the blast cone, the brake jets and the sparks glow in GlowMaterial, the fireball burns in FireMaterial and the
+	 * glare (#354) washes over the view in GlareMaterial. Returns null and logs why when it fails.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
-	static UNiagaraSystem* BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* GlowMaterial, UMaterialInterface* FireMaterial);
+	static UNiagaraSystem* BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* GlowMaterial, UMaterialInterface* FireMaterial,
+		UMaterialInterface* GlareMaterial);
 
 	/**
 	 * Builds the muzzle smoke of vehicle cannons (#221, #303) and the ground blast (#294) as the Niagara system AssetPath

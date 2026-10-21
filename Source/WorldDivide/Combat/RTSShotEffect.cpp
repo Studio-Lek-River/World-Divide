@@ -40,8 +40,8 @@ namespace
 	constexpr float MuzzleLightOutSeconds = 0.03f;
 
 	constexpr float MuzzleFlashSeconds = 0.08f;
-	/** How long a Niagara muzzle flash (#220) and its light last: NS_MuzzleFlash's lifetime. */
-	constexpr float NiagaraFlashSeconds = 0.15f;
+	/** How long a Niagara muzzle flash (#220) and its light last: NS_MuzzleFlash's lifetime (#354). */
+	constexpr float NiagaraFlashSeconds = 0.2f;
 	constexpr float ImpactSeconds = 0.25f;
 
 	/** Emissive strength at full brightness, well into bloom. */
@@ -192,8 +192,10 @@ void ARTSShotEffect::PlayNiagaraFlash(const FTransform& MuzzleTransform)
 	NiagaraFlash->SetVariableLinearColor(FlashColorParameter, FMath::Lerp(Weapon->ShellColor, FLinearColor::White, 0.3f) * GlowStrength);
 	NiagaraFlash->SetVariableFloat(FlashScaleParameter, Weapon->EffectScale);
 	NiagaraFlash->SetVariableInt(FlashBrakeParameter, Weapon->bMuzzleBrake ? 1 : 0);
-	// A machine that never renders (tests under -nullrhi) places the flash but Niagara does not run it.
-	NiagaraFlash->ActivateSystem(true);
+	// A machine that never renders (tests under -nullrhi) places the flash but Niagara does not run it. A full reset, not
+	// ActivateSystem: once the last shot's flash has played out, ActivateSystem wakes the system but none of its one-shot
+	// emitters, so only the first shot of a pooled effect flashed (#354).
+	NiagaraFlash->ResetSystem();
 	bNiagaraFlashLive = true;
 	Pool->CountMuzzleFlash();
 }

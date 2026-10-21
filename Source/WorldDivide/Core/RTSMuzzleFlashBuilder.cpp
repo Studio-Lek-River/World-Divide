@@ -1,4 +1,4 @@
-// URTSEditorScripting::BuildMuzzleFlashSystem (#220, #294), BuildMuzzleSmokeSystem (#221, #303), BuildExhaustSystem (#222)
+// URTSEditorScripting::BuildMuzzleFlashSystem (#220, #294, #354), BuildMuzzleSmokeSystem (#221, #303), BuildExhaustSystem (#222)
 // and BuildDustSystem (#224), on their own so that setup_testmap.py rebuilds NS_MuzzleFlash, NS_MuzzleSmoke, NS_Exhaust and
 // NS_Dust only when this file changes.
 #include "Core/RTSEditorScripting.h"
@@ -365,7 +365,7 @@ namespace RTSMuzzleFlashBuilder
 }
 
 UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* GlowMaterial,
-	UMaterialInterface* FireMaterial)
+	UMaterialInterface* FireMaterial, UMaterialInterface* GlareMaterial)
 {
 	using namespace RTSMuzzleFlashBuilder;
 	TOptional<FNiagaraExternalEditContext> Edit;
@@ -382,44 +382,82 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& Asset
 		AddUserParameter(System, TEXT("User.Scale"), FNiagaraTypeDefinition::GetFloatDef(), DefaultScale, Context);
 		AddUserParameter(System, TEXT("User.Brake"), FNiagaraTypeDefinition::GetIntDef(), DefaultBrake, Context);
 
-		// The layers of a real firing (docs/art/refs/muzzle_flash), along the bore (+X), all gone within 0.15 s; sizes are for
-		// a scale of 1, so twice them on the M20's gun (scale 2). The bounds hold the heaviest gun (scale 2.5).
-		const FBox Bounds(FVector(-300.0, -700.0, -700.0), FVector(1100.0, 700.0, 700.0));
+		// The layers of a real firing (docs/art/refs/muzzle_flash) as World in Conflict's tanks show them at 60 fps (#354),
+		// along the bore (+X), all gone by 0.2 s; sizes are for a scale of 1, so twice them on the M20's gun (scale 2). The
+		// bounds hold the heaviest gun (scale 2.5) and its sparks' flight.
+		const FBox Bounds(FVector(-300.0, -700.0, -700.0), FVector(2000.0, 700.0, 700.0));
 		const FString Stretched(TEXT(", \"Alignment\": \"VelocityAligned\""));
+		const float LoopSeconds = 0.22f;
+		// The brightest channel of the shot's colour, for the layers that burn whiter than it.
+		const FString Heat(TEXT("max(User.Color.r, max(User.Color.g, User.Color.b))"));
 
-		// A white-hot core right at the muzzle: flares in a frame or two and burns out in 0.08 s.
-		AddSpriteBurst(System, TEXT("Core"), TEXT("1"), 0.15f, TEXT("0.08"), TEXT("User.Scale * 60.0"), TEXT("User.Color * 0.5"), GlowMaterial,
-			Bounds, true, Context);
-		SetSpawnSphere(System, TEXT("Core"), TEXT("0.0"), TEXT("float3(User.Scale * 20.0, 0.0, 0.0)"), Context);
+		// The tongue: a short white-hot jet right at the muzzle, there for the first frame or two only.
+		AddSpriteBurst(System, TEXT("Tongue"), TEXT("1"), LoopSeconds, TEXT("0.035"), TEXT("User.Scale * 60.0"),
+			FString::Printf(TEXT("float4(float3(1.0, 0.95, 0.85) * %s, User.Color.a) * 0.5"), *Heat), GlowMaterial, Bounds, true, Context,
+			Stretched);
+		SetSpriteSize2D(System, TEXT("Tongue"), TEXT("float2(User.Scale * 20.0, User.Scale * 70.0)"), Context);
+		SetSpawnSphere(System, TEXT("Tongue"), TEXT("0.0"), TEXT("float3(User.Scale * 35.0, 0.0, 0.0)"), Context);
+		SetMotion(System, TEXT("Tongue"), TEXT("float3(User.Scale * 300.0, 0.0, 0.0)"), 10.f, FString(), Context);
 
-		// The blast cone: two tongues of flame stretched along the bore, 1.5 to 2.2 m long, born clear of the muzzle so none
-		// lies over the barrel, thrown out and gone in 0.06 to 0.09 s.
-		AddSpriteBurst(System, TEXT("Cone"), TEXT("2"), 0.15f, TEXT("0.06 + rand(0.03)"), TEXT("User.Scale * 60.0"), TEXT("User.Color * 0.9"),
+		// The blast cone: two tongues of flame stretched along the bore, 1.5 to 2.2 m long, their back ends at the muzzle so
+		// they shoot out of it without lying over the barrel, thrown out and gone in 0.05 to 0.08 s.
+		AddSpriteBurst(System, TEXT("Cone"), TEXT("2"), LoopSeconds, TEXT("0.05 + rand(0.03)"), TEXT("User.Scale * 60.0"), TEXT("User.Color * 0.5"),
 			GlowMaterial, Bounds, true, Context, Stretched);
 		SetSpriteSize2D(System, TEXT("Cone"), TEXT("float2(User.Scale * (40.0 + rand(15.0)), User.Scale * (150.0 + rand(70.0)))"), Context);
-		SetSpawnSphere(System, TEXT("Cone"), TEXT("0.0"), TEXT("float3(User.Scale * 140.0, 0.0, 0.0)"), Context);
+		SetSpawnSphere(System, TEXT("Cone"), TEXT("0.0"), TEXT("float3(User.Scale * 90.0, 0.0, 0.0)"), Context);
 		SetMotion(System, TEXT("Cone"), TEXT("float3(User.Scale * (900.0 + rand(500.0)), 0.0, 0.0)"), 25.f, FString(), Context);
 
 		// The brake jets: on a gun with a muzzle brake, a tongue of flame thrown out to each side and a little forward.
 		for (const TPair<const TCHAR*, const TCHAR*>& Jet : { TPair<const TCHAR*, const TCHAR*>(TEXT("JetLeft"), TEXT("-")),
 			TPair<const TCHAR*, const TCHAR*>(TEXT("JetRight"), TEXT("")) })
 		{
-			AddSpriteBurst(System, Jet.Key, TEXT("User.Brake"), 0.15f, TEXT("0.05 + rand(0.02)"), TEXT("User.Scale * 30.0"),
+			AddSpriteBurst(System, Jet.Key, TEXT("User.Brake"), LoopSeconds, TEXT("0.05 + rand(0.02)"), TEXT("User.Scale * 30.0"),
 				TEXT("User.Color * 0.8"), GlowMaterial, Bounds, true, Context, Stretched);
 			SetSpriteSize2D(System, Jet.Key, TEXT("float2(User.Scale * 30.0, User.Scale * (90.0 + rand(30.0)))"), Context);
 			SetMotion(System, Jet.Key, FString::Printf(TEXT("float3(User.Scale * 150.0, %sUser.Scale * (600.0 + rand(250.0)), 0.0)"), Jet.Value),
 				25.f, FString(), Context);
 		}
 
-		// The fireball: six billows of the baked fire (T_MuzzleFire), 1.1 to 1.7 m across, thrown out along the bore and
-		// slowed hard by the air, cooling from white-yellow to dark red in 0.11 to 0.16 s.
-		AddSpriteBurst(System, TEXT("Fireball"), TEXT("6"), 0.2f, TEXT("0.11 + rand(0.05)"), TEXT("User.Scale * (110.0 + rand(60.0))"),
+		// The fireball: four puffs of the baked fire (T_MuzzleFire), 1.9 to 2.6 m across, thrown 5 to 30 m/s along the bore and
+		// braked by the air to a few percent within 0.1 s, so together they make a ball as big as the turret just in front of
+		// the muzzle. White-yellow, fading to yellow (M_MuzzleFire), gone in one frame after 0.15 to 0.2 s.
+		AddSpriteBurst(System, TEXT("Fireball"), TEXT("4"), LoopSeconds, TEXT("0.15 + rand(0.05)"), TEXT("User.Scale * (95.0 + rand(35.0))"),
 			TEXT("User.Color"), FireMaterial, Bounds, true, Context);
 		SetRandomRotation(System, TEXT("Fireball"), Context);
-		SetSpawnSphere(System, TEXT("Fireball"), TEXT("User.Scale * 20.0"), TEXT("float3(User.Scale * 60.0, 0.0, 0.0)"), Context);
+		// Born at the mouth of the barrel at two fifths of their size and swelling to full in the first quarter of their life
+		// while the air brakes them, so the ball grows out of the muzzle and its back stays on it.
+		SetSpawnSphere(System, TEXT("Fireball"), TEXT("User.Scale * 10.0"), TEXT("float3(User.Scale * 25.0, 0.0, 0.0)"), Context);
 		SetMotion(System, TEXT("Fireball"),
-			TEXT("float3(User.Scale * (500.0 + rand(700.0)), User.Scale * (rand(240.0) - 120.0), User.Scale * (rand(240.0) - 120.0))"), 14.f,
+			TEXT("float3(User.Scale * (150.0 + rand(900.0)), User.Scale * (rand(120.0) - 60.0), User.Scale * (rand(120.0) - 60.0))"), 28.f,
 			FString(), Context);
+		SetBirthAttribute(System, TEXT("Fireball"), TEXT("Particles.BirthSize"), FNiagaraTypeDefinition::GetFloatDef(), 100.f,
+			TEXT("User.Scale * (95.0 + rand(35.0))"), Context);
+		SetSpriteSizeOverLife(System, TEXT("Fireball"),
+			TEXT("float2(1.0, 1.0) * Particles.BirthSize * (0.4 + 0.6 * saturate(Particles.NormalizedAge * 4.0))"), Context);
+
+		// The sparks: one streak flung 40 to 70 m/s down the bore, white turning blue-white for three quarters of its 0.2 s,
+		// then swelling to three times its size as it fades. It and the glare draw with GlareMaterial, which leaves their
+		// brightness over life to the colour set here.
+		AddSpriteBurst(System, TEXT("Sparks"), TEXT("1"), LoopSeconds, TEXT("0.2"), TEXT("User.Scale * 30.0"), TEXT("User.Color"),
+			GlareMaterial, Bounds, true, Context, Stretched);
+		SetSpawnSphere(System, TEXT("Sparks"), TEXT("0.0"), TEXT("float3(User.Scale * 60.0, 0.0, 0.0)"), Context);
+		SetMotion(System, TEXT("Sparks"), TEXT("float3(User.Scale * (2000.0 + rand(1500.0)), 0.0, 0.0)"), 0.5f, FString(), Context);
+		const FString Late(TEXT("saturate((Particles.NormalizedAge - 0.75) / 0.25)"));
+		SetSpriteSizeOverLife(System, TEXT("Sparks"),
+			FString::Printf(TEXT("float2(User.Scale * 6.0, User.Scale * 25.0) * (1.0 + 2.0 * %s)"), *Late), Context);
+		SetColorOverLife(System, TEXT("Sparks"),
+			FString::Printf(TEXT("float4(lerp(float3(1.0, 1.0, 1.0), float3(0.7, 0.82, 1.0), saturate(Particles.NormalizedAge / 0.75)) * %s * 0.4, User.Color.a * (1.0 - %s))"),
+				*Heat, *Late), Context);
+
+		// The glare: one wide, soft, warm glow over the gun and the ground around it that floods the view for 0.2 s, flaring
+		// within a frame and fading fast. It faces the camera and fades where it meets the ground, so it lights the picture,
+		// not a disc on the ground (#312), and takes no light from the budget (#227).
+		AddSpriteBurst(System, TEXT("Glare"), TEXT("1"), LoopSeconds, TEXT("0.2"), TEXT("User.Scale * 300.0"), TEXT("User.Color"), GlareMaterial,
+			Bounds, true, Context);
+		SetSpawnSphere(System, TEXT("Glare"), TEXT("0.0"), TEXT("float3(User.Scale * 40.0, 0.0, 0.0)"), Context);
+		SetColorOverLife(System, TEXT("Glare"),
+			FString::Printf(TEXT("float4(float3(1.0, 0.93, 0.38) * %s * 0.012, User.Color.a * saturate(Particles.NormalizedAge * 12.0) * pow(1.0 - Particles.NormalizedAge, 3.0))"),
+				*Heat), Context);
 	}
 	return FinishSystem(System, AssetPath, TEXT("BuildMuzzleFlashSystem"), Context);
 }
@@ -611,7 +649,7 @@ UNiagaraSystem* URTSEditorScripting::BuildDustSystem(const FString& AssetPath, U
 }
 #else
 UNiagaraSystem* URTSEditorScripting::BuildMuzzleFlashSystem(const FString& AssetPath, UMaterialInterface* GlowMaterial,
-	UMaterialInterface* FireMaterial)
+	UMaterialInterface* FireMaterial, UMaterialInterface* GlareMaterial)
 {
 	return nullptr;
 }

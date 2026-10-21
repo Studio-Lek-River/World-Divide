@@ -80,8 +80,9 @@ namespace RTSMuzzleFlashTests
 }
 
 /**
- * The muzzle flash the setup builds (#220, #294): NS_MuzzleFlash with the user parameters ARTSShotEffect sets, its layers
- * (core, blast cone, brake jets, fireball) drawn with M_MuzzleFlash and M_MuzzleFire, and the M20's gun pointing at it.
+ * The muzzle flash the setup builds (#220, #294, #354): NS_MuzzleFlash with the user parameters ARTSShotEffect sets, its
+ * layers (tongue, blast cone, brake jets, fireball, sparks, glare) drawn with M_MuzzleFlash, M_MuzzleFire and M_MuzzleGlare,
+ * and the M20's gun pointing at it.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMuzzleFlashAssetTest, "WorldDivide.Combat.MuzzleFlash.Asset", RTSTests::TestFlags)
 
@@ -100,7 +101,7 @@ bool FRTSMuzzleFlashAssetTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("It takes User.Color"), User.IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetColorDef(), TEXT("User.Color"))) != INDEX_NONE);
 	TestTrue(TEXT("It takes User.Scale"), User.IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetFloatDef(), TEXT("User.Scale"))) != INDEX_NONE);
 	TestTrue(TEXT("It takes User.Brake"), User.IndexOf(FNiagaraVariable(FNiagaraTypeDefinition::GetIntDef(), TEXT("User.Brake"))) != INDEX_NONE);
-	TestEqual(TEXT("A core, a blast cone, two brake jets and a fireball"), System->GetEmitterHandles().Num(), 5);
+	TestEqual(TEXT("A tongue, a blast cone, two brake jets, a fireball, sparks and a glare"), System->GetEmitterHandles().Num(), 7);
 	TestFalse(TEXT("The M20's gun has no muzzle brake"), M20->Weapon->bMuzzleBrake);
 	TestTrue(TEXT("It is ready to run"), System->IsValid());
 	const UMaterial* Material = LoadObject<UMaterial>(nullptr, TEXT("/Game/Materials/M_MuzzleFlash.M_MuzzleFlash"));
@@ -114,6 +115,12 @@ bool FRTSMuzzleFlashAssetTest::RunTest(const FString& Parameters)
 	{
 		TestTrue(TEXT("The fire draws Niagara sprites"), Fire->bUsedWithNiagaraSprites != 0);
 		TestTrue(TEXT("The fire is additive"), Fire->GetBlendMode() == BLEND_Additive);
+	}
+	const UMaterial* Glare = LoadObject<UMaterial>(nullptr, TEXT("/Game/Materials/M_MuzzleGlare.M_MuzzleGlare"));
+	if (TestNotNull(TEXT("M_MuzzleGlare loads"), Glare))
+	{
+		TestTrue(TEXT("The glare draws Niagara sprites"), Glare->bUsedWithNiagaraSprites != 0);
+		TestTrue(TEXT("The glare is additive"), Glare->GetBlendMode() == BLEND_Additive);
 	}
 	return true;
 }

@@ -113,8 +113,8 @@ namespace RTSUnitDebugCommands
 	/** How slowly the world runs while a muzzle flash is held for its picture (#220): as still as the engine allows. */
 	constexpr float FlashHoldDilation = 0.0001f;
 
-	/** The moments after the shot the firing is held at for its pictures (#294), in seconds. */
-	constexpr float MuzzleFlashHolds[] = { 0.f, 0.03f, 0.08f, 0.15f };
+	/** The moments after the shot the firing is held at for its pictures (#294), in seconds; the last just after it is gone (#354). */
+	constexpr float MuzzleFlashHolds[] = { 0.f, 0.03f, 0.08f, 0.15f, 0.21f };
 
 	/** The step a held firing's Niagara systems are advanced to its moment by. */
 	constexpr float FlashHoldStep = 1.f / 240.f;
@@ -574,6 +574,19 @@ namespace RTSUnitDebugCommands
 					} });
 				}
 			}
+			// A second shot from the same gun once the first one's flash has played out in real time (#354): the pooled flash
+			// has to play again, not only the first time.
+			Shots.Add({ TEXT("muzzle_flash_repeat_first"), [](FUnitShotsRun& Run)
+			{
+				Run.ReleaseMuzzleFlash();
+				Run.SetNight(false);
+				Run.Unit->SetAimOverride(TurretShotAim);
+				return Run.UseLODCamera(FVector::ForwardVector, SmokeViewDistance, false, SmokeViewElevation) && Run.FireGun();
+			}, SmokeTurnedSeconds });
+			Shots.Add({ TEXT("muzzle_flash_repeat_030"), [](FUnitShotsRun& Run)
+			{
+				return Run.HoldMuzzleFlash(0.03f);
+			} });
 			// The head- and rear lights (#223) from the RTS camera at its default zoom, the turret to the front: the lamps dim by
 			// day; at night they glow and light the ground white ahead and red behind. The day/night policy looks at the sun
 			// about once a second, so these settle longer.
