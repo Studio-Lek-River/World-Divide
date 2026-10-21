@@ -100,7 +100,11 @@ public:
 	/** From clamped to the footprint rectangle. Under construction or not, the building can be shot. */
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
 
-	/** The meshes drawn with Mesh for a building of several (URTSBuildingData::Parts), in the data's order. */
+	/**
+	 * The meshes drawn with Mesh for a building of several (URTSBuildingData::Parts), in the order of each mesh's first part:
+	 * one component per part, or one UInstancedStaticMeshComponent for the parts that share a mesh and how it draws (the
+	 * HQ's door sections), an instance per part in the data's order (#358).
+	 */
 	const TArray<TObjectPtr<UStaticMeshComponent>>& GetPartComponents() const { return PartComponents; }
 
 	/**
@@ -196,7 +200,7 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> Mesh;
 
-	/** The data's Parts, on Mesh. */
+	/** The data's Parts, on Mesh (GetPartComponents). */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UStaticMeshComponent>> PartComponents;
 

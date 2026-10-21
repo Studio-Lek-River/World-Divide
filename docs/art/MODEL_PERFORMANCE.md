@@ -38,6 +38,8 @@ by authoring each asset for the RTS camera, cheap enough to draw at full detail 
    | Small (power plant, barracks, defences) | ≤ 25,000 | ≤ 6,000 | ≤ 8 |
 
    - The large budget is the one #349 benched with the USA HQ: about 0.2 ms of GPU per HQ among 240 units.
+   - The USA HQ has LOD0 ≤ 350,000, raised by the producer (rule 7): its delivered façade is a dense master without a
+     baked game mesh, and at 150,000 its bevelled frames tore apart at 12 m (#358). A new delivery keeps to the table.
    - Share the budget out per mesh by what reads at the RTS camera, not by triangle count. Small details that show at
      150 m (solar cells, grilles, door lights, planters) keep their own triangles; a flat cut lost the HQ's solar cells
      at LOD0.

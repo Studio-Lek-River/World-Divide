@@ -2436,3 +2436,15 @@ RTS camera keep their triangles, and switch at one distance for the whole buildi
   environment.
 - These are quick-method numbers on a busy machine. One `-Long` run of `@NaniteHQ` and `@LodHQ` against the baseline, on
   an idle machine, is still to come with the producer's approval.
+
+## #358 (USA HQ at LOD0 + LOD1)
+
+No bench run; the shell is the production HQ now, so `@LodHQ` stands four `DA_TestHeadquarters` (`RTSBenchScene::LodHQData`).
+
+- One HQ is 349,119 triangles at LOD0 and 39,767 at LOD1 (was 3.24M), with 74 material sections (was 172) in 15 components
+  (was 38): the static shell merged into two meshes, the door sections and lift cables drawn instanced.
+- LOD0 is above the large-building 150,000 and above #349's LOD shell (149,994 for the shell alone), on the producer's
+  call for the 12 m look (`docs/art/MODEL_PERFORMANCE.md`). Its GPU cost per HQ is still to measure: a `-Quick` run of
+  `@NaniteHQ` and `@LodHQ` against the baseline, after `setup -BenchHQ`.
+- The whole HQ switches to LOD1 at 260 m (the door sections about 2 % later): `ue.ps1 -Task buildingshots -Building
+  DA_TestHeadquarters` logs every multi-LOD part at LOD0 at 249.6 m and at LOD1 at 270.4 m.

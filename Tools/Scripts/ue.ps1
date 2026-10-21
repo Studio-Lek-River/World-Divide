@@ -58,9 +58,9 @@ editor's own output goes to Saved/Logs/AutomationRun*.log.stdout; the run prints
 Setup runs without a renderer and draws the lobby's map previews; -Render gives it one (a GPU is needed) to render them.
 Setup stops before its slow imports when an asset it must rewrite is read-only and lists them all in
 Saved/Setup/ReadOnlyAssets.txt (#350). -Lock (setup, bakemap, rivercrossing) then git lfs locks the listed files, clears a
-read-only flag the lock left and runs once more; unlock them after the push. -BenchHQ also builds the bench's two HQ shells
-(#349) under the git-ignored Content/Bench/USAHQ: DA_BenchHQ_Nanite, the HQ's static shell with Nanite, and DA_BenchHQ_Lod,
-the same without Nanite at LOD0 and LOD1 (150k and 40k triangles, LOD1 from 260 m); about 15 minutes the first time.
+read-only flag the lock left and runs once more; unlock them after the push. -BenchHQ also builds the bench's dense HQ
+(#349) under the git-ignored Content/Bench/USAHQ: DA_BenchHQ_Nanite, the HQ's static shell as delivered with Nanite; about
+10 minutes the first time.
 Bakemap bakes the level -Map (/Game/Maps/<Level> or <Level>) into its map data asset DA_Map<Name>, or -DataAsset DA_<Name>:
 its preview (rendered with -Render, drawn without), the area the preview covers and its start spots (Tools/Editor/bake_map.py,
 docs/world/maps/AUTHORING_A_MAP.md). It exits 3 like setup when the asset or the preview texture is read-only.
@@ -104,8 +104,9 @@ navmesh leaves out (trunks, boulders, low walls; RTSBenchScene), in its own fold
 animates every track at any distance, and every row counts the tracks' phase updates and the tracks animated on screen. Every row also counts the units' primitives, those drawn on screen, dynamic material
 slots and materials. @ExactOcclusion, @NoOcclusion and @HZB (#214) change the occlusion queries, @Occluded roofs most of the
 grid and @Close takes the camera to the RTS close zoom, @Near (#149) to 60 m and @Far to its farthest, 450 m; -Map L_TestMap plays L_TestMap instead, for the sets with its viewpoints
-(@TestMapOpen, @TestMapBase, @TestMapWall; RTSBenchScene). @NaniteHQ and @LodHQ (#349) stand four of the bench HQs that
-setup -BenchHQ builds beside the grid (DA_BenchHQ_Nanite, DA_BenchHQ_Lod), against the same set without them, and add a table
+(@TestMapOpen, @TestMapBase, @TestMapWall; RTSBenchScene). @NaniteHQ and @LodHQ (#349) stand four HQs beside the grid
+(@NaniteHQ the DA_BenchHQ_Nanite setup -BenchHQ builds, @LodHQ the production DA_TestHeadquarters at LOD0 + LOD1, #358),
+against the same set without them, and add a table
 of their meshes, triangles and memory, and the meshes' disk size; @VSM turns virtual shadow maps on while the set runs (the
 project draws conventional shadow maps otherwise).
 -Passes records a CSV profile of every sample (r.GPUCsvStatsEnabled and the VSM category) and adds to bench.md and passes.json
@@ -997,12 +998,15 @@ function Add-BenchPasses([string]$Set) {
 	[IO.File]::AppendAllLines((Join-Path $OutDir 'bench.md'), [string[]]$Lines, (New-Object Text.UTF8Encoding $false))
 }
 
-# The disk size of the bench HQ shell an @NaniteHQ or @LodHQ set stood (#349): its SM_BenchHQ_<kind>_* packages, to bench.md.
+# The disk size of the HQ shell an @NaniteHQ or @LodHQ set stood (#349): the bench's SM_BenchHQ_Nanite_* packages, or the
+# production HQ's meshes (#358), to bench.md.
 function Add-BenchHQDisk([string]$Set) {
-	$Kind = if ($Set -like '*@NaniteHQ*') { 'Nanite' } elseif ($Set -like '*@LodHQ*') { 'Lod' } else { return }
-	$Files = @(Get-ChildItem (Join-Path $RepoRoot 'Content\Bench\USAHQ\Meshes') -Filter "SM_BenchHQ_$($Kind)_*.uasset" -ErrorAction SilentlyContinue)
+	if ($Set -like '*@NaniteHQ*') { $Kind = 'Nanite'; $Folder = 'Content\Bench\USAHQ\Meshes'; $Filter = 'SM_BenchHQ_Nanite_*.uasset' }
+	elseif ($Set -like '*@LodHQ*') { $Kind = 'Lod'; $Folder = 'Content\Art\USA\Buildings\USAHQ\Meshes'; $Filter = '*.uasset' }
+	else { return }
+	$Files = @(Get-ChildItem (Join-Path $RepoRoot $Folder) -Filter $Filter -ErrorAction SilentlyContinue)
 	$Bytes = ($Files | Measure-Object -Property Length -Sum).Sum
-	$Line = [string]::Format([Globalization.CultureInfo]::InvariantCulture, 'Disk (#349): the {0} shell''s {1} mesh packages take {2:0.0} MB in Content/Bench/USAHQ/Meshes.', $Kind, $Files.Count, $Bytes / 1MB)
+	$Line = [string]::Format([Globalization.CultureInfo]::InvariantCulture, 'Disk (#349): the {0} HQ''s {1} mesh packages take {2:0.0} MB in {3}.', $Kind, $Files.Count, $Bytes / 1MB, $Folder.Replace('\', '/'))
 	[IO.File]::AppendAllLines((Join-Path $RepoRoot "Saved\Bench\$Set\bench.md"), [string[]]@('', $Line), (New-Object Text.UTF8Encoding $false))
 }
 

@@ -2,7 +2,7 @@
 usa_hq.json gives (Tools/Art/usa_hq_recipe.py), one FBX per mesh at real size (cm, +X the front, Z up), the textures,
 the master materials rebuilt here from the delivery's graphs (recipe/material_graphs.json) and their instances with
 the delivery's values. Every mesh keeps the normals and UVs it was exported with, has no Nanite and no collision (the
-building's data carries simple boxes instead) and gets LODs at the vehicles' switch distances (vehicle_art.build_lods).
+building's data carries simple boxes instead) and gets the building's two LODs, switching as one (import_mesh, #358).
 Everything here builds in memory only; setup_testmap.py decides what needs rebuilding and saves it.
 
 The masters read two custom primitive data channels the building writes to every one of its meshes: the owner's colour
@@ -303,17 +303,95 @@ def build_material_instance(directory, name, parent, scalars, vectors):
     return instance
 
 
-def import_mesh(source, directory, name, slot_materials, bounds, expected_triangles, triangles):
-    """Imports one mesh at its own origin (vehicle_art.import_part: normals and tangents as exported, no Nanite, no
-    collision, slots bound by name), checks its size along X and its triangles against the delivery's, and gives it
-    LODs (triangles: LOD1-3 targets, none for a small mesh)."""
+def _reset_lods(mesh, expected_triangles):
+    """Back to LOD0 alone at full detail: a reimport keeps the LODs and the LOD0 reduction an earlier run gave the mesh."""
+    if mesh.get_num_lods() > 1 or mesh.get_num_triangles(0) < expected_triangles * 0.99:
+        options = unreal.StaticMeshReductionOptions()
+        whole = unreal.StaticMeshReductionSettings()
+        whole.set_editor_property("percent_triangles", 1.0)
+        whole.set_editor_property("screen_size", 1.0)
+        options.set_editor_property("reduction_settings", [whole])
+        vehicle_art._mesh_editing().set_lods(mesh, options)
+
+
+def cover_building(mesh, building_box, placements):
+    """Extends mesh's bounds to cover the building's box (min, max in the building's frame, cm) from each of its
+    placements (unreal.Transform in the building's frame), so every mesh of the building measures its LOD from about the
+    building's middle and they all switch at once (#358)."""
+    box = mesh.get_bounding_box()
+    low = [box.min.x, box.min.y, box.min.z]
+    high = [box.max.x, box.max.y, box.max.z]
+    corners = [unreal.Vector(x, y, z) for x in (building_box[0][0], building_box[1][0])
+               for y in (building_box[0][1], building_box[1][1]) for z in (building_box[0][2], building_box[1][2])]
+    wanted_low, wanted_high = list(low), list(high)
+    for placement in placements:
+        for corner in corners:
+            local = placement.inverse_transform_location(corner)
+            for axis, value in enumerate((local.x, local.y, local.z)):
+                wanted_low[axis] = min(wanted_low[axis], value)
+                wanted_high[axis] = max(wanted_high[axis], value)
+    mesh.set_editor_property("negative_bounds_extension", unreal.Vector(*(l - w for l, w in zip(low, wanted_low))))
+    mesh.set_editor_property("positive_bounds_extension", unreal.Vector(*(w - h for w, h in zip(wanted_high, high))))
+
+
+def import_mesh(source, directory, name, slot_materials, bounds, expected_triangles, budgets, building_box, placements,
+                switch_distance, lod1_source=None, spare_materials=None):
+    """Imports one mesh of the building at its own origin (vehicle_art.import_part: normals and tangents as exported, no
+    Nanite, no collision, slots bound by name), checks its size along X and its triangles against the delivery's, and
+    gives it the building's two LODs (#358, docs/art/MODEL_PERFORMANCE.md): budgets (LOD0, LOD1) triangles, LOD0 reduced
+    to its budget and LOD1 lod1_source (a hand-made LOD1 FBX with the same slots) or the engine's reduction of LOD0; no
+    budgets keeps LOD0 alone. Its bounds cover the building's box from every placement (cover_building), and LOD1 comes in
+    at switch_distance cm from the camera for those bounds (vehicle_art.lod_screen_sizes' measure; the box's half
+    diagonal for a mesh several parts draw, which an instanced component measures by)."""
     size = bounds[1][0] - bounds[0][0]
-    mesh = vehicle_art.import_part(source, directory, name, slot_materials, size)
+    # A reimport keeps the bounds an earlier run extended, which import_part's size check would read.
+    if assets.does_asset_exist(f"{directory}/{name}"):
+        earlier = assets.load_asset(f"{directory}/{name}")
+        earlier.set_editor_property("negative_bounds_extension", unreal.Vector(0.0, 0.0, 0.0))
+        earlier.set_editor_property("positive_bounds_extension", unreal.Vector(0.0, 0.0, 0.0))
+    # It also keeps the slots it had, which the asset cannot drop while it is loaded: a slot the FBX no longer has keeps
+    # its instance from spare_materials and draws nothing.
+    mesh = vehicle_art.import_part(source, directory, name, dict(spare_materials or {}, **slot_materials), size)
+    stale = sorted({str(slot.material_slot_name) for slot in mesh.static_materials} - set(slot_materials))
+    if stale:
+        unreal.log_warning(f"building_art: {name} keeps the slots {stale} an earlier import gave it, without faces")
+    _reset_lods(mesh, expected_triangles)
     imported = mesh.get_num_triangles(0)
     if imported < expected_triangles * 0.99:
         raise RuntimeError(f"{source} imported {imported} triangles instead of {expected_triangles}")
-    if triangles:
-        vehicle_art.build_lods(mesh, triangles)
+    cover_building(mesh, building_box, placements)
+    if not budgets:
+        unreal.log(f"building_art: {name} LOD0 {imported} triangles, no LOD1")
+        return mesh
+
+    mesh_editing = vehicle_art._mesh_editing()
+    radius = vehicle_art.lod_radius(mesh, len(placements) > 1)
+    screen_sizes = [1.0, 2.0 * vehicle_art.SCREEN_MULTIPLE * radius / switch_distance]
+    lod0, lod1 = budgets
+    options = unreal.StaticMeshReductionOptions()
+    options.set_editor_property("auto_compute_lod_screen_size", False)
+    settings = []
+    # The engine reduces LOD1 from LOD0 once LOD0 is itself reduced, so its share is of lod0.
+    for target, base, screen_size in zip((lod0, lod1), (imported, min(lod0, imported)), screen_sizes):
+        setting = unreal.StaticMeshReductionSettings()
+        setting.set_editor_property("percent_triangles", min(1.0, target / base))
+        setting.set_editor_property("screen_size", screen_size)
+        settings.append(setting)
+    settings = settings[:1] if lod1_source else settings
+    options.set_editor_property("reduction_settings", settings)
+    if mesh_editing.set_lods(mesh, options) != len(settings):
+        raise RuntimeError(f"{name}: could not make its LODs")
+    if lod1_source:
+        slots = [str(slot.material_slot_name) for slot in mesh.static_materials]
+        if mesh_editing.import_lod(mesh, 1, lod1_source) != 1:
+            raise RuntimeError(f"{name}: could not import LOD1 from {lod1_source}")
+        if [str(slot.material_slot_name) for slot in mesh.static_materials] != slots:
+            raise RuntimeError(f"{name}: {lod1_source} brought slots LOD0 does not have")
+    if not mesh_editing.set_lod_screen_sizes(mesh, screen_sizes):
+        raise RuntimeError(f"{name}: could not set its LOD screen sizes")
+    unreal.log(f"building_art: {name} LODs " + ", ".join(f"{mesh.get_num_triangles(i)}" for i in range(mesh.get_num_lods())) +
+               f" triangles (of {imported}), {mesh.get_num_sections(0)} sections, radius {radius:.0f} cm, screen sizes "
+               f"{[round(s, 4) for s in mesh_editing.get_lod_screen_sizes(mesh)]} (LOD1 from {switch_distance / 100:.0f} m)")
     return mesh
 
 
@@ -327,50 +405,19 @@ def allow_nanite(material):
     return _finish(material)
 
 
-def import_bench_shell(source, directory, name, slot_materials, bounds, expected_triangles, nanite, lod0=None, lod1=None,
-                       switch_distance=None):
-    """One mesh of the bench's HQ shell (#349), imported as import_mesh does but kept apart from the production HQ: with
-    Nanite on and no LODs (nanite), or without Nanite, LOD0 reduced to lod0 triangles and one LOD1 of lod1 triangles at
-    switch_distance cm from the camera (vehicle_art.lod_screen_sizes' measure), both by the engine's quadric reduction."""
+def import_bench_shell(source, directory, name, slot_materials, bounds, expected_triangles):
+    """One delivered mesh of the bench's dense HQ shell (#349), imported as import_mesh does but kept apart from the
+    production HQ, as delivered with Nanite on and no LODs."""
     size = bounds[1][0] - bounds[0][0]
     mesh = vehicle_art.import_part(source, directory, name, slot_materials, size)
-    # A reimport keeps the reduction an earlier run gave LOD0: back to LOD0 alone, at full detail.
-    mesh_editing = vehicle_art._mesh_editing()
-    if mesh.get_num_lods() > 1 or mesh.get_num_triangles(0) < expected_triangles * 0.99:
-        options = unreal.StaticMeshReductionOptions()
-        whole = unreal.StaticMeshReductionSettings()
-        whole.set_editor_property("percent_triangles", 1.0)
-        whole.set_editor_property("screen_size", 1.0)
-        options.set_editor_property("reduction_settings", [whole])
-        mesh_editing.set_lods(mesh, options)
+    _reset_lods(mesh, expected_triangles)
     imported = mesh.get_num_triangles(0)
     if imported < expected_triangles * 0.99:
         raise RuntimeError(f"{source} imported {imported} triangles instead of {expected_triangles}")
-    if nanite:
-        settings = mesh.get_editor_property("nanite_settings")
-        settings.enabled = True
-        mesh.set_editor_property("nanite_settings", settings)
-        if not mesh.get_editor_property("nanite_settings").enabled:
-            raise RuntimeError(f"{name}: Nanite did not stay on")
-        unreal.log(f"building_art: {name} Nanite on, {imported} triangles")
-        return mesh
-
-    radius = vehicle_art.lod_radius(mesh, False)
-    screen_sizes = [1.0, 2.0 * vehicle_art.SCREEN_MULTIPLE * radius / switch_distance]
-    options = unreal.StaticMeshReductionOptions()
-    options.set_editor_property("auto_compute_lod_screen_size", False)
-    settings = []
-    # The engine reduces LOD1 from LOD0 once LOD0 is itself reduced, so its share is of lod0.
-    for target, base, screen_size in zip((lod0, lod1), (imported, lod0), screen_sizes):
-        setting = unreal.StaticMeshReductionSettings()
-        setting.set_editor_property("percent_triangles", min(1.0, target / base))
-        setting.set_editor_property("screen_size", screen_size)
-        settings.append(setting)
-    options.set_editor_property("reduction_settings", settings)
-    if mesh_editing.set_lods(mesh, options) != len(settings):
-        raise RuntimeError(f"{name}: could not make its LODs")
-    if not mesh_editing.set_lod_screen_sizes(mesh, screen_sizes):
-        raise RuntimeError(f"{name}: could not set its LOD screen sizes")
-    unreal.log(f"building_art: {name} LODs " + ", ".join(f"{mesh.get_num_triangles(i)}" for i in range(mesh.get_num_lods())) +
-               f" triangles (of {imported}), screen sizes {[round(s, 4) for s in mesh_editing.get_lod_screen_sizes(mesh)]}")
+    settings = mesh.get_editor_property("nanite_settings")
+    settings.enabled = True
+    mesh.set_editor_property("nanite_settings", settings)
+    if not mesh.get_editor_property("nanite_settings").enabled:
+        raise RuntimeError(f"{name}: Nanite did not stay on")
+    unreal.log(f"building_art: {name} Nanite on, {imported} triangles")
     return mesh

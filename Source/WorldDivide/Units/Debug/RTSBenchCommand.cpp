@@ -690,11 +690,11 @@ namespace RTSBenchCommand
 			}
 			if (BuildingDataName)
 			{
-				const FString Path = FString::Printf(TEXT("%s/%s.%s"), RTSBenchScene::BenchHQDir, BuildingDataName, BuildingDataName);
-				BuildingData.Reset(LoadObject<URTSBuildingData>(nullptr, *Path));
+				BuildingData.Reset(LoadObject<URTSBuildingData>(nullptr, BuildingDataName));
 				if (!BuildingData)
 				{
-					return Finish(FString::Printf(TEXT("no building data at %s: build it with ue.ps1 -Task setup -BenchHQ"), *Path));
+					return Finish(FString::Printf(TEXT("no building data at %s: build it with ue.ps1 -Task setup (-BenchHQ for the Nanite HQ)"),
+						BuildingDataName));
 				}
 			}
 			TeamId = Controller->GetTeamId();

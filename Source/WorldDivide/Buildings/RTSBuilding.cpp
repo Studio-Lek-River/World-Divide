@@ -7,6 +7,7 @@
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
@@ -564,12 +565,48 @@ void ARTSBuilding::ApplyParts()
 		}
 	}
 	PartComponents.Reset();
-	for (const FRTSBuildingPart& Data : BuildingData->Parts)
+
+	// Parts that share a mesh and how it draws (the HQ's sixteen door sections) draw as one instanced component, one
+	// instance per part in the data's order: one draw per material section instead of one per part (#358).
+	auto SameDraw = [](const FRTSBuildingPart& A, const FRTSBuildingPart& B)
 	{
+		return A.Mesh == B.Mesh && A.bCastShadow == B.bCastShadow && A.BoundsScale == B.BoundsScale
+			&& A.MaxDrawDistance == B.MaxDrawDistance;
+	};
+	const TArray<FRTSBuildingPart>& Parts = BuildingData->Parts;
+	TArray<bool> Done;
+	Done.Init(false, Parts.Num());
+	for (int32 Index = 0; Index < Parts.Num(); ++Index)
+	{
+		if (Done[Index])
+		{
+			continue;
+		}
+		const FRTSBuildingPart& Data = Parts[Index];
+		TArray<FTransform> Instances;
+		for (int32 Other = Index; Other < Parts.Num(); ++Other)
+		{
+			if (!Done[Other] && SameDraw(Data, Parts[Other]))
+			{
+				Done[Other] = true;
+				Instances.Add(Parts[Other].Transform);
+			}
+		}
+
 		// Cosmetic, like Mesh: the collision boxes alone block and are picked.
-		UStaticMeshComponent* Part = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
+		UStaticMeshComponent* Part = nullptr;
+		if (Instances.Num() > 1)
+		{
+			UInstancedStaticMeshComponent* Instanced = NewObject<UInstancedStaticMeshComponent>(this, NAME_None, RF_Transient);
+			Instanced->AddInstances(Instances, /*bShouldReturnIndices*/ false);
+			Part = Instanced;
+		}
+		else
+		{
+			Part = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
+			Part->SetRelativeTransform(Data.Transform);
+		}
 		Part->SetStaticMesh(Data.Mesh);
-		Part->SetRelativeTransform(Data.Transform);
 		Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		Part->SetGenerateOverlapEvents(false);
 		Part->SetCanEverAffectNavigation(false);

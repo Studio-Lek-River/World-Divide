@@ -210,8 +210,9 @@ bool FRTSBuildingTeamColorTest::RunTest(const FString& Parameters)
 	{
 		ARTSBuilding* BlueHQ = TestWorld.SpawnBuilding(Headquarters, 0, FVector(20000.f, 0.f, 0.f));
 		ARTSBuilding* GreenHQ = TestWorld.SpawnBuilding(Headquarters, 2, FVector(20000.f, 10000.f, 0.f));
+		// Its parts that share a mesh draw as one instanced component (#358).
 		TestEqual(TEXT("The headquarters draws its mesh and every part in its team's colour"),
-			TestColored(*this, TEXT("HQ team 0"), *BlueHQ, 0), 1 + Headquarters->Parts.Num());
+			TestColored(*this, TEXT("HQ team 0"), *BlueHQ, 0), 1 + BlueHQ->GetPartComponents().Num());
 		TestSharesMaterials(*this, TEXT("Two headquarters of different teams"), *BlueHQ, *GreenHQ);
 		ReplicateTeam(*GreenHQ, 3);
 		TestColored(*this, TEXT("HQ after its team became 3"), *GreenHQ, 3);

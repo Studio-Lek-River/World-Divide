@@ -7,48 +7,48 @@
 - **Textures:** 9 PNGs with the delivery's compression, sRGB, LOD group and build size. Paving is 3072² in source and built at 2048².
 - **Masters:** 9, rebuilt from the delivery's graphs. `HQ14_Paving` was unused and is dropped.
 - **Instances:** 49, with the delivery's exact parameter values, and the parent checked after it is set.
-- **Meshes:** 22, through Interchange.
+- **Meshes:** 15 (the game shell's two and the delivery's 13 moving parts and flag), through Interchange.
   - Static mesh only, normals and tangents as exported, no materials or textures from the FBX, no collision, no Nanite.
   - Slots are bound by name from `usa_hq.json`.
-  - Setup fails if a mesh's length along X or its triangle count differs from the delivery's records.
+  - Setup fails if a mesh's length along X or its triangle count differs from its record.
 
-## LODs
+## LODs (#358)
 
-Switch distances are the vehicles' (`vehicle_art.LOD_DISTANCES`): 35, 110 and 260 m from the RTS camera, measured with the camera's lens. Screen sizes come from each mesh's own bounds.
+The HQ has two LODs and no Nanite (`docs/art/MODEL_PERFORMANCE.md`, Buildings). The whole building switches to LOD1 at 260 m from the RTS camera at once.
 
-The architecture, roof systems and courtyard are about 35 m in radius, so their screen size passes 1 before 110 m, and the engine keeps 1 at most. They show full detail up to about 108 m, LOD2 from there (the default zoom is 150 m) and LOD3 beyond about 260 m.
+- **Game shell:** `Tools/Art/usa_hq_game_blender.py` merges the nine meshes that never move into two meshes under `game/`. Each slot is named after its instance, so slots that share an instance become one.
+  - `SM_HQ_Shell` is the bulk, at LOD0 as delivered with the delivery's normals. Setup reduces it to 274,000 triangles with the engine's reduction, which keeps those normals and UVs.
+  - `SM_HQ_ShellDetail` holds the small details that read at the RTS camera: solar cells, team lights and panels, RF panels, markings, chips, door light strips, leaves and the planters' soil, which the engine's reduction sank below the rims. LOD0 keeps them whole. An engine reduction over the whole shell lost the solar cells (#349).
+  - Each has a hand-made LOD1 (`*_LOD1.fbx`), reduced per source mesh by collapse decimation with those details weighted. Loose pieces under 20 cm (about a pixel at the switch) are left out, and the planters keep a third of their leaves.
+  - Rerun the generator, then `python Tools/Art/usa_hq_recipe.py`, whenever the delivery's FBX change.
+- **Moving parts and flag:** setup reduces them with the engine to their budgets in `usa_hq_recipe.py`. Parts under 2,000 triangles keep LOD0 only.
+- **One switch:** setup extends every mesh's bounds to cover the building's box from each place it is drawn (`building_art.cover_building`). Every part then measures its LOD from about the building's middle. LOD1's screen size is the one for 260 m at those bounds. The door sections cover the box from all 16 of their places, so they switch about 2 % later (radius 3,577 cm against the shell's 3,501). The radar and the dish turn their box with them.
+- **Instancing:** parts that share a mesh (the 16 door sections, the 2 lift cables) draw as one instanced component (`ARTSBuilding::ApplyParts`).
 
-| Mesh | Drawn | LOD0 | LOD1 | LOD2 | LOD3 |
-|---|---|---|---|---|---|
-| Architecture_WallCorrected | 1 | 1,074,804 | 150,000 | 44,999 | 10,000 |
-| RoofSystems_WallCorrected | 1 | 870,276 | 100,000 | 24,999 | 4,000 |
-| Courtyard | 1 | 624,040 | 60,001 | 15,001 | 2,999 |
-| GarageInterior | 1 | 327,552 | 30,000 | 6,000 | 1,000 |
-| DoorHardware | 1 | 33,628 | 8,000 | 2,000 | 500 |
-| CourtyardDetails | 1 | 19,320 | 6,000 | 1,500 | 400 |
-| GaragePortal | 1 | 14,652 | 5,000 | 1,500 | 400 |
-| DoorSection | 16 | 14,308 | 3,000 | 800 | 150 |
-| PlantingFinish | 1 | 12,136 | 4,000 | 1,200 | 300 |
-| WingDish_Elevation | 1 | 9,236 | 3,000 | 800 | 200 |
-| NationalFlag_Wind | 1 | 8,904 | 5,300 | 2,700 | 1,200 |
-| Radar_Azimuth | 1 | 8,224 | 3,000 | 800 | 200 |
-| GarageFloor | 1 | 4,548 | 2,000 | 600 | 150 |
-| DriveShaft | 1 | 2,636 | 1,000 | 300 | 80 |
-| Small parts: wing dish azimuth, seal, rollers, 2 cables, 4 fans | 9 | 3,060 total | single LOD | | |
-| **Whole HQ** | 38 | **3,241,808** | **428,225** | **118,123** | **26,753** |
+| Mesh | Drawn | LOD0 | LOD1 | Sections |
+|---|---|---|---|---|
+| SM_HQ_Shell | 1 | 284,999 (of 2,949,960) | 22,758 | 34 |
+| SM_HQ_ShellDetail | 1 | 30,996 | 11,016 | 11 |
+| DoorSection | 16 | 1,200 | 70 | 4 (instanced) |
+| Radar_Azimuth | 1 | 3,000 | 400 | 4 |
+| WingDish_Elevation | 1 | 3,000 | 400 | 5 |
+| NationalFlag_Wind | 1 | 4,000 | 999 | 3 |
+| DriveShaft | 1 | 1,000 | 150 | 2 |
+| Small parts: wing dish azimuth, seal, rollers, 2 cables, 4 fans | 9 | 3,060 total | LOD0 only | 12 |
+| **Whole HQ** | 31 | **349,119** | **39,767** | **74** (was 172) |
 
-At the default zoom an HQ draws about 118k triangles, down from 3.24M. `WorldDivide.Art.USAHeadquarters` asserts at most 450k / 150k / 40k triangles at LOD1, LOD2 and LOD3.
+The large-building budget is 150,000 at LOD0. The producer raised the HQ's to 350,000 for its 12 m look: at 150,000 the façade's bevelled frames tore apart (#358). `WorldDivide.Art.USAHeadquarters` asserts 350,000 / 40,000, every mesh's own budget, bounds that cover the building, one switch distance and at most 80 sections.
 
 ## Decisions
 
-- **Nanite stays off.** The translucent placement ghost cannot draw Nanite (`WorldDivide.Art.PlaceholderWithoutNanite`), the door and equipment parts move, and the glass is translucent.
+- **Nanite stays off.** The translucent placement ghost cannot draw Nanite (`WorldDivide.Art.PlaceholderWithoutNanite`), the door and equipment parts move, and the glass is translucent. At 240 units a Nanite HQ also cost more than twice an HQ with LODs (#349).
 - **Collision:** four simple boxes in `URTSBuildingData::CollisionBoxes` (`USA_HQ_SPEC.md`), not the meshes.
   - The garage bay is a box of its own, marked `garage`, and solid until #192 opens it for the vehicle leaving.
   - The apron in front of the door has no box.
   - The footprint centre lies inside a box, so the navmesh hole check is unchanged.
 - **Shadows:** the four fan rotors cast none. Small parts stop drawing beyond 120 m.
 - **Ownership and power:** custom primitive data on every component (team colour 4–7, operational 8 = 1). No dynamic material instances.
-- **Placement ghost:** shows the architecture mesh, which carries the full slab silhouette.
+- **Placement ghost:** shows the game shell's bulk, which carries the full slab silhouette.
 - **Base layouts:** the starting builders stand 36 m behind each start spot (was 24 m), clear of the 56 m long HQ on the diagonal skirmish spots.
 
 ## Not yet done (later issues)

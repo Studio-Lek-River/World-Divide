@@ -118,15 +118,16 @@ namespace RTSBenchScene
 	constexpr float CloseCameraDistance = 3000.f;
 
 	/**
-	 * The set name's suffixes that stand four of the bench's HQs beside the grid (#349): "@NaniteHQ" the HQ whose static
-	 * shell draws with Nanite (DA_BenchHQ_Nanite), "@LodHQ" the same shell without Nanite at LOD0 and LOD1 (DA_BenchHQ_Lod).
-	 * Both are built only by ue.ps1 -Task setup -BenchHQ, under BenchHQDir; the set without the suffix is the baseline.
+	 * The set name's suffixes that stand four HQs beside the grid (#349): "@NaniteHQ" the HQ whose static shell draws as
+	 * delivered with Nanite (DA_BenchHQ_Nanite, built only by ue.ps1 -Task setup -BenchHQ, under BenchHQDir), "@LodHQ" the
+	 * production HQ, its shell at LOD0 and LOD1 without Nanite (DA_TestHeadquarters, #358). The set without the suffix is
+	 * the baseline.
 	 */
 	const TCHAR* const NaniteHQSuffix = TEXT("@NaniteHQ");
 	const TCHAR* const LodHQSuffix = TEXT("@LodHQ");
 	const TCHAR* const BenchHQDir = TEXT("/Game/Bench/USAHQ");
-	const TCHAR* const NaniteHQData = TEXT("DA_BenchHQ_Nanite");
-	const TCHAR* const LodHQData = TEXT("DA_BenchHQ_Lod");
+	const TCHAR* const NaniteHQData = TEXT("/Game/Bench/USAHQ/DA_BenchHQ_Nanite.DA_BenchHQ_Nanite");
+	const TCHAR* const LodHQData = TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters");
 
 	/**
 	 * Where the four HQs stand, from the grid's middle, and their yaw: two on each side of the long scene's 240-unit grid

@@ -104,14 +104,10 @@ M20_DIR = "/Game/Art/USA/Vehicles/M20Guardian"
 # The USA HQ as delivered (#187-#191): its layout usa_hq.json (Tools/Art/usa_hq_recipe.py), and where its assets go.
 USA_HQ_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "USA", "buildings", "usa_hq")
 USA_HQ_DIR = "/Game/Art/USA/Buildings/USAHQ"
-# The bench's HQ shells (#349), built only with ue.ps1 -Task setup -BenchHQ (WD_SETUP_BENCH_HQ=1) and never committed
-# (Content/Bench/ is git-ignored): A, the static shell with Nanite, and B, the same without Nanite at LOD0 and LOD1 within
-# these triangle budgets over the whole shell, LOD1 from BENCH_HQ_SWITCH_DISTANCE cm.
+# The bench's dense HQ (#349), built only with ue.ps1 -Task setup -BenchHQ (WD_SETUP_BENCH_HQ=1) and never committed
+# (Content/Bench/ is git-ignored): the delivered shell with Nanite, beside the production HQ's LOD0 + LOD1 shell (#358).
 BENCH_HQ = os.environ.get("WD_SETUP_BENCH_HQ") == "1"
 BENCH_HQ_DIR = "/Game/Bench/USAHQ"
-BENCH_HQ_LOD0_TRIANGLES = 150000
-BENCH_HQ_LOD1_TRIANGLES = 40000
-BENCH_HQ_SWITCH_DISTANCE = 26000.0
 
 assets = unreal.EditorAssetLibrary
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
@@ -464,6 +460,39 @@ USA_HQ_MASTERS = {
 }
 
 
+def log_building_budget(label, meshes, layout):
+    """Logs a building's triangles at LOD0 and LOD1 over every part that draws (each placement counts), its material
+    sections over the components it draws with (one per mesh several parts share, which draw instanced) and its switch
+    distance (#358)."""
+    totals = [0, 0]
+    sections = 0
+    for name, records in sorted(
+            {mesh: [p for p in layout["parts"] if p["mesh"] == mesh] for mesh in meshes}.items()):
+        mesh = meshes[name]
+        for lod in (0, 1):
+            totals[lod] += len(records) * mesh.get_num_triangles(min(lod, mesh.get_num_lods() - 1))
+        sections += mesh.get_num_sections(0) if records else 0
+    unreal.log(f"setup_testmap: {label} LOD0 {totals[0]} and LOD1 {totals[1]} triangles, {sections} material sections, "
+               f"LOD1 from {layout['switch_distance'] / 100:.0f} m")
+
+
+def delete_stale_meshes(directory, names):
+    """Deletes the meshes under directory that are not in names: those a layout no longer has (the delivered shell meshes
+    SM_HQ_Shell replaced, #358). Nothing setup builds refers to them once it is rebuilt."""
+    for object_path_name in assets.list_assets(directory, recursive=False, include_folder=False):
+        path = object_path_name.split(".", 1)[0]
+        if path.rsplit("/", 1)[-1] not in names:
+            if blocked_by(path, ".uasset") or read_only:
+                continue
+            pending.append((path, ".uasset", True, lambda path=path: delete_mesh(path)))
+
+
+def delete_mesh(path):
+    if not assets.delete_asset(path):
+        raise RuntimeError(f"Could not delete {path}")
+    unreal.log(f"setup_testmap: deleted {path}, which the layout no longer has")
+
+
 def make_usa_hq():
     """Imports the USA HQ (building_art.py) as usa_hq.json lays it out and returns its root mesh, its footprint and its
     building data properties: the architecture is Mesh at real size, every other mesh a part where the delivery placed
@@ -503,18 +532,40 @@ def make_usa_hq():
             spec_hash([building_art.build_material_instance], material_dir, name, parent,
                       sorted(record["scalars"].items()), sorted(record["vectors"].items())))
 
+    # Every mesh's placements in the building, the root (the shell) where the building stands: each mesh's bounds cover
+    # the building's from each of them, so the whole building switches to LOD1 at once (#358).
+    def transform(record):
+        pitch, yaw, roll = record["rotation"]
+        return unreal.Transform(unreal.Vector(*record["location"]), unreal.Rotator(roll=roll, pitch=pitch, yaw=yaw),
+                                unreal.Vector(*record["scale"]))
+
+    building_box = layout["meshes"][layout["parts"][0]["mesh"]]["bounds"]
+    if layout["parts"][0]["name"] != layout["root_part"]:
+        raise RuntimeError(f"usa_hq.json: the root part {layout['root_part']} is not the first part")
+    placements = {}
+    for record in layout["parts"]:
+        placements.setdefault(record["mesh"], []).append(record)
+
     meshes = {}
     for name, record in sorted(layout["meshes"].items()):
         source = os.path.join(USA_HQ_SOURCE_DIR, *record["fbx"].split("/"))
+        lod1 = os.path.join(USA_HQ_SOURCE_DIR, *record["lod1_fbx"].split("/")) if record.get("lod1_fbx") else None
         slots = {slot: instances[instance] for slot, instance in record["slots"].items()}
+        where = placements[name]
         meshes[name] = plan_now(
             f"{mesh_dir}/{name}",
-            lambda s=source, n=name, m=slots, r=record: building_art.import_mesh(
-                s, mesh_dir, n, m, r["bounds"], r["triangles"], r["lods"]),
-            spec_hash([building_art.import_mesh, vehicle_art.import_part, vehicle_art.build_lods,
-                       vehicle_art.lod_screen_sizes], mesh_dir, name, file_hash(source),
+            lambda s=source, n=name, m=slots, r=record, w=where, l=lod1: building_art.import_mesh(
+                s, mesh_dir, n, m, r["bounds"], r["triangles"], r["lods"], building_box, [transform(p) for p in w],
+                layout["switch_distance"], l, instances),
+            spec_hash([building_art.import_mesh, building_art._reset_lods, building_art.cover_building,
+                       vehicle_art.import_part, vehicle_art.lod_radius], mesh_dir, name, file_hash(source),
+                      file_hash(lod1) if lod1 else None,
                       sorted((slot, object_path(material)) for slot, material in slots.items()), record["bounds"],
-                      record["triangles"], record["lods"], vehicle_art.LOD_DISTANCES, vehicle_art.SCREEN_MULTIPLE))
+                      record["triangles"], record["lods"], building_box, [(p["location"], p["rotation"], p["scale"])
+                                                                          for p in where],
+                      layout["switch_distance"], vehicle_art.SCREEN_MULTIPLE))
+    log_building_budget("USA HQ", meshes, layout)
+    delete_stale_meshes(mesh_dir, set(layout["meshes"]))
 
     def part(record):
         value = unreal.RTSBuildingPart()
@@ -553,23 +604,24 @@ def make_usa_hq():
 
 
 def make_bench_hq(footprint, layout):
-    """The bench's two HQs (#349, rts.Debug.Bench @NaniteHQ / @LodHQ): DA_BenchHQ_Nanite and DA_BenchHQ_Lod in BENCH_HQ_DIR,
-    the production HQ's data (footprint, collision boxes, sockets, parts in place; layout as make_usa_hq returns it) with
-    its static shell, the meshes that never move, swapped for SM_BenchHQ_Nanite_<part> (Nanite, as delivered) or
-    SM_BenchHQ_Lod_<part> (no Nanite, BENCH_HQ_LOD0/LOD1_TRIANGLES shared out by each mesh's share of the shell's
-    triangles). Both shells draw with copies of the HQ's masters that allow Nanite, and draw the glass opaque,
+    """The bench's dense HQ (#349, rts.Debug.Bench @NaniteHQ): DA_BenchHQ_Nanite in BENCH_HQ_DIR, the production HQ's data
+    (footprint, collision boxes, sockets, parts in place; layout as make_usa_hq returns it) with the game shell swapped
+    for the delivered meshes it stands for (usa_hq.json's delivery_shell), as SM_BenchHQ_Nanite_<part>, Nanite on, as
+    delivered. They draw with copies of the HQ's masters that allow Nanite, and draw the glass opaque,
     MI_BenchHQ_CoolGlass and MI_BenchHQ_WarmGlass on M_HQ17_Surface with the delivery's tints, since Nanite draws no
-    translucency. The moving parts and the flag stay the production meshes.
-    The bench HQs produce nothing."""
+    translucency. The moving parts and the flag stay the production meshes. The LOD shell #349 benched beside it is the
+    production HQ since #358.
+    The bench HQ produces nothing."""
     hq = building_art.read_layout(os.path.join(USA_HQ_SOURCE_DIR, "usa_hq.json"))
     material_dir, mesh_dir = f"{BENCH_HQ_DIR}/Materials", f"{BENCH_HQ_DIR}/Meshes"
-    shell = [p for p in hq["parts"] if not p["movable"] and "Flag" not in p["mesh"]]
+    delivered = hq["delivery_shell"]["meshes"]
+    shell = hq["delivery_shell"]["parts"]
 
     # The shell's masters and instances again in BENCH_HQ_DIR, the masters with the Nanite usage (building_art.allow_nanite),
-    # which the production ones lack; A and B both draw with them. The glass is opaque on the surface master.
+    # which the production ones lack. The glass is opaque on the surface master.
     textures = {name: unreal.load_asset(f"{USA_HQ_DIR}/Textures/{name}") for name in hq["textures"]}
     glass = {"MI_HQ17_CoolGlass": "MI_BenchHQ_CoolGlass", "MI_HQ17_WarmGlass": "MI_BenchHQ_WarmGlass"}
-    used = sorted({instance for p in shell for instance in hq["meshes"][p["mesh"]]["slots"].values()})
+    used = sorted({instance for p in shell for instance in delivered[p["mesh"]]["slots"].values()})
     parents = sorted({"M_HQ17_Surface" if name in glass else hq["material_instances"][name]["parent"] for name in used})
     masters = {}
     for name in parents:
@@ -591,41 +643,31 @@ def make_bench_hq(footprint, layout):
             spec_hash([building_art.build_material_instance], material_dir, name, parent, sorted(scalars.items()),
                       sorted(record["vectors"].items())))
 
-    total = sum(hq["meshes"][p["mesh"]]["triangles"] for p in shell)
-    variants = {}
-    for kind, nanite in (("Nanite", True), ("Lod", False)):
-        meshes = {}
-        for part in shell:
-            record = hq["meshes"][part["mesh"]]
-            source = os.path.join(USA_HQ_SOURCE_DIR, *record["fbx"].split("/"))
-            slots = {slot: instances[instance] for slot, instance in record["slots"].items()}
-            share = record["triangles"] / total
-            lod0, lod1 = (None, None) if nanite else (
-                int(BENCH_HQ_LOD0_TRIANGLES * share), max(1, int(BENCH_HQ_LOD1_TRIANGLES * share)))
-            name = f"SM_BenchHQ_{kind}_{part['name']}"
-            meshes[part["name"]] = plan_now(
-                f"{mesh_dir}/{name}",
-                lambda s=source, n=name, m=slots, r=record, a=lod0, b=lod1, x=nanite: building_art.import_bench_shell(
-                    s, mesh_dir, n, m, r["bounds"], r["triangles"], x, a, b, BENCH_HQ_SWITCH_DISTANCE),
-                spec_hash([building_art.import_bench_shell, vehicle_art.import_part, vehicle_art.lod_radius,
-                           vehicle_art._mesh_editing], mesh_dir, name, file_hash(source),
-                          sorted((slot, object_path(material)) for slot, material in slots.items()), record["bounds"],
-                          record["triangles"], nanite, lod0, lod1, BENCH_HQ_SWITCH_DISTANCE, vehicle_art.SCREEN_MULTIPLE))
-        variants[kind] = meshes
+    meshes = {}
+    for part in shell:
+        record = delivered[part["mesh"]]
+        source = os.path.join(USA_HQ_SOURCE_DIR, *record["fbx"].split("/"))
+        slots = {slot: instances[instance] for slot, instance in record["slots"].items()}
+        name = f"SM_BenchHQ_Nanite_{part['name']}"
+        meshes[part["name"]] = plan_now(
+            f"{mesh_dir}/{name}",
+            lambda s=source, n=name, m=slots, r=record: building_art.import_bench_shell(
+                s, mesh_dir, n, m, r["bounds"], r["triangles"]),
+            spec_hash([building_art.import_bench_shell, building_art._reset_lods, vehicle_art.import_part], mesh_dir,
+                      name, file_hash(source), sorted((slot, object_path(material)) for slot, material in slots.items()),
+                      record["bounds"], record["triangles"]))
 
-    def bench_part(part, mesh):
+    def bench_part(name, mesh):
         value = unreal.RTSBuildingPart()
-        for key in ("name", "transform", "movable", "cast_shadow", "bounds_scale", "max_draw_distance"):
-            value.set_editor_property(key, part.get_editor_property(key))
+        value.set_editor_property("name", name)
         value.set_editor_property("mesh", mesh)
         return value
 
-    for kind, meshes in variants.items():
-        data = make_building(f"DA_BenchHQ_{kind}", f"Bench HQ ({kind})", meshes[hq["root_part"]], (1.0, 1.0, 1.0), footprint,
-                             3000.0, None, 2500, 12.0, 0, 0, directory=BENCH_HQ_DIR)
-        parts = [bench_part(p, meshes.get(str(p.get_editor_property("name")), p.get_editor_property("mesh")))
-                 for p in layout["parts"]]
-        add_properties(data, dict(layout, parts=parts))
+    root = "Architecture"
+    data = make_building("DA_BenchHQ_Nanite", "Bench HQ (Nanite)", meshes[root], (1.0, 1.0, 1.0), footprint, 3000.0, None,
+                         2500, 12.0, 0, 0, directory=BENCH_HQ_DIR)
+    parts = [bench_part(name, mesh) for name, mesh in sorted(meshes.items()) if name != root] + list(layout["parts"])
+    add_properties(data, dict(layout, parts=parts))
 
 
 def gun_recoil(stroke_fraction, recoil_seconds, hold_seconds, return_seconds, jump_degrees=0.0, jump_seconds=0.4,

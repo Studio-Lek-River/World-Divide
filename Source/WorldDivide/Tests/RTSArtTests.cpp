@@ -65,8 +65,12 @@ namespace
 	const TCHAR* HeadquartersLayoutFile = TEXT("Art/USA/buildings/usa_hq/usa_hq.json");
 	/** The slab: 38 x 56 m, 17.98 m to the top of its central tower. */
 	const FVector HeadquartersSize(3800.0, 5600.0, 1798.0);
-	/** The whole HQ's triangles at LOD1, 2 and 3, every part counted each time it is drawn (#191). */
-	const int32 HeadquartersLODBudgets[] = { 450000, 150000, 40000 };
+	/** The whole HQ's triangles at LOD0 and LOD1, every part counted each time it is drawn: LOD0 raised for its 12 m look (#358). */
+	const int32 HeadquartersLODBudgets[] = { 350000, 40000 };
+	/** Where the whole HQ switches to LOD1, cm from the camera (docs/art/MODEL_PERFORMANCE.md, Buildings). */
+	constexpr double HeadquartersSwitchDistance = 26000.0;
+	/** The material sections the HQ draws with, once per mesh: its parts that share a mesh draw instanced (#358). */
+	constexpr int32 HeadquartersMaxSections = 80;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSPlaceholderWithoutNaniteTest, "WorldDivide.Art.PlaceholderWithoutNanite", TestFlags)
@@ -211,9 +215,10 @@ bool FRTSM20GuardianArtTest::RunTest(const FString& Parameters)
 }
 
 /**
- * The USA HQ as setup_testmap.py imports it (#191): the architecture at real size on a 38 x 56 m footprint, every other
- * mesh of usa_hq.json a part of it, each mesh with every triangle the delivery exported, without Nanite or collision of its
- * own, and its LODs switching at the vehicles' distances within the HQ's budget. Its slots use the delivery's masters, the
+ * The USA HQ as setup_testmap.py imports it (#191): the game shell at real size on a 38 x 56 m footprint, every other
+ * mesh of usa_hq.json a part of it, without Nanite or collision of its own, at LOD0 and LOD1 within the large building's
+ * budget and every mesh's own (#358), each covering the building's bounds so the whole HQ switches to LOD1 at once, at
+ * 260 m, in few material sections, the glass in glass slots. Its slots use the delivery's masters, the
  * owner's colour and the operational glow read from the custom primitive data the building writes, and the flag keeps its
  * wind. Simple boxes collide instead, and the garage bay is one of its own; the garage's sockets are in the data.
  */
@@ -244,8 +249,17 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		TestNotNull(*FString::Printf(TEXT("Part %s has a mesh"), *Part.Name.ToString()), Part.Mesh.Get());
 		Drawn.Add(Part.Mesh);
 	}
+	// Where each mesh is drawn in the building's frame, the shell where the building stands.
+	TMultiMap<const UStaticMesh*, FTransform> Placements;
+	Placements.Add(Data->Mesh, FTransform::Identity);
+	for (const FRTSBuildingPart& Part : Data->Parts)
+	{
+		Placements.Add(Part.Mesh, Part.Transform);
+	}
+	const FBox Building = Data->Mesh->GetBoundingBox();
 	const TSharedPtr<FJsonObject>& Meshes = Layout->GetObjectField(TEXT("meshes"));
-	int32 Totals[4] = {};
+	int32 Totals[2] = {};
+	int32 Sections = 0;
 	TSet<const UStaticMesh*> Checked;
 	for (const UStaticMesh* Mesh : Drawn)
 	{
@@ -254,7 +268,7 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		{
 			continue;
 		}
-		for (int32 LOD = 0; LOD < 4; ++LOD)
+		for (int32 LOD = 0; LOD < 2; ++LOD)
 		{
 			Totals[LOD] += Mesh->GetNumTriangles(FMath::Min(LOD, Mesh->GetNumLODs() - 1));
 		}
@@ -263,6 +277,7 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 			continue;
 		}
 		Checked.Add(Mesh);
+		Sections += RenderData->LODResources[0].Sections.Num();
 
 		const TSharedPtr<FJsonObject>* Record = nullptr;
 		if (!TestTrue(*FString::Printf(TEXT("%s is in the layout"), *Mesh->GetName()), Meshes->TryGetObjectField(Mesh->GetName(), Record)))
@@ -270,26 +285,45 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 			continue;
 		}
 		const int32 Exported = static_cast<int32>((*Record)->GetNumberField(TEXT("triangles")));
+		const TArray<TSharedPtr<FJsonValue>>& Budgets = (*Record)->GetArrayField(TEXT("lods"));
 		const int32 Imported = Mesh->GetNumTriangles(0);
-		TestTrue(*FString::Printf(TEXT("%s keeps its triangles (%d of %d)"), *Mesh->GetName(), Imported, Exported),
-			Imported <= Exported && Imported >= Exported - FMath::Max(Exported / 100, 30));
+		if (Budgets.IsEmpty())
+		{
+			TestTrue(*FString::Printf(TEXT("%s keeps its triangles (%d of %d)"), *Mesh->GetName(), Imported, Exported),
+				Imported <= Exported && Imported >= Exported - FMath::Max(Exported / 100, 30));
+		}
+		for (int32 LOD = 0; LOD < FMath::Min(Budgets.Num(), Mesh->GetNumLODs()); ++LOD)
+		{
+			const int32 Budget = static_cast<int32>(Budgets[LOD]->AsNumber());
+			TestTrue(*FString::Printf(TEXT("%s is %d triangles at LOD%d, within its %d"), *Mesh->GetName(), Mesh->GetNumTriangles(LOD), LOD,
+				Budget), Mesh->GetNumTriangles(LOD) <= Budget);
+		}
 		TestFalse(*FString::Printf(TEXT("%s has Nanite off"), *Mesh->GetName()), Mesh->IsNaniteEnabled());
 		const UBodySetup* Body = Mesh->GetBodySetup();
 		TestTrue(*FString::Printf(TEXT("%s has no collision of its own"), *Mesh->GetName()), !Body || Body->AggGeom.GetElementCount() == 0);
 
-		const int32 LODs = (*Record)->GetArrayField(TEXT("lods")).Num() + 1;
-		TestEqual(*FString::Printf(TEXT("%s has its LODs"), *Mesh->GetName()), Mesh->GetNumLODs(), LODs);
-		const double Radius = Mesh->GetBounds().SphereRadius;
-		for (int32 LOD = 1; LOD < Mesh->GetNumLODs(); ++LOD)
+		TestEqual(*FString::Printf(TEXT("%s has LOD0 and LOD1, or LOD0 alone when small"), *Mesh->GetName()), Mesh->GetNumLODs(),
+			Budgets.IsEmpty() ? 1 : 2);
+
+		// One switch for the whole building: the mesh's bounds cover the building's from every place it is drawn, so each
+		// part measures its LOD from about the building's middle, and LOD1 comes in at 260 m for those bounds.
+		TArray<FTransform> Where;
+		Placements.MultiFind(Mesh, Where);
+		for (const FTransform& Transform : Where)
 		{
-			const float ScreenSize = RenderData->ScreenSize[LOD].GetValue();
-			TestTrue(*FString::Printf(TEXT("%s: fewer triangles at LOD%d than at LOD%d"), *Mesh->GetName(), LOD, LOD - 1),
-				Mesh->GetNumTriangles(LOD) < Mesh->GetNumTriangles(LOD - 1));
-			// The vehicles' distances, unless the mesh is so large that its screen size there is past 1, the most the engine
-			// keeps: the architecture, roofs and courtyard keep full detail to about 108 m and then switch.
-			const double Wanted = 2.0 * RTSLensScreenMultiple * Radius / M20LODDistances[LOD - 1];
-			TestTrue(*FString::Printf(TEXT("%s switches to LOD%d at screen size %.4f, with the vehicles (%.4f)"), *Mesh->GetName(), LOD,
-				ScreenSize, Wanted), Wanted >= 0.97 ? ScreenSize >= 0.97f : FMath::IsNearlyEqual(ScreenSize, Wanted, Wanted * 0.01));
+			TestTrue(*FString::Printf(TEXT("%s's bounds cover the building's"), *Mesh->GetName()),
+				Mesh->GetBounds().GetBox().TransformBy(Transform).IsInside(Building.ExpandBy(-1.0)));
+		}
+		// A mesh several parts draw is instanced, which the GPU measures by its box's half diagonal.
+		const double Radius = Where.Num() > 1 ? Mesh->GetBounds().BoxExtent.Size() : Mesh->GetBounds().SphereRadius;
+		if (Mesh->GetNumLODs() > 1)
+		{
+			const float ScreenSize = RenderData->ScreenSize[1].GetValue();
+			const double Wanted = 2.0 * RTSLensScreenMultiple * Radius / HeadquartersSwitchDistance;
+			TestTrue(*FString::Printf(TEXT("%s: fewer triangles at LOD1 than at LOD0"), *Mesh->GetName()),
+				Mesh->GetNumTriangles(1) < Mesh->GetNumTriangles(0));
+			TestTrue(*FString::Printf(TEXT("%s switches to LOD1 at screen size %.4f, at 260 m (%.4f)"), *Mesh->GetName(), ScreenSize,
+				Wanted), FMath::IsNearlyEqual(ScreenSize, Wanted, Wanted * 0.01));
 		}
 
 		for (const FStaticMaterial& Slot : Mesh->GetStaticMaterials())
@@ -298,14 +332,20 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 			const UMaterialInterface* Parent = Instance ? Instance->Parent.Get() : nullptr;
 			TestTrue(*FString::Printf(TEXT("%s slot %s is an instance of an HQ master"), *Mesh->GetName(), *Slot.MaterialSlotName.ToString()),
 				Parent && Parent->GetPathName().StartsWith(HeadquartersMaterialDir));
+			// The glass is a slot of its own, so it can draw translucent or opaque without touching the rest.
+			const bool bGlass = Parent && Parent->GetName() == TEXT("M_HQ17_Glass");
+			TestEqual(*FString::Printf(TEXT("%s slot %s is glass only if named so"), *Mesh->GetName(), *Slot.MaterialSlotName.ToString()),
+				bGlass, Slot.MaterialSlotName.ToString().Contains(TEXT("Glass")));
 		}
 	}
-	AddInfo(FString::Printf(TEXT("Triangles per HQ by LOD: %d, %d, %d, %d"), Totals[0], Totals[1], Totals[2], Totals[3]));
-	for (int32 LOD = 1; LOD < 4; ++LOD)
+	AddInfo(FString::Printf(TEXT("Triangles per HQ: LOD0 %d, LOD1 %d; %d material sections"), Totals[0], Totals[1], Sections));
+	for (int32 LOD = 0; LOD < 2; ++LOD)
 	{
-		TestTrue(*FString::Printf(TEXT("LOD%d is %d triangles per HQ, within %d"), LOD, Totals[LOD], HeadquartersLODBudgets[LOD - 1]),
-			Totals[LOD] <= HeadquartersLODBudgets[LOD - 1]);
+		TestTrue(*FString::Printf(TEXT("LOD%d is %d triangles per HQ, within %d"), LOD, Totals[LOD], HeadquartersLODBudgets[LOD]),
+			Totals[LOD] <= HeadquartersLODBudgets[LOD]);
 	}
+	TestTrue(*FString::Printf(TEXT("The HQ draws %d material sections, at most %d"), Sections, HeadquartersMaxSections),
+		Sections <= HeadquartersMaxSections);
 
 	auto LoadMaster = [](const TCHAR* Name)
 	{
