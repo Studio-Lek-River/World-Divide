@@ -415,8 +415,10 @@ def make_m20_guardian(exhaust_system, dust_system):
         "gun_mesh": meshes["Gun"],
         "gun_offset": unreal.Vector(*layout["gun_pivot_offset"]),
         "gun_muzzle_offset": unreal.Vector(*layout["gun_muzzle_offset"]),
-        # A 105 mm gun's stroke and run-out, its jump on the trunnions and the hull's rock on its suspension (#218).
-        "gun_recoil": gun_recoil(30.0, 0.015, 0.03, 0.7, jump_degrees=1.0, jump_seconds=0.3, hull_rock_degrees=0.6,
+        # World in Conflict's big, snappy stroke (#353): 0.3 of the barrel, 87 cm, a third of it outside the mantlet, back in a
+        # frame, held to 0.1 s and home at 0.5 s; the fume extractor stops 7 cm short of the boot's clamp ring. The gun's jump
+        # and the hull's rock stay small, as WiC's hull does not move (#218, #219).
+        "gun_recoil": gun_recoil(0.3, 0.015, 0.085, 0.4, jump_degrees=0.3, jump_seconds=0.3, hull_rock_degrees=0.2,
                                  hull_rock_seconds=0.75),
         # Its hull on its torsion bars with the drive (#297): about a degree back pulling away at 10 m/s² and leaning out of
         # its tightest turn at 4 m/s², at most 1.2 degrees diving under its 25 m/s² brakes; the turret trails a 45°/s
@@ -542,13 +544,14 @@ def make_usa_hq():
     }
 
 
-def gun_recoil(distance, recoil_seconds, hold_seconds, return_seconds, jump_degrees=0.0, jump_seconds=0.4,
-               jump_damping=0.45, hull_rock_degrees=0.0, hull_rock_seconds=1.0, hull_rock_damping=0.6):
-    """A vehicle's reaction to its gun firing (FRTSGunRecoil, #218): the barrel's stroke in cm and its seconds back, held
-    and out again; the gun's jump and the hull's rock in degrees, the seconds each takes to settle and the damping ratio
-    it settles with (#219)."""
+def gun_recoil(stroke_fraction, recoil_seconds, hold_seconds, return_seconds, jump_degrees=0.0, jump_seconds=0.4,
+               jump_damping=0.45, hull_rock_degrees=0.0, hull_rock_seconds=1.0, hull_rock_damping=0.6, max_distance=0.0):
+    """A vehicle's reaction to its gun firing (FRTSGunRecoil, #218): the barrel's stroke as a share of its length, capped
+    at max_distance cm for a gun that would clip (#353), and its seconds back, held and out again; the gun's jump and the
+    hull's rock in degrees, the seconds each takes to settle and the damping ratio it settles with (#219)."""
     value = unreal.RTSGunRecoil()
-    for name, setting in (("distance", distance), ("recoil_seconds", recoil_seconds), ("hold_seconds", hold_seconds),
+    for name, setting in (("stroke_fraction", stroke_fraction), ("max_distance", max_distance),
+                          ("recoil_seconds", recoil_seconds), ("hold_seconds", hold_seconds),
                           ("return_seconds", return_seconds), ("jump_degrees", jump_degrees),
                           ("jump_seconds", jump_seconds), ("jump_damping", jump_damping),
                           ("hull_rock_degrees", hull_rock_degrees), ("hull_rock_seconds", hull_rock_seconds),

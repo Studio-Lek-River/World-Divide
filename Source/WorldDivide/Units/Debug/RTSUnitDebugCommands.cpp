@@ -534,7 +534,7 @@ namespace RTSUnitDebugCommands
 			// The gun's recoil (#218) from the same view: at rest, held at full stroke, and run out again after a real stroke.
 			Shots.Add({ TEXT("recoil_rest"), [](FUnitShotsRun& Run)
 			{
-				if (Run.Unit->GetUnitData()->GunRecoil.Distance <= 0.f)
+				if (Run.Unit->GetGunRecoilStroke() <= 0.f)
 				{
 					UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.UnitShots: %s has no gun recoil"), *Run.UnitName);
 				}

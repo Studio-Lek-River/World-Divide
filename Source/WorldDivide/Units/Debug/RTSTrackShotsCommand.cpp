@@ -38,7 +38,8 @@
  * either way, accelerating, braking, stopped, driven into Block_North, and coming back into the animation distance from
  * far away; then driving past a still camera at full speed, beside it and from the RTS angle, plain and with the previous
  * frame's reprojection shown (motion_*, #243); and standing while its gun fires, the hull rocking on its suspension, seen from
- * beside the track the gun turns to and from the sprocket and idler the gun lifts (fire_*, #219); and its engine's exhaust
+ * beside the track the gun turns to and from the sprocket and idler the gun lifts (fire_*, #219), and side-on with the gun along the hull, a picture every 0.05 s of the
+ * barrel's stroke with its offset logged (fire_stroke, #353); and its engine's exhaust
  * standing, setting off and driving, seen from behind, by day and by night (exhaust_*, #222, #325); and its body
  * squatting as it pulls away, diving as it brakes, leaning into a turn and its turret trailing a traverse (body_*, #297); and
  * the dust behind its tracks standing, driving slowly and fast and pivoting, seen from behind and above with the ground it
@@ -129,6 +130,14 @@ namespace RTSTrackShots
 	 */
 	constexpr double FireWarm = 5.0;
 	constexpr float FireTimeDilation = 0.25f;
+
+	/**
+	 * The barrel's stroke (#353), side-on with the gun along the hull: a picture every StrokeSpacing game seconds from the shot,
+	 * at a fixed 60 fps step, so the sequence runs from the first frame to home at 0.5 s.
+	 */
+	const FView StrokeView{ FVector(250.f, -800.f, 200.f), FVector(250.f, 0.f, 180.f), 40.f };
+	constexpr double StrokeSpacing = 0.05;
+	constexpr double StrokeStep = 1.0 / 60.0;
 
 	struct FScenario
 	{
@@ -424,6 +433,16 @@ namespace RTSTrackShots
 					return InUnit.GetUnitData()->GunRecoil.HullRockDegrees > 0.f;
 				}, FireWarm, nullptr, [](ARTSUnit& InUnit) { InUnit.PlayGunRecoil(); }, FireSpacing, FireTimeDilation });
 			}
+			// The barrel's stroke alone at the game's own speed (#353), against World in Conflict's: a third back in the first frame,
+			// home at 0.5 s.
+			FScenario Stroke{ TEXT("fire_stroke"), StrokeView, [Stand = Drive(RTSLocomotion::FCommand())](ARTSUnit& InUnit)
+			{
+				Stand(InUnit);
+				InUnit.SetAimOverride(FVector2D(0.f, 0.f));
+				return InUnit.GetGunRecoilStroke() > 0.f;
+			}, FireWarm, nullptr, [](ARTSUnit& InUnit) { InUnit.PlayGunRecoil(); }, StrokeSpacing, 1.f };
+			Stroke.FixedStep = StrokeStep;
+			Scenarios.Add(MoveTemp(Stroke));
 			// The engine's exhaust (#222) at the game's own speed, as the puffs drift and fade: standing, setting off from a stand
 			// for full speed (the pictures run through 2.4 s of the climb, to about 1,000 cm/s), and driving on at a steady speed;
 			// by day, then by night, where its colours must hold too (#325).
@@ -620,9 +639,9 @@ namespace RTSTrackShots
 			const URTSDustSubsystem* Dust = World->GetSubsystem<URTSDustSubsystem>();
 			const float DustRate = URTSDustSubsystem::GetRate(Unit->GetUnitData()->Dust, Motion.ForwardSpeed, Motion.YawRate);
 			UE_LOG(LogWorldDivide, Display,
-				TEXT("rts.Debug.TrackShots: %s %02d: %s, %.0f cm/s, %.1f deg/s; travel L %.1f R %.1f cm; phase L %.4f (material %.4f) R %.4f (material %.4f); rock front %.3f right %.3f deg; sway front %.3f right %.3f deg; turret %.1f lag %.2f deg; exhaust %s; dust %.1f/s on surface %d, %d emitters"),
+				TEXT("rts.Debug.TrackShots: %s %02d: %s, %.0f cm/s, %.1f deg/s; travel L %.1f R %.1f cm; phase L %.4f (material %.4f) R %.4f (material %.4f); rock front %.3f right %.3f deg; sway front %.3f right %.3f deg; turret %.1f lag %.2f deg; recoil %.1f cm at %.3f s; exhaust %s; dust %.1f/s on surface %d, %d emitters"),
 				*Name, Shot, *UEnum::GetValueAsString(Motion.Status), Motion.ForwardSpeed, Motion.YawRate, Motion.LeftTravel, Motion.RightTravel,
-				Phase[0], Sent[0], Phase[1], Sent[1], Rock.X, Rock.Y, Sway.X, Sway.Y, Unit->GetTurretYaw(), Unit->GetTurretLag(), *UEnum::GetDisplayValueAsText(ExhaustState).ToString(),
+				Phase[0], Sent[0], Phase[1], Sent[1], Rock.X, Rock.Y, Sway.X, Sway.Y, Unit->GetTurretYaw(), Unit->GetTurretLag(), Unit->GetGunRecoilOffset(), World->GetTimeSeconds(), *UEnum::GetDisplayValueAsText(ExhaustState).ToString(),
 				DustRate, Dust ? static_cast<int32>(Dust->GetSurface(*Unit)) : 0, Dust ? Dust->GetActiveEmitters() : 0);
 		}
 

@@ -4,23 +4,24 @@
 #include "Misc/DataValidation.h"
 #endif
 
-float FRTSGunRecoil::OffsetAt(float Time, float From) const
+float FRTSGunRecoil::OffsetAt(float Time, float From, float Stroke) const
 {
 	// Back from where the barrel was, so a shot before it is out again starts its stroke there instead of jumping; never
-	// past Distance.
+	// past the stroke.
 	if (Time < RecoilSeconds)
 	{
 		const float Back = 1.f - FMath::Square(1.f - FMath::Max(Time, 0.f) / RecoilSeconds);
-		return FMath::Lerp(FMath::Min(From, Distance), Distance, Back);
+		return FMath::Lerp(FMath::Min(From, Stroke), Stroke, Back);
 	}
 	const float Out = (Time - RecoilSeconds - HoldSeconds) / ReturnSeconds;
 	if (Out <= 0.f)
 	{
-		return Distance;
+		return Stroke;
 	}
-	// The recuperator pushes it out from a standstill, fastest a third of the way in, then the buffer brakes it: half the
-	// stroke is gone by 40% of the time and the last tenth creeps home over the final third.
-	return Out >= 1.f ? 0.f : Distance * FMath::Cube(1.f - Out) * (1.f + 3.f * Out);
+	// The recuperator pushes it out from a standstill and the buffer brings it to rest at home, half way at half the time:
+	// with the M20's timing a third of the barrel back at 0.1 s, a sixth at 0.3 s, a twentieth at 0.4 s and home at 0.5 s,
+	// as World in Conflict's M1A1 (#353).
+	return Out >= 1.f ? 0.f : Stroke * (1.f - FMath::SmoothStep(0.f, 1.f, Out));
 }
 
 void FRTSRecoilSpring::Evaluate(float Elapsed, float& OutAngle, float& OutRate) const

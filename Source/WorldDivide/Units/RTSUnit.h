@@ -228,6 +228,9 @@ public:
 	/** Every machine. How far back the recoiling parts are now, in cm before MeshScale; zero at rest. */
 	float GetGunRecoilOffset() const { return GunRecoilOffset; }
 
+	/** Every machine. How far back a shot drives the recoiling parts, in cm before MeshScale (FRTSGunRecoil::GetStroke, #353); zero without any. */
+	float GetGunRecoilStroke() const { return GunRecoilStroke; }
+
 	/** Every machine. Degrees the gun's jump lifts it above GetGunPitch now. */
 	float GetGunJump() const { return GunJump.GetAngle(); }
 
@@ -767,6 +770,8 @@ private:
 		FVector Rest = FVector::ZeroVector;
 	};
 	TArray<FRecoilPart> RecoilParts;
+	/** How far back a shot drives them, in cm before MeshScale: from the longest of them. */
+	float GunRecoilStroke = 0.f;
 
 	/** Seconds into the running recoil stroke; unset at rest. */
 	TOptional<float> GunRecoilTime;

@@ -29,7 +29,7 @@ namespace RTSRecoilTests
 		URTSUnitData* M20 = LoadObject<URTSUnitData>(nullptr, TEXT("/Game/Data/Units/DA_TestM20Guardian.DA_TestM20Guardian"));
 		if (!Test.TestNotNull(TEXT("DA_TestM20Guardian loads"), M20) || !Test.TestNotNull(TEXT("It has a weapon"), M20->Weapon.Get())
 			|| !Test.TestTrue(TEXT("Its gun recoils, jumps and rocks the hull"),
-				M20->GunRecoil.Distance > 0.f && M20->GunRecoil.JumpDegrees > 0.f && M20->GunRecoil.HullRockDegrees > 0.f))
+				M20->GunRecoil.StrokeFraction > 0.f && M20->GunRecoil.JumpDegrees > 0.f && M20->GunRecoil.HullRockDegrees > 0.f))
 		{
 			return nullptr;
 		}
@@ -89,8 +89,9 @@ namespace RTSRecoilTests
 }
 
 /**
- * The M20's barrel on one shot (#218): it snaps back along the bore by GunRecoil.Distance within a frame, stays back for
- * HoldSeconds, runs out quickly at first and creeps the last of the way, and ends exactly where it rested.
+ * The M20's barrel on one shot (#218), with World in Conflict's stroke (#353): it snaps back along the bore by a third of its
+ * barrel within a frame, stays back to 0.1 s after the shot, is half way out at 0.3 s, nearly home at 0.4 s and home at 0.5 s,
+ * exactly where it rested.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRecoilStrokeTest, "WorldDivide.Combat.Recoil.Stroke", RTSTests::TestFlags)
 
@@ -103,7 +104,6 @@ bool FRTSRecoilStrokeTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	const FRTSGunRecoil& Recoil = M20->GunRecoil;
 	const int32 Barrel = FindBarrel(*M20);
 	if (!TestTrue(TEXT("The M20 has a barrel that recoils"), Barrel != INDEX_NONE))
 	{
@@ -114,36 +114,40 @@ bool FRTSRecoilStrokeTest::RunTest(const FString& Parameters)
 	const FTransform Rest = GetBarrel(*Tank, Barrel);
 	const FTransform RestOnGun = GetBarrelOnGun(*Tank, Barrel);
 
+	// The stroke follows the barrel: about 0.3 of its length, a third of the part outside the mantlet.
+	const FBox BarrelBox = M20->Parts[Barrel].Mesh->GetBoundingBox();
+	const float BarrelLength = BarrelBox.Max.X - BarrelBox.Min.X;
+	const float Stroke = Tank->GetGunRecoilStroke();
+	TestTrue(FString::Printf(TEXT("The stroke is about 0.3 of the barrel (%.1f of %.1f cm)"), Stroke, BarrelLength),
+		Stroke > BarrelLength * 0.27f && Stroke < BarrelLength * 0.33f);
+
 	Tank->PlayGunRecoil();
 	TestTrue(TEXT("The stroke starts at rest"), GetBarrelOnGun(*Tank, Barrel).Equals(RestOnGun, RestTolerance));
 	Tank->UpdateGunRecoil(Step);
-	TestTrue(FString::Printf(TEXT("One frame on it is fully back (%.2f of %.2f cm)"), Tank->GetGunRecoilOffset(), Recoil.Distance),
-		FMath::IsNearlyEqual(Tank->GetGunRecoilOffset(), Recoil.Distance, 0.01f));
+	TestTrue(FString::Printf(TEXT("One frame on it is fully back (%.2f of %.2f cm)"), Tank->GetGunRecoilOffset(), Stroke),
+		FMath::IsNearlyEqual(Tank->GetGunRecoilOffset(), Stroke, 0.01f));
 	const FTransform Back = GetBarrelOnGun(*Tank, Barrel);
 	const FVector Moved = Back.GetLocation() - RestOnGun.GetLocation();
 	TestTrue(FString::Printf(TEXT("Back along the bore (%s)"), *Moved.ToString()),
-		Moved.Equals(FVector(-Recoil.Distance * M20->MeshScale.X, 0.f, 0.f), 0.05f));
+		Moved.Equals(FVector(-Stroke * M20->MeshScale.X, 0.f, 0.f), 0.05f));
 	TestTrue(TEXT("Without turning on the gun"), Back.GetRotation().Equals(RestOnGun.GetRotation(), 1.0e-4f));
 
-	// Held, then out: half the way by 40% of the run-out, the last tenth taking over a quarter of it.
-	Tank->UpdateGunRecoil(Recoil.RecoilSeconds + Recoil.HoldSeconds - Step - 0.001f);
-	TestTrue(TEXT("It stays back while held"), FMath::IsNearlyEqual(Tank->GetGunRecoilOffset(), Recoil.Distance, 0.01f));
-	Tank->UpdateGunRecoil(0.001f + Recoil.ReturnSeconds * 0.4f);
-	const float AtTwoFifths = Tank->GetGunRecoilOffset();
-	TestTrue(FString::Printf(TEXT("40%% of the run-out has taken it half way (%.2f cm back)"), AtTwoFifths),
-		AtTwoFifths < Recoil.Distance * 0.5f && AtTwoFifths > Recoil.Distance * 0.3f);
-	float Time = Recoil.ReturnSeconds * 0.4f;
-	float TenthLeftAt = -1.f;
-	for (; Tank->GetGunRecoilOffset() > 0.f && Time < SettleLimit; Time += Step)
+	// WiC's curve, as shares of the stroke after the shot: still back at 0.1 s, half at 0.3 s, a sixth or less at 0.4 s.
+	float Time = Step;
+	const auto RunTo = [&Time, Tank](float Seconds)
 	{
-		Tank->UpdateGunRecoil(Step);
-		if (TenthLeftAt < 0.f && Tank->GetGunRecoilOffset() <= Recoil.Distance * 0.1f)
-		{
-			TenthLeftAt = Time;
-		}
-	}
-	TestTrue(FString::Printf(TEXT("The buffer slows the last tenth (%.2f of %.2f s)"), Recoil.ReturnSeconds - TenthLeftAt, Recoil.ReturnSeconds),
-		TenthLeftAt > 0.f && Recoil.ReturnSeconds - TenthLeftAt > Recoil.ReturnSeconds * 0.25f);
+		Tank->UpdateGunRecoil(Seconds - Time);
+		Time = Seconds;
+		return Tank->GetGunRecoilOffset();
+	};
+	const float AtTenth = RunTo(0.1f);
+	TestTrue(FString::Printf(TEXT("Still back at 0.1 s (%.2f cm)"), AtTenth), AtTenth > Stroke * 0.95f);
+	const float AtThreeTenths = RunTo(0.3f);
+	TestTrue(FString::Printf(TEXT("About half way out at 0.3 s (%.2f cm)"), AtThreeTenths),
+		AtThreeTenths > Stroke * 0.4f && AtThreeTenths < Stroke * 0.6f);
+	const float AtFourTenths = RunTo(0.4f);
+	TestTrue(FString::Printf(TEXT("Nearly home at 0.4 s (%.2f cm)"), AtFourTenths), AtFourTenths > 0.f && AtFourTenths < Stroke * 0.25f);
+	TestEqual(TEXT("Home at 0.5 s"), RunTo(0.5f + Step), 0.f);
 
 	TestTrue(TEXT("Everything settles"), Settle(*Tank));
 	TestEqual(TEXT("It is out again"), Tank->GetGunRecoilOffset(), 0.f);
@@ -249,7 +253,6 @@ bool FRTSRecoilRepeatedTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	const FRTSGunRecoil& Recoil = M20->GunRecoil;
 	const int32 Barrel = FindBarrel(*M20);
 	const FRTSTestWorld TestWorld;
 	ARTSUnit* Tank = TestWorld.SpawnUnit(M20, 0, FVector::ZeroVector);
@@ -272,7 +275,7 @@ bool FRTSRecoilRepeatedTest::RunTest(const FString& Parameters)
 		MostBack = FMath::Max(MostBack, Tank->GetGunRecoilOffset());
 	}
 	TestTrue(FString::Printf(TEXT("It fired again and again (%d shots)"), Shots), Shots >= 3);
-	TestTrue(FString::Printf(TEXT("Each shot drove the barrel back (%.2f cm)"), MostBack), MostBack > Recoil.Distance * 0.95f);
+	TestTrue(FString::Printf(TEXT("Each shot drove the barrel back (%.2f cm)"), MostBack), MostBack > Tank->GetGunRecoilStroke() * 0.95f);
 
 	// Shots faster than the recoil settles, as quick as every couple of frames: at the moment of each, nothing jumps.
 	float BiggestJump = 0.f;
@@ -293,7 +296,7 @@ bool FRTSRecoilRepeatedTest::RunTest(const FString& Parameters)
 		}
 	}
 	TestTrue(FString::Printf(TEXT("A shot never makes the barrel, gun or hull jump (%.5f)"), BiggestJump), BiggestJump <= 1.0e-4f);
-	TestTrue(FString::Printf(TEXT("Nor the barrel go further back than a stroke (%.2f cm)"), MostBack), MostBack <= Recoil.Distance + KINDA_SMALL_NUMBER);
+	TestTrue(FString::Printf(TEXT("Nor the barrel go further back than a stroke (%.2f cm)"), MostBack), MostBack <= Tank->GetGunRecoilStroke() + KINDA_SMALL_NUMBER);
 
 	TestTrue(TEXT("After the last shot everything settles"), Settle(*Tank));
 	TestEqual(TEXT("The barrel is out again"), Tank->GetGunRecoilOffset(), 0.f);
@@ -368,9 +371,9 @@ bool FRTSRecoilTrackingTest::RunTest(const FString& Parameters)
 	Tank->SetGunRecoilHold(M20->GunRecoil.RecoilSeconds);
 	const FVector Moved = GetBarrelOnGun(*Tank, Barrel).GetLocation() - RestOnGun.GetLocation();
 	TestTrue(FString::Printf(TEXT("Held at full stroke, %s back along the bore"), *Moved.ToString()),
-		Moved.Equals(FVector(-M20->GunRecoil.Distance * M20->MeshScale.X, 0.f, 0.f), 0.05f));
+		Moved.Equals(FVector(-Tank->GetGunRecoilStroke() * M20->MeshScale.X, 0.f, 0.f), 0.05f));
 	Tank->UpdateGunRecoil(1.f);
-	TestTrue(TEXT("It stays held"), FMath::IsNearlyEqual(Tank->GetGunRecoilOffset(), M20->GunRecoil.Distance, 0.01f));
+	TestTrue(TEXT("It stays held"), FMath::IsNearlyEqual(Tank->GetGunRecoilOffset(), Tank->GetGunRecoilStroke(), 0.01f));
 	Tank->SetGunRecoilHold({});
 	TestFalse(TEXT("Let go, it is at rest"), Tank->IsRecoiling());
 	TestTrue(TEXT("Exactly where it rested"), GetBarrel(*Tank, Barrel).Equals(Rest, RestTolerance));

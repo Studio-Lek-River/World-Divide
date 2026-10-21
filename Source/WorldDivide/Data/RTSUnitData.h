@@ -81,21 +81,28 @@ struct WORLDDIVIDE_API FRTSGunRecoil
 {
 	GENERATED_BODY()
 
-	/** How far the barrel slides back in cm, before the unit's MeshScale; 0 does not recoil. */
+	/**
+	 * How far the barrel slides back, as a share of the recoiling part's length (#353), so every gun gets the same look
+	 * without tuning: 0.3 of the M20's 290 cm barrel is a third of the part outside its mantlet. 0 does not recoil.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0", ClampMax = "1"))
+	float StrokeFraction = 0.3f;
+
+	/** The longest stroke in cm before the unit's MeshScale, for a gun whose breech or sleeve would clip its mantlet further back; 0 has no limit. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0"))
-	float Distance = 0.f;
+	float MaxDistance = 0.f;
 
 	/** Seconds to slide back the full stroke: a real gun takes about a hundredth, a frame on screen. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.001"))
 	float RecoilSeconds = 0.015f;
 
-	/** Seconds the barrel stays fully back before it runs out. */
+	/** Seconds the barrel stays fully back before it runs out: back by 0.1 s, as World in Conflict's tanks (#353). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0"))
-	float HoldSeconds = 0.03f;
+	float HoldSeconds = 0.085f;
 
-	/** Seconds to run back out to rest: quick at first, then slowed by the buffer over the last part. */
+	/** Seconds to run back out to rest, starting and ending at a standstill: home half a second after the shot (#353). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.01"))
-	float ReturnSeconds = 0.7f;
+	float ReturnSeconds = 0.4f;
 
 	/** Degrees the gun kicks up on its trunnions at its highest; 0 does not. It swings back past rest once and settles. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0"))
@@ -131,8 +138,15 @@ struct WORLDDIVIDE_API FRTSGunRecoil
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Recoil", meta = (ClampMin = "0.05", ClampMax = "0.95"))
 	float HullRockDamping = 0.6f;
 
-	/** How far back the barrel is, in cm before MeshScale, Time seconds into a stroke that started From cm back. */
-	float OffsetAt(float Time, float From) const;
+	/** The stroke in cm before MeshScale of a recoiling part Length cm long: StrokeFraction of it, at most MaxDistance. */
+	float GetStroke(float Length) const
+	{
+		const float Stroke = StrokeFraction * FMath::Max(Length, 0.f);
+		return MaxDistance > 0.f ? FMath::Min(Stroke, MaxDistance) : Stroke;
+	}
+
+	/** How far back the barrel is, in cm before MeshScale, Time seconds into a stroke of Stroke cm that started From cm back. */
+	float OffsetAt(float Time, float From, float Stroke) const;
 
 	/** Seconds a stroke lasts, back, held and out again. */
 	float GetSeconds() const { return RecoilSeconds + HoldSeconds + ReturnSeconds; }

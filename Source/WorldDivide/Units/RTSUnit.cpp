@@ -352,6 +352,7 @@ void ARTSUnit::CreateParts()
 	WheelSets.Reset();
 	Tracks.Reset();
 	RecoilParts.Reset();
+	GunRecoilStroke = 0.f;
 	GunRecoilTime.Reset();
 	GunRecoilOffset = 0.f;
 	bGunRecoilHeld = false;
@@ -405,6 +406,8 @@ void ARTSUnit::CreateParts()
 			if (Part.bRecoils && Part.MountedOn == ERTSVehiclePartMount::Gun)
 			{
 				RecoilParts.Add({ Slot.Component, Part.Offset });
+				const FBox Box = Part.Mesh->GetBoundingBox();
+				GunRecoilStroke = FMath::Max(GunRecoilStroke, UnitData->GunRecoil.GetStroke(Box.Max.X - Box.Min.X));
 			}
 			if (Part.TrackPitch > 0.f && Part.MountedOn == ERTSVehiclePartMount::Hull)
 			{
@@ -1202,7 +1205,7 @@ void ARTSUnit::PlayGunRecoil()
 		return;
 	}
 	const FRTSGunRecoil& Recoil = UnitData->GunRecoil;
-	if (!RecoilParts.IsEmpty() && Recoil.Distance > 0.f)
+	if (GunRecoilStroke > 0.f)
 	{
 		GunRecoilFrom = GunRecoilOffset;
 		GunRecoilTime = 0.f;
@@ -1376,7 +1379,7 @@ void ARTSUnit::UpdateGunRecoil(float DeltaSeconds)
 		}
 		else
 		{
-			GunRecoilOffset = UnitData->GunRecoil.OffsetAt(*GunRecoilTime, GunRecoilFrom);
+			GunRecoilOffset = UnitData->GunRecoil.OffsetAt(*GunRecoilTime, GunRecoilFrom, GunRecoilStroke);
 		}
 		PlaceRecoilParts();
 	}

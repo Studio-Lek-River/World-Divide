@@ -146,7 +146,7 @@ bool FRTSM20GuardianArtTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("It rides on the gun at its pivot"), Barrel->MountedOn == ERTSVehiclePartMount::Gun && Barrel->Offset.IsNearlyZero());
 		TestTrue(FString::Printf(TEXT("It ends at the muzzle (%.1f cm)"), Barrel->Mesh->GetBoundingBox().Max.X),
 			FMath::IsNearlyEqual(Barrel->Mesh->GetBoundingBox().Max.X, Data->GunMuzzleOffset.X, 1.0));
-		TestTrue(TEXT("It has a recoil stroke"), Data->GunRecoil.Distance > 0.f);
+		TestTrue(TEXT("It has a recoil stroke"), Data->GunRecoil.StrokeFraction > 0.f);
 	}
 	if (Data->Mesh)
 	{
