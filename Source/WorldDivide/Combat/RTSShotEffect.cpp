@@ -27,6 +27,21 @@ namespace
 	constexpr float MuzzleLightBoostStart = 5000.f;
 	constexpr float MuzzleLightBoostEnd = 25000.f;
 	constexpr float MuzzleLightMaxBoost = 3.f;
+	/**
+	 * The boost widens the light far more than it brightens it: full width and full intensity together clipped the ground
+	 * around a distant gun to a white disc by day (#312).
+	 */
+	constexpr float MuzzleLightMaxIntensityBoost = 1.1f;
+	/** The muzzle light is mostly the shell's fire colour, a warm glow rather than a white spot (#312). */
+	constexpr float MuzzleLightWhite = 0.1f;
+	/** Steeper than the impact light's, so the glow gathers around the gun and fades out without a disc edge (#312). */
+	constexpr float MuzzleLightFalloffExponent = 4.f;
+
+	/** The intensity's share of a GetMuzzleLightBoost. */
+	float GetMuzzleLightIntensityBoost(float Boost)
+	{
+		return FMath::Lerp(1.f, MuzzleLightMaxIntensityBoost, (Boost - 1.f) / (MuzzleLightMaxBoost - 1.f));
+	}
 
 	const FName FlashColorParameter(TEXT("User.Color"));
 	const FName FlashScaleParameter(TEXT("User.Scale"));
@@ -232,6 +247,11 @@ void ARTSShotEffect::Start(URTSShotSubsystem& InPool, AActor& Shooter, const URT
 		Light->SetAttenuationRadius(LightRadius * InWeapon.EffectScale);
 	}
 	MuzzleLight->SetAttenuationRadius(LightRadius * InWeapon.EffectScale * MuzzleLightBoost);
+	if (bNiagaraFlash)
+	{
+		MuzzleLight->SetLightColor(FMath::Lerp(InWeapon.ShellColor, FLinearColor::White, MuzzleLightWhite));
+	}
+	MuzzleLight->SetLightFalloffExponent(bNiagaraFlash ? MuzzleLightFalloffExponent : 2.f);
 	MuzzleFlash->SetWorldLocation(Muzzle);
 	MuzzleLight->SetWorldLocation(Muzzle);
 
@@ -344,7 +364,8 @@ void ARTSShotEffect::UpdateMuzzleFlash()
 	if (bMuzzleLightSlot)
 	{
 		// The placeholder glow's light fades with it; a Niagara flash's follows its fire, a sharp peak and a flicker down.
-		const float Brightness = bMuzzleGlow ? 1.f - Alpha : NiagaraFlashLightScale * MuzzleLightBoost * GetMuzzleLightCurve(Age);
+		const float Brightness = bMuzzleGlow ? 1.f - Alpha : NiagaraFlashLightScale * GetMuzzleLightIntensityBoost(MuzzleLightBoost)
+			* GetMuzzleLightCurve(Age);
 		MuzzleLight->SetIntensity(LightIntensity * Scale * Brightness);
 	}
 }

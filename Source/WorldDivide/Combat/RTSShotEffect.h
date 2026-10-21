@@ -21,8 +21,8 @@ class URTSWeaponData;
  * shared M_ShotFx; a light shines only while URTSShotSubsystem's light budget gives it a slot.
  *
  * A weapon with a URTSWeaponData::MuzzleFlash (vehicle guns, #220) flashes that Niagara system along the bore instead of
- * the placeholder glow, from a component the effect makes the first time and reuses. Its muzzle light reads from afar: the
- * further the nearest camera, the brighter and wider. Past rts.Fx.MuzzleLightDistance a shot has no muzzle light, past
+ * the placeholder glow, from a component the effect makes the first time and reuses. Its muzzle light is a warm glow that
+ * reads from afar: the further the nearest camera, the wider and a little brighter. Past rts.Fx.MuzzleLightDistance a shot has no muzzle light, past
  * rts.Fx.MuzzleFlashDistance no flash either.
  */
 UCLASS(NotPlaceable)
