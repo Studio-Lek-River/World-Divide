@@ -1,0 +1,304 @@
+{
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_Radar_Azimuth": {
+    "triangles": [
+      8224,
+      4112,
+      1644,
+      494
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 4
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_ER_Cooling_Fan1_Rotor": {
+    "triangles": [
+      176
+    ],
+    "thresholds": [
+      2
+    ],
+    "nanite": false,
+    "slots": 1
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WF_Condenser_Fan1_Rotor": {
+    "triangles": [
+      176
+    ],
+    "thresholds": [
+      2
+    ],
+    "nanite": false,
+    "slots": 1
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WM_AHU_Fan1_Rotor": {
+    "triangles": [
+      176
+    ],
+    "thresholds": [
+      2
+    ],
+    "nanite": false,
+    "slots": 1
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WM_AHU_Fan2_Rotor": {
+    "triangles": [
+      176
+    ],
+    "thresholds": [
+      2
+    ],
+    "nanite": false,
+    "slots": 1
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WingDish_Azimuth": {
+    "triangles": [
+      1312
+    ],
+    "thresholds": [
+      2
+    ],
+    "nanite": false,
+    "slots": 4
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WingDish_Elevation": {
+    "triangles": [
+      9236,
+      4618,
+      1848,
+      554
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 5
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_GarageInterior": {
+    "triangles": [
+      327552,
+      163775,
+      65511,
+      19654
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 10
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_GaragePortal": {
+    "triangles": [
+      14652,
+      7326,
+      2930,
+      880
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 7
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_GarageFloor": {
+    "triangles": [
+      4548,
+      2274,
+      910,
+      272
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 5
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorBottomSeal": {
+    "triangles": [
+      668
+    ],
+    "thresholds": [
+      2
+    ],
+    "nanite": false,
+    "slots": 1
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorTopRollers": {
+    "triangles": [
+      184
+    ],
+    "thresholds": [
+      2
+    ],
+    "nanite": false,
+    "slots": 1
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_LiftCable": {
+    "triangles": [
+      28
+    ],
+    "thresholds": [
+      2
+    ],
+    "nanite": false,
+    "slots": 1
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery": {
+    "triangles": [
+      14308,
+      7154,
+      2862,
+      858
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 4
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorHardware_Delivery": {
+    "triangles": [
+      33628,
+      16814,
+      6726,
+      2018
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 4
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DriveShaft": {
+    "triangles": [
+      2636,
+      1318,
+      528,
+      158
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 2
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_Architecture_WallCorrected": {
+    "triangles": [
+      1074804,
+      537402,
+      214961,
+      64489
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 18
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_RoofSystems_WallCorrected": {
+    "triangles": [
+      870276,
+      435138,
+      174056,
+      52217
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 15
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_Courtyard": {
+    "triangles": [
+      624040,
+      312020,
+      124808,
+      37443
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 16
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_CourtyardDetails_Delivery": {
+    "triangles": [
+      19320,
+      9660,
+      3864,
+      1160
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 3
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_PlantingFinish_Delivery": {
+    "triangles": [
+      12136,
+      6068,
+      2428,
+      728
+    ],
+    "thresholds": [
+      1,
+      0.5,
+      0.20000000298023224,
+      0.07999999821186066
+    ],
+    "nanite": false,
+    "slots": 4
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_NationalFlag_Wind": {
+    "triangles": [
+      8904,
+      5342,
+      2672
+    ],
+    "thresholds": [
+      1,
+      0.07999999821186066,
+      0.02500000037252903
+    ],
+    "nanite": false,
+    "slots": 3
+  }
+}

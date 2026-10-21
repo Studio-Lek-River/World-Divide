@@ -1,0 +1,110 @@
+{
+  "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ17_Coating_2m_BaseColor": {
+    "CompressionSettings": "TC_Default",
+    "SRGB": true,
+    "LODGroup": "TEXTUREGROUP_World",
+    "LODBias": 0,
+    "MaxTextureSize": 0,
+    "NeverStream": false,
+    "MipGenSettings": "TMGS_FromTextureGroup",
+    "PowerOfTwoMode": "None",
+    "ResizeDuringBuildX": 0,
+    "ResizeDuringBuildY": 0
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ17_Coating_2m_Normal": {
+    "CompressionSettings": "TC_Normalmap",
+    "SRGB": false,
+    "LODGroup": "TEXTUREGROUP_WorldNormalMap",
+    "LODBias": 0,
+    "MaxTextureSize": 0,
+    "NeverStream": false,
+    "MipGenSettings": "TMGS_FromTextureGroup",
+    "PowerOfTwoMode": "None",
+    "ResizeDuringBuildX": 0,
+    "ResizeDuringBuildY": 0
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ17_Coating_2m_Roughness": {
+    "CompressionSettings": "TC_Masks",
+    "SRGB": false,
+    "LODGroup": "TEXTUREGROUP_World",
+    "LODBias": 0,
+    "MaxTextureSize": 0,
+    "NeverStream": false,
+    "MipGenSettings": "TMGS_FromTextureGroup",
+    "PowerOfTwoMode": "None",
+    "ResizeDuringBuildX": 0,
+    "ResizeDuringBuildY": 0
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ20_Floor_BaseColor": {
+    "CompressionSettings": "TC_Default",
+    "SRGB": true,
+    "LODGroup": "TEXTUREGROUP_World",
+    "LODBias": 0,
+    "MaxTextureSize": 0,
+    "NeverStream": false,
+    "MipGenSettings": "TMGS_FromTextureGroup",
+    "PowerOfTwoMode": "None",
+    "ResizeDuringBuildX": 0,
+    "ResizeDuringBuildY": 0
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ20_Floor_Roughness": {
+    "CompressionSettings": "TC_Default",
+    "SRGB": false,
+    "LODGroup": "TEXTUREGROUP_World",
+    "LODBias": 0,
+    "MaxTextureSize": 0,
+    "NeverStream": false,
+    "MipGenSettings": "TMGS_FromTextureGroup",
+    "PowerOfTwoMode": "None",
+    "ResizeDuringBuildX": 0,
+    "ResizeDuringBuildY": 0
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ21_Paving_BaseColor": {
+    "CompressionSettings": "TC_Default",
+    "SRGB": true,
+    "LODGroup": "TEXTUREGROUP_World",
+    "LODBias": 0,
+    "MaxTextureSize": 0,
+    "NeverStream": false,
+    "MipGenSettings": "TMGS_FromTextureGroup",
+    "PowerOfTwoMode": "ResizeToSpecificResolution",
+    "ResizeDuringBuildX": 2048,
+    "ResizeDuringBuildY": 2048
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ21_Paving_Roughness": {
+    "CompressionSettings": "TC_Default",
+    "SRGB": false,
+    "LODGroup": "TEXTUREGROUP_World",
+    "LODBias": 0,
+    "MaxTextureSize": 0,
+    "NeverStream": false,
+    "MipGenSettings": "TMGS_FromTextureGroup",
+    "PowerOfTwoMode": "ResizeToSpecificResolution",
+    "ResizeDuringBuildX": 2048,
+    "ResizeDuringBuildY": 2048
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ21_Soil_BaseColor": {
+    "CompressionSettings": "TC_Default",
+    "SRGB": true,
+    "LODGroup": "TEXTUREGROUP_World",
+    "LODBias": 0,
+    "MaxTextureSize": 0,
+    "NeverStream": false,
+    "MipGenSettings": "TMGS_FromTextureGroup",
+    "PowerOfTwoMode": "None",
+    "ResizeDuringBuildX": 0,
+    "ResizeDuringBuildY": 0
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ21_Soil_Normal": {
+    "CompressionSettings": "TC_Normalmap",
+    "SRGB": false,
+    "LODGroup": "TEXTUREGROUP_WorldNormalMap",
+    "LODBias": 0,
+    "MaxTextureSize": 0,
+    "NeverStream": false,
+    "MipGenSettings": "TMGS_FromTextureGroup",
+    "PowerOfTwoMode": "None",
+    "ResizeDuringBuildX": 0,
+    "ResizeDuringBuildY": 0
+  }
+}

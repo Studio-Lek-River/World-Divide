@@ -14,6 +14,7 @@
 #include "NiagaraSystem.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Scalability.h"
+#include "Units/RTSEffectPool.h"
 #include "Units/RTSGround.h"
 #include "Units/RTSLocomotion.h"
 #include "Units/RTSNearestToView.h"
@@ -191,11 +192,8 @@ void URTSDustSubsystem::Register(ARTSUnit& Unit)
 	if (FRTSDustEntry* Entry = Find(Unit))
 	{
 		// New data: the contact points may have changed, so the emitters are made again when a camera is near.
-		DestroyComponents(*Entry);
-		Entry->SentRate = -1.f;
-		Entry->SentOpacity = -1.f;
-		Entry->SentSurface = INDEX_NONE;
-		Entry->SentDirection = FVector3f::ZeroVector;
+		ReleaseComponents(*Entry);
+		Entry->Contacts.Reset();
 		return;
 	}
 	FRTSDustEntry& Entry = Entries.AddDefaulted_GetRef();
@@ -207,23 +205,26 @@ void URTSDustSubsystem::Unregister(ARTSUnit& Unit)
 	const int32 Index = Entries.IndexOfByPredicate([&Unit](const FRTSDustEntry& Entry) { return Entry.Unit.Get() == &Unit; });
 	if (Index != INDEX_NONE)
 	{
-		DestroyComponents(Entries[Index]);
+		ReleaseComponents(Entries[Index]);
 		Entries.RemoveAtSwap(Index);
 	}
 }
 
-void URTSDustSubsystem::DestroyComponents(FRTSDustEntry& Entry)
+void URTSDustSubsystem::ReleaseComponents(FRTSDustEntry& Entry)
 {
+	// A destroyed vehicle gives them back too: vehicles come and go with combat (PERFORMANCE_GUIDELINES.md, rule 9).
+	const int32 MaxFree = 2 * FMath::Max(GetMaxVehicles(), 0);
 	for (UNiagaraComponent* Component : Entry.Components)
 	{
-		if (IsValid(Component))
-		{
-			Component->DestroyComponent();
-		}
+		RTSEffectPool::Release(FreeComponents, Component, MaxFree);
 	}
 	Entry.Components.Reset();
-	Entry.Contacts.Reset();
 	Entry.bActive = false;
+	Entry.StoppedSeconds = 0.f;
+	Entry.SentRate = -1.f;
+	Entry.SentOpacity = -1.f;
+	Entry.SentSurface = INDEX_NONE;
+	Entry.SentDirection = FVector3f::ZeroVector;
 }
 
 TConstArrayView<TObjectPtr<UNiagaraComponent>> URTSDustSubsystem::GetComponents(const ARTSUnit& Unit) const
@@ -252,6 +253,16 @@ int32 URTSDustSubsystem::GetActiveEmitters() const
 		Active += Entry.bActive ? Entry.Components.Num() : 0;
 	}
 	return Active;
+}
+
+int32 URTSDustSubsystem::GetHeldEmitters() const
+{
+	int32 Held = FreeComponents.Num();
+	for (const FRTSDustEntry& Entry : Entries)
+	{
+		Held += Entry.Components.Num();
+	}
+	return Held;
 }
 
 void URTSDustSubsystem::SetActive(FRTSDustEntry& Entry, bool bActive)
@@ -333,9 +344,9 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 	UStaticMeshComponent* Hull = Unit.GetMesh();
 	if (Entry.Components.IsEmpty())
 	{
-		// Made the first time the vehicle shows dust near a camera, and kept: one driving in and out of view starts and stops
-		// them. Owned by no actor and attached to the hull, so they follow its tilt over the ground, and are not its parts. One
-		// serves two contact points, as both tracks (#336): half the systems for Niagara to tick.
+		// Taken the first time the vehicle shows dust near a camera, and kept while it drives in and out of view, which starts
+		// and stops them; stopped for rts.Fx.ReleaseDelay, they go back to the free list (#225). One serves two contact points,
+		// as both tracks (#336): half the systems for Niagara to tick.
 		GetContactPoints(*Unit.GetUnitData(), Entry.Contacts);
 		for (int32 First = 0; First < Entry.Contacts.Num(); First += 2)
 		{
@@ -343,24 +354,19 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 			const FVector Middle = bPair ? 0.5 * (Entry.Contacts[First] + Entry.Contacts[First + 1]) : Entry.Contacts[First];
 			// From the middle to the second point in cm, in the component's space, which keeps none of the hull's scale.
 			const FVector Side = bPair ? 0.5 * (Entry.Contacts[First + 1] - Entry.Contacts[First]) * Hull->GetComponentScale() : FVector::ZeroVector;
-			UNiagaraComponent* Component = NewObject<UNiagaraComponent>(GetWorld());
-			Component->SetAutoActivate(false);
-			Component->SetAutoDestroy(false);
-			Component->SetCastShadow(false);
-			Component->SetCanEverAffectNavigation(false);
-			// Lighting channel 1 only (#341): lit by the sun or moon (OnWorldBeginPlay), the sky and the headlights, never by
-			// the red tail lights, which turned the dust behind a vehicle into a red cloud at night.
-			Component->LightingChannels.bChannel0 = false;
-			Component->LightingChannels.bChannel1 = true;
-			Component->SetAsset(Dust.System);
-			// The hull's scale stays out of the dust.
-			Component->SetUsingAbsoluteScale(true);
-			Component->SetupAttachment(Hull);
-			Component->SetRelativeLocation(Middle);
+			bool bNew = false;
+			UNiagaraComponent* Component = RTSEffectPool::Take(FreeComponents, *GetWorld(), Dust.System, *Hull, Middle, bNew);
 			Component->SetVariableFloat(SizeParameter, Dust.Size);
 			Component->SetVariableFloat(PointsParameter, bPair ? 2.f : 1.f);
 			Component->SetVariableVec3(SideParameter, Side);
-			Component->RegisterComponentWithWorld(GetWorld());
+			if (bNew)
+			{
+				// Lighting channel 1 only (#341): lit by the sun or moon (OnWorldBeginPlay), the sky and the headlights, never
+				// by the red tail lights, which turned the dust behind a vehicle into a red cloud at night.
+				Component->LightingChannels.bChannel0 = false;
+				Component->LightingChannels.bChannel1 = true;
+				Component->RegisterComponentWithWorld(GetWorld());
+			}
 			Entry.Components.Add(Component);
 		}
 		Entry.bActive = false;
@@ -460,7 +466,7 @@ void URTSDustSubsystem::UpdateAll(float DeltaSeconds)
 		const ARTSUnit* Unit = Entries[Index].Unit.Get();
 		if (!Unit || !Unit->GetUnitData())
 		{
-			DestroyComponents(Entries[Index]);
+			ReleaseComponents(Entries[Index]);
 			Entries.RemoveAtSwap(Index);
 		}
 	}
@@ -500,6 +506,9 @@ void URTSDustSubsystem::UpdateAll(float DeltaSeconds)
 		Entries[Near.Value].bShows = true;
 	}
 
+	// Emitters stopped for the release delay go back to the free list: idle, out of the budget or far away, the dust they
+	// raised has settled by then (#225).
+	const float ReleaseDelay = RTSEffectPool::GetReleaseDelay();
 	for (FRTSDustEntry& Entry : Entries)
 	{
 		if (Entry.bShows)
@@ -509,6 +518,14 @@ void URTSDustSubsystem::UpdateAll(float DeltaSeconds)
 		else
 		{
 			SetActive(Entry, false);
+		}
+		if (Entry.bActive || Entry.Components.IsEmpty())
+		{
+			Entry.StoppedSeconds = 0.f;
+		}
+		else if ((Entry.StoppedSeconds += DeltaSeconds) >= ReleaseDelay && ReleaseDelay > 0.f)
+		{
+			ReleaseComponents(Entry);
 		}
 	}
 	RTSDust::DustCycles += FPlatformTime::Cycles64() - StartCycles;
@@ -549,8 +566,9 @@ void URTSDustSubsystem::Deinitialize()
 	}
 	for (FRTSDustEntry& Entry : Entries)
 	{
-		DestroyComponents(Entry);
+		ReleaseComponents(Entry);
 	}
 	Entries.Reset();
+	RTSEffectPool::DestroyAll(FreeComponents);
 	Super::Deinitialize();
 }

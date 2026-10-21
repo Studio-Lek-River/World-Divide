@@ -1,0 +1,5779 @@
+[
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.WorldSettings_1"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.Brush_1"
+    },
+    "transform": {
+      "location": {
+        "x": -90,
+        "y": 110,
+        "z": 20
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.DirectionalLight_0"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": -44.999999999999964,
+        "yaw": -134.99999999999994,
+        "roll": 2.2489917831974717e-15
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.SkyAtmosphere_0"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": -6000
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.SkyLight_0"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 600
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.ExponentialHeightFog_0"
+    },
+    "transform": {
+      "location": {
+        "x": -5600,
+        "y": -50,
+        "z": -6850
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.VolumetricCloud_0"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 700
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_0"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 400,
+        "y": 400,
+        "z": 400
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_0.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Engine/EngineSky/SM_SkySphere.SM_SkySphere"
+          },
+          "OverrideMaterials": [
+            {
+              "refPath": "/Engine/EngineSky/M_SimpleSkyDome.M_SimpleSkyDome"
+            }
+          ],
+          "CustomPrimitiveData": {
+            "data": []
+          },
+          "Mobility": "Static",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": false,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3600,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.Floor_0"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": -10
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 160,
+        "y": 160,
+        "z": 8
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.Floor_0.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Engine/MapTemplates/SM_Template_Map_Floor.SM_Template_Map_Floor"
+          },
+          "OverrideMaterials": [
+            {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/HQ14_Paving.HQ14_Paving"
+            }
+          ],
+          "CustomPrimitiveData": {
+            "data": []
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldDynamic",
+            "collisionEnabled": "QueryAndPhysics",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "BlockAllDynamic",
+            "collisionResponses": {
+              "responseArray": []
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": false,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_1"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_1.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_Architecture_WallCorrected.SM_HQ20_Architecture_WallCorrected"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Static",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "QueryAndPhysics",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": []
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3600,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.PostProcessVolume_0"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_2"
+    },
+    "transform": {
+      "location": {
+        "x": -229.23433781,
+        "y": -1229.6998024,
+        "z": 921.50001526
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_2.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_Radar_Azimuth.SM_HQ19_Radar_Azimuth"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_3"
+    },
+    "transform": {
+      "location": {
+        "x": -710,
+        "y": -1490,
+        "z": 907
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_3.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_ER_Cooling_Fan1_Rotor.SM_HQ19_ER_Cooling_Fan1_Rotor"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": false,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_4"
+    },
+    "transform": {
+      "location": {
+        "x": 1060,
+        "y": 1780,
+        "z": 850
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_4.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WF_Condenser_Fan1_Rotor.SM_HQ19_WF_Condenser_Fan1_Rotor"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": false,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_5"
+    },
+    "transform": {
+      "location": {
+        "x": -60,
+        "y": 2014.9999999999998,
+        "z": 829.9999999999999
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_5.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WM_AHU_Fan1_Rotor.SM_HQ19_WM_AHU_Fan1_Rotor"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": false,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_6"
+    },
+    "transform": {
+      "location": {
+        "x": 80,
+        "y": 2014.9999999999998,
+        "z": 829.9999999999999
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_6.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WM_AHU_Fan2_Rotor.SM_HQ19_WM_AHU_Fan2_Rotor"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": false,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_7"
+    },
+    "transform": {
+      "location": {
+        "x": -983.06264877,
+        "y": 1994.9447631799999,
+        "z": 821.4999961899999
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_7.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WingDish_Azimuth.SM_HQ19_WingDish_Azimuth"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_9"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_9.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_RoofSystems_WallCorrected.SM_HQ20_RoofSystems_WallCorrected"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Static",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "QueryAndPhysics",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": []
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3600,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_10"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_10.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_GarageInterior.SM_HQ20_GarageInterior"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Static",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "QueryAndPhysics",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": []
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3600,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_11"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_11.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_GaragePortal.SM_HQ20_GaragePortal"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Static",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "QueryAndPhysics",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": []
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3600,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_12"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_12.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorHardware_Delivery.SM_HQ20_DoorHardware_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Static",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "QueryAndPhysics",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": []
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3600,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_13"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_13.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_GarageFloor.SM_HQ20_GarageFloor"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Static",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "QueryAndPhysics",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": []
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3600,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_14"
+    },
+    "transform": {
+      "location": {
+        "x": 1314.101791381836,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_14.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_15"
+    },
+    "transform": {
+      "location": {
+        "x": 1279.101848602295,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_15.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_16"
+    },
+    "transform": {
+      "location": {
+        "x": 1244.1018104553223,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_16.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_17"
+    },
+    "transform": {
+      "location": {
+        "x": 1209.1017723083496,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_17.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_18"
+    },
+    "transform": {
+      "location": {
+        "x": 1174.101734161377,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_18.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_19"
+    },
+    "transform": {
+      "location": {
+        "x": 1139.1016960144043,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_19.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_20"
+    },
+    "transform": {
+      "location": {
+        "x": 1104.1016578674316,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_20.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_21"
+    },
+    "transform": {
+      "location": {
+        "x": 1069.1017150878906,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_21.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_22"
+    },
+    "transform": {
+      "location": {
+        "x": 1034.101676940918,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_22.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_23"
+    },
+    "transform": {
+      "location": {
+        "x": 999.1016387939453,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_23.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_24"
+    },
+    "transform": {
+      "location": {
+        "x": 964.1016006469727,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_24.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_25"
+    },
+    "transform": {
+      "location": {
+        "x": 929.1015625,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_25.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_26"
+    },
+    "transform": {
+      "location": {
+        "x": 894.1015243530273,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_26.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_27"
+    },
+    "transform": {
+      "location": {
+        "x": 859.1015815734863,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_27.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_28"
+    },
+    "transform": {
+      "location": {
+        "x": 824.1015434265137,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_28.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_29"
+    },
+    "transform": {
+      "location": {
+        "x": 789.101505279541,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_29.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_30"
+    },
+    "transform": {
+      "location": {
+        "x": 1314.101791381836,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_30.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorBottomSeal.SM_HQ20_DoorBottomSeal"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_31"
+    },
+    "transform": {
+      "location": {
+        "x": 789.101505279541,
+        "y": -1758.45184326,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": 90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_31.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorTopRollers.SM_HQ20_DoorTopRollers"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_32"
+    },
+    "transform": {
+      "location": {
+        "x": 1314.101791381836,
+        "y": -2408.4518,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": -78.09586581013701,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 0.7756634232123596
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_32.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_LiftCable.SM_HQ20_LiftCable"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_33"
+    },
+    "transform": {
+      "location": {
+        "x": 1314.101791381836,
+        "y": -1108.4517999999998,
+        "z": 630.0000190734863
+      },
+      "rotation": {
+        "pitch": -78.09586581013701,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 0.7756634232123596
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_33.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_LiftCable.SM_HQ20_LiftCable"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.RectLight_0"
+    },
+    "transform": {
+      "location": {
+        "x": 520,
+        "y": -1758.45,
+        "z": 585
+      },
+      "rotation": {
+        "pitch": -90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.RectLight_1"
+    },
+    "transform": {
+      "location": {
+        "x": 1280,
+        "y": -1758.45,
+        "z": 550
+      },
+      "rotation": {
+        "pitch": -90,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_34"
+    },
+    "transform": {
+      "location": {
+        "x": 1390,
+        "y": -1758.45184326,
+        "z": 646
+      },
+      "rotation": {
+        "pitch": 48.16881947670752,
+        "yaw": 180,
+        "roll": 180
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_34.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DriveShaft.SM_HQ20_DriveShaft"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_35"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_35.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_Courtyard.SM_HQ21_Courtyard"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Static",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "QueryAndPhysics",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": []
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3600,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_37"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_37.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_CourtyardDetails_Delivery.SM_HQ21_CourtyardDetails_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Static",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "QueryAndPhysics",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": []
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3600,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_38"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_38.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_PlantingFinish_Delivery.SM_HQ21_PlantingFinish_Delivery"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Static",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "QueryAndPhysics",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": []
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3600,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_39"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_39.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_NationalFlag_Wind.SM_HQ21_NationalFlag_Wind"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Static",
+          "BoundsScale": 1.2000000476837158,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "QueryAndPhysics",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": []
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3600,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.BP_HQ20_DoorPreview_C_1"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.BuoyancyManager_0"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.DefaultPhysicsVolume_0"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.GameplayDebuggerPlayerManager_0"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.ChaosDebugDrawActor"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_8"
+    },
+    "transform": {
+      "location": {
+        "x": -983.06264877,
+        "y": 1994.9447631799999,
+        "z": 1045
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": [
+      {
+        "component": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_8.StaticMeshComponent0"
+        },
+        "properties": {
+          "StaticMesh": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WingDish_Elevation.SM_HQ19_WingDish_Elevation"
+          },
+          "OverrideMaterials": [],
+          "CustomPrimitiveData": {
+            "data": [
+              0,
+              0,
+              0,
+              0,
+              0.02500000037252903,
+              0.0949999988079071,
+              0.20000000298023224,
+              1,
+              1
+            ]
+          },
+          "Mobility": "Movable",
+          "BoundsScale": 1,
+          "CastShadow": true,
+          "bGenerateOverlapEvents": false,
+          "ForcedLodModel": 0,
+          "MinLOD": 0,
+          "BodyInstance": {
+            "positionSolverIterationCount": 8,
+            "velocitySolverIterationCount": 2,
+            "projectionSolverIterationCount": 1,
+            "objectType": "ECC_WorldStatic",
+            "collisionEnabled": "NoCollision",
+            "sleepFamily": "Normal",
+            "dOFMode": "Default",
+            "bUseCCD": false,
+            "bUseMACD": false,
+            "bAllowPartialIslandSleep": true,
+            "bIgnoreAnalyticCollisions": false,
+            "bNotifyRigidBodyCollision": false,
+            "bSmoothEdgeCollisions": false,
+            "bLockTranslation": true,
+            "bLockRotation": true,
+            "bLockXTranslation": false,
+            "bLockYTranslation": false,
+            "bLockZTranslation": false,
+            "bLockXRotation": false,
+            "bLockYRotation": false,
+            "bLockZRotation": false,
+            "bOverrideMaxAngularVelocity": false,
+            "bOverrideMaxDepenetrationVelocity": false,
+            "bOverrideWalkableSlopeOnInstance": false,
+            "bOverrideIterationCounts": false,
+            "bInterpolateWhenSubStepping": true,
+            "bInertiaConditioning": true,
+            "bOneWayInteraction": false,
+            "bOverrideSolverAsyncDeltaTime": false,
+            "solverAsyncDeltaTime": 0.01666666753590107,
+            "collisionProfileName": "NoCollision",
+            "collisionResponses": {
+              "responseArray": [
+                {
+                  "channel": "Visibility",
+                  "response": "ECR_Ignore"
+                },
+                {
+                  "channel": "Camera",
+                  "response": "ECR_Ignore"
+                }
+              ]
+            },
+            "maxDepenetrationVelocity": 0,
+            "massInKgOverride": 100,
+            "linearDamping": 0.009999999776482582,
+            "angularDamping": 0,
+            "customDOFPlaneNormal": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "cOMNudge": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "massScale": 1,
+            "gravityGroupIndex": 0,
+            "inertiaTensorScale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "walkableSlopeOverride": {
+              "walkableSlopeBehavior": "WalkableSlope_Default",
+              "walkableSlopeAngle": 0
+            },
+            "physMaterialOverride": "None",
+            "maxAngularVelocity": 3599.999755859375,
+            "customSleepThresholdMultiplier": 1,
+            "stabilizationThresholdMultiplier": 1,
+            "physicsBlendWeight": 0,
+            "bSimulatePhysics": false,
+            "bOverrideMass": false,
+            "bEnableGravity": true,
+            "bUpdateKinematicFromSimulation": false,
+            "bGyroscopicTorqueEnabled": false,
+            "bAutoWeld": true,
+            "bStartAwake": true,
+            "bGenerateWakeEvents": false,
+            "bUpdateMassWhenScaleChanges": true
+          }
+        }
+      }
+    ]
+  },
+  {
+    "actor": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.AbstractNavData-Default"
+    },
+    "transform": {
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rotation": {
+        "pitch": 0,
+        "yaw": 0,
+        "roll": 0
+      },
+      "scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      }
+    },
+    "components": []
+  }
+]

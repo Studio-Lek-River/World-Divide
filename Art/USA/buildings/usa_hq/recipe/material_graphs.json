@@ -1,0 +1,2465 @@
+{
+  "/Game/Art/Candidates/USA_HQ/Final/Materials/HQ14_Paving": {
+    "settings": {
+      "BlendMode": "BLEND_Opaque",
+      "TwoSided": false,
+      "ShadingModel": "MSM_DefaultLit",
+      "bTangentSpaceNormal": true,
+      "TranslucencyLightingMode": "TLM_VolumetricNonDirectional",
+      "bScreenSpaceReflections": false
+    },
+    "expressions": {
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/HQ14_Paving.HQ14_Paving:MaterialExpressionVectorParameter_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0.3400000035762787,
+            "g": 0.3400000035762787,
+            "b": 0.3400000035762787,
+            "a": 0
+          },
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "Param",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -260,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": []
+      }
+    },
+    "outputs": {
+      "MP_BaseColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/HQ14_Paving.HQ14_Paving:MaterialExpressionVectorParameter_0"
+        },
+        "input_name": ""
+      },
+      "MP_Metallic": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Specular": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Roughness": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Normal": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_EmissiveColor": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Opacity": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_OpacityMask": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_WorldPositionOffset": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_AmbientOcclusion": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      }
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Surface": {
+    "settings": {
+      "BlendMode": "BLEND_Opaque",
+      "TwoSided": false,
+      "ShadingModel": "MSM_DefaultLit",
+      "bTangentSpaceNormal": true,
+      "TranslucencyLightingMode": "TLM_VolumetricNonDirectional",
+      "bScreenSpaceReflections": false
+    },
+    "expressions": {
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Surface.M_HQ17_Surface:MaterialExpressionVectorParameter_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0.5,
+            "g": 0.5,
+            "b": 0.5,
+            "a": 1
+          },
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "SurfaceColor",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Surface.M_HQ17_Surface:MaterialExpressionScalarParameter_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 0.5,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "parameterName": "Roughness",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 160,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Surface.M_HQ17_Surface:MaterialExpressionScalarParameter_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 0,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "parameterName": "Metallic",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 320,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Surface.M_HQ17_Surface:MaterialExpressionVectorParameter_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 1
+          },
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "EmissionColor",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 480,
+          "desc": ""
+        },
+        "inputs": []
+      }
+    },
+    "outputs": {
+      "MP_BaseColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Surface.M_HQ17_Surface:MaterialExpressionVectorParameter_0"
+        },
+        "input_name": ""
+      },
+      "MP_Metallic": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Surface.M_HQ17_Surface:MaterialExpressionScalarParameter_1"
+        },
+        "input_name": ""
+      },
+      "MP_Specular": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Roughness": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Surface.M_HQ17_Surface:MaterialExpressionScalarParameter_0"
+        },
+        "input_name": ""
+      },
+      "MP_Normal": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_EmissiveColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Surface.M_HQ17_Surface:MaterialExpressionVectorParameter_1"
+        },
+        "input_name": ""
+      },
+      "MP_Opacity": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_OpacityMask": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_WorldPositionOffset": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_AmbientOcclusion": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      }
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Glass": {
+    "settings": {
+      "BlendMode": "BLEND_Translucent",
+      "TwoSided": false,
+      "ShadingModel": "MSM_DefaultLit",
+      "bTangentSpaceNormal": true,
+      "TranslucencyLightingMode": "TLM_SurfacePerPixelLighting",
+      "bScreenSpaceReflections": true
+    },
+    "expressions": {
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Glass.M_HQ17_Glass:MaterialExpressionVectorParameter_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0.5,
+            "g": 0.5,
+            "b": 0.5,
+            "a": 1
+          },
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "SurfaceColor",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Glass.M_HQ17_Glass:MaterialExpressionScalarParameter_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 0.5,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "parameterName": "Roughness",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 160,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Glass.M_HQ17_Glass:MaterialExpressionScalarParameter_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 0,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "parameterName": "Metallic",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 320,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Glass.M_HQ17_Glass:MaterialExpressionVectorParameter_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 1
+          },
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "EmissionColor",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 480,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Glass.M_HQ17_Glass:MaterialExpressionScalarParameter_2": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 0.30000001192092896,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "parameterName": "GlassOpacity",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 650,
+          "desc": ""
+        },
+        "inputs": []
+      }
+    },
+    "outputs": {
+      "MP_BaseColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Glass.M_HQ17_Glass:MaterialExpressionVectorParameter_0"
+        },
+        "input_name": ""
+      },
+      "MP_Metallic": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Glass.M_HQ17_Glass:MaterialExpressionScalarParameter_1"
+        },
+        "input_name": ""
+      },
+      "MP_Specular": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Roughness": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Glass.M_HQ17_Glass:MaterialExpressionScalarParameter_0"
+        },
+        "input_name": ""
+      },
+      "MP_Normal": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_EmissiveColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Glass.M_HQ17_Glass:MaterialExpressionVectorParameter_1"
+        },
+        "input_name": ""
+      },
+      "MP_Opacity": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Glass.M_HQ17_Glass:MaterialExpressionScalarParameter_2"
+        },
+        "input_name": ""
+      },
+      "MP_OpacityMask": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_WorldPositionOffset": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_AmbientOcclusion": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      }
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational": {
+    "settings": {
+      "BlendMode": "BLEND_Opaque",
+      "TwoSided": false,
+      "ShadingModel": "MSM_DefaultLit",
+      "bTangentSpaceNormal": true,
+      "TranslucencyLightingMode": "TLM_VolumetricNonDirectional",
+      "bScreenSpaceReflections": false
+    },
+    "expressions": {
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionVectorParameter_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0.5,
+            "g": 0.5,
+            "b": 0.5,
+            "a": 1
+          },
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "SurfaceColor",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionScalarParameter_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 0.5,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "parameterName": "Roughness",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 160,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionScalarParameter_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 0,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "parameterName": "Metallic",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 320,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionVectorParameter_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 1
+          },
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "EmissionColor",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 480,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionScalarParameter_2": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 1,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": true,
+          "primitiveDataIndex": 8,
+          "parameterName": "Operational",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -500,
+          "materialExpressionEditorY": 500,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionMultiply_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionMultiply"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -500,
+          "materialExpressionEditorY": 500,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "RGB",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionVectorParameter_1"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionScalarParameter_2"
+            },
+            "input_name": "B"
+          }
+        ]
+      }
+    },
+    "outputs": {
+      "MP_BaseColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionVectorParameter_0"
+        },
+        "input_name": ""
+      },
+      "MP_Metallic": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionScalarParameter_1"
+        },
+        "input_name": ""
+      },
+      "MP_Specular": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Roughness": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionScalarParameter_0"
+        },
+        "input_name": ""
+      },
+      "MP_Normal": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_EmissiveColor": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational.M_HQ_Final_Operational:MaterialExpressionMultiply_0"
+        },
+        "input_name": ""
+      },
+      "MP_Opacity": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_OpacityMask": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_WorldPositionOffset": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_AmbientOcclusion": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      }
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Ownership": {
+    "settings": {
+      "BlendMode": "BLEND_Opaque",
+      "TwoSided": false,
+      "ShadingModel": "MSM_DefaultLit",
+      "bTangentSpaceNormal": true,
+      "TranslucencyLightingMode": "TLM_VolumetricNonDirectional",
+      "bScreenSpaceReflections": false
+    },
+    "expressions": {
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Ownership.M_HQ_Final_Ownership:MaterialExpressionVectorParameter_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0.02500000037252903,
+            "g": 0.0949999988079071,
+            "b": 0.20000000298023224,
+            "a": 1
+          },
+          "bUseCustomPrimitiveData": true,
+          "primitiveDataIndex": 4,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "PlayerColor",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Ownership.M_HQ_Final_Ownership:MaterialExpressionScalarParameter_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 0.5,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "parameterName": "Roughness",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 160,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Ownership.M_HQ_Final_Ownership:MaterialExpressionScalarParameter_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 0,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "parameterName": "Metallic",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 320,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Ownership.M_HQ_Final_Ownership:MaterialExpressionVectorParameter_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 1
+          },
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "EmissionColor",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 480,
+          "desc": ""
+        },
+        "inputs": []
+      }
+    },
+    "outputs": {
+      "MP_BaseColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Ownership.M_HQ_Final_Ownership:MaterialExpressionVectorParameter_0"
+        },
+        "input_name": ""
+      },
+      "MP_Metallic": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Ownership.M_HQ_Final_Ownership:MaterialExpressionScalarParameter_1"
+        },
+        "input_name": ""
+      },
+      "MP_Specular": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Roughness": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Ownership.M_HQ_Final_Ownership:MaterialExpressionScalarParameter_0"
+        },
+        "input_name": ""
+      },
+      "MP_Normal": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_EmissiveColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Ownership.M_HQ_Final_Ownership:MaterialExpressionVectorParameter_1"
+        },
+        "input_name": ""
+      },
+      "MP_Opacity": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_OpacityMask": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_WorldPositionOffset": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_AmbientOcclusion": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      }
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind": {
+    "settings": {
+      "BlendMode": "BLEND_Opaque",
+      "TwoSided": true,
+      "ShadingModel": "MSM_DefaultLit",
+      "bTangentSpaceNormal": false,
+      "TranslucencyLightingMode": "TLM_VolumetricNonDirectional",
+      "bScreenSpaceReflections": false
+    },
+    "expressions": {
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionVectorParameter_3": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0.4000000059604645,
+            "g": 0.02500000037252903,
+            "b": 0.03500000014901161,
+            "a": 1
+          },
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "SurfaceColor",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -1000,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant_12": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionConstant"
+        },
+        "properties": {
+          "r": 0.8500000238418579,
+          "materialExpressionEditorX": -820,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionWorldPosition_3": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionWorldPosition"
+        },
+        "properties": {
+          "worldPositionShaderOffset": "WPT_Default",
+          "materialExpressionEditorX": -640,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant3Vector_5": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionConstant3Vector"
+        },
+        "properties": {
+          "constant": {
+            "r": 0,
+            "g": 0.00800000037997961,
+            "b": 0.006000000052154064,
+            "a": 1
+          },
+          "materialExpressionEditorX": -460,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionDotProduct_3": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionDotProduct"
+        },
+        "properties": {
+          "materialExpressionEditorX": -280,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "XYZ",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionWorldPosition_3"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant3Vector_5"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionTime_3": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTime"
+        },
+        "properties": {
+          "bIgnorePause": false,
+          "bOverride_Period": false,
+          "period": 0,
+          "materialExpressionEditorX": -1000,
+          "materialExpressionEditorY": 180,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant_13": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionConstant"
+        },
+        "properties": {
+          "r": 1.5499999523162842,
+          "materialExpressionEditorX": -820,
+          "materialExpressionEditorY": 180,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_13": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionMultiply"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -640,
+          "materialExpressionEditorY": 180,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionTime_3"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant_13"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionAdd_5": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionAdd"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -460,
+          "materialExpressionEditorY": 180,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionDotProduct_3"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_13"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionSine_5": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionSine"
+        },
+        "properties": {
+          "period": 6.283185005187988,
+          "materialExpressionEditorX": -280,
+          "materialExpressionEditorY": 180,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionAdd_5"
+            },
+            "input_name": "None"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant_14": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionConstant"
+        },
+        "properties": {
+          "r": 2.700000047683716,
+          "materialExpressionEditorX": -1000,
+          "materialExpressionEditorY": 360,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_14": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionMultiply"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -820,
+          "materialExpressionEditorY": 360,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionAdd_5"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant_14"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionSine_6": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionSine"
+        },
+        "properties": {
+          "period": 6.283185005187988,
+          "materialExpressionEditorX": -640,
+          "materialExpressionEditorY": 360,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_14"
+            },
+            "input_name": "None"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant_15": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionConstant"
+        },
+        "properties": {
+          "r": 0.23000000417232513,
+          "materialExpressionEditorX": -460,
+          "materialExpressionEditorY": 360,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_15": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionMultiply"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -280,
+          "materialExpressionEditorY": 360,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionSine_6"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant_15"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionAdd_6": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionAdd"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -1000,
+          "materialExpressionEditorY": 540,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionSine_5"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_15"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant_16": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionConstant"
+        },
+        "properties": {
+          "r": 18,
+          "materialExpressionEditorX": -820,
+          "materialExpressionEditorY": 540,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_16": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionMultiply"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -640,
+          "materialExpressionEditorY": 540,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionAdd_6"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant_16"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionTextureCoordinate_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTextureCoordinate"
+        },
+        "properties": {
+          "coordinateIndex": 0,
+          "uTiling": 1,
+          "vTiling": 1,
+          "unMirrorU": false,
+          "unMirrorV": false,
+          "materialExpressionEditorX": -460,
+          "materialExpressionEditorY": 540,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionComponentMask_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionComponentMask"
+        },
+        "properties": {
+          "r": true,
+          "g": false,
+          "b": false,
+          "a": false,
+          "materialExpressionEditorX": -280,
+          "materialExpressionEditorY": 540,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionTextureCoordinate_0"
+            },
+            "input_name": "None"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_17": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionMultiply"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -1000,
+          "materialExpressionEditorY": 720,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionComponentMask_0"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionComponentMask_0"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_18": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionMultiply"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -820,
+          "materialExpressionEditorY": 720,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_16"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_17"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant3Vector_6": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionConstant3Vector"
+        },
+        "properties": {
+          "constant": {
+            "r": 1,
+            "g": 0.11999999731779099,
+            "b": 0.18000000715255737,
+            "a": 1
+          },
+          "materialExpressionEditorX": -640,
+          "materialExpressionEditorY": 720,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_19": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionMultiply"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -460,
+          "materialExpressionEditorY": 720,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_18"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant3Vector_6"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionWorldPosition_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionWorldPosition"
+        },
+        "properties": {
+          "worldPositionShaderOffset": "WPT_Default",
+          "materialExpressionEditorX": -500,
+          "materialExpressionEditorY": 500,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionDDX_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionDDX"
+        },
+        "properties": {
+          "materialExpressionEditorX": -500,
+          "materialExpressionEditorY": 500,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "XYZ",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionWorldPosition_0"
+            },
+            "input_name": "Value"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionDDY_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionDDY"
+        },
+        "properties": {
+          "materialExpressionEditorX": -500,
+          "materialExpressionEditorY": 500,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "XYZ",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionWorldPosition_0"
+            },
+            "input_name": "Value"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionCrossProduct_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionCrossProduct"
+        },
+        "properties": {
+          "materialExpressionEditorX": -500,
+          "materialExpressionEditorY": 500,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionDDX_0"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionDDY_0"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionNormalize_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionNormalize"
+        },
+        "properties": {
+          "materialExpressionEditorX": -500,
+          "materialExpressionEditorY": 500,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionCrossProduct_0"
+            },
+            "input_name": "VectorInput"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionTwoSidedSign_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTwoSidedSign"
+        },
+        "properties": {
+          "materialExpressionEditorX": -200,
+          "materialExpressionEditorY": 800,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionMultiply"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": 0,
+          "materialExpressionEditorY": 800,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionNormalize_0"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionTwoSidedSign_0"
+            },
+            "input_name": "B"
+          }
+        ]
+      }
+    },
+    "outputs": {
+      "MP_BaseColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionVectorParameter_3"
+        },
+        "input_name": ""
+      },
+      "MP_Metallic": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Specular": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Roughness": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionConstant_12"
+        },
+        "input_name": ""
+      },
+      "MP_Normal": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_0"
+        },
+        "input_name": ""
+      },
+      "MP_EmissiveColor": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Opacity": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_OpacityMask": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_WorldPositionOffset": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_FlagWind.M_HQ21_FlagWind:MaterialExpressionMultiply_19"
+        },
+        "input_name": ""
+      },
+      "MP_AmbientOcclusion": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      }
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating": {
+    "settings": {
+      "BlendMode": "BLEND_Opaque",
+      "TwoSided": false,
+      "ShadingModel": "MSM_DefaultLit",
+      "bTangentSpaceNormal": true,
+      "TranslucencyLightingMode": "TLM_VolumetricNonDirectional",
+      "bScreenSpaceReflections": false
+    },
+    "expressions": {
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionVectorParameter_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0.5,
+            "g": 0.5,
+            "b": 0.5,
+            "a": 1
+          },
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "SurfaceColor",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionScalarParameter_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 0.5,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "parameterName": "Roughness",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 160,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionScalarParameter_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+        },
+        "properties": {
+          "defaultValue": 0,
+          "controlType": "Numeric",
+          "sliderMin": 0,
+          "sliderMax": 0,
+          "enumeration": "None",
+          "enumerationIndex": 0,
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "parameterName": "Metallic",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 320,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionVectorParameter_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+        },
+        "properties": {
+          "defaultValue": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 1
+          },
+          "bUseCustomPrimitiveData": false,
+          "primitiveDataIndex": 0,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "parameterName": "EmissionColor",
+          "group": "None",
+          "sortPriority": 32,
+          "materialExpressionEditorX": -450,
+          "materialExpressionEditorY": 480,
+          "desc": ""
+        },
+        "inputs": []
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionTextureSampleParameter2D_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTextureSampleParameter2D"
+        },
+        "properties": {
+          "parameterName": "CoatingBaseColor",
+          "group": "None",
+          "sortPriority": 32,
+          "mipValueMode": "TMVM_None",
+          "samplerSource": "SSM_FromTextureAsset",
+          "gatherMode": "TGM_None",
+          "automaticViewMipBias": true,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "constCoordinate": 0,
+          "constMipValue": -1,
+          "texture": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ17_Coating_2m_BaseColor.T_HQ17_Coating_2m_BaseColor"
+          },
+          "samplerType": "SAMPLERTYPE_Color",
+          "isDefaultMeshpaintTexture": false,
+          "materialExpressionEditorX": -750,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "UVs"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Apply View MipBias"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionTextureSampleParameter2D_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTextureSampleParameter2D"
+        },
+        "properties": {
+          "parameterName": "CoatingRoughness",
+          "group": "None",
+          "sortPriority": 32,
+          "mipValueMode": "TMVM_None",
+          "samplerSource": "SSM_FromTextureAsset",
+          "gatherMode": "TGM_None",
+          "automaticViewMipBias": true,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "constCoordinate": 0,
+          "constMipValue": -1,
+          "texture": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ17_Coating_2m_Roughness.T_HQ17_Coating_2m_Roughness"
+          },
+          "samplerType": "SAMPLERTYPE_Masks",
+          "isDefaultMeshpaintTexture": false,
+          "materialExpressionEditorX": -750,
+          "materialExpressionEditorY": 160,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "UVs"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Apply View MipBias"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionTextureSampleParameter2D_2": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTextureSampleParameter2D"
+        },
+        "properties": {
+          "parameterName": "CoatingNormal",
+          "group": "None",
+          "sortPriority": 32,
+          "mipValueMode": "TMVM_None",
+          "samplerSource": "SSM_FromTextureAsset",
+          "gatherMode": "TGM_None",
+          "automaticViewMipBias": true,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "constCoordinate": 0,
+          "constMipValue": -1,
+          "texture": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ17_Coating_2m_Normal.T_HQ17_Coating_2m_Normal"
+          },
+          "samplerType": "SAMPLERTYPE_Normal",
+          "isDefaultMeshpaintTexture": false,
+          "materialExpressionEditorX": -750,
+          "materialExpressionEditorY": 320,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "UVs"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Apply View MipBias"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionMultiply_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionMultiply"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -750,
+          "materialExpressionEditorY": 480,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "RGB",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionTextureSampleParameter2D_0"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "RGB",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionVectorParameter_0"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionSubtract_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionSubtract"
+        },
+        "properties": {
+          "constA": 1,
+          "constB": 0.6700000166893005,
+          "materialExpressionEditorX": -500,
+          "materialExpressionEditorY": 500,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "R",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionTextureSampleParameter2D_1"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionAdd_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionAdd"
+        },
+        "properties": {
+          "constA": 0,
+          "constB": 1,
+          "materialExpressionEditorX": -500,
+          "materialExpressionEditorY": 500,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionScalarParameter_0"
+            },
+            "input_name": "A"
+          },
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionSubtract_1"
+            },
+            "input_name": "B"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionClamp_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionClamp"
+        },
+        "properties": {
+          "clampMode": "CMODE_Clamp",
+          "minDefault": 0.05999999865889549,
+          "maxDefault": 0.9800000190734863,
+          "materialExpressionEditorX": -500,
+          "materialExpressionEditorY": 500,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": {
+              "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionAdd_1"
+            },
+            "input_name": "None"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Min"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Max"
+          }
+        ]
+      }
+    },
+    "outputs": {
+      "MP_BaseColor": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionMultiply_0"
+        },
+        "input_name": ""
+      },
+      "MP_Metallic": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionScalarParameter_1"
+        },
+        "input_name": ""
+      },
+      "MP_Specular": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Roughness": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionClamp_1"
+        },
+        "input_name": ""
+      },
+      "MP_Normal": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionTextureSampleParameter2D_2"
+        },
+        "input_name": ""
+      },
+      "MP_EmissiveColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ17_Coating.M_HQ17_Coating:MaterialExpressionVectorParameter_1"
+        },
+        "input_name": ""
+      },
+      "MP_Opacity": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_OpacityMask": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_WorldPositionOffset": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_AmbientOcclusion": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      }
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ20_FloorWear": {
+    "settings": {
+      "BlendMode": "BLEND_Opaque",
+      "TwoSided": false,
+      "ShadingModel": "MSM_DefaultLit",
+      "bTangentSpaceNormal": true,
+      "TranslucencyLightingMode": "TLM_VolumetricNonDirectional",
+      "bScreenSpaceReflections": false
+    },
+    "expressions": {
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ20_FloorWear.M_HQ20_FloorWear:MaterialExpressionTextureSample_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTextureSample"
+        },
+        "properties": {
+          "mipValueMode": "TMVM_None",
+          "samplerSource": "SSM_FromTextureAsset",
+          "gatherMode": "TGM_None",
+          "automaticViewMipBias": true,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "constCoordinate": 0,
+          "constMipValue": -1,
+          "texture": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ20_Floor_BaseColor.T_HQ20_Floor_BaseColor"
+          },
+          "samplerType": "SAMPLERTYPE_Color",
+          "isDefaultMeshpaintTexture": false,
+          "materialExpressionEditorX": -400,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "UVs"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Tex"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Apply View MipBias"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ20_FloorWear.M_HQ20_FloorWear:MaterialExpressionTextureSample_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTextureSample"
+        },
+        "properties": {
+          "mipValueMode": "TMVM_None",
+          "samplerSource": "SSM_FromTextureAsset",
+          "gatherMode": "TGM_None",
+          "automaticViewMipBias": true,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "constCoordinate": 0,
+          "constMipValue": -1,
+          "texture": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ20_Floor_Roughness.T_HQ20_Floor_Roughness"
+          },
+          "samplerType": "SAMPLERTYPE_LinearColor",
+          "isDefaultMeshpaintTexture": false,
+          "materialExpressionEditorX": -400,
+          "materialExpressionEditorY": 250,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "UVs"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Tex"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Apply View MipBias"
+          }
+        ]
+      }
+    },
+    "outputs": {
+      "MP_BaseColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ20_FloorWear.M_HQ20_FloorWear:MaterialExpressionTextureSample_0"
+        },
+        "input_name": ""
+      },
+      "MP_Metallic": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Specular": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Roughness": {
+        "output_name": "R",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ20_FloorWear.M_HQ20_FloorWear:MaterialExpressionTextureSample_1"
+        },
+        "input_name": ""
+      },
+      "MP_Normal": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_EmissiveColor": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Opacity": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_OpacityMask": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_WorldPositionOffset": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_AmbientOcclusion": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      }
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_PavingWear": {
+    "settings": {
+      "BlendMode": "BLEND_Opaque",
+      "TwoSided": false,
+      "ShadingModel": "MSM_DefaultLit",
+      "bTangentSpaceNormal": true,
+      "TranslucencyLightingMode": "TLM_VolumetricNonDirectional",
+      "bScreenSpaceReflections": false
+    },
+    "expressions": {
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_PavingWear.M_HQ21_PavingWear:MaterialExpressionTextureSample_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTextureSample"
+        },
+        "properties": {
+          "mipValueMode": "TMVM_None",
+          "samplerSource": "SSM_FromTextureAsset",
+          "gatherMode": "TGM_None",
+          "automaticViewMipBias": true,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "constCoordinate": 0,
+          "constMipValue": -1,
+          "texture": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ21_Paving_BaseColor.T_HQ21_Paving_BaseColor"
+          },
+          "samplerType": "SAMPLERTYPE_Color",
+          "isDefaultMeshpaintTexture": false,
+          "materialExpressionEditorX": -400,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "UVs"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Tex"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Apply View MipBias"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_PavingWear.M_HQ21_PavingWear:MaterialExpressionTextureSample_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTextureSample"
+        },
+        "properties": {
+          "mipValueMode": "TMVM_None",
+          "samplerSource": "SSM_FromTextureAsset",
+          "gatherMode": "TGM_None",
+          "automaticViewMipBias": true,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "constCoordinate": 0,
+          "constMipValue": -1,
+          "texture": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ21_Paving_Roughness.T_HQ21_Paving_Roughness"
+          },
+          "samplerType": "SAMPLERTYPE_LinearColor",
+          "isDefaultMeshpaintTexture": false,
+          "materialExpressionEditorX": -400,
+          "materialExpressionEditorY": 250,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "UVs"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Tex"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Apply View MipBias"
+          }
+        ]
+      }
+    },
+    "outputs": {
+      "MP_BaseColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_PavingWear.M_HQ21_PavingWear:MaterialExpressionTextureSample_0"
+        },
+        "input_name": ""
+      },
+      "MP_Metallic": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Specular": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Roughness": {
+        "output_name": "R",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_PavingWear.M_HQ21_PavingWear:MaterialExpressionTextureSample_1"
+        },
+        "input_name": ""
+      },
+      "MP_Normal": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_EmissiveColor": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Opacity": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_OpacityMask": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_WorldPositionOffset": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_AmbientOcclusion": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      }
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_Soil": {
+    "settings": {
+      "BlendMode": "BLEND_Opaque",
+      "TwoSided": false,
+      "ShadingModel": "MSM_DefaultLit",
+      "bTangentSpaceNormal": true,
+      "TranslucencyLightingMode": "TLM_VolumetricNonDirectional",
+      "bScreenSpaceReflections": false
+    },
+    "expressions": {
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_Soil.M_HQ21_Soil:MaterialExpressionTextureSample_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTextureSample"
+        },
+        "properties": {
+          "mipValueMode": "TMVM_None",
+          "samplerSource": "SSM_FromTextureAsset",
+          "gatherMode": "TGM_None",
+          "automaticViewMipBias": true,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "constCoordinate": 0,
+          "constMipValue": -1,
+          "texture": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ21_Soil_BaseColor.T_HQ21_Soil_BaseColor"
+          },
+          "samplerType": "SAMPLERTYPE_Color",
+          "isDefaultMeshpaintTexture": false,
+          "materialExpressionEditorX": -400,
+          "materialExpressionEditorY": 0,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "UVs"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Tex"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Apply View MipBias"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_Soil.M_HQ21_Soil:MaterialExpressionTextureSample_1": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionTextureSample"
+        },
+        "properties": {
+          "mipValueMode": "TMVM_None",
+          "samplerSource": "SSM_FromTextureAsset",
+          "gatherMode": "TGM_None",
+          "automaticViewMipBias": true,
+          "channelNames": {
+            "r": "",
+            "g": "",
+            "b": "",
+            "a": ""
+          },
+          "constCoordinate": 0,
+          "constMipValue": -1,
+          "texture": {
+            "refPath": "/Game/Art/Candidates/USA_HQ/Final/Textures/T_HQ21_Soil_Normal.T_HQ21_Soil_Normal"
+          },
+          "samplerType": "SAMPLERTYPE_Normal",
+          "isDefaultMeshpaintTexture": false,
+          "materialExpressionEditorX": -400,
+          "materialExpressionEditorY": 240,
+          "desc": ""
+        },
+        "inputs": [
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "UVs"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Tex"
+          },
+          {
+            "output_name": "",
+            "expression": "None",
+            "input_name": "Apply View MipBias"
+          }
+        ]
+      },
+      "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_Soil.M_HQ21_Soil:MaterialExpressionConstant_0": {
+        "class": {
+          "refPath": "/Script/Engine.MaterialExpressionConstant"
+        },
+        "properties": {
+          "r": 0.9399999976158142,
+          "materialExpressionEditorX": -400,
+          "materialExpressionEditorY": 480,
+          "desc": ""
+        },
+        "inputs": []
+      }
+    },
+    "outputs": {
+      "MP_BaseColor": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_Soil.M_HQ21_Soil:MaterialExpressionTextureSample_0"
+        },
+        "input_name": ""
+      },
+      "MP_Metallic": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Specular": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Roughness": {
+        "output_name": "",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_Soil.M_HQ21_Soil:MaterialExpressionConstant_0"
+        },
+        "input_name": ""
+      },
+      "MP_Normal": {
+        "output_name": "RGB",
+        "expression": {
+          "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ21_Soil.M_HQ21_Soil:MaterialExpressionTextureSample_1"
+        },
+        "input_name": ""
+      },
+      "MP_EmissiveColor": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_Opacity": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_OpacityMask": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_WorldPositionOffset": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      },
+      "MP_AmbientOcclusion": {
+        "output_name": "",
+        "expression": "None",
+        "input_name": ""
+      }
+    }
+  }
+}

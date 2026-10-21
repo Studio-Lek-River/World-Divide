@@ -1,0 +1,4 @@
+interface:
+  display_name: "World Divide Building Production"
+  short_description: "Reference-led Blender and Unreal building production"
+  default_prompt: "Use $world-divide-building-production to start or continue a building from its saved reference, approved milestones and current handoff."

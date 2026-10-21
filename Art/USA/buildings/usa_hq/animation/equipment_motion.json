@@ -1,0 +1,211 @@
+{
+  "period_seconds": 24,
+  "equipment": [
+    {
+      "name": "Radar_Azimuth",
+      "actor": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_2"
+      },
+      "rest_transform": {
+        "location": {
+          "x": -229.23433781,
+          "y": -1229.6998024,
+          "z": 921.50001526
+        },
+        "rotation": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "yaw_expression": "(* t 15.0)",
+      "pitch_expression": "0.0"
+    },
+    {
+      "name": "ER_Cooling_Fan1_Rotor",
+      "actor": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_3"
+      },
+      "rest_transform": {
+        "location": {
+          "x": -710,
+          "y": -1490,
+          "z": 907
+        },
+        "rotation": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "yaw_expression": "(* t 240.0)",
+      "pitch_expression": "0.0"
+    },
+    {
+      "name": "WF_Condenser_Fan1_Rotor",
+      "actor": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_4"
+      },
+      "rest_transform": {
+        "location": {
+          "x": 1060,
+          "y": 1780,
+          "z": 850
+        },
+        "rotation": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "yaw_expression": "(* t 240.0)",
+      "pitch_expression": "0.0"
+    },
+    {
+      "name": "WM_AHU_Fan1_Rotor",
+      "actor": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_5"
+      },
+      "rest_transform": {
+        "location": {
+          "x": -60,
+          "y": 2014.9999999999998,
+          "z": 829.9999999999999
+        },
+        "rotation": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "yaw_expression": "(* t 240.0)",
+      "pitch_expression": "0.0"
+    },
+    {
+      "name": "WM_AHU_Fan2_Rotor",
+      "actor": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_6"
+      },
+      "rest_transform": {
+        "location": {
+          "x": 80,
+          "y": 2014.9999999999998,
+          "z": 829.9999999999999
+        },
+        "rotation": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "yaw_expression": "(* t 240.0)",
+      "pitch_expression": "0.0"
+    },
+    {
+      "name": "WingDish_Azimuth",
+      "actor": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_7"
+      },
+      "rest_transform": {
+        "location": {
+          "x": -983.06264877,
+          "y": 1994.9447631799999,
+          "z": 821.4999961899999
+        },
+        "rotation": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "yaw_expression": "(* 12.0 (Math|Trig|Sin(Radians) (* t 0.261799387799)))",
+      "pitch_expression": "0.0"
+    },
+    {
+      "name": "WingDish_Elevation",
+      "actor": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_8"
+      },
+      "rest_transform": {
+        "location": {
+          "x": -983.06264877,
+          "y": 1994.9447631799999,
+          "z": 1045
+        },
+        "rotation": {
+          "pitch": 0,
+          "yaw": 0,
+          "roll": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "yaw_expression": "(* 12.0 (Math|Trig|Sin(Radians) (* t 0.261799387799)))",
+      "pitch_expression": "(* 4.0 (Math|Trig|Sin(Radians) (* t 0.261799387799)))"
+    }
+  ],
+  "controller": {
+    "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.BP_HQ20_DoorPreview_C_1"
+  },
+  "bindings": {
+    "Equipment0": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_2"
+    },
+    "Equipment1": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_3"
+    },
+    "Equipment2": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_4"
+    },
+    "Equipment3": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_5"
+    },
+    "Equipment4": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_6"
+    },
+    "Equipment5": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_7"
+    },
+    "Equipment6": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_8"
+    }
+  },
+  "graph_result": null,
+  "compile_result": null,
+  "door": "accepted 16-section path; 2 closed + 8 opening + 3 open + 8 closing + 3 closed; modulo 24 seconds",
+  "gameplay": false,
+  "integration": "Replace preview absolute world actor updates with building-local component transforms; preserve pivots and sample the supplied curves using the gameplay door state."
+}

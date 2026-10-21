@@ -48,9 +48,9 @@ namespace
 	}
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMCPWriteToolsHiddenTest, "WorldDivide.Tooling.MCPWriteToolsHidden", TestFlags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSMCPEditToolsExposedTest, "WorldDivide.Tooling.MCPEditToolsExposed", TestFlags)
 
-bool FRTSMCPWriteToolsHiddenTest::RunTest(const FString& Parameters)
+bool FRTSMCPEditToolsExposedTest::RunTest(const FString& Parameters)
 {
 	TArray<FString> Allowed;
 	TArray<FString> Blocked;
@@ -71,25 +71,23 @@ bool FRTSMCPWriteToolsHiddenTest::RunTest(const FString& Parameters)
 		TEXT("editor_toolset.toolsets.scene.SceneTools.find_actors"),
 		TEXT("editor_toolset.toolsets.actor.ActorTools.get_actor_transform"),
 		TEXT("editor_toolset.toolsets.object.ObjectTools.get_properties"),
+		// Importing and editing art: what Codex and Claude use for candidate assets.
+		TEXT("editor_toolset.toolsets.asset.AssetTools.save_assets"), TEXT("editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file"),
+		TEXT("editor_toolset.toolsets.texture.TextureTools.import_file"), TEXT("editor_toolset.toolsets.material.MaterialTools.create_material"),
+		TEXT("editor_toolset.toolsets.material_instance.MaterialInstanceTools.set_texture_parameter"),
+		TEXT("editor_toolset.toolsets.scene.SceneTools.add_to_scene_from_asset"), TEXT("editor_toolset.toolsets.scene.SceneTools.save_actor"),
+		TEXT("editor_toolset.toolsets.actor.ActorTools.set_actor_transform"), TEXT("editor_toolset.toolsets.object.ObjectTools.set_properties"),
+		TEXT("editor_toolset.toolsets.blueprint.BlueprintTools"), TEXT("EditorToolset.EditorAppToolset.OpenEditorForAsset"),
 	};
 	for (const TCHAR* Name : Kept)
 	{
-		TestTrue(FString::Printf(TEXT("%s stays visible"), Name), IsVisible(Name));
+		TestTrue(FString::Printf(TEXT("%s is visible"), Name), IsVisible(Name));
 	}
 
+	// Arbitrary Python stays off, and so does any toolset an engine update adds until it is listed.
 	const TCHAR* Hidden[] = {
-		TEXT("editor_toolset.toolsets.asset.AssetTools"), TEXT("editor_toolset.toolsets.blueprint.BlueprintTools"),
-		TEXT("editor_toolset.toolsets.material.MaterialTools"), TEXT("editor_toolset.toolsets.data_asset.DataAssetTools"),
-		TEXT("editor_toolset.toolsets.data_table.DataTableTools"), TEXT("editor_toolset.toolsets.static_mesh.StaticMeshTools"),
-		TEXT("editor_toolset.toolsets.texture.TextureTools"), TEXT("editor_toolset.toolsets.primitive.PrimitiveTools"),
 		TEXT("editor_toolset.toolsets.programmatic.ProgrammaticToolset"), TEXT("ToolsetRegistry.AgentSkillToolset"),
-		TEXT("editor_toolset.toolsets.scene.SceneTools.save_actor"), TEXT("editor_toolset.toolsets.scene.SceneTools.remove_from_scene"),
-		TEXT("editor_toolset.toolsets.scene.SceneTools.add_to_scene_from_class"),
-		TEXT("editor_toolset.toolsets.actor.ActorTools.set_actor_transform"), TEXT("editor_toolset.toolsets.actor.ActorTools.add_component"),
-		TEXT("editor_toolset.toolsets.object.ObjectTools.set_properties"),
-		TEXT("EditorToolset.EditorAppToolset.OpenEditorForAsset"),
-		TEXT("SlateInspectorToolset.SlateInspectorToolset.Click"), TEXT("SlateInspectorToolset.SlateInspectorToolset.PressKey"),
-		TEXT("SlateInspectorToolset.SlateInspectorToolset.Type"),
+		TEXT("SomeNewPlugin.SomeNewToolset"),
 	};
 	for (const TCHAR* Name : Hidden)
 	{

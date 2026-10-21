@@ -1,0 +1,123 @@
+{
+  "coating_roughness": "clamp(Roughness + CoatingRoughness.R - 0.67, 0.06, 0.98), metric UV0 2 m",
+  "ownership": {
+    "master": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Ownership",
+    "CPD_RGBA": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "slots": [
+      "HQ17_TeamPanel"
+    ]
+  },
+  "operational": {
+    "master": "/Game/Art/Candidates/USA_HQ/Final/Materials/M_HQ_Final_Operational",
+    "CPD": 8,
+    "on": 1,
+    "off": 0,
+    "ownership_independent": true
+  },
+  "calibration": {
+    "MI_HQ14_Shell": {
+      "SurfaceColor": [
+        0.57,
+        0.53,
+        0.44
+      ],
+      "Roughness": 0.64,
+      "Metallic": 0
+    },
+    "MI_HQ14_Roof": {
+      "SurfaceColor": [
+        0.095,
+        0.12,
+        0.13
+      ],
+      "Roughness": 0.86,
+      "Metallic": 0
+    },
+    "MI_HQ17_Roof": {
+      "Roughness": 0.86,
+      "Metallic": 0
+    },
+    "MI_HQ19_Membrane": {
+      "Roughness": 0.88,
+      "Metallic": 0
+    },
+    "MI_HQ19_MembraneLap": {
+      "Roughness": 0.88,
+      "Metallic": 0
+    },
+    "MI_HQ20_DoorPaint": {
+      "SurfaceColor": [
+        0.7,
+        0.66,
+        0.55
+      ],
+      "Roughness": 0.48,
+      "Metallic": 0.18
+    },
+    "MI_HQ20_WallLiner": {
+      "SurfaceColor": [
+        0.57,
+        0.53,
+        0.44
+      ],
+      "Roughness": 0.68,
+      "Metallic": 0
+    },
+    "MI_HQ21_Coping": {
+      "SurfaceColor": [
+        0.57,
+        0.53,
+        0.44
+      ],
+      "Roughness": 0.68,
+      "Metallic": 0
+    },
+    "MI_HQ17_WarmGlass": {
+      "SurfaceColor": [
+        0.075,
+        0.11,
+        0.135
+      ],
+      "Roughness": 0.1,
+      "Metallic": 0,
+      "GlassOpacity": 0.22
+    },
+    "MI_HQ17_CoolGlass": {
+      "Roughness": 0.12,
+      "Metallic": 0,
+      "GlassOpacity": 0.3
+    },
+    "MI_HQ17_InteriorWarm": {
+      "EmissionColor": [
+        0.32,
+        0.18,
+        0.065
+      ]
+    },
+    "MI_HQ17_TeamLight": {
+      "SurfaceColor": [
+        0.015,
+        0.18,
+        0.8
+      ],
+      "EmissionColor": [
+        0.045,
+        0.54,
+        2.4
+      ]
+    },
+    "MI_HQ20_FixtureBlue": {
+      "EmissionColor": [
+        0.045,
+        0.54,
+        2.4
+      ]
+    }
+  },
+  "flag_normals": "normalize(cross(ddx(WorldPosition including WPO),ddy(WorldPosition including WPO))) * TwoSidedSign"
+}

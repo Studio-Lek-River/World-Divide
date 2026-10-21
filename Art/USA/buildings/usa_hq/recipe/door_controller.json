@@ -1,0 +1,70 @@
+{
+  "actor": {
+    "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.BP_HQ20_DoorPreview_C_1"
+  },
+  "bindings": {
+    "Section00": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_14"
+    },
+    "Section01": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_15"
+    },
+    "Section02": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_16"
+    },
+    "Section03": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_17"
+    },
+    "Section04": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_18"
+    },
+    "Section05": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_19"
+    },
+    "Section06": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_20"
+    },
+    "Section07": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_21"
+    },
+    "Section08": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_22"
+    },
+    "Section09": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_23"
+    },
+    "Section10": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_24"
+    },
+    "Section11": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_25"
+    },
+    "Section12": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_26"
+    },
+    "Section13": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_27"
+    },
+    "Section14": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_28"
+    },
+    "Section15": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_29"
+    },
+    "DoorBottomSeal": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_30"
+    },
+    "DoorTopRollers": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_31"
+    },
+    "LiftCable0": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_32"
+    },
+    "LiftCable1": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_33"
+    },
+    "DriveShaft": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Final/L_USA_HQ_Final.L_USA_HQ_Final:PersistentLevel.StaticMeshActor_34"
+    }
+  }
+}

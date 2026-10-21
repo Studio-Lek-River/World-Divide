@@ -292,7 +292,7 @@ void ARTSBuilding::UpdateNavCut(float DeltaSeconds)
 	{
 		const ARecastNavMesh* NavMesh = NavSystem ? RTSNavAgents::GetNavMesh(*GetWorld(), Agent) : nullptr;
 		FNavLocation NavPoint;
-		bCut = bCut && !(NavMesh && NavMesh->ProjectPoint(GetActorLocation(), NavPoint, NavCutQueryExtent));
+		bCut = bCut && !(NavMesh && NavMesh->ProjectPoint(GetActorTransform().TransformPosition(NavProbeOffset), NavPoint, NavCutQueryExtent));
 	}
 	if (bCut || NavCutWaited >= NavCutTimeout || !BuildingData)
 	{
@@ -547,15 +547,107 @@ void ARTSBuilding::ApplyBuildingData()
 	float MeshHeight = 0.f;
 	RTSBuildPlacement::GetMeshPlacement(*BuildingData, MeshBaseOffset, MeshHeight);
 	Mesh->SetStaticMesh(BuildingData->Mesh);
-
-	const float Height = MeshHeight > 0.f ? MeshHeight : DefaultHeight;
-	// In the actor's own frame: the box turns with the actor, and the navmesh hole with it.
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint);
-	Collision->SetBoxExtent(FVector(Extent.X, Extent.Y, Height * 0.5f));
-	Collision->SetRelativeLocation(FVector(0.f, 0.f, Height * 0.5f));
+	ApplyParts();
+	ApplyCollision(MeshHeight > 0.f ? MeshHeight : DefaultHeight);
 
 	ApplyConstructionVisual();
 	ApplyTeamColor();
+}
+
+void ARTSBuilding::ApplyParts()
+{
+	for (UStaticMeshComponent* Part : PartComponents)
+	{
+		if (Part)
+		{
+			Part->DestroyComponent();
+		}
+	}
+	PartComponents.Reset();
+	for (const FRTSBuildingPart& Data : BuildingData->Parts)
+	{
+		// Cosmetic, like Mesh: the collision boxes alone block and are picked.
+		UStaticMeshComponent* Part = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
+		Part->SetStaticMesh(Data.Mesh);
+		Part->SetRelativeTransform(Data.Transform);
+		Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Part->SetGenerateOverlapEvents(false);
+		Part->SetCanEverAffectNavigation(false);
+		Part->SetCastShadow(Data.bCastShadow);
+		Part->SetBoundsScale(Data.BoundsScale);
+		Part->SetCullDistance(Data.MaxDrawDistance);
+		Part->SetupAttachment(Mesh);
+		AddInstanceComponent(Part);
+		Part->RegisterComponent();
+		PartComponents.Add(Part);
+	}
+}
+
+void ARTSBuilding::ApplyCollision(float Height)
+{
+	for (UBoxComponent* Box : ExtraCollision)
+	{
+		if (Box)
+		{
+			Box->DestroyComponent();
+		}
+	}
+	ExtraCollision.Reset();
+
+	// In the actor's own frame: the boxes turn with the actor, and the navmesh hole with them.
+	const TArray<FRTSBuildingCollisionBox>& Boxes = BuildingData->CollisionBoxes;
+	if (Boxes.IsEmpty())
+	{
+		const FVector Extent = RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint);
+		Collision->SetBoxExtent(FVector(Extent.X, Extent.Y, Height * 0.5f));
+		Collision->SetRelativeLocation(FVector(0.f, 0.f, Height * 0.5f));
+		NavProbeOffset = FVector::ZeroVector;
+		return;
+	}
+
+	const FVector Scale = BuildingData->MeshScale;
+	NavProbeOffset = FVector::ZeroVector;
+	bool bProbeInside = false;
+	for (int32 Index = 0; Index < Boxes.Num(); ++Index)
+	{
+		const FBox Box(Boxes[Index].Min * Scale, Boxes[Index].Max * Scale);
+		UBoxComponent* Component = Collision;
+		if (Index > 0)
+		{
+			Component = NewObject<UBoxComponent>(this, NAME_None, RF_Transient);
+			Component->SetCollisionProfileName(UCollisionProfile::BlockAllDynamic_ProfileName);
+			Component->SetCanEverAffectNavigation(true);
+			Component->bDynamicObstacle = true;
+			Component->SetAreaClassOverride(UNavArea_Null::StaticClass());
+			Component->SetupAttachment(Root);
+			AddInstanceComponent(Component);
+		}
+		Component->SetBoxExtent(Box.GetExtent());
+		Component->SetRelativeLocation(Box.GetCenter());
+		if (Index > 0)
+		{
+			Component->RegisterComponent();
+			ExtraCollision.Add(Component);
+		}
+		// The hole is looked for at the footprint centre when a box covers it, else in the middle of the first box.
+		const FVector Ground(0.f, 0.f, Box.Min.Z);
+		if (!bProbeInside && Box.IsInsideOrOnXY(Ground))
+		{
+			bProbeInside = true;
+		}
+	}
+	if (!bProbeInside)
+	{
+		const FBox First(Boxes[0].Min * Scale, Boxes[0].Max * Scale);
+		NavProbeOffset = FVector(First.GetCenter().X, First.GetCenter().Y, 0.f);
+	}
+}
+
+TArray<UBoxComponent*> ARTSBuilding::GetCollisionComponents() const
+{
+	TArray<UBoxComponent*> Boxes = { Collision.Get() };
+	Boxes.Append(ExtraCollision);
+	return Boxes;
 }
 
 void ARTSBuilding::ApplyConstructionVisual()
@@ -572,7 +664,19 @@ void ARTSBuilding::ApplyConstructionVisual()
 void ARTSBuilding::ApplyTeamColor()
 {
 	// As custom primitive data, so buildings of a kind keep sharing their material instances whatever their team (#150).
-	Mesh->SetCustomPrimitiveDataVector4(RTSPrimitiveData::TeamColor, FVector4(ARTSUnit::GetTeamColor(TeamId)));
+	// A building of several meshes colours them all; their lit windows and lamps (CPD LampOn, the HQ's Operational) stay on
+	// until the building's power state drives them (#196).
+	const FVector4 Color(ARTSUnit::GetTeamColor(TeamId));
+	Mesh->SetCustomPrimitiveDataVector4(RTSPrimitiveData::TeamColor, Color);
+	Mesh->SetCustomPrimitiveDataFloat(RTSPrimitiveData::LampOn, 1.f);
+	for (UStaticMeshComponent* Part : PartComponents)
+	{
+		if (Part)
+		{
+			Part->SetCustomPrimitiveDataVector4(RTSPrimitiveData::TeamColor, Color);
+			Part->SetCustomPrimitiveDataFloat(RTSPrimitiveData::LampOn, 1.f);
+		}
+	}
 }
 
 void ARTSBuilding::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

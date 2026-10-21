@@ -1,0 +1,731 @@
+{
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_Radar_Azimuth": {
+    "slots": {
+      "HQ17_DarkStructure": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      },
+      "HQ19_DuctGalvanized": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_DuctGalvanized.MI_HQ19_DuctGalvanized"
+      },
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      "HQ19_RFPanel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_RFPanel.MI_HQ19_RFPanel"
+      }
+    },
+    "triangles": 8224,
+    "bounds": {
+      "min": {
+        "x": -183.25003051757812,
+        "y": -91.25006866455078,
+        "z": 126.49993896484375
+      },
+      "max": {
+        "x": 183.25001525878906,
+        "y": 91.25006866455078,
+        "z": 241.5
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_ER_Cooling_Fan1_Rotor": {
+    "slots": {
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      }
+    },
+    "triangles": 176,
+    "bounds": {
+      "min": {
+        "x": -39.911651611328125,
+        "y": -40.40031433105469,
+        "z": -6.075382232666016
+      },
+      "max": {
+        "x": 38.86299133300781,
+        "y": 37.42161178588867,
+        "z": 7.000064849853516
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WF_Condenser_Fan1_Rotor": {
+    "slots": {
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      }
+    },
+    "triangles": 176,
+    "bounds": {
+      "min": {
+        "x": -42.3802375793457,
+        "y": -42.911720275878906,
+        "z": -6.087779998779297
+      },
+      "max": {
+        "x": 41.29151916503906,
+        "y": 39.7234001159668,
+        "z": 6.999969482421875
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WM_AHU_Fan1_Rotor": {
+    "slots": {
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      }
+    },
+    "triangles": 176,
+    "bounds": {
+      "min": {
+        "x": -48.908447265625,
+        "y": -49.55158233642578,
+        "z": -6.112957000732422
+      },
+      "max": {
+        "x": 47.709835052490234,
+        "y": 45.812992095947266,
+        "z": 6.999969482421875
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WM_AHU_Fan2_Rotor": {
+    "slots": {
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      }
+    },
+    "triangles": 176,
+    "bounds": {
+      "min": {
+        "x": -48.908447265625,
+        "y": -49.55158233642578,
+        "z": -6.112957000732422
+      },
+      "max": {
+        "x": 47.709835052490234,
+        "y": 45.812992095947266,
+        "z": 6.999969482421875
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WingDish_Azimuth": {
+    "slots": {
+      "HQ19_EquipmentPaint": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_EquipmentPaint.MI_HQ19_EquipmentPaint"
+      },
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      "HQ19_DuctGalvanized": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_DuctGalvanized.MI_HQ19_DuctGalvanized"
+      },
+      "HQ17_DarkStructure": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      }
+    },
+    "triangles": 1312,
+    "bounds": {
+      "min": {
+        "x": -64.00003051757812,
+        "y": -62.99991989135742,
+        "z": 0
+      },
+      "max": {
+        "x": 43.000030517578125,
+        "y": 62.99991989135742,
+        "z": 237.5
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ19_WingDish_Elevation": {
+    "slots": {
+      "HQ17_FramePaint": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+      },
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      "HQ17_DarkStructure": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      },
+      "HQ17_Seals": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Seals.MI_HQ17_Seals"
+      },
+      "HQ19_DuctGalvanized": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_DuctGalvanized.MI_HQ19_DuctGalvanized"
+      }
+    },
+    "triangles": 9236,
+    "bounds": {
+      "min": {
+        "x": -84.43640899658203,
+        "y": -200.46673583984375,
+        "z": -72.79911041259766
+      },
+      "max": {
+        "x": 195.6389923095703,
+        "y": 167.22756958007812,
+        "z": 191.3867950439453
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_GarageInterior": {
+    "slots": {
+      "HQ20_WallLiner": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_WallLiner.MI_HQ20_WallLiner"
+      },
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      "HQ17_DarkStructure": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      },
+      "HQ20_ServiceOlive": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_ServiceOlive.MI_HQ20_ServiceOlive"
+      },
+      "HQ20_DoorPaint": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_DoorPaint.MI_HQ20_DoorPaint"
+      },
+      "HQ17_Marking": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Marking.MI_HQ17_Marking"
+      },
+      "HQ17_Seals": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Seals.MI_HQ17_Seals"
+      },
+      "HQ17_Brass": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Brass.MI_HQ17_Brass"
+      },
+      "HQ20_FixtureWarm": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_FixtureWarm.MI_HQ20_FixtureWarm"
+      },
+      "HQ20_FixtureBlue": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_FixtureBlue.MI_HQ20_FixtureBlue"
+      }
+    },
+    "triangles": 327552,
+    "bounds": {
+      "min": {
+        "x": -11.441819190979004,
+        "y": -2451.90380859375,
+        "z": 5.5
+      },
+      "max": {
+        "x": 1416.558349609375,
+        "y": -1064.999755859375,
+        "z": 668
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_GaragePortal": {
+    "slots": {
+      "HQ17_Seals": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Seals.MI_HQ17_Seals"
+      },
+      "HQ20_FixtureBlue": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_FixtureBlue.MI_HQ20_FixtureBlue"
+      },
+      "HQ17_DarkStructure": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      },
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      "HQ20_DoorPaint": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_DoorPaint.MI_HQ20_DoorPaint"
+      },
+      "HQ20_SafetyOchre": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_SafetyOchre.MI_HQ20_SafetyOchre"
+      },
+      "HQ17_CoolGlass": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_CoolGlass.MI_HQ17_CoolGlass"
+      }
+    },
+    "triangles": 14652,
+    "bounds": {
+      "min": {
+        "x": 1410.0001220703125,
+        "y": -2476.45166015625,
+        "z": 7
+      },
+      "max": {
+        "x": 1564.431884765625,
+        "y": -1040.4515380859375,
+        "z": 574
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_GarageFloor": {
+    "slots": {
+      "HQ20_Floor": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_USA_HQ_HQ20_FloorWear.MI_USA_HQ_HQ20_FloorWear"
+      },
+      "HQ17_Seals": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Seals.MI_HQ17_Seals"
+      },
+      "HQ20_SafetyOchre": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_SafetyOchre.MI_HQ20_SafetyOchre"
+      },
+      "HQ17_DarkStructure": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      },
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      }
+    },
+    "triangles": 4548,
+    "bounds": {
+      "min": {
+        "x": -9.541821479797363,
+        "y": -2450.90380859375,
+        "z": 5.009999752044678
+      },
+      "max": {
+        "x": 1423.0003662109375,
+        "y": -1065.999755859375,
+        "z": 5.699999809265137
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorBottomSeal": {
+    "slots": {
+      "HQ20_Rubber": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_Rubber.MI_HQ20_Rubber"
+      }
+    },
+    "triangles": 668,
+    "bounds": {
+      "min": {
+        "x": -5.500133991241455,
+        "y": -635.0000610351562,
+        "z": -0.20000003278255463
+      },
+      "max": {
+        "x": 4.500111103057861,
+        "y": 635.0000610351562,
+        "z": 1.8000003099441528
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorTopRollers": {
+    "slots": {
+      "HQ20_Rubber": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_Rubber.MI_HQ20_Rubber"
+      }
+    },
+    "triangles": 184,
+    "bounds": {
+      "min": {
+        "x": -6.000147342681885,
+        "y": -646.4000854492188,
+        "z": 29.000043869018555
+      },
+      "max": {
+        "x": 6.000147342681885,
+        "y": 646.4000854492188,
+        "z": 41.000030517578125
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_LiftCable": {
+    "slots": {
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      }
+    },
+    "triangles": 28,
+    "bounds": {
+      "min": {
+        "x": -1.0000228881835938,
+        "y": -1.0000228881835938,
+        "z": 0
+      },
+      "max": {
+        "x": 1.0000228881835938,
+        "y": 1.0000228881835938,
+        "z": 99.99999237060547
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorSection_Delivery": {
+    "slots": {
+      "HQ20_DoorPaint": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_DoorPaint.MI_HQ20_DoorPaint"
+      },
+      "HQ17_DarkStructure": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      },
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      "HQ20_Rubber": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_Rubber.MI_HQ20_Rubber"
+      }
+    },
+    "triangles": 14308,
+    "bounds": {
+      "min": {
+        "x": -14.50014877319336,
+        "y": -654.0001220703125,
+        "z": -5.999998569488525
+      },
+      "max": {
+        "x": 6.000147342681885,
+        "y": 654,
+        "z": 37
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DoorHardware_Delivery": {
+    "slots": {
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      "HQ17_DarkStructure": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      },
+      "HQ20_Rubber": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_Rubber.MI_HQ20_Rubber"
+      },
+      "HQ20_DoorPaint": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ20_DoorPaint.MI_HQ20_DoorPaint"
+      }
+    },
+    "triangles": 33628,
+    "bounds": {
+      "min": {
+        "x": 675.0001831054688,
+        "y": -2428.45166015625,
+        "z": 5
+      },
+      "max": {
+        "x": 1424.0003662109375,
+        "y": -1063.95166015625,
+        "z": 664
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_DriveShaft": {
+    "slots": {
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      "HQ17_DarkStructure": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      }
+    },
+    "triangles": 2636,
+    "bounds": {
+      "min": {
+        "x": -18.000139236450195,
+        "y": -663.9999389648438,
+        "z": -17.999982833862305
+      },
+      "max": {
+        "x": 18.000139236450195,
+        "y": 664.2999877929688,
+        "z": 17.999982833862305
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_Architecture_WallCorrected": {
+    "slots": {
+      "HQ14_Roof": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ14_Roof.MI_HQ14_Roof"
+      },
+      "HQ14_Paving": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ14_Paving.MI_HQ14_Paving"
+      },
+      "HQ14_Shell": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ14_Shell.MI_HQ14_Shell"
+      },
+      "HQ17_DarkStructure": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      },
+      "HQ17_Roof": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Roof.MI_HQ17_Roof"
+      },
+      "HQ17_FramePaint": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+      },
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      "HQ17_IvoryCeramic": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_IvoryCeramic.MI_HQ17_IvoryCeramic"
+      },
+      "HQ17_Seals": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Seals.MI_HQ17_Seals"
+      },
+      "HQ17_CoolGlass": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_CoolGlass.MI_HQ17_CoolGlass"
+      },
+      "HQ17_InteriorWarm": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_InteriorWarm.MI_HQ17_InteriorWarm"
+      },
+      "HQ17_WarmGlass": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_WarmGlass.MI_HQ17_WarmGlass"
+      },
+      "HQ17_InnerLight": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_InnerLight.MI_HQ17_InnerLight"
+      },
+      "HQ17_Brass": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Brass.MI_HQ17_Brass"
+      },
+      "HQ17_Chips": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Chips.MI_HQ17_Chips"
+      },
+      "HQ17_TeamPanel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_TeamPanel.MI_HQ17_TeamPanel"
+      },
+      "HQ17_Marking": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Marking.MI_HQ17_Marking"
+      },
+      "HQ17_TeamLight": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+      }
+    },
+    "triangles": 1074804,
+    "bounds": {
+      "min": {
+        "x": -1900.00048828125,
+        "y": -2800.000244140625,
+        "z": 0
+      },
+      "max": {
+        "x": 1900.00048828125,
+        "y": 2800.000244140625,
+        "z": 1798
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ20_RoofSystems_WallCorrected": {
+    "slots": {
+      "HQ19_MembraneLap": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_MembraneLap.MI_HQ19_MembraneLap"
+      },
+      "HQ19_Membrane": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_Membrane.MI_HQ19_Membrane"
+      },
+      "HQ19_DuctGalvanized": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_DuctGalvanized.MI_HQ19_DuctGalvanized"
+      },
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      "HQ17_Seals": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Seals.MI_HQ17_Seals"
+      },
+      "HQ17_DarkStructure": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      },
+      "HQ19_DrainGrate": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_DrainGrate.MI_HQ19_DrainGrate"
+      },
+      "HQ19_EquipmentPaint": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_EquipmentPaint.MI_HQ19_EquipmentPaint"
+      },
+      "HQ19_Walkpad": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_Walkpad.MI_HQ19_Walkpad"
+      },
+      "HQ17_FramePaint": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+      },
+      "HQ19_SafetyOchre": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_SafetyOchre.MI_HQ19_SafetyOchre"
+      },
+      "HQ17_Brass": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Brass.MI_HQ17_Brass"
+      },
+      "HQ17_TeamLight": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+      },
+      "HQ19_RFPanel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_RFPanel.MI_HQ19_RFPanel"
+      },
+      "HQ19_SolarCell": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ19_SolarCell.MI_HQ19_SolarCell"
+      }
+    },
+    "triangles": 870276,
+    "bounds": {
+      "min": {
+        "x": -1591.0986328125,
+        "y": -2414.40380859375,
+        "z": 416
+      },
+      "max": {
+        "x": 1441.1644287109375,
+        "y": 2525.444091796875,
+        "z": 1650
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_Courtyard": {
+    "slots": {
+      "HQ21_Concrete2": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_USA_HQ_HQ21_PavingWear.MI_USA_HQ_HQ21_PavingWear"
+      },
+      "HQ21_Concrete1": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_USA_HQ_HQ21_PavingWear.MI_USA_HQ_HQ21_PavingWear"
+      },
+      "HQ21_Concrete0": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_USA_HQ_HQ21_PavingWear.MI_USA_HQ_HQ21_PavingWear"
+      },
+      "HQ21_Concrete4": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_USA_HQ_HQ21_PavingWear.MI_USA_HQ_HQ21_PavingWear"
+      },
+      "HQ21_Concrete3": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_USA_HQ_HQ21_PavingWear.MI_USA_HQ_HQ21_PavingWear"
+      },
+      "HQ21_Coping": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Coping.MI_HQ21_Coping"
+      },
+      "HQ21_DrainSteel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_DrainSteel.MI_HQ21_DrainSteel"
+      },
+      "HQ21_Joint": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Joint.MI_HQ21_Joint"
+      },
+      "HQ21_Soil": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_USA_HQ_HQ21_Soil.MI_USA_HQ_HQ21_Soil"
+      },
+      "HQ21_Olive": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Olive.MI_HQ21_Olive"
+      },
+      "HQ17_Steel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      "HQ21_Leaf0": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Leaf0.MI_HQ21_Leaf0"
+      },
+      "HQ21_Leaf1": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Leaf1.MI_HQ21_Leaf1"
+      },
+      "HQ21_Leaf2": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Leaf2.MI_HQ21_Leaf2"
+      },
+      "HQ21_Gravel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Gravel.MI_HQ21_Gravel"
+      },
+      "HQ21_Ochre": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Ochre.MI_HQ21_Ochre"
+      }
+    },
+    "triangles": 624040,
+    "bounds": {
+      "min": {
+        "x": -1899.1004638671875,
+        "y": -2799.10009765625,
+        "z": 5
+      },
+      "max": {
+        "x": 1899.1004638671875,
+        "y": 2799.10009765625,
+        "z": 710
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_CourtyardDetails_Delivery": {
+    "slots": {
+      "HQ21_Coping": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Coping.MI_HQ21_Coping"
+      },
+      "HQ21_Gravel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Gravel.MI_HQ21_Gravel"
+      },
+      "HQ21_DrainSteel": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_DrainSteel.MI_HQ21_DrainSteel"
+      }
+    },
+    "triangles": 19320,
+    "bounds": {
+      "min": {
+        "x": 282.83892822265625,
+        "y": -818.0642700195312,
+        "z": 60.5
+      },
+      "max": {
+        "x": 1474.6810302734375,
+        "y": 818.0643920898438,
+        "z": 175.5
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_PlantingFinish_Delivery": {
+    "slots": {
+      "HQ21_Soil": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_USA_HQ_HQ21_Soil.MI_USA_HQ_HQ21_Soil"
+      },
+      "HQ21_Leaf1": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Leaf1.MI_HQ21_Leaf1"
+      },
+      "HQ21_Leaf0": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Leaf0.MI_HQ21_Leaf0"
+      },
+      "HQ21_Leaf2": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_Leaf2.MI_HQ21_Leaf2"
+      }
+    },
+    "triangles": 12136,
+    "bounds": {
+      "min": {
+        "x": 331.26129150390625,
+        "y": -749.4678955078125,
+        "z": 142.5
+      },
+      "max": {
+        "x": 1435.3555908203125,
+        "y": 729.5166625976562,
+        "z": 232.29835510253906
+      },
+      "isValid": true
+    }
+  },
+  "/Game/Art/Candidates/USA_HQ/Final/Meshes/SM_HQ21_NationalFlag_Wind": {
+    "slots": {
+      "HQ21_FlagRed": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_FlagRed.MI_HQ21_FlagRed"
+      },
+      "HQ21_FlagWhite": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_FlagWhite.MI_HQ21_FlagWhite"
+      },
+      "HQ21_FlagNavy": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Final/Materials/MI_HQ21_FlagNavy.MI_HQ21_FlagNavy"
+      }
+    },
+    "triangles": 8904,
+    "bounds": {
+      "min": {
+        "x": 1123.0928955078125,
+        "y": 8.000186920166016,
+        "z": 498.0181579589844
+      },
+      "max": {
+        "x": 1171.035888671875,
+        "y": 350.00018310546875,
+        "z": 690
+      },
+      "isValid": true
+    }
+  }
+}

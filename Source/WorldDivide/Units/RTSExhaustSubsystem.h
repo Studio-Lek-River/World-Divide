@@ -49,6 +49,8 @@ struct FRTSExhaustEntry
 	bool bShows = false;
 	bool bSpeedKnown = false;
 	bool bActive = false;
+	/** Seconds the emitters have been stopped; at rts.Fx.ReleaseDelay they go back to the free list (#225). */
+	float StoppedSeconds = 0.f;
 	/** What the emitters were last sent, so they are only sent again when it changes. */
 	float SentRate = -1.f;
 	float SentOpacity = -1.f;
@@ -86,6 +88,12 @@ public:
 	/** Emitters running now, over every unit. */
 	int32 GetActiveEmitters() const;
 
+	/** Emitters held now, running or stopped, over every unit and the free list. For the bench and the tests. */
+	int32 GetHeldEmitters() const;
+
+	/** Emitters in the free list, given back by vehicles stopped for rts.Fx.ReleaseDelay. For the tests. */
+	int32 GetFreeEmitters() const { return FreeComponents.Num(); }
+
 	/** Makes the distance to the cameras measured from Location instead, or from the cameras again when unset. For the tests. */
 	void SetViewLocationOverride(TOptional<FVector> Location) { ViewLocationOverride = Location; }
 
@@ -113,7 +121,8 @@ public:
 private:
 	FRTSExhaustEntry* Find(const ARTSUnit& Unit);
 	const FRTSExhaustEntry* Find(const ARTSUnit& Unit) const;
-	void DestroyComponents(FRTSExhaustEntry& Entry);
+	/** Gives the entry's emitters back to the free list (or destroys those beyond it) and forgets what they were sent. */
+	void ReleaseComponents(FRTSExhaustEntry& Entry);
 	void UpdateState(FRTSExhaustEntry& Entry, const ARTSUnit& Unit, float DeltaSeconds) const;
 	/** Measures the entry's distance to the cameras; whether it is within rts.Fx.ExhaustDistance and has exhaust to show. */
 	bool IsNear(FRTSExhaustEntry& Entry, const ARTSUnit& Unit) const;
@@ -124,6 +133,10 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<FRTSExhaustEntry> Entries;
+
+	/** Stopped emitters no vehicle holds, for the next one to show exhaust (RTSEffectPool); at most twice rts.Fx.ExhaustMaxVehicles. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UNiagaraComponent>> FreeComponents;
 
 	/** The local cameras this frame, kept between frames so gathering them does not allocate. */
 	TArray<FVector> CameraLocations;

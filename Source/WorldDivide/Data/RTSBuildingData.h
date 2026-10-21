@@ -4,8 +4,78 @@
 #include "Data/RTSEntityData.h"
 #include "RTSBuildingData.generated.h"
 
+class UStaticMesh;
 class URTSUnitData;
 class URTSUpgradeData;
+
+/**
+ * One more mesh of a building made of several (the USA HQ, #191): drawn with the building's Mesh, rising with it during
+ * construction and coloured with it, without collision of its own.
+ */
+USTRUCT(BlueprintType)
+struct FRTSBuildingPart
+{
+	GENERATED_BODY()
+
+	/** The part's name in the building's layout, such as DoorSection00 or Radar_Azimuth, for the parts that move. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part")
+	FName Name;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part")
+	TObjectPtr<UStaticMesh> Mesh;
+
+	/** Where the part stands in the building's own frame, at rest, before MeshScale. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part")
+	FTransform Transform;
+
+	/** The part is animated (door, radar, fans); the others never move in the building. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part")
+	bool bMovable = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part")
+	bool bCastShadow = true;
+
+	/** Grows the part's render bounds, for one whose material moves it beyond its mesh (the flag's wind). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part", meta = (ClampMin = "1"))
+	float BoundsScale = 1.f;
+
+	/** The part stops drawing farther than this from the camera, in cm; 0 to always draw it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part", meta = (ClampMin = "0"))
+	float MaxDrawDistance = 0.f;
+};
+
+/** A box that blocks units and cuts the navmesh, in the building's own frame, before MeshScale. */
+USTRUCT(BlueprintType)
+struct FRTSBuildingCollisionBox
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
+	FName Name;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
+	FVector Min = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
+	FVector Max = FVector::ZeroVector;
+
+	/** The garage bay, which the garage sequence opens for a unit leaving it (#192). Solid for now. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
+	bool bGarage = false;
+};
+
+/** A named point of a building's layout in its own frame, such as the garage's spawn and exit. */
+USTRUCT(BlueprintType)
+struct FRTSBuildingSocket
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Socket")
+	FName Name;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Socket")
+	FVector Location = FVector::ZeroVector;
+};
 
 /**
  * A structure placed on the 100 cm build grid. An armed building (a tower) fires once construction completes; a building
@@ -20,6 +90,28 @@ public:
 	/** Size in 100 cm grid cells along X and Y. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Placement", meta = (ClampMin = "1"))
 	FIntPoint Footprint = FIntPoint(16, 16);
+
+	/** Meshes drawn with Mesh, for a building modelled in several (#191). Empty for a building of one mesh. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+	TArray<FRTSBuildingPart> Parts;
+
+	/**
+	 * The boxes that block units and cut the navmesh, around the building's blocks. Empty for one box filling the footprint
+	 * up to the mesh's height.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Placement")
+	TArray<FRTSBuildingCollisionBox> CollisionBoxes;
+
+	/** Named points of the building's layout, such as GarageSpawn and GarageExit (#192). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Placement")
+	TArray<FRTSBuildingSocket> Sockets;
+
+	/** The location of the socket Name, or null when the data has none of that name. */
+	const FVector* FindSocket(FName Name) const
+	{
+		const FRTSBuildingSocket* Socket = Sockets.FindByPredicate([Name](const FRTSBuildingSocket& S) { return S.Name == Name; });
+		return Socket ? &Socket->Location : nullptr;
+	}
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power", meta = (ClampMin = "0"))
 	int32 PowerOutput = 0;

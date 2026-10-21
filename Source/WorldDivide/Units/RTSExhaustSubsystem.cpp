@@ -9,6 +9,7 @@
 #include "NiagaraSystem.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
 #include "Scalability.h"
+#include "Units/RTSEffectPool.h"
 #include "Units/RTSLocomotion.h"
 #include "Units/RTSNearestToView.h"
 #include "Units/RTSUnit.h"
@@ -101,13 +102,7 @@ void URTSExhaustSubsystem::Register(ARTSUnit& Unit)
 	if (FRTSExhaustEntry* Entry = Find(Unit))
 	{
 		// New data: the outlets may have changed, so the emitters are made again when a camera is near.
-		DestroyComponents(*Entry);
-		Entry->SentRate = -1.f;
-		Entry->SentOpacity = -1.f;
-		Entry->SentLifetime = -1.f;
-		Entry->SentLift = -1.f;
-		Entry->SentColor.Reset();
-		Entry->SentDirection = FVector3f::ZeroVector;
+		ReleaseComponents(*Entry);
 		return;
 	}
 	FRTSExhaustEntry& Entry = Entries.AddDefaulted_GetRef();
@@ -119,22 +114,28 @@ void URTSExhaustSubsystem::Unregister(ARTSUnit& Unit)
 	const int32 Index = Entries.IndexOfByPredicate([&Unit](const FRTSExhaustEntry& Entry) { return Entry.Unit.Get() == &Unit; });
 	if (Index != INDEX_NONE)
 	{
-		DestroyComponents(Entries[Index]);
+		ReleaseComponents(Entries[Index]);
 		Entries.RemoveAtSwap(Index);
 	}
 }
 
-void URTSExhaustSubsystem::DestroyComponents(FRTSExhaustEntry& Entry)
+void URTSExhaustSubsystem::ReleaseComponents(FRTSExhaustEntry& Entry)
 {
+	// A destroyed vehicle gives them back too: vehicles come and go with combat (PERFORMANCE_GUIDELINES.md, rule 9).
+	const int32 MaxFree = 2 * FMath::Max(GetMaxVehicles(), 0);
 	for (UNiagaraComponent* Component : Entry.Components)
 	{
-		if (IsValid(Component))
-		{
-			Component->DestroyComponent();
-		}
+		RTSEffectPool::Release(FreeComponents, Component, MaxFree);
 	}
 	Entry.Components.Reset();
 	Entry.bActive = false;
+	Entry.StoppedSeconds = 0.f;
+	Entry.SentRate = -1.f;
+	Entry.SentOpacity = -1.f;
+	Entry.SentLifetime = -1.f;
+	Entry.SentLift = -1.f;
+	Entry.SentColor.Reset();
+	Entry.SentDirection = FVector3f::ZeroVector;
 }
 
 ERTSExhaustState URTSExhaustSubsystem::GetState(const ARTSUnit& Unit) const
@@ -157,6 +158,16 @@ int32 URTSExhaustSubsystem::GetActiveEmitters() const
 		Active += Entry.bActive ? Entry.Components.Num() : 0;
 	}
 	return Active;
+}
+
+int32 URTSExhaustSubsystem::GetHeldEmitters() const
+{
+	int32 Held = FreeComponents.Num();
+	for (const FRTSExhaustEntry& Entry : Entries)
+	{
+		Held += Entry.Components.Num();
+	}
+	return Held;
 }
 
 float URTSExhaustSubsystem::GetViewDistance(const FVector& Location) const
@@ -228,22 +239,17 @@ void URTSExhaustSubsystem::UpdateEmitters(FRTSExhaustEntry& Entry, ARTSUnit& Uni
 	UStaticMeshComponent* Hull = Unit.GetMesh();
 	if (Entry.Components.IsEmpty())
 	{
-		// Made the first time a camera comes near, and kept: a vehicle driving in and out of view starts and stops them.
-		// Owned by no actor and attached to the hull, so they follow its tilt and rock and are not counted among its parts.
+		// Taken the first time a camera comes near, and kept while the vehicle drives in and out of view, which starts and
+		// stops them; stopped for rts.Fx.ReleaseDelay, they go back to the free list (#225).
 		for (const FVector& Outlet : Exhaust.Outlets)
 		{
-			UNiagaraComponent* Component = NewObject<UNiagaraComponent>(GetWorld());
-			Component->SetAutoActivate(false);
-			Component->SetAutoDestroy(false);
-			Component->SetCastShadow(false);
-			Component->SetCanEverAffectNavigation(false);
-			Component->SetAsset(Exhaust.System);
-			// The hull's scale stays out of the puffs.
-			Component->SetUsingAbsoluteScale(true);
-			Component->SetupAttachment(Hull);
-			Component->SetRelativeLocation(Outlet);
+			bool bNew = false;
+			UNiagaraComponent* Component = RTSEffectPool::Take(FreeComponents, *GetWorld(), Exhaust.System, *Hull, Outlet, bNew);
 			Component->SetVariableFloat(SizeParameter, Exhaust.Size);
-			Component->RegisterComponentWithWorld(GetWorld());
+			if (bNew)
+			{
+				Component->RegisterComponentWithWorld(GetWorld());
+			}
 			Entry.Components.Add(Component);
 		}
 		Entry.bActive = false;
@@ -324,7 +330,7 @@ void URTSExhaustSubsystem::UpdateAll(float DeltaSeconds)
 		const ARTSUnit* Unit = Entries[Index].Unit.Get();
 		if (!Unit || !Unit->GetUnitData())
 		{
-			DestroyComponents(Entries[Index]);
+			ReleaseComponents(Entries[Index]);
 			Entries.RemoveAtSwap(Index);
 		}
 	}
@@ -348,6 +354,8 @@ void URTSExhaustSubsystem::UpdateAll(float DeltaSeconds)
 		Entries[Near.Value].bShows = true;
 	}
 
+	// Emitters stopped for the release delay go back to the free list: out of the budget or far away (#225).
+	const float ReleaseDelay = RTSEffectPool::GetReleaseDelay();
 	for (FRTSExhaustEntry& Entry : Entries)
 	{
 		if (Entry.bShows)
@@ -357,6 +365,14 @@ void URTSExhaustSubsystem::UpdateAll(float DeltaSeconds)
 		else
 		{
 			SetActive(Entry, false);
+		}
+		if (Entry.bActive || Entry.Components.IsEmpty())
+		{
+			Entry.StoppedSeconds = 0.f;
+		}
+		else if ((Entry.StoppedSeconds += DeltaSeconds) >= ReleaseDelay && ReleaseDelay > 0.f)
+		{
+			ReleaseComponents(Entry);
 		}
 	}
 	ExhaustCycles += FPlatformTime::Cycles64() - StartCycles;
@@ -382,8 +398,9 @@ void URTSExhaustSubsystem::Deinitialize()
 	}
 	for (FRTSExhaustEntry& Entry : Entries)
 	{
-		DestroyComponents(Entry);
+		ReleaseComponents(Entry);
 	}
 	Entries.Reset();
+	RTSEffectPool::DestroyAll(FreeComponents);
 	Super::Deinitialize();
 }

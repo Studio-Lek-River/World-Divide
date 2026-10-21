@@ -209,10 +209,14 @@ namespace RTSBenchCommand
 		double ExhaustMs = 0.0;
 		double MaxExhaustMs = 0.0;
 		int32 ExhaustEmitters = 0;
+		/** The exhaust emitters held at the sample's end, running or stopped, the free list's included (#225). */
+		int32 ExhaustHeld = 0;
 		/** The dust pass (URTSDustSubsystem, #224), its slowest frame, and its emitters running at the sample's end. */
 		double DustMs = 0.0;
 		double MaxDustMs = 0.0;
 		int32 DustEmitters = 0;
+		/** The dust emitters held at the sample's end, running or stopped, the free list's included (#225). */
+		int32 DustHeld = 0;
 		/** The vehicle lights' pass (URTSVehicleLightSubsystem, #223), its slowest frame, and the real lights on at the sample's end. */
 		double LightsMs = 0.0;
 		double MaxLightsMs = 0.0;
@@ -360,12 +364,12 @@ namespace RTSBenchCommand
 				TEXT("solid_updates,solid_reuse_share,solid_checks,solid_queries,solid_broad_ms,solid_narrow_ms,")
 				TEXT("sample_s,max_frame_ms,stall_frames,freeze_frames,p95_render_ms,p95_gpu_ms,running_gear_ms,p95_running_gear_ms,")
 				TEXT("primitives,dynamic_materials,distinct_materials,lod0_units,lod1_units,lod2_units,lod3_units,mixed_lod_units,p95_rhi_ms,drawn_primitives,")
-				TEXT("track_updates,tracks,drawn_tracks,animated_tracks,exhaust_ms,max_exhaust_ms,exhaust_emitters,lights_ms,max_lights_ms,vehicle_lights,dust_ms,max_dust_ms,dust_emitters");
+				TEXT("track_updates,tracks,drawn_tracks,animated_tracks,exhaust_ms,max_exhaust_ms,exhaust_emitters,lights_ms,max_lights_ms,vehicle_lights,dust_ms,max_dust_ms,dust_emitters,exhaust_held,dust_held");
 		}
 
 		FString ToCsv() const
 		{
-			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d,%.1f,%d,%d,%d,%.3f,%.3f,%d,%.3f,%.3f,%d,%.3f,%.3f,%d"),
+			return FString::Printf(TEXT("%d,%s,%d,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.0f,%.0f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.0f,%.0f,%d,%d,%.2f,%.3f,%.2f,%.2f,%.4f,%.4f,%.2f,%.2f,%d,%d,%.2f,%.2f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d,%.1f,%d,%d,%d,%.3f,%.3f,%d,%.3f,%.3f,%d,%.3f,%.3f,%d,%d,%d"),
 				Count, *Scenario, Sample, Frames, Units, Mean(FrameMs), Mean(GameMs), P95GameMs, MaxGameMs, Mean(RenderMs), Mean(RHIMs), Mean(GPUMs),
 				Mean(DrawCalls), Mean(Triangles), Mean(AvoidanceMs), MaxAvoidanceMs, Mean(SearchMs), Mean(LocomotionMs), P95LocomotionMs,
 				MaxLocomotionMs, UsedMemoryMB, PeakMemoryMB, RenderSize.X, RenderSize.Y, Mean(Solids.Updates), SolidReuseShare(),
@@ -373,7 +377,7 @@ namespace RTSBenchCommand
 				SampleSeconds, MaxFrameMs, StallFrames, FreezeFrames, P95RenderMs, P95GPUMs, Mean(RunningGearMs), P95RunningGearMs,
 				Primitives, DynamicMaterials, DistinctMaterials, HullLOD(0), HullLOD(1), HullLOD(2), HullLOD(3), MixedLODUnits, P95RHIMs, DrawnPrimitives,
 				Mean(TrackUpdates), Tracks, DrawnTracks, AnimatedTracks, Mean(ExhaustMs), MaxExhaustMs, ExhaustEmitters,
-				Mean(LightsMs), MaxLightsMs, VehicleLights, Mean(DustMs), MaxDustMs, DustEmitters);
+				Mean(LightsMs), MaxLightsMs, VehicleLights, Mean(DustMs), MaxDustMs, DustEmitters, ExhaustHeld, DustHeld);
 		}
 
 		int32 HullLOD(int32 LOD) const { return HullLODs.IsValidIndex(LOD) ? HullLODs[LOD] : 0; }
@@ -435,13 +439,13 @@ namespace RTSBenchCommand
 
 		FString ToExhaustMarkdown() const
 		{
-			return FString::Printf(TEXT("| %d | %s | %d | %.3f (%.3f) | %d | %.3f (%.3f) | %d |\n"), Count, *Scenario, Sample, Mean(ExhaustMs),
-				MaxExhaustMs, ExhaustEmitters, Mean(LightsMs), MaxLightsMs, VehicleLights);
+			return FString::Printf(TEXT("| %d | %s | %d | %.3f (%.3f) | %d | %d | %.3f (%.3f) | %d |\n"), Count, *Scenario, Sample, Mean(ExhaustMs),
+				MaxExhaustMs, ExhaustEmitters, ExhaustHeld, Mean(LightsMs), MaxLightsMs, VehicleLights);
 		}
 
 		FString ToDustMarkdown() const
 		{
-			return FString::Printf(TEXT("| %d | %s | %d | %.3f (%.3f) | %d |\n"), Count, *Scenario, Sample, Mean(DustMs), MaxDustMs, DustEmitters);
+			return FString::Printf(TEXT("| %d | %s | %d | %.3f (%.3f) | %d | %d |\n"), Count, *Scenario, Sample, Mean(DustMs), MaxDustMs, DustEmitters, DustHeld);
 		}
 
 		FString ToMaterialsMarkdown() const
@@ -1084,8 +1088,10 @@ namespace RTSBenchCommand
 			CountTracks(Current);
 			const URTSExhaustSubsystem* Exhaust = World->GetSubsystem<URTSExhaustSubsystem>();
 			Current.ExhaustEmitters = Exhaust ? Exhaust->GetActiveEmitters() : 0;
+			Current.ExhaustHeld = Exhaust ? Exhaust->GetHeldEmitters() : 0;
 			const URTSDustSubsystem* Dust = World->GetSubsystem<URTSDustSubsystem>();
 			Current.DustEmitters = Dust ? Dust->GetActiveEmitters() : 0;
+			Current.DustHeld = Dust ? Dust->GetHeldEmitters() : 0;
 			const URTSVehicleLightSubsystem* Lights = World->GetSubsystem<URTSVehicleLightSubsystem>();
 			Current.VehicleLights = Lights ? Lights->GetActiveLightCount() : 0;
 			Results.Add(Current);
@@ -1269,16 +1275,16 @@ namespace RTSBenchCommand
 			{
 				Markdown += Result.ToTracksMarkdown();
 			}
-			Markdown += TEXT("\nThe engine exhaust (#222) and the vehicle lights (#223): their passes per frame, and the emitters running and real lights on at each sample's end:\n\n")
-				TEXT("| Units | Scenario | Sample | Exhaust ms (max) | Emitters | Lights ms (max) | Real lights |\n")
-				TEXT("|---:|---|---:|---:|---:|---:|---:|\n");
+			Markdown += TEXT("\nThe engine exhaust (#222) and the vehicle lights (#223): their passes per frame, and the emitters running, the emitters held (#225) and the real lights on at each sample's end:\n\n")
+				TEXT("| Units | Scenario | Sample | Exhaust ms (max) | Emitters | Held | Lights ms (max) | Real lights |\n")
+				TEXT("|---:|---|---:|---:|---:|---:|---:|---:|\n");
 			for (const FScenarioStats& Result : Results)
 			{
 				Markdown += Result.ToExhaustMarkdown();
 			}
-			Markdown += TEXT("\nThe dust behind the vehicles (#224): its pass per frame, and the emitters running at each sample's end:\n\n")
-				TEXT("| Units | Scenario | Sample | Dust ms (max) | Emitters |\n")
-				TEXT("|---:|---|---:|---:|---:|\n");
+			Markdown += TEXT("\nThe dust behind the vehicles (#224): its pass per frame, and the emitters running and held (#225) at each sample's end:\n\n")
+				TEXT("| Units | Scenario | Sample | Dust ms (max) | Emitters | Held |\n")
+				TEXT("|---:|---|---:|---:|---:|---:|\n");
 			for (const FScenarioStats& Result : Results)
 			{
 				Markdown += Result.ToDustMarkdown();

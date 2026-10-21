@@ -413,12 +413,13 @@ namespace RTSVehicleNetTests
 					++Effects;
 				}
 				Test.TestEqual(TEXT("Shots: the dedicated server shows no shot"), Effects, 0);
+				// After the drives too: no exhaust or dust emitter either, held or in their free lists (#225).
 				int32 NiagaraComponents = 0;
 				for (TObjectIterator<UNiagaraComponent> It; It; ++It)
 				{
 					NiagaraComponents += It->GetWorld() == Session->ServerWorld ? 1 : 0;
 				}
-				Test.TestEqual(TEXT("Shots: the dedicated server has no muzzle flash"), NiagaraComponents, 0);
+				Test.TestEqual(TEXT("Shots: the dedicated server has no muzzle flash, exhaust or dust"), NiagaraComponents, 0);
 			}
 			if (Shooter)
 			{

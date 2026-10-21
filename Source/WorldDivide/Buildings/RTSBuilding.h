@@ -100,6 +100,15 @@ public:
 	/** From clamped to the footprint rectangle. Under construction or not, the building can be shot. */
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
 
+	/** The meshes drawn with Mesh for a building of several (URTSBuildingData::Parts), in the data's order. */
+	const TArray<TObjectPtr<UStaticMeshComponent>>& GetPartComponents() const { return PartComponents; }
+
+	/**
+	 * The boxes that block units and cut the navmesh: the footprint box alone, or the data's CollisionBoxes, the first of them
+	 * in that box.
+	 */
+	TArray<UBoxComponent*> GetCollisionComponents() const;
+
 	/** 0 when placed, 1 when complete. */
 	float GetConstructionProgress() const { return ConstructionProgress; }
 	bool IsConstructed() const { return ConstructionProgress >= 1.f; }
@@ -157,6 +166,12 @@ private:
 	void ApplyBuildingData();
 	void ApplyTeamColor();
 
+	/** Makes the data's Parts, replacing any made before, attached to Mesh so they rise and scale with it. */
+	void ApplyParts();
+
+	/** Sizes the collision: one box over the footprint up to Height, or the data's CollisionBoxes. */
+	void ApplyCollision(float Height);
+
 	/** The mesh rises out of the ground as construction progresses. */
 	void ApplyConstructionVisual();
 
@@ -180,6 +195,14 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> Mesh;
+
+	/** The data's Parts, on Mesh. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UStaticMeshComponent>> PartComponents;
+
+	/** The data's CollisionBoxes after the first, which Collision takes. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UBoxComponent>> ExtraCollision;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<URTSHealthComponent> HealthComponent;
@@ -206,6 +229,9 @@ private:
 	int32 PaidCost = 0;
 
 	float MeshBaseOffset = 0.f;
+
+	/** Where UpdateNavCut looks for the navmesh hole, in the actor's frame: inside a collision box. */
+	FVector NavProbeOffset = FVector::ZeroVector;
 
 	/** Server only. */
 	bool bNavCutPending = false;
