@@ -13,7 +13,7 @@ Issue number, base SHA, commit SHA(s), context brief path.
 
 ## Work
 
-Read `docs/tech/PERFORMANCE_GUIDELINES.md` and, when movement or scale is touched, `docs/tech/scale/RTS_MOVEMENT_PERFORMANCE.md`. Then `git diff <base>..<head>` and the changed files in full. Look at the latest bench and gate output if present (`Saved/Bench/`, `Saved/Gate/`, newest first) and any `stat unit` captures in `Saved/UnitShots/<Unit>/`.
+Read `docs/tech/PERFORMANCE_GUIDELINES.md` and, when movement or scale is touched, `docs/tech/scale/RTS_MOVEMENT_PERFORMANCE.md`. For engine-level levers and how to measure, use `docs/engine/perf-many-units.md`, `perf-profiling.md` and `perf-scalability.md`. Then `git diff <base>..<head>` and the changed files in full. Look at the latest bench and gate output if present (`Saved/Bench/`, `Saved/Gate/`, newest first) and any `stat unit` captures in `Saved/UnitShots/<Unit>/`.
 
 Check, citing file:line and the guideline section:
 

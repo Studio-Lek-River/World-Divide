@@ -15,6 +15,7 @@ Read `.claude/skills/fix-issue/SKILL.md` first and follow its sections 3 (prepar
 - C++ for gameplay logic, data assets for content; every new tunable goes into a data asset or a CVar, not a literal. Server-authoritative through `FRTSCommand`. Never hand-edit `.uasset` or `.umap`: extend `setup_testmap.py` and run setup.
 - Tests for the Acceptance in `Source/WorldDivide/Tests` under `WorldDivide.`; cheapest run first (`-Filter`, `-Rerun`, `-Tier fast`); the full suite only when the change touches shared foundations; never commit red.
 - Build exits 2 when `UnrealEditor` runs: stop and report it. Never kill the editor. An LFS lock held by someone else: stop and report who.
+- Before touching an engine system (reflection, GC, ticking, assets, landscape, PCG, profiling, ...), read its note in `docs/engine/` (index: `docs/engine/README.md`); project docs win on conflict.
 - Original IP only. Match the surrounding style. Out-of-scope findings become suggested follow-ups, not edits.
 - Commit with `Closes #<n>` as the last line, no attribution trailer, no mention of Claude or Anthropic. **Never push.**
 

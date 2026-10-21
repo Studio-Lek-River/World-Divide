@@ -16,7 +16,7 @@ The issue number, its milestone, and the output folder `Saved/Director/<n>/`.
 1. `gh issue view <n> --repo Studio-Lek-River/World-Divide --json number,title,body,state,comments,milestone`. Follow every `#ref` in body and comments (`gh issue view` each); note which are open.
 2. Read the `README.md` Layout section, then find the classes, data assets, scripts and docs the issue names or implies (Grep and Glob over `Source/`, `Tools/`, `Config/`, `docs/`, `UI/`). Read their callers. Look at `git log --oneline -15 -- <paths>` for what changed recently around them.
 3. Find the existing tests in `Source/WorldDivide/Tests` that cover this area and the `[Slow]` tags in `Config/Tests/Tags.ini` that apply.
-4. Check the relevant rules: `.claude/skills/fix-issue/SKILL.md` section 4, `docs/tech/PERFORMANCE_GUIDELINES.md`, `docs/tech/scale/WORLD_SCALE_STANDARD.md`, `docs/design/DECISIONS.md`, and for UI `docs/ui/DESIGNER_HANDBOOK.md`.
+4. Check the relevant rules: `.claude/skills/fix-issue/SKILL.md` section 4, `docs/tech/PERFORMANCE_GUIDELINES.md`, `docs/tech/scale/WORLD_SCALE_STANDARD.md`, `docs/design/DECISIONS.md`, and for UI `docs/ui/DESIGNER_HANDBOOK.md`. For the engine systems the issue touches, read the matching note in `docs/engine/` (index: `docs/engine/README.md`).
 
 ## Output: `Saved/Director/<n>/context.md`
 
