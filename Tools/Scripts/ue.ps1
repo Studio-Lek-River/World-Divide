@@ -39,6 +39,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task b
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task packaudit
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task surfaces -Path D:\Downloads\textures
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task freeassets
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate -Scope broad -Baseline 4a2a706
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uibindings
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uicheck -Path Saved/UIIntake/HUD_2026-10-14/staging/UI
@@ -149,10 +150,13 @@ end in BaseColor/Albedo/Color/diff, Normal/nor_gl/NormalDX, Roughness/rough, AO,
 imperfection sets, keeps one set per Megascans id (an _ue variant first), scales the maps to 2K with a packed ORM into
 Saved/Surfaces/, and imports them with Tools/Editor/import_surfaces.py into the git-ignored, never cooked /Game/Surfaces/<Name>/
 as T_<Name>_BC/_N/_ORM and MI_<Name> of M_ScannedSurface (world-aligned, tiled at the JSON's scanArea).
+Freeassets (#409) downloads the CC0 models of Tools/Editor/free_assets.json from Poly Haven (cached in Saved/FreeAssets/)
+into the git-ignored, never cooked /Game/PolyHaven/<id>/, puts the listed ambientCG surface ZIPs into -Path (default
+D:\Downloads\textures) for -Task surfaces, and imports the in-house roadside kit (Art/Shared/roadside) to /Game/Art/Shared/Roadside.
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'buildingshots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit', 'surfaces', 'kitspike', 'bakemap', 'rivercrossing')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'buildingshots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit', 'surfaces', 'freeassets', 'kitspike', 'bakemap', 'rivercrossing')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -1522,11 +1526,12 @@ function Invoke-Surfaces {
 				$Kind = Get-SurfaceMapKind $Entry.Name
 				if ($Kind -and -not $Maps.ContainsKey($Kind)) { $Maps[$Kind] = $Entry.FullName }
 			}
-			$Stem = $Zip.BaseName -replace '_ue_(raw|high)', '' -replace '_\d+k$', ''
+			# Megascans '_8k' and '_ue_raw', ambientCG '_2K-PNG' (#409).
+			$Stem = $Zip.BaseName -replace '_ue_(raw|high)', '' -replace '_\d+k$', '' -replace '_\d+K-(PNG|JPG)$', ''
 			$Id = if ($Info -and $Info.id) { [string]$Info.id } else { $Stem }
 			$Title = if ($Info -and $Info.name) { [string]$Info.name } else { $Stem -replace '_texture_pack$', '' }
 			# Some Megascans names end in their id already ('Military Trenches Ground Dirt Fine 01 yd0kabg').
-			$Title = ($Title -replace "[\s_-]*$([regex]::Escape($Id))$", '').Trim()
+			if ($Info) { $Title = ($Title -replace "[\s_-]*$([regex]::Escape($Id))$", '').Trim() }
 			# Megascans: the tags and categories name the kind of set; snow does not fit the late-summer map (D3).
 			$Words = @($Title)
 			if ($Info) {
@@ -1611,6 +1616,21 @@ function Invoke-Surfaces {
 	Write-Host "SURFACES SUCCEEDED: $($Manifest.Count) set(s) imported, $($Skipped.Count) skipped. $Report"
 }
 
+# The CC0 models and surface ZIPs of free_assets.json and the roadside kit (#409), through import_free_assets.py.
+function Invoke-FreeAssets {
+	Assert-EditorClosed 'the imported assets are saved by a second editor.'
+	$env:WD_SURFACES_DIR = if ($Path) { $Path } else { 'D:\Downloads\textures' }
+	$Script = Join-Path $RepoRoot 'Tools\Editor\import_free_assets.py'
+	$Report = Join-Path $RepoRoot 'Saved\FreeAssets\imported.md'
+	if (Test-Path $Report) { Remove-Item -Force $Report }
+	& $EditorCmd $Project -run=pythonscript "-script=$Script" $NoMCPPlugins -unattended -nosplash -nullrhi -nosound -stdout -FullStdOutLogOutput | Out-Null
+	if (-not (Test-Path $Report)) {
+		Write-Host "FREEASSETS FAILED (exit $LASTEXITCODE): no report written. See Saved\Logs\WorldDivide.log."
+		exit 1
+	}
+	Write-Host "FREEASSETS SUCCEEDED: $Report. Run -Task surfaces -Path $env:WD_SURFACES_DIR for the new surface ZIPs."
+}
+
 # The shared building kit's spike (#387): its content, then the lens row's shots and update costs.
 function Invoke-KitSpike {
 	Assert-EditorClosed 'the spike content is saved by a second editor.'
@@ -1658,6 +1678,7 @@ switch ($Task) {
 	'packaudit' { Invoke-PackAudit }
 	'kitspike' { Invoke-KitSpike }
 	'surfaces' { Invoke-Surfaces }
+	'freeassets' { Invoke-FreeAssets }
 	'bakemap' { Invoke-BakeMap }
 	'rivercrossing' { Invoke-RiverCrossing }
 }

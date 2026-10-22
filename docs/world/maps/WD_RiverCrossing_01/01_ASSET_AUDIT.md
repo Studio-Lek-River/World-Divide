@@ -1,6 +1,6 @@
 # WD_RiverCrossing_01: environment asset audit
 
-Phase 1. First audit 2026-10-15 (no packs yet, from "How this was checked" down); packs imported and audited 2026-10-20 (#153, the next section; a second batch of eight the same day). Engine: UE 5.8 (`WorldDivide.uproject`, `"EngineAssociation": "5.8"`).
+Phase 1. First audit 2026-10-15 (no packs yet, from "How this was checked" down); packs imported and audited 2026-10-20 (#153, the next section; a second batch of eight the same day); CC0 props, roof and plank surfaces and the in-house roadside kit added 2026-10-22 (#409). Engine: UE 5.8 (`WorldDivide.uproject`, `"EngineAssociation": "5.8"`).
 
 ## Imported packs (2026-10-20)
 
@@ -10,7 +10,8 @@ The repository is public and the pack licences do not allow sharing the files, s
 
 - Each pack stays in its own `Content/<Pack>/` root, as Fab installs it. Moving them to `/Game/World/Packs/` would only rewrite references in files nobody else has.
 - Each is git-ignored (`.gitignore`) and never cooked (`Config/DefaultGame.ini`, `DirectoriesToNeverCook`; `WorldDivide.Config.Cook` checks it). Cooking what the map uses is decided with #154 onwards.
-- Every machine adds the packs in the manifest below from Fab (*My Library → Add to project*, see [05_PRODUCER_ACTIONS.md](05_PRODUCER_ACTIONS.md) §2) and then runs `ue.ps1 -Task packaudit`.
+- Every machine adds the packs in the manifest below from Fab (*My Library → Add to project*, see [05_PRODUCER_ACTIONS.md](05_PRODUCER_ACTIONS.md) §2), runs `ue.ps1 -Task freeassets` (the CC0 models and surface ZIPs, downloaded again) and `ue.ps1 -Task surfaces -Path D:\Downloads\textures`, and then runs `ue.ps1 -Task packaudit`.
+- The CC0 models follow the same rule although their licence would allow committing them: they are 0.6 GB and download again in minutes. Only the in-house roadside kit (`Art/Shared/roadside` → `/Game/Art/Shared/Roadside`, own work) is committed and may cook.
 
 ### How this was checked
 
@@ -42,7 +43,9 @@ Skeletal meshes have no size tag; the Megaplant trees' heights are checked by ey
 | `StylizedSurface_Lite` | Stylized Surface Lite | 311 MB | D | **Stylized** | Not usable |
 | `AccuCities` | AccuCities (London city sample) | 58 MB | D | Photogrammetry, UK city blocks | Not usable for the villages: low-detail city tiles, no interiors (added 2026-10-22, not yet audited) |
 | `FogArea` | Fog Area | 27 MB | G atmosphere | Volumetric fog volumes | Candidate for the river mist in #159 (added 2026-10-22, not yet audited) |
-| `Surfaces` | Megascans surface ZIPs in `D:\Downloads\textures`, through `ue.ps1 -Task surfaces` (#330) | 36 sets at 2K | A, F | Realistic, scanned | **Use** for grass, meadow, clover, dirt and tracks, gravel, forest floor, sand, rock faces. Snow sets skipped; desert, Thai beach, coal ash and swamp water are imported but off-biome |
+| `Surfaces` | Megascans surface ZIPs in `D:\Downloads\textures`, through `ue.ps1 -Task surfaces` (#330); four ambientCG sets added by `-Task freeassets` (#409) | 40 sets at 2K | A, D, F | Realistic, scanned | **Use** for grass, meadow, clover, dirt and tracks, gravel, forest floor, sand, rock faces, roof tiles and planks. Snow sets skipped; desert, Thai beach, coal ash and swamp water are imported but off-biome |
+| `PolyHaven` | Poly Haven models (CC0), through `ue.ps1 -Task freeassets` (#409) | 0.6 GB | B grass and flowers, E poles, fences, lamp, F logs, debris, cliffs | Realistic, scanned and modelled | **Use**: 26 models as 221 Nanite meshes, 2K textures |
+| `Art/Shared/Roadside` (committed) | In-house roadside kit (#409) | < 1 MB | E signs, fences, power line | Realistic, plain | **Use**: European signs, post-and-rail and pasture fences, a cable for spline power lines |
 | `MeshRift_CW_MaterialPackSample` | Chiselled Wood Material Pack Sample | 0.8 GB | D | **Stylized** (carved wood) | Not usable |
 
 `NeonStrips`, `QuantumCharacter` and `Realistic_Starter_VFX_Pack_Vol2` are also in `Content/` but were committed to git in a7904b0; they are not environment packs (see the report of #153).
@@ -121,26 +124,65 @@ Skeletal meshes have no size tag; the Megaplant trees' heights are checked by ey
 - Not a Fab pack: the producer's 39 Megascans surface ZIPs (raw 8K or 4K JPGs with the scan's JSON) and one non-Megascans set (mud and pebbles). They are source textures, so the task scales them to 2K, packs AO, roughness and metalness into one ORM, and imports `T_<Name>_BC`, `_N` and `_ORM` with `MI_<Name>` of one master, `/Game/Surfaces/M_ScannedSurface`.
 - The master projects from above in world space (no UVs needed) and tiles at the JSON's `scanArea` (`TileSize`, mostly 2 m; 0.25–4 m), with `Tint` and `RoughnessScale`. It is meant for tiles, props and checks; the landscape material of #156 samples the same textures.
 - Raw Megascans normals are OpenGL (green up; checked against the displacement maps), so their green channel is flipped on import.
-- 36 sets imported, 3 snow sets skipped; one set per Megascans id. Git-ignored and never cooked like the packs. The run's list is `Saved/Surfaces/imported.md`.
+- 40 sets imported, 3 snow sets skipped; one set per Megascans id. Four of them are ambientCG (CC0) sets that `-Task freeassets` downloads (#409): `RoofingTiles006` (red clay), `RoofingTiles013A`, `Planks037A`, `Planks023A`, for the in-house buildings; their NormalGL maps are flipped like the Megascans ones. Git-ignored and never cooked like the packs. The run's list is `Saved/Surfaces/imported.md`.
 - For the late-summer map (D3): grass (lush, wild ×2, uncut, mossy, clover), dirt and tracks (soil, dry trampled soil, forest path, 8 military trench dirts, bark-soil mix), gravel, forest floor ×3, sand and riverbank (rippled ×2, rocky sand), rock (gouged cliff, rough rock ×2, rocky ground and steppe, rocky soil), mud (mud and pebbles). Off-biome but imported: bright desert sand, Thai beach sand, coal ash, swamp water.
+
+**PolyHaven** (`/Game/PolyHaven/<id>/SM_<object>`, from `ue.ps1 -Task freeassets`, #409)
+
+- `Tools/Editor/free_assets.json` lists the models; `Tools/Editor/import_free_assets.py` downloads each one's 2K FBX and maps from Poly Haven's API into `Saved/FreeAssets/<id>/` (cached) and imports one Nanite static mesh per FBX object: a model's variants and a modular kit's parts become separate meshes, Poly Haven's `_LOD1`–`_LOD3` objects are dropped. One instance per material of `M_PolyHavenProp` (opaque: base colour, DirectX normal, ARM) or `M_PolyHavenFoliage` (masked by the alpha map, two-sided).
+- Collision: props an 18-DOP hull; the cliffs their own triangles (complex as simple); plants and branches none, which the audit flags as "no simple collision" on purpose.
+- All textures 2048². The run's list, with each mesh's size and Poly Haven's triangle count, is `Saved/FreeAssets/imported.md`.
+- **Open for #156, #158 and #160:** the scanned plants are dense. Poly Haven's counts per model are 6 k (fern) to 1.7 M triangles (celandine, five variants), grass_medium_02 1.0 M for five tufts of 16–40 cm. Fine as Nanite set dressing; as Landscape Grass or PCG at field density they must be measured first, and a Fab Megascans grass (05 §2) stays the upgrade.
+
+| Model | Category | Meshes | Use | Authors |
+|---|---|---|---|---|
+| `grass_bermuda_01` | B | 21 | Short and dead grass tufts, 3–15 cm | Rico Cilliers |
+| `grass_medium_02` | B | 5 | Meadow grass tufts, 16–40 cm | Rico Cilliers |
+| `dandelion_01`, `celandine_01`, `periwinkle_plant` | B | 5, 5, 6 | Wildflowers | Rob Tuytel, Rico Cilliers; Amal Kumar |
+| `nettle_plant`, `weed_plant_02`, `fern_02` | B | 6, 5, 4 | Verge weeds, wood-edge ferns | Rob Tuytel, Rico Cilliers |
+| `shrub_02`, `shrub_03`, `shrub_04` | B | 4 each | Low bushes, up to 1.4 m tall (hedgerow fill) | Rico Cilliers |
+| `moss_01` | B | 12 | Moss clumps | Rob Tuytel |
+| `modular_electricity_poles` | E | 103 | Wooden poles of 5, 6 and 7 m with crossarms, insulators, fuses and three assembled presets | James Ray Cock |
+| `modular_chainlink_fence` | E | 20 | Chain-link fence panels, posts, corners and a gate (yards, the depot) | James Ray Cock, Amal Kumar |
+| `street_lamp_01`, `utility_box_01` | E | 1 each | A village street lamp (3.9 m), a roadside utility box | Josh Dean; James Ray Cock |
+| `dead_tree_trunk`, `dead_tree_trunk_02`, `tree_stump_01`, `tree_stump_02` | F | 1 each | Fallen logs of 3 and 4 m, stumps | Rob Tuytel; Jenelle van Heerden, Rico Cilliers |
+| `dry_branches_medium_01`, `bark_debris_01`, `root_cluster_01` | F | 3, 4, 1 | Branches, bark and roots on the forest floor | Rico Cilliers; Greg Zaal, Jenelle van Heerden |
+| `rock_face_01`, `rock_face_02`, `mountainside` | F | 1 each | Small cliffs of 5 m, 5 m and 10 m | Dario Barresi, Rico Cilliers |
+
+**Roadside kit** (`/Game/Art/Shared/Roadside`, committed; source `Art/Shared/roadside`, #409)
+
+- Own work, because no CC0 source has European signs or a rural wooden fence. `Tools/Art/roadside_textures.py` draws the sign faces from Vienna Convention geometry (pure Python, its own stroke lettering, no font); `Tools/Art/roadside_blender.py` builds the meshes; `-Task freeassets` imports them, checked against `roadside.json`.
+- Signs on galvanised posts at their normal sizes, plate bottom at 2 m: `SM_Sign_speed_50` (600 mm), `SM_Sign_warning` and `SM_Sign_give_way` (900 mm triangles), `SM_Sign_priority_road` (600 mm diamond), `SM_Sign_place_name` (1200 × 500 mm on two posts, the fictional village MERWEDAL). 56–236 triangles each, UCX_ collision on the posts.
+- Fences in 3 m bays along +X with an end post each: `SM_Fence_PostRail` (wooden post-and-rail, 1.25 m), `SM_Fence_FieldWire` (round post, four wires, 1.15 m).
+- `SM_PowerLine_Cable`: 1 m of 16 mm conductor along +X for a spline mesh between the poles' insulators; no collision. #157 strings the lines.
+- Flat materials: `M_Roadside` (`MI_Roadside_Galvanised`, `_Wood`, `_Wire`) and `M_RoadsideFace` with one `MI_Sign_<sign>_Face` per sign.
+
+### Licences
+
+| Source | Licence | Commercial game | Recorded |
+|---|---|---|---|
+| Poly Haven models (`/Game/PolyHaven`) | CC0 1.0 (polyhaven.com/license) | Yes, no attribution required | Authors per model above; source URL per mesh in `Saved/FreeAssets/imported.md` |
+| ambientCG surfaces (the four sets above) | CC0 1.0 (ambientcg.com) | Yes, no attribution required | Set ids above |
+| Roadside kit | Own work of this project | Yes | `Tools/Art/roadside_*.py` |
+| Megascans surfaces, Fab packs | Fab / Quixel licences, local only | Not committed or cooked; settled with #154 onwards | Manifest above |
 
 ### Coverage against the minimum set (05 §2)
 
-Updated 2026-10-22 (#330). The village buildings and the bridge are made in-house (05 §2); the remaining gaps go to the follow-up of #330.
+Updated 2026-10-22 (#409). The village buildings and the bridge are made in-house (05 §2); every other category has its minimum set.
 
 
 | Category | Minimum set | Now | Status |
 |---|---|---|---|
-| A. Landscape surfaces | Grass, meadow, dirt, mud, gravel, rock, sand/riverbank, asphalt; one realistic family, 2K+ | Scanned surfaces (#330): grass, meadow, clover, dirt and tracks, gravel, forest floor, sand, rock; mud (MuddyGround, mud and pebbles), asphalt (UnrealDrive), concrete and paving (Scans Matter, StoneTiles) | **Met**; roof tiles and wood planks for the buildings still to add (CC0, 05 §2) |
+| A. Landscape surfaces | Grass, meadow, dirt, mud, gravel, rock, sand/riverbank, asphalt; one realistic family, 2K+ | Scanned surfaces (#330): grass, meadow, clover, dirt and tracks, gravel, forest floor, sand, rock; mud (MuddyGround, mud and pebbles), asphalt (UnrealDrive), concrete and paving (Scans Matter, StoneTiles); roof tiles and planks (ambientCG, #409) | **Met** |
 | B. Trees | 3 deciduous + 1–2 conifers, Nanite or LODs | Black alder, hazel, cherry; Norway spruce, Baltic pine (broken bark) | **Met** |
-| B. Bushes, grass, flowers | Hedgerow bushes, shrubs, grass and wildflower cards | Spindle, beach rose; no realistic grass or flower cards | **Partly**: grass and flowers missing |
+| B. Bushes, grass, flowers | Hedgerow bushes, shrubs, grass and wildflower cards | Spindle, beach rose; Poly Haven grass tufts (bermuda, meadow), wildflowers (dandelion, celandine, periwinkle), nettle, weeds, ferns, low shrubs, moss (#409) | **Met**; density to measure in #156/#158 |
 | D. Buildings | One modern European village kit | PBG slum prefabs, broken references; AccuCities city tiles; facade, paving and glass materials only | **Made in-house** (2026-10-22): enterable, garrisoned and destructible, which no pack offers |
-| E. Infrastructure | Road bridge, road decals, kerbs, fences, power poles and lines, streetlights, signs, barriers | Stylized bridge and roads; US freeway lamps, poles, barriers; UnrealDrive asphalt, kerbs, sidewalks, bollards, guardrails | **Partly**: European signs, fences, power lines missing; the bridge is made in-house with the buildings |
-| F. Natural details | Rocks, small cliffs, logs, debris, same family as A | 8 scanned stones; rock-face and cliff surfaces (#330) | **Partly**: cliff meshes and logs missing |
+| E. Infrastructure | Road bridge, road decals, kerbs, fences, power poles and lines, streetlights, signs, barriers | US freeway lamps, poles, barriers; UnrealDrive asphalt, kerbs, sidewalks, bollards, guardrails; Poly Haven wooden power poles, chain-link fence, street lamp, utility box; in-house European signs, post-and-rail and pasture fences, power-line cable (#409) | **Met**; the bridge is made in-house with the buildings |
+| F. Natural details | Rocks, small cliffs, logs, debris, same family as A | 8 scanned stones; rock-face and cliff surfaces (#330); Poly Haven cliffs (2 rock faces, a mountainside), logs, stumps, branches, bark, roots (#409) | **Met** |
 
 ### L_PackScale
 
-`/Game/Developers/PackAudit/L_PackScale` holds, on a 300 m ground: the Abrams (`/Game/Art/Local/Meshes/SM_Abrams_*`) and the M20 Guardian at the origin; one variant of each Megaplant species except the Baltic pine, and `SM_HP_Tree`, along +x; four stones; one StylizedBridge pillar base; the packs' landscape and water materials on 10 m tiles, and a second row with the surface packs (mud, two asphalts, sidewalk, two concretes, granite tiles, two stone pavings). Since #330 the rows go on with every scanned surface of `/Game/Surfaces`. 36 assets placed (before #330), missing references: 0. No building is placed, because no pack has a usable one.
+`/Game/Developers/PackAudit/L_PackScale` holds, on a 300 m ground: the Abrams (`/Game/Art/Local/Meshes/SM_Abrams_*`) and the M20 Guardian at the origin; one variant of each Megaplant species except the Baltic pine, and `SM_HP_Tree`, along +x; four stones; one StylizedBridge pillar base; the packs' landscape and water materials on 10 m tiles, and a second row with the surface packs (mud, two asphalts, sidewalk, two concretes, granite tiles, two stone pavings). Since #330 the rows go on with every scanned surface of `/Game/Surfaces`. Since #409 a row runs from the Abrams along −x: grass tufts, a dandelion, a celandine, a nettle, a shrub, the post-and-rail and pasture fences, a chain-link panel, a 6 m pole, the power-line cable, three signs, a log, a stump, branches, bark and a rock face. 98 assets placed (2026-10-22), missing references: 0. No building is placed, because no pack has a usable one.
 
 ## How this was checked (2026-10-15)
 

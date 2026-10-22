@@ -50,6 +50,8 @@ Content/AccuCities/
 Content/FogArea/
 # The scanned surfaces of ue.ps1 -Task surfaces (#330): Megascans source textures, rebuilt from the producer's ZIPs.
 Content/Surfaces/
+# The CC0 Poly Haven models of ue.ps1 -Task freeassets (#409), downloaded again on each machine.
+Content/PolyHaven/
 # Their one-file-per-actor data from the packs' demo levels.
 Content/__ExternalActors__/AdvancedGlass/
 Content/__ExternalActors__/AdvancedRealisticGlass/

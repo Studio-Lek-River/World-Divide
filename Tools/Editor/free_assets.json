@@ -1,0 +1,32 @@
+{
+ "about": "The CC0 assets of ue.ps1 -Task freeassets (#409), read by Tools/Editor/import_free_assets.py. Poly Haven models go to the git-ignored /Game/PolyHaven/<Id>; the ambientCG surface ZIPs go to the surfaces folder for ue.ps1 -Task surfaces. Licence of both sources: CC0 1.0, commercial use allowed, no attribution required.",
+ "polyhaven": [
+  {"id": "grass_bermuda_01", "category": "B", "kind": "foliage"},
+  {"id": "grass_medium_02", "category": "B", "kind": "foliage"},
+  {"id": "dandelion_01", "category": "B", "kind": "foliage"},
+  {"id": "celandine_01", "category": "B", "kind": "foliage"},
+  {"id": "periwinkle_plant", "category": "B", "kind": "foliage"},
+  {"id": "nettle_plant", "category": "B", "kind": "foliage"},
+  {"id": "weed_plant_02", "category": "B", "kind": "foliage"},
+  {"id": "fern_02", "category": "B", "kind": "foliage"},
+  {"id": "shrub_02", "category": "B", "kind": "foliage"},
+  {"id": "shrub_03", "category": "B", "kind": "foliage"},
+  {"id": "shrub_04", "category": "B", "kind": "foliage"},
+  {"id": "moss_01", "category": "B", "kind": "foliage"},
+  {"id": "modular_electricity_poles", "category": "E", "kind": "prop"},
+  {"id": "modular_chainlink_fence", "category": "E", "kind": "prop"},
+  {"id": "street_lamp_01", "category": "E", "kind": "prop"},
+  {"id": "utility_box_01", "category": "E", "kind": "prop"},
+  {"id": "dead_tree_trunk", "category": "F", "kind": "prop"},
+  {"id": "dead_tree_trunk_02", "category": "F", "kind": "prop"},
+  {"id": "tree_stump_01", "category": "F", "kind": "prop"},
+  {"id": "tree_stump_02", "category": "F", "kind": "prop"},
+  {"id": "dry_branches_medium_01", "category": "F", "kind": "foliage"},
+  {"id": "root_cluster_01", "category": "F", "kind": "prop"},
+  {"id": "bark_debris_01", "category": "F", "kind": "prop"},
+  {"id": "rock_face_01", "category": "F", "kind": "prop", "collision": "complex"},
+  {"id": "rock_face_02", "category": "F", "kind": "prop", "collision": "complex"},
+  {"id": "mountainside", "category": "F", "kind": "prop", "collision": "complex"}
+ ],
+ "ambientcg": ["RoofingTiles006", "RoofingTiles013A", "Planks037A", "Planks023A"]
+}

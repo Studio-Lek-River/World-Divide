@@ -17,15 +17,15 @@ What only the producer can do or decide, ordered by when it blocks work.
 
 ## 2. Assets to add from your Fab library
 
-Two batches of packs were imported and audited on 2026-10-20 (#153), a third on 2026-10-22 (AccuCities, FogArea); the manifest and the coverage are in [01_ASSET_AUDIT.md](01_ASSET_AUDIT.md), "Imported packs". Trees, rocks, mud, asphalt, concrete and paving come from the packs; grass, meadow, dirt, gravel, rock faces and sand come from the Megascans ZIPs in `D:\Downloads\textures` through `ue.ps1 -Task surfaces -Path D:\Downloads\textures` (#330). What is still open, with a free source where one exists:
+Two batches of packs were imported and audited on 2026-10-20 (#153), a third on 2026-10-22 (AccuCities, FogArea); the manifest and the coverage are in [01_ASSET_AUDIT.md](01_ASSET_AUDIT.md), "Imported packs". Trees, rocks, mud, asphalt, concrete and paving come from the packs; grass, meadow, dirt, gravel, rock faces and sand come from the Megascans ZIPs in `D:\Downloads\textures` through `ue.ps1 -Task surfaces -Path D:\Downloads\textures` (#330). The gaps of 2026-10-22 are filled since #409 by CC0 assets that `ue.ps1 -Task freeassets` downloads (Poly Haven models into `/Game/PolyHaven`, ambientCG roof and plank ZIPs into `D:\Downloads\textures`) and an in-house roadside kit; a machine that lacks them runs `-Task freeassets`, then `-Task surfaces -Path D:\Downloads\textures`. What each category has now:
 
-| Category | Still missing (late-summer temperate Europe, realistic) | Free source |
+| Category | Late-summer temperate Europe, realistic | Source |
 |---|---|---|
-| Landscape surfaces | Roof tiles, wood planks (for the buildings) | ambientCG or Poly Haven (CC0): download the 2K PNG ZIP into `D:\Downloads\textures` and run `-Task surfaces` again; it reads their file names |
-| Bushes, grass, flowers | Grass and wildflower cards for Landscape Grass and PCG; more hedgerow bushes | Fab's free Megascans plants when offered; Poly Haven has a few CC0 grass and plant models |
+| Landscape surfaces | Roof tiles, wood planks (for the buildings): **done** (#409) | ambientCG (CC0), listed in `Tools/Editor/free_assets.json`; more sets: add their id there, or drop any 2K PNG ZIP into `D:\Downloads\textures`, and run `-Task surfaces` again |
+| Bushes, grass, flowers | Grass and wildflowers for Landscape Grass and PCG, low shrubs: **done** (#409) | Poly Haven (CC0). Optional upgrade: Fab's free Megascans grass when offered, if #156/#158 find the Poly Haven tufts too dense |
 | Buildings | Village houses, farmhouse, barn, workshop/garage, a landmark | **Made in-house** (decided 2026-10-22): the buildings must be enterable, take an infantry squad that fires from them, and break apart, which no pack does. They come through the building pipeline of the USA HQ, as their own issues. |
-| Infrastructure | A realistic two-lane road bridge, fences, power poles and lines, European signs | The bridge is part of the map and is made in-house like the buildings (it is crossed and fought over). Fences, poles and signs: Poly Haven CC0 models, Fab's free monthly content, or simple in-house kit meshes |
-| Natural details | Small cliffs, logs, debris | Rock faces are covered by the scanned surfaces; logs and debris from Poly Haven (CC0) or Fab's free monthly content |
+| Infrastructure | Fences, power poles and lines, European signs: **done** (#409); the two-lane road bridge | Poles and chain-link fence from Poly Haven (CC0); signs, wooden fences and the line cable in-house (`Art/Shared/roadside`). The bridge is part of the map and is made in-house like the buildings (it is crossed and fought over) |
+| Natural details | Small cliffs, logs, debris: **done** (#409) | Poly Haven (CC0) rock faces, logs, stumps, branches, bark |
 
 The road tool is out: **MetaRoad** fails to install to 5.8, so only `UnrealDrive_CitySample`'s meshes and materials are used (01, UnrealDrive_CitySample).
 **Storage:** the repository is public, so packs are never committed. Keep each in its own `Content/<Pack>/` root, add it to `.gitignore` and to `DirectoriesToNeverCook` in `Config/DefaultGame.ini` (the cook test fails otherwise), then run `Tools\Scripts\ue.ps1 -Task packaudit` and tell me the folder name.

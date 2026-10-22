@@ -8,9 +8,9 @@ git-ignored and never cooked (Config/DefaultGame.ini). This script reads what is
   collision and material slots; per texture its size; per asset whose class comes from a plugin this project lacks,
   that plugin. One CSV per pack and a summary go to Saved/PackAudit/.
 - Every pack texture over 4K gets a Max Texture Size of 4K (#330), so no 8K map reaches a map or the GPU.
-- /Game/Developers/PackAudit/L_PackScale puts a sample of the packs (trees, a building, stones, a bridge, the surface
-  materials and the scanned surfaces of ue.ps1 -Task surfaces on tiles) next to the Abrams and the M20 Guardian at real
-  scale. The level references local-only assets, so it is git-ignored too. After saving it, every /Game package it references is checked to exist.
+- /Game/Developers/PackAudit/L_PackScale puts a sample of the packs (trees, a building, stones, a bridge, the props of
+  ue.ps1 -Task freeassets, the surface materials and the scanned surfaces of ue.ps1 -Task surfaces on tiles) next to the
+  Abrams and the M20 Guardian at real scale. The level references local-only assets, so it is git-ignored too. After saving it, every /Game package it references is checked to exist.
 
 Run with Tools/Scripts/ue.ps1 -Task packaudit, which fails when the summary lists a missing reference.
 """
@@ -25,7 +25,7 @@ CONTENT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_co
 OUT_DIR = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir()), "PackAudit")
 # The project's own Content folders, as in RTSConfigTests.cpp, and the bench HQs of setup -BenchHQ (never capped: the
 # bench measures them as built); every other top-level folder is a pack.
-PROJECT_FOLDERS = {"Art", "Audio", "Bench", "Collections", "Data", "Developers", "Effects", "Maps", "Materials", "UI",
+PROJECT_FOLDERS = {"Art", "Audio", "Bench", "Collections", "Data", "Developers", "Effects", "Maps", "Materials", "UI", "World",
                    "__ExternalActors__", "__ExternalObjects__"}
 LEVEL_PATH = "/Game/Developers/PackAudit/L_PackScale"
 
@@ -50,6 +50,29 @@ SURFACE_SAMPLES = [
     ("/Game/Materials_StoneTiles/Materials/Instances", "MI_StoneTiles", 2),
 ]
 SCANNED_SURFACES = "/Game/Surfaces"
+# The props of ue.ps1 -Task freeassets (#409) in a row beside the Abrams: (folder, name filter, how many, spacing in cm).
+# Grass and flower cards, fences, a pole and the power-line cable, signs, logs and debris, then a cliff.
+PROP_SAMPLES = [
+    ("/Game/PolyHaven/grass_medium_02", "SM_", 3, 150.0),
+    ("/Game/PolyHaven/grass_bermuda_01", "medium", 2, 100.0),
+    ("/Game/PolyHaven/dandelion_01", "SM_", 1, 150.0),
+    ("/Game/PolyHaven/celandine_01", "SM_", 1, 150.0),
+    ("/Game/PolyHaven/nettle_plant", "tall", 1, 200.0),
+    ("/Game/PolyHaven/shrub_02", "SM_", 1, 400.0),
+    ("/Game/Art/Shared/Roadside", "SM_Fence_PostRail", 1, 500.0),
+    ("/Game/Art/Shared/Roadside", "SM_Fence_FieldWire", 1, 500.0),
+    ("/Game/PolyHaven/modular_chainlink_fence", "SM_modular_chainlink_fence_double", 1, 500.0),
+    ("/Game/PolyHaven/modular_electricity_poles", "SM_pole", 1, 300.0),
+    ("/Game/Art/Shared/Roadside", "SM_PowerLine_Cable", 1, 500.0),
+    ("/Game/Art/Shared/Roadside", "SM_Sign_speed_50", 1, 300.0),
+    ("/Game/Art/Shared/Roadside", "SM_Sign_warning", 1, 300.0),
+    ("/Game/Art/Shared/Roadside", "SM_Sign_place_name", 1, 400.0),
+    ("/Game/PolyHaven/dead_tree_trunk", "SM_", 1, 800.0),
+    ("/Game/PolyHaven/tree_stump_01", "SM_", 1, 400.0),
+    ("/Game/PolyHaven/dry_branches_medium_01", "SM_", 1, 300.0),
+    ("/Game/PolyHaven/bark_debris_01", "SM_", 1, 400.0),
+    ("/Game/PolyHaven/rock_face_01", "SM_", 1, 1000.0),
+]
 CUBE = "/Engine/BasicShapes/Cube.Cube"
 
 registry = unreal.AssetRegistryHelpers.get_asset_registry()
@@ -330,6 +353,12 @@ def build_level():
     bridges = find("/Game/StylizedBridge/StaticMesh/Bridge", {"StaticMesh"})
     if bridges:
         put(bridges[0], (0.0, 5000.0, 0.0), "Bridge")
+    # The free props (#409), from the Abrams along -x.
+    x = -1000.0
+    for root, contains, count, spacing in PROP_SAMPLES:
+        for prop in find(root, {"StaticMesh"}, contains)[:count]:
+            put(prop, (x, -800.0, 0.0), os.path.basename(prop))
+            x -= spacing
 
     # Surface candidates: the material instances in the packs' landscape folders, then the samples of the surface packs.
     surfaces = [path for pack in pack_roots() for path in find(f"/Game/{pack}", {"MaterialInstanceConstant"})
