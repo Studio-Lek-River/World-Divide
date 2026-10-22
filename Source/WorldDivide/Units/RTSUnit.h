@@ -560,7 +560,10 @@ private:
 
 	FRTSShotDelegate ShotDelegate;
 
-	/** Places the mesh from its rest location, tilt, fire kick, rock and sway; it leans around the bottom of the hull box. */
+	/**
+	 * Places the mesh from its rest location, tilt, fire kick, rock and sway; it leans around the bottom of the hull box. The
+	 * running gear takes the rest location, tilt and kick only, so the tracks stay on the ground while the hull sways (#333).
+	 */
 	void UpdateMeshTransform();
 
 	/** The hull box: picking, the movement component's updated component and the Pawn overlaps of building placement. */
@@ -569,6 +572,13 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> Mesh;
+
+	/**
+	 * Mesh's frame without the rock and the sway, scaled as Mesh: the hull's tracks and wheels ride on it, so they stay on the
+	 * ground while the hull rocks and sways on its suspension (#333).
+	 */
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<USceneComponent> RunningGear;
 
 	/** Attached to Mesh, so it leans and kicks with the hull; hidden without a turret. */
 	UPROPERTY(VisibleAnywhere, Category = "Components")
@@ -720,12 +730,12 @@ private:
 	};
 	TArray<FWheelSet> WheelSets;
 
-	/** The hull's world transform UpdateRunningGear last placed the wheels on. */
+	/** RunningGear's world transform UpdateRunningGear last placed the wheels on. */
 	TOptional<FTransform> GearHull;
 	/** The wheels' previous transforms are their current ones: standing, they show no motion. */
 	bool bWheelsSettled = true;
 
-	/** Where Wheel is drawn in world space with its roll, on the hull as it stands now. */
+	/** Where Wheel is drawn in world space with its roll, on the running gear as it stands now. */
 	FTransform GetWheelTransform(const FWheel& Wheel) const;
 
 	/** The unit's place when UpdateRunningGear last ran. */

@@ -203,6 +203,9 @@ ARTSUnit::ARTSUnit()
 	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Mesh->SetCanEverAffectNavigation(false);
 
+	RunningGear = CreateDefaultSubobject<USceneComponent>(TEXT("RunningGear"));
+	RunningGear->SetupAttachment(Collision);
+
 	Turret = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Turret"));
 	Turret->SetupAttachment(Mesh);
 	Turret->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -314,6 +317,7 @@ void ARTSUnit::ApplyUnitData()
 
 	Mesh->SetStaticMesh(UnitData->Mesh);
 	Mesh->SetRelativeScale3D(UnitData->MeshScale);
+	RunningGear->SetRelativeScale3D(UnitData->MeshScale);
 	// The box is the hull, and the mesh, or the running gear below it, stands on its bottom.
 	Shape = RTSUnitShape::FromData(*UnitData);
 	Collision->SetBoxExtent(Shape.Hull.GetExtent());
@@ -386,13 +390,16 @@ void ARTSUnit::CreateParts()
 		Gun->SetRelativeLocationAndRotation(UnitData->GunOffset, FRotator(GunPitch, 0.f, 0.f));
 	}
 
-	const FTransform Hull = Mesh->GetComponentTransform();
+	const FTransform Hull = RunningGear->GetComponentTransform();
 	TMap<UStaticMesh*, int32> SetOfMesh;
 	for (const FRTSVehiclePart& Part : UnitData->Parts)
 	{
 		FPartSlot& Slot = PartSlots.AddDefaulted_GetRef();
+		// The tracks and wheels stay on the ground while the hull above them sways (#333).
+		const bool bRunningGear = Part.MountedOn == ERTSVehiclePartMount::Hull && (Part.bWheel || Part.TrackPitch > 0.f);
 		USceneComponent* Parent = Part.MountedOn == ERTSVehiclePartMount::Gun ? Gun.Get()
-			: Part.MountedOn == ERTSVehiclePartMount::Turret ? (HasTurret() ? Turret.Get() : nullptr) : Mesh.Get();
+			: Part.MountedOn == ERTSVehiclePartMount::Turret ? (HasTurret() ? Turret.Get() : nullptr)
+			: bRunningGear ? RunningGear.Get() : Mesh.Get();
 		if (!Part.Mesh || !Parent)
 		{
 			continue;
@@ -416,9 +423,9 @@ void ARTSUnit::CreateParts()
 			continue;
 		}
 
-		// One draw for every wheel of a kind: each wheel is an instance. The set stays attached to the hull, which it is shown,
-		// hidden and coloured with, but it does not move with it: UpdateRunningGear writes every instance in world space each
-		// frame the hull moves or the wheels roll. Carried by the hull's move as well, the set would be updated twice (#165).
+		// One draw for every wheel of a kind: each wheel is an instance. The set stays attached to the running gear, which it is
+		// shown and hidden with, but it does not move with it: UpdateRunningGear writes every instance in world space each frame
+		// the running gear moves or the wheels roll. Carried by the gear's move as well, the set would be updated twice (#165).
 		int32* SetIndex = SetOfMesh.Find(Part.Mesh.Get());
 		if (!SetIndex)
 		{
@@ -583,7 +590,7 @@ FTransform ARTSUnit::GetWheelTransform(const FWheel& Wheel) const
 	// Rolling forward brings the top of the wheel forward: a nose-down pitch about the hull's Y axis, after the wheel's own
 	// turn on the hull.
 	const FQuat Roll = FRotator(-FMath::RadiansToDegrees(Wheel.Angle), 0.f, 0.f).Quaternion();
-	return FTransform(Roll * Wheel.Rest.GetRotation(), Wheel.Rest.GetLocation()) * Mesh->GetComponentTransform();
+	return FTransform(Roll * Wheel.Rest.GetRotation(), Wheel.Rest.GetLocation()) * RunningGear->GetComponentTransform();
 }
 
 bool ARTSUnit::GetPartTransform(int32 PartIndex, FTransform& OutTransform) const
@@ -692,9 +699,9 @@ int32 ARTSUnit::UpdateRunningGear(const FRTSTrackViews* Views)
 		}
 	}
 
-	// The wheels are placed in world space, so they follow every move of the hull, rolled or not: a push, a tilt, a kick, a
-	// correction from the server.
-	const FTransform& Hull = Mesh->GetComponentTransform();
+	// The wheels are placed in world space, so they follow every move of the running gear, rolled or not: a push, a tilt, a
+	// kick, a correction from the server. The hull's rock and sway leave them on the ground (#333).
+	const FTransform& Hull = RunningGear->GetComponentTransform();
 	const bool bMoved = bRolls || !GearHull.IsSet() || !GearHull->Equals(Hull);
 	if (Wheels.IsEmpty() || (!bMoved && bWheelsSettled))
 	{
@@ -1462,10 +1469,12 @@ void ARTSUnit::UpdateMeshTransform()
 	// Leaning around the bottom of the hull box keeps the tracks on the slope.
 	const FVector Extent = Collision->GetUnscaledBoxExtent();
 	const FVector Pivot(0.f, 0.f, -Extent.Z);
-	FVector Hull = MeshRestLocation + Kick;
+	const FVector Rest = MeshRestLocation + Kick;
+	FVector Hull = Rest;
 	FQuat Rotation = FQuat::Identity;
 	// The rock from a shot (PlayGunRecoil) and the drive's sway (StepBodyMotion) lift one side, hinged on the bottom edge
-	// across from it, so the hull rises but never sinks into the ground.
+	// across from it, so the hull rises on its suspension but never sinks into the ground or onto its tracks; the running
+	// gear stays down (#333).
 	const FVector2D Rock = GetHullRock() + GetHullSway();
 	const float RockDegrees = Rock.Size();
 	if (RockDegrees > UE_KINDA_SMALL_NUMBER)
@@ -1478,6 +1487,7 @@ void ARTSUnit::UpdateMeshTransform()
 		Hull = Hinge + Rotation.RotateVector(Hull - Hinge);
 	}
 	const FQuat Tilt = MeshTilt.Quaternion();
+	RunningGear->SetRelativeLocationAndRotation(Pivot + Tilt.RotateVector(Rest - Pivot), Tilt);
 	Mesh->SetRelativeLocationAndRotation(Pivot + Tilt.RotateVector(Hull - Pivot), Tilt * Rotation);
 }
 

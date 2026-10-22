@@ -382,8 +382,9 @@ bool FRTSRecoilTrackingTest::RunTest(const FString& Parameters)
 
 /**
  * The rock is drawn only (#219): an M20 rocking and one whose data has no rock, at the gun's 0, 90 and 180 degrees, keep
- * their actor and collision box exactly where they rest through every frame of a shot; and on the rocking one the turret,
- * the tracks and every wheel stay where they sit on the hull, so nothing opens a gap between them.
+ * their actor and collision box exactly where they rest through every frame of a shot; and on the rocking one the turret
+ * stays where it sits on the hull, while the tracks and every wheel stay where they rest on the ground as the hull rocks on
+ * its suspension above them (#333).
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRecoilRockVisualOnlyTest, "WorldDivide.Combat.Recoil.RockVisualOnly", RTSTests::TestFlags)
 
@@ -407,11 +408,18 @@ bool FRTSRecoilRockVisualOnlyTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	// The parts on the hull and the turret: the gun's own jump and the barrel's stroke are the recoil (Recoil.Rock).
+	// The parts on the turret ride the hull; the gun's own jump and the barrel's stroke are the recoil (Recoil.Rock). The
+	// tracks and wheels on the hull are its running gear, which stays on the ground.
 	TArray<int32> Parts;
+	TArray<int32> GearParts;
 	for (int32 Index = 0; Index < M20->Parts.Num(); ++Index)
 	{
-		if (M20->Parts[Index].MountedOn != ERTSVehiclePartMount::Gun)
+		const FRTSVehiclePart& Part = M20->Parts[Index];
+		if (Part.MountedOn == ERTSVehiclePartMount::Hull && (Part.bWheel || Part.TrackPitch > 0.f))
+		{
+			GearParts.Add(Index);
+		}
+		else if (Part.MountedOn != ERTSVehiclePartMount::Gun)
 		{
 			Parts.Add(Index);
 		}
@@ -439,7 +447,8 @@ bool FRTSRecoilRockVisualOnlyTest::RunTest(const FString& Parameters)
 		TestTrue(FString::Printf(TEXT("%s: both collision boxes are the same size"), *Gun),
 			BoundsRest[0].GetExtent().Equals(BoundsRest[1].GetExtent(), 0.f));
 
-		// Where everything sits on the hull at rest: the parts, and each wheel instance as drawn.
+		// Where the turret's parts sit on the hull at rest, and where the running gear stands in the world: the track parts,
+		// and each wheel instance as drawn. The actor stands still, so the ground stays where it was.
 		const FTransform HullRest = Hull->GetComponentTransform();
 		TArray<FTransform> PartsRest;
 		for (const int32 Part : Parts)
@@ -448,28 +457,30 @@ bool FRTSRecoilRockVisualOnlyTest::RunTest(const FString& Parameters)
 			Tanks[0]->GetPartTransform(Part, Transform);
 			PartsRest.Add(Transform.GetRelativeTransform(HullRest));
 		}
-		auto GetWheelsOnHull = [&WheelSets](const FTransform& HullNow)
+		auto GetGear = [&WheelSets, &GearParts, Tank = Tanks[0]]()
 		{
-			TArray<FTransform> OnHull;
+			TArray<FTransform> Gear;
+			for (const int32 Part : GearParts)
+			{
+				Tank->GetPartTransform(Part, Gear.AddDefaulted_GetRef());
+			}
 			for (const UInstancedStaticMeshComponent* Set : WheelSets)
 			{
 				for (int32 Instance = 0; Instance < Set->GetInstanceCount(); ++Instance)
 				{
-					FTransform Transform;
-					Set->GetInstanceTransform(Instance, Transform, /*bWorldSpace*/ true);
-					OnHull.Add(Transform.GetRelativeTransform(HullNow));
+					Set->GetInstanceTransform(Instance, Gear.AddDefaulted_GetRef(), /*bWorldSpace*/ true);
 				}
 			}
-			return OnHull;
+			return Gear;
 		};
-		const TArray<FTransform> WheelsRest = GetWheelsOnHull(HullRest);
+		const TArray<FTransform> GearRest = GetGear();
 
 		Tanks[0]->PlayGunRecoil();
 		Tanks[1]->PlayGunRecoil();
 		bool bStill = true;
 		float MostRock = 0.f;
 		float MostPartGap = 0.f;
-		float MostWheelGap = 0.f;
+		float MostGearGap = 0.f;
 		for (float Time = 0.f; Time < SettleLimit && (Tanks[0]->IsRecoiling() || Tanks[1]->IsRecoiling()); Time += Step)
 		{
 			for (int32 Tank = 0; Tank < 2; ++Tank)
@@ -489,17 +500,16 @@ bool FRTSRecoilRockVisualOnlyTest::RunTest(const FString& Parameters)
 				MostPartGap = FMath::Max(MostPartGap,
 					static_cast<float>(FVector::Dist(Transform.GetRelativeTransform(HullNow).GetLocation(), PartsRest[Index].GetLocation())));
 			}
-			const TArray<FTransform> Wheels = GetWheelsOnHull(HullNow);
-			for (int32 Index = 0; Index < Wheels.Num(); ++Index)
+			const TArray<FTransform> Gear = GetGear();
+			for (int32 Index = 0; Index < Gear.Num(); ++Index)
 			{
-				MostWheelGap = FMath::Max(MostWheelGap,
-					static_cast<float>(FVector::Dist(Wheels[Index].GetLocation(), WheelsRest[Index].GetLocation())));
+				MostGearGap = FMath::Max(MostGearGap, static_cast<float>(FVector::Dist(Gear[Index].GetLocation(), GearRest[Index].GetLocation())));
 			}
 		}
 		TestTrue(FString::Printf(TEXT("%s: the hull rocked (%.2f degrees)"), *Gun, MostRock), MostRock > M20->GunRecoil.HullRockDegrees * 0.5f);
 		TestTrue(FString::Printf(TEXT("%s: the actors and their collision stay exactly where they rest, rocking or not"), *Gun), bStill);
-		TestTrue(FString::Printf(TEXT("%s: the turret and the tracks stay on the hull (%.4f cm)"), *Gun, MostPartGap), MostPartGap < RestTolerance);
-		TestTrue(FString::Printf(TEXT("%s: every wheel stays on the hull (%.4f cm)"), *Gun, MostWheelGap), MostWheelGap < RestTolerance);
+		TestTrue(FString::Printf(TEXT("%s: the turret stays on the hull (%.4f cm)"), *Gun, MostPartGap), MostPartGap < RestTolerance);
+		TestTrue(FString::Printf(TEXT("%s: the tracks and every wheel stay on the ground (%.4f cm)"), *Gun, MostGearGap), MostGearGap < RestTolerance);
 	}
 	return true;
 }
