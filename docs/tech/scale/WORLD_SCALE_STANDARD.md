@@ -2,7 +2,8 @@
 
 Status: **approved** by the producer (2026-10-15, recovery decision D-F in [the recovery audit](../../production/SHARED_FOUNDATION_RECOVERY.md)). This is the authoritative source for world scale: 1 Unreal unit = 1 cm, and any change to the world scale needs the producer's explicit approval. Companion documents in this folder:
 [placeholder audit](PLACEHOLDER_SCALE_AUDIT.md), [collision and selection](VEHICLE_COLLISION_AND_SELECTION.md),
-[movement performance](RTS_MOVEMENT_PERFORMANCE.md), [implementation plan](SCALE_IMPLEMENTATION_PLAN.md).
+[movement performance](RTS_MOVEMENT_PERFORMANCE.md), [implementation plan](SCALE_IMPLEMENTATION_PLAN.md),
+[Zero Hour proportions](ZH_PROPORTIONS.md) (measured reference).
 
 This is the "rescale issue" that [WD_RiverCrossing_01 technical plan](../../world/maps/WD_RiverCrossing_01/03_TECHNICAL_PLAN.md)
 §9, §12 and §14 depend on.
@@ -97,4 +98,4 @@ The full argument is in [the implementation plan](SCALE_IMPLEMENTATION_PLAN.md#s
 | Max arm | 70 m | 450 m (about 520 m across: a base and its approaches) |
 | Pitch | -55° | -55° (unchanged) |
 | Test map (L_TestMap) | 200 × 200 m | 600 × 600 m |
-| Skirmish maps | 160–240 m across | 500–800 m across for small maps; full maps follow RiverCrossing (2 km playable) |
+| Skirmish maps | 160–240 m across | At least Zero Hour's size for as many players ([ZH proportions](ZH_PROPORTIONS.md) §4): 1000 m for two players, 1250 m for four to six, about 1600 m for eight. Full maps follow RiverCrossing (2 km playable). `L_Skirmish` and `L_SkirmishDuel` stay at 600 m as test maps. |
