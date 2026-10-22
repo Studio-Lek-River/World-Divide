@@ -19,7 +19,7 @@ Earlier candidates, recovery archives and the blockout are gone from the reposit
 
 ## Dimensions and coordinates
 
-- Slab 38 m along Unreal X × 56 m along Y, 17.98 m to the top of the central tower. Origin on the ground at the slab's centre; +X is the front and the garage exit, +Y is west.
+- Slab 38 m along Unreal X × 56 m along Y, 13.43 m to the top of the central tower's roof; the communication masts rise to 28 m (core) and 24 m (east roof) (#379). Origin on the ground at the slab's centre; +X is the front and the garage exit, +Y is west.
 - Footprint 38 × 56 cells on the 100 cm grid. MeshScale (1, 1, 1): no fit stretch.
 - Garage opening 12.6 × 5.6 m, a 7 m clear vehicle lane, bay 15.044 m deep. Sockets (cm, building frame):
 
@@ -28,8 +28,8 @@ Earlier candidates, recovery archives and the blockout are gone from the reposit
 | GarageSpawn | (742.2, −1758.5, 5) |
 | GarageExit | (1494.4, −1758.5, 5) |
 | GarageDoorPivot | (1474.4, −1758.5, 565) |
-| FlagCourtyard / FlagCore / MastTip | (1115.3, 0, 1700) / (−1238.7, −694.5, 1210) / (−1080.0, 0, 1800), as delivered; MastTip stands 1.8 m off the core mast's rod |
-| MastTipCore / MastTipEast | (−898.7, 0, 1798) / (−1090, −1995, 1650), measured on the shell: the tops of the core tower's and east roof's antenna rods (#351) |
+| FlagCourtyard / FlagCore | (1115.3, 0, 1700) / (−1238.7, −694.5, 1210), as delivered |
+| MastTipCore / MastTipEast | (−898.7, 0, 2800) / (−1090, −1995, 2400), the tops of the masts' antenna rods (#379; the delivered MastTip, 1.8 m off the old rod, is dropped) |
 | RadarPivot, WingDish pivots, DriveShaftPivot | see `usa_hq.json` |
 
 ## Assembly
@@ -63,7 +63,8 @@ All values are data: `Tools/Art/usa_hq_recipe.py` (`MOTION`, `BEACONS`, `FLAG_*`
 | WingDish_Elevation | sweep ±4° pitch over 24 s about `WingDishElevationPivot` (+20 cm), riding on WingDish_Azimuth | ±10 % |
 
 - `URTSBuildingMotionSubsystem` (one `FTickFunction` in `TG_PostUpdateWork`, no tick per HQ) turns them: relative transform = turn about the pivot × rest × the followed part's turn about its pivot, so placement rotation and the construction scale come from `Mesh`. Each HQ picks its rates and phases from where it stands. A part is posed only while its HQ was drawn in the last 0.2 s and a camera is within the part's draw distance; the angles run on regardless. Nothing on a dedicated server. `rts.Fx.BuildingMotion 0` freezes them.
-- Beacons: `SM_Beacon_Obstruction` (shared prop, 44 × 56 cm, 314 triangles, no shadow) at MastTipCore and MastTipEast, drawn as one instanced component. `M_Beacon_Obstruction`: the lens flashes red (1 Hz, on 18 % of the cycle, ±8 % rate and its own phase per beacon from its world position), emissive only, times `Operational` (CPD 8, `RTSPrimitiveData::LampOn`). No light components.
+- Masts (#379): `SM_HQ22_MastCore_H28` and `SM_HQ22_MastEast_H28`, out of the shell as static parts `MastCore` / `MastEast`, each at its foot ((−898.7, 0, 1151) and (−1090, −1995, 770)) unturned, with a hand-made LOD1 (3,772 / 1,404 and 5,780 / 2,700 triangles). The producer chose the 28 / 24 m option of three (`Art/USA/buildings/usa_hq/HANDOFF_379.md`).
+- Beacons: `SM_Beacon_Obstruction` (shared prop, 44 × 56 cm, 314 triangles, no shadow) at MastTipCore and MastTipEast, scaled 1.75 with the masts, drawn as one instanced component. `M_Beacon_Obstruction`: the lens flashes red (1 Hz, on 18 % of the cycle, ±8 % rate and its own phase per beacon from its world position), emissive only, times `Operational` (CPD 8, `RTSPrimitiveData::LampOn`). No light components.
 - Flag: `SM_Flag_Cloth` (shared prop, 40 × 24 quads, 1 × 1 m, origin at the hoist's top, U hoist → fly, V top → bottom) at (1150, 10.5, 690), yaw 90, flying along +Y from just outside the pole (13 cm, top at 7.1 m), its top 20 cm under the pole's. Size: hoist 2.2 m, fly 4.18 m (10:19). `URTSBuildingData::FlagType` (`USA`) is looked up in `DA_FlagTypes` (`URTSFlagTypes`, written by setup from `Art/Shared/flags/flags.json`); `ARTSBuilding::ApplyParts` puts its instance (`MI_Flag_USA` on `M_Flag_Cloth`) on `FlagPart` and sets the cloth's width to its height × the flag's aspect. Adding a flag: a PNG in `Art/Shared/flags/`, an entry in `flags.json`, setup.
 - `usa.png` (2048 × 1024, drawn by `Tools/Art/flag_textures.py`): Executive Order 10834 — 13 stripes, 50 stars in nine rows of six and five, the union over seven stripes, 0.5385 × 0.76 of the hoist, at the hoist.
 - `M_Flag_Cloth`: two-sided, derivative world normal, colours from `FlagTexture`. World position offset: waves travelling hoist → fly (1.35 per flag length, 0.85 Hz), growing as U^1.5 to 24 cm at the fly, plus a faster harmonic; flutter (4.5 per length, 2.6 Hz, U³, 5 cm); sag U² up to 22 cm, more in a lull; gusts over 7 s swell amplitude by 45 % and wave speed by 30 %; per-flag phases from `ObjectPositionWS`; nothing at the hoist, so the cloth never leaves or crosses the pole. The wind fades out from 90 to 120 m from the camera, and the part's `WPODisableDistance` (125 m) stops it beyond.

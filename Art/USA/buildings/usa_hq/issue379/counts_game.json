@@ -1,0 +1,250 @@
+{
+  "total": 349568,
+  "meshes": {
+    "Shell": {
+      "mesh": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Candidate22/Shells/SM_HQ379_ShellReview.SM_HQ379_ShellReview"
+      },
+      "lod": 1,
+      "triangles": 267000
+    },
+    "ShellDetail": {
+      "mesh": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Candidate22/Shells/SM_HQ_ShellDetail.SM_HQ_ShellDetail"
+      },
+      "lod": 0,
+      "triangles": 41344
+    },
+    "DoorBottomSeal": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorBottomSeal.SM_HQ20_DoorBottomSeal"
+      },
+      "lod": 0,
+      "triangles": 668
+    },
+    "DoorSection00": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection01": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection02": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection03": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection04": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection05": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection06": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection07": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection08": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection09": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection10": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection11": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection12": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection13": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection14": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorSection15": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery.SM_HQ20_DoorSection_Delivery"
+      },
+      "lod": 0,
+      "triangles": 1200
+    },
+    "DoorTopRollers": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorTopRollers.SM_HQ20_DoorTopRollers"
+      },
+      "lod": 0,
+      "triangles": 184
+    },
+    "DriveShaft": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DriveShaft.SM_HQ20_DriveShaft"
+      },
+      "lod": 0,
+      "triangles": 1000
+    },
+    "ER_Cooling_Fan1_Rotor": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_ER_Cooling_Fan1_Rotor.SM_HQ19_ER_Cooling_Fan1_Rotor"
+      },
+      "lod": 0,
+      "triangles": 176
+    },
+    "LiftCableEast": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_LiftCable.SM_HQ20_LiftCable"
+      },
+      "lod": 0,
+      "triangles": 28
+    },
+    "LiftCableWest": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_LiftCable.SM_HQ20_LiftCable"
+      },
+      "lod": 0,
+      "triangles": 28
+    },
+    "NationalFlag": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_Flag_Cloth.SM_Flag_Cloth"
+      },
+      "lod": 0,
+      "triangles": 1920
+    },
+    "Radar_Azimuth": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_Radar_Azimuth.SM_HQ19_Radar_Azimuth"
+      },
+      "lod": 0,
+      "triangles": 3000
+    },
+    "WF_Condenser_Fan1_Rotor": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WF_Condenser_Fan1_Rotor.SM_HQ19_WF_Condenser_Fan1_Rotor"
+      },
+      "lod": 0,
+      "triangles": 176
+    },
+    "WM_AHU_Fan1_Rotor": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WM_AHU_Fan1_Rotor.SM_HQ19_WM_AHU_Fan1_Rotor"
+      },
+      "lod": 0,
+      "triangles": 176
+    },
+    "WM_AHU_Fan2_Rotor": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WM_AHU_Fan2_Rotor.SM_HQ19_WM_AHU_Fan2_Rotor"
+      },
+      "lod": 0,
+      "triangles": 176
+    },
+    "WingDish_Azimuth": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WingDish_Azimuth.SM_HQ19_WingDish_Azimuth"
+      },
+      "lod": 0,
+      "triangles": 1312
+    },
+    "WingDish_Elevation": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WingDish_Elevation.SM_HQ19_WingDish_Elevation"
+      },
+      "lod": 0,
+      "triangles": 3000
+    },
+    "MastCore": {
+      "mesh": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Candidate22/FinalMasts/SM_HQ22_MastCore_H28.SM_HQ22_MastCore_H28"
+      },
+      "lod": 0,
+      "triangles": 3772
+    },
+    "MastEast": {
+      "mesh": {
+        "refPath": "/Game/Art/Candidates/USA_HQ/Candidate22/FinalMasts/SM_HQ22_MastEast_H28.SM_HQ22_MastEast_H28"
+      },
+      "lod": 0,
+      "triangles": 5780
+    },
+    "BeaconCore": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_Beacon_Obstruction.SM_Beacon_Obstruction"
+      },
+      "lod": 0,
+      "triangles": 314
+    },
+    "BeaconEast": {
+      "mesh": {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_Beacon_Obstruction.SM_Beacon_Obstruction"
+      },
+      "lod": 0,
+      "triangles": 314
+    }
+  }
+}

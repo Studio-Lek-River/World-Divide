@@ -7,7 +7,7 @@
  "reference_size_cm": [
   3800.0,
   5600.0,
-  1798.0
+  1343.08
  ],
  "root_part": "Shell",
  "switch_distance": 26000.0,
@@ -68,9 +68,9 @@
    "name": "Beacon_MastTipCore",
    "mesh": "SM_Beacon_Obstruction",
    "location": [
-    -898.7,
+    -898.7123,
     0.0,
-    1798.0
+    2800.0
    ],
    "rotation": [
     0.0,
@@ -78,9 +78,9 @@
     0.0
    ],
    "scale": [
-    1.0,
-    1.0,
-    1.0
+    1.75,
+    1.75,
+    1.75
    ],
    "movable": false,
    "cast_shadow": false,
@@ -94,8 +94,8 @@
    "mesh": "SM_Beacon_Obstruction",
    "location": [
     -1090.0,
-    -1995.0,
-    1650.0
+    -1995.0001,
+    2400.0
    ],
    "rotation": [
     0.0,
@@ -103,9 +103,9 @@
     0.0
    ],
    "scale": [
-    1.0,
-    1.0,
-    1.0
+    1.75,
+    1.75,
+    1.75
    ],
    "movable": false,
    "cast_shadow": false,
@@ -680,6 +680,56 @@
    "cast_shadow": true,
    "bounds_scale": 1.0,
    "max_draw_distance": 12000.0,
+   "wpo_disable_distance": 0.0,
+   "motion": null
+  },
+  {
+   "name": "MastCore",
+   "mesh": "SM_HQ22_MastCore_H28",
+   "location": [
+    -898.7123,
+    0.0,
+    1151.0
+   ],
+   "rotation": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "movable": false,
+   "cast_shadow": true,
+   "bounds_scale": 1.0,
+   "max_draw_distance": 0.0,
+   "wpo_disable_distance": 0.0,
+   "motion": null
+  },
+  {
+   "name": "MastEast",
+   "mesh": "SM_HQ22_MastEast_H28",
+   "location": [
+    -1090.0,
+    -1995.0001,
+    770.0
+   ],
+   "rotation": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "scale": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "movable": false,
+   "cast_shadow": true,
+   "bounds_scale": 1.0,
+   "max_draw_distance": 0.0,
    "wpo_disable_distance": 0.0,
    "motion": null
   },
@@ -1279,7 +1329,7 @@
     "MI_USA_HQ_HQ20_FloorWear": "MI_USA_HQ_HQ20_FloorWear",
     "MI_USA_HQ_HQ21_PavingWear": "MI_USA_HQ_HQ21_PavingWear"
    },
-   "triangles": 2938860,
+   "triangles": 2915364,
    "bounds": [
     [
      -1900.0,
@@ -1289,12 +1339,12 @@
     [
      1900.0,
      2800.0,
-     1798.0
+     1343.08
     ]
    ],
    "lods": [
-    274000,
-    22000
+    267000,
+    19000
    ]
   },
   "SM_HQ_ShellDetail": {
@@ -1314,7 +1364,7 @@
     "MI_HQ21_Leaf2": "MI_HQ21_Leaf2",
     "MI_USA_HQ_HQ21_Soil": "MI_USA_HQ_HQ21_Soil"
    },
-   "triangles": 42096,
+   "triangles": 41344,
    "bounds": [
     [
      -1639.9,
@@ -1324,12 +1374,64 @@
     [
      1560.93,
      2219.5,
-     1315.0
+     1052.0
     ]
    ],
    "lods": [
-    42096,
-    11878
+    41344,
+    10655
+   ]
+  },
+  "SM_HQ22_MastCore_H28": {
+   "fbx": "fbx/SM_HQ22_MastCore_H28.fbx",
+   "lod1_fbx": "fbx/SM_HQ22_MastCore_H28_LOD1.fbx",
+   "slots": {
+    "HQ17_DarkStructure": "MI_HQ17_DarkStructure",
+    "HQ17_FramePaint": "MI_HQ17_FramePaint",
+    "HQ17_TeamLight": "MI_HQ17_TeamLight"
+   },
+   "triangles": 3772,
+   "bounds": [
+    [
+     -204.75,
+     -248.5,
+     0.0
+    ],
+    [
+     204.75,
+     248.5,
+     1649.0
+    ]
+   ],
+   "lods": [
+    3772,
+    1404
+   ]
+  },
+  "SM_HQ22_MastEast_H28": {
+   "fbx": "fbx/SM_HQ22_MastEast_H28.fbx",
+   "lod1_fbx": "fbx/SM_HQ22_MastEast_H28_LOD1.fbx",
+   "slots": {
+    "HQ17_DarkStructure": "MI_HQ17_DarkStructure",
+    "HQ17_FramePaint": "MI_HQ17_FramePaint",
+    "HQ17_TeamLight": "MI_HQ17_TeamLight"
+   },
+   "triangles": 5780,
+   "bounds": [
+    [
+     -110.33,
+     -185.5,
+     -16.37
+    ],
+    [
+     110.33,
+     185.5,
+     1630.0
+    ]
+   ],
+   "lods": [
+    5780,
+    2700
    ]
   },
   "SM_Flag_Cloth": {
@@ -2865,11 +2967,6 @@
    -694.4708,
    1210.0
   ],
-  "MastTip": [
-   -1080.0464,
-   0.0,
-   1800.0
-  ],
   "RadarPivot": [
    -229.2343,
    -1229.6998,
@@ -2891,14 +2988,14 @@
    646.0
   ],
   "MastTipCore": [
-   -898.7,
+   -898.7123,
    0.0,
-   1798.0
+   2800.0
   ],
   "MastTipEast": [
    -1090.0,
-   -1995.0,
-   1650.0
+   -1995.0001,
+   2400.0
   ]
  },
  "collision_boxes": [

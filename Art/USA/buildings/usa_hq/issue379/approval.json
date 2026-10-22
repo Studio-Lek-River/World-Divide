@@ -1,0 +1,9 @@
+{
+  "date": "2026-10-22",
+  "quote": "I opt for the middle (core 28, east 24)",
+  "chosen_option": "H28",
+  "core_tip_cm": 2800,
+  "east_tip_cm": 2400,
+  "beacon_scale": 1.75,
+  "state": "visual choice approved; production integration pending"
+}

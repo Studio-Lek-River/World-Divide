@@ -22,11 +22,15 @@ in the FBX, as m20_guardian_blender.py exports.
 """
 
 import json
+import math
 import os
 import re
 
 import bmesh
 import bpy
+from mathutils.kdtree import KDTree
+from mathutils.bvhtree import BVHTree
+from mathutils import Vector
 
 PROJECT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 ROOT = os.path.join(PROJECT_DIR, "Art", "USA", "buildings", "usa_hq")
@@ -130,6 +134,46 @@ def import_source(name, instances):
         instance = instances[slot_name]
         slot.material = bpy.data.materials.get(instance) or bpy.data.materials.new(instance)
     return obj
+
+
+def remove_separate_masts(obj, source_name):
+    """Exclude #379's exact approved mast vertices before either shell/LOD split.
+
+    The mask is recorded from the evaluated approved source, not a broad roof
+    bounding box. Thus neighbouring dishes, roof finishes and equipment survive.
+    """
+    groups = {'SM_HQ20_Architecture_WallCorrected': 'Core',
+              'SM_HQ20_RoofSystems_WallCorrected': 'East'}
+    if source_name not in groups:
+        return 0
+    path = os.path.join(ROOT, 'issue379', 'mast_removal_mask.json')
+    with open(path, encoding='utf8') as file:
+        record = json.load(file)[groups[source_name]]
+    tree = KDTree(len(record['vertices']))
+    for i, co in enumerate(record['vertices']):
+        tree.insert(co, i)
+    tree.balance()
+    surface = BVHTree.FromPolygons(record['vertices'], record['faces'], all_triangles=True)
+    hits = {v.index for v in obj.data.vertices if tree.find(v.co)[2] < 0.00015 or
+            (surface.find_nearest(v.co, 0.00015)[0] is not None)}
+    doomed = [p for p in obj.data.polygons if all(v in hits for v in p.vertices)]
+    removed = sum(len(p.vertices)-2 for p in doomed)
+    # The wall-corrected roof FBX subdivides the original mast rods. Its face
+    # count differs, but the complete surface area must agree with the master.
+    expected_area = sum((Vector(record['vertices'][b])-Vector(record['vertices'][a])).cross(
+        Vector(record['vertices'][c])-Vector(record['vertices'][a])).length/2
+        for a,b,c in record['faces'])
+    removed_area = sum(p.area for p in doomed)
+    if abs(removed_area-expected_area) > max(0.0001, expected_area*0.00001):
+        raise RuntimeError(f'{source_name}: mask area {removed_area}, expected {expected_area}; refuse partial removal')
+    print(f'usa_hq_game: removed mast {removed} triangles; surface {removed_area:.8f} / {expected_area:.8f} m2', flush=True)
+    obj.data.vertices.foreach_set('select', [False]*len(obj.data.vertices))
+    obj.data.edges.foreach_set('select', [False]*len(obj.data.edges))
+    obj.data.polygons.foreach_set('select', [all(v in hits for v in p.vertices) for p in obj.data.polygons])
+    select_only(obj)
+    bpy.context.scene.tool_settings.mesh_select_mode = (False, False, True)
+    bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.delete(type='FACE'); bpy.ops.object.mode_set(mode='OBJECT')
+    return removed
 
 
 def protect_group(obj, lod):
@@ -305,6 +349,102 @@ def export(obj, path):
                              path_mode="AUTO")
 
 
+def repair_detail_tangent_uvs(obj, _pass=0):
+    """Repair collapsed UV faces with a coherent 2 m world box projection.
+
+    Invalid UVs are reprojected. Needle faces narrower than 1 mm are removed
+    because Unreal's tangent recomputation rejects some of them; surviving positions,
+    normals and material assignments remain intact. This covers planter sides
+    whose inherited projection collapsed during LOD reduction.
+    """
+    mesh = obj.data
+    mesh.calc_loop_triangles()
+    uv = mesh.uv_layers.active.data
+    mesh.calc_tangents(uvmap=mesh.uv_layers.active.name)
+    bad = {p.index for p in mesh.polygons if any(mesh.loops[i].tangent.length < 1e-4 or
+           mesh.loops[i].bitangent.length < 1e-4 for i in p.loop_indices)}
+    for triangle in mesh.loop_triangles:
+        a, b, c = (uv[i].uv.copy() for i in triangle.loops)
+        if abs((b-a).cross(c-a)) < 2e-10:
+            bad.add(triangle.polygon_index)
+    for index in bad:
+        face = mesh.polygons[index]
+        dominant = max(range(3), key=lambda i: abs(face.normal[i]))
+        axes = [i for i in range(3) if i != dominant]
+        center = obj.matrix_world @ face.center
+        origin = [math.floor(center[axis]/2.0) for axis in axes]
+        for loop in face.loop_indices:
+            co = obj.matrix_world @ mesh.vertices[mesh.loops[loop].vertex_index].co
+            uv[loop].uv = (co[axes[0]]/2.0-origin[0], co[axes[1]]/2.0-origin[1])
+    mesh.update()
+    mesh.free_tangents()
+    mesh.calc_tangents(uvmap=mesh.uv_layers.active.name)
+    zero = sum(loop.tangent.length < 1e-4 or loop.bitangent.length < 1e-4 for loop in mesh.loops)
+    slivers = {p.index for p in mesh.polygons if 2*p.area/max(
+        (mesh.vertices[a].co-mesh.vertices[b].co).length for a,b in p.edge_keys)<0.001}
+    if zero or slivers:
+        faces = slivers | {p.index for p in mesh.polygons if any(mesh.loops[i].tangent.length < 1e-4 or
+                 mesh.loops[i].bitangent.length < 1e-4 for i in p.loop_indices)}
+        widths=[]
+        for index in faces:
+            p=mesh.polygons[index]
+            longest=max((mesh.vertices[a].co-mesh.vertices[b].co).length for a,b in p.edge_keys)
+            widths.append(2*p.area/longest)
+        if max(widths)>0.001:
+            raise RuntimeError('Refusing to remove a non-sliver face for tangent repair')
+        select_only(obj)
+        mesh.vertices.foreach_set('select',[False]*len(mesh.vertices))
+        mesh.edges.foreach_set('select',[False]*len(mesh.edges))
+        mesh.polygons.foreach_set('select',[p.index in faces for p in mesh.polygons])
+        bpy.context.scene.tool_settings.mesh_select_mode=(False,False,True)
+        bpy.ops.object.mode_set(mode='EDIT');bpy.ops.mesh.delete(type='FACE');bpy.ops.object.mode_set(mode='OBJECT')
+        obj['issue379_removed_sliver_faces']=obj.get('issue379_removed_sliver_faces',0)+len(faces)
+        obj['issue379_max_sliver_width_m']=max(obj.get('issue379_max_sliver_width_m',0),max(widths))
+        mesh=obj.data
+        mesh.update();mesh.free_tangents();mesh.calc_tangents(uvmap=mesh.uv_layers.active.name)
+        zero = sum(loop.tangent.length < 1e-4 or loop.bitangent.length < 1e-4 for loop in mesh.loops)
+    if zero:
+        if _pass<2:
+            return len(bad)+repair_detail_tangent_uvs(obj,_pass+1)
+        uv=mesh.uv_layers.active.data
+        diagnostics=[]
+        for triangle in mesh.loop_triangles:
+            if any(mesh.loops[i].tangent.length < 1e-4 for i in triangle.loops):
+                a,b,c=(uv[i].uv.copy() for i in triangle.loops)
+                coords=[mesh.vertices[i].co for i in triangle.vertices]
+                edges=[(coords[(i+1)%3]-coords[i]).length for i in range(3)]
+                diagnostics.append((triangle.area,abs((b-a).cross(c-a))/2,triangle.polygon_index,edges))
+        print('Remaining tangent diagnostic area/UV/index:',diagnostics[:24],flush=True)
+        raise RuntimeError(f'{obj.name}: {zero} invalid tangent frames remain after UV repair')
+    return len(bad)
+
+
+def finalize_detail_lod1(obj, path):
+    # Round-trip the FBX once before the final count: its tessellator drops
+    # collapsed source faces, so pre-export polygon counts can be misleading.
+    before = set(bpy.data.objects)
+    original_materials=list(obj.data.materials)
+    bpy.ops.import_scene.fbx(filepath=path)
+    imported = [o for o in bpy.data.objects if o not in before and o.type == 'MESH']
+    if len(imported) != 1:
+        raise RuntimeError('Detail LOD1 round-trip must contain exactly one mesh')
+    fresh = imported[0]
+    select_only(fresh)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    if len(fresh.data.materials)!=len(original_materials):
+        raise RuntimeError('Detail LOD1 round-trip changed its material slot count')
+    for i,material in enumerate(original_materials):
+        if re.sub(r'\.\d{3}$','',fresh.data.materials[i].name)!=material.name:
+            raise RuntimeError('Detail LOD1 round-trip changed its material slot order')
+        fresh.data.materials[i]=material
+    obj.data = fresh.data.copy()
+    for other in set(bpy.data.objects)-before:
+        bpy.data.objects.remove(other, do_unlink=True)
+    fixed = repair_detail_tangent_uvs(obj)
+    export(obj, path)
+    print(f'usa_hq_game: repaired {fixed} collapsed detail LOD1 UV faces; final tangents valid', flush=True)
+
+
 def split(obj, detail, label):
     """A copy of obj with only DETAIL's faces (detail) or only the others."""
     part = obj.copy()
@@ -333,10 +473,12 @@ def main():
     report = {}
     for name, (step, budget) in SHELL.items():
         source = import_source(name, instances[name])
+        removed_mast_triangles = remove_separate_masts(source, name)
         halfway = reduce(source, source, step, 0, f"{name}_Step")
         lod1 = reduce(halfway, source, budget, 1, f"{name}_LOD1")
         bpy.data.objects.remove(halfway)
-        report[name] = {"source": triangles(source), "lod1": triangles(lod1), "budget": budget}
+        report[name] = {"source": triangles(source), "lod1": triangles(lod1), "budget": budget,
+                        "removed_mast_triangles": removed_mast_triangles}
         print(f"usa_hq_game: {name} {report[name]['source']} -> LOD1 {report[name]['lod1']} (budget {budget})")
         for mesh, detail in ((SHELL_NAME, False), (DETAIL_NAME, True)):
             for lod, obj in enumerate((source, lod1)):
@@ -364,6 +506,8 @@ def main():
             joined.append(join(lod1, f"{mesh}_LOD1", order))
         for obj, path in zip(joined, (f"{mesh}.fbx", f"{mesh}_LOD1.fbx")):
             export(obj, os.path.join(GAME_DIR, path))
+            if obj.name == f'{DETAIL_NAME}_LOD1':
+                finalize_detail_lod1(obj, os.path.join(GAME_DIR, path))
         slots = [per_slot(obj) for obj in joined]
         record["meshes"][mesh] = {
             "fbx": f"game/{mesh}.fbx",

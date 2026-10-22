@@ -27,15 +27,16 @@ The HQ has two LODs and no Nanite (`docs/art/MODEL_PERFORMANCE.md`, Buildings). 
 
 | Mesh | Drawn | LOD0 | LOD1 | Sections |
 |---|---|---|---|---|
-| SM_HQ_Shell | 1 | 284,999 (of 2,949,960) | 22,758 | 34 |
-| SM_HQ_ShellDetail | 1 | 30,996 | 11,016 | 11 |
+| SM_HQ_Shell | 1 | 267,000 (of 2,915,364) | 19,000 | 33 |
+| SM_HQ_ShellDetail | 1 | 41,344 | 10,655 | 12 |
+| MastCore, MastEast (hand-made LOD1, #379) | 2 | 9,552 | 4,104 | 6 |
 | DoorSection | 16 | 1,200 | 70 | 4 (instanced) |
 | Radar_Azimuth | 1 | 3,000 | 400 | 4 |
 | WingDish_Elevation | 1 | 3,000 | 400 | 5 |
 | NationalFlag_Wind | 1 | 4,000 | 999 | 3 |
 | DriveShaft | 1 | 1,000 | 150 | 2 |
 | Small parts: wing dish azimuth, seal, rollers, 2 cables, 4 fans | 9 | 3,060 total | LOD0 only | 12 |
-| **Whole HQ** | 31 | **349,119** | **39,767** | **74** (was 172) |
+| **Whole HQ** | 35 | **349,568** | **39,032** | **79** (was 172) |
 
 The large-building budget is 150,000 at LOD0. The producer raised the HQ's to 350,000 for its 12 m look: at 150,000 the façade's bevelled frames tore apart (#358). `WorldDivide.Art.USAHeadquarters` asserts 350,000 / 40,000, every mesh's own budget, bounds that cover the building, one switch distance and at most 80 sections.
 

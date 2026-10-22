@@ -1,0 +1,66 @@
+{
+  "source/USA_HQ_Final.blend": {
+    "bytes": 11311205,
+    "sha256": "ae887321c2344bd59eb0421da6c7c63b49e8e47bc58aa71691b00a4e310c08ee"
+  },
+  "fbx/SM_HQ22_MastCore_H24.fbx": {
+    "bytes": 229036,
+    "sha256": "72242054ab06ecf3cea2b89fe502861e646ae610ff08f5799d5490efe71a3926"
+  },
+  "fbx/SM_HQ22_MastCore_H24_LOD1.fbx": {
+    "bytes": 125932,
+    "sha256": "c6fee5e703f351bf446f421df99ebd6c45efea48d0b000012ad0eca055424687"
+  },
+  "fbx/SM_HQ22_MastEast_H24.fbx": {
+    "bytes": 339004,
+    "sha256": "144123c4f17ad8c20896fef525da5db1dd44ee1bc735ef19980d24bc6972d389"
+  },
+  "fbx/SM_HQ22_MastEast_H24_LOD1.fbx": {
+    "bytes": 222972,
+    "sha256": "7a629a880a8800d1befa8e2bb6912f2eb836b6820834411388c8a177c27a994c"
+  },
+  "fbx/SM_HQ22_MastCore_H28.fbx": {
+    "bytes": 229772,
+    "sha256": "81894717f5946176a270cf8b0307669e25e6607ec7e03766b5ad3ce6f50eaef0"
+  },
+  "fbx/SM_HQ22_MastCore_H28_LOD1.fbx": {
+    "bytes": 125708,
+    "sha256": "87bea7b7efc32ee7e1a2cb1a475a729086d4b95e05a6ef14d19894fa411d05cd"
+  },
+  "fbx/SM_HQ22_MastEast_H28.fbx": {
+    "bytes": 340268,
+    "sha256": "b3093a8a2e197cb48abce2155e650d764f0e801c43604187bd56176eadaf1434"
+  },
+  "fbx/SM_HQ22_MastEast_H28_LOD1.fbx": {
+    "bytes": 223052,
+    "sha256": "df7f77e9e778ef2a71839d865c532f7bc47613e823af59055a82b3615827e87d"
+  },
+  "fbx/SM_HQ22_MastCore_H32.fbx": {
+    "bytes": 226780,
+    "sha256": "ec541650d71ac51d7f25399f32880baa5c9e229c66296b86436293c090d0502f"
+  },
+  "fbx/SM_HQ22_MastCore_H32_LOD1.fbx": {
+    "bytes": 125276,
+    "sha256": "c82f9f9460c4486cec1add653ca9bc4e69b36df70050de303f8c740f669bfc70"
+  },
+  "fbx/SM_HQ22_MastEast_H32.fbx": {
+    "bytes": 337836,
+    "sha256": "7b45b202b56ba2b4a28ae72e099265d3c69ff9dfbd9d69fb2f8a88bf0ce5dc82"
+  },
+  "fbx/SM_HQ22_MastEast_H32_LOD1.fbx": {
+    "bytes": 222044,
+    "sha256": "61d42c6649af15ccd88c2cee00eac4703199b9a8a7ffe03889b580fbb8efdfbc"
+  },
+  "game/SM_HQ_Shell.fbx": {
+    "bytes": 223800380,
+    "sha256": "2a34ea35bd412c7b6d6f72a51cad6d6be678d1a483075a3c120561fc72e23225"
+  },
+  "game/SM_HQ_ShellDetail.fbx": {
+    "bytes": 3767372,
+    "sha256": "085bc1ff12a6e14b36a784068d8aaf47cac0d880e38d87d3fccca6daaa9443e0"
+  },
+  "game/SM_HQ_ShellDetail_LOD1.fbx": {
+    "bytes": 1289964,
+    "sha256": "f5056c0848d99033b8dd1f29f98c999caf45c354cbacb92611b56615cd883339"
+  }
+}

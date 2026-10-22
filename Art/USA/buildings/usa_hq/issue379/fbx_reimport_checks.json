@@ -1,0 +1,383 @@
+[
+  {
+    "mesh": "SM_HQ22_MastCore_H24",
+    "triangles": 3772,
+    "bounds_m": [
+      [
+        -1.755000114440918,
+        -2.129999876022339,
+        0.0
+      ],
+      [
+        1.7549993991851807,
+        2.129999876022339,
+        12.489998817443848
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipCore": [
+        0.0,
+        0.0,
+        12.489999771118164
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ22_MastCore_H24_LOD1",
+    "triangles": 1404,
+    "bounds_m": [
+      [
+        -1.7409367561340332,
+        -2.129999876022339,
+        0.0
+      ],
+      [
+        1.7409331798553467,
+        2.129999876022339,
+        12.489995002746582
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipCore": [
+        0.0,
+        0.0,
+        12.489999771118164
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ22_MastEast_H24",
+    "triangles": 5780,
+    "bounds_m": [
+      [
+        -1.0200005769729614,
+        -1.590002179145813,
+        -0.13354167342185974
+      ],
+      [
+        1.019999623298645,
+        1.5899991989135742,
+        13.300000190734863
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipEast": [
+        0.0,
+        0.0,
+        13.300000190734863
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ22_MastEast_H24_LOD1",
+    "triangles": 2700,
+    "bounds_m": [
+      [
+        -1.0200005769729614,
+        -1.590002179145813,
+        -0.13354167342185974
+      ],
+      [
+        1.019999623298645,
+        1.5899991989135742,
+        13.300000190734863
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipEast": [
+        0.0,
+        0.0,
+        13.300000190734863
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ22_MastCore_H28",
+    "triangles": 3772,
+    "bounds_m": [
+      [
+        -2.0475001335144043,
+        -2.484999895095825,
+        0.0
+      ],
+      [
+        2.047499179840088,
+        2.484999895095825,
+        16.48999786376953
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipCore": [
+        0.0,
+        0.0,
+        16.489999771118164
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ22_MastCore_H28_LOD1",
+    "triangles": 1404,
+    "bounds_m": [
+      [
+        -2.031092882156372,
+        -2.484999895095825,
+        0.0
+      ],
+      [
+        2.0310888290405273,
+        2.484999895095825,
+        16.489994049072266
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipCore": [
+        0.0,
+        0.0,
+        16.489999771118164
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ22_MastEast_H28",
+    "triangles": 5780,
+    "bounds_m": [
+      [
+        -1.1033397912979126,
+        -1.855002522468567,
+        -0.1636638641357422
+      ],
+      [
+        1.1033397912979126,
+        1.85499906539917,
+        16.299999237060547
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipEast": [
+        0.0,
+        0.0,
+        16.299999237060547
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ22_MastEast_H28_LOD1",
+    "triangles": 2700,
+    "bounds_m": [
+      [
+        -1.0939821004867554,
+        -1.855002522468567,
+        -0.1636638641357422
+      ],
+      [
+        1.0939821004867554,
+        1.85499906539917,
+        16.299999237060547
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipEast": [
+        0.0,
+        0.0,
+        16.299999237060547
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ22_MastCore_H32",
+    "triangles": 3772,
+    "bounds_m": [
+      [
+        -2.3400001525878906,
+        -2.8399999141693115,
+        0.0
+      ],
+      [
+        2.339999198913574,
+        2.8399999141693115,
+        20.48999786376953
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipCore": [
+        0.0,
+        0.0,
+        20.489999771118164
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ22_MastCore_H32_LOD1",
+    "triangles": 1404,
+    "bounds_m": [
+      [
+        -2.321249008178711,
+        -2.8399999141693115,
+        0.0
+      ],
+      [
+        2.321244239807129,
+        2.8399999141693115,
+        20.489992141723633
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipCore": [
+        0.0,
+        0.0,
+        20.489999771118164
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ22_MastEast_H32",
+    "triangles": 5780,
+    "bounds_m": [
+      [
+        -1.2609598636627197,
+        -2.1200027465820312,
+        -0.19378603994846344
+      ],
+      [
+        1.2609598636627197,
+        2.1199989318847656,
+        19.299999237060547
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipEast": [
+        0.0,
+        0.0,
+        19.299999237060547
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ22_MastEast_H32_LOD1",
+    "triangles": 2700,
+    "bounds_m": [
+      [
+        -1.25026535987854,
+        -2.1200027465820312,
+        -0.19378603994846344
+      ],
+      [
+        1.25026535987854,
+        2.1199989318847656,
+        19.299999237060547
+      ]
+    ],
+    "empties_m": {
+      "SOCKET_MastTipEast": [
+        0.0,
+        0.0,
+        19.299999237060547
+      ]
+    },
+    "degenerate_triangles": 0,
+    "uv_layers": 1
+  },
+  {
+    "mesh": "SM_HQ_Shell",
+    "triangles": 2915364,
+    "slots": [
+      "MI_HQ14_Paving",
+      "MI_HQ14_Roof",
+      "MI_HQ14_Shell",
+      "MI_HQ17_Brass",
+      "MI_HQ17_CoolGlass",
+      "MI_HQ17_DarkStructure",
+      "MI_HQ17_FramePaint",
+      "MI_HQ17_InnerLight",
+      "MI_HQ17_InteriorWarm",
+      "MI_HQ17_IvoryCeramic",
+      "MI_HQ17_Roof",
+      "MI_HQ17_Seals",
+      "MI_HQ17_Steel",
+      "MI_HQ17_WarmGlass",
+      "MI_HQ19_DrainGrate",
+      "MI_HQ19_DuctGalvanized",
+      "MI_HQ19_EquipmentPaint",
+      "MI_HQ19_Membrane",
+      "MI_HQ19_MembraneLap",
+      "MI_HQ19_SafetyOchre",
+      "MI_HQ19_Walkpad",
+      "MI_HQ20_DoorPaint",
+      "MI_HQ20_Rubber",
+      "MI_HQ20_SafetyOchre",
+      "MI_HQ20_ServiceOlive",
+      "MI_HQ20_WallLiner",
+      "MI_HQ21_Coping",
+      "MI_HQ21_DrainSteel",
+      "MI_HQ21_Gravel",
+      "MI_HQ21_Joint",
+      "MI_HQ21_Ochre",
+      "MI_HQ21_Olive",
+      "MI_USA_HQ_HQ20_FloorWear",
+      "MI_USA_HQ_HQ21_PavingWear"
+    ],
+    "source_sha256": "2a34ea35bd412c7b6d6f72a51cad6d6be678d1a483075a3c120561fc72e23225"
+  },
+  {
+    "mesh": "SM_HQ_ShellDetail",
+    "triangles": 41344,
+    "slots": [
+      "MI_HQ17_Chips",
+      "MI_HQ17_Marking",
+      "MI_HQ17_TeamLight",
+      "MI_HQ17_TeamPanel",
+      "MI_HQ19_RFPanel",
+      "MI_HQ19_SolarCell",
+      "MI_HQ20_FixtureBlue",
+      "MI_HQ20_FixtureWarm",
+      "MI_HQ21_Leaf0",
+      "MI_HQ21_Leaf1",
+      "MI_HQ21_Leaf2",
+      "MI_USA_HQ_HQ21_Soil"
+    ],
+    "source_sha256": "085bc1ff12a6e14b36a784068d8aaf47cac0d880e38d87d3fccca6daaa9443e0"
+  },
+  {
+    "mesh": "SM_HQ_ShellDetail_LOD1",
+    "triangles": 10655,
+    "slots": [
+      "MI_HQ17_Chips",
+      "MI_HQ17_Marking",
+      "MI_HQ17_TeamLight",
+      "MI_HQ17_TeamPanel",
+      "MI_HQ19_RFPanel",
+      "MI_HQ19_SolarCell",
+      "MI_HQ20_FixtureBlue",
+      "MI_HQ20_FixtureWarm",
+      "MI_HQ21_Leaf0",
+      "MI_HQ21_Leaf1",
+      "MI_HQ21_Leaf2",
+      "MI_USA_HQ_HQ21_Soil"
+    ],
+    "source_sha256": "f5056c0848d99033b8dd1f29f98c999caf45c354cbacb92611b56615cd883339",
+    "zero_tangent_loops": 0,
+    "zero_bitangent_loops": 0
+  }
+]

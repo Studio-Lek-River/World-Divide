@@ -1,0 +1,456 @@
+{
+  "options": {
+    "24": [
+      {
+        "mesh": "SM_HQ22_MastCore_H24",
+        "lod": 0,
+        "triangles": 3772,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastCore_H24.fbx",
+        "sha256": "72242054ab06ecf3cea2b89fe502861e646ae610ff08f5799d5490efe71a3926",
+        "foot_cm": [
+          -898.7122535705566,
+          -0.0,
+          1151.0000228881836
+        ],
+        "tip_cm": [
+          -898.7122535705566,
+          -0.0,
+          2400
+        ],
+        "local_bounds_m": [
+          [
+            -1.755000114440918,
+            -2.129999876022339,
+            0.0
+          ],
+          [
+            1.7549993991851807,
+            2.129999876022339,
+            12.489998817443848
+          ]
+        ],
+        "beacon_scale": 1.5,
+        "socket_name": "MastTipCore"
+      },
+      {
+        "mesh": "SM_HQ22_MastCore_H24_LOD1",
+        "lod": 1,
+        "triangles": 1404,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastCore_H24_LOD1.fbx",
+        "sha256": "c6fee5e703f351bf446f421df99ebd6c45efea48d0b000012ad0eca055424687",
+        "foot_cm": [
+          -898.7122535705566,
+          -0.0,
+          1151.0000228881836
+        ],
+        "tip_cm": [
+          -898.7122535705566,
+          -0.0,
+          2400
+        ],
+        "local_bounds_m": [
+          [
+            -1.7409367561340332,
+            -2.129999876022339,
+            0.0
+          ],
+          [
+            1.7409331798553467,
+            2.129999876022339,
+            12.489995002746582
+          ]
+        ],
+        "beacon_scale": 1.5,
+        "socket_name": "MastTipCore"
+      },
+      {
+        "mesh": "SM_HQ22_MastEast_H24",
+        "lod": 0,
+        "triangles": 5780,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastEast_H24.fbx",
+        "sha256": "144123c4f17ad8c20896fef525da5db1dd44ee1bc735ef19980d24bc6972d389",
+        "foot_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          769.9999809265137
+        ],
+        "tip_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          2100
+        ],
+        "local_bounds_m": [
+          [
+            -1.0200004577636719,
+            -1.5900020599365234,
+            -0.13354167342185974
+          ],
+          [
+            1.0199995040893555,
+            1.5899991989135742,
+            13.300000190734863
+          ]
+        ],
+        "beacon_scale": 1.5,
+        "socket_name": "MastTipEast"
+      },
+      {
+        "mesh": "SM_HQ22_MastEast_H24_LOD1",
+        "lod": 1,
+        "triangles": 2700,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastEast_H24_LOD1.fbx",
+        "sha256": "7a629a880a8800d1befa8e2bb6912f2eb836b6820834411388c8a177c27a994c",
+        "foot_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          769.9999809265137
+        ],
+        "tip_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          2100
+        ],
+        "local_bounds_m": [
+          [
+            -1.0200004577636719,
+            -1.5900020599365234,
+            -0.13354167342185974
+          ],
+          [
+            1.0199995040893555,
+            1.5899991989135742,
+            13.300000190734863
+          ]
+        ],
+        "beacon_scale": 1.5,
+        "socket_name": "MastTipEast"
+      }
+    ],
+    "28": [
+      {
+        "mesh": "SM_HQ22_MastCore_H28",
+        "lod": 0,
+        "triangles": 3772,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastCore_H28.fbx",
+        "sha256": "81894717f5946176a270cf8b0307669e25e6607ec7e03766b5ad3ce6f50eaef0",
+        "foot_cm": [
+          -898.7122535705566,
+          -0.0,
+          1151.0000228881836
+        ],
+        "tip_cm": [
+          -898.7122535705566,
+          -0.0,
+          2800
+        ],
+        "local_bounds_m": [
+          [
+            -2.0475001335144043,
+            -2.484999895095825,
+            0.0
+          ],
+          [
+            2.047499179840088,
+            2.484999895095825,
+            16.48999786376953
+          ]
+        ],
+        "beacon_scale": 1.75,
+        "socket_name": "MastTipCore"
+      },
+      {
+        "mesh": "SM_HQ22_MastCore_H28_LOD1",
+        "lod": 1,
+        "triangles": 1404,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastCore_H28_LOD1.fbx",
+        "sha256": "87bea7b7efc32ee7e1a2cb1a475a729086d4b95e05a6ef14d19894fa411d05cd",
+        "foot_cm": [
+          -898.7122535705566,
+          -0.0,
+          1151.0000228881836
+        ],
+        "tip_cm": [
+          -898.7122535705566,
+          -0.0,
+          2800
+        ],
+        "local_bounds_m": [
+          [
+            -2.031092882156372,
+            -2.484999895095825,
+            0.0
+          ],
+          [
+            2.0310888290405273,
+            2.484999895095825,
+            16.489994049072266
+          ]
+        ],
+        "beacon_scale": 1.75,
+        "socket_name": "MastTipCore"
+      },
+      {
+        "mesh": "SM_HQ22_MastEast_H28",
+        "lod": 0,
+        "triangles": 5780,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastEast_H28.fbx",
+        "sha256": "b3093a8a2e197cb48abce2155e650d764f0e801c43604187bd56176eadaf1434",
+        "foot_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          769.9999809265137
+        ],
+        "tip_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          2400
+        ],
+        "local_bounds_m": [
+          [
+            -1.103339672088623,
+            -1.8550024032592773,
+            -0.1636638641357422
+          ],
+          [
+            1.103339672088623,
+            1.85499906539917,
+            16.299999237060547
+          ]
+        ],
+        "beacon_scale": 1.75,
+        "socket_name": "MastTipEast"
+      },
+      {
+        "mesh": "SM_HQ22_MastEast_H28_LOD1",
+        "lod": 1,
+        "triangles": 2700,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastEast_H28_LOD1.fbx",
+        "sha256": "df7f77e9e778ef2a71839d865c532f7bc47613e823af59055a82b3615827e87d",
+        "foot_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          769.9999809265137
+        ],
+        "tip_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          2400
+        ],
+        "local_bounds_m": [
+          [
+            -1.0939819812774658,
+            -1.8550024032592773,
+            -0.1636638641357422
+          ],
+          [
+            1.0939819812774658,
+            1.85499906539917,
+            16.299999237060547
+          ]
+        ],
+        "beacon_scale": 1.75,
+        "socket_name": "MastTipEast"
+      }
+    ],
+    "32": [
+      {
+        "mesh": "SM_HQ22_MastCore_H32",
+        "lod": 0,
+        "triangles": 3772,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastCore_H32.fbx",
+        "sha256": "ec541650d71ac51d7f25399f32880baa5c9e229c66296b86436293c090d0502f",
+        "foot_cm": [
+          -898.7122535705566,
+          -0.0,
+          1151.0000228881836
+        ],
+        "tip_cm": [
+          -898.7122535705566,
+          -0.0,
+          3200
+        ],
+        "local_bounds_m": [
+          [
+            -2.3400001525878906,
+            -2.8399999141693115,
+            0.0
+          ],
+          [
+            2.339999198913574,
+            2.8399999141693115,
+            20.48999786376953
+          ]
+        ],
+        "beacon_scale": 2.0,
+        "socket_name": "MastTipCore"
+      },
+      {
+        "mesh": "SM_HQ22_MastCore_H32_LOD1",
+        "lod": 1,
+        "triangles": 1404,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastCore_H32_LOD1.fbx",
+        "sha256": "c82f9f9460c4486cec1add653ca9bc4e69b36df70050de303f8c740f669bfc70",
+        "foot_cm": [
+          -898.7122535705566,
+          -0.0,
+          1151.0000228881836
+        ],
+        "tip_cm": [
+          -898.7122535705566,
+          -0.0,
+          3200
+        ],
+        "local_bounds_m": [
+          [
+            -2.321249008178711,
+            -2.8399999141693115,
+            0.0
+          ],
+          [
+            2.321244239807129,
+            2.8399999141693115,
+            20.489992141723633
+          ]
+        ],
+        "beacon_scale": 2.0,
+        "socket_name": "MastTipCore"
+      },
+      {
+        "mesh": "SM_HQ22_MastEast_H32",
+        "lod": 0,
+        "triangles": 5780,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastEast_H32.fbx",
+        "sha256": "7b45b202b56ba2b4a28ae72e099265d3c69ff9dfbd9d69fb2f8a88bf0ce5dc82",
+        "foot_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          769.9999809265137
+        ],
+        "tip_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          2700
+        ],
+        "local_bounds_m": [
+          [
+            -1.2609596252441406,
+            -2.1200027465820312,
+            -0.19378603994846344
+          ],
+          [
+            1.2609596252441406,
+            2.1199989318847656,
+            19.299999237060547
+          ]
+        ],
+        "beacon_scale": 2.0,
+        "socket_name": "MastTipEast"
+      },
+      {
+        "mesh": "SM_HQ22_MastEast_H32_LOD1",
+        "lod": 1,
+        "triangles": 2700,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ],
+        "fbx": "fbx\\SM_HQ22_MastEast_H32_LOD1.fbx",
+        "sha256": "61d42c6649af15ccd88c2cee00eac4703199b9a8a7ffe03889b580fbb8efdfbc",
+        "foot_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          769.9999809265137
+        ],
+        "tip_cm": [
+          -1089.9999618530273,
+          -1995.0000762939453,
+          2700
+        ],
+        "local_bounds_m": [
+          [
+            -1.250265121459961,
+            -2.1200027465820312,
+            -0.19378603994846344
+          ],
+          [
+            1.250265121459961,
+            2.1199989318847656,
+            19.299999237060547
+          ]
+        ],
+        "beacon_scale": 2.0,
+        "socket_name": "MastTipEast"
+      }
+    ]
+  },
+  "source_objects": {
+    "Core": {
+      "count": 117,
+      "triangles": 5532
+    },
+    "East": {
+      "count": 141,
+      "triangles": 9476
+    }
+  },
+  "baseline_source_sha256": "7c8df00352e53ff10bb7b983f0cb71e49afe9a577a740d14df6e51e88aa9e138",
+  "non_mast_meshes_unchanged": 20161,
+  "section_count_with_existing_HQ": 80,
+  "mast_surface_mapping": "FramePaint and TeamLight preserved; other mast surfaces share existing HQ17_DarkStructure."
+}

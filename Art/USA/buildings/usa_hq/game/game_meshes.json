@@ -41,31 +41,31 @@
     "MI_USA_HQ_HQ21_PavingWear"
    ],
    "triangles": [
-    2938860
+    2915364
    ],
    "slot_triangles": [
     {
      "MI_HQ14_Paving": 76,
      "MI_HQ14_Roof": 1392,
      "MI_HQ14_Shell": 124,
-     "MI_HQ17_Brass": 37484,
+     "MI_HQ17_Brass": 36948,
      "MI_HQ17_CoolGlass": 12276,
-     "MI_HQ17_DarkStructure": 277672,
-     "MI_HQ17_FramePaint": 269908,
+     "MI_HQ17_DarkStructure": 272080,
+     "MI_HQ17_FramePaint": 269156,
      "MI_HQ17_InnerLight": 16356,
      "MI_HQ17_InteriorWarm": 36344,
      "MI_HQ17_IvoryCeramic": 198164,
      "MI_HQ17_Roof": 760,
-     "MI_HQ17_Seals": 137408,
-     "MI_HQ17_Steel": 433760,
+     "MI_HQ17_Seals": 131652,
+     "MI_HQ17_Steel": 427036,
      "MI_HQ17_WarmGlass": 24376,
      "MI_HQ19_DrainGrate": 82968,
-     "MI_HQ19_DuctGalvanized": 178704,
+     "MI_HQ19_DuctGalvanized": 177368,
      "MI_HQ19_EquipmentPaint": 31088,
      "MI_HQ19_Membrane": 6692,
-     "MI_HQ19_MembraneLap": 165872,
+     "MI_HQ19_MembraneLap": 163824,
      "MI_HQ19_SafetyOchre": 139884,
-     "MI_HQ19_Walkpad": 123648,
+     "MI_HQ19_Walkpad": 122896,
      "MI_HQ20_DoorPaint": 20140,
      "MI_HQ20_Rubber": 376,
      "MI_HQ20_SafetyOchre": 700,
@@ -90,7 +90,7 @@
     [
      1900.0,
      2800.0,
-     1798.0
+     1343.08
     ]
    ]
   },
@@ -112,14 +112,14 @@
     "MI_USA_HQ_HQ21_Soil"
    ],
    "triangles": [
-    42096,
-    11878
+    41344,
+    10655
    ],
    "slot_triangles": [
     {
      "MI_HQ17_Chips": 4512,
      "MI_HQ17_Marking": 3608,
-     "MI_HQ17_TeamLight": 2444,
+     "MI_HQ17_TeamLight": 1692,
      "MI_HQ17_TeamPanel": 188,
      "MI_HQ19_RFPanel": 752,
      "MI_HQ19_SolarCell": 432,
@@ -131,18 +131,18 @@
      "MI_USA_HQ_HQ21_Soil": 11100
     },
     {
-     "MI_HQ17_Chips": 288,
-     "MI_HQ17_Marking": 2830,
-     "MI_HQ17_TeamLight": 2444,
+     "MI_HQ17_Chips": 330,
+     "MI_HQ17_Marking": 3072,
+     "MI_HQ17_TeamLight": 1692,
      "MI_HQ17_TeamPanel": 188,
      "MI_HQ19_RFPanel": 752,
      "MI_HQ19_SolarCell": 432,
-     "MI_HQ20_FixtureBlue": 1048,
-     "MI_HQ20_FixtureWarm": 934,
+     "MI_HQ20_FixtureBlue": 843,
+     "MI_HQ20_FixtureWarm": 817,
      "MI_HQ21_Leaf0": 262,
      "MI_HQ21_Leaf1": 270,
      "MI_HQ21_Leaf2": 830,
-     "MI_USA_HQ_HQ21_Soil": 1600
+     "MI_USA_HQ_HQ21_Soil": 1167
     }
    ],
    "bounds": [
@@ -154,56 +154,65 @@
     [
      1560.93,
      2219.5,
-     1315.0
+     1052.0
     ]
    ]
   }
  },
  "sources": {
   "SM_HQ20_Architecture_WallCorrected": {
-   "source": 1074804,
+   "source": 1069272,
    "lod1": 14000,
-   "budget": 14000
+   "budget": 14000,
+   "removed_mast_triangles": 5532
   },
   "SM_HQ20_RoofSystems_WallCorrected": {
-   "source": 870276,
+   "source": 851560,
    "lod1": 9000,
-   "budget": 9000
+   "budget": 9000,
+   "removed_mast_triangles": 18716
   },
   "SM_HQ21_Courtyard": {
    "source": 624040,
    "lod1": 2600,
-   "budget": 2600
+   "budget": 2600,
+   "removed_mast_triangles": 0
   },
   "SM_HQ20_GarageInterior": {
    "source": 327552,
    "lod1": 1999,
-   "budget": 2000
+   "budget": 2000,
+   "removed_mast_triangles": 0
   },
   "SM_HQ20_DoorHardware_Delivery": {
    "source": 33628,
    "lod1": 2600,
-   "budget": 2600
+   "budget": 2600,
+   "removed_mast_triangles": 0
   },
   "SM_HQ21_CourtyardDetails_Delivery": {
    "source": 19320,
    "lod1": 876,
-   "budget": 900
+   "budget": 900,
+   "removed_mast_triangles": 0
   },
   "SM_HQ20_GaragePortal": {
    "source": 14652,
    "lod1": 800,
-   "budget": 800
+   "budget": 800,
+   "removed_mast_triangles": 0
   },
   "SM_HQ21_PlantingFinish_Delivery": {
    "source": 12136,
    "lod1": 1500,
-   "budget": 1500
+   "budget": 1500,
+   "removed_mast_triangles": 0
   },
   "SM_HQ20_GarageFloor": {
    "source": 4548,
    "lod1": 400,
-   "budget": 400
+   "budget": 400,
+   "removed_mast_triangles": 0
   }
  }
 }

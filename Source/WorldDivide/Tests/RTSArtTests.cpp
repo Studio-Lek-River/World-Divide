@@ -65,7 +65,7 @@ namespace
 	/** The USA HQ's layout (Tools/Art/usa_hq_recipe.py), which setup_testmap.py builds it from. */
 	const TCHAR* HeadquartersLayoutFile = TEXT("Art/USA/buildings/usa_hq/usa_hq.json");
 	/** The slab: 38 x 56 m, 17.98 m to the top of its central tower. */
-	const FVector HeadquartersSize(3800.0, 5600.0, 1798.0);
+	const FVector HeadquartersSize(3800.0, 5600.0, 1343.08);
 	/** The whole HQ's triangles at LOD0 and LOD1, every part counted each time it is drawn: LOD0 raised for its 12 m look (#358). */
 	const int32 HeadquartersLODBudgets[] = { 350000, 40000 };
 	/** Where the whole HQ switches to LOD1, cm from the camera (docs/art/MODEL_PERFORMANCE.md, Buildings). */

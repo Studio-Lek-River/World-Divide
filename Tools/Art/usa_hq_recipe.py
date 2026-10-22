@@ -9,7 +9,8 @@
 - the door curves (animation/CT_HQ20_DoorMotion.csv) for the closed door the game starts with;
 - game/game_meshes.json: the game shell that stands for the meshes that never move (#358);
 - Art/Shared/props/props.json and Art/Shared/flags/flags.json: the shared flag cloth and mast beacon (#351), which
-  replace the delivered flag, and the flag the HQ flies.
+  replace the delivered flag, and the flag the HQ flies;
+- issue379/mast_manifest.json: the communication masts, taken out of the shell as parts of their own (#379).
 
 The equipment's motion (MOTION), the beacons (BEACONS) and the flag (FLAG_*) are the game's own, set here (#351).
 
@@ -34,8 +35,8 @@ RECIPE = os.path.join(ROOT, "recipe")
 GAME_MESHES = os.path.join(ROOT, "game", "game_meshes.json")
 SHELL = "SM_HQ_Shell"
 SHELL_DETAIL = "SM_HQ_ShellDetail"
-SHELL_LOD0 = 274000
-SHELL_LOD1 = 22000
+SHELL_LOD0 = 267000
+SHELL_LOD1 = 19000
 
 # The other meshes' (LOD0, LOD1) triangle budgets, per placement, reduced in setup from the delivered FBX. The building
 # switches to LOD1 at SWITCH_DISTANCE cm from the camera as one (docs/art/MODEL_PERFORMANCE.md, Buildings); meshes under
@@ -79,15 +80,15 @@ PROP_SLOTS = {"SM_Flag_Cloth": {"Flag": "MI_Flag_{flag}"}, "SM_Beacon_Obstructio
 # (FLAG_WPO_DISABLE_DISTANCE), a flat sheet and a coarse beacon, so the HQ stays within its LOD1 budget.
 PROP_BUDGETS = {"SM_Flag_Cloth": (1920, 120), "SM_Beacon_Obstruction": (314, 80)}
 
-# The mast tips, measured on the delivered shell (the top vertex of each antenna rod; the delivery's Socket_Mast_Core_Tip,
-# MastTip, stands 1.8 m off the core mast's rod): the core tower's mast at 18 m and the east wing's roof mast at 16.5 m.
-# Each carries a red obstruction beacon, SM_Beacon_Obstruction, standing on it. The masts are to be enlarged (a follow-up of
-# #351); the beacons move with these sockets.
-MAST_TIPS = {
-    "MastTipCore": [-898.7, 0.0, 1798.0],
-    "MastTipEast": [-1090.0, -1995.0, 1650.0],
-}
+# The communication masts (#379): the core tower's to 28 m and the east wing's roof mast to 24 m, out of the shell as parts
+# of their own with a hand-made LOD1, the producer's choice of the delivery's three heights (HANDOFF_379.md). Each stands at
+# its foot (the mesh's pivot) unturned, its tip socket (the top of its antenna rod) above the foot. Each tip carries a red
+# obstruction beacon, SM_Beacon_Obstruction, standing on it at BEACON_SCALE, grown with the masts.
+MAST_MANIFEST = os.path.join(ROOT, "issue379", "mast_manifest.json")
+MAST_HEIGHT = "28"
+MASTS = {"MastCore": "MastTipCore", "MastEast": "MastTipEast"}
 BEACONS = {"Beacon_MastTipCore": "MastTipCore", "Beacon_MastTipEast": "MastTipEast"}
+BEACON_SCALE = 1.75
 
 # The flag (#351): the HQ flies FLAG_TYPE (flags.json) on SM_Flag_Cloth at the courtyard pole, the top of its hoist at
 # FLAG_HOIST. The pole (13 cm across, 20 cm deep at its fittings, its top at 7.1 m) stands at X 1150, Y 0; the cloth
@@ -120,7 +121,6 @@ SOCKETS = {
     "GarageDoorPivot": "Pivot_GarageDoor",
     "FlagCourtyard": "Socket_Flag_Courtyard",
     "FlagCore": "Socket_Flag_Core",
-    "MastTip": "Socket_Mast_Core_Tip",
     "RadarPivot": "HQ19_Pivot_Radar_Azimuth",
     "WingDishAzimuthPivot": "HQ19_Pivot_WingDish_Azimuth",
     "WingDishElevationPivot": "HQ19_Pivot_WingDish_Elevation",
@@ -299,12 +299,39 @@ def parts(mesh_records):
     return result
 
 
-def sockets():
+def masts():
+    """The masts' mesh records, their parts and their tip sockets, from the delivery's manifest at MAST_HEIGHT. Its
+    bounds are in the Blender source's metres with Y mirrored; the masts are symmetric about their X axis."""
+    entries = {entry["mesh"]: entry for entry in read(MAST_MANIFEST)["options"][MAST_HEIGHT]}
+    records, result, tips = {}, [], {}
+    for part, socket in sorted(MASTS.items()):
+        name = f"SM_HQ22_{part}_H{MAST_HEIGHT}"
+        lod0, lod1 = entries[name], entries[f"{name}_LOD1"]
+        if lod0["socket_name"] != socket or lod0["beacon_scale"] != BEACON_SCALE:
+            raise SystemExit(f"{name}: the manifest has {lod0['socket_name']} at beacon scale {lod0['beacon_scale']}")
+        low, high = lod0["local_bounds_m"]
+        records[name] = {
+            "fbx": f"fbx/{name}.fbx",
+            "lod1_fbx": f"fbx/{name}_LOD1.fbx",
+            "slots": {slot: f"MI_{slot}" for slot in lod0["slots"]},
+            "triangles": lod0["triangles"],
+            "bounds": [rounded([low[0] * 100.0, -high[1] * 100.0, low[2] * 100.0], 2),
+                       rounded([high[0] * 100.0, -low[1] * 100.0, high[2] * 100.0], 2)],
+            "lods": [lod0["triangles"], lod1["triangles"]],
+        }
+        result.append({"name": part, "mesh": name, "location": [v + 0.0 for v in rounded(lod0["foot_cm"])], "rotation": [0.0, 0.0, 0.0],
+                       "scale": [1.0, 1.0, 1.0], "movable": False, "cast_shadow": True, "bounds_scale": 1.0,
+                       "max_draw_distance": 0.0, "wpo_disable_distance": 0.0})
+        tips[socket] = [v + 0.0 for v in rounded(lod0["tip_cm"])]
+    return records, result, tips
+
+
+def sockets(mast_tips):
     """{socket: location in cm}. The inspection already converted Blender (metres, Y mirrored) to Unreal; the game
     reads locations only (the spawn and exit helpers face +X, the drive shaft's tilt stays in its part)."""
     helpers = load("source_inspection.json")["helpers"]
     result = {name: rounded(helpers[helper]["unreal_location_cm"]) for name, helper in SOCKETS.items()}
-    result.update(MAST_TIPS)
+    result.update(mast_tips)
     return result
 
 
@@ -314,7 +341,7 @@ def shared_parts(helpers, flag):
     result = []
     for name, socket in sorted(BEACONS.items()):
         result.append({"name": name, "mesh": "SM_Beacon_Obstruction", "location": helpers[socket],
-                       "rotation": [0.0, 0.0, 0.0], "scale": [1.0, 1.0, 1.0], "movable": False, "cast_shadow": False,
+                       "rotation": [0.0, 0.0, 0.0], "scale": [BEACON_SCALE] * 3, "movable": False, "cast_shadow": False,
                        "bounds_scale": 1.0, "max_draw_distance": 0.0, "wpo_disable_distance": 0.0})
     aspect = flag["ratio"][1] / flag["ratio"][0]
     result.append({"name": FLAG_PART, "mesh": "SM_Flag_Cloth", "location": FLAG_HOIST, "rotation": [0.0, 90.0, 0.0],
@@ -348,6 +375,8 @@ def main():
     delivered_parts = parts(delivered)
     mesh_records = {name: record for name, record in delivered.items() if name not in sources and name != DELIVERED_FLAG}
     mesh_records.update(shell_records)
+    mast_records, mast_parts, mast_tips = masts()
+    mesh_records.update(mast_records)
     mesh_records.update(props())
     flags = read(FLAGS)["flags"]
     if FLAG_TYPE not in flags:
@@ -362,7 +391,8 @@ def main():
                 raise SystemExit(f"{part['name']} is not a static part at the origin, so it cannot be in the shell")
         else:
             game_parts.append(part)
-    helpers = sockets()
+    game_parts.extend(mast_parts)
+    helpers = sockets(mast_tips)
     game_parts.extend(shared_parts(helpers, flags[FLAG_TYPE]))
     order = {"Shell": 0, "ShellDetail": 0}
     game_parts.sort(key=lambda p: (order.get(p["name"], 1), p["name"]))
@@ -375,7 +405,7 @@ def main():
     layout = {
         "about": "Generated by Tools/Art/usa_hq_recipe.py from recipe/ and game/; read by Tools/Editor/building_art.py.",
         "footprint_cells": [38, 56],
-        "reference_size_cm": [3800.0, 5600.0, 1798.0],
+        "reference_size_cm": [3800.0, 5600.0, 1343.08],
         "root_part": "Shell",
         "switch_distance": SWITCH_DISTANCE,
         "flag": FLAG_TYPE,

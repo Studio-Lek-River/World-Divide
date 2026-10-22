@@ -1,0 +1,15 @@
+{
+  "fixed_uv_faces": 0,
+  "removed_sliver_faces": 387,
+  "max_sliver_width_m": 0.0009997431418603308,
+  "surviving_faces_positions_and_materials_unchanged": true,
+  "before_geometry_hash": "690232645fc97c11d2bc286c8497850ba13af5f6244cbd66eae8a035e0fd0263",
+  "triangles": 10655,
+  "zero_tangent_loops_after": 0,
+  "zero_bitangent_loops_after": 0,
+  "sha256": "f5056c0848d99033b8dd1f29f98c999caf45c354cbacb92611b56615cd883339",
+  "total_uv_faces_repaired": 65,
+  "total_sliver_faces_removed": 412,
+  "final_unreal_import_warning_count": 0,
+  "validation": "Final FBX independently reimported; native Unreal Final asset saved with zero tangent/binormal warnings. Full shell generator was not rerun after the final 387-face cleanup; its repair function was used on the delivered export."
+}
