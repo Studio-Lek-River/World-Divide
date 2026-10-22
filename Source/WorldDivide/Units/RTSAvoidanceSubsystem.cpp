@@ -118,7 +118,8 @@ bool URTSAvoidanceSubsystem::BuildIndex(float DeltaSeconds)
 		Agent.HalfSegment = Footprint.HalfSegment;
 		Agent.Radius = Footprint.Radius;
 		Agent.BoundRadius = Footprint.HalfSegment + Footprint.Radius;
-		Agent.bAvoids = Unit->GetUnitData() && !Unit->GetAircraftComponent()->CanFly();
+		// A vehicle driving out of a garage keeps to its lane, which the garage keeps clear (#192).
+		Agent.bAvoids = Unit->GetUnitData() && !Unit->GetAircraftComponent()->CanFly() && !Unit->GetUnitMovement()->IsDrivingThroughNavObstacles();
 		Agent.bGear = Agent.bAvoids && Unit->GetUnitMovement()->UsesLocomotion();
 		Agent.MaxStep = Agent.bAvoids ? Unit->GetUnitData()->MoveSpeed * SeparationSpeedFraction * DeltaSeconds : 0.f;
 		Agent.bWalking = AI && AI->GetMoveStatus() != EPathFollowingStatus::Idle;

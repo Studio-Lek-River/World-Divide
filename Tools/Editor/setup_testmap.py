@@ -105,6 +105,8 @@ M20_DIR = "/Game/Art/USA/Vehicles/M20Guardian"
 # The USA HQ as delivered (#187-#191): its layout usa_hq.json (Tools/Art/usa_hq_recipe.py), and where its assets go.
 USA_HQ_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "USA", "buildings", "usa_hq")
 USA_HQ_DIR = "/Game/Art/USA/Buildings/USAHQ"
+# The garage door's cycle as delivered (animation/CT_HQ20_DoorMotion.csv), a curve table the garage plays (#192).
+USA_HQ_DOOR_MOTION = "CT_HQ20_DoorMotion"
 # The bench's dense HQ (#349), built only with ue.ps1 -Task setup -BenchHQ (WD_SETUP_BENCH_HQ=1) and never committed
 # (Content/Bench/ is git-ignored): the delivered shell with Nanite, beside the production HQ's LOD0 + LOD1 shell (#358).
 BENCH_HQ = os.environ.get("WD_SETUP_BENCH_HQ") == "1"
@@ -597,12 +599,44 @@ def make_usa_hq():
         value.set_editor_property("location", unreal.Vector(*location))
         return value
 
+    door_source = os.path.join(USA_HQ_SOURCE_DIR, "animation", f"{USA_HQ_DOOR_MOTION}.csv")
+    door_motion = plan_now(f"{USA_HQ_DIR}/Animation/{USA_HQ_DOOR_MOTION}",
+                           lambda: import_curve_table(door_source, f"{USA_HQ_DIR}/Animation", USA_HQ_DOOR_MOTION),
+                           spec_hash([import_curve_table], USA_HQ_DOOR_MOTION, file_hash(door_source)))
+
     root = next(p for p in layout["parts"] if p["name"] == layout["root_part"])
     return meshes[root["mesh"]], tuple(layout["footprint_cells"]), {
         "parts": [part(p) for p in layout["parts"] if p is not root],
         "collision_boxes": [collision_box(b) for b in layout["collision_boxes"]],
         "sockets": [socket(name, location) for name, location in sorted(layout["sockets"].items())],
+        # The delivered 24 s door cycle opens from 2 to 10 s; the game plays that in GarageDoorSeconds (#192).
+        "garage_door_motion": door_motion,
+        "garage_door_open_start": 2.0,
+        "garage_door_open_end": 10.0,
+        "garage_door_seconds": 3.0,
     }
+
+
+def import_curve_table(source, directory, name):
+    """A curve table from a CSV of one row per curve and one column per second (the HQ's door cycle), keys linear."""
+    factory = unreal.CSVImportFactory()
+    settings = factory.get_editor_property("automated_import_settings")
+    settings.set_editor_property("import_type", unreal.CSVImportType.ECSV_CURVE_TABLE)
+    settings.set_editor_property("import_curve_interp_mode", unreal.RichCurveInterpMode.RCIM_LINEAR)
+    factory.set_editor_property("automated_import_settings", settings)
+    task = unreal.AssetImportTask()
+    task.filename = source
+    task.destination_path = directory
+    task.destination_name = name
+    task.automated = True
+    task.replace_existing = True
+    task.save = False
+    task.factory = factory
+    asset_tools.import_asset_tasks([task])
+    table = unreal.load_asset(f"{directory}/{name}")
+    if not isinstance(table, unreal.CurveTable):
+        raise RuntimeError(f"Could not import {source} as a curve table")
+    return table
 
 
 def make_bench_hq(footprint, layout):

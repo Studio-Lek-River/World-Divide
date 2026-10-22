@@ -2,6 +2,7 @@
 
 #include "AI/RTSAIPlayer.h"
 #include "Buildings/RTSBuildPlacement.h"
+#include "Buildings/RTSGarageComponent.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Buildings/RTSSuperweaponComponent.h"
 #include "Combat/RTSHealthComponent.h"
@@ -75,6 +76,7 @@ ARTSBuilding::ARTSBuilding()
 	WeaponComponent = CreateDefaultSubobject<URTSWeaponComponent>(TEXT("Weapon"));
 	ProductionComponent = CreateDefaultSubobject<URTSProductionComponent>(TEXT("Production"));
 	SuperweaponComponent = CreateDefaultSubobject<URTSSuperweaponComponent>(TEXT("Superweapon"));
+	GarageComponent = CreateDefaultSubobject<URTSGarageComponent>(TEXT("Garage"));
 
 	bReplicates = true;
 	SetNetUpdateFrequency(10.f);
@@ -191,6 +193,7 @@ void ARTSBuilding::Tick(float DeltaSeconds)
 	if (IsConstructed())
 	{
 		ProductionComponent->UpdateProduction(DeltaSeconds);
+		GarageComponent->UpdateGarage(DeltaSeconds);
 		SuperweaponComponent->UpdateCharge(DeltaSeconds);
 		UpdateForcedFire();
 	}
@@ -340,6 +343,12 @@ void ARTSBuilding::Destroyed()
 		ReleaseHeldUnits();
 	}
 
+	// Nothing more leaves the garage.
+	if (HasAuthority())
+	{
+		GarageComponent->Abandon();
+	}
+
 	// Aircraft bound here look for another pad.
 	if (HasAuthority())
 	{
@@ -394,14 +403,20 @@ void ARTSBuilding::SpawnCompletionUnit()
 FVector ARTSBuilding::GetExitLocation(float Clearance, const FNavAgentProperties* Agent) const
 {
 	const FVector Extent = BuildingData ? RTSBuildPlacement::GetFootprintExtent(BuildingData->Footprint) : FVector::ZeroVector;
-	FVector Location = GetActorLocation() + GetActorForwardVector() * (Extent.X + Clearance);
+	const float LaneOffset = BuildingData ? RTSBuildPlacement::GetExitLaneOffset(*BuildingData) : 0.f;
+	FVector Location = GetActorLocation() + GetActorForwardVector() * (Extent.X + Clearance) + GetActorRightVector() * LaneOffset;
 	if (const ARecastNavMesh* NavMesh = RTSNavAgents::GetNavMesh(*GetWorld(), Agent ? *Agent : RTSNavAgents::GetNarrowestAgent()))
 	{
 		FNavLocation NavPoint;
 		if (NavMesh->ProjectPoint(Location, NavPoint, FVector(200.f, 200.f, 250.f)))
 		{
-			Location.X = NavPoint.Location.X;
-			Location.Y = NavPoint.Location.Y;
+			FVector Nudge(NavPoint.Location.X - Location.X, NavPoint.Location.Y - Location.Y, 0.f);
+			// A lane off the middle (the garage's) is the lane the drive-out leaves on: nudged along it only, never out of it.
+			if (LaneOffset != 0.f)
+			{
+				Nudge = GetActorForwardVector() * FVector::DotProduct(Nudge, GetActorForwardVector());
+			}
+			Location += Nudge;
 		}
 	}
 	return Location;
@@ -430,6 +445,32 @@ ARTSUnit* ARTSBuilding::SpawnUnitAtExit(URTSUnitData* Data)
 	Transform.AddToTranslation(FVector(0.f, 0.f, Unit->GetGroundOffset()));
 	Unit->FinishSpawning(Transform);
 	return Unit;
+}
+
+void ARTSBuilding::DeliverUnit(URTSUnitData& Data)
+{
+	check(HasAuthority());
+	if (GarageComponent->Accepts(Data))
+	{
+		GarageComponent->Enqueue(Data);
+		return;
+	}
+	if (ARTSUnit* Unit = SpawnUnitAtExit(&Data))
+	{
+		ProductionComponent->SendOut(*Unit);
+	}
+}
+
+bool ARTSBuilding::FindPart(FName Name, UStaticMeshComponent*& OutComponent, int32& OutInstance) const
+{
+	const TPair<int32, int32>* Found = PartIndex.Find(Name);
+	if (!Found || !PartComponents.IsValidIndex(Found->Key) || !PartComponents[Found->Key])
+	{
+		return false;
+	}
+	OutComponent = PartComponents[Found->Key];
+	OutInstance = Found->Value;
+	return true;
 }
 
 int32 ARTSBuilding::GetPadCount() const
@@ -550,6 +591,7 @@ void ARTSBuilding::ApplyBuildingData()
 	Mesh->SetStaticMesh(BuildingData->Mesh);
 	ApplyParts();
 	ApplyCollision(MeshHeight > 0.f ? MeshHeight : DefaultHeight);
+	GarageComponent->ApplyBuildingData();
 
 	ApplyConstructionVisual();
 	ApplyTeamColor();
@@ -565,6 +607,7 @@ void ARTSBuilding::ApplyParts()
 		}
 	}
 	PartComponents.Reset();
+	PartIndex.Reset();
 
 	// Parts that share a mesh and how it draws (the HQ's sixteen door sections) draw as one instanced component, one
 	// instance per part in the data's order: one draw per material section instead of one per part (#358).
@@ -584,12 +627,14 @@ void ARTSBuilding::ApplyParts()
 		}
 		const FRTSBuildingPart& Data = Parts[Index];
 		TArray<FTransform> Instances;
+		TArray<FName> Names;
 		for (int32 Other = Index; Other < Parts.Num(); ++Other)
 		{
 			if (!Done[Other] && SameDraw(Data, Parts[Other]))
 			{
 				Done[Other] = true;
 				Instances.Add(Parts[Other].Transform);
+				Names.Add(Parts[Other].Name);
 			}
 		}
 
@@ -616,6 +661,10 @@ void ARTSBuilding::ApplyParts()
 		Part->SetupAttachment(Mesh);
 		AddInstanceComponent(Part);
 		Part->RegisterComponent();
+		for (int32 Instance = 0; Instance < Names.Num(); ++Instance)
+		{
+			PartIndex.Add(Names[Instance], { PartComponents.Num(), Instances.Num() > 1 ? Instance : INDEX_NONE });
+		}
 		PartComponents.Add(Part);
 	}
 }

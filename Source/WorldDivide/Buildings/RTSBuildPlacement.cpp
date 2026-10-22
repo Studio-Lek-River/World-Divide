@@ -104,6 +104,12 @@ namespace RTSBuildPlacement
 			: 0.f;
 	}
 
+	float GetExitLaneOffset(const URTSBuildingData& Data)
+	{
+		const FVector* Exit = Data.FindSocket(URTSBuildingData::GarageExitSocket);
+		return Exit ? Exit->Y * Data.MeshScale.Y : 0.f;
+	}
+
 	bool CanUnitsLeave(const UWorld& World, const URTSBuildingData& Data, const FVector& Location, int32 QuarterTurns)
 	{
 		const URTSUnitData* Unit = GetWidestExitUnit(Data);
@@ -119,10 +125,13 @@ namespace RTSBuildPlacement
 			return true;
 		}
 
-		// Where SpawnUnitAtExit puts it, facing out: it must stand on its navmesh, clear of everything around it...
-		const FVector Forward = FRotator(0.f, GetYaw(QuarterTurns), 0.f).Vector();
+		// Where SpawnUnitAtExit puts it, or the garage's drive-out hands it over, facing out on the exit lane: it must stand on
+		// its navmesh, clear of everything around it...
+		const FRotator Rotation(0.f, GetYaw(QuarterTurns), 0.f);
+		const FVector Forward = Rotation.Vector();
+		const FVector Lane = Rotation.RotateVector(FVector(0.f, GetExitLaneOffset(Data), 0.f));
 		FNavLocation Exit;
-		if (!NavMesh->ProjectPoint(Location + Forward * GetExitDistance(Data, *Unit), Exit, FVector(ExitTolerance, ExitTolerance, NavHeightTolerance))
+		if (!NavMesh->ProjectPoint(Location + Forward * GetExitDistance(Data, *Unit) + Lane, Exit, FVector(ExitTolerance, ExitTolerance, NavHeightTolerance))
 			|| RTSHullClearance::GetClearance(*NavMesh, RTSHullClearance::MakeFootprint(Shape, Exit.Location, FVector2D(Forward))) < 0.f)
 		{
 			return false;

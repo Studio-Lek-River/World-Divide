@@ -34,6 +34,12 @@ namespace RTSBuildPlacement
 	WORLDDIVIDE_API float GetExitLaneLength(const URTSBuildingData& Data);
 
 	/**
+	 * How far to the side of the building's centre line, along its own Y, the exit lane runs: the garage's lane for a
+	 * building with one (URTSBuildingData::GarageExitSocket, #192), else zero, the middle of the exit edge.
+	 */
+	WORLDDIVIDE_API float GetExitLaneOffset(const URTSBuildingData& Data);
+
+	/**
 	 * Whether the widest unit a building of Data sends out (GetWidestExitUnit) fits at its exit at Location, turned
 	 * QuarterTurns, and can drive a hull's length straight on, on that unit's own navmesh. True for a building whose units
 	 * all walk the narrowest class: anything placeable leaves them room.

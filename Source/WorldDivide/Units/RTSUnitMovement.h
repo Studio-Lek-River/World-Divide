@@ -70,8 +70,20 @@ public:
 	/** Server only. Avoidance's request for the next update: a share of the speed to keep and a curvature (1/cm) to add. */
 	void SetAvoidance(float SpeedScale, float CurvatureBias);
 
-	/** Server only. Drives with Command instead of following the path, for tests; unset follows the path again. */
-	void SetCommandOverride(TOptional<RTSLocomotion::FCommand> Command) { CommandOverride = Command; }
+	/**
+	 * Server only. Drives with Command instead of following the path, for tests and a garage's drive-out (#192); unset follows
+	 * the path again. bThroughNavObstacles lets the hull drive where the navmesh is cut, out of the garage bay that stays
+	 * cut while it leaves, still stopped by the solids the navmesh leaves out; avoidance leaves such a hull alone, so the
+	 * garage keeps its lane clear itself.
+	 */
+	void SetCommandOverride(TOptional<RTSLocomotion::FCommand> Command, bool bThroughNavObstacles = false)
+	{
+		CommandOverride = Command;
+		bOverrideThroughNavObstacles = Command.IsSet() && bThroughNavObstacles;
+	}
+
+	/** Server only. A command override drives the hull through what cuts the navmesh (SetCommandOverride). */
+	bool IsDrivingThroughNavObstacles() const { return bOverrideThroughNavObstacles; }
 
 	/**
 	 * Server only. Backs straight off what the hull is stuck against for Seconds, slowly, before it follows its path again;
@@ -150,6 +162,7 @@ private:
 
 	TOptional<float> FacingYaw;
 	TOptional<RTSLocomotion::FCommand> CommandOverride;
+	bool bOverrideThroughNavObstacles = false;
 	float BackOffSeconds = 0.f;
 	float AvoidanceSpeedScale = 1.f;
 	float AvoidanceCurvatureBias = 0.f;

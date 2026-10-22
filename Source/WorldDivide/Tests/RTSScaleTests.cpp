@@ -6,6 +6,7 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
+#include "Buildings/RTSGarageComponent.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommand.h"
@@ -372,8 +373,29 @@ namespace RTSScaleTests
 				Out.Center += Building->GetActorForwardVector() * 2.f * Shape.GetHalfLength();
 				TestTrue(*FString::Printf(TEXT("%s: it drives a hull's length out clear of the building"), *What),
 					RTSTests::GetHullGap(Out, BuildingBox) > Gap);
-				const float SpawnFront = FVector::Dist2D(Unit->GetActorLocation(), Building->GetActorLocation()) - Extent.X
-					+ FMath::Max(Shape.GetHalfLength(), Shape.GetHalfWidth());
+				// Along the way out: a garage's lane runs off the building's middle (RTSBuildPlacement::GetExitLaneOffset).
+				const float SpawnFront = FVector::DotProduct(Unit->GetActorLocation() - Building->GetActorLocation(), Building->GetActorForwardVector())
+					- Extent.X + FMath::Max(Shape.GetHalfLength(), Shape.GetHalfWidth());
+				const float LaneOffset = FVector::DotProduct(Unit->GetActorLocation() - Building->GetActorLocation(), Building->GetActorRightVector());
+				TestTrue(*FString::Printf(TEXT("%s: it leaves on the exit lane (%.0f cm off the middle, %.0f cm expected)"), *What, LaneOffset,
+					RTSBuildPlacement::GetExitLaneOffset(*Data)), FMath::IsNearlyEqual(LaneOffset, RTSBuildPlacement::GetExitLaneOffset(*Data), 1.f));
+				// A vehicle of a building with a garage (#192) appears in the bay, its hull inside the garage's box and in no other.
+				URTSGarageComponent* Garage = Building->GetGarageComponent();
+				if (Garage->Accepts(*UnitData))
+				{
+					const FRTSFootprint InBay = RTSUnitShape::MakeFootprint(Shape, Garage->GetSpawnTransform());
+					for (const FRTSBuildingCollisionBox& Box : Data->CollisionBoxes)
+					{
+						const FTransform& Frame = Building->GetActorTransform();
+						const FVector Min = Frame.TransformPosition(Box.Min * Data->MeshScale);
+						const FVector Max = Frame.TransformPosition(Box.Max * Data->MeshScale);
+						const FBox2D World(FVector2D(FVector::Min(Min, Max)), FVector2D(FVector::Max(Min, Max)));
+						const float BoxGap = RTSTests::GetHullGap(InBay, World);
+						TestTrue(*FString::Printf(TEXT("%s: in the garage it stands %s %s (%.0f cm)"), *What,
+							Box.bGarage ? TEXT("inside") : TEXT("clear of"), *Box.Name.ToString(), BoxGap),
+							Box.bGarage ? BoxGap < 0.f && World.IsInside(FVector2D(InBay.Center)) : BoxGap >= 0.f);
+					}
+				}
 				TestTrue(*FString::Printf(TEXT("%s: the exit lane (%.0f cm) reaches past the spawned hull (%.0f cm)"), *What, LaneLength, SpawnFront),
 					LaneLength >= SpawnFront - 1.f);
 				if (Data->Units.Contains(UnitData))

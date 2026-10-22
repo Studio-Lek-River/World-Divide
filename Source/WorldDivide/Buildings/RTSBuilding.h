@@ -9,6 +9,7 @@ class ARTSUnit;
 class UBoxComponent;
 class UStaticMeshComponent;
 class URTSBuildingData;
+class URTSGarageComponent;
 class URTSHealthComponent;
 class URTSProductionComponent;
 class URTSSuperweaponComponent;
@@ -63,15 +64,30 @@ public:
 	URTSWeaponComponent* GetWeaponComponent() const { return WeaponComponent; }
 	URTSProductionComponent* GetProductionComponent() const { return ProductionComponent; }
 	URTSSuperweaponComponent* GetSuperweaponComponent() const { return SuperweaponComponent; }
+	URTSGarageComponent* GetGarageComponent() const { return GarageComponent; }
 
 	/**
 	 * Where units leave the building: outside its front edge (the data's +X edge, turned with the building), Clearance beyond
-	 * it, nudged onto Agent's navmesh, or the narrowest agent's without one, when it exists.
+	 * it, on the exit lane (RTSBuildPlacement::GetExitLaneOffset: the garage's for a building with one, else the middle of
+	 * the edge), nudged onto Agent's navmesh, or the narrowest agent's without one, when it exists; on a garage's lane only
+	 * along the lane, so it stays in it.
 	 */
 	FVector GetExitLocation(float Clearance, const FNavAgentProperties* Agent = nullptr) const;
 
 	/** Server only. Spawns a unit of Data for the building's team at the exit. */
 	ARTSUnit* SpawnUnitAtExit(URTSUnitData* Data);
+
+	/**
+	 * Server only. Sends out a unit of Data that production completed: through the garage for a vehicle when the building has
+	 * one (URTSGarageComponent), else spawned at the exit and sent off at once (URTSProductionComponent::SendOut).
+	 */
+	void DeliverUnit(URTSUnitData& Data);
+
+	/**
+	 * The component that draws the part Name (URTSBuildingData::Parts) and, when it draws several, the part's instance in it;
+	 * INDEX_NONE for a part drawn on its own. False when the data has no part of that name.
+	 */
+	bool FindPart(FName Name, UStaticMeshComponent*& OutComponent, int32& OutInstance) const;
 
 	/** Aircraft pads, from the data; 0 for a building that is not an airfield. */
 	int32 GetPadCount() const;
@@ -204,6 +220,9 @@ private:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UStaticMeshComponent>> PartComponents;
 
+	/** Each part's index in PartComponents and its instance there, INDEX_NONE for a part drawn on its own. */
+	TMap<FName, TPair<int32, int32>> PartIndex;
+
 	/** The data's CollisionBoxes after the first, which Collision takes. */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UBoxComponent>> ExtraCollision;
@@ -219,6 +238,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<URTSSuperweaponComponent> SuperweaponComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<URTSGarageComponent> GarageComponent;
 
 	UPROPERTY(ReplicatedUsing = OnRep_BuildingData)
 	TObjectPtr<URTSBuildingData> BuildingData;

@@ -59,9 +59,27 @@ Simple boxes in `URTSBuildingData::CollisionBoxes`, BlockAllDynamic with a NavAr
 | GarageBay (garage) | −0.749 … 14.944 | −25.169 … −10 | 0 … 7.6 |
 
 - The apron in front of the garage door (X 14.944 … 19, Y −25.169 … −10) has no box, so the navmesh reaches the door.
-- The garage bay is solid in #191. #192 opens it for the vehicle leaving.
+- The garage bay stays solid and cut out of the navmesh (#192): the vehicle leaving it drives a scripted lane, not a path. Nothing else can path into the bay.
 - Selection and placement keep the 38 × 56 footprint. The placement ghost shows the architecture mesh only.
-- Units still leave at the centre of the +X edge until #192 routes them through the garage.
+
+## Garage sequence (#192)
+
+`URTSGarageComponent` presents what `URTSProductionComponent` completes; cost, queue, progress, low-power rate and cancelling stay production's.
+
+1. While the front of the queue is a vehicle due within the door's opening time (3 s, plus 0.5 s), the warning lights come on and the door opens, so it is open the frame the vehicle completes. Low on power the door does not open early: it opens once the vehicle has completed, and the vehicle waits for it. A vehicle cancelled while the door opens for it leaves none, and the door closes again.
+2. Each completed vehicle waits in the garage, one entry per completed item, until the door is fully open and nothing stands in the bay or on its lane. It then appears at `GarageSpawn`, facing out of the door, one at a time.
+3. It drives straight out at half its top speed (`URTSUnitMovement::SetCommandOverride` through nav obstacles; avoidance leaves it alone). It stops while any unit stands on the lane ahead of it. Once its hull is where a building without a garage puts the unit (footprint edge + the hull's longer half + `ExitClearance`, X 2425 cm for the builder), it goes to the rally point.
+4. With nothing more to send out and the bay and apron clear for 1 s, the door closes. A vehicle due again opens it again, even halfway down. The door never closes, or starts closing, with a hull in the bay or on the apron.
+
+Blocked exit: the door stays open and the next vehicle is held in the garage while any unit stands on the lane, out to the lane's end. The owner's idle units there are sent straight on past the lane's end (`ARTSUnit::StepAside`); other units are waited for.
+
+Destroyed HQ: the vehicles still waiting are lost with the building and nothing more comes out. A vehicle on its way out stops its scripted drive and goes to the rally point; one already out keeps going.
+
+Lane: `RTSBuildPlacement::GetExitLaneOffset` puts the exit lane on the garage's Y (−1758.45 cm, turning with the building). `GetExitLocation`, the rally point (lane end, X 3075 cm for the builder) and `CanUnitsLeave` all use it, and `GetExitLocation`'s navmesh nudge moves the point along the lane only.
+
+Door motion: `CT_HQ20_DoorMotion` is imported as a curve table (`GarageDoorMotion`). The game plays its opening, 2 to 10 s of the delivered cycle, in `GarageDoorSeconds` (3 s), and closing plays it backward. Rows `Sxx_X/Z/P` pose the sixteen door instances, the bottom seal follows S00, the lift cables hang from S00 with `Cable_P` and the length scale `Cable_L`, and the drive shaft turns by `Drive_P`. The door's phase and start time replicate, and every machine but a dedicated server poses the door from the server clock.
+
+Warning lights: two amber point lights (300 cd, 12 m, no shadows) either side of the opening above `GarageDoorPivot`, flashing in turn while the door is not closed. They stand in until the HQ's lighting and VFX passes (#195, #197).
 
 ## LODs and budgets
 

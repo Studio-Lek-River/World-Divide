@@ -225,33 +225,51 @@ void URTSProductionComponent::UpdateProduction(float DeltaSeconds)
 		}
 		return;
 	}
-	URTSUnitData* UnitData = Cast<URTSUnitData>(Data);
-	ARTSUnit* Unit = UnitData ? Building->SpawnUnitAtExit(UnitData) : nullptr;
-	if (Unit && Unit->GetAircraftComponent()->CanFly())
+	if (URTSUnitData* UnitData = Cast<URTSUnitData>(Data))
+	{
+		Building->DeliverUnit(*UnitData);
+	}
+}
+
+void URTSProductionComponent::SendOut(ARTSUnit& Unit)
+{
+	check(GetOwner()->HasAuthority());
+	ARTSBuilding* Building = GetBuilding();
+	if (Unit.GetAircraftComponent()->CanFly())
 	{
 		// An aircraft parks on the pad kept for it; should none be free after all, it circles until one is.
-		if (!Unit->GetAircraftComponent()->ParkAt(*Building))
+		if (!Building || !Unit.GetAircraftComponent()->ParkAt(*Building))
 		{
 			FRTSCommand Stop;
 			Stop.Type = ERTSCommandType::Stop;
-			Unit->ExecuteCommand(Stop);
+			Unit.ExecuteCommand(Stop);
 		}
+		return;
 	}
-	else if (Unit)
+	FRTSCommand Move;
+	Move.Type = ERTSCommandType::Move;
+	Move.TargetLocation = RallyPoint;
+	Unit.ExecuteCommand(Move);
+	// Harvesters go on to the nearest source from the rally point.
+	if (Unit.GetHarvesterComponent()->CanHarvest())
 	{
-		FRTSCommand Move;
-		Move.Type = ERTSCommandType::Move;
-		Move.TargetLocation = RallyPoint;
-		Unit->ExecuteCommand(Move);
-		// Harvesters go on to the nearest source from the rally point.
-		if (Unit->GetHarvesterComponent()->CanHarvest())
-		{
-			FRTSCommand Harvest;
-			Harvest.Type = ERTSCommandType::Harvest;
-			Harvest.bQueue = true;
-			Unit->ExecuteCommand(Harvest);
-		}
+		FRTSCommand Harvest;
+		Harvest.Type = ERTSCommandType::Harvest;
+		Harvest.bQueue = true;
+		Unit.ExecuteCommand(Harvest);
 	}
+}
+
+float URTSProductionComponent::GetSecondsToComplete() const
+{
+	const ARTSBuilding* Building = GetBuilding();
+	const URTSEntityData* Data = Queue.IsEmpty() ? nullptr : Queue[0].Get();
+	if (!Data || !Building)
+	{
+		return 0.f;
+	}
+	const float Rate = ARTSPlayerState::GetProductionRateForTeam(*GetWorld(), Building->GetTeamId());
+	return Data->BuildTime > 0.f && Rate > 0.f ? (1.f - Progress) * Data->BuildTime / Rate : 0.f;
 }
 
 void URTSProductionComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

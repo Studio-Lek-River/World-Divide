@@ -4,6 +4,7 @@
 #include "Data/RTSEntityData.h"
 #include "RTSBuildingData.generated.h"
 
+class UCurveTable;
 class UStaticMesh;
 class URTSUnitData;
 class URTSUpgradeData;
@@ -59,7 +60,10 @@ struct FRTSBuildingCollisionBox
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
 	FVector Max = FVector::ZeroVector;
 
-	/** The garage bay, which the garage sequence opens for a unit leaving it (#192). Solid for now. */
+	/**
+	 * The garage bay a produced vehicle drives out of (URTSGarageComponent, #192). It stays solid and cuts the navmesh like
+	 * the others: the vehicle leaving it drives a scripted lane, not a path.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
 	bool bGarage = false;
 };
@@ -112,6 +116,42 @@ public:
 		const FRTSBuildingSocket* Socket = Sockets.FindByPredicate([Name](const FRTSBuildingSocket& S) { return S.Name == Name; });
 		return Socket ? &Socket->Location : nullptr;
 	}
+
+	/** Where a produced vehicle appears in the garage bay, facing out of the door (#192). */
+	static inline const FName GarageSpawnSocket = TEXT("GarageSpawn");
+
+	/** The garage door's opening on the floor, on the same lane as GarageSpawnSocket. */
+	static inline const FName GarageExitSocket = TEXT("GarageExit");
+
+	/** Above the door, where its warning lights hang. */
+	static inline const FName GarageDoorPivotSocket = TEXT("GarageDoorPivot");
+
+	/** A collision box is the garage bay and both garage sockets are there: produced vehicles leave through the garage. */
+	bool HasGarage() const
+	{
+		return FindSocket(GarageSpawnSocket) && FindSocket(GarageExitSocket)
+			&& CollisionBoxes.ContainsByPredicate([](const FRTSBuildingCollisionBox& Box) { return Box.bGarage; });
+	}
+
+	/**
+	 * The garage door's motion as delivered (the HQ's CT_HQ20_DoorMotion): rows S00..S15 _X, _Z and _P for the door
+	 * sections' place along the building's X and Z and their pitch, Cable_P and Cable_L for the lift cables' pitch and length
+	 * scale, Drive_P for the drive shaft's turn, in cm and degrees over the cycle's seconds. Null for a door that does not move.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Garage")
+	TObjectPtr<UCurveTable> GarageDoorMotion;
+
+	/** The second of GarageDoorMotion at which the door starts to open, closed before it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Garage", meta = (ClampMin = "0"))
+	float GarageDoorOpenStart = 2.f;
+
+	/** The second of GarageDoorMotion at which the door is open; closing plays the opening backward. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Garage", meta = (ClampMin = "0"))
+	float GarageDoorOpenEnd = 10.f;
+
+	/** Seconds the door takes in the game to open, and again to close. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Garage", meta = (ClampMin = "0.1"))
+	float GarageDoorSeconds = 3.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Power", meta = (ClampMin = "0"))
 	int32 PowerOutput = 0;

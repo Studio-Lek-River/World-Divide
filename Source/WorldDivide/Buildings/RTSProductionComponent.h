@@ -6,6 +6,7 @@
 
 class ARTSBuilding;
 class ARTSPlayerState;
+class ARTSUnit;
 class URTSBuildingData;
 class URTSEntityData;
 class URTSUnitData;
@@ -41,7 +42,7 @@ namespace RTSProduction
 /**
  * The build queue of a production building, such as a barracks: units and upgrades in one queue. Queueing charges the entry's
  * cost, cancelling refunds it. The front entry builds over its BuildTime, slower while the owner is low on power; a finished
- * unit comes out just outside the footprint and walks to the rally point, a finished aircraft parks on a pad of the airfield,
+ * unit comes out just outside the footprint, or out of the building's garage (URTSGarageComponent), and walks to the rally point, a finished aircraft parks on a pad of the airfield,
  * a finished upgrade goes to the owner's player.
  * Every building has one; it stays inert unless the building is constructed and its data lists units or upgrades. The server
  * runs it; the queue, progress and rally point replicate for the HUD.
@@ -86,10 +87,19 @@ public:
 	void SetRallyPoint(const FVector& Location);
 
 	/**
-	 * Server only. Advances the front entry; once complete, spawns a unit and sends it to the rally point, or completes an
-	 * upgrade for the owner's player.
+	 * Server only. Advances the front entry; once complete, hands a unit to the building to send out (ARTSBuilding::DeliverUnit),
+	 * or completes an upgrade for the owner's player.
 	 */
 	void UpdateProduction(float DeltaSeconds);
+
+	/**
+	 * Server only. Sends a finished unit off from where it came out: an aircraft to the pad kept for it, a ground unit to the
+	 * rally point, a harvester on to the nearest source from there.
+	 */
+	void SendOut(ARTSUnit& Unit);
+
+	/** Seconds until the front entry completes at the owner's production rate now; 0 with nothing queued. */
+	float GetSecondsToComplete() const;
 
 	const TArray<TObjectPtr<URTSEntityData>>& GetQueue() const { return Queue; }
 

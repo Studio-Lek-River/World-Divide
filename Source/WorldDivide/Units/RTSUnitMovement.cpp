@@ -424,6 +424,11 @@ bool URTSUnitMovement::IsPoseClear(const FVector& Location, float Yaw, FCurrentC
 	{
 		return false;
 	}
+	// A garage's drive-out leaves a bay that stays cut out of the navmesh (#192).
+	if (bOverrideThroughNavObstacles)
+	{
+		return true;
+	}
 	FRTSHullClearanceCache& Cache = Unit->GetHullClearanceCache();
 	const double Now = World->GetTimeSeconds();
 	if (Cache.IsClear(Footprint, Now))
