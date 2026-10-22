@@ -1,5 +1,6 @@
 """The greybox of WD_RiverCrossing_01 (#154): the layout of docs/world/maps/WD_RiverCrossing_01/02_MAP_DESIGN.md as a
-landscape, engine cubes, a Water plugin river and the concrete bridges of Tools/Art/bridge_blender.py (#155).
+landscape, engine cubes, a Water plugin river, the concrete bridges of Tools/Art/bridge_blender.py (#155) and landscape
+spline roads drawn into the landscape's runtime virtual texture (#383).
 setup_rivercrossing.py builds it only when the level does not exist yet, or anew with ue.ps1 -Task rivercrossing
 -Rebuild: from then on the level is authored by hand (03_TECHNICAL_PLAN.md section 2) and this file is never run on it
 again. The river carves its bed through the landscape's Water edit layer on the GPU, so the build needs a renderer
@@ -154,6 +155,59 @@ WEST_VILLAGE = (
     (-120.0, 150.0, 16.0, 14.0, 9.0),
 )
 VILLAGE_RIVER_CLEARANCE = 15.0
+
+# Roads (02 "Road network", #383), the west side's; the east side has the same turned about the centre. Each is (name,
+# kind, waypoints): a polyline whose corners are rounded with ROAD_CORNER_RADIUS (02: at least 25 m) and whose straights
+# carry a spline point every ROAD_POINT_SPACING, each at the greybox height, so the road follows the rolling ground. Where
+# one road carries straight on into another they share the waypoint, one control point. A branch (a T junction) ends at
+# the through road's edge instead: a landscape spline control point has one direction, so a shared one would kink the
+# through road. The main axis runs from the base to the home (south) bridge, straight for its last 160 m; the farm track
+# runs to the forward supply and on, as the flank route, to the far (north) bridge's approach, which carries straight on
+# to the bridge; the village ring road links both approaches along the west bank's street; a dressing road leaves the
+# map behind the base. Each bridge's ramp gets its own road from the ramp's foot to the abutment (ramp_roads).
+ROAD_KINDS = {
+    # kind: (width, side falloff) in metres, and the road material instance.
+    "asphalt": (8.0, 6.0, "MI_Road_Asphalt"),
+    "ring": (6.0, 5.0, "MI_Road_Asphalt"),
+    "track": (5.0, 5.0, "MI_Road_Track"),
+}
+ROAD_KINDS_HALF_WIDTH = {kind: width / 2.0 for kind, (width, _, _) in ROAD_KINDS.items()}
+ROAD_RAMP_FOOT = BRIDGE_LENGTH / 2.0 + BRIDGE_ABUTMENT + BRIDGE_RAMP_TOP + BRIDGE_RAMP
+ROAD_ABUTMENT = BRIDGE_LENGTH / 2.0 + BRIDGE_ABUTMENT
+VILLAGE_STREET_X = -157.0
+FLANK_APPROACH_X = -200.0
+WEST_ROADS = (
+    ("Main", "asphalt", ((-640.0, -230.0), (-420.0, -260.0), (-260.0, -BRIDGE_Y), (-ROAD_RAMP_FOOT, -BRIDGE_Y))),
+    ("Farm", "track", ((-690.0, -130.0), (-640.0, 150.0), (-520.0, 380.0), (-420.0, 470.0), (-250.0, BRIDGE_Y),
+                       (FLANK_APPROACH_X, BRIDGE_Y))),
+    ("Approach", "ring", ((FLANK_APPROACH_X, BRIDGE_Y), (-ROAD_RAMP_FOOT, BRIDGE_Y))),
+    # Between the main road's edge and the north approach's edge.
+    ("Ring", "ring", ((VILLAGE_STREET_X, -BRIDGE_Y + ROAD_KINDS_HALF_WIDTH["asphalt"]),
+                      (VILLAGE_STREET_X, BRIDGE_Y - ROAD_KINDS_HALF_WIDTH["ring"]))),
+    ("Border", "track", ((-830.0, -200.0), (-1000.0, -190.0), (-LANDSCAPE_HALF + 10.0, -180.0))),
+)
+ROAD_CORNER_RADIUS = 40.0
+ROAD_POINT_SPACING = 30.0
+# Along a bridge ramp a point every ROAD_RAMP_SPACING, so the spline follows the ramp's kinks; the ramp roads leave the
+# ground as it is (bShapeGround off), so its steep sides stay.
+ROAD_RAMP_SPACING = 5.0
+# How far a road keeps from the river's edge and, with its falloff, from a house.
+ROAD_RIVER_CLEARANCE = 20.0
+ROAD_HOUSE_CLEARANCE = 1.0
+# The road surfaces (placeholders until the landscape material, #156): one master that draws both in the main pass and
+# into the landscape's runtime virtual texture, tiled along the splines on the engine cube (a slab, so occlusion culling
+# sees its top over the ground; AddLandscapeSplineRoad sets its depth), ROAD_TILE long a tile.
+ROAD_MATERIAL_DIR = "/Game/Materials/Road"
+ROAD_MASTER = "M_RiverCrossing_Road"
+ROAD_SLOTS = {
+    "MI_Road_Asphalt": ((0.05, 0.05, 0.052), 0.8),
+    "MI_Road_Track": ((0.2, 0.15, 0.1), 0.95),
+}
+ROAD_MESH = "/Engine/BasicShapes/Cube.Cube"
+ROAD_TILE = 4.0
+# The landscape's runtime virtual texture (03 section 5): base colour, normal and roughness for the material of #156.
+RVT_DIR = "/Game/World/Landscape"
+RVT_NAME = "RVT_WD_RiverCrossing_01"
 
 actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
@@ -384,6 +438,150 @@ def create_river(world, material):
     return river
 
 
+def road_path(waypoints):
+    """The (x, y) points of a road along waypoints: each corner rounded with ROAD_CORNER_RADIUS (less where a leg is too
+    short), a point every few metres along the arc and every ROAD_POINT_SPACING or less along the straights. The ends and
+    every straight-through waypoint stay where they are, so roads that share one meet there."""
+    corners = [(waypoints[0], None)]
+    for index in range(1, len(waypoints) - 1):
+        before, at, after = waypoints[index - 1], waypoints[index], waypoints[index + 1]
+        into = (at[0] - before[0], at[1] - before[1])
+        out = (after[0] - at[0], after[1] - at[1])
+        into_length, out_length = math.hypot(*into), math.hypot(*out)
+        turn = math.atan2(into[0] * out[1] - into[1] * out[0], into[0] * out[0] + into[1] * out[1])
+        if abs(turn) < 1e-3:
+            corners.append((at, None))
+            continue
+        cut = min(ROAD_CORNER_RADIUS * math.tan(abs(turn) / 2.0), into_length / 2.0, out_length / 2.0)
+        radius = cut / math.tan(abs(turn) / 2.0)
+        start = (at[0] - into[0] / into_length * cut, at[1] - into[1] / into_length * cut)
+        # The arc's centre lies to the side the road turns to, radius from the arc's start.
+        side = 1.0 if turn > 0.0 else -1.0
+        centre = (start[0] - side * into[1] / into_length * radius, start[1] + side * into[0] / into_length * radius)
+        heading = math.atan2(start[1] - centre[1], start[0] - centre[0])
+        steps = max(2, int(math.ceil(abs(turn) * radius / 8.0)))
+        arc = [(centre[0] + radius * math.cos(heading + turn * step / steps),
+                centre[1] + radius * math.sin(heading + turn * step / steps)) for step in range(steps + 1)]
+        corners.append((arc[0], arc))
+    corners.append((waypoints[-1], None))
+
+    points = []
+    for point, arc in corners:
+        if points:
+            last = points[-1]
+            gap = math.hypot(point[0] - last[0], point[1] - last[1])
+            steps = int(math.ceil(gap / ROAD_POINT_SPACING))
+            points += [(last[0] + (point[0] - last[0]) * step / steps, last[1] + (point[1] - last[1]) * step / steps)
+                       for step in range(1, steps)]
+        points += arc if arc else [point]
+    return points
+
+
+def ramp_roads():
+    """Each bridge ramp's road on the west side, from the ramp's foot (where its approach road ends) to the abutment, a
+    point every ROAD_RAMP_SPACING. The east side has the same turned about the centre."""
+    roads = []
+    for name, bridge_y in (("North", BRIDGE_Y), ("South", -BRIDGE_Y)):
+        steps = int(round((ROAD_RAMP_FOOT - ROAD_ABUTMENT) / ROAD_RAMP_SPACING))
+        points = [(-ROAD_RAMP_FOOT + (ROAD_RAMP_FOOT - ROAD_ABUTMENT) * step / steps, bridge_y) for step in range(steps + 1)]
+        roads.append((f"Ramp{name}", "asphalt" if bridge_y < 0.0 else "ring", points))
+    return roads
+
+
+def check_roads():
+    """Raises when a road (02 "Road network") breaks a rule: a point near the river, a house in the road or its falloff, or a
+    curve tighter than 25 m."""
+    houses = [(x, y, length, width) for x, y, length, width, _ in WEST_VILLAGE]
+    houses += [(*rotate((x, y)), length, width) for x, y, length, width in houses]
+    for name, kind, waypoints in WEST_ROADS:
+        width, falloff, _ = ROAD_KINDS[kind]
+        points = road_path(waypoints)
+        for x, y in points:
+            distance, half_width = river_distance(x, y)
+            if distance < half_width + ROAD_RIVER_CLEARANCE:
+                raise RuntimeError(f"Road {name} passes within {ROAD_RIVER_CLEARANCE} m of the river at ({x:.0f}, {y:.0f})")
+            for side in (1.0, -1.0):
+                for house_x, house_y, length, house_width in houses:
+                    gap = max(abs(side * x - house_x) - length / 2.0, abs(side * y - house_y) - house_width / 2.0)
+                    if gap < width / 2.0 + falloff + ROAD_HOUSE_CLEARANCE:
+                        raise RuntimeError(f"Road {name} runs {gap:.1f} m from the house at ({house_x}, {house_y})")
+        # The radius through three neighbouring points (circumradius) never under 25 m.
+        for a, b, c in zip(points, points[1:], points[2:]):
+            cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+            if abs(cross) > 1e-6:
+                radius = math.dist(a, b) * math.dist(b, c) * math.dist(a, c) / (2.0 * abs(cross))
+                if radius < 25.0:
+                    raise RuntimeError(f"Road {name} curves at a {radius:.1f} m radius near ({b[0]:.0f}, {b[1]:.0f})")
+
+
+def build_road_materials():
+    """M_RiverCrossing_Road, a colour and a roughness drawn both in the main pass and into a runtime virtual texture, for
+    spline meshes, and its ROAD_SLOTS instances. Does not save; returns the instances by name."""
+    path = f"{ROAD_MATERIAL_DIR}/{ROAD_MASTER}"
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        material = unreal.load_asset(path)
+    else:
+        material = asset_tools.create_asset(ROAD_MASTER, ROAD_MATERIAL_DIR, unreal.Material, unreal.MaterialFactoryNew())
+    editing.delete_all_material_expressions(material)
+    default_color, default_roughness = ROAD_SLOTS["MI_Road_Asphalt"]
+    color = editing.create_material_expression(material, unreal.MaterialExpressionVectorParameter, -500, 0)
+    color.set_editor_property("parameter_name", "Color")
+    color.set_editor_property("default_value", unreal.LinearColor(*default_color, 1.0))
+    roughness = editing.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -500, 250)
+    roughness.set_editor_property("parameter_name", "Roughness")
+    roughness.set_editor_property("default_value", default_roughness)
+    editing.connect_material_property(color, "", unreal.MaterialProperty.MP_BASE_COLOR)
+    editing.connect_material_property(roughness, "", unreal.MaterialProperty.MP_ROUGHNESS)
+    output = editing.create_material_expression(material, unreal.MaterialExpressionRuntimeVirtualTextureOutput, -150, 450)
+    editing.connect_material_expressions(color, "", output, "BaseColor")
+    editing.connect_material_expressions(roughness, "", output, "Roughness")
+    editing.set_material_usage(material, unreal.MaterialUsage.MATUSAGE_SPLINE_MESH)
+    if not editing.has_material_usage(material, unreal.MaterialUsage.MATUSAGE_SPLINE_MESH):
+        raise RuntimeError(f"{ROAD_MASTER}: could not set the spline mesh usage")
+    editing.recompile_material(material)
+    slots = {}
+    for name, (value, rough) in ROAD_SLOTS.items():
+        made = instance(ROAD_MATERIAL_DIR, name, material)
+        editing.set_material_instance_vector_parameter_value(made, "Color", unreal.LinearColor(*value, 1.0))
+        editing.set_material_instance_scalar_parameter_value(made, "Roughness", rough)
+        editing.update_material_instance(made)
+        slots[name] = made
+    return slots
+
+
+def create_virtual_texture(world):
+    """The landscape's runtime virtual texture (03 section 5) and its volume over the landscape. Does not save."""
+    texture = unreal.RTSEditorScripting.create_landscape_virtual_texture(world, f"{RVT_DIR}/{RVT_NAME}")
+    if not texture:
+        raise RuntimeError("Could not give the landscape a runtime virtual texture (CreateLandscapeVirtualTexture in the log)")
+    texture.set_editor_property("material_type", unreal.RuntimeVirtualTextureMaterialType.BASE_COLOR_NORMAL_ROUGHNESS)
+    return texture
+
+
+def create_roads(world, materials, texture):
+    """Both sides' roads as landscape splines that shape the ground to them (#383), in materials and drawn into texture,
+    then applied to the landscape. Needs a renderer."""
+    check_roads()
+    mesh = unreal.load_asset(ROAD_MESH)
+    segments = 0
+    for name, kind, waypoints in WEST_ROADS + tuple(ramp_roads()):
+        width, falloff, slot = ROAD_KINDS[kind]
+        # The ramps keep their ground: a road's falloff would soften their steep sides into walkable slopes.
+        shape = not name.startswith("Ramp")
+        path = waypoints if not shape else road_path(waypoints)
+        for flip in (False, True):
+            points = [rotate(point) if flip else point for point in path]
+            added = unreal.RTSEditorScripting.add_landscape_spline_road(
+                world, [cm(point, height(*point)) for point in points], width * 100.0, falloff * 100.0, shape, mesh,
+                ROAD_TILE * 100.0, materials[slot], texture)
+            if added == 0:
+                raise RuntimeError(f"Could not lay road {name} (AddLandscapeSplineRoad in the log says why)")
+            segments += added
+    if not unreal.RTSEditorScripting.apply_landscape_splines(world):
+        raise RuntimeError("The road splines did not shape the landscape (ApplyLandscapeSplines in the log says why)")
+    unreal.log(f"rivercrossing_greybox: {segments} road segments")
+
+
 def read_bridge_records():
     with open(os.path.join(BRIDGE_SOURCE_DIR, "bridge.json"), encoding="utf-8") as file:
         return json.load(file)
@@ -566,10 +764,11 @@ def spawn_lighting():
     spawn(unreal.SkyAtmosphere, cm((0.0, 0.0)), label="SkyAtmosphere")
 
 
-def build_greybox(world, heightmap_file, river_material, bridge_meshes):
+def build_greybox(world, heightmap_file, river_material, bridge_meshes, road_materials):
     """Fills world, a new empty level, with the greybox: One File Per Actor, the landscape, the river in river_material
-    and its Water_ blockers, the bridges of bridge_meshes (build_bridge_assets), the village, both sides' start spots,
-    builders and supply sources, the lighting and the navmesh bounds. Does not save."""
+    and its Water_ blockers, the bridges of bridge_meshes (build_bridge_assets), the runtime virtual texture and the roads
+    in road_materials (build_road_materials), the village, both sides' start spots, builders and supply sources, the
+    lighting and the navmesh bounds. Does not save."""
     check_layout()
     if not unreal.RTSEditorScripting.use_external_actors(world):
         raise RuntimeError(f"Could not turn on One File Per Actor in {MAP_PATH}")
@@ -585,6 +784,7 @@ def build_greybox(world, heightmap_file, river_material, bridge_meshes):
     create_river(world, river_material)
     spawn_water_blockers()
     spawn_bridges(bridge_meshes)
+    create_roads(world, road_materials, create_virtual_texture(world))
     spawn_village()
     yaw = math.degrees(math.atan2(-WEST_BASE[1], -WEST_BASE[0]))
     spawn_side(0, WEST_BASE, yaw)

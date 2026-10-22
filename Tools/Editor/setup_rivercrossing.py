@@ -1,9 +1,9 @@
 """Builds and saves the navmesh of WD_RiverCrossing_01 (#154), a hand-authored level that setup_testmap.py never touches
 (docs/world/maps/WD_RiverCrossing_01/03_TECHNICAL_PLAN.md sections 2 and 13). When the level does not exist yet it is
-first created as the scripted greybox of rivercrossing_greybox.py, with its river material and bridge meshes (#155); an
-existing level is only loaded, so its terrain and dressing stay as authored. -Rebuild has ue.ps1 delete the level and
-its actor files first, so the greybox is built anew. The river carves the landscape on the GPU, so building the greybox
-needs -Render. The map data asset and the preview come from the bake afterwards:
+first created as the scripted greybox of rivercrossing_greybox.py, with its river material and bridge meshes (#155) and
+its roads (#383); an existing level is only loaded, so its terrain and dressing stay as authored. -Rebuild has ue.ps1
+delete the level and its actor files first, so the greybox is built anew. The river carves the landscape on the GPU,
+so building the greybox needs -Render. The map data asset and the preview come from the bake afterwards:
 
   powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task rivercrossing -Rebuild -Render
   powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bakemap -Map /Game/Maps/WD_RiverCrossing_01 -DataAsset DA_MapRiverCrossing01 -Render
@@ -63,9 +63,10 @@ def main():
             raise RuntimeError(f"Building the greybox of {path} needs a renderer for the river's carving: run with -Render")
         river_material = greybox.build_river_material()
         bridge_meshes = greybox.build_bridge_assets()
+        road_materials = greybox.build_road_materials()
         if not levels.new_level(path):
             raise RuntimeError(f"Could not create {path}")
-        greybox.build_greybox(editor_world(), HEIGHTMAP_FILE, river_material, bridge_meshes)
+        greybox.build_greybox(editor_world(), HEIGHTMAP_FILE, river_material, bridge_meshes, road_materials)
         unreal.log(f"setup_rivercrossing: built the greybox of {path}")
 
     world = editor_world()
@@ -76,8 +77,8 @@ def main():
         raise RuntimeError(f"Could not build the navmesh of {path}")
 
     # The level and every actor file the build changed: the navmesh actors, and on a new level all of them, with the
-    # river material and the bridge's assets.
-    owned = (greybox.BRIDGE_DIR + "/", greybox.RIVER_MATERIAL_DIR + "/")
+    # river material, the bridge's assets, the road materials and the runtime virtual texture.
+    owned = (greybox.BRIDGE_DIR + "/", greybox.RIVER_MATERIAL_DIR + "/", greybox.ROAD_MATERIAL_DIR + "/", greybox.RVT_DIR + "/")
     dirty = list(saving.get_dirty_map_packages()) + [package for package in saving.get_dirty_content_packages()
                                                      if package.get_name().startswith(owned)]
     read_only = read_only_files(dirty)

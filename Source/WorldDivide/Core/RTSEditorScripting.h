@@ -10,7 +10,9 @@ class UFontFace;
 class UMaterialInterface;
 class UNiagaraSystem;
 class UPhysicalMaterial;
+class URuntimeVirtualTexture;
 class USoundCue;
+class UStaticMesh;
 class USoundWave;
 
 /** Engine calls Tools/Editor scripts need that Unreal does not expose to Python. */
@@ -91,6 +93,43 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
 	static AActor* CreateRiver(UObject* WorldContextObject, const TArray<FVector>& Points, const TArray<float>& Widths, const TArray<float>& Depths,
 		float BankAngle, float ShoreHeight, UMaterialInterface* WaterMaterial);
+
+	/**
+	 * Gives the landscape of WorldContextObject's world a runtime virtual texture (#383): the asset AssetPath (such as
+	 * /Game/World/Landscape/RVT_Name), made when it does not exist yet, an ARuntimeVirtualTextureVolume labelled RVT_Landscape
+	 * over the landscape's bounds, and the asset in the landscape's RuntimeVirtualTextures. Python cannot make the asset
+	 * without the editor's factory; it sets the asset's size and content afterwards. Returns null and logs why when the world
+	 * has no landscape.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static URuntimeVirtualTexture* CreateLandscapeVirtualTexture(UObject* WorldContextObject, const FString& AssetPath);
+
+	/**
+	 * Lays a road along Points (world cm, Z the road's surface) as landscape splines of WorldContextObject's landscape (#383),
+	 * as the landscape editor's spline tool does: a control point per point, one already there within a metre reused, so a
+	 * road that carries straight on from another shares its end (a control point has one direction, so a branch should end
+	 * beside the through road rather than on it), and a segment between each pair. With bShapeGround the splines raise and
+	 * lower the ground to the road, Width cm wide, blending into it over SideFalloff cm, through the landscape's reserved
+	 * splines edit layer, made when it is missing; without, the road only lies on the ground there (a bridge ramp, whose steep
+	 * sides keep the navmesh linked across a tile seam, 03_TECHNICAL_PLAN.md section 8). Each segment is tiled with Mesh in
+	 * Material, TileLength cm a tile, scaled to the road's width and half a metre deep, its top a few cm over the ground,
+	 * with no collision and no shadow, drawn both in the main pass and into VirtualTexture. Python cannot make spline points.
+	 * The ground changes only in ApplyLandscapeSplines. Returns how many segments it added, 0 and logs why when the world has
+	 * no landscape or Points are fewer than two.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static int32 AddLandscapeSplineRoad(UObject* WorldContextObject, const TArray<FVector>& Points, float Width, float SideFalloff,
+		bool bShapeGround, UStaticMesh* Mesh, float TileLength, UMaterialInterface* Material, URuntimeVirtualTexture* VirtualTexture);
+
+	/**
+	 * Applies the landscape splines of WorldContextObject's world to its landscape's heights and collision, merging the edit
+	 * layers as CreateRiver does, so a level saved afterwards and its navmesh have the roads' ground. The splines layer
+	 * stays (it is a runtime Landscape class, unlike the river's brush), so moving a road in the editor reshapes the ground.
+	 * Needs a renderer. Returns false and logs why when the merge did not finish or the ground under the splines' segments
+	 * did not reach the road.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static bool ApplyLandscapeSplines(UObject* WorldContextObject);
 
 	/**
 	 * Stores every actor of WorldContextObject's level in its own file (One File Per Actor), as the World Settings' "Use

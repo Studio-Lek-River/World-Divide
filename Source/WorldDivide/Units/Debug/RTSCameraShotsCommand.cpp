@@ -94,6 +94,8 @@ namespace RTSCameraShots
 		{ TEXT("hills"), FVector2D(-35000.f, -65000.f), 0.f },
 		{ TEXT("bridge"), FVector2D(0.f, 30000.f), 0.f },
 		{ TEXT("base_yaw45"), FVector2D(-72000.f, -22000.f), 45.f },
+		// The junction of the west main road and the village ring road (#383).
+		{ TEXT("roads"), FVector2D(-15700.f, -30000.f), 0.f },
 		{ TEXT("edge"), FVector2D(-100000.f, -100000.f), 0.f, true },
 		{ TEXT("edge_yaw45"), FVector2D(-100000.f, -100000.f), 45.f, true },
 		{ TEXT("past_west_yaw45"), FVector2D(-160000.f, 0.f), 45.f, true },

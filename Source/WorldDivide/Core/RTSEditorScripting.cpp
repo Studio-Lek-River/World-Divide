@@ -32,11 +32,19 @@
 
 #if WITH_EDITOR
 #include "ActorFactories/ActorFactory.h"
+#include "Components/RuntimeVirtualTextureComponent.h"
 #include "Editor.h"
+#include "Engine/CollisionProfile.h"
+#include "Engine/StaticMesh.h"
 #include "LandscapeBlueprintBrushBase.h"
 #include "LandscapeEdit.h"
 #include "LandscapeEditLayer.h"
+#include "LandscapeSplineControlPoint.h"
+#include "LandscapeSplineSegment.h"
+#include "LandscapeSplinesComponent.h"
 #include "NavAreas/NavArea_Null.h"
+#include "VT/RuntimeVirtualTexture.h"
+#include "VT/RuntimeVirtualTextureVolume.h"
 #include "WaterBodyRiverActor.h"
 #include "WaterBodyRiverComponent.h"
 #include "WaterSplineComponent.h"
@@ -515,6 +523,241 @@ AActor* URTSEditorScripting::CreateRiver(UObject* WorldContextObject, const TArr
 	return River;
 #else
 	return nullptr;
+#endif
+}
+
+URuntimeVirtualTexture* URTSEditorScripting::CreateLandscapeVirtualTexture(UObject* WorldContextObject, const FString& AssetPath)
+{
+#if WITH_EDITOR
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	TActorIterator<ALandscape> LandscapeIt(World);
+	ALandscape* Landscape = World && LandscapeIt ? *LandscapeIt : nullptr;
+	if (!Landscape)
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("CreateLandscapeVirtualTexture: no world or no landscape"));
+		return nullptr;
+	}
+	const FString Name = FPackageName::GetLongPackageAssetName(AssetPath);
+	URuntimeVirtualTexture* Texture = LoadObject<URuntimeVirtualTexture>(nullptr, *(AssetPath + TEXT(".") + Name), nullptr, LOAD_NoWarn | LOAD_Quiet);
+	if (!Texture)
+	{
+		UPackage* Package = CreatePackage(*AssetPath);
+		Texture = NewObject<URuntimeVirtualTexture>(Package, *Name, RF_Public | RF_Standalone | RF_Transactional);
+		FAssetRegistryModule::AssetCreated(Texture);
+		Texture->MarkPackageDirty();
+	}
+
+	ARuntimeVirtualTextureVolume* Volume = nullptr;
+	for (TActorIterator<ARuntimeVirtualTextureVolume> It(World); It && !Volume; ++It)
+	{
+		Volume = *It;
+	}
+	if (!Volume)
+	{
+		Volume = World->SpawnActor<ARuntimeVirtualTextureVolume>();
+		Volume->SetActorLabel(TEXT("RVT_Landscape"));
+	}
+	// As the volume's "Set Bounds" button for an unrotated landscape: a unit box from the bounds' corner, scaled to their size.
+	const FBox Bounds = Landscape->GetComponentsBoundingBox(true);
+	Volume->SetActorTransform(FTransform(FRotator::ZeroRotator, Bounds.Min, Bounds.GetSize()));
+	Volume->VirtualTextureComponent->SetBoundsAlignActor(Landscape);
+	Volume->VirtualTextureComponent->SetVirtualTexture(Texture);
+
+	if (!Landscape->RuntimeVirtualTextures.Contains(Texture))
+	{
+		Landscape->Modify();
+		Landscape->RuntimeVirtualTextures.Add(Texture);
+		Landscape->MarkComponentsRenderStateDirty();
+	}
+	return Texture;
+#else
+	return nullptr;
+#endif
+}
+
+int32 URTSEditorScripting::AddLandscapeSplineRoad(UObject* WorldContextObject, const TArray<FVector>& Points, float Width, float SideFalloff,
+	bool bShapeGround, UStaticMesh* Mesh, float TileLength, UMaterialInterface* Material, URuntimeVirtualTexture* VirtualTexture)
+{
+#if WITH_EDITOR
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	TActorIterator<ALandscape> LandscapeIt(World);
+	ALandscape* Landscape = World && LandscapeIt ? *LandscapeIt : nullptr;
+	if (!Landscape || Points.Num() < 2 || !Mesh || TileLength <= 0.f)
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("AddLandscapeSplineRoad: needs a landscape, a mesh, a tile length and at least two points"));
+		return 0;
+	}
+	// The roads' deformation goes to the reserved splines layer, as the landscape editor's spline tool makes it.
+	if (!Landscape->FindEditLayerOfType(ULandscapeEditLayerSplines::StaticClass())
+		&& Landscape->CreateLayer(TEXT("Splines"), ULandscapeEditLayerSplines::StaticClass()) == INDEX_NONE)
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("AddLandscapeSplineRoad: could not make a splines edit layer on %s"), *Landscape->GetActorLabel());
+		return 0;
+	}
+	// Unscaled under the landscape's scale, as the spline tool makes it, so the points and widths are in world cm.
+	if (!Landscape->GetSplinesComponent())
+	{
+		Landscape->CreateSplineComponent(FVector::OneVector / Landscape->GetActorScale3D());
+	}
+	ULandscapeSplinesComponent* Splines = Landscape->GetSplinesComponent();
+	if (!Splines)
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("AddLandscapeSplineRoad: could not make the splines component of %s"), *Landscape->GetActorLabel());
+		return 0;
+	}
+	Splines->Modify();
+	const FTransform& ToWorld = Splines->GetComponentTransform();
+
+	constexpr float JunctionTolerance = 100.f;
+	// The road's top a few cm over the ground the splines flatten, so it never fights the landscape for the same depth, and
+	// RoadThickness deep: a flat mesh's flat bounds lie in the ground and occlusion culling dropped whole stretches of it.
+	constexpr float MeshLift = 10.f;
+	constexpr float RoadThickness = 50.f;
+	const FBoxSphereBounds MeshBounds = Mesh->GetBounds();
+	const double ThicknessScale = MeshBounds.BoxExtent.Z > UE_KINDA_SMALL_NUMBER ? RoadThickness / (2.0 * MeshBounds.BoxExtent.Z) : 1.0;
+	const float MeshOffset = MeshLift - (MeshBounds.Origin.Z + MeshBounds.BoxExtent.Z) * ThicknessScale;
+	TArray<ULandscapeSplineControlPoint*> Road;
+	for (const FVector& Point : Points)
+	{
+		const FVector Local = ToWorld.InverseTransformPosition(Point);
+		ULandscapeSplineControlPoint* ControlPoint = nullptr;
+		for (ULandscapeSplineControlPoint* Existing : Splines->GetControlPoints())
+		{
+			if (Existing && FVector::Dist(Existing->Location, Local) < JunctionTolerance)
+			{
+				ControlPoint = Existing;
+				break;
+			}
+		}
+		if (!ControlPoint)
+		{
+			ControlPoint = NewObject<ULandscapeSplineControlPoint>(Splines, NAME_None, RF_Transactional);
+			ControlPoint->Location = Local;
+			ControlPoint->Width = 0.5f * Width;
+			ControlPoint->SideFalloff = SideFalloff;
+			ControlPoint->EndFalloff = SideFalloff;
+			ControlPoint->SegmentMeshOffset = MeshOffset;
+			ControlPoint->bRaiseTerrain = bShapeGround;
+			ControlPoint->bLowerTerrain = bShapeGround;
+			Splines->GetControlPoints().Add(ControlPoint);
+		}
+		Road.Add(ControlPoint);
+	}
+
+	FLandscapeSplineMeshEntry Entry;
+	Entry.Mesh = Mesh;
+	if (Material)
+	{
+		Entry.MaterialOverrides.Add(Material);
+	}
+	Entry.bScaleToWidth = true;
+	Entry.bNoZScaling = true;
+	Entry.Scale = FVector(TileLength / FMath::Max(MeshBounds.BoxExtent.X * 2.0, 1.0), 1.0, ThicknessScale);
+	int32 Added = 0;
+	for (int32 Index = 1; Index < Road.Num(); ++Index)
+	{
+		ULandscapeSplineControlPoint* Start = Road[Index - 1];
+		ULandscapeSplineControlPoint* End = Road[Index];
+		if (Start == End)
+		{
+			continue;
+		}
+		ULandscapeSplineSegment* Segment = NewObject<ULandscapeSplineSegment>(Splines, NAME_None, RF_Transactional);
+		const float Length = FVector::Dist(Start->Location, End->Location);
+		Segment->Connections[0].ControlPoint = Start;
+		Segment->Connections[0].TangentLen = Length;
+		Segment->Connections[1].ControlPoint = End;
+		Segment->Connections[1].TangentLen = Length;
+		Segment->bRaiseTerrain = bShapeGround;
+		Segment->bLowerTerrain = bShapeGround;
+		Segment->SplineMeshes.Add(Entry);
+		Segment->bCastShadow = false;
+		Segment->BodyInstance.SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+		if (VirtualTexture)
+		{
+			Segment->RuntimeVirtualTextures.Add(VirtualTexture);
+			// In the main pass too while the landscape material (#156) does not read the texture yet.
+			Segment->VirtualTextureRenderPassType = ERuntimeVirtualTextureMainPassType::Always;
+		}
+		Splines->GetSegments().Add(Segment);
+		Start->ConnectedSegments.Add(FLandscapeSplineConnection(Segment, 0));
+		End->ConnectedSegments.Add(FLandscapeSplineConnection(Segment, 1));
+		++Added;
+	}
+	// The tangents along the road and through its junctions, then the meshes.
+	for (ULandscapeSplineControlPoint* ControlPoint : Road)
+	{
+		ControlPoint->AutoCalcRotation(true);
+	}
+	for (ULandscapeSplineControlPoint* ControlPoint : Road)
+	{
+		ControlPoint->UpdateSplinePoints(true, true);
+	}
+	Landscape->RequestSplineLayerUpdate();
+	return Added;
+#else
+	return 0;
+#endif
+}
+
+bool URTSEditorScripting::ApplyLandscapeSplines(UObject* WorldContextObject)
+{
+#if WITH_EDITOR
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	TActorIterator<ALandscape> LandscapeIt(World);
+	ALandscape* Landscape = World && LandscapeIt ? *LandscapeIt : nullptr;
+	ULandscapeSplinesComponent* Splines = Landscape ? Landscape->GetSplinesComponent() : nullptr;
+	if (!Splines)
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("ApplyLandscapeSplines: no landscape with splines"));
+		return false;
+	}
+	if (!CanRender())
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("ApplyLandscapeSplines: the edit layers merge on the GPU; run with -AllowCommandletRendering"));
+		return false;
+	}
+	FModuleManager::Get().LoadModule(TEXT("LandscapeEditor"));
+	Landscape->RequestSplineLayerUpdate();
+	if (!MergeEditLayers(*Landscape))
+	{
+		return false;
+	}
+	if (ULandscapeInfo* Info = Landscape->GetLandscapeInfo())
+	{
+		Info->MarkModifiedPackagesAsDirty();
+	}
+
+	// The ground must have reached the road at the middle of each segment.
+	constexpr float Tolerance = 50.f;
+	const FTransform& ToWorld = Splines->GetComponentTransform();
+	int32 Segments = 0;
+	int32 OnRoad = 0;
+	float WorstMiss = 0.f;
+	for (const ULandscapeSplineSegment* Segment : Splines->GetSegments())
+	{
+		if (!Segment || Segment->GetPoints().IsEmpty())
+		{
+			continue;
+		}
+		const TArray<FLandscapeSplineInterpPoint>& Points = Segment->GetPoints();
+		++Segments;
+		const FVector Center = ToWorld.TransformPosition(Points[Points.Num() / 2].Center);
+		const TOptional<float> Ground = Landscape->GetHeightAtLocation(Center);
+		const float Miss = Ground ? FMath::Abs(*Ground - Center.Z) : TNumericLimits<float>::Max();
+		WorstMiss = FMath::Max(WorstMiss, Miss);
+		OnRoad += Miss < Tolerance ? 1 : 0;
+	}
+	UE_LOG(LogWorldDivide, Display, TEXT("ApplyLandscapeSplines: %d control points, %d segments, the ground on the road under %d of them (worst %.0f cm)"),
+		Splines->GetControlPoints().Num(), Segments, OnRoad, WorstMiss);
+	if (Segments == 0 || OnRoad < Segments)
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("ApplyLandscapeSplines: the splines did not shape the ground under %d of %d segments"), Segments - OnRoad, Segments);
+		return false;
+	}
+	return true;
+#else
+	return false;
 #endif
 }
 

@@ -128,10 +128,15 @@ Heightmap authoring:
 
 ## 8. Roads and bridges
 
-- **Roads:** **Landscape Splines** with spline-mesh road segments and kerbs.
-  - They deform the landscape, so the road follows a smoothed height.
-  - They write into the RVT for blending.
-  - Purely visual for navigation: the road is part of the walkable ground.
+- **Roads (#383):** **Landscape Splines** with spline-mesh road segments, laid by `rivercrossing_greybox.py` (`WEST_ROADS`, turned about the centre for the east side) through `URTSEditorScripting::AddLandscapeSplineRoad` and `ApplyLandscapeSplines`.
+  - The main axis (asphalt, 8 m), the farm track to the forward supply and on to the far bridge's approach (5 m), the village ring road along the street at x = ±157 m (asphalt, 6 m), and a dressing road off the map behind each base. Corners are rounded at 40 m, with a spline point at most every 30 m at the greybox height.
+  - They deform the landscape through its reserved splines edit layer (`ULandscapeEditLayerSplines`), so the road follows a smoothed height. The layer stays in the level: it is a runtime Landscape class, and a `-game` run loads the map cleanly. Moving a road in the editor reshapes the ground.
+  - A landscape spline control point has one direction, so a branch (a T junction) ends at the through road's edge instead of sharing its point; only roads that carry straight on share one.
+  - The bridge ramps' roads do not deform the ground (`bShapeGround` off): a road's falloff would soften the ramps' steep sides into walkable slopes, which breaks the tile-seam rule below. Everywhere else the roads follow the rolling ground and are never raised.
+  - Placeholder surface `M_RiverCrossing_Road` (`MI_Road_Asphalt`, `MI_Road_Track` in `/Game/Materials/Road`) on the engine cube, 4 m tiles, half a metre deep with the top 10 cm over the ground: a flat plane's flat bounds lay in the ground and occlusion culling dropped whole stretches of it.
+  - They draw both in the main pass and into the RVT (`VirtualTextureRenderPassType` Always) until the landscape material (#156) reads the RVT; then switch them to Exclusive.
+  - No collision, no navigation effect: the road is part of the walkable ground, and ground traces and dust still find the landscape.
+- **RVT (#383):** `r.VirtualTextures=True`; `/Game/World/Landscape/RVT_WD_RiverCrossing_01` (base colour, normal, roughness; default size, tuning in #160) on the volume `RVT_Landscape` over the landscape's bounds, listed in the landscape's `RuntimeVirtualTextures` (`URTSEditorScripting::CreateLandscapeVirtualTexture`).
 - **Bridges (#155):**
   - A project-built concrete girder bridge from `Tools/Art/bridge_blender.py` (FBX in `Art/Shared/bridge/`, imported to `/Game/Art/Shared/Bridge`): three separate 30 m spans on two piers and two abutments, Nanite on. Each part is its own static mesh actor, `Bridge_<North|South>_<Span1-3|Pier1-2|AbutmentW|AbutmentE>`, so a span can be dropped later.
   - **WorldStatic** `BlockAll` collision from `UCX_` boxes: the deck and both parapets of each span, the pier caps and columns, the abutments' seats, approach slabs and wing walls.
