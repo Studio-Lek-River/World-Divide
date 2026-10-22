@@ -163,6 +163,9 @@ public:
 	/** The hull's mesh, which leans, kicks and rocks with it; the turret and the hull's parts ride on it. */
 	UStaticMeshComponent* GetMesh() const { return Mesh; }
 
+	/** The hull mesh's frame without its rock and sway, which the tracks, wheels and their dust ride on (#333, #377). */
+	USceneComponent* GetRunningGear() const { return RunningGear; }
+
 	/** Every machine. What the tracks or wheels of a vehicle did, for presentation (#151); see FRTSRealizedMotion. */
 	const FRTSRealizedMotion& GetRealizedMotion() const;
 

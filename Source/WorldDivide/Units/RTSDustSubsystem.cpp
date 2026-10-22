@@ -294,13 +294,13 @@ void URTSDustSubsystem::SetActive(FRTSDustEntry& Entry, bool bActive)
 
 bool URTSDustSubsystem::IsNear(FRTSDustEntry& Entry, const ARTSUnit& Unit) const
 {
-	const UStaticMeshComponent* Hull = Unit.GetMesh();
-	if (!Hull)
+	const USceneComponent* Gear = Unit.GetRunningGear();
+	if (!Gear)
 	{
 		return false;
 	}
 	const float Distance = GetDistance();
-	Entry.ViewDistance = RTSNearestToView::GetDistance(CameraLocations, ViewLocationOverride, Hull->GetComponentLocation());
+	Entry.ViewDistance = RTSNearestToView::GetDistance(CameraLocations, ViewLocationOverride, Gear->GetComponentLocation());
 	return Distance <= 0.f || Entry.ViewDistance <= Distance * (Entry.bActive ? RTSNearestToView::StopScale : 1.f);
 }
 
@@ -310,14 +310,15 @@ void URTSDustSubsystem::UpdateSurface(FRTSDustEntry& Entry, const ARTSUnit& Unit
 	{
 		return;
 	}
-	const UStaticMeshComponent* Hull = Unit.GetMesh();
+	// The running gear, not the hull, which sways and rocks above the tracks (#377).
+	const USceneComponent* Gear = Unit.GetRunningGear();
 	const UWorld* World = GetWorld();
 	if (Entry.Contacts.IsEmpty())
 	{
 		// A vehicle on water has no emitters yet, or none since its data changed, but still looks for the ground under them.
 		GetContactPoints(*Unit.GetUnitData(), Entry.Contacts);
 	}
-	if (!Hull || !World || Entry.Contacts.IsEmpty())
+	if (!Gear || !World || Entry.Contacts.IsEmpty())
 	{
 		return;
 	}
@@ -327,7 +328,7 @@ void URTSDustSubsystem::UpdateSurface(FRTSDustEntry& Entry, const ARTSUnit& Unit
 	{
 		Middle += Contact;
 	}
-	const FVector Ground = Hull->GetComponentTransform().TransformPosition(Middle / Entry.Contacts.Num());
+	const FVector Ground = Gear->GetComponentTransform().TransformPosition(Middle / Entry.Contacts.Num());
 	const float Span = static_cast<float>(Unit.GetShape().Hull.GetSize().Z);
 	EPhysicalSurface Surface = Entry.Surface;
 	Entry.bSurfaceKnown = RTSGround::TraceSurface(*World, Ground, Span, Span, Surface) || Entry.bSurfaceKnown;
@@ -341,21 +342,22 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 {
 	using namespace RTSDust;
 	const FRTSVehicleDust& Dust = Unit.GetUnitData()->Dust;
-	UStaticMeshComponent* Hull = Unit.GetMesh();
+	USceneComponent* Gear = Unit.GetRunningGear();
 	if (Entry.Components.IsEmpty())
 	{
 		// Taken the first time the vehicle shows dust near a camera, and kept while it drives in and out of view, which starts
 		// and stops them; stopped for rts.Fx.ReleaseDelay, they go back to the free list (#225). One serves two contact points,
-		// as both tracks (#336): half the systems for Niagara to tick.
+		// as both tracks (#336): half the systems for Niagara to tick. On the running gear, so they stay where the tracks meet
+		// the ground while the hull sways and rocks (#377).
 		GetContactPoints(*Unit.GetUnitData(), Entry.Contacts);
 		for (int32 First = 0; First < Entry.Contacts.Num(); First += 2)
 		{
 			const bool bPair = First + 1 < Entry.Contacts.Num();
 			const FVector Middle = bPair ? 0.5 * (Entry.Contacts[First] + Entry.Contacts[First + 1]) : Entry.Contacts[First];
 			// From the middle to the second point in cm, in the component's space, which keeps none of the hull's scale.
-			const FVector Side = bPair ? 0.5 * (Entry.Contacts[First + 1] - Entry.Contacts[First]) * Hull->GetComponentScale() : FVector::ZeroVector;
+			const FVector Side = bPair ? 0.5 * (Entry.Contacts[First + 1] - Entry.Contacts[First]) * Gear->GetComponentScale() : FVector::ZeroVector;
 			bool bNew = false;
-			UNiagaraComponent* Component = RTSEffectPool::Take(FreeComponents, *GetWorld(), Dust.System, *Hull, Middle, bNew);
+			UNiagaraComponent* Component = RTSEffectPool::Take(FreeComponents, *GetWorld(), Dust.System, *Gear, Middle, bNew);
 			Component->SetVariableFloat(SizeParameter, Dust.Size);
 			Component->SetVariableFloat(PointsParameter, bPair ? 2.f : 1.f);
 			Component->SetVariableVec3(SideParameter, Side);
@@ -437,7 +439,7 @@ void URTSDustSubsystem::UpdateEmitters(FRTSDustEntry& Entry, ARTSUnit& Unit, int
 	}
 	// The dust is thrown off the way the tracks or wheels leave the ground behind: backward driving forward, and ahead in reverse.
 	const float Away = Unit.GetRealizedMotion().ForwardSpeed < 0.f ? 1.f : -1.f;
-	const FVector3f Direction(Hull->GetComponentTransform().TransformVectorNoScale(FVector(Away, 0.f, 0.f)));
+	const FVector3f Direction(Gear->GetComponentTransform().TransformVectorNoScale(FVector(Away, 0.f, 0.f)));
 	if (FVector3f::DotProduct(Direction, Entry.SentDirection) < ResendDirectionDot)
 	{
 		for (UNiagaraComponent* Component : Entry.Components)

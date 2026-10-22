@@ -230,7 +230,7 @@ bool FRTSVehicleDustTest::RunTest(const FString& Parameters)
 			TestEqual(*FString::Printf(TEXT("%s %s: all running"), *What, When), Dust.GetActiveEmitters(), Emitters);
 			for (const UNiagaraComponent* Component : Dust.GetComponents(*Unit))
 			{
-				TestTrue(*FString::Printf(TEXT("%s %s: on the hull"), *What, When), Component && Component->GetAttachParent() == Unit->GetMesh());
+				TestTrue(*FString::Printf(TEXT("%s %s: on the running gear"), *What, When), Component && Component->GetAttachParent() == Unit->GetRunningGear());
 				TestTrue(*FString::Printf(TEXT("%s %s: casts no shadow"), *What, When), Component && !Component->CastShadow);
 				const float Sent = Component ? GetSentRate(*Component) : -1.f;
 				TestTrue(*FString::Printf(TEXT("%s %s: told %.2f puffs a second (%.2f)"), *What, When, Expected(), Sent),

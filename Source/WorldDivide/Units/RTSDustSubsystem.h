@@ -30,7 +30,7 @@ struct FRTSDustEntry
 
 	TWeakObjectPtr<ARTSUnit> Unit;
 
-	/** One per two contact points (#336), between them and attached to the hull; empty until the unit first shows dust. */
+	/** One per two contact points (#336), between them and attached to the running gear (#377); empty until the unit first shows dust. */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UNiagaraComponent>> Components;
 
