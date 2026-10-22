@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "D:\Lek River Studio\World-Divide\Tools\Art\usa_hq_379_preview.py", line 226, in <module>
+    elif stage=='import_detail_clean':import_detail_clean()
+                                      ~~~~~~~~~~~~~~~~~~~^^
+  File "D:\Lek River Studio\World-Divide\Tools\Art\usa_hq_379_preview.py", line 108, in import_detail_clean
+    assert not warnings,warnings
+           ^^^^^^^^^^^^
+AssertionError: ['[2026.10.22-13.12.00:499][920]LogStaticMesh: Warning: SM_HQ_ShellDetail_LOD1_Clean has some nearly zero tangents which can create some issues. (Tolerance of 1E-4)', '[2026.10.22-13.12.00:499][920]LogStaticMesh: Warning: SM_HQ_ShellDetail_LOD1_Clean has some nearly zero bi-normals which can create some issues. (Tolerance of 1E-4)', '[2026.10.22-13.12.00:530][920]FBXImport: Warning: SM_HQ_ShellDetail_LOD1_Clean has some nearly zero tangents which can create some issues. (Tolerance of 1E-4) ', '[2026.10.22-13.12.00:531][920]FBXImport: Warning: SM_HQ_ShellDetail_LOD1_Clean has some nearly zero bi-normals which can create some issues. (Tolerance of 1E-4) ']

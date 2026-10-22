@@ -1,0 +1,72 @@
+{
+  "meshes": {
+    "SM_Beacon_Obstruction": [
+      314,
+      80
+    ],
+    "SM_Flag_Cloth": [
+      1920,
+      119
+    ],
+    "SM_HQ19_ER_Cooling_Fan1_Rotor": [
+      176,
+      176
+    ],
+    "SM_HQ19_Radar_Azimuth": [
+      3000,
+      400
+    ],
+    "SM_HQ19_WF_Condenser_Fan1_Rotor": [
+      176,
+      176
+    ],
+    "SM_HQ19_WM_AHU_Fan1_Rotor": [
+      176,
+      176
+    ],
+    "SM_HQ19_WM_AHU_Fan2_Rotor": [
+      176,
+      176
+    ],
+    "SM_HQ19_WingDish_Azimuth": [
+      1312,
+      1312
+    ],
+    "SM_HQ19_WingDish_Elevation": [
+      3000,
+      400
+    ],
+    "SM_HQ20_DoorBottomSeal": [
+      668,
+      668
+    ],
+    "SM_HQ20_DoorSection_Delivery": [
+      1200,
+      70
+    ],
+    "SM_HQ20_DoorTopRollers": [
+      184,
+      184
+    ],
+    "SM_HQ20_DriveShaft": [
+      1000,
+      150
+    ],
+    "SM_HQ20_LiftCable": [
+      28,
+      28
+    ],
+    "SM_HQ_Shell": [
+      274000,
+      22000
+    ],
+    "SM_HQ_ShellDetail": [
+      42096,
+      11878
+    ]
+  },
+  "whole": [
+    347768,
+    39151
+  ]
+}

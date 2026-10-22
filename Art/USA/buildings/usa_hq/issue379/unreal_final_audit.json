@@ -1,0 +1,1250 @@
+{
+  "SM_HQ22_MastCore_H24": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              208.0867156982422,
+              6918.02490234375,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              199.95538330078125,
+              6782.13525390625,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.00733947753906,
+              6782.4765625,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -175.50001525878906,
+        "y": -213,
+        "z": 0
+      },
+      "max": {
+        "x": 175.49993896484375,
+        "y": 212.99998474121094,
+        "z": 1248.9998779296875
+      },
+      "isValid": true
+    },
+    "triangles": 3772
+  },
+  "SM_HQ22_MastCore_H24_LOD1": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              203.7482452392578,
+              6794.05224609375,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              199.95538330078125,
+              6743.8671875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.00733947753906,
+              6760.01953125,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -174.0936737060547,
+        "y": -213,
+        "z": 0
+      },
+      "max": {
+        "x": 174.09332275390625,
+        "y": 212.99998474121094,
+        "z": 1248.99951171875
+      },
+      "isValid": true
+    },
+    "triangles": 1404
+  },
+  "SM_HQ22_MastEast_H24": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              208.75022888183594,
+              9375.7646484375,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.17210388183594,
+              9140.3310546875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.82943725585938,
+              9600.671875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -102.00006103515625,
+        "y": -158.9999237060547,
+        "z": -13.354166984558105
+      },
+      "max": {
+        "x": 101.99996948242188,
+        "y": 159.00021362304688,
+        "z": 1330
+      },
+      "isValid": true
+    },
+    "triangles": 5780
+  },
+  "SM_HQ22_MastEast_H24_LOD1": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              206.07058715820312,
+              9436.38671875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.17210388183594,
+              9397.9521484375,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.82943725585938,
+              9342.6572265625,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -102.00006103515625,
+        "y": -158.9999237060547,
+        "z": -13.354166984558105
+      },
+      "max": {
+        "x": 101.99996948242188,
+        "y": 159.00021362304688,
+        "z": 1330
+      },
+      "isValid": true
+    },
+    "triangles": 2700
+  },
+  "SM_HQ22_MastCore_H28": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              208.0935516357422,
+              8130.0185546875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.20144653320312,
+              7922.0380859375,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              199.86972045898438,
+              7968.9482421875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -204.75001525878906,
+        "y": -248.5,
+        "z": 0
+      },
+      "max": {
+        "x": 204.7499237060547,
+        "y": 248.49998474121094,
+        "z": 1648.999755859375
+      },
+      "isValid": true
+    },
+    "triangles": 3772
+  },
+  "SM_HQ22_MastCore_H28_LOD1": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              203.6548309326172,
+              8492.978515625,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.20144653320312,
+              8514.123046875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              199.86972045898438,
+              8450.0693359375,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -203.10928344726562,
+        "y": -248.5,
+        "z": 0
+      },
+      "max": {
+        "x": 203.10888671875,
+        "y": 248.49998474121094,
+        "z": 1648.9993896484375
+      },
+      "isValid": true
+    },
+    "triangles": 1404
+  },
+  "SM_HQ22_MastEast_H28": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              209.019287109375,
+              11003.8955078125,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.07322692871094,
+              10759.2685546875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              201.37063598632812,
+              10734.62890625,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -110.333984375,
+        "y": -185.49990844726562,
+        "z": -16.36638641357422
+      },
+      "max": {
+        "x": 110.333984375,
+        "y": 185.500244140625,
+        "z": 1629.9998779296875
+      },
+      "isValid": true
+    },
+    "triangles": 5780
+  },
+  "SM_HQ22_MastEast_H28_LOD1": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              206.20603942871094,
+              10526.0595703125,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.07322692871094,
+              10330.244140625,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              201.37063598632812,
+              10225.2919921875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -109.3982162475586,
+        "y": -185.49990844726562,
+        "z": -16.36638641357422
+      },
+      "max": {
+        "x": 109.3982162475586,
+        "y": 185.500244140625,
+        "z": 1629.9998779296875
+      },
+      "isValid": true
+    },
+    "triangles": 2700
+  },
+  "SM_HQ22_MastCore_H32": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              208.18716430664062,
+              9203.5546875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              199.96621704101562,
+              9024.1796875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.09347534179688,
+              8843.0009765625,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -234.00001525878906,
+        "y": -284,
+        "z": 0
+      },
+      "max": {
+        "x": 233.9999237060547,
+        "y": 284,
+        "z": 2048.999755859375
+      },
+      "isValid": true
+    },
+    "triangles": 3772
+  },
+  "SM_HQ22_MastCore_H32_LOD1": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              203.80946350097656,
+              9681.4833984375,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              199.96621704101562,
+              9635.4189453125,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              200.09347534179688,
+              9739.9208984375,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -232.12489318847656,
+        "y": -284,
+        "z": 0
+      },
+      "max": {
+        "x": 232.12442016601562,
+        "y": 284,
+        "z": 2048.999267578125
+      },
+      "isValid": true
+    },
+    "triangles": 1404
+  },
+  "SM_HQ22_MastEast_H32": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              208.93569946289062,
+              12509.021484375,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              199.9014434814453,
+              12247.5771484375,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              201.75599670410156,
+              12632.267578125,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -126.09598541259766,
+        "y": -211.99989318847656,
+        "z": -19.378604888916016
+      },
+      "max": {
+        "x": 126.09598541259766,
+        "y": 212.0002899169922,
+        "z": 1929.9998779296875
+      },
+      "isValid": true
+    },
+    "triangles": 5780
+  },
+  "SM_HQ22_MastEast_H32_LOD1": {
+    "properties": {
+      "staticMaterials": [
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+          },
+          "materialSlotName": "HQ17_DarkStructure",
+          "importedMaterialSlotName": "HQ17_DarkStructure",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              206.16641235351562,
+              12360.8740234375,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+          },
+          "materialSlotName": "HQ17_FramePaint",
+          "importedMaterialSlotName": "HQ17_FramePaint",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              199.9014434814453,
+              12146.8212890625,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        },
+        {
+          "materialInterface": {
+            "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_TeamLight.MI_HQ17_TeamLight"
+          },
+          "materialSlotName": "HQ17_TeamLight",
+          "importedMaterialSlotName": "HQ17_TeamLight",
+          "uVChannelData": {
+            "bInitialized": true,
+            "bOverrideDensities": false,
+            "localUVDensities": [
+              201.75599670410156,
+              12424.544921875,
+              0,
+              0
+            ]
+          },
+          "overlayMaterialInterface": "None"
+        }
+      ],
+      "naniteSettings": {
+        "bEnabled": false,
+        "bExplicitTangents": false,
+        "bLerpUVs": true,
+        "bSeparable": false,
+        "bVoxelNDF": true,
+        "bVoxelOpacity": false,
+        "shapePreservation": "None",
+        "positionPrecision": -2147483648,
+        "normalPrecision": -1,
+        "tangentPrecision": -1,
+        "boneWeightPrecision": -1,
+        "targetMinimumResidencyInKB": 0,
+        "keepPercentTriangles": 1,
+        "trimRelativeError": 0,
+        "generateFallback": "PlatformDefault",
+        "fallbackTarget": "Auto",
+        "fallbackPercentTriangles": 1,
+        "fallbackRelativeError": 1,
+        "maxEdgeLengthFactor": 0,
+        "numRays": 64,
+        "voxelLevel": 0,
+        "rayBackUp": 0,
+        "displacementUVChannel": 0,
+        "displacementMaps": [],
+        "naniteAssemblyData": {
+          "parts": [],
+          "nodes": []
+        }
+      }
+    },
+    "bounds_cm": {
+      "min": {
+        "x": -125.02653503417969,
+        "y": -211.99989318847656,
+        "z": -19.378604888916016
+      },
+      "max": {
+        "x": 125.02653503417969,
+        "y": 212.0002899169922,
+        "z": 1929.9998779296875
+      },
+      "isValid": true
+    },
+    "triangles": 2700
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "triangles": 10655,
+  "geometric_area_counts": {
+    "1e-18": 0,
+    "1e-16": 0,
+    "1e-14": 0,
+    "1e-12": 0,
+    "1e-10": 0,
+    "1e-08": 0,
+    "1e-06": 8
+  },
+  "uv_area_counts": {
+    "1e-18": 0,
+    "1e-16": 0,
+    "1e-14": 0,
+    "1e-12": 0,
+    "1e-10": 0,
+    "1e-08": 29,
+    "1e-06": 445
+  },
+  "bad_by_material": {},
+  "samples": [],
+  "zero_tangent_loops": 0,
+  "zero_bitangent_loops": 0,
+  "zero_tangent_samples": []
+}

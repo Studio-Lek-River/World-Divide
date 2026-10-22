@@ -54,6 +54,8 @@ Tools/Art/kit/<piece>.py                one module per piece
 
 /Game/Art/Shared/Kit/                   engine side, mirrors the sources
   Materials/                            M_Kit_Lens, M_Kit_Housing, MI_Kit_Neutral_*
+/Game/Art/Shared/Materials/Building/    the generic building masters every building draws with (#388): M_Bld_Surface,
+                                        M_Bld_Glass, M_Bld_Operational, M_Bld_Ownership, M_Bld_Coating (+ Textures/)
   Textures/                             T_Kit_* atlases
   Lighting/                             SM_Kit_*, DA_Kit_* of the lighting kit
   Identity/  Utilities/  Comms/  Structure/
@@ -174,7 +176,10 @@ the light's position, direction, intensity, radius and behaviour with no manual 
 
 Lens appearance per instance (on/level, group, fault phase, flash phase, indicator colour) is per-instance custom data
 read by `M_Kit_Lens`, written with `SetCustomData` and one `MarkRenderInstancesDirty`; the night state stays component
-custom primitive data 12 (proven in the spike, see [Per-instance and LOD](#per-instance-and-lod)).
+custom primitive data 12 (proven in the spike, see [Per-instance and LOD](#per-instance-and-lod)). The layout is
+`RTSKitLensData` (`RTSPrimitiveData.h`): 0 level, 1 group mask (Fixtures, CPD 10), 2 fault phase, 3 flash phase, 4–6
+colour, 7 floats. The lens also goes dark with the building's Operational (CPD 8), as every other glow does, and samples
+an optional baked finish normal on UV1 (`FinishNormal`, flat by default).
 
 ## Light rule
 

@@ -1,0 +1,225 @@
+{
+  "Shell": {
+    "staticMesh": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Candidate22/Shells/SM_HQ379_ShellReview.SM_HQ379_ShellReview"
+    },
+    "forcedLodModel": 2,
+    "customPrimitiveData": {
+      "data": [
+        0,
+        0,
+        0,
+        0,
+        0.02500000037252903,
+        0.1599999964237213,
+        0.800000011920929,
+        1,
+        1
+      ]
+    },
+    "overrideMaterials": [
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ14_Paving.MI_HQ14_Paving"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ14_Roof.MI_HQ14_Roof"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ14_Shell.MI_HQ14_Shell"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_Brass.MI_HQ17_Brass"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_CoolGlass.MI_HQ17_CoolGlass"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_DarkStructure.MI_HQ17_DarkStructure"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_FramePaint.MI_HQ17_FramePaint"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_InnerLight.MI_HQ17_InnerLight"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_InteriorWarm.MI_HQ17_InteriorWarm"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_IvoryCeramic.MI_HQ17_IvoryCeramic"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_Roof.MI_HQ17_Roof"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_Seals.MI_HQ17_Seals"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_Steel.MI_HQ17_Steel"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ17_WarmGlass.MI_HQ17_WarmGlass"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ19_DrainGrate.MI_HQ19_DrainGrate"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ19_DuctGalvanized.MI_HQ19_DuctGalvanized"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ19_EquipmentPaint.MI_HQ19_EquipmentPaint"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ19_Membrane.MI_HQ19_Membrane"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ19_MembraneLap.MI_HQ19_MembraneLap"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ19_SafetyOchre.MI_HQ19_SafetyOchre"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ19_Walkpad.MI_HQ19_Walkpad"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ20_DoorPaint.MI_HQ20_DoorPaint"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ20_Rubber.MI_HQ20_Rubber"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ20_SafetyOchre.MI_HQ20_SafetyOchre"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ20_ServiceOlive.MI_HQ20_ServiceOlive"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ20_WallLiner.MI_HQ20_WallLiner"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ21_Coping.MI_HQ21_Coping"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ21_DrainSteel.MI_HQ21_DrainSteel"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ21_Gravel.MI_HQ21_Gravel"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ21_Joint.MI_HQ21_Joint"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ21_Ochre.MI_HQ21_Ochre"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_HQ21_Olive.MI_HQ21_Olive"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_USA_HQ_HQ20_FloorWear.MI_USA_HQ_HQ20_FloorWear"
+      },
+      {
+        "refPath": "/Game/Art/USA/Buildings/USAHQ/Materials/MI_USA_HQ_HQ21_PavingWear.MI_USA_HQ_HQ21_PavingWear"
+      }
+    ]
+  },
+  "ShellDetail": {
+    "staticMesh": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Candidate22/Shells/SM_HQ_ShellDetail.SM_HQ_ShellDetail"
+    },
+    "forcedLodModel": 0,
+    "customPrimitiveData": {
+      "data": [
+        0,
+        0,
+        0,
+        0,
+        0.02500000037252903,
+        0.1599999964237213,
+        0.800000011920929,
+        1,
+        1
+      ]
+    },
+    "overrideMaterials": []
+  },
+  "MastCore": {
+    "staticMesh": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Candidate22/FinalMasts/SM_HQ22_MastCore_H28.SM_HQ22_MastCore_H28"
+    },
+    "forcedLodModel": 0,
+    "customPrimitiveData": {
+      "data": [
+        0,
+        0,
+        0,
+        0,
+        0.02500000037252903,
+        0.1599999964237213,
+        0.800000011920929,
+        1,
+        1
+      ]
+    },
+    "overrideMaterials": []
+  },
+  "MastEast": {
+    "staticMesh": {
+      "refPath": "/Game/Art/Candidates/USA_HQ/Candidate22/FinalMasts/SM_HQ22_MastEast_H28.SM_HQ22_MastEast_H28"
+    },
+    "forcedLodModel": 0,
+    "customPrimitiveData": {
+      "data": [
+        0,
+        0,
+        0,
+        0,
+        0.02500000037252903,
+        0.1599999964237213,
+        0.800000011920929,
+        1,
+        1
+      ]
+    },
+    "overrideMaterials": []
+  },
+  "BeaconCore": {
+    "staticMesh": {
+      "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_Beacon_Obstruction.SM_Beacon_Obstruction"
+    },
+    "forcedLodModel": 1,
+    "customPrimitiveData": {
+      "data": [
+        0,
+        0,
+        0,
+        0,
+        0.02500000037252903,
+        0.1599999964237213,
+        0.800000011920929,
+        1,
+        1
+      ]
+    },
+    "overrideMaterials": []
+  },
+  "BeaconEast": {
+    "staticMesh": {
+      "refPath": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_Beacon_Obstruction.SM_Beacon_Obstruction"
+    },
+    "forcedLodModel": 1,
+    "customPrimitiveData": {
+      "data": [
+        0,
+        0,
+        0,
+        0,
+        0.02500000037252903,
+        0.1599999964237213,
+        0.800000011920929,
+        1,
+        1
+      ]
+    },
+    "overrideMaterials": []
+  }
+}

@@ -74,6 +74,9 @@ namespace
 	constexpr int32 HeadquartersMaxSections = 80;
 	/** The shared props' masters (#351): the flag's cloth and the mast beacon. */
 	const TCHAR* SharedMaterialDir = TEXT("/Game/Art/Shared/Materials");
+	/** The generic building masters every building draws with (#388), and the kit's masters. */
+	const TCHAR* BuildingMaterialDir = TEXT("/Game/Art/Shared/Materials/Building");
+	const TCHAR* KitMaterialDir = TEXT("/Game/Art/Shared/Kit/Materials");
 	const TCHAR* FlagTypesPath = TEXT("/Game/Data/Flags/DA_FlagTypes.DA_FlagTypes");
 	/** The HQ's parts that turn on their own (#351): four fans, the radar and the wing dish's azimuth and elevation. */
 	const TCHAR* HeadquartersMovingParts[] = { TEXT("ER_Cooling_Fan1_Rotor"), TEXT("WF_Condenser_Fan1_Rotor"), TEXT("WM_AHU_Fan1_Rotor"),
@@ -350,7 +353,7 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 			TestTrue(*FString::Printf(TEXT("%s slot %s is an instance of an HQ or shared master"), *Mesh->GetName(), *Slot.MaterialSlotName.ToString()),
 				Parent && (Parent->GetPathName().StartsWith(HeadquartersMaterialDir) || Parent->GetPathName().StartsWith(SharedMaterialDir)));
 			// The glass is a slot of its own, so it can draw translucent or opaque without touching the rest.
-			const bool bGlass = Parent && Parent->GetName() == TEXT("M_HQ17_Glass");
+			const bool bGlass = Parent && Parent->GetPathName() == FString::Printf(TEXT("%s/M_Bld_Glass.M_Bld_Glass"), BuildingMaterialDir);
 			TestEqual(*FString::Printf(TEXT("%s slot %s is glass only if named so"), *Mesh->GetName(), *Slot.MaterialSlotName.ToString()),
 				bGlass, Slot.MaterialSlotName.ToString().Contains(TEXT("Glass")));
 		}
@@ -381,9 +384,22 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		});
 	};
 	TestTrue(TEXT("The ownership master reads the owner's colour"),
-		ReadsPrimitiveData(LoadMaster(TEXT("M_HQ_Final_Ownership")), TEXT("PlayerColor"), RTSPrimitiveData::TeamColor));
+		ReadsPrimitiveData(LoadMaster(TEXT("M_Bld_Ownership"), BuildingMaterialDir), TEXT("PlayerColor"), RTSPrimitiveData::TeamColor));
 	TestTrue(TEXT("The operational master reads whether the HQ is operational"),
-		ReadsPrimitiveData(LoadMaster(TEXT("M_HQ_Final_Operational")), TEXT("Operational"), RTSPrimitiveData::LampOn));
+		ReadsPrimitiveData(LoadMaster(TEXT("M_Bld_Operational"), BuildingMaterialDir), TEXT("Operational"), RTSPrimitiveData::LampOn));
+
+	// The kit's lens (#388): drawn instanced, its state per instance next to the building's dark.
+	const UMaterial* Lens = LoadMaster(TEXT("M_Kit_Lens"), KitMaterialDir);
+	TestTrue(TEXT("The kit lens can draw on instanced meshes"), Lens && Lens->bUsedWithInstancedStaticMeshes);
+	TestTrue(TEXT("The kit lens reads the dark"), ReadsPrimitiveData(Lens, TEXT("Night"), RTSPrimitiveData::LightNight));
+	TestTrue(TEXT("The kit lens reads its level per instance"), Lens && Algo::AnyOf(Lens->GetExpressions(), [](const TObjectPtr<UMaterialExpression>& Expression)
+	{
+		// The engine does not export the expression's class, so its index is read through reflection.
+		const UClass* Class = Expression ? Expression->GetClass() : nullptr;
+		const FUInt32Property* Index = Class && Class->GetFName() == TEXT("MaterialExpressionPerInstanceCustomData")
+			? CastField<FUInt32Property>(Class->FindPropertyByName(TEXT("DataIndex"))) : nullptr;
+		return Index && Index->GetPropertyValue_InContainer(Expression.Get()) == static_cast<uint32>(RTSKitLensData::Level);
+	}));
 
 	// The equipment turns on its own (#351): each moving part has a motion, drawn on its own, riding on a part there is.
 	for (const TCHAR* Name : HeadquartersMovingParts)
@@ -441,11 +457,11 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 	}
 	const UMaterialInstance* TeamPanel = LoadObject<UMaterialInstance>(nullptr,
 		*FString::Printf(TEXT("%s/MI_HQ17_TeamPanel.MI_HQ17_TeamPanel"), HeadquartersMaterialDir));
-	TestTrue(TEXT("The team panels take the owner's colour"), TeamPanel && TeamPanel->Parent == LoadMaster(TEXT("M_HQ_Final_Ownership")));
+	TestTrue(TEXT("The team panels take the owner's colour"), TeamPanel && TeamPanel->Parent == LoadMaster(TEXT("M_Bld_Ownership"), BuildingMaterialDir));
 
 	// Night lighting (#195): the glow's groups and the dark on the operational master, and real lights only at the model's
 	// lamps and windows, within the budget.
-	const UMaterial* Operational = LoadMaster(TEXT("M_HQ_Final_Operational"));
+	const UMaterial* Operational = LoadMaster(TEXT("M_Bld_Operational"), BuildingMaterialDir);
 	const TPair<const TCHAR*, int32> GroupData[] = { { TEXT("WindowsOn"), RTSPrimitiveData::LightWindows },
 		{ TEXT("FixturesOn"), RTSPrimitiveData::LightFixtures }, { TEXT("AccentsOn"), RTSPrimitiveData::LightAccents },
 		{ TEXT("Night"), RTSPrimitiveData::LightNight } };

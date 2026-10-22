@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"returnValue\":[\"/Engine/Maps/Templates/VR-Basic_BuiltData\",\"/Engine/Maps/Templates/OpenWorld\",\"/Engine/Maps/Templates/Template_Default\",\"/Engine/Maps/Templates/TimeOfDay_Default\",\"/Engine/Maps/Templates/VR-Basic\",\"/Engine/Maps/Templates/HLODs/HLODLayer_Instanced\",\"/Engine/Maps/Templates/HLODs/HLODLayer_Merged\",\"/Engine/Maps/Templates/Thumbnails/Basic\",\"/Engine/Maps/Templates/Thumbnails/OpenWorld\",\"/Engine/Maps/Templates/Thumbnails/TimeOfDay\",\"/Engine/Maps/Templates/Thumbnails/VR-Basic\"]}"
+    }
+  ]
+}

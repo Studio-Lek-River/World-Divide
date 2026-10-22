@@ -1,0 +1,1494 @@
+{
+  "meshes": {
+    "SM_HQ19_Radar_Azimuth": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_Radar_Azimuth",
+      "triangles": [
+        3000,
+        400
+      ],
+      "slots": [
+        "HQ17_DarkStructure",
+        "HQ19_DuctGalvanized",
+        "HQ17_Steel",
+        "HQ19_RFPanel"
+      ],
+      "bounds": {
+        "min": {
+          "x": -1670.7657,
+          "y": -1570.3001999999997,
+          "z": -921.5
+        },
+        "max": {
+          "x": 2129.2343,
+          "y": 4029.6998000000003,
+          "z": 421.5799999999999
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ19_ER_Cooling_Fan1_Rotor": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_ER_Cooling_Fan1_Rotor",
+      "triangles": [
+        176,
+        176
+      ],
+      "slots": [
+        "HQ17_Steel"
+      ],
+      "bounds": {
+        "min": {
+          "x": -1190,
+          "y": -1310,
+          "z": -907
+        },
+        "max": {
+          "x": 2610,
+          "y": 4290,
+          "z": 436.0799999999999
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ19_WF_Condenser_Fan1_Rotor": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WF_Condenser_Fan1_Rotor",
+      "triangles": [
+        176,
+        176
+      ],
+      "slots": [
+        "HQ17_Steel"
+      ],
+      "bounds": {
+        "min": {
+          "x": -2960,
+          "y": -4580,
+          "z": -850
+        },
+        "max": {
+          "x": 840,
+          "y": 1020,
+          "z": 493.0799999999999
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ19_WM_AHU_Fan1_Rotor": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WM_AHU_Fan1_Rotor",
+      "triangles": [
+        176,
+        176
+      ],
+      "slots": [
+        "HQ17_Steel"
+      ],
+      "bounds": {
+        "min": {
+          "x": -1840,
+          "y": -4815,
+          "z": -830
+        },
+        "max": {
+          "x": 1960,
+          "y": 785,
+          "z": 513.0799999999999
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ19_WM_AHU_Fan2_Rotor": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WM_AHU_Fan2_Rotor",
+      "triangles": [
+        176,
+        176
+      ],
+      "slots": [
+        "HQ17_Steel"
+      ],
+      "bounds": {
+        "min": {
+          "x": -1980,
+          "y": -4815,
+          "z": -830
+        },
+        "max": {
+          "x": 1820,
+          "y": 785,
+          "z": 513.0799999999999
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ19_WingDish_Azimuth": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WingDish_Azimuth",
+      "triangles": [
+        1312,
+        1312
+      ],
+      "slots": [
+        "HQ19_EquipmentPaint",
+        "HQ17_Steel",
+        "HQ19_DuctGalvanized",
+        "HQ17_DarkStructure"
+      ],
+      "bounds": {
+        "min": {
+          "x": -916.9373999999999,
+          "y": -4794.9448,
+          "z": -821.5
+        },
+        "max": {
+          "x": 2883.0626,
+          "y": 805.0551999999998,
+          "z": 521.5799999999999
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ19_WingDish_Elevation": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WingDish_Elevation",
+      "triangles": [
+        3000,
+        400
+      ],
+      "slots": [
+        "HQ17_FramePaint",
+        "HQ17_Steel",
+        "HQ17_DarkStructure",
+        "HQ17_Seals",
+        "HQ19_DuctGalvanized"
+      ],
+      "bounds": {
+        "min": {
+          "x": -916.9373999999999,
+          "y": -4794.9448,
+          "z": -1045
+        },
+        "max": {
+          "x": 2883.0626,
+          "y": 805.0551999999998,
+          "z": 298.0799999999999
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ20_DoorBottomSeal": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorBottomSeal",
+      "triangles": [
+        668,
+        668
+      ],
+      "slots": [
+        "HQ20_Rubber"
+      ],
+      "bounds": {
+        "min": {
+          "x": -3297,
+          "y": -1041.5482000000002,
+          "z": -5
+        },
+        "max": {
+          "x": 503,
+          "y": 4558.4518,
+          "z": 1338.08
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ20_DoorTopRollers": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorTopRollers",
+      "triangles": [
+        184,
+        184
+      ],
+      "slots": [
+        "HQ20_Rubber"
+      ],
+      "bounds": {
+        "min": {
+          "x": -3297,
+          "y": -1041.5482000000002,
+          "z": -530.0001
+        },
+        "max": {
+          "x": 503,
+          "y": 4558.4518,
+          "z": 813.0799
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ20_LiftCable": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_LiftCable",
+      "triangles": [
+        28,
+        28
+      ],
+      "slots": [
+        "HQ17_Steel"
+      ],
+      "bounds": {
+        "min": {
+          "x": -3296.858006898581,
+          "y": -1691.5482000000002,
+          "z": -1.6368161509483912
+        },
+        "max": {
+          "x": 517.5822526970192,
+          "y": 5208.4518,
+          "z": 214.34049765588568
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ20_DoorSection_Delivery": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery",
+      "triangles": [
+        1200,
+        70
+      ],
+      "slots": [
+        "HQ20_DoorPaint",
+        "HQ17_DarkStructure",
+        "HQ17_Steel",
+        "HQ20_Rubber"
+      ],
+      "bounds": {
+        "min": {
+          "x": -3297,
+          "y": -1041.5482000000002,
+          "z": -530.0001
+        },
+        "max": {
+          "x": 503,
+          "y": 4558.4518,
+          "z": 1338.08
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ20_DriveShaft": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DriveShaft",
+      "triangles": [
+        1000,
+        150
+      ],
+      "slots": [
+        "HQ17_Steel",
+        "HQ17_DarkStructure"
+      ],
+      "bounds": {
+        "min": {
+          "x": -3290,
+          "y": -1041.5482000000002,
+          "z": -646
+        },
+        "max": {
+          "x": 510,
+          "y": 4558.4518,
+          "z": 697.0799999999999
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ_Shell": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ_Shell",
+      "triangles": [
+        267000,
+        19000
+      ],
+      "slots": [
+        "MI_HQ14_Paving",
+        "MI_HQ14_Roof",
+        "MI_HQ14_Shell",
+        "MI_HQ17_Brass",
+        "MI_HQ17_CoolGlass",
+        "MI_HQ17_DarkStructure",
+        "MI_HQ17_FramePaint",
+        "MI_HQ17_InnerLight",
+        "MI_HQ17_InteriorWarm",
+        "MI_HQ17_IvoryCeramic",
+        "MI_HQ17_Roof",
+        "MI_HQ17_Seals",
+        "MI_HQ17_Steel",
+        "MI_HQ17_WarmGlass",
+        "MI_HQ19_DrainGrate",
+        "MI_HQ19_DuctGalvanized",
+        "MI_HQ19_EquipmentPaint",
+        "MI_HQ19_Membrane",
+        "MI_HQ19_MembraneLap",
+        "MI_HQ19_SafetyOchre",
+        "MI_HQ19_Walkpad",
+        "MI_HQ20_DoorPaint",
+        "MI_HQ20_Rubber",
+        "MI_HQ20_SafetyOchre",
+        "MI_HQ20_ServiceOlive",
+        "MI_HQ20_WallLiner",
+        "MI_HQ21_Coping",
+        "MI_HQ21_DrainSteel",
+        "MI_HQ21_Gravel",
+        "MI_HQ21_Joint",
+        "MI_HQ21_Ochre",
+        "MI_HQ21_Olive",
+        "MI_USA_HQ_HQ20_FloorWear"
+      ],
+      "bounds": {
+        "min": {
+          "x": -1900.0008544921875,
+          "y": -2800.000732421875,
+          "z": 0
+        },
+        "max": {
+          "x": 1900.0008544921875,
+          "y": 2800.000732421875,
+          "z": 1343.0826416015625
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ_ShellDetail": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ_ShellDetail",
+      "triangles": [
+        41344,
+        10655
+      ],
+      "slots": [
+        "MI_HQ17_Chips",
+        "MI_HQ17_Marking",
+        "MI_HQ17_TeamLight",
+        "MI_HQ17_TeamPanel",
+        "MI_HQ19_RFPanel",
+        "MI_HQ19_SolarCell",
+        "MI_HQ20_FixtureBlue",
+        "MI_HQ20_FixtureWarm",
+        "MI_HQ21_Leaf0",
+        "MI_HQ21_Leaf1",
+        "MI_HQ21_Leaf2",
+        "MI_USA_HQ_HQ21_Soil"
+      ],
+      "bounds": {
+        "min": {
+          "x": -1900,
+          "y": -2800,
+          "z": 0
+        },
+        "max": {
+          "x": 1900,
+          "y": 2800,
+          "z": 1343.08
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ22_MastCore_H28": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ22_MastCore_H28",
+      "triangles": [
+        3772,
+        1404
+      ],
+      "slots": [
+        "HQ17_DarkStructure",
+        "HQ17_FramePaint",
+        "HQ17_TeamLight"
+      ],
+      "bounds": {
+        "min": {
+          "x": -1001.2876999999999,
+          "y": -2800,
+          "z": -1151
+        },
+        "max": {
+          "x": 2798.7123,
+          "y": 2800,
+          "z": 1648.999755859375
+        },
+        "isValid": true
+      }
+    },
+    "SM_HQ22_MastEast_H28": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ22_MastEast_H28",
+      "triangles": [
+        5780,
+        2700
+      ],
+      "slots": [
+        "HQ17_DarkStructure",
+        "HQ17_FramePaint",
+        "HQ17_TeamLight"
+      ],
+      "bounds": {
+        "min": {
+          "x": -810,
+          "y": -804.9998999999998,
+          "z": -770
+        },
+        "max": {
+          "x": 2990,
+          "y": 4795.0001,
+          "z": 1629.9998779296875
+        },
+        "isValid": true
+      }
+    },
+    "SM_Flag_Cloth": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_Flag_Cloth",
+      "triangles": [
+        1920,
+        119
+      ],
+      "slots": [
+        "Flag"
+      ],
+      "bounds": {
+        "min": {
+          "x": -672.3684210526319,
+          "y": -750.0000000000009,
+          "z": -313.6363636363636
+        },
+        "max": {
+          "x": 667.344497607656,
+          "y": 3050.000000000002,
+          "z": 296.8545454545455
+        },
+        "isValid": true
+      }
+    },
+    "SM_Beacon_Obstruction": {
+      "asset": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_Beacon_Obstruction",
+      "triangles": [
+        314,
+        80
+      ],
+      "slots": [
+        "Beacon"
+      ],
+      "bounds": {
+        "min": {
+          "x": -572.1644000000001,
+          "y": -1600,
+          "z": -1600
+        },
+        "max": {
+          "x": 1708.5714285714284,
+          "y": 2740.0000571428573,
+          "z": 56
+        },
+        "isValid": true
+      }
+    }
+  },
+  "drawn_triangles": [
+    349568,
+    39032
+  ],
+  "unique_sections": 79,
+  "parts": [
+    {
+      "name": "Shell",
+      "mesh": "SM_HQ_Shell",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": false,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "ShellDetail",
+      "mesh": "SM_HQ_ShellDetail",
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": false,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "Beacon_MastTipCore",
+      "mesh": "SM_Beacon_Obstruction",
+      "location": [
+        -898.7123,
+        0.0,
+        2800.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.75,
+        1.75,
+        1.75
+      ],
+      "movable": false,
+      "cast_shadow": false,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "Beacon_MastTipEast",
+      "mesh": "SM_Beacon_Obstruction",
+      "location": [
+        -1090.0,
+        -1995.0001,
+        2400.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.75,
+        1.75,
+        1.75
+      ],
+      "movable": false,
+      "cast_shadow": false,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorBottomSeal",
+      "mesh": "SM_HQ20_DoorBottomSeal",
+      "location": [
+        1397.0,
+        -1758.4518,
+        5.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 12000.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection00",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        5.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection01",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        40.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection02",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        75.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection03",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        110.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection04",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        145.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection05",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        180.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection06",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        215.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection07",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        250.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection08",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        285.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection09",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        320.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection10",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        355.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection11",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        390.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection12",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        425.0
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection13",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        460.0001
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection14",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        495.0001
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorSection15",
+      "mesh": "SM_HQ20_DoorSection_Delivery",
+      "location": [
+        1397.0,
+        -1758.4518,
+        530.0001
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DoorTopRollers",
+      "mesh": "SM_HQ20_DoorTopRollers",
+      "location": [
+        1397.0,
+        -1758.4518,
+        530.0001
+      ],
+      "rotation": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 12000.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "DriveShaft",
+      "mesh": "SM_HQ20_DriveShaft",
+      "location": [
+        1390.0,
+        -1758.4518,
+        646.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 12000.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "ER_Cooling_Fan1_Rotor",
+      "mesh": "SM_HQ19_ER_Cooling_Fan1_Rotor",
+      "location": [
+        -710.0,
+        -1490.0,
+        907.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": false,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 12000.0,
+      "wpo_disable_distance": 0.0,
+      "motion": {
+        "spin_rate": [
+          0.0,
+          240.0,
+          0.0
+        ],
+        "sweep_amplitude": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sweep_period": 0.0,
+        "pivot_offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "follow_part": "",
+        "rate_jitter": 0.1
+      }
+    },
+    {
+      "name": "LiftCableEast",
+      "mesh": "SM_HQ20_LiftCable",
+      "location": [
+        1397.0,
+        -2408.4518,
+        5.0
+      ],
+      "rotation": [
+        0.6257,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        6.410382
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 12000.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "LiftCableWest",
+      "mesh": "SM_HQ20_LiftCable",
+      "location": [
+        1397.0,
+        -1108.4518,
+        5.0
+      ],
+      "rotation": [
+        0.6257,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        6.410382
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 12000.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "MastCore",
+      "mesh": "SM_HQ22_MastCore_H28",
+      "location": [
+        -898.7123,
+        0.0,
+        1151.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": false,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "MastEast",
+      "mesh": "SM_HQ22_MastEast_H28",
+      "location": [
+        -1090.0,
+        -1995.0001,
+        770.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": false,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": null
+    },
+    {
+      "name": "NationalFlag",
+      "mesh": "SM_Flag_Cloth",
+      "location": [
+        1150.0,
+        10.5,
+        690.0
+      ],
+      "rotation": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "scale": [
+        4.18,
+        1.0,
+        2.2
+      ],
+      "movable": false,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 12500.0,
+      "motion": null
+    },
+    {
+      "name": "Radar_Azimuth",
+      "mesh": "SM_HQ19_Radar_Azimuth",
+      "location": [
+        -229.2343,
+        -1229.6998,
+        921.5
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": {
+        "spin_rate": [
+          0.0,
+          72.0,
+          0.0
+        ],
+        "sweep_amplitude": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sweep_period": 0.0,
+        "pivot_offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "follow_part": "",
+        "rate_jitter": 0.05
+      }
+    },
+    {
+      "name": "WF_Condenser_Fan1_Rotor",
+      "mesh": "SM_HQ19_WF_Condenser_Fan1_Rotor",
+      "location": [
+        1060.0,
+        1780.0,
+        850.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": false,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 12000.0,
+      "wpo_disable_distance": 0.0,
+      "motion": {
+        "spin_rate": [
+          0.0,
+          205.0,
+          0.0
+        ],
+        "sweep_amplitude": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sweep_period": 0.0,
+        "pivot_offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "follow_part": "",
+        "rate_jitter": 0.1
+      }
+    },
+    {
+      "name": "WM_AHU_Fan1_Rotor",
+      "mesh": "SM_HQ19_WM_AHU_Fan1_Rotor",
+      "location": [
+        -60.0,
+        2015.0,
+        830.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": false,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 12000.0,
+      "wpo_disable_distance": 0.0,
+      "motion": {
+        "spin_rate": [
+          0.0,
+          280.0,
+          0.0
+        ],
+        "sweep_amplitude": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sweep_period": 0.0,
+        "pivot_offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "follow_part": "",
+        "rate_jitter": 0.1
+      }
+    },
+    {
+      "name": "WM_AHU_Fan2_Rotor",
+      "mesh": "SM_HQ19_WM_AHU_Fan2_Rotor",
+      "location": [
+        80.0,
+        2015.0,
+        830.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": false,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 12000.0,
+      "wpo_disable_distance": 0.0,
+      "motion": {
+        "spin_rate": [
+          0.0,
+          255.0,
+          0.0
+        ],
+        "sweep_amplitude": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sweep_period": 0.0,
+        "pivot_offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "follow_part": "",
+        "rate_jitter": 0.1
+      }
+    },
+    {
+      "name": "WingDish_Azimuth",
+      "mesh": "SM_HQ19_WingDish_Azimuth",
+      "location": [
+        -983.0626,
+        1994.9448,
+        821.5
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": {
+        "spin_rate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sweep_amplitude": [
+          0.0,
+          12.0,
+          0.0
+        ],
+        "sweep_period": 24.0,
+        "pivot_offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "follow_part": "",
+        "rate_jitter": 0.1
+      }
+    },
+    {
+      "name": "WingDish_Elevation",
+      "mesh": "SM_HQ19_WingDish_Elevation",
+      "location": [
+        -983.0626,
+        1994.9448,
+        1045.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "movable": true,
+      "cast_shadow": true,
+      "bounds_scale": 1.0,
+      "max_draw_distance": 0.0,
+      "wpo_disable_distance": 0.0,
+      "motion": {
+        "spin_rate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sweep_amplitude": [
+          4.0,
+          0.0,
+          0.0
+        ],
+        "sweep_period": 24.0,
+        "pivot_offset": [
+          0.0,
+          0.0,
+          20.0
+        ],
+        "follow_part": "WingDish_Azimuth",
+        "rate_jitter": 0.1
+      }
+    }
+  ]
+}

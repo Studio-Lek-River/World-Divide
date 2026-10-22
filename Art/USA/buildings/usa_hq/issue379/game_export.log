@@ -1,0 +1,100 @@
+BlenderMCP addon registered
+BlenderMCP addon unregistered
+FBX version: 7400
+usa_hq_game: removed mast 5532 triangles; surface 39.93497857 / 39.93493835 m2
+usa_hq_game:   SM_HQ20_Architecture_WallCorrected_Step 1069272 -> 1068834 after merging flat faces
+usa_hq_game:   SM_HQ20_Architecture_WallCorrected_LOD1 32148 -> 22935 after merging flat faces
+usa_hq_game: SM_HQ20_Architecture_WallCorrected 1069272 -> LOD1 14000 (budget 14000)
+FBX version: 7400
+usa_hq_game: removed mast 18716 triangles; surface 60.12430791 / 60.12436604 m2
+usa_hq_game:   SM_HQ20_RoofSystems_WallCorrected_Step 851560 -> 846898 after merging flat faces
+usa_hq_game:   SM_HQ20_RoofSystems_WallCorrected_LOD1 32872 -> 22765 after merging flat faces
+usa_hq_game: SM_HQ20_RoofSystems_WallCorrected 851560 -> LOD1 9000 (budget 9000)
+FBX version: 7400
+usa_hq_game:   SM_HQ21_Courtyard_Step 624040 -> 479666 after merging flat faces
+usa_hq_game:   SM_HQ21_Courtyard_LOD1 7490 -> 6610 after merging flat faces
+usa_hq_game: SM_HQ21_Courtyard 624040 -> LOD1 2600 (budget 2600)
+FBX version: 7400
+usa_hq_game:   SM_HQ20_GarageInterior_Step 327552 -> 323828 after merging flat faces
+usa_hq_game:   SM_HQ20_GarageInterior_LOD1 11728 -> 10292 after merging flat faces
+usa_hq_game: SM_HQ20_GarageInterior 327552 -> LOD1 1999 (budget 2000)
+FBX version: 7400
+usa_hq_game:   SM_HQ20_DoorHardware_Delivery_Step 33628 -> 33628 after merging flat faces
+usa_hq_game:   SM_HQ20_DoorHardware_Delivery_LOD1 3052 -> 2660 after merging flat faces
+usa_hq_game: SM_HQ20_DoorHardware_Delivery 33628 -> LOD1 2600 (budget 2600)
+FBX version: 7400
+usa_hq_game:   SM_HQ21_CourtyardDetails_Delivery_Step 19320 -> 19320 after merging flat faces
+usa_hq_game:   SM_HQ21_CourtyardDetails_Delivery_LOD1 2252 -> 876 after merging flat faces
+usa_hq_game: SM_HQ21_CourtyardDetails_Delivery 19320 -> LOD1 876 (budget 900)
+FBX version: 7400
+usa_hq_game:   SM_HQ20_GaragePortal_Step 14652 -> 14640 after merging flat faces
+usa_hq_game:   SM_HQ20_GaragePortal_LOD1 4322 -> 3860 after merging flat faces
+usa_hq_game: SM_HQ20_GaragePortal 14652 -> LOD1 800 (budget 800)
+FBX version: 7400
+usa_hq_game:   SM_HQ21_PlantingFinish_Delivery_Step 12136 -> 12136 after merging flat faces
+usa_hq_game:   SM_HQ21_PlantingFinish_Delivery_LOD1 8200 -> 8200 after merging flat faces
+usa_hq_game: SM_HQ21_PlantingFinish_Delivery 12136 -> LOD1 1500 (budget 1500)
+FBX version: 7400
+usa_hq_game:   SM_HQ20_GarageFloor_Step 4548 -> 3648 after merging flat faces
+usa_hq_game:   SM_HQ20_GarageFloor_LOD1 1000 -> 482 after merging flat faces
+usa_hq_game: SM_HQ20_GarageFloor 4548 -> LOD1 400 (budget 400)
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\USA\\buildings\\usa_hq\\game\\SM_HQ_Shell.fbx'
+export finished in 11.9877 sec.
+usa_hq_game: SM_HQ_Shell [2915364] triangles, 34 slots, bounds [[-1900.0, -2800.0, 0.0], [1900.0, 2800.0, 1343.08]]
+usa_hq_game:   MI_HQ14_Paving 76
+usa_hq_game:   MI_HQ14_Roof 1392
+usa_hq_game:   MI_HQ14_Shell 124
+usa_hq_game:   MI_HQ17_Brass 36948
+usa_hq_game:   MI_HQ17_CoolGlass 12276
+usa_hq_game:   MI_HQ17_DarkStructure 272080
+usa_hq_game:   MI_HQ17_FramePaint 269156
+usa_hq_game:   MI_HQ17_InnerLight 16356
+usa_hq_game:   MI_HQ17_InteriorWarm 36344
+usa_hq_game:   MI_HQ17_IvoryCeramic 198164
+usa_hq_game:   MI_HQ17_Roof 760
+usa_hq_game:   MI_HQ17_Seals 131652
+usa_hq_game:   MI_HQ17_Steel 427036
+usa_hq_game:   MI_HQ17_WarmGlass 24376
+usa_hq_game:   MI_HQ19_DrainGrate 82968
+usa_hq_game:   MI_HQ19_DuctGalvanized 177368
+usa_hq_game:   MI_HQ19_EquipmentPaint 31088
+usa_hq_game:   MI_HQ19_Membrane 6692
+usa_hq_game:   MI_HQ19_MembraneLap 163824
+usa_hq_game:   MI_HQ19_SafetyOchre 139884
+usa_hq_game:   MI_HQ19_Walkpad 122896
+usa_hq_game:   MI_HQ20_DoorPaint 20140
+usa_hq_game:   MI_HQ20_Rubber 376
+usa_hq_game:   MI_HQ20_SafetyOchre 700
+usa_hq_game:   MI_HQ20_ServiceOlive 1816
+usa_hq_game:   MI_HQ20_WallLiner 236020
+usa_hq_game:   MI_HQ21_Coping 31140
+usa_hq_game:   MI_HQ21_DrainSteel 22744
+usa_hq_game:   MI_HQ21_Gravel 11336
+usa_hq_game:   MI_HQ21_Joint 1060
+usa_hq_game:   MI_HQ21_Ochre 992
+usa_hq_game:   MI_HQ21_Olive 6100
+usa_hq_game:   MI_USA_HQ_HQ20_FloorWear 1152
+usa_hq_game:   MI_USA_HQ_HQ21_PavingWear 430328
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\USA\\buildings\\usa_hq\\game\\SM_HQ_ShellDetail.fbx'
+export finished in 0.8131 sec.
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\USA\\buildings\\usa_hq\\game\\SM_HQ_ShellDetail_LOD1.fbx'
+export finished in 0.2259 sec.
+usa_hq_game: SM_HQ_ShellDetail [41344, 11436] triangles, 12 slots, bounds [[-1639.9, -2451.1, 43.0], [1560.93, 2219.5, 1052.0]]
+usa_hq_game:   MI_HQ17_Chips 4512 / 356
+usa_hq_game:   MI_HQ17_Marking 3608 / 3072
+usa_hq_game:   MI_HQ17_TeamLight 1692 / 1692
+usa_hq_game:   MI_HQ17_TeamPanel 188 / 188
+usa_hq_game:   MI_HQ19_RFPanel 752 / 752
+usa_hq_game:   MI_HQ19_SolarCell 432 / 432
+usa_hq_game:   MI_HQ20_FixtureBlue 6012 / 1048
+usa_hq_game:   MI_HQ20_FixtureWarm 5344 / 934
+usa_hq_game:   MI_HQ21_Leaf0 2498 / 262
+usa_hq_game:   MI_HQ21_Leaf1 2640 / 270
+usa_hq_game:   MI_HQ21_Leaf2 2566 / 830
+usa_hq_game:   MI_USA_HQ_HQ21_Soil 11100 / 1600
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

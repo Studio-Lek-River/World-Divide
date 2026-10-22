@@ -1,0 +1,10 @@
+00:00.484  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\USA\buildings\usa_hq\issue379\baseline\USA_HQ_Final.blend"
+BlenderMCP addon registered
+BlenderMCP addon unregistered
+FBX version: 7400
+DIFFERENCES [('HQ19_ER_Relay_AerialMount', 44, 20), ('HQ19_ER_Relay_AerialMount.001', 44, 20), ('HQ19_ER_Relay_AerialMount.002', 44, 20), ('HQ19_ER_Relay_AerialMount.003', 44, 20), ('HQ19_ER_Relay_AerialMount.004', 44, 20), ('HQ19_ER_Relay_Coax', 156, 136), ('HQ19_ER_Relay_Coax.001', 156, 136), ('HQ19_ER_Relay_Feed', 156, 136), ('HQ19_ER_Relay_Feed.001', 156, 136), ('HQ19_ER_Relay_Feed.002', 156, 136), ('HQ19_ER_Relay_Feed.003', 156, 136), ('HQ19_ER_Relay_Feed.004', 156, 136), ('HQ19_ER_Relay_LadderRail', 36, 16), ('HQ19_ER_Relay_LadderRail.001', 36, 16), ('HQ19_ER_Relay_Leg', 60, 28), ('HQ19_ER_Relay_Leg.001', 60, 28), ('HQ19_ER_Relay_Leg.002', 60, 28), ('HQ19_ER_Relay_Leg.003', 60, 28), ('HQ19_ER_Relay_MembraneBoot', 188, 128), ('HQ19_ER_Relay_PanelArm', 44, 54), ('HQ19_ER_Relay_PanelArm.001', 44, 54), ('HQ19_ER_Relay_SupportRail', 188, 156), ('HQ19_ER_Relay_SupportRail.001', 188, 156)]
+MATCHED SUM 8944
+[]
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

@@ -1,0 +1,11 @@
+{
+  "method": "tools/call",
+  "jsonrpc": "2.0",
+  "id": 2,
+  "params": {
+    "name": "describe_toolset",
+    "arguments": {
+      "toolset_name": "editor_toolset.toolsets.object.ObjectTools"
+    }
+  }
+}

@@ -40,11 +40,11 @@ Earlier candidates, recovery archives and the blockout are gone from the reposit
 
 ## Materials
 
-The 10 delivery masters are rebuilt by `building_art.py` (the unused `HQ14_Paving` is dropped), with the 49 instances at the delivery's exact values (`usa_hq.json` → `material_instances`):
+The 10 delivery masters are rebuilt by `building_art.py` (the unused `HQ14_Paving` is dropped), with the 49 instances at the delivery's exact values (`usa_hq.json` → `material_instances`). The five generic ones are every building's since #388: `M_Bld_Surface`, `M_Bld_Glass`, `M_Bld_Operational`, `M_Bld_Ownership` and `M_Bld_Coating` (with `T_Bld_Coating_2m_*`) in `/Game/Art/Shared/Materials/Building`; `usa_hq.json` keeps the delivered parent names (`M_HQ17_Surface`, `M_HQ17_Glass`, `M_HQ_Final_Operational`, `M_HQ_Final_Ownership`, `M_HQ17_Coating`) and `setup_testmap.USA_HQ_SHARED_PARENTS` maps them. The ground masters `M_HQ20_FloorWear`, `M_HQ21_PavingWear` and `M_HQ21_Soil` stay the HQ's.
 
-- `M_HQ_Final_Ownership`: PlayerColor from custom primitive data 4–7 (`RTSPrimitiveData::TeamColor`). Only `MI_HQ17_TeamPanel` uses it.
-- `M_HQ_Final_Operational`: EmissionColor × Operational from custom primitive data 8 (`RTSPrimitiveData::LampOn`), 1 on and 0 off. `URTSBuildingStateComponent` drives it (#196, below).
-- `M_HQ17_Coating`: roughness clamp(Roughness + CoatingRoughness.R − 0.67, 0.06, 0.98), with the 2 m coating texture set.
+- `M_Bld_Ownership`: PlayerColor from custom primitive data 4–7 (`RTSPrimitiveData::TeamColor`). Only `MI_HQ17_TeamPanel` uses it.
+- `M_Bld_Operational`: EmissionColor × Operational from custom primitive data 8 (`RTSPrimitiveData::LampOn`), 1 on and 0 off. `URTSBuildingStateComponent` drives it (#196, below).
+- `M_Bld_Coating`: roughness clamp(Roughness + CoatingRoughness.R − 0.67, 0.06, 0.98), with the 2 m coating texture set.
 - The delivered flag (`SM_HQ21_NationalFlag_Wind`, `M_HQ21_FlagWind` and its three colour instances) is replaced by the shared flag (#351, below).
 - `ARTSBuilding::ApplyTeamColor` writes the same custom primitive data to Mesh and every part. Every HQ shares the same instances, so there are no dynamic instances.
 
@@ -96,8 +96,8 @@ Destroyed: the HQ goes at once, so placement, power and the rebuild (#38) are fr
 
 Rule: **light only comes from a lamp or window the model has.** No light component stands in the air; every one names the fixtures it shines from (`FRTSBuildingLight::Fixture`, islands of `Art/USA/buildings/usa_hq/issue195/fixtures.json`, written by `Tools/Art/usa_hq_light_probe.py` from the game shell's lamp and glass slots) and stands within their bounds (`WorldDivide.Art.USAHeadquarters` checks both). A lamp the model lacks is art first (`issue195/BRIEF_floodlights.md`).
 
-- Glow: `M_HQ_Final_Operational` multiplies EmissionColor × Operational × its group's switch × lerp(1, `NightGain`, Night). Groups by instance (`usa_hq_recipe.LIGHT_GROUPS`): `Windows` (InnerLight, InteriorWarm; night ×4), `Fixtures` (FixtureWarm; ×4), `Accents` (FixtureBlue, TeamLight; ×3). CPD 9–11 are the group switches (1 on, the default), CPD 12 the dark (`RTSPrimitiveData::LightWindows`..`LightNight`); the building writes all four together.
-- Windows at night: `M_HQ17_Glass` adds `NightGlow` × Night × WindowsOn × Operational, so the warm glass glows with the rooms lit behind it (`usa_hq_recipe.GLASS_NIGHT_GLOW`); the cool glass stays dark. With Lumen (#159) the glow alone would light the ground and the entrance lights could go.
+- Glow: `M_Bld_Operational` multiplies EmissionColor × Operational × its group's switch × lerp(1, `NightGain`, Night). Groups by instance (`usa_hq_recipe.LIGHT_GROUPS`): `Windows` (InnerLight, InteriorWarm; night ×4), `Fixtures` (FixtureWarm; ×4), `Accents` (FixtureBlue, TeamLight; ×3). CPD 9–11 are the group switches (1 on, the default), CPD 12 the dark (`RTSPrimitiveData::LightWindows`..`LightNight`); the building writes all four together.
+- Windows at night: `M_Bld_Glass` adds `NightGlow` × Night × WindowsOn × Operational, so the warm glass glows with the rooms lit behind it (`usa_hq_recipe.GLASS_NIGHT_GLOW`); the cool glass stays dark. With Lumen (#159) the glow alone would light the ground and the entrance lights could go.
 - Real lights (`URTSBuildingData::Lights`, `usa_hq_recipe.LIGHTS`), all non-shadow-casting, no GI, tagged `Light.<Group>`:
 
 | Light | Group | From | Type |

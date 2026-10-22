@@ -1,0 +1,246 @@
+{
+  "actors": {
+    "Shell": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_1",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_1.StaticMeshComponent0",
+      "mesh": "/Game/Art/Candidates/USA_HQ/Candidate22/Shells/SM_HQ379_ShellReview"
+    },
+    "ShellDetail": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_2",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_2.StaticMeshComponent0",
+      "mesh": "/Game/Art/Candidates/USA_HQ/Candidate22/Shells/SM_HQ_ShellDetail"
+    },
+    "DoorBottomSeal": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_3",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_3.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorBottomSeal"
+    },
+    "DoorSection00": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_4",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_4.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection01": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_5",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_5.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection02": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_6",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_6.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection03": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_7",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_7.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection04": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_8",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_8.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection05": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_9",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_9.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection06": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_10",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_10.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection07": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_11",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_11.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection08": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_12",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_12.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection09": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_13",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_13.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection10": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_14",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_14.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection11": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_15",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_15.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection12": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_16",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_16.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection13": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_17",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_17.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection14": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_18",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_18.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorSection15": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_19",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_19.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorSection_Delivery"
+    },
+    "DoorTopRollers": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_20",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_20.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DoorTopRollers"
+    },
+    "DriveShaft": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_21",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_21.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_DriveShaft"
+    },
+    "ER_Cooling_Fan1_Rotor": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_22",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_22.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_ER_Cooling_Fan1_Rotor"
+    },
+    "LiftCableEast": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_23",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_23.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_LiftCable"
+    },
+    "LiftCableWest": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_24",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_24.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ20_LiftCable"
+    },
+    "NationalFlag": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_25",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_25.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_Flag_Cloth"
+    },
+    "Radar_Azimuth": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_26",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_26.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_Radar_Azimuth"
+    },
+    "WF_Condenser_Fan1_Rotor": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_27",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_27.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WF_Condenser_Fan1_Rotor"
+    },
+    "WM_AHU_Fan1_Rotor": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_28",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_28.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WM_AHU_Fan1_Rotor"
+    },
+    "WM_AHU_Fan2_Rotor": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_29",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_29.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WM_AHU_Fan2_Rotor"
+    },
+    "WingDish_Azimuth": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_30",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_30.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WingDish_Azimuth"
+    },
+    "WingDish_Elevation": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_31",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_31.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_HQ19_WingDish_Elevation"
+    },
+    "BeaconCore": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_34",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_34.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_Beacon_Obstruction"
+    },
+    "BeaconEast": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_35",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_35.StaticMeshComponent0",
+      "mesh": "/Game/Art/USA/Buildings/USAHQ/Meshes/SM_Beacon_Obstruction"
+    },
+    "PreviewGround": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_36",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_36.StaticMeshComponent0",
+      "mesh": "/Engine/BasicShapes/Plane"
+    },
+    "MastsFixed": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_32",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_32.StaticMeshComponent0",
+      "mesh": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/Meshes/SM_HQ195_MastsFixed_Final"
+    },
+    "FloodWest": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_33",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_33.StaticMeshComponent0",
+      "mesh": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/Meshes/SM_HQ195_Flood"
+    },
+    "FloodEast": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_37",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_37.StaticMeshComponent0",
+      "mesh": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/Meshes/SM_HQ195_Flood"
+    },
+    "GarageBeaconSouth": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_38",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_38.StaticMeshComponent0",
+      "mesh": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/Meshes/SM_HQ195_Beacon"
+    },
+    "GarageBeaconNorth": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_39",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.StaticMeshActor_39.StaticMeshComponent0",
+      "mesh": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/Meshes/SM_HQ195_Beacon"
+    }
+  },
+  "mode": "game",
+  "day_lighting": {
+    "sun": {
+      "intensity": 6,
+      "lightColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1,
+        "a": 1
+      }
+    },
+    "sky": {
+      "intensity": 1,
+      "lightColor": {
+        "r": 1,
+        "g": 1,
+        "b": 1,
+        "a": 1
+      }
+    }
+  },
+  "lights": {
+    "SOCKET_Flood_West": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.SpotLight_0",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.SpotLight_0.LightComponent0"
+    },
+    "SOCKET_Flood_East": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.SpotLight_1",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.SpotLight_1.LightComponent0"
+    },
+    "SOCKET_GarageBeacon_South": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.PointLight_0",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.PointLight_0.LightComponent0"
+    },
+    "SOCKET_GarageBeacon_North": {
+      "actor": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.PointLight_1",
+      "component": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.PointLight_1.LightComponent0"
+    }
+  },
+  "lighting": "day",
+  "master_reference": "/Game/Art/Candidates/USA_HQ/Candidate22/Shells/SM_HQ379_ShellReview",
+  "instanced": true,
+  "asset_map": {
+    "SM_HQ195_MastsFixed": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/Meshes/SM_HQ195_MastsFixed_Final",
+    "SM_HQ195_MastsFixed_LOD1": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/Meshes/SM_HQ195_MastsFixed_Final_LOD1"
+  },
+  "exposure_volume": "/Game/Art/Candidates/USA_HQ/Issue195_PhaseB/L_HQ195_Fixtures.L_HQ195_Fixtures:PersistentLevel.PostProcessVolume_0"
+}

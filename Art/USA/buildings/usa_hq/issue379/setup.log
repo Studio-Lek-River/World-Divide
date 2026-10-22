@@ -1,0 +1,48 @@
+Traceback (most recent call last):
+  File "D:\Lek River Studio\World-Divide\Tools\Art\usa_hq_379_preview.py", line 147, in <module>
+    elif stage=='setup':setup()
+                        ~~~~~^^
+  File "D:\Lek River Studio\World-Divide\Tools\Art\usa_hq_379_preview.py", line 56, in setup
+    bind(f'{CAND}/Shells/{name}',game['meshes']['SM_HQ_Shell']['slots'])
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Lek River Studio\World-Divide\Tools\Art\usa_hq_379_preview.py", line 44, in bind
+    props(path,staticMaterials=[{'materialSlotName':s,'importedMaterialSlotName':s,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        'materialInterface':ref(f'{PROD}/Materials/{s if s.startswith("MI_") else "MI_"+s}')} for s in slots],naniteSettings={'bEnabled':False})
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Lek River Studio\World-Divide\Tools\Art\usa_hq_379_preview.py", line 31, in props
+    def props(path,**values):return call('ObjectTools','set_properties',instance=ref(path),values=json.dumps(values))
+                                    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Lek River Studio\World-Divide\Tools\Art\usa_hq_379_preview.py", line 25, in call
+    result=rpc('tools/call',{'name':'call_tool','arguments':{'toolset_name':SETS[s],'tool_name':t,'arguments':args}})
+  File "D:\Lek River Studio\World-Divide\Tools\Art\usa_hq_379_mcp.py", line 10, in rpc
+    with urllib.request.urlopen(req,timeout=1800) as response:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Program Files\Blender Foundation\Blender 5.1\5.1\python\Lib\urllib\request.py", line 189, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "D:\Program Files\Blender Foundation\Blender 5.1\5.1\python\Lib\urllib\request.py", line 489, in open
+    response = self._open(req, data)
+  File "D:\Program Files\Blender Foundation\Blender 5.1\5.1\python\Lib\urllib\request.py", line 506, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+                              '_open', req)
+  File "D:\Program Files\Blender Foundation\Blender 5.1\5.1\python\Lib\urllib\request.py", line 466, in _call_chain
+    result = func(*args)
+  File "D:\Program Files\Blender Foundation\Blender 5.1\5.1\python\Lib\urllib\request.py", line 1348, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Program Files\Blender Foundation\Blender 5.1\5.1\python\Lib\urllib\request.py", line 1323, in do_open
+    r = h.getresponse()
+  File "D:\Program Files\Blender Foundation\Blender 5.1\5.1\python\Lib\http\client.py", line 1430, in getresponse
+    response.begin()
+    ~~~~~~~~~~~~~~^^
+  File "D:\Program Files\Blender Foundation\Blender 5.1\5.1\python\Lib\http\client.py", line 331, in begin
+    version, status, reason = self._read_status()
+                              ~~~~~~~~~~~~~~~~~^^
+  File "D:\Program Files\Blender Foundation\Blender 5.1\5.1\python\Lib\http\client.py", line 292, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "D:\Program Files\Blender Foundation\Blender 5.1\5.1\python\Lib\socket.py", line 719, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+TimeoutError: timed out

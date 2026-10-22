@@ -1,0 +1,212 @@
+{
+  "0": {
+    "triangles": 9600,
+    "mast_triangles": 9552,
+    "missing_or_changed_mast_triangles": 0,
+    "max_mast_vertex_roundtrip_error_m": 2.3360154559928683e-06,
+    "max_mast_corner_normal_error_degrees": 0.08622923062092014,
+    "slots": [
+      "HQ17_DarkStructure",
+      "HQ17_FramePaint",
+      "HQ17_TeamLight"
+    ],
+    "degenerate_triangles": 0,
+    "invalid_uv_faces": 0,
+    "helpers": {
+      "SOCKET_Flood_East": {
+        "location_m": [
+          11.996889114379883,
+          10.497543334960938,
+          8.04946231842041
+        ],
+        "x_axis": [
+          -0.7776127457618713,
+          -0.6141815781593323,
+          -0.1345350444316864
+        ]
+      },
+      "SOCKET_Flood_West": {
+        "location_m": [
+          7.9976701736450195,
+          -12.84677791595459,
+          7.499560832977295
+        ],
+        "x_axis": [
+          -0.5825116038322449,
+          0.8053878545761108,
+          -0.10968317091464996
+        ]
+      },
+      "SOCKET_GarageBeacon_North": {
+        "location_m": [
+          15.679999351501465,
+          10.784517288208008,
+          6.495999813079834
+        ],
+        "x_axis": [
+          1.0,
+          -1.6292067073209182e-07,
+          0.0
+        ]
+      },
+      "SOCKET_GarageBeacon_South": {
+        "location_m": [
+          15.679999351501465,
+          24.3845157623291,
+          6.495999813079834
+        ],
+        "x_axis": [
+          1.0,
+          -1.6292067073209182e-07,
+          0.0
+        ]
+      }
+    }
+  },
+  "1": {
+    "triangles": 4152,
+    "mast_triangles": 4104,
+    "missing_or_changed_mast_triangles": 0,
+    "max_mast_vertex_roundtrip_error_m": 2.3360154559928683e-06,
+    "max_mast_corner_normal_error_degrees": 0.01978234059262607,
+    "slots": [
+      "HQ17_DarkStructure",
+      "HQ17_FramePaint",
+      "HQ17_TeamLight"
+    ],
+    "degenerate_triangles": 0,
+    "invalid_uv_faces": 0,
+    "helpers": {
+      "SOCKET_Flood_East": {
+        "location_m": [
+          11.996889114379883,
+          10.497543334960938,
+          8.04946231842041
+        ],
+        "x_axis": [
+          -0.7776127457618713,
+          -0.6141815781593323,
+          -0.1345350444316864
+        ]
+      },
+      "SOCKET_Flood_West": {
+        "location_m": [
+          7.9976701736450195,
+          -12.84677791595459,
+          7.499560832977295
+        ],
+        "x_axis": [
+          -0.5825116038322449,
+          0.8053878545761108,
+          -0.10968317091464996
+        ]
+      },
+      "SOCKET_GarageBeacon_North": {
+        "location_m": [
+          15.679999351501465,
+          10.784517288208008,
+          6.495999813079834
+        ],
+        "x_axis": [
+          1.0,
+          -1.6292067073209182e-07,
+          0.0
+        ]
+      },
+      "SOCKET_GarageBeacon_South": {
+        "location_m": [
+          15.679999351501465,
+          24.3845157623291,
+          6.495999813079834
+        ],
+        "x_axis": [
+          1.0,
+          -1.6292067073209182e-07,
+          0.0
+        ]
+      }
+    }
+  },
+  "shared_parts": {
+    "SM_HQ195_Flood": {
+      "triangles": 104,
+      "slots": [
+        "HQ17_DarkStructure",
+        "HQ20_FixtureWarm"
+      ],
+      "bounds_m": [
+        [
+          -0.20000003278255463,
+          -0.20999997854232788,
+          -0.2549999952316284
+        ],
+        [
+          0.004000023938715458,
+          0.21000002324581146,
+          0.125
+        ]
+      ]
+    },
+    "SM_HQ195_Flood_LOD1": {
+      "triangles": 104,
+      "slots": [
+        "HQ17_DarkStructure",
+        "HQ20_FixtureWarm"
+      ],
+      "bounds_m": [
+        [
+          -0.20000003278255463,
+          -0.20999997854232788,
+          -0.2549999952316284
+        ],
+        [
+          0.004000023938715458,
+          0.21000002324581146,
+          0.125
+        ]
+      ]
+    },
+    "SM_HQ195_Beacon": {
+      "triangles": 72,
+      "slots": [
+        "HQ17_DarkStructure",
+        "HQ195_BeaconAmber"
+      ],
+      "bounds_m": [
+        [
+          -0.07750000059604645,
+          -0.07750000059604645,
+          0.0
+        ],
+        [
+          0.07750000059604645,
+          0.07750000059604645,
+          0.12399999797344208
+        ]
+      ]
+    },
+    "SM_HQ195_Beacon_LOD1": {
+      "triangles": 72,
+      "slots": [
+        "HQ17_DarkStructure",
+        "HQ195_BeaconAmber"
+      ],
+      "bounds_m": [
+        [
+          -0.07750000059604645,
+          -0.07750000059604645,
+          0.0
+        ],
+        [
+          0.07750000059604645,
+          0.07750000059604645,
+          0.12399999797344208
+        ]
+      ]
+    }
+  },
+  "fixture_split_preservation": {
+    "matched_triangles": 400,
+    "max_position_error_m": 6.106495129998063e-06
+  }
+}

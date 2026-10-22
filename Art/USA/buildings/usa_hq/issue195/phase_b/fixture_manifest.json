@@ -1,0 +1,171 @@
+{
+  "approved_source_sha256": "ae887321c2344bd59eb0421da6c7c63b49e8e47bc58aa71691b00a4e310c08ee",
+  "protected_meshes_unchanged": 20173,
+  "fixture_triangles": 400,
+  "helpers": {
+    "SOCKET_Flood_West": {
+      "location_cm": [
+        799.767017364502,
+        1284.6778869628906,
+        749.9561309814453
+      ],
+      "beam_direction": [
+        -0.5825116634368896,
+        -0.8053879141807556,
+        -0.10968318581581116
+      ]
+    },
+    "SOCKET_Flood_East": {
+      "location_cm": [
+        1199.6889114379883,
+        -1049.7543334960938,
+        804.946231842041
+      ],
+      "beam_direction": [
+        -0.7776125073432922,
+        0.6141815185546875,
+        -0.134535014629364
+      ]
+    },
+    "SOCKET_GarageBeacon_South": {
+      "location_cm": [
+        1568.0000305175781,
+        -2438.4517669677734,
+        649.5999813079834
+      ],
+      "beam_direction": null
+    },
+    "SOCKET_GarageBeacon_North": {
+      "location_cm": [
+        1568.0000305175781,
+        -1078.4518241882324,
+        649.5999813079834
+      ],
+      "beam_direction": null
+    }
+  },
+  "instances": [
+    {
+      "kind": "flood",
+      "name": "West",
+      "location_m": [
+        8,
+        -12.85,
+        7.5
+      ],
+      "quaternion_wxyz": [
+        0.45688527822494507,
+        -0.0,
+        0.1200336143374443,
+        0.8813896775245667
+      ]
+    },
+    {
+      "kind": "flood",
+      "name": "East",
+      "location_m": [
+        12,
+        10.5,
+        8.05
+      ],
+      "quaternion_wxyz": [
+        0.33345720171928406,
+        0.0,
+        0.20172756910324097,
+        -0.9209300875663757
+      ]
+    },
+    {
+      "kind": "beacon",
+      "name": "South",
+      "location_m": [
+        15.68,
+        24.384518,
+        6.42
+      ]
+    },
+    {
+      "kind": "beacon",
+      "name": "North",
+      "location_m": [
+        15.68,
+        10.784518,
+        6.42
+      ]
+    }
+  ],
+  "batches": [
+    {
+      "mesh": "SM_HQ195_StaticEquipment",
+      "triangles": 9952,
+      "slots": [
+        "HQ17_DarkStructure",
+        "HQ17_FramePaint",
+        "HQ17_TeamLight",
+        "HQ20_FixtureWarm",
+        "HQ195_BeaconAmber"
+      ]
+    },
+    {
+      "mesh": "SM_HQ195_StaticEquipment_LOD1",
+      "triangles": 4504,
+      "slots": [
+        "HQ17_DarkStructure",
+        "HQ17_FramePaint",
+        "HQ17_TeamLight",
+        "HQ20_FixtureWarm",
+        "HQ195_BeaconAmber"
+      ]
+    }
+  ],
+  "preferred_instanced_delivery": {
+    "fixed_batches": [
+      {
+        "mesh": "SM_HQ195_MastsFixed",
+        "triangles": 9600,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ]
+      },
+      {
+        "mesh": "SM_HQ195_MastsFixed_LOD1",
+        "triangles": 4152,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ17_FramePaint",
+          "HQ17_TeamLight"
+        ]
+      }
+    ],
+    "shared_parts": {
+      "flood": {
+        "mesh": "SM_HQ195_Flood",
+        "triangles_per_instance": 104,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ20_FixtureWarm"
+        ]
+      },
+      "beacon": {
+        "mesh": "SM_HQ195_Beacon",
+        "triangles_per_instance": 72,
+        "slots": [
+          "HQ17_DarkStructure",
+          "HQ195_BeaconAmber"
+        ]
+      }
+    },
+    "fixed_support_triangles": 48,
+    "whole_hq_triangles": [
+      349968,
+      39432
+    ],
+    "unique_instanced_sections": 80,
+    "supersedes": [
+      "SM_HQ195_StaticEquipment",
+      "SM_HQ195_StaticEquipment_LOD1"
+    ]
+  }
+}

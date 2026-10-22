@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Cannot load '/Game/Art/Candidates/USA_HQ/Candidate22/L_HQ379_Masts': the level has unsaved changes. Save the level before loading it."
+    }
+  ],
+  "isError": true
+}

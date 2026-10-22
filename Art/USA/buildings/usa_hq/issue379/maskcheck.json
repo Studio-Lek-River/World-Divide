@@ -1,0 +1,85 @@
+{
+  "counts": {
+    "vertices": 8924,
+    "surface": 18716,
+    "surface_center": 15675,
+    "center": 15675
+  },
+  "areas": {
+    "vertices": 22.03801725749713,
+    "surface": 60.12430791458087,
+    "surface_center": 49.44330272240245,
+    "center": 49.44330272240245,
+    "source": 60.12436604216993
+  },
+  "slots": {
+    "vertices": {
+      "MI_HQ19_MembraneLap": 128,
+      "MI_HQ19_Membrane": 0,
+      "MI_HQ19_DuctGalvanized": 312,
+      "MI_HQ17_Steel": 4248,
+      "MI_HQ17_Seals": 2144,
+      "MI_HQ17_DarkStructure": 588,
+      "MI_HQ19_DrainGrate": 0,
+      "MI_HQ19_EquipmentPaint": 0,
+      "MI_HQ19_Walkpad": 752,
+      "MI_HQ17_FramePaint": 376,
+      "MI_HQ19_SafetyOchre": 0,
+      "MI_HQ17_Brass": 0,
+      "MI_HQ17_TeamLight": 376,
+      "MI_HQ19_RFPanel": 0,
+      "MI_HQ19_SolarCell": 0
+    },
+    "surface": {
+      "MI_HQ19_MembraneLap": 2048,
+      "MI_HQ19_Membrane": 0,
+      "MI_HQ19_DuctGalvanized": 1336,
+      "MI_HQ17_Steel": 4888,
+      "MI_HQ17_Seals": 4384,
+      "MI_HQ17_DarkStructure": 4556,
+      "MI_HQ19_DrainGrate": 0,
+      "MI_HQ19_EquipmentPaint": 0,
+      "MI_HQ19_Walkpad": 752,
+      "MI_HQ17_FramePaint": 376,
+      "MI_HQ19_SafetyOchre": 0,
+      "MI_HQ17_Brass": 0,
+      "MI_HQ17_TeamLight": 376,
+      "MI_HQ19_RFPanel": 0,
+      "MI_HQ19_SolarCell": 0
+    },
+    "surface_center": {
+      "MI_HQ19_MembraneLap": 1812,
+      "MI_HQ19_Membrane": 0,
+      "MI_HQ19_DuctGalvanized": 1104,
+      "MI_HQ17_Steel": 4624,
+      "MI_HQ17_Seals": 3478,
+      "MI_HQ17_DarkStructure": 3153,
+      "MI_HQ19_DrainGrate": 0,
+      "MI_HQ19_EquipmentPaint": 0,
+      "MI_HQ19_Walkpad": 752,
+      "MI_HQ17_FramePaint": 376,
+      "MI_HQ19_SafetyOchre": 0,
+      "MI_HQ17_Brass": 0,
+      "MI_HQ17_TeamLight": 376,
+      "MI_HQ19_RFPanel": 0,
+      "MI_HQ19_SolarCell": 0
+    },
+    "center": {
+      "MI_HQ19_MembraneLap": 1812,
+      "MI_HQ19_Membrane": 0,
+      "MI_HQ19_DuctGalvanized": 1104,
+      "MI_HQ17_Steel": 4624,
+      "MI_HQ17_Seals": 3478,
+      "MI_HQ17_DarkStructure": 3153,
+      "MI_HQ19_DrainGrate": 0,
+      "MI_HQ19_EquipmentPaint": 0,
+      "MI_HQ19_Walkpad": 752,
+      "MI_HQ17_FramePaint": 376,
+      "MI_HQ19_SafetyOchre": 0,
+      "MI_HQ17_Brass": 0,
+      "MI_HQ17_TeamLight": 376,
+      "MI_HQ19_RFPanel": 0,
+      "MI_HQ19_SolarCell": 0
+    }
+  }
+}

@@ -6,9 +6,10 @@ building's data carries simple boxes instead) and gets the building's two LODs, 
 Everything here builds in memory only; setup_testmap.py decides what needs rebuilding and saves it.
 
 The masters read two custom primitive data channels the building writes to every one of its meshes: the owner's colour
-at vehicle_art.TEAM_COLOR_INDEX (M_HQ_Final_Ownership's PlayerColor) and whether it is operational at
-vehicle_art.LAMP_ON_INDEX (M_HQ_Final_Operational's Operational, multiplying its glow). M_HQ_Final_Operational also reads
-its lighting group and the dark (LIGHT_GROUP_INDICES, LIGHT_NIGHT_INDEX, #195).
+at vehicle_art.TEAM_COLOR_INDEX (M_Bld_Ownership's PlayerColor) and whether it is operational at
+vehicle_art.LAMP_ON_INDEX (M_Bld_Operational's Operational, multiplying its glow). M_Bld_Operational also reads
+its lighting group and the dark (LIGHT_GROUP_INDICES, LIGHT_NIGHT_INDEX, #195). The generic masters (M_Bld_*) and the kit's
+lens (M_Kit_Lens) are every building's, in /Game/Art/Shared (#388).
 """
 
 import json
@@ -82,7 +83,7 @@ FLAG_WPO_INPUTS = {"WaveAmplitude": "FlagWaveAmplitude", "WaveNumber": "FlagWave
 
 # The shared mast beacon (M_Beacon_Obstruction, #351): its lens (UV0.U >= 0.5) a red emissive flash BeaconRate times a
 # second, on for BeaconDuty of it and fading over its last BeaconFade, times Operational (custom primitive data
-# LAMP_ON_INDEX, as M_HQ_Final_Operational); every beacon runs up to BeaconRateJitter faster or slower and at its own
+# LAMP_ON_INDEX, as M_Bld_Operational); every beacon runs up to BeaconRateJitter faster or slower and at its own
 # phase, from where it stands. The housing (U < 0.5) is dark and never glows; between flashes the lens is dark red glass
 # (LensOffColor), so the flash reads against it from the default zoom (#379).
 BEACON_PARAMETERS = {
@@ -108,12 +109,25 @@ return saturate((Duty - Cycle) / max(Fade, 0.001));"""
 SOIL_ROUGHNESS = 0.94
 
 
-# M_HQ_Final_Operational's lighting groups (RTSPrimitiveData::LightWindows.., #195): an instance whose Group<name> weight is
+# M_Bld_Operational's lighting groups (RTSPrimitiveData::LightWindows.., #195): an instance whose Group<name> weight is
 # 1 glows only while the building's custom primitive data at that index is 1 (ARTSBuilding::SetLightGroupOn, 1 unless
 # switched off); one of no group always glows. In the dark (LIGHT_NIGHT_INDEX 1, URTSBuildingLightSubsystem) the glow rises
 # to the instance's NightGain times its day strength.
 LIGHT_GROUP_INDICES = {"Windows": 9, "Fixtures": 10, "Accents": 11}
 LIGHT_NIGHT_INDEX = 12
+
+# M_Kit_Lens's per-instance custom data (RTSKitLensData, #387, docs/art/BUILDING_KIT.md "Per-instance and LOD"), written
+# with SetCustomData: on/level, group mask (1 = gated by the building's Fixtures group), fault phase (0 = no fault), flash
+# seed (0 = steady) and the colour, RGB.
+LENS_LEVEL, LENS_GROUP, LENS_FAULT, LENS_FLASH, LENS_COLOR = 0, 1, 2, 3, 4
+LENS_HLSL = """
+float gate = lerp(1.0, Fixtures, saturate(Group));
+float fault = Fault > 0.0 ? step(0.35, frac(Time * 2.3 + Fault + 0.5 * sin(Time * 17.0 + Fault * 40.0))) : 1.0;
+float flash = Flash > 0.0 ? step(0.5, frac(Time + Flash)) : 1.0;
+return Color * Level * Operational * gate * fault * flash * lerp(DayGain, 1.0, Night) * Intensity;
+"""
+# The engine's flat normal: a lens without a baked finish normal draws as if it had none.
+FLAT_NORMAL = "/Engine/EngineMaterials/FlatNormal"
 
 
 def read_layout(path):
@@ -215,11 +229,11 @@ def _finish(material):
 
 def build_surface_material(directory, name, kind):
     """The flat masters, each a colour, roughness, metallic and glow from its instance:
-    "surface" (M_HQ17_Surface), "glass" (M_HQ17_Glass: translucent, lit per pixel, GlassOpacity, at night
+    "surface" (M_Bld_Surface), "glass" (M_Bld_Glass: translucent, lit per pixel, GlassOpacity, at night
     NightGlow, the rooms lit behind it),
-    "operational" (M_HQ_Final_Operational: the glow times Operational, custom primitive data, 1 on and 0 off, its lighting
+    "operational" (M_Bld_Operational: the glow times Operational, custom primitive data, 1 on and 0 off, its lighting
     group's switch and, in the dark, NightGain: LIGHT_GROUP_INDICES) and
-    "ownership" (M_HQ_Final_Ownership: the colour is the owner's PlayerColor, custom primitive data)."""
+    "ownership" (M_Bld_Ownership: the colour is the owner's PlayerColor, custom primitive data)."""
     material = _material(directory, name)
     if kind == "ownership":
         color = _vector(material, -450, 0, "PlayerColor", (0.025, 0.095, 0.2, 1.0), vehicle_art.TEAM_COLOR_INDEX)
@@ -277,7 +291,7 @@ def build_surface_material(directory, name, kind):
 
 
 def build_coating_material(directory, name, textures):
-    """M_HQ17_Coating: painted and coated surfaces, the instance's colour times the 2 m coating texture, its roughness
+    """M_Bld_Coating: painted and coated surfaces, the instance's colour times the 2 m coating texture, its roughness
     moved by the coating's (COATING_ROUGHNESS_MEAN), the coating's normal. textures: {parameter: texture}."""
     material = _material(directory, name)
     color = _vector(material, -450, 0, "SurfaceColor", (0.5, 0.5, 0.5, 1.0))
@@ -445,6 +459,44 @@ def build_beacon_material(directory, name):
     material.set_editor_property("used_with_instanced_static_meshes", True)
     return _finish(material)
 
+
+
+def build_lens_material(directory, name):
+    """M_Kit_Lens, every kit piece's lit glass (#388): metal, glass or LED from its instance's SurfaceColor, Roughness and
+    Metallic, with the finish normal baked on UV1 (FinishNormal, the tangent basis on UV0, BUILDING_KIT.md). It glows as
+    LENS_HLSL works out from its instance's custom data (LENS_LEVEL..LENS_COLOR), the building's Fixtures group and
+    Operational, and the dark (LIGHT_NIGHT_INDEX), which lifts it from DayGain to full Intensity. No light of its own."""
+    material = _material(directory, name)
+    color = _vector(material, -450, -500, "SurfaceColor", (0.8, 0.8, 0.8, 1.0))
+    roughness = _scalar(material, -450, -340, "Roughness", 0.4)
+    metallic = _scalar(material, -450, -180, "Metallic", 0.0)
+    uv1 = _node(material, unreal.MaterialExpressionTextureCoordinate, -750, -100, coordinate_index=1)
+    finish = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, -450, -100, parameter_name="FinishNormal",
+                   texture=unreal.load_asset(FLAT_NORMAL), sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
+    _connect(uv1, "", finish, "UVs")
+    _output(material, color, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
+    _output(material, roughness, "", unreal.MaterialProperty.MP_ROUGHNESS)
+    _output(material, metallic, "", unreal.MaterialProperty.MP_METALLIC)
+    _output(material, finish, "RGB", unreal.MaterialProperty.MP_NORMAL)
+
+    pins = {}
+    for index, (pin, data) in enumerate((("Level", LENS_LEVEL), ("Group", LENS_GROUP), ("Fault", LENS_FAULT),
+                                         ("Flash", LENS_FLASH))):
+        pins[pin] = _node(material, unreal.MaterialExpressionPerInstanceCustomData, -900, 120 * index, data_index=data)
+    pins["Color"] = _node(material, unreal.MaterialExpressionPerInstanceCustomData3Vector, -900, 500, data_index=LENS_COLOR)
+    pins["Operational"] = _scalar(material, -900, 620, "Operational", 1.0, vehicle_art.LAMP_ON_INDEX)
+    pins["Fixtures"] = _scalar(material, -900, 720, "FixturesOn", 1.0, LIGHT_GROUP_INDICES["Fixtures"])
+    pins["Night"] = _scalar(material, -900, 820, "Night", 0.0, LIGHT_NIGHT_INDEX)
+    pins["DayGain"] = _scalar(material, -900, 920, "DayGain", 0.1)
+    pins["Intensity"] = _scalar(material, -900, 1020, "Intensity", 3.0)
+    pins["Time"] = _node(material, unreal.MaterialExpressionTime, -900, 1120)
+    glow = vehicle_art._custom(material, -400, 400, LENS_HLSL, list(pins))
+    for pin, node in pins.items():
+        _connect(node, "", glow, pin)
+    _output(material, glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    # The kit's pieces are drawn instanced, one component per mesh per building.
+    material.set_editor_property("used_with_instanced_static_meshes", True)
+    return _finish(material)
 
 def build_material_instance(directory, name, parent, scalars, vectors):
     """An instance of parent with the delivery's values. The parent is set first and the instance updated after, so the

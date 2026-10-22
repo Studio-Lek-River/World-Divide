@@ -1,0 +1,42 @@
+{
+  "game/SM_HQ_ShellDetail_LOD1.fbx": {
+    "Normals": {
+      "vectors": 9906,
+      "zero": 0,
+      "min": 0.9999998494500907,
+      "max": 1.0000001340812528
+    },
+    "Binormals": {
+      "vectors": 31965,
+      "zero": 0,
+      "min": 0.999999767446484,
+      "max": 1.0000002384406945
+    },
+    "Tangents": {
+      "vectors": 31965,
+      "zero": 0,
+      "min": 0.9999998485835763,
+      "max": 1.0000001546476684
+    }
+  },
+  "issue379/preview_fbx/SM_HQ_ShellDetail_LOD1.fbx": {
+    "Normals": {
+      "vectors": 10063,
+      "zero": 0,
+      "min": 0.9999998494500907,
+      "max": 1.0000001494360062
+    },
+    "Binormals": {
+      "vectors": 31965,
+      "zero": 0,
+      "min": 0.999999767446484,
+      "max": 1.0000002348181125
+    },
+    "Tangents": {
+      "vectors": 31965,
+      "zero": 0,
+      "min": 0.9999998485835763,
+      "max": 1.000000154267081
+    }
+  }
+}

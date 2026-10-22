@@ -39,7 +39,7 @@ namespace RTSPrimitiveData
 	constexpr int32 LampOn = 8;
 
 	/**
-	 * M_HQ_Final_Operational's lighting groups (#195): 1 while the group glows, 0 switched off (ARTSBuilding::SetLightGroupOn,
+	 * M_Bld_Operational's lighting groups (#195): 1 while the group glows, 0 switched off (ARTSBuilding::SetLightGroupOn,
 	 * for the state controller, #196), 1 when unset; each instance belongs to one group or none. Night is 1 in the dark,
 	 * when the glow rises to the instance's NightGain (URTSBuildingLightSubsystem).
 	 */
@@ -47,4 +47,25 @@ namespace RTSPrimitiveData
 	constexpr int32 LightFixtures = 10;
 	constexpr int32 LightAccents = 11;
 	constexpr int32 LightNight = 12;
+}
+
+/**
+ * M_Kit_Lens's per-instance custom data (#387, #388): the floats each kit lens instance carries in its instanced component
+ * (SetNumCustomDataFloats(Floats) before the instances are added; SetCustomData per instance, then one
+ * MarkRenderInstancesDirty). The lens also reads the building's custom primitive data above: Operational (LampOn),
+ * the Fixtures group (LightFixtures) and the dark (LightNight). Tools/Editor/building_art.py builds it with the same numbers.
+ */
+namespace RTSKitLensData
+{
+	/** How bright the lens glows, 0 off to 1 full. */
+	constexpr int32 Level = 0;
+	/** 1 when the building's Fixtures group switches the lens, 0 when it ignores the group. */
+	constexpr int32 Group = 1;
+	/** A fault's flicker phase, 0 for no fault. */
+	constexpr int32 Fault = 2;
+	/** A flashing lens's phase, 0 for a steady one. */
+	constexpr int32 Flash = 3;
+	/** The glow's colour, RGB, from 4 to 6. */
+	constexpr int32 Color = 4;
+	constexpr int32 Floats = 7;
 }

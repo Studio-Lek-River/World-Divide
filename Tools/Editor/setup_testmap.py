@@ -109,6 +109,9 @@ USA_HQ_DIR = "/Game/Art/USA/Buildings/USAHQ"
 # building that places them), the flags of Art/Shared/flags/flags.json, their shared masters, and DA_FlagTypes.
 SHARED_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Shared")
 SHARED_DIR = "/Game/Art/Shared"
+# The generic building masters every building draws with (#388), and the kit's masters (docs/art/BUILDING_KIT.md).
+BUILDING_MATERIAL_DIR = f"{SHARED_DIR}/Materials/Building"
+KIT_MATERIAL_DIR = f"{SHARED_DIR}/Kit/Materials"
 FLAG_DATA_DIR = "/Game/Data/Flags"
 FLAG_TEXTURE_SETTINGS = {"srgb": True, "compression": "TC_Default", "lod_group": "TEXTUREGROUP_World", "resize": None}
 # The garage door's cycle as delivered (animation/CT_HQ20_DoorMotion.csv), a curve table the garage plays (#192).
@@ -451,15 +454,31 @@ def make_m20_guardian(exhaust_system, dust_system):
     }
 
 
-# The USA HQ's masters (building_art.py): name -> how to build it from the HQ's textures.
+# The generic building masters (building_art.py, #388) in BUILDING_MATERIAL_DIR: name -> how to build it from the shared
+# textures.
+BUILDING_MASTERS = {
+    "M_Bld_Surface": lambda d, n, t: building_art.build_surface_material(d, n, "surface"),
+    "M_Bld_Glass": lambda d, n, t: building_art.build_surface_material(d, n, "glass"),
+    "M_Bld_Operational": lambda d, n, t: building_art.build_surface_material(d, n, "operational"),
+    "M_Bld_Ownership": lambda d, n, t: building_art.build_surface_material(d, n, "ownership"),
+    "M_Bld_Coating": lambda d, n, t: building_art.build_coating_material(d, n, {
+        "CoatingBaseColor": t["T_Bld_Coating_2m_BaseColor"], "CoatingRoughness": t["T_Bld_Coating_2m_Roughness"],
+        "CoatingNormal": t["T_Bld_Coating_2m_Normal"]}),
+}
+# The 2 m coating M_Bld_Coating samples: the USA HQ's delivered textures (usa_hq.json's settings), imported as the shared
+# T_Bld_Coating_2m_<map>.
+BUILDING_TEXTURES = {f"T_Bld_Coating_2m_{map_name}": f"T_HQ17_Coating_2m_{map_name}"
+                     for map_name in ("BaseColor", "Normal", "Roughness")}
+# usa_hq.json's parents as delivered -> the generic master each one now is.
+USA_HQ_SHARED_PARENTS = {
+    "M_HQ17_Surface": "M_Bld_Surface",
+    "M_HQ17_Glass": "M_Bld_Glass",
+    "M_HQ_Final_Operational": "M_Bld_Operational",
+    "M_HQ_Final_Ownership": "M_Bld_Ownership",
+    "M_HQ17_Coating": "M_Bld_Coating",
+}
+# The USA HQ's own masters (building_art.py): name -> how to build it from the HQ's textures.
 USA_HQ_MASTERS = {
-    "M_HQ17_Surface": lambda d, n, t: building_art.build_surface_material(d, n, "surface"),
-    "M_HQ17_Glass": lambda d, n, t: building_art.build_surface_material(d, n, "glass"),
-    "M_HQ_Final_Operational": lambda d, n, t: building_art.build_surface_material(d, n, "operational"),
-    "M_HQ_Final_Ownership": lambda d, n, t: building_art.build_surface_material(d, n, "ownership"),
-    "M_HQ17_Coating": lambda d, n, t: building_art.build_coating_material(d, n, {
-        "CoatingBaseColor": t["T_HQ17_Coating_2m_BaseColor"], "CoatingRoughness": t["T_HQ17_Coating_2m_Roughness"],
-        "CoatingNormal": t["T_HQ17_Coating_2m_Normal"]}),
     "M_HQ20_FloorWear": lambda d, n, t: building_art.build_ground_material(
         d, n, t["T_HQ20_Floor_BaseColor"], t["T_HQ20_Floor_Roughness"], False),
     "M_HQ21_PavingWear": lambda d, n, t: building_art.build_ground_material(
@@ -554,6 +573,43 @@ def make_shared_props():
     return instances, flag_types
 
 
+def make_building_masters():
+    """The generic building masters every building draws with (#388): BUILDING_MASTERS in BUILDING_MATERIAL_DIR with the
+    2 m coating they sample (BUILDING_TEXTURES) in its Textures folder, and the kit's M_Kit_Lens in KIT_MATERIAL_DIR.
+    Returns the masters by name."""
+    hq_textures = building_art.read_layout(os.path.join(USA_HQ_SOURCE_DIR, "usa_hq.json"))["textures"]
+    texture_dir = f"{BUILDING_MATERIAL_DIR}/Textures"
+    textures = {}
+    for name, delivered in sorted(BUILDING_TEXTURES.items()):
+        source = os.path.join(USA_HQ_SOURCE_DIR, "textures", f"{delivered}.png")
+        settings = hq_textures[delivered]
+        textures[name] = plan_now(
+            f"{texture_dir}/{name}",
+            lambda s=source, n=name, t=settings: building_art.import_texture(s, texture_dir, n, t),
+            spec_hash([building_art.import_texture], texture_dir, name, sorted(settings.items()), file_hash(source)))
+
+    builders = [building_art.build_surface_material, building_art.build_coating_material, building_art._material,
+                building_art._vector, building_art._scalar, building_art._multiply, building_art._add]
+    constants = (vehicle_art.TEAM_COLOR_INDEX, vehicle_art.LAMP_ON_INDEX, building_art.COATING_ROUGHNESS_MEAN,
+                 building_art.COATING_ROUGHNESS_RANGE, sorted(building_art.LIGHT_GROUP_INDICES.items()),
+                 building_art.LIGHT_NIGHT_INDEX)
+    masters = {}
+    for name, build in BUILDING_MASTERS.items():
+        masters[name] = plan_now(
+            f"{BUILDING_MATERIAL_DIR}/{name}", lambda b=build, n=name: b(BUILDING_MATERIAL_DIR, n, textures),
+            spec_hash(builders + [build], BUILDING_MATERIAL_DIR, name, constants,
+                      sorted(map(object_path, textures.values()))))
+    masters["M_Kit_Lens"] = plan_now(
+        f"{KIT_MATERIAL_DIR}/M_Kit_Lens", lambda: building_art.build_lens_material(KIT_MATERIAL_DIR, "M_Kit_Lens"),
+        spec_hash([building_art.build_lens_material, building_art._material, building_art._vector, building_art._scalar,
+                   vehicle_art._custom], KIT_MATERIAL_DIR, constants, building_art.LENS_HLSL, building_art.FLAT_NORMAL,
+                  (building_art.LENS_LEVEL, building_art.LENS_GROUP, building_art.LENS_FAULT, building_art.LENS_FLASH,
+                   building_art.LENS_COLOR)))
+    delete_stale_assets(texture_dir, set(textures))
+    delete_stale_assets(BUILDING_MATERIAL_DIR, set(BUILDING_MASTERS))
+    return masters
+
+
 def make_usa_hq():
     """Imports the USA HQ (building_art.py) as usa_hq.json lays it out and returns its root mesh, its footprint and its
     building data properties: the architecture is Mesh at real size, every other mesh a part where the delivery placed
@@ -562,30 +618,32 @@ def make_usa_hq():
     switch LODs with it too; the flag flies the layout's flag from DA_FlagTypes, and the parts that turn have their motion."""
     layout = building_art.read_layout(os.path.join(USA_HQ_SOURCE_DIR, "usa_hq.json"))
     shared_instances, flag_types = make_shared_props()
+    shared_masters = make_building_masters()
     texture_dir, material_dir, mesh_dir = (f"{USA_HQ_DIR}/{folder}" for folder in ("Textures", "Materials", "Meshes"))
 
+    # The coating is the shared masters' since #388.
+    own_textures = {name: settings for name, settings in layout["textures"].items()
+                    if name not in BUILDING_TEXTURES.values()}
     textures = {}
-    for name, settings in sorted(layout["textures"].items()):
+    for name, settings in sorted(own_textures.items()):
         source = os.path.join(USA_HQ_SOURCE_DIR, "textures", f"{name}.png")
         textures[name] = plan_now(
             f"{texture_dir}/{name}",
             lambda s=source, n=name, t=settings: building_art.import_texture(s, texture_dir, n, t),
             spec_hash([building_art.import_texture], texture_dir, name, sorted(settings.items()), file_hash(source)))
 
-    builders = [building_art.build_surface_material, building_art.build_coating_material,
-                building_art.build_ground_material, building_art._material,
-                building_art._vector, building_art._scalar, building_art._multiply, building_art._add]
-    constants = (vehicle_art.TEAM_COLOR_INDEX, vehicle_art.LAMP_ON_INDEX, building_art.COATING_ROUGHNESS_MEAN,
-                 building_art.COATING_ROUGHNESS_RANGE, building_art.SOIL_ROUGHNESS)
+    builders = [building_art.build_ground_material, building_art._material]
     masters = {}
     for name, build in USA_HQ_MASTERS.items():
         masters[name] = plan_now(
             f"{material_dir}/{name}", lambda b=build, n=name: b(material_dir, n, textures),
-            spec_hash(builders + [build], material_dir, name, constants, sorted(map(object_path, textures.values()))))
+            spec_hash(builders + [build], material_dir, name, building_art.SOIL_ROUGHNESS,
+                      sorted(map(object_path, textures.values()))))
+    parents = dict(masters, **{delivered: shared_masters[shared] for delivered, shared in USA_HQ_SHARED_PARENTS.items()})
 
     instances = {}
     for name, record in sorted(layout["material_instances"].items()):
-        parent = masters[record["parent"]]
+        parent = parents[record["parent"]]
         instances[name] = plan_now(
             f"{material_dir}/{name}",
             lambda n=name, p=parent, r=record: building_art.build_material_instance(material_dir, n, p, r["scalars"],
@@ -627,8 +685,10 @@ def make_usa_hq():
                       layout["switch_distance"], vehicle_art.SCREEN_MULTIPLE))
     log_building_budget("USA HQ", meshes, layout)
     delete_stale_assets(mesh_dir, set(layout["meshes"]))
-    # The delivered flag's master and colour instances, which the shared cloth replaced (#351).
+    # The delivered flag's master and colour instances, which the shared cloth replaced (#351), and the generic masters and
+    # their coating, which are shared since #388.
     delete_stale_assets(material_dir, set(masters) | set(instances))
+    delete_stale_assets(texture_dir, set(textures))
 
     def part(record):
         value = unreal.RTSBuildingPart()
@@ -742,7 +802,7 @@ def make_bench_hq(footprint, layout):
     (footprint, collision boxes, sockets, parts in place; layout as make_usa_hq returns it) with the game shell swapped
     for the delivered meshes it stands for (usa_hq.json's delivery_shell), as SM_BenchHQ_Nanite_<part>, Nanite on, as
     delivered. They draw with copies of the HQ's masters that allow Nanite, and draw the glass opaque,
-    MI_BenchHQ_CoolGlass and MI_BenchHQ_WarmGlass on M_HQ17_Surface with the delivery's tints, since Nanite draws no
+    MI_BenchHQ_CoolGlass and MI_BenchHQ_WarmGlass on the surface master with the delivery's tints, since Nanite draws no
     translucency. The moving parts and the flag stay the production meshes. The LOD shell #349 benched beside it is the
     production HQ since #358.
     The bench HQ produces nothing."""
@@ -753,13 +813,16 @@ def make_bench_hq(footprint, layout):
 
     # The shell's masters and instances again in BENCH_HQ_DIR, the masters with the Nanite usage (building_art.allow_nanite),
     # which the production ones lack. The glass is opaque on the surface master.
-    textures = {name: unreal.load_asset(f"{USA_HQ_DIR}/Textures/{name}") for name in hq["textures"]}
+    # The copies keep usa_hq.json's names; the generic ones build as BUILDING_MASTERS, from the shared coating (#388).
+    textures = {name: unreal.load_asset(f"{USA_HQ_DIR}/Textures/{name}") for name in hq["textures"]
+                if name not in BUILDING_TEXTURES.values()}
+    textures.update({name: unreal.load_asset(f"{BUILDING_MATERIAL_DIR}/Textures/{name}") for name in BUILDING_TEXTURES})
     glass = {"MI_HQ17_CoolGlass": "MI_BenchHQ_CoolGlass", "MI_HQ17_WarmGlass": "MI_BenchHQ_WarmGlass"}
     used = sorted({instance for p in shell for instance in delivered[p["mesh"]]["slots"].values()})
     parents = sorted({"M_HQ17_Surface" if name in glass else hq["material_instances"][name]["parent"] for name in used})
     masters = {}
     for name in parents:
-        build = USA_HQ_MASTERS[name]
+        build = USA_HQ_MASTERS[name] if name in USA_HQ_MASTERS else BUILDING_MASTERS[USA_HQ_SHARED_PARENTS[name]]
         masters[name] = plan_now(
             f"{material_dir}/{name}", lambda b=build, n=name: building_art.allow_nanite(b(material_dir, n, textures)),
             spec_hash([building_art.allow_nanite, build, building_art.build_surface_material,

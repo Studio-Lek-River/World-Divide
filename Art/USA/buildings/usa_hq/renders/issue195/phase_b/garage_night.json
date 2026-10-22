@@ -1,0 +1,51 @@
+{
+  "cameraLocation": {
+    "x": 3320.66568132085,
+    "y": -1758.0000000000002,
+    "z": 794.2410434719668
+  },
+  "cameraRotation": {
+    "pitch": -11.999999999999998,
+    "yaw": 180,
+    "roll": 0
+  },
+  "cameraFOV": 90,
+  "grid": {
+    "spacingCm": 0,
+    "extentCm": 0,
+    "height": 0
+  },
+  "labeledActors": [],
+  "arm_m": 18,
+  "target_cm": [
+    1560,
+    -1758,
+    420
+  ],
+  "transform": {
+    "location": {
+      "x": 3320.66568132085,
+      "y": -1758.0000000000002,
+      "z": 794.2410434719668
+    },
+    "rotation": {
+      "pitch": -12,
+      "yaw": 180,
+      "roll": 0
+    }
+  },
+  "capture_type": "Actual Unreal editor; manual LOD selection; not gameplay",
+  "mode": "game",
+  "review_crop": {
+    "raw_horizontal_fov": 90,
+    "effective_horizontal_fov": 60,
+    "rect": [
+      571,
+      196,
+      1561,
+      878
+    ],
+    "aspect": "16:9",
+    "resampling": "none"
+  }
+}

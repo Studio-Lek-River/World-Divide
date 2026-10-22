@@ -1,0 +1,290 @@
+[
+  {
+    "helper": "SOCKET_Flood_West",
+    "target_m": [
+      -1.2940000295639038,
+      -2.5,
+      4.800000190734863
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942571640014648,
+      -2.499713897705078,
+      4.799925804138184
+    ],
+    "distance_to_target_m": 14.16610711432524,
+    "hit_distance_m": 14.166499101358381
+  },
+  {
+    "helper": "SOCKET_Flood_West",
+    "target_m": [
+      -1.2940000295639038,
+      -2.5,
+      5.75
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942571640014648,
+      -2.4997129440307617,
+      5.749951362609863
+    ],
+    "distance_to_target_m": 14.01613090393096,
+    "hit_distance_m": 14.016519634905983
+  },
+  {
+    "helper": "SOCKET_Flood_West",
+    "target_m": [
+      -1.2940000295639038,
+      -2.5,
+      6.650000095367432
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942571640014648,
+      -2.4997129440307617,
+      6.64997673034668
+    ],
+    "distance_to_target_m": 13.932433920398474,
+    "hit_distance_m": 13.932820302138198
+  },
+  {
+    "helper": "SOCKET_Flood_West",
+    "target_m": [
+      -1.2940000295639038,
+      0.0,
+      4.800000190734863
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.294255256652832,
+      0.00035381317138671875,
+      4.799925804138184
+    ],
+    "distance_to_target_m": 16.082987681151632,
+    "hit_distance_m": 16.083430194398357
+  },
+  {
+    "helper": "SOCKET_Flood_West",
+    "target_m": [
+      -1.2940000295639038,
+      0.0,
+      5.75
+    ],
+    "first_hit": "HQ17_StarBadge",
+    "first_hit_m": [
+      -1.244257926940918,
+      -0.06877422332763672,
+      5.759366035461426
+    ],
+    "distance_to_target_m": 15.951044714803718,
+    "hit_distance_m": 15.865652298391952
+  },
+  {
+    "helper": "SOCKET_Flood_West",
+    "target_m": [
+      -1.2940000295639038,
+      0.0,
+      6.650000095367432
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942571640014648,
+      0.0003566741943359375,
+      6.64997673034668
+    ],
+    "distance_to_target_m": 15.877550721815032,
+    "hit_distance_m": 15.877990915865617
+  },
+  {
+    "helper": "SOCKET_Flood_West",
+    "target_m": [
+      -1.2940000295639038,
+      2.5,
+      4.800000190734863
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942562103271484,
+      2.500424385070801,
+      4.799925804138184
+    ],
+    "distance_to_target_m": 18.14239177922319,
+    "hit_distance_m": 18.142893397195248
+  },
+  {
+    "helper": "SOCKET_Flood_West",
+    "target_m": [
+      -1.2940000295639038,
+      2.5,
+      5.75
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942571640014648,
+      2.500425338745117,
+      5.749951362609863
+    ],
+    "distance_to_target_m": 18.025529512677778,
+    "hit_distance_m": 18.026029224349205
+  },
+  {
+    "helper": "SOCKET_Flood_West",
+    "target_m": [
+      -1.2940000295639038,
+      2.5,
+      6.650000095367432
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942581176757812,
+      2.500425338745117,
+      6.64997673034668
+    ],
+    "distance_to_target_m": 17.960526262962315,
+    "hit_distance_m": 17.96102457411186
+  },
+  {
+    "helper": "SOCKET_Flood_East",
+    "target_m": [
+      -1.2940000295639038,
+      -2.5,
+      4.800000190734863
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942590713500977,
+      -2.500253677368164,
+      4.799936771392822
+    ],
+    "distance_to_target_m": 18.871747425075785,
+    "hit_distance_m": 18.8721161211847
+  },
+  {
+    "helper": "SOCKET_Flood_East",
+    "target_m": [
+      -1.2940000295639038,
+      -2.5,
+      5.75
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942581176757812,
+      -2.5002527236938477,
+      5.749955177307129
+    ],
+    "distance_to_target_m": 18.731560910139045,
+    "hit_distance_m": 18.73192564516138
+  },
+  {
+    "helper": "SOCKET_Flood_East",
+    "target_m": [
+      -1.2940000295639038,
+      -2.5,
+      6.650000095367432
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942590713500977,
+      -2.500253677368164,
+      6.649972915649414
+    ],
+    "distance_to_target_m": 18.642487537609558,
+    "hit_distance_m": 18.642851758080756
+  },
+  {
+    "helper": "SOCKET_Flood_East",
+    "target_m": [
+      -1.2940000295639038,
+      0.0,
+      4.800000190734863
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942581176757812,
+      -0.0002040863037109375,
+      4.7999372482299805
+    ],
+    "distance_to_target_m": 17.24543829047103,
+    "hit_distance_m": 17.245773765213475
+  },
+  {
+    "helper": "SOCKET_Flood_East",
+    "target_m": [
+      -1.2940000295639038,
+      0.0,
+      5.75
+    ],
+    "first_hit": "HQ17_StarBadge",
+    "first_hit_m": [
+      -1.2442569732666016,
+      0.039287567138671875,
+      5.75860595703125
+    ],
+    "distance_to_target_m": 17.091918121873825,
+    "hit_distance_m": 17.027950394201305
+  },
+  {
+    "helper": "SOCKET_Flood_East",
+    "target_m": [
+      -1.2940000295639038,
+      0.0,
+      6.650000095367432
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942581176757812,
+      -0.0002040863037109375,
+      6.649972915649414
+    ],
+    "distance_to_target_m": 16.99425292693143,
+    "hit_distance_m": 16.994583560777343
+  },
+  {
+    "helper": "SOCKET_Flood_East",
+    "target_m": [
+      -1.2940000295639038,
+      2.5,
+      4.800000190734863
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942571640014648,
+      2.499845504760742,
+      4.7999372482299805
+    ],
+    "distance_to_target_m": 15.848262527975729,
+    "hit_distance_m": 15.848569449238669
+  },
+  {
+    "helper": "SOCKET_Flood_East",
+    "target_m": [
+      -1.2940000295639038,
+      2.5,
+      5.75
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942581176757812,
+      2.4998440742492676,
+      5.749955177307129
+    ],
+    "distance_to_target_m": 15.681069746992206,
+    "hit_distance_m": 15.681375166574778
+  },
+  {
+    "helper": "SOCKET_Flood_East",
+    "target_m": [
+      -1.2940000295639038,
+      2.5,
+      6.650000095367432
+    ],
+    "first_hit": "HQ17_TowerBase_E4_SignPanel",
+    "first_hit_m": [
+      -1.2942590713500977,
+      2.4998435974121094,
+      6.649972915649414
+    ],
+    "distance_to_target_m": 15.574559893291138,
+    "hit_distance_m": 15.5748639648828
+  }
+]
