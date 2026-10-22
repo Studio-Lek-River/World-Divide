@@ -287,6 +287,8 @@ def build_surface_material(directory, name, kind):
         material.set_editor_property("translucency_lighting_mode",
                                      unreal.TranslucencyLightingMode.TLM_SURFACE_PER_PIXEL_LIGHTING)
         material.set_editor_property("screen_space_reflections", True)
+    # Parts several placements share and the kit's pieces (#389) draw from one instanced component.
+    material.set_editor_property("used_with_instanced_static_meshes", True)
     return _finish(material)
 
 
@@ -349,7 +351,7 @@ def _seed(material, x, y):
 
 
 def build_flag_material(directory, name, texture):
-    """M_Flag_Cloth, the shared waving flag (#351) on SM_Flag_Cloth: the flag's texture (FlagTexture, an instance's per
+    """M_Flag_Cloth, the shared waving flag (#351) on the kit's SM_Kit_FlagCloth: the flag's texture (FlagTexture, an instance's per
     flag, texture by default) over UV0, never the owner's colours, waving by world position offset (FLAG_WPO_HLSL with
     FLAG_PARAMETERS): across the cloth (its local Y in the world) and sagging down, nothing at the hoist (U 0), so the cloth
     stays on its pole, and fading out with the distance from the camera. Two-sided, its normal the cross of the moved
@@ -396,6 +398,8 @@ def build_flag_material(directory, name, texture):
     side = _node(material, unreal.MaterialExpressionTwoSidedSign, -200, 820)
     shaded = _multiply(material, 0, 700, normalized, "", side, "")
     _output(material, shaded, "", unreal.MaterialProperty.MP_NORMAL)
+    # A kit piece (#389), which may draw from an instanced component.
+    material.set_editor_property("used_with_instanced_static_meshes", True)
     return _finish(material)
 
 
@@ -418,7 +422,7 @@ def build_flag_instance(directory, name, parent, texture):
 
 
 def build_beacon_material(directory, name):
-    """M_Beacon_Obstruction, the shared mast beacon (#351) on SM_Beacon_Obstruction: the housing (UV0.U < 0.5)
+    """M_Beacon_Obstruction, the shared mast beacon (#351) on the kit's SM_Kit_MastBeaconSingle: the housing (UV0.U < 0.5)
     HousingColor, the lens LensOffColor and flashing LensColor as BEACON_HLSL works it out from BEACON_PARAMETERS, times Operational
     (custom primitive data LAMP_ON_INDEX), so it is dark while the building is not operational. No light, no shadow: the
     glow alone."""
@@ -608,6 +612,32 @@ def import_mesh(source, directory, name, slot_materials, bounds, expected_triang
     unreal.log(f"building_art: {name} LODs " + ", ".join(f"{mesh.get_num_triangles(i)}" for i in range(mesh.get_num_lods())) +
                f" triangles (of {imported}), {mesh.get_num_sections(0)} sections, radius {radius:.0f} cm, screen sizes "
                f"{[round(s, 4) for s in mesh_editing.get_lod_screen_sizes(mesh)]} (LOD1 from {switch_distance / 100:.0f} m)")
+    return mesh
+
+
+def import_kit_mesh(source, directory, name, slot_materials, bounds, triangles, switch_distance, lod1_source=None):
+    """Imports one piece of the shared kit (#389, docs/art/BUILDING_KIT.md) at its own origin, as import_mesh does a
+    building's (no Nanite, no collision, slots bound by name), with its hand-made LOD1 lod1_source or LOD0 alone (class S).
+    A kit mesh is shared by every building, so its bounds stay its own (no cover_building): LOD1 comes in at
+    switch_distance cm for its box's half diagonal, as an instanced component measures it, until the building forces its
+    one LOD decision on all its meshes (#387, C2)."""
+    mesh = vehicle_art.import_part(source, directory, name, slot_materials, bounds[1][0] - bounds[0][0])
+    _reset_lods(mesh, triangles[0])
+    if mesh.get_num_triangles(0) != triangles[0]:
+        raise RuntimeError(f"{source} imported {mesh.get_num_triangles(0)} triangles instead of {triangles[0]}")
+    if not lod1_source:
+        unreal.log(f"building_art: kit {name} LOD0 {triangles[0]} triangles, no LOD1")
+        return mesh
+    mesh_editing = vehicle_art._mesh_editing()
+    if mesh_editing.import_lod(mesh, 1, lod1_source) != 1:
+        raise RuntimeError(f"{name}: could not import LOD1 from {lod1_source}")
+    if mesh.get_num_triangles(1) != triangles[1]:
+        raise RuntimeError(f"{lod1_source} imported {mesh.get_num_triangles(1)} triangles instead of {triangles[1]}")
+    screen_sizes = [1.0, 2.0 * vehicle_art.SCREEN_MULTIPLE * vehicle_art.lod_radius(mesh, True) / switch_distance]
+    if not mesh_editing.set_lod_screen_sizes(mesh, screen_sizes):
+        raise RuntimeError(f"{name}: could not set its LOD screen sizes")
+    unreal.log(f"building_art: kit {name} LODs {triangles} triangles, screen sizes "
+               f"{[round(s, 4) for s in mesh_editing.get_lod_screen_sizes(mesh)]}")
     return mesh
 
 

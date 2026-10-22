@@ -4,6 +4,8 @@ Intermediate/
 Saved/
 DerivedDataCache/
 Build/
+# The kit's derived manifest (Tools/Art/kit_blender.py) is committed; Build/ above matches its folder on Windows.
+!Art/Shared/kit/build/
 **/Plugins/*/Binaries/
 **/Plugins/*/Intermediate/
 

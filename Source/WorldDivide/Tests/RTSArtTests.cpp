@@ -77,6 +77,8 @@ namespace
 	/** The generic building masters every building draws with (#388), and the kit's masters. */
 	const TCHAR* BuildingMaterialDir = TEXT("/Game/Art/Shared/Materials/Building");
 	const TCHAR* KitMaterialDir = TEXT("/Game/Art/Shared/Kit/Materials");
+	/** The shared building kit's assets (docs/art/BUILDING_KIT.md). */
+	const TCHAR* KitDir = TEXT("/Game/Art/Shared/Kit/");
 	const TCHAR* FlagTypesPath = TEXT("/Game/Data/Flags/DA_FlagTypes.DA_FlagTypes");
 	/** The HQ's parts that turn on their own (#351): four fans, the radar and the wing dish's azimuth and elevation. */
 	const TCHAR* HeadquartersMovingParts[] = { TEXT("ER_Cooling_Fan1_Rotor"), TEXT("WF_Condenser_Fan1_Rotor"), TEXT("WM_AHU_Fan1_Rotor"),
@@ -326,17 +328,19 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 			Budgets.IsEmpty() ? 1 : 2);
 
 		// One switch for the whole building: the mesh's bounds cover the building's from every place it is drawn, so each
-		// part measures its LOD from about the building's middle, and LOD1 comes in at 260 m for those bounds.
+		// part measures its LOD from about the building's middle, and LOD1 comes in at 260 m for those bounds. The kit's
+		// pieces are shared by every building and keep their own bounds (#389); WorldDivide.Art.Kit checks them.
+		const bool bKit = Mesh->GetPathName().StartsWith(KitDir);
 		TArray<FTransform> Where;
 		Placements.MultiFind(Mesh, Where);
-		for (const FTransform& Transform : Where)
+		for (const FTransform& Transform : bKit ? TArray<FTransform>() : Where)
 		{
 			TestTrue(*FString::Printf(TEXT("%s's bounds cover the building's"), *Mesh->GetName()),
 				Mesh->GetBounds().GetBox().TransformBy(Transform).IsInside(Building.ExpandBy(-1.0)));
 		}
 		// A mesh several parts draw is instanced, which the GPU measures by its box's half diagonal.
 		const double Radius = Where.Num() > 1 ? Mesh->GetBounds().BoxExtent.Size() : Mesh->GetBounds().SphereRadius;
-		if (Mesh->GetNumLODs() > 1)
+		if (Mesh->GetNumLODs() > 1 && !bKit)
 		{
 			const float ScreenSize = RenderData->ScreenSize[1].GetValue();
 			const double Wanted = 2.0 * RTSLensScreenMultiple * Radius / HeadquartersSwitchDistance;

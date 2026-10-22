@@ -1,0 +1,54 @@
+{
+ "about": "Derived: written by Tools/Art/kit_blender.py from kit_catalogue.json. Do not edit.",
+ "pieces": {
+  "identity/01_FlagCloth": {
+   "mesh": "SM_Kit_FlagCloth",
+   "fbx": "identity/01_FlagCloth/SM_Kit_FlagCloth.fbx",
+   "lod1_fbx": "identity/01_FlagCloth/SM_Kit_FlagCloth_LOD1.fbx",
+   "slots": [
+    "Flag"
+   ],
+   "triangles": [
+    1920,
+    120
+   ],
+   "bounds": [
+    [
+     0.0,
+     0.0,
+     -100.0
+    ],
+    [
+     100.0,
+     0.0,
+     0.0
+    ]
+   ],
+   "lens_bounds": null
+  },
+  "lighting/12_MastBeaconSingle": {
+   "mesh": "SM_Kit_MastBeaconSingle",
+   "fbx": "lighting/12_MastBeaconSingle/SM_Kit_MastBeaconSingle.fbx",
+   "lod1_fbx": null,
+   "slots": [
+    "Beacon"
+   ],
+   "triangles": [
+    234
+   ],
+   "bounds": [
+    [
+     -22.0,
+     -22.0,
+     0.0
+    ],
+    [
+     22.0,
+     22.0,
+     56.0
+    ]
+   ],
+   "lens_bounds": null
+  }
+ }
+}

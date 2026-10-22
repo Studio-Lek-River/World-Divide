@@ -30,7 +30,11 @@ No kit piece adds an actor or a ticking component.
   its budgets.
 - `Tools/Art/kit_blender.py` reads the catalogue, builds each piece with its module `Tools/Art/kit/<piece>.py`, and
   writes the FBX, the `_LOD1.fbx` and the **derived** manifest `Art/Shared/kit/build/kit_manifest.json`: triangles per
-  LOD, bounds, material sections and the measured bounds of the `Lens` island. Nobody edits the manifest.
+  LOD, bounds, material slots and the measured bounds of the `Lens` island. Nobody edits the manifest. Run it with
+  Blender (`blender -b --python Tools/Art/kit_blender.py`) after a catalogue or module change, and commit its output.
+- A module is the piece's name in snake case (`FlagCloth` → `flag_cloth.py`). Its `build(piece)` gets the catalogue
+  entry and returns the LOD0 object and the LOD1 object, or `None` for a piece that keeps LOD0 alone (class S). Its slots
+  are its Blender materials' names, in the catalogue's order; the lit glass is the material `Lens`.
 - Setup (`make_kit()` in `Tools/Editor/setup_testmap.py`) imports the meshes and **generates** one `DA_Kit_<Piece>`
   (`URTSKitPieceData`) per piece from catalogue plus manifest, behind the `plan_now` hash gate, so a second run changes
   nothing. Never edit a `DA_Kit_*` by hand: the next setup overwrites it.
@@ -64,9 +68,10 @@ Tools/Art/kit/<piece>.py                one module per piece
 
 - No kit piece goes in a building's own folder (`Art/USA/buildings/...`, `/Game/Art/USA/Buildings/...`). A building only
   *mounts* pieces.
-- The shared flag (`SM_Flag_Cloth`) and the obstruction beacon (`SM_Beacon_Obstruction`) move from `Art/Shared/props/`
-  into the kit (identity and lighting) in M7.00-04; `Art/Shared/props/` and `PROP_SLOTS`/`PROP_BUDGETS` in
-  `usa_hq_recipe.py` then disappear.
+- The shared flag and the obstruction beacon moved from `Art/Shared/props/` into the kit in M7.00-04 (#389), as
+  `identity/01_FlagCloth` (`SM_Kit_FlagCloth`) and `lighting/12_MastBeaconSingle` (`SM_Kit_MastBeaconSingle`, cut to class
+  S: 12 segments, 234 triangles, one LOD). Until 12 is remodelled (M7.00-08) it keeps its one `Beacon` slot, its lens told
+  apart by UV0, on `M_Beacon_Obstruction`; the flag keeps `M_Flag_Cloth`, its flag set per building from `DA_FlagTypes`.
 
 ## Naming
 
@@ -122,6 +127,8 @@ plate, X out of the wall (the direction the lamp faces), Z up, centimetres.
 }
 ```
 
+The catalogue file is `{"pieces": [ ... ]}`.
+
 | Field | Meaning |
 |---|---|
 | `id` | `<category>/<NN>_<Piece>`; unique, never reused |
@@ -130,8 +137,10 @@ plate, X out of the wall (the direction the lamp faces), Z up, centimetres.
 | `faction` | `neutral` or `usa` (later `china`, `insurgents`) |
 | `slots` | at most 2 material slots, named after the surface; the lit glass is always `Lens` |
 | `atlas` | which shared atlas each slot samples: `Trim` or `Lens` |
+| `materials` | optional: slot → a shared instance by name (`MI_Beacon_Obstruction`); a slot it leaves out takes its faction's `MI_Kit_<Faction>_<Slot>` (`MI_Kit_Neutral_Housing` on `M_Bld_Surface`, `MI_Kit_Neutral_Lens` on `M_Kit_Lens`) |
 | `light` | absent for emissive-only pieces (S class); otherwise one real light, see below |
-| `light.anchor` | the named island it shines from: always `Lens`. The light stands inside the island's measured bounds (manifest) and points out of it |
+| `light.anchor` | the named island it shines from: always `Lens`. Setup puts the light in the middle of the lens face it shines through (manifest bounds); a Rect is as wide and high as that face |
+| `light.rotation` | optional: pitch, yaw, roll of the light in the fixture frame; `[0, 0, 0]` (default) shines along +X |
 | `light.type` | `Point`, `Spot` or `Rect` (`ERTSBuildingLightType`) |
 | `light.candela` | intensity, within the class maximum |
 | `light.kelvin` | colour temperature of the real fixture class |
@@ -145,6 +154,9 @@ plate, X out of the wall (the direction the lamp faces), Z up, centimetres.
 | `fault_response` | `None`, `Flicker` or `Off`: what damage does to it, see the state table |
 | `mount_points` | named frames on the piece where it meets the building |
 | `budgets` | LOD0 and LOD1 triangles and slots, within its class |
+
+`DA_Kit_<Piece>` (`URTSKitPieceData`, `Source/WorldDivide/Data/RTSKitPieceData.h`) holds the same values plus the
+measured `LensBounds` and the light's position (`FRTSKitLight`). The class limits below are `RTSKit::GetClassLimits`.
 
 ## Mounts
 
@@ -287,7 +299,7 @@ approved.
 | 09 | Small configurable indicator LED | `SM_Kit_IndicatorLED` | S | none (emissive) | colour per mount | None | — |
 | 10 | Path/area lamp | `SM_Kit_PathLamp` | L | Spot down, Secondary | Fixtures | None | — |
 | 11 | Perimeter pole lamp | `SM_Kit_PoleLamp` | XL | Spot down | Fixtures | None | — |
-| 12 | Single red mast LED beacon | `SM_Kit_MastBeaconSingle` | S | none (emissive) | obstruction, battery | None | is `SM_Beacon_Obstruction` |
+| 12 | Single red mast LED beacon | `SM_Kit_MastBeaconSingle` | S | none (emissive) | obstruction, battery | None | was `SM_Beacon_Obstruction` (#389) |
 | 13 | Dual red mast LED beacon | `SM_Kit_MastBeaconDual` | S | none (emissive) | obstruction, battery | None | — |
 | 14 | Multicolour status LED cluster | `SM_Kit_StatusCluster` | S | none (emissive) | colour/pattern per mount | None | — |
 

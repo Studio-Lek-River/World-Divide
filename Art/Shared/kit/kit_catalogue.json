@@ -1,0 +1,29 @@
+{
+ "about": "The shared building kit's catalogue, the only hand-edited kit file (docs/art/BUILDING_KIT.md). Tools/Art/kit_blender.py builds each piece from it, setup_testmap.py's make_kit() generates DA_Kit_<Piece> from it.",
+ "pieces": [
+  {
+   "id": "identity/01_FlagCloth",
+   "mesh": "SM_Kit_FlagCloth",
+   "class": "L",
+   "faction": "neutral",
+   "slots": ["Flag"],
+   "materials": {"Flag": "MI_Flag_USA"},
+   "emergency_default": false,
+   "fault_response": "None",
+   "mount_points": {"Hoist": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 1920, "lod1": 120, "slots": 1}
+  },
+  {
+   "id": "lighting/12_MastBeaconSingle",
+   "mesh": "SM_Kit_MastBeaconSingle",
+   "class": "S",
+   "faction": "neutral",
+   "slots": ["Beacon"],
+   "materials": {"Beacon": "MI_Beacon_Obstruction"},
+   "emergency_default": true,
+   "fault_response": "None",
+   "mount_points": {"Base": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 250, "lod1": 250, "slots": 1}
+  }
+ ]
+}

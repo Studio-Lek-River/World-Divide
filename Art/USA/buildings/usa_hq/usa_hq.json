@@ -66,7 +66,7 @@
   },
   {
    "name": "Beacon_MastTipCore",
-   "mesh": "SM_Beacon_Obstruction",
+   "mesh": "SM_Kit_MastBeaconSingle",
    "location": [
     -898.7123,
     0.0,
@@ -91,7 +91,7 @@
   },
   {
    "name": "Beacon_MastTipEast",
-   "mesh": "SM_Beacon_Obstruction",
+   "mesh": "SM_Kit_MastBeaconSingle",
    "location": [
     -1090.0,
     -1995.0001,
@@ -735,7 +735,7 @@
   },
   {
    "name": "NationalFlag",
-   "mesh": "SM_Flag_Cloth",
+   "mesh": "SM_Kit_FlagCloth",
    "location": [
     1150.0,
     10.5,
@@ -1434,11 +1434,8 @@
     2700
    ]
   },
-  "SM_Flag_Cloth": {
-   "fbx": "../../../Shared/props/SM_Flag_Cloth.fbx",
-   "slots": {
-    "Flag": "MI_Flag_USA"
-   },
+  "SM_Kit_FlagCloth": {
+   "kit": "identity/01_FlagCloth",
    "triangles": 1920,
    "bounds": [
     [
@@ -1455,15 +1452,11 @@
    "lods": [
     1920,
     120
-   ],
-   "shared": true
+   ]
   },
-  "SM_Beacon_Obstruction": {
-   "fbx": "../../../Shared/props/SM_Beacon_Obstruction.fbx",
-   "slots": {
-    "Beacon": "MI_Beacon_Obstruction"
-   },
-   "triangles": 314,
+  "SM_Kit_MastBeaconSingle": {
+   "kit": "lighting/12_MastBeaconSingle",
+   "triangles": 234,
    "bounds": [
     [
      -22.0,
@@ -1476,11 +1469,7 @@
      56.0
     ]
    ],
-   "lods": [
-    314,
-    80
-   ],
-   "shared": true
+   "lods": []
   }
  },
  "delivery_shell": {

@@ -105,13 +105,22 @@ M20_DIR = "/Game/Art/USA/Vehicles/M20Guardian"
 # The USA HQ as delivered (#187-#191): its layout usa_hq.json (Tools/Art/usa_hq_recipe.py), and where its assets go.
 USA_HQ_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "USA", "buildings", "usa_hq")
 USA_HQ_DIR = "/Game/Art/USA/Buildings/USAHQ"
-# The props and flags every building may use (#351): the flag cloth and mast beacon (Art/Shared/props, imported with each
-# building that places them), the flags of Art/Shared/flags/flags.json, their shared masters, and DA_FlagTypes.
+# What every building may use: the flags of Art/Shared/flags/flags.json with their shared masters and DA_FlagTypes (#351),
+# and the shared building kit (docs/art/BUILDING_KIT.md, #389), built from Art/Shared/kit/kit_catalogue.json and the
+# manifest Tools/Art/kit_blender.py derives from it.
 SHARED_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Shared")
 SHARED_DIR = "/Game/Art/Shared"
+KIT_SOURCE_DIR = os.path.join(SHARED_SOURCE_DIR, "kit")
+KIT_DIR = f"{SHARED_DIR}/Kit"
 # The generic building masters every building draws with (#388), and the kit's masters (docs/art/BUILDING_KIT.md).
 BUILDING_MATERIAL_DIR = f"{SHARED_DIR}/Materials/Building"
-KIT_MATERIAL_DIR = f"{SHARED_DIR}/Kit/Materials"
+KIT_MATERIAL_DIR = f"{KIT_DIR}/Materials"
+# The kit's neutral variant set: MI_Kit_Neutral_<slot> on the master its surface draws with. A piece's slot takes its
+# faction's MI_Kit_<faction>_<slot> unless the catalogue names a shared instance for it (materials).
+KIT_FACTIONS = {"neutral": "Neutral", "usa": "USA"}
+KIT_NEUTRAL_VARIANTS = {"MI_Kit_Neutral_Housing": "M_Bld_Surface", "MI_Kit_Neutral_Lens": "M_Kit_Lens"}
+# A kit mesh's LOD1 comes in at a building's switch (docs/art/MODEL_PERFORMANCE.md), cm from the camera.
+KIT_SWITCH_DISTANCE = 26000.0
 FLAG_DATA_DIR = "/Game/Data/Flags"
 FLAG_TEXTURE_SETTINGS = {"srgb": True, "compression": "TC_Default", "lod_group": "TEXTUREGROUP_World", "resize": None}
 # The garage door's cycle as delivered (animation/CT_HQ20_DoorMotion.csv), a curve table the garage plays (#192).
@@ -170,6 +179,9 @@ def differs(current, desired):
     if isinstance(desired, dict):
         return len(current) != len(desired) or any(key not in current or differs(current[key], value)
                                                    for key, value in desired.items())
+    if isinstance(desired, unreal.Transform):
+        # A rotator turned into a quaternion can carry -0.0, which its text keeps.
+        return any(differs(getattr(current, part), getattr(desired, part)) for part in ("translation", "scale3d")) or             any(differs(getattr(current.rotation, axis), getattr(desired.rotation, axis)) for axis in "xyzw")
     if isinstance(desired, unreal.StructBase):
         return current.export_text() != desired.export_text()
     if desired is None or isinstance(desired, unreal.Object):
@@ -513,17 +525,23 @@ def delete_stale_assets(directory, names):
         if path.rsplit("/", 1)[-1] not in names:
             if blocked_by(path, ".uasset") or read_only:
                 continue
+            stale.add(path)
             pending.append((path, ".uasset", True, lambda path=path: delete_asset(path)))
 
 
 def delete_asset(path):
     if not assets.delete_asset(path):
         raise RuntimeError(f"Could not delete {path}")
+    # A data asset's file can outlive its package (as delete_ui_asset found).
+    file = asset_file(path, ".uasset")
+    if os.path.exists(file):
+        os.remove(file)
+        unreal.AssetRegistryHelpers.get_asset_registry().scan_files_synchronous([file], force_rescan=True)
     unreal.log(f"setup_testmap: deleted {path}, which the layout no longer has")
 
 
-def make_shared_props():
-    """The shared flags and beacon (#351): T_Flag_<key> and MI_Flag_<key> in SHARED_DIR/Flags for every flag of
+def make_flags():
+    """The shared flags and beacon materials (#351): T_Flag_<key> and MI_Flag_<key> in SHARED_DIR/Flags for every flag of
     flags.json, on M_Flag_Cloth, M_Beacon_Obstruction and MI_Beacon_Obstruction in SHARED_DIR/Materials, and
     DA_FlagTypes, which lists each flag's instance and aspect. Returns the instances by name and DA_FlagTypes."""
     flags_dir, material_dir = f"{SHARED_DIR}/Flags", f"{SHARED_DIR}/Materials"
@@ -573,6 +591,115 @@ def make_shared_props():
     return instances, flag_types
 
 
+def kit_light(light, lens):
+    """A kit piece's FRTSKitLight from its catalogue light and the manifest's lens bounds (min, max, cm): turned by its
+    rotation (+X by default), it stands on the face of the lens it shines through, in the middle of it; a Rect is as wide
+    and high as the lens across its Y and Z."""
+    pitch, yaw, roll = light.get("rotation", [0.0, 0.0, 0.0])
+    rotation = unreal.Rotator(roll=roll, pitch=pitch, yaw=yaw)
+    forward, right, up = ([v.x, v.y, v.z] for v in (rotation.get_forward_vector(), rotation.get_right_vector(),
+                                                    rotation.get_up_vector()))
+    centre = [(low + high) / 2.0 for low, high in zip(*lens)]
+    size = [high - low for low, high in zip(*lens)]
+    axis = max(range(3), key=lambda i: abs(forward[i]))
+    location = list(centre)
+    location[axis] += math.copysign(size[axis] / 2.0, forward[axis])
+    value = unreal.RTSKitLight()
+    value.set_editor_property("type", getattr(unreal.RTSBuildingLightType, light["type"].upper()))
+    value.set_editor_property("location", unreal.Vector(*location))
+    value.set_editor_property("rotation", rotation)
+    inner, outer = light.get("cone", [0.0, 0.0])
+    for key, setting in (("candelas", light["candela"]), ("kelvin", light["kelvin"]), ("radius", light["radius"]),
+                         ("inner_cone_angle", inner), ("outer_cone_angle", outer),
+                         ("max_draw_distance", light["max_draw_distance"])):
+        value.set_editor_property(key, float(setting))
+    if light["type"] == "Rect":
+        value.set_editor_property("source_width", sum(s * abs(r) for s, r in zip(size, right)))
+        value.set_editor_property("source_height", sum(s * abs(u) for s, u in zip(size, up)))
+    value.set_editor_property("group", light["group"])
+    value.set_editor_property("behaviour", getattr(unreal.RTSKitLightBehaviour, light["behaviour"].upper()))
+    value.set_editor_property("priority", getattr(unreal.RTSKitLightPriority, light["priority"].upper()))
+    return value
+
+
+def make_kit(masters):
+    """The shared building kit (docs/art/BUILDING_KIT.md, #389) and the flags (make_flags): every piece of
+    kit_catalogue.json as SM_Kit_<Piece> (building_art.import_kit_mesh) and the generated DA_Kit_<Piece>
+    (URTSKitPieceData) in KIT_DIR/<Category>, from the catalogue and the manifest kit_blender.py derived from it, its slots
+    on the instances the catalogue names or its faction's variant set; the neutral set is built here on masters (by name,
+    make_building_masters). A piece the catalogue no longer has is deleted. Returns the meshes by catalogue id and
+    DA_FlagTypes."""
+    instances, flag_types = make_flags()
+    for name, parent in sorted(KIT_NEUTRAL_VARIANTS.items()):
+        instances[name] = plan_now(
+            f"{KIT_MATERIAL_DIR}/{name}",
+            lambda n=name, p=masters[parent]: building_art.build_material_instance(KIT_MATERIAL_DIR, n, p, {}, {}),
+            spec_hash([building_art.build_material_instance], KIT_MATERIAL_DIR, name, masters[parent]))
+
+    catalogue = building_art.read_layout(os.path.join(KIT_SOURCE_DIR, "kit_catalogue.json"))["pieces"]
+    manifest = building_art.read_layout(os.path.join(KIT_SOURCE_DIR, "build", "kit_manifest.json"))["pieces"]
+    if sorted(p["id"] for p in catalogue) != sorted(manifest):
+        raise RuntimeError(f"kit_manifest.json has {sorted(manifest)}, the catalogue {sorted(p['id'] for p in catalogue)}: "
+                           "rerun Tools/Art/kit_blender.py")
+    meshes, kept = {}, set()
+    for piece in catalogue:
+        built = manifest[piece["id"]]
+        if built["mesh"] != piece["mesh"] or built["slots"] != piece["slots"]:
+            raise RuntimeError(f"kit_manifest.json's {piece['id']} is not the catalogue's: rerun Tools/Art/kit_blender.py")
+        category = piece["id"].split("/")[0]
+        directory = f"{KIT_DIR}/{category.capitalize()}"
+        variant = KIT_FACTIONS[piece["faction"]]
+        slots = {slot: instances[piece.get("materials", {}).get(slot, f"MI_Kit_{variant}_{slot}")]
+                 for slot in piece["slots"]}
+        source = os.path.join(KIT_SOURCE_DIR, *built["fbx"].split("/"))
+        lod1 = os.path.join(KIT_SOURCE_DIR, *built["lod1_fbx"].split("/")) if built["lod1_fbx"] else None
+        mesh = plan_now(
+            f"{directory}/{piece['mesh']}",
+            lambda s=source, d=directory, n=piece["mesh"], m=slots, b=built, l=lod1: building_art.import_kit_mesh(
+                s, d, n, m, b["bounds"], b["triangles"], KIT_SWITCH_DISTANCE, l),
+            spec_hash([building_art.import_kit_mesh, building_art._reset_lods, vehicle_art.import_part,
+                       vehicle_art.lod_radius], directory, piece["mesh"], file_hash(source),
+                      file_hash(lod1) if lod1 else None, sorted((slot, object_path(m)) for slot, m in slots.items()),
+                      built["bounds"], built["triangles"], KIT_SWITCH_DISTANCE, vehicle_art.SCREEN_MULTIPLE))
+        meshes[piece["id"]] = mesh
+
+        lens = built["lens_bounds"]
+        mount_points = {}
+        for name, point in piece["mount_points"].items():
+            pitch, yaw, roll = point["rotation"]
+            mount_points[name] = unreal.Transform(unreal.Vector(*point["location"]),
+                                                  unreal.Rotator(roll=roll, pitch=pitch, yaw=yaw))
+        # No lens: an invalid box, which Python's Box() is not.
+        lens_bounds = unreal.Box(unreal.Vector(*lens[0]), unreal.Vector(*lens[1])) if lens else unreal.Box()
+        lens_bounds.set_editor_property("is_valid", bool(lens))
+        data = f"DA_Kit_{piece['mesh'][len('SM_Kit_'):]}"
+        plan_data_asset(data, directory, unreal.RTSKitPieceData, {
+            "id": piece["id"],
+            "mesh": mesh,
+            "class_": getattr(unreal.RTSKitClass, piece["class"]),
+            "faction": piece["faction"],
+            "has_light": "light" in piece,
+            "light": kit_light(piece["light"], lens) if "light" in piece else unreal.RTSKitLight(),
+            "lens_bounds": lens_bounds,
+            "emergency_default": piece["emergency_default"],
+            "fault_response": getattr(unreal.RTSKitFaultResponse, piece["fault_response"].upper()),
+            "mount_points": mount_points,
+            "budget_lod0": piece["budgets"]["lod0"],
+            "budget_lod1": piece["budgets"]["lod1"],
+        })
+        kept |= {f"{directory}/{piece['mesh']}", f"{directory}/{data}"}
+
+    # A piece the catalogue dropped: its mesh and data go, wherever its category was.
+    for object_path_name in assets.list_assets(KIT_DIR, recursive=True, include_folder=False):
+        path = object_path_name.split(".", 1)[0]
+        if path.rsplit("/", 1)[-1].startswith(("SM_Kit_", "DA_Kit_")) and path not in kept:
+            if blocked_by(path, ".uasset") or read_only:
+                continue
+            stale.add(path)
+            pending.append((path, ".uasset", True, lambda path=path: delete_asset(path)))
+    return meshes, flag_types
+
+
 def make_building_masters():
     """The generic building masters every building draws with (#388): BUILDING_MASTERS in BUILDING_MATERIAL_DIR with the
     2 m coating they sample (BUILDING_TEXTURES) in its Textures folder, and the kit's M_Kit_Lens in KIT_MATERIAL_DIR.
@@ -614,11 +741,11 @@ def make_usa_hq():
     """Imports the USA HQ (building_art.py) as usa_hq.json lays it out and returns its root mesh, its footprint and its
     building data properties: the architecture is Mesh at real size, every other mesh a part where the delivery placed
     it with the garage door closed, the collision boxes go around its blocks with the garage bay a box of its own, and
-    the sockets give the garage's spawn and exit. The shared flag cloth and beacons (#351) are imported with it, so they
-    switch LODs with it too; the flag flies the layout's flag from DA_FlagTypes, and the parts that turn have their motion."""
+    the sockets give the garage's spawn and exit. The flag cloth and mast beacons (#351) are the shared kit's pieces
+    (make_kit, #389), which switch LODs by their own bounds until the building forces its LOD on them (#390); the flag flies the layout's flag from DA_FlagTypes, and the parts that turn have their motion."""
     layout = building_art.read_layout(os.path.join(USA_HQ_SOURCE_DIR, "usa_hq.json"))
-    shared_instances, flag_types = make_shared_props()
     shared_masters = make_building_masters()
+    kit_meshes, flag_types = make_kit(shared_masters)
     texture_dir, material_dir, mesh_dir = (f"{USA_HQ_DIR}/{folder}" for folder in ("Textures", "Materials", "Meshes"))
 
     # The coating is the shared masters' since #388.
@@ -665,11 +792,14 @@ def make_usa_hq():
     for record in layout["parts"]:
         placements.setdefault(record["mesh"], []).append(record)
 
-    meshes = {}
+    # The kit's pieces (#389) are the kit's meshes, shared with every building.
+    meshes = {name: kit_meshes[record["kit"]] for name, record in layout["meshes"].items() if "kit" in record}
     for name, record in sorted(layout["meshes"].items()):
+        if "kit" in record:
+            continue
         source = os.path.join(USA_HQ_SOURCE_DIR, *record["fbx"].split("/"))
         lod1 = os.path.join(USA_HQ_SOURCE_DIR, *record["lod1_fbx"].split("/")) if record.get("lod1_fbx") else None
-        slots = {slot: dict(instances, **shared_instances)[instance] for slot, instance in record["slots"].items()}
+        slots = {slot: instances[instance] for slot, instance in record["slots"].items()}
         where = placements[name]
         meshes[name] = plan_now(
             f"{mesh_dir}/{name}",
@@ -684,7 +814,8 @@ def make_usa_hq():
                                                                           for p in where],
                       layout["switch_distance"], vehicle_art.SCREEN_MULTIPLE))
     log_building_budget("USA HQ", meshes, layout)
-    delete_stale_assets(mesh_dir, set(layout["meshes"]))
+    # Its own meshes only: the flag cloth and beacons it imported before the kit (#389) go too.
+    delete_stale_assets(mesh_dir, {name for name, record in layout["meshes"].items() if "kit" not in record})
     # The delivered flag's master and colour instances, which the shared cloth replaced (#351), and the generic masters and
     # their coating, which are shared since #388.
     delete_stale_assets(material_dir, set(masters) | set(instances))
