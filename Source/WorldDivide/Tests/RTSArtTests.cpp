@@ -394,6 +394,8 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 	const UMaterial* Beacon = LoadMaster(TEXT("M_Beacon_Obstruction"), SharedMaterialDir);
 	TestTrue(TEXT("The beacon master glows only while the HQ is operational"),
 		ReadsPrimitiveData(Beacon, TEXT("Operational"), RTSPrimitiveData::LampOn) && Beacon->GetEditorOnlyData()->EmissiveColor.IsConnected());
+	// The beacons share one instanced component: without the usage a game draws them in the default material (#379).
+	TestTrue(TEXT("The beacon master can draw on instanced meshes"), Beacon && Beacon->bUsedWithInstancedStaticMeshes);
 	const TArray<FRTSBuildingPart> Beacons = Data->Parts.FilterByPredicate([](const FRTSBuildingPart& P)
 	{
 		return P.Name.ToString().StartsWith(HeadquartersBeaconPrefix);

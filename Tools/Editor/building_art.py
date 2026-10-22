@@ -82,7 +82,8 @@ FLAG_WPO_INPUTS = {"WaveAmplitude": "FlagWaveAmplitude", "WaveNumber": "FlagWave
 # The shared mast beacon (M_Beacon_Obstruction, #351): its lens (UV0.U >= 0.5) a red emissive flash BeaconRate times a
 # second, on for BeaconDuty of it and fading over its last BeaconFade, times Operational (custom primitive data
 # LAMP_ON_INDEX, as M_HQ_Final_Operational); every beacon runs up to BeaconRateJitter faster or slower and at its own
-# phase, from where it stands. The housing (U < 0.5) is dark and never glows.
+# phase, from where it stands. The housing (U < 0.5) is dark and never glows; between flashes the lens is dark red glass
+# (LensOffColor), so the flash reads against it from the default zoom (#379).
 BEACON_PARAMETERS = {
     "BeaconRate": 1.0,
     "BeaconDuty": 0.18,
@@ -93,6 +94,7 @@ BEACON_PARAMETERS = {
 }
 BEACON_COLORS = {
     "LensColor": (1.0, 0.03, 0.01, 1.0),
+    "LensOffColor": (0.06, 0.004, 0.002, 1.0),
     "HousingColor": (0.03, 0.03, 0.03, 1.0),
 }
 BEACON_HLSL = """float3 S = frac(Seed * float3(0.1031, 0.1030, 0.0973));
@@ -363,7 +365,7 @@ def build_flag_instance(directory, name, parent, texture):
 
 def build_beacon_material(directory, name):
     """M_Beacon_Obstruction, the shared mast beacon (#351) on SM_Beacon_Obstruction: the housing (UV0.U < 0.5)
-    HousingColor, the lens LensColor and flashing as BEACON_HLSL works it out from BEACON_PARAMETERS, times Operational
+    HousingColor, the lens LensOffColor and flashing LensColor as BEACON_HLSL works it out from BEACON_PARAMETERS, times Operational
     (custom primitive data LAMP_ON_INDEX), so it is dark while the building is not operational. No light, no shadow: the
     glow alone."""
     material = _material(directory, name)
@@ -381,7 +383,7 @@ def build_beacon_material(directory, name):
     _connect(floor, "", lens, "")
     base = _node(material, unreal.MaterialExpressionLinearInterpolate, -300, -400)
     _connect(colors["HousingColor"], "RGB", base, "A")
-    _connect(colors["LensColor"], "RGB", base, "B")
+    _connect(colors["LensOffColor"], "RGB", base, "B")
     _connect(lens, "", base, "Alpha")
     _output(material, base, "", unreal.MaterialProperty.MP_BASE_COLOR)
     _output(material, parameters["Roughness"], "", unreal.MaterialProperty.MP_ROUGHNESS)
@@ -398,6 +400,9 @@ def build_beacon_material(directory, name):
     strength = _multiply(material, -200, 300, lit, "", parameters["BeaconIntensity"], "")
     glow = _multiply(material, 0, 300, colors["LensColor"], "RGB", strength, "")
     _output(material, glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    # The beacons of a building are drawn as one instanced component; without the usage a game draws them in the default
+    # material, grey and unlit (#379).
+    material.set_editor_property("used_with_instanced_static_meshes", True)
     return _finish(material)
 
 
