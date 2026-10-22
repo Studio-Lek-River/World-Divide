@@ -34,6 +34,13 @@ int32 RTSUnitLOD::ChooseLOD(const UStaticMesh& Mesh, double Radius, double Dista
 	return 0;
 }
 
+int32 RTSUnitLOD::GetForcedLOD(const UStaticMeshComponent& Component, int32 LOD)
+{
+	// ForcedLodModel counts from 1; 0 lets the renderer choose.
+	const int32 NumLODs = Component.GetStaticMesh() ? Component.GetStaticMesh()->GetNumLODs() : 1;
+	return Component.ForcedLodModel > 0 ? FMath::Min(Component.ForcedLodModel, NumLODs) - 1 : LOD;
+}
+
 const UStaticMeshComponent* RTSUnitLOD::FindHull(const AActor& Actor)
 {
 	TInlineComponentArray<UStaticMeshComponent*> Components(&Actor);
@@ -113,13 +120,13 @@ RTSUnitLOD::FPartLODs RTSUnitLOD::GetPartLODs(const AActor& Actor, const FVector
 				Instanced->GetInstanceTransform(Instance, Transform, /*bWorldSpace*/ true);
 				const double Distance = FVector::Dist(Transform.TransformPosition(MeshBounds.Origin), ViewOrigin);
 				const double Radius = MeshBounds.BoxExtent.Size() * Transform.GetMaximumAxisScale();
-				Count(Mesh, ChooseLOD(*Mesh, Radius, Distance, Projection), Distance);
+				Count(Mesh, GetForcedLOD(*Component, ChooseLOD(*Mesh, Radius, Distance, Projection)), Distance);
 			}
 			continue;
 		}
 		const FBoxSphereBounds& Bounds = Component->Bounds;
 		const double Distance = FVector::Dist(Bounds.Origin, ViewOrigin);
-		const int32 LOD = ChooseLOD(*Mesh, Bounds.SphereRadius, Distance, Projection);
+		const int32 LOD = GetForcedLOD(*Component, ChooseLOD(*Mesh, Bounds.SphereRadius, Distance, Projection));
 		Count(Mesh, LOD, Distance);
 		if (Component == Hull)
 		{

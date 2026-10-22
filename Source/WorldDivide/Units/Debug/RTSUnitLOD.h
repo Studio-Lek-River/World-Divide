@@ -20,6 +20,9 @@ namespace RTSUnitLOD
 	/** The LOD of Mesh for bounds of Radius at Distance cm from a view with Projection. */
 	int32 ChooseLOD(const UStaticMesh& Mesh, double Radius, double Distance, const FMatrix& Projection);
 
+	/** LOD, or the LOD Component is forced to draw at (its ForcedLodModel, the kit spike's option C, #387). */
+	int32 GetForcedLOD(const UStaticMeshComponent& Component, int32 LOD);
+
 	/** A unit's hull: the first mesh on its root component (the collision box) that is not instanced; null without one. */
 	const UStaticMeshComponent* FindHull(const AActor& Actor);
 

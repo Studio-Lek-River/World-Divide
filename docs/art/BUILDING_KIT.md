@@ -173,8 +173,8 @@ mount × the light's transform in the fixture frame, with `Fixture` filled in an
 the light's position, direction, intensity, radius and behaviour with no manual step.**
 
 Lens appearance per instance (on/level, group, fault phase, flash phase, indicator colour) is per-instance custom data
-read by `M_Kit_Lens`; the night state stays component custom primitive data 12. The spike (M7.00-02) proves this in UE
-5.8 before production code relies on it.
+read by `M_Kit_Lens`, written with `SetCustomData` and one `MarkRenderInstancesDirty`; the night state stays component
+custom primitive data 12 (proven in the spike, see [Per-instance and LOD](#per-instance-and-lod)).
 
 ## Light rule
 
@@ -257,7 +257,8 @@ Only **real** lights count. Emissive-only pieces (09, 12, 13, 14, and every lens
 - At most **2 material slots** per piece.
 - Kit pieces count towards their building's budget (`MODEL_PERFORMANCE.md`), every time they are drawn.
 - A piece switches to LOD1 with its building at 260 m, never on its own; the LOD1 switch shows no visible change in the
-  `lod_before`/`lod_after` shots. How a shared mesh follows each building's switch is settled in the spike (M7.00-02).
+  `lod_before`/`lod_after` shots. The building forces its one LOD decision on all its meshes, kit ISMs included
+  ([Per-instance and LOD](#per-instance-and-lod), option C2).
 - These budgets are hypotheses, adjusted after the close-up review of the first pieces.
 
 ## USA Lighting Kit
@@ -332,6 +333,69 @@ settles which before it mounts more than the phase B fixtures it replaces.
 Reuse on a second building (the Barracks) is not part of Gate A: it follows when that building is worked on, and must
 need no kit change.
 
+## Per-instance and LOD
+
+The spike (#387) ran the kit's two risky assumptions in UE 5.8, on non-Nanite instanced static meshes, before production
+code relies on them. Its content is throwaway and git-ignored: `ue.ps1 -Task kitspike` builds it in
+`/Game/Developers/KitSpike` (`Tools/Editor/kit_spike.py`) and runs `rts.Debug.KitSpikeLens`; `ue.ps1 -Task buildingshots
+-Building DA_KitSpike_<Large|Small>_<A|B>` pictures the LOD switch, and option C with `-Cvars
+rts.Debug.KitSpikeLODSync=<1|2>`. `WorldDivide.Art.KitSpike` checks the update path headless.
+
+### Per-instance lens state
+
+`M_KitSpike_Lens` reads seven `PerInstanceCustomData` floats per instance (0 on/level, 1 group mask, 2 fault phase, 3 flash
+seed, 4-6 colour) and the component's custom primitive data 10 (Fixtures) and 12 (Night), as `ARTSBuilding::ApplyLightData`
+writes them to every part. In a row of 200 lenses in one ISM, every lens shows its own state by day, at night, with the
+Fixtures group off (only the gated lenses go dark), after one lens alone turned blue, and at a forced LOD1.
+
+Changing 128 of the 200 instances in one frame, 60 frames each, game thread in a 1920x1080 game:
+
+| How | Calls per frame | Scene proxy |
+|---|---:|---|
+| `SetCustomData` per instance, then one `MarkRenderInstancesDirty` | 0.006 ms | kept, 0 of 60 frames rebuilt |
+| `SetCustomDataValue(..., bMarkRenderStateDirty = true)` per float | 0.144 ms | rebuilt every frame |
+| `SetCustomData` per instance, then `MarkRenderStateDirty` | 0.009 ms | rebuilt every frame |
+| nothing changes (reference) | — | kept |
+
+Frame times stayed within noise (game thread 1.44–1.57 ms, render thread 1.87–1.97 ms for this small scene).
+
+- **Production writes lens state with `SetCustomData` and one `MarkRenderInstancesDirty` per component per frame.** Never
+  `SetCustomDataValue` with its dirty flag, and never `MarkRenderStateDirty`: both rebuild the scene proxy, which is the
+  re-registration the kit must avoid.
+- `SetNumCustomDataFloats` comes before the instances are added, since it resets the data.
+- Night stays component custom primitive data 12; the instance data and the component data combine in the material
+  without any extra write.
+
+### Shared-mesh LOD sync
+
+One kit mesh (`SM_KitSpike_Lamp`, 1.5 m, yellow at LOD0, magenta at LOD1) on two buildings: the USA HQ (38 x 56 m, 15
+lamps around its box) and a 16 x 16 x 7 m box shell (6 lamps; grey at LOD0, cyan at LOD1). Both shells and the lamp have
+their LOD1 screen size set for 260 m from their own bounds. The comparison sheet is `Saved/KitSpike/lod_sync_sheet.png`
+after a run.
+
+| Option | Small building | HQ | Verdict |
+|---|---|---|---|
+| A. Screen size from the kit mesh's own bounds | lamps and shell agree in the log, but neither switches on screen at 270 m | lamps switch from their own position: 5 of 15 a step early, 1 a step late in the log, none on screen | rejected |
+| B. `BoundsScale` from the building radius | identical to A | identical to A | rejected: GPU LOD selection takes the instance radius from the mesh's bounds, not the component's; `BoundsScale` changes only culling |
+| C1. The shell's LOD (game-thread estimate) forced on the kit ISMs | lamps switch at 260 m, the shell much later | lamps switch at 260 m, the shell much later | rejected |
+| C2. One game-thread LOD decision forced on every mesh of the building | shell and lamps switch together between 252 and 273 m | the whole HQ and its lamps switch together between 255 and 276 m | **works** |
+
+What the renderer does, measured with `r.StaticMeshLODDistanceScale` 1.25, 1.5 and 1.75 on the small building:
+
+- A mesh drawn on its own (the shell) switches at **378–410 m**, not 260 m. An instanced mesh with the same calibration
+  (the lamps, GPU LOD selection) switches at **410–441 m**. The two paths do not agree with each other, so no screen size
+  per mesh can make a kit ISM follow its shell.
+- `RTSUnitLOD` (the `buildingshots` and bench LOD log) predicts 260 m for both, so it is about 1.5x short of what is drawn.
+  The HQ's LOD1 switch (#358) was checked on that log: on screen the HQ stays at LOD0 to about 390 m.
+- Forced to LOD1 at 270 m (C2), the HQ's LOD1 shows holes and stray triangles on its roofs. At the renderer's own 390 m it
+  shows the same; the `far_450m` shot of the production HQ has them too.
+
+**Chosen: C2.** The building decides its LOD once on the game thread (the light subsystem's tick already visits every
+building) and forces it on all its meshes, shell, parts and kit ISMs, with `SetForcedLodModel`, only when it changes. All
+meshes switch on the same frame, at exactly the distance the spec names, and a kit mesh is shared by every building with
+no copy and no `cover_building`. Cost: a forced LOD rebuilds each component's scene proxy once per switch, per building,
+which happens only as the camera crosses 260 m; per-instance data survives it.
+
 ## Producer decisions (#386)
 
 | Question | Decision |
@@ -340,6 +404,13 @@ need no kit change.
 | Does 12 replace `SM_Beacon_Obstruction`? | `SM_Beacon_Obstruction` (the red light on the HQ's two mast tips, #351/#379) **is** piece 12: it moves into the kit as `SM_Kit_MastBeaconSingle`, no new model. |
 | Starting values for the class budgets, the light budgets and the 30 % backup level | Accepted as listed above, as hypotheses for Gate A. |
 | Does #199 wait for Gate A? | No extra blocking: the HQ sign-off follows the HQ lighting (M7.00-09), not the Gate A bench. |
+
+## Producer decisions (#387)
+
+| Question | Decision |
+|---|---|
+| How does a shared kit mesh switch LOD with its building? | **C2**: one LOD decision per building on the game thread, forced on all its meshes. Kit meshes are shared; `cover_building` and per-building duplicate meshes are not used for kit pieces. Built in M7.00-05. |
+| The HQ's LOD1 roof holes, which C2 shows from 260 m instead of about 390 m | Fixed in a follow-up issue, not by switching later. |
 
 ## Approval
 

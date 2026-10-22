@@ -135,6 +135,9 @@ asset -Building (rts.Debug.BuildingShots, #349; the bench HQs or any of Content/
 12, 150 and 450 m and at 249.6 and 270.4 m, 4 % either side of the bench's LOD1 switch, with every part's LOD printed, to
 Saved/BuildingShots/<Building>. -Cvars runs it with console variables into a folder named after them (r.Nanite=0 into
 r_Nanite_0, what hardware without Nanite draws).
+Kitspike builds the shared building kit's git-ignored spike content in /Game/Developers/KitSpike (Tools/Editor/kit_spike.py,
+#387), then plays L_Bench with a renderer and pictures the lens row (rts.Debug.KitSpikeLens) to Saved/KitSpike with the cost
+of updating its instances logged. Buildingshots then takes -Building DA_KitSpike_<Large|Small>_<A|B>.
 Uibindings writes every binding key, list and action with its panels, and the widgets, colours, fonts and sprites a layout
 may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck validates the layouts of the UI folder -Path
 (an unpacked delivery, for /ui-intake) and prints each problem. -Out and -Path are relative to the repository root.
@@ -149,7 +152,7 @@ as T_<Name>_BC/_N/_ORM and MI_<Name> of M_ScannedSurface (world-aligned, tiled a
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'buildingshots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit', 'surfaces', 'bakemap', 'rivercrossing')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'buildingshots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit', 'surfaces', 'kitspike', 'bakemap', 'rivercrossing')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -1608,6 +1611,36 @@ function Invoke-Surfaces {
 	Write-Host "SURFACES SUCCEEDED: $($Manifest.Count) set(s) imported, $($Skipped.Count) skipped. $Report"
 }
 
+# The shared building kit's spike (#387): its content, then the lens row's shots and update costs.
+function Invoke-KitSpike {
+	Assert-EditorClosed 'the spike content is saved by a second editor.'
+	$Script = Join-Path $RepoRoot 'Tools\Editor\kit_spike.py'
+	$BuildLog = Join-Path $RepoRoot 'Saved\Logs\KitSpikeBuild.log'
+	& $EditorCmd $Project -run=pythonscript "-script=$Script" $NoMCPPlugins -unattended -nosplash -nullrhi -nosound "-abslog=$BuildLog" | Out-Null
+	if (-not (Select-String -Path $BuildLog -Pattern 'KitSpike: done' -Quiet)) {
+		Select-String -Path $BuildLog -Pattern 'KitSpike|Error|Traceback' | Select-Object -Last 20 | ForEach-Object { $_.Line }
+		Write-Host "KITSPIKE FAILED: the content was not built. Log: $BuildLog"
+		exit 1
+	}
+	Select-String -Path $BuildLog -Pattern 'KitSpike: ' | ForEach-Object { $_.Line -replace '^.*KitSpike: ', '  ' }
+	$ShotDir = Join-Path $RepoRoot 'Saved\KitSpike'
+	$LogFile = Join-Path $RepoRoot 'Saved\Logs\KitSpike.log'
+	Clear-ShotDir $ShotDir
+	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList @(
+		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
+		'"-ExecCmds=rts.Debug.KitSpikeLens"', '-RTSKitSpikeQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		'-unattended', '-nosplash', '-nosound')
+	if (Test-Path $LogFile) {
+		Select-String -Path $LogFile -Pattern 'rts.Debug.KitSpikeLens: ' | ForEach-Object { $_.Line -replace '^.*rts.Debug.KitSpikeLens: ', '  ' }
+	}
+	if ($Process.ExitCode -ne 0) {
+		if (Test-Path $LogFile) { Select-String -Path $LogFile -Pattern 'rts.Debug|Error:|Fatal' | Select-Object -Last 20 | ForEach-Object { $_.Line } }
+		Write-Host "KITSPIKE FAILED (game exit $($Process.ExitCode)). Log: $LogFile"
+		exit 1
+	}
+	Write-Host "KITSPIKE SUCCEEDED: $ShotDir"
+}
+
 switch ($Task) {
 	'build' { Invoke-Build }
 	'test' { Invoke-Test }
@@ -1623,6 +1656,7 @@ switch ($Task) {
 	'uibindings' { Invoke-UIBindings }
 	'uicheck' { Invoke-UICheck }
 	'packaudit' { Invoke-PackAudit }
+	'kitspike' { Invoke-KitSpike }
 	'surfaces' { Invoke-Surfaces }
 	'bakemap' { Invoke-BakeMap }
 	'rivercrossing' { Invoke-RiverCrossing }
