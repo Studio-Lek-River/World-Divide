@@ -55,6 +55,7 @@ UI_STYLE_DIR = "/Game/UI/Styles"
 FONT_POINTS_PER_PIXEL = 0.75
 MATERIAL_DIR = "/Game/Materials"
 EFFECT_DIR = "/Game/Effects"
+AUDIO_DIR = "/Game/Audio"
 MAP_PATH = "/Game/Maps/L_TestMap"
 # L_TestMap by moonlight (#223), to try the vehicle lights and other night looks by hand: the same ground, bases and units.
 NIGHT_MAP_PATH = "/Game/Maps/L_TestMapNight"
@@ -724,8 +725,10 @@ def interaction_radius(mesh, scale):
 
 
 def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_scale, shell_color, arc_height=0.0,
-                ground=True, air=False, muzzle_flash=None, muzzle_smoke=None, splash_radius=0.0, muzzle_brake=False):
+                ground=True, air=False, muzzle_flash=None, muzzle_smoke=None, splash_radius=0.0, muzzle_brake=False,
+                fire_sound=None):
     """muzzle_flash: the Niagara system a vehicle gun flashes (make_muzzle_flash); None keeps the placeholder glow.
+    fire_sound: the sound of a shot (make_cannon_sound); None plays the synthesized one (RTSShotSound).
     muzzle_brake: the gun has a muzzle brake, so its flash throws fire sideways too (#294).
     muzzle_smoke: the Niagara system a vehicle cannon leaves at the muzzle after a shot (make_muzzle_smoke); None leaves none.
     splash_radius: the blast in cm of a shot at a ground location (force fire); 0 for none."""
@@ -733,6 +736,7 @@ def make_weapon(name, weapon_range, damage, reload_seconds, shell_speed, effect_
         "muzzle_flash": muzzle_flash,
         "muzzle_smoke": muzzle_smoke,
         "muzzle_brake": muzzle_brake,
+        "fire_sound": fire_sound,
         "range": weapon_range,
         "damage": damage,
         "reload_seconds": reload_seconds,
@@ -1346,6 +1350,48 @@ def make_muzzle_smoke():
         return system
     builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSMuzzleFlashBuilder.cpp"))
     return plan_now(path, build, spec_hash([make_muzzle_smoke], path, *looks.values(), builder_source))
+
+
+# The tank cannon's takes (#374), made by Lek River Studio (Art/Source/Audio/CREDITS.md): per take a blast, a body and an
+# echo tail, in the order BuildLayeredShotSound layers them.
+CANNON_SOUND_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Source", "Audio", "TankCannon")
+CANNON_SOUND_TAKES = [f"TankCannon_0{take}_{layer}" for take in (1, 2, 3) for layer in ("Blast", "Body", "Echo")]
+
+
+def import_wave(source, directory, name):
+    task = unreal.AssetImportTask()
+    task.filename = source
+    task.destination_path = directory
+    task.destination_name = name
+    task.automated = True
+    task.replace_existing = True
+    task.save = False
+    asset_tools.import_asset_tasks([task])
+    wave = unreal.load_asset(f"{directory}/{name}")
+    if not isinstance(wave, unreal.SoundWave):
+        raise RuntimeError(f"Could not import {source}")
+    return wave
+
+
+def make_cannon_sound():
+    """The tank cannons' firing sound (#356, #374): one take at random per shot, each mixing its blast, body and echo by
+    distance (URTSEditorScripting::BuildLayeredShotSound, RTSShotSoundBuilder.cpp)."""
+    directory = f"{AUDIO_DIR}/Weapons"
+    waves = []
+    for take in CANNON_SOUND_TAKES:
+        source = os.path.join(CANNON_SOUND_SOURCE_DIR, f"{take}.wav")
+        name = f"SW_{take}"
+        waves.append(plan_now(f"{directory}/{name}", lambda s=source, n=name: import_wave(s, directory, n),
+                              spec_hash([import_wave], name, file_hash(source))))
+    path = f"{directory}/SC_TankCannon"
+
+    def build():
+        cue = unreal.RTSEditorScripting.build_layered_shot_sound(path, waves)
+        if not cue:
+            raise RuntimeError(f"Could not build {path}; the log says why")
+        return cue
+    builder_source = file_hash(os.path.join(PROJECT_DIR, "Source", "WorldDivide", "Core", "RTSShotSoundBuilder.cpp"))
+    return plan_now(path, build, spec_hash([make_cannon_sound], path, *waves, builder_source))
 
 
 # The exhaust's look (#222): the later, thinner frames of the muzzle smoke's flipbook, eroded, so a puff reads as a light
@@ -2575,12 +2621,14 @@ TOWER_RANGE_OVER_TANK = 1.25
 # and the Abrams' have none.
 muzzle_flash = make_muzzle_flash()
 muzzle_smoke = make_muzzle_smoke()
+# Both tank cannons fire the layered cannon sound (#374); every other gun keeps the synthesized one.
+cannon_sound = make_cannon_sound()
 # Vehicles' engine exhaust (#222): the M20 from its model, the flak truck from a tailpipe placed on its van.
 exhaust = make_exhaust()
 # The dust behind every ground vehicle (#224): the M20's from its tracks in its model, the others' from their locomotion.
 dust = make_dust()
 cannon = make_weapon("DA_TestCannon", TANK_RANGE, 40.0, 2.0, 30000.0, 1.6, (1.0, 0.45, 0.1), muzzle_flash=muzzle_flash,
-                     muzzle_smoke=muzzle_smoke, splash_radius=250.0, muzzle_brake=True)
+                     muzzle_smoke=muzzle_smoke, splash_radius=250.0, muzzle_brake=True, fire_sound=cannon_sound)
 rifle = make_weapon("DA_TestRifle", 3500.0, 8.0, 0.5, 45000.0, 0.4, (1.0, 0.85, 0.3))
 # A main battle tank, 9.8 x 3.7 m with its gun forward; the placeholder's long gun lets the width bind.
 tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 1080.0, 370.0), 200.0, cannon, 1100.0, 75.0,
@@ -2588,7 +2636,8 @@ tank = make_unit("DA_TestTank", "Test Tank", tank_mesh, fit_scale(tank_mesh, 108
 # A heavier second tank to try out. It wears the standard tank's model here; on a machine with the local Abrams art,
 # import_local_art.py gives it that model and its traversing turret.
 heavy_cannon = make_weapon("DA_TestHeavyCannon", TANK_RANGE, 60.0, 2.5, 32500.0, 2.0, (1.0, 0.4, 0.08),
-                           muzzle_flash=muzzle_flash, muzzle_smoke=muzzle_smoke, splash_radius=350.0)
+                           muzzle_flash=muzzle_flash, muzzle_smoke=muzzle_smoke, splash_radius=350.0,
+                           fire_sound=cannon_sound)
 abrams = make_unit("DA_TestAbrams", "Test Abrams", tank_mesh, fit_scale(tank_mesh, 1080.0, 380.0), 350.0, heavy_cannon,
                    1000.0, 60.0, 1100, 14.0)
 # The M20 Guardian at its real size (7.1 m hull), to try the Blender to Unreal pipeline out: the heavy tank's weapon and
