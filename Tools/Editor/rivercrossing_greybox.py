@@ -71,14 +71,15 @@ RIVER_SHALLOW = 2.0
 RIVER_DEEP = 3.0
 RIVER_BANK_ANGLE = 60.0
 RIVER_SHORE = 0.16
-# The engine's river material and the instance that gives it River Crossing's murky green-brown lowland water.
+# The engine's river material and the instance that gives it River Crossing's blue river water. Absorption reads as a
+# clarity distance per channel: blue carries furthest; low values turn the water near black.
 RIVER_MATERIAL_PARENT = "/Water/Materials/WaterSurface/Water_Material_River"
 RIVER_MATERIAL_DIR = "/Game/Materials/Water"
 RIVER_MATERIAL = "MI_RiverCrossing_River"
 RIVER_MATERIAL_VECTORS = {
-    "Absorption": (2.2, 2.0, 2.6, 8.0),
-    "Scattering": (1.8, 2.2, 0.8, 0.5),
-    "Water Albedo": (0.3, 0.28, 0.14, 0.5),
+    "Absorption": (20.0, 30.0, 60.0, 8.0),
+    "Scattering": (0.3, 0.4, 0.45, 0.5),
+    "Water Albedo": (0.3, 0.36, 0.4, 0.5),
 }
 # Water_ nav blockers: NavArea_Null boxes along the river, this long each, wider than the river by the margin, from the
 # bed to below the bridge decks.
