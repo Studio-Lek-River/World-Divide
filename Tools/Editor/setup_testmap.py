@@ -422,9 +422,10 @@ def make_m20_guardian(exhaust_system, dust_system):
         "gun_muzzle_offset": unreal.Vector(*layout["gun_muzzle_offset"]),
         # World in Conflict's big, snappy stroke (#353): 0.3 of the barrel, 87 cm, a third of it outside the mantlet, back in a
         # frame, held to 0.1 s and home at 0.5 s; the fume extractor stops 7 cm short of the boot's clamp ring. The gun's jump
-        # and the hull's rock stay small, as WiC's hull does not move (#218, #219).
-        "gun_recoil": gun_recoil(0.3, 0.015, 0.085, 0.4, jump_degrees=0.3, jump_seconds=0.3, hull_rock_degrees=0.2,
-                                 hull_rock_seconds=0.75),
+        # stays small (#218); the hull rocks a degree and bounces back past rest by a third of it before it settles, enough to
+        # read at close zoom (#376).
+        "gun_recoil": gun_recoil(0.3, 0.015, 0.085, 0.4, jump_degrees=0.3, jump_seconds=0.3, hull_rock_degrees=1.0,
+                                 hull_rock_seconds=1.0, hull_rock_damping=0.35),
         # Its hull on its torsion bars with the drive (#297): about a degree back pulling away at 10 m/s² and leaning out of
         # its tightest turn at 4 m/s², at most 1.2 degrees diving under its 25 m/s² brakes; the turret trails a 45°/s
         # traverse by 1.5 degrees.
