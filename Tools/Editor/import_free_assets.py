@@ -3,8 +3,9 @@
 - Poly Haven models (CC0): each model's 2K FBX and its base colour, DirectX normal, ARM (AO, roughness, metalness) and alpha
   maps from api.polyhaven.com, cached in Saved/FreeAssets/<id>/ (a cached file is not fetched again). They are imported to
   /Game/PolyHaven/<id>/: one Nanite static mesh SM_<object> per object of the FBX (a model's variants, a modular kit's
-  parts; Poly Haven's _LOD1 and lower objects are dropped, Nanite needs none), textures and an MI_ per material of one of two masters, /Game/PolyHaven/M_PolyHavenProp (opaque) or M_PolyHavenFoliage (masked by the alpha
-  map, two-sided). Props get an 18-DOP hull as collision, or their own triangles where the list says "complex" (cliffs); foliage none.
+  parts; Poly Haven's _LOD1 and lower objects are dropped, Nanite needs none), textures and an MI_ per material of one of three masters: /Game/PolyHaven/M_PolyHavenProp (opaque),
+  M_PolyHavenPropMasked (a prop material with an alpha map, such as the chain-link wire: masked by it, two-sided) or
+  M_PolyHavenFoliage (masked, two-sided, Two Sided Foliage shading with the base colour as subsurface colour). Props get an 18-DOP hull as collision, or their own triangles where the list says "complex" (cliffs); foliage none.
   /Game/PolyHaven is git-ignored and never cooked like the packs: every machine downloads it again with this task.
 - ambientCG surfaces (CC0): each listed set's 2K PNG ZIP goes to the surfaces folder (WD_SURFACES_DIR, default
   D:\\Downloads\\textures) when it is not there yet; ue.ps1 -Task surfaces imports it like the Megascans sets.
@@ -30,6 +31,7 @@ ROADSIDE_SOURCE = os.path.join(PROJECT_DIR, "Art", "Shared", "roadside")
 
 ROOT = "/Game/PolyHaven"
 PROP_MASTER = f"{ROOT}/M_PolyHavenProp"
+PROP_MASKED_MASTER = f"{ROOT}/M_PolyHavenPropMasked"
 FOLIAGE_MASTER = f"{ROOT}/M_PolyHavenFoliage"
 ROADSIDE_DIR = "/Game/Art/Shared/Roadside"
 ROADSIDE_MASTER = f"{ROADSIDE_DIR}/M_Roadside"
@@ -163,9 +165,10 @@ def sampler(material, parameter, texture, sampler_type, x, y):
     return made
 
 
-def build_master(path, defaults, foliage):
-    """Base colour, normal and the ARM's AO, roughness and metalness on UV 0; foliage also masks by the alpha map's red
-    and is two-sided. defaults are imported textures, for the samplers' types."""
+def build_master(path, defaults, masked, foliage):
+    """Base colour, normal and the ARM's AO, roughness and metalness on UV 0; masked also masks by the alpha map's red
+    and is two-sided; foliage also lets light through the leaves (Two Sided Foliage, the base colour as subsurface
+    colour), so their shaded sides are not black. defaults are imported textures, for the samplers' types."""
     material = material_at(path)
     color = sampler(material, "BaseColor", defaults["BC"], unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -600, -300)
     normal = sampler(material, "Normal", defaults["N"], unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, -600, 50)
@@ -175,11 +178,14 @@ def build_master(path, defaults, foliage):
     editing.connect_material_property(arm, "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
     editing.connect_material_property(arm, "G", unreal.MaterialProperty.MP_ROUGHNESS)
     editing.connect_material_property(arm, "B", unreal.MaterialProperty.MP_METALLIC)
-    if foliage:
+    if masked:
         alpha = sampler(material, "Alpha", defaults["A"], unreal.MaterialSamplerType.SAMPLERTYPE_MASKS, -600, 750)
         editing.connect_material_property(alpha, "R", unreal.MaterialProperty.MP_OPACITY_MASK)
         material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
         material.set_editor_property("two_sided", True)
+    if foliage:
+        editing.connect_material_property(color, "RGB", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
+        material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
     editing.recompile_material(material)
     save(material)
     return material
@@ -282,8 +288,8 @@ def finish_model(entry, folder, foliage, textures, meshes, masters):
     for group, kinds in textures.items():
         if "BC" not in kinds:
             continue
-        masked = foliage and "A" in kinds
-        master = masters["foliage" if masked else "prop"]
+        masked = "A" in kinds
+        master = masters["foliage" if foliage and masked else "prop_masked" if masked else "prop"]
         parameters = {"BaseColor": kinds["BC"]}
         for kind, parameter in (("N", "Normal"), ("ARM", "ARM"), ("A", "Alpha")):
             if kind in kinds and (kind != "A" or masked):
@@ -403,8 +409,9 @@ def main():
                     return kinds[kind]
         raise RuntimeError(f"No imported {kind} texture for the masters' defaults")
     defaults = {kind: first(kind) for kind in ("BC", "N", "ARM")}
-    masters = {"prop": build_master(PROP_MASTER, defaults, False),
-               "foliage": build_master(FOLIAGE_MASTER, dict(defaults, A=first("A", True)), True)}
+    masters = {"prop": build_master(PROP_MASTER, defaults, False, False),
+               "prop_masked": build_master(PROP_MASKED_MASTER, dict(defaults, A=first("A")), True, False),
+               "foliage": build_master(FOLIAGE_MASTER, dict(defaults, A=first("A", True)), True, True)}
 
     lines = ["# Free assets", "", "Generated by Tools/Editor/import_free_assets.py from Tools/Editor/free_assets.json.", "",
              "## Poly Haven (CC0)", "", "| Mesh | Category | Kind | Size (cm) | Source triangles | Authors | Source |",

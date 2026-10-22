@@ -50,8 +50,9 @@ SURFACE_SAMPLES = [
     ("/Game/Materials_StoneTiles/Materials/Instances", "MI_StoneTiles", 2),
 ]
 SCANNED_SURFACES = "/Game/Surfaces"
-# The props of ue.ps1 -Task freeassets (#409) in a row beside the Abrams: (folder, name filter, how many, spacing in cm).
-# Grass and flower cards, fences, a pole and the power-line cable, signs, logs and debris, then a cliff.
+# The props of ue.ps1 -Task freeassets (#409) in a row beside the Abrams: (folder, name filter, how many, spacing in cm,
+# optional yaw). Grass and flower cards, fences, a pole and the power-line cable, signs, logs and debris, then the cliffs:
+# open one-sided scans, turned so their face, not the open back, looks at the camera row (#428).
 PROP_SAMPLES = [
     ("/Game/PolyHaven/grass_medium_02", "SM_", 3, 150.0),
     ("/Game/PolyHaven/grass_bermuda_01", "medium", 2, 100.0),
@@ -71,7 +72,9 @@ PROP_SAMPLES = [
     ("/Game/PolyHaven/tree_stump_01", "SM_", 1, 400.0),
     ("/Game/PolyHaven/dry_branches_medium_01", "SM_", 1, 300.0),
     ("/Game/PolyHaven/bark_debris_01", "SM_", 1, 400.0),
-    ("/Game/PolyHaven/rock_face_01", "SM_", 1, 1000.0),
+    ("/Game/PolyHaven/rock_face_01", "SM_", 1, 1000.0, 180.0),
+    ("/Game/PolyHaven/rock_face_02", "SM_", 1, 1000.0, 180.0),
+    ("/Game/PolyHaven/mountainside", "SM_", 1, 1500.0, 180.0),
 ]
 CUBE = "/Engine/BasicShapes/Cube.Cube"
 
@@ -355,9 +358,9 @@ def build_level():
         put(bridges[0], (0.0, 5000.0, 0.0), "Bridge")
     # The free props (#409), from the Abrams along -x.
     x = -1000.0
-    for root, contains, count, spacing in PROP_SAMPLES:
+    for root, contains, count, spacing, *yaw in PROP_SAMPLES:
         for prop in find(root, {"StaticMesh"}, contains)[:count]:
-            put(prop, (x, -800.0, 0.0), os.path.basename(prop))
+            put(prop, (x, -800.0, 0.0), os.path.basename(prop), yaw[0] if yaw else 0.0)
             x -= spacing
 
     # Surface candidates: the material instances in the packs' landscape folders, then the samples of the surface packs.
