@@ -30,6 +30,16 @@
 #include "RenderingThread.h"
 #include "ShaderCompiler.h"
 
+#if WITH_EDITOR
+#include "ActorFactories/ActorFactory.h"
+#include "Editor.h"
+#include "LandscapeBlueprintBrushBase.h"
+#include "NavAreas/NavArea_Null.h"
+#include "WaterBodyRiverActor.h"
+#include "WaterBodyRiverComponent.h"
+#include "WaterSplineComponent.h"
+#endif
+
 int32 URTSEditorScripting::BuildNavigation(UObject* WorldContextObject)
 {
 	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
@@ -265,6 +275,194 @@ int32 URTSEditorScripting::SetLandscapePhysicalMaterial(UObject* WorldContextObj
 	return Changed;
 #else
 	return 0;
+#endif
+}
+
+#if WITH_EDITOR
+namespace
+{
+	/** The most edit-layer updates MergeEditLayers runs before it gives up: the merge and its GPU readbacks take a few. */
+	constexpr int32 MaxEditLayerUpdates = 300;
+
+	/**
+	 * Merges Landscape's edit layers, its brushes included, into its heights and collision and waits for the GPU readbacks,
+	 * as the editor's tick does over several frames, which a commandlet never reaches. Returns whether it finished.
+	 */
+	bool MergeEditLayers(ALandscape& Landscape)
+	{
+		Landscape.ForceLayersFullUpdate();
+		for (int32 Update = 0; Update < MaxEditLayerUpdates; ++Update)
+		{
+			if (Landscape.IsUpToDate())
+			{
+				UE_LOG(LogWorldDivide, Display, TEXT("MergeEditLayers: %s merged after %d updates"), *Landscape.GetActorLabel(), Update);
+				return true;
+			}
+			// The brushes draw through materials and render targets that compile and stream lazily in a commandlet.
+			FAssetCompilingManager::Get().FinishAllCompilation();
+			if (GShaderCompilingManager)
+			{
+				GShaderCompilingManager->FinishAllCompilation();
+			}
+			Landscape.ForceUpdateLayersContent();
+			FlushRenderingCommands();
+		}
+		UE_LOG(LogWorldDivide, Error, TEXT("MergeEditLayers: %s still had edit-layer work after %d updates"), *Landscape.GetActorLabel(), MaxEditLayerUpdates);
+		return false;
+	}
+}
+#endif
+
+AActor* URTSEditorScripting::CreateRiver(UObject* WorldContextObject, const TArray<FVector>& Points, const TArray<float>& Widths,
+	const TArray<float>& Depths, float BankAngle, float ShoreHeight, UMaterialInterface* WaterMaterial)
+{
+#if WITH_EDITOR
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	if (!World || !GEditor || Points.Num() < 2 || Widths.Num() != Points.Num() || Depths.Num() != Points.Num())
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("CreateRiver: needs an editor world and a width and a depth for each of at least two points"));
+		return nullptr;
+	}
+	if (!CanRender())
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("CreateRiver: the water brush carves the landscape on the GPU; run with -AllowCommandletRendering"));
+		return nullptr;
+	}
+	TActorIterator<ALandscape> LandscapeIt(World);
+	ALandscape* Landscape = LandscapeIt ? *LandscapeIt : nullptr;
+	if (!Landscape)
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("CreateRiver: %s has no landscape to carve"), *World->GetMapName());
+		return nullptr;
+	}
+	// A new water body gets its water zone and the landscape its water brush from the Water editor module, and the brush its
+	// edit layer from the landscape editor's services; a commandlet loads neither module.
+	for (const TCHAR* Module : { TEXT("LandscapeEditor"), TEXT("WaterEditor") })
+	{
+		if (!FModuleManager::Get().LoadModule(Module))
+		{
+			UE_LOG(LogWorldDivide, Error, TEXT("CreateRiver: could not load the %s module"), Module);
+			return nullptr;
+		}
+	}
+	// The water brush that carves the landscape, on its Water edit layer. A new water body would make it itself, through the
+	// landscape editor's services, which open a dialog and the level editor's mode tools, neither of which a commandlet
+	// has: so it is made here first, and the river finds it.
+	static const FName WaterLayer(TEXT("Water"));
+	int32 WaterLayerIndex = Landscape->GetLayerIndex(WaterLayer);
+	if (WaterLayerIndex == INDEX_NONE)
+	{
+		WaterLayerIndex = Landscape->CreateLayer(WaterLayer);
+	}
+	UClass* BrushClass = LoadClass<ALandscapeBlueprintBrushBase>(nullptr, TEXT("/Script/WaterEditor.WaterBrushManager"));
+	if (WaterLayerIndex == INDEX_NONE || !BrushClass)
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("CreateRiver: no Water edit layer on %s or no water brush class"), *Landscape->GetActorLabel());
+		return nullptr;
+	}
+	bool bHasBrush = false;
+	for (const ALandscapeBlueprintBrushBase* Brush : Landscape->GetBrushesForLayer(WaterLayerIndex))
+	{
+		bHasBrush |= Brush && Brush->IsA(BrushClass);
+	}
+	if (!bHasBrush)
+	{
+		// Through its actor factory, as the editor makes it: the brush's materials and render target defaults.
+		UActorFactory* BrushFactory = GEditor->FindActorFactoryForActorClass(BrushClass);
+		const FTransform Center(Landscape->GetComponentsBoundingBox().GetCenter());
+		ALandscapeBlueprintBrushBase* Brush = Cast<ALandscapeBlueprintBrushBase>(BrushFactory
+			? BrushFactory->CreateActor(BrushClass, World->PersistentLevel, Center)
+			: World->SpawnActor(BrushClass, &Center));
+		if (!Brush)
+		{
+			UE_LOG(LogWorldDivide, Error, TEXT("CreateRiver: could not spawn the water brush"));
+			return nullptr;
+		}
+		Brush->SetActorLabel(TEXT("Landscape_WaterBrushManager"));
+		Landscape->AddBrushToLayer(WaterLayerIndex, Brush);
+	}
+	// Through the river's actor factory, as the Place Actors panel spawns it: the engine's river materials and brush defaults.
+	UActorFactory* Factory = GEditor->FindActorFactoryForActorClass(AWaterBodyRiver::StaticClass());
+	AWaterBodyRiver* River = Factory ? Cast<AWaterBodyRiver>(Factory->CreateActor(AWaterBodyRiver::StaticClass(), World->PersistentLevel,
+		FTransform(Points[0]))) : nullptr;
+	UWaterBodyRiverComponent* Body = River ? Cast<UWaterBodyRiverComponent>(River->GetWaterBodyComponent()) : nullptr;
+	UWaterSplineComponent* Spline = River ? River->GetWaterSpline() : nullptr;
+	if (!Body || !Spline)
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("CreateRiver: could not spawn a WaterBodyRiver"));
+		return nullptr;
+	}
+	River->SetActorLabel(TEXT("River"));
+
+	TArray<FVector> LocalPoints;
+	for (const FVector& Point : Points)
+	{
+		LocalPoints.Add(Point - Points[0]);
+	}
+	Spline->ResetSpline(LocalPoints);
+	for (int32 Index = 0; Index < Points.Num(); ++Index)
+	{
+		Body->SetRiverWidthAtSplineInputKey(Index, Widths[Index]);
+		Body->SetRiverDepthAtSplineInputKey(Index, Depths[Index]);
+	}
+	Spline->K2_SynchronizeAndBroadcastDataChange();
+
+	if (WaterMaterial)
+	{
+		Body->SetWaterMaterial(WaterMaterial);
+	}
+	// The bed follows the spline's depth alone, no extra curved channel; the banks rise at BankAngle straight from the edge.
+	Body->bAffectsLandscape = true;
+	Body->CurveSettings.bUseCurveChannel = false;
+	Body->CurveSettings.ChannelDepth = 0.f;
+	FWaterFalloffSettings& Falloff = Body->WaterHeightmapSettings.FalloffSettings;
+	Falloff.FalloffMode = EWaterBrushFalloffMode::Angle;
+	Falloff.FalloffAngle = BankAngle;
+	Falloff.EdgeOffset = 0.f;
+	Falloff.ZOffset = ShoreHeight;
+	// Never ground: the water profile is world-static (UWaterRuntimeSettings), which RTSGround's traces would stop on. The
+	// river's Water_ NavArea_Null volumes block the navmesh; the null nav area here only matters if it ever affects it.
+	Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Body->SetCanEverAffectNavigation(false);
+	Body->SetNavAreaClass(UNavArea_Null::StaticClass());
+
+	FOnWaterBodyChangedParams Changed;
+	Changed.bShapeOrPositionChanged = true;
+	Changed.bWeightmapSettingsChanged = true;
+	Changed.bUserTriggered = true;
+	Body->OnWaterBodyChanged(Changed);
+
+	if (!MergeEditLayers(*Landscape))
+	{
+		return nullptr;
+	}
+	// The merge outside landscape mode only lists the landscape's packages as modified; the level must save them.
+	if (ULandscapeInfo* Info = Landscape->GetLandscapeInfo())
+	{
+		Info->MarkModifiedPackagesAsDirty();
+	}
+
+	// The carve must have reached the landscape's collision: the bed under the middle of the river, below the surface.
+	int32 Carved = 0;
+	for (int32 Index = 0; Index < Points.Num(); ++Index)
+	{
+		const TOptional<float> Ground = Landscape->GetHeightAtLocation(Points[Index]);
+		if (Ground && *Ground < Points[Index].Z - 0.5f * Depths[Index])
+		{
+			++Carved;
+		}
+	}
+	const TOptional<float> Middle = Landscape->GetHeightAtLocation(Points[Points.Num() / 2]);
+	UE_LOG(LogWorldDivide, Display, TEXT("CreateRiver: %d points, the bed under %d of them; mid-river ground %.0f cm, surface %.0f cm"),
+		Points.Num(), Carved, Middle ? *Middle : 0.f, Points[Points.Num() / 2].Z);
+	if (Carved < Points.Num() / 2)
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("CreateRiver: the water brush did not carve the landscape (bed under %d of %d points)"), Carved, Points.Num());
+		return nullptr;
+	}
+	return River;
+#else
+	return nullptr;
 #endif
 }
 

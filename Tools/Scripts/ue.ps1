@@ -17,6 +17,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task s
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task setup -Lock
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bakemap -Map /Game/Maps/L_RiverFord -Render
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task rivercrossing
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task rivercrossing -Rebuild -Render
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task editor
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uishots -Panel ResourceBar
@@ -66,7 +67,9 @@ its preview (rendered with -Render, drawn without), the area the preview covers 
 docs/world/maps/AUTHORING_A_MAP.md). It exits 3 like setup when the asset or the preview texture is read-only.
 Rivercrossing builds and saves the navmesh of /Game/Maps/WD_RiverCrossing_01, first creating its scripted greybox when the
 level does not exist yet (Tools/Editor/setup_rivercrossing.py, #154); bake it afterwards with bakemap. It exits 3 like setup
-when an actor file it must rewrite is read-only.
+when an actor file it must rewrite is read-only. -Rebuild deletes the level and its actor files first, so the greybox is
+built anew (#155); it exits 3 too when one of them is read-only, and with -Lock locks them first. The greybox's river
+carves the landscape on the GPU, so building it needs -Render.
 Editor opens the editor with the Unreal MCP server at http://127.0.0.1:8000/mcp (docs/ui/AI_TEAM.md); test and setup run without it.
 Uishots plays L_TestMap with a renderer (a GPU is needed) and saves the HUD in the UI test state for each faction look at
 1920x1080, 2560x1440, 3440x1440 and 1680x1050 to Saved/UIShots/HUD, or with -Panel to Saved/UIShots/<Panel> with a crop of that panel;
@@ -165,6 +168,8 @@ param(
 	[switch]$Render,
 
 	[switch]$Lock,
+
+	[switch]$Rebuild,
 
 	[switch]$BenchHQ,
 
@@ -350,8 +355,34 @@ function Invoke-BakeMap {
 	}
 }
 
-# Builds and saves WD_RiverCrossing_01's navmesh, creating its greybox first when the level is missing (#154).
+# Builds and saves WD_RiverCrossing_01's navmesh, creating its greybox first when the level is missing (#154). -Rebuild
+# deletes the level and its actor files first, which must be locked like any file the run rewrites (#155).
 function Invoke-RiverCrossing {
+	if ($Rebuild) {
+		$LevelFiles = @(Get-Item -LiteralPath (Join-Path $RepoRoot 'Content\Maps\WD_RiverCrossing_01.umap') -ErrorAction SilentlyContinue)
+		$ActorDir = Join-Path $RepoRoot 'Content\__ExternalActors__\Maps\WD_RiverCrossing_01'
+		if (Test-Path $ActorDir) { $LevelFiles += @(Get-ChildItem -LiteralPath $ActorDir -Recurse -File) }
+		$ReadOnly = @($LevelFiles | Where-Object { $_.IsReadOnly } | ForEach-Object {
+			$_.FullName.Substring($RepoRoot.Length + 1).Replace([char]92, [char]47) })
+		if ($ReadOnly.Count -gt 0) {
+			if (-not $Lock) {
+				Write-Host "RIVERCROSSING BLOCKED: -Rebuild deletes $($ReadOnly.Count) read-only level files (LFS lockable, not locked by you)."
+				Write-Host 'Nothing was deleted. Rerun with -Lock to lock them first; unlock them after the push.'
+				exit 3
+			}
+			Write-Host "Locking the $($ReadOnly.Count) level files -Rebuild deletes (-Lock):"
+			foreach ($File in $ReadOnly) {
+				& git -C $RepoRoot lfs lock $File | Out-Null
+				if ($LASTEXITCODE -ne 0) {
+					Write-Host "RIVERCROSSING BLOCKED: could not lock $File (git lfs locks shows who holds it)."
+					exit 3
+				}
+			}
+			Write-Host 'Locked; unlock them after the push (git lfs unlock <file> for each, or git lfs locks to list them).'
+		}
+		$LevelFiles | ForEach-Object { Remove-Item -Force -LiteralPath $_.FullName }
+		Write-Host "Deleted the level and $($LevelFiles.Count - 1) actor files; building the greybox anew."
+	}
 	Invoke-EditorScript (Join-Path $RepoRoot 'Tools\Editor\setup_rivercrossing.py') 'RIVERCROSSING'
 }
 

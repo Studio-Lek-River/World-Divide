@@ -10,6 +10,7 @@
 #include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommand.h"
+#include "Commands/RTSCommandDispatch.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSAIBuildOrderData.h"
@@ -26,6 +27,7 @@
 #include "EngineUtils.h"
 #include "Misc/PackageName.h"
 #include "GameFramework/PlayerStart.h"
+#include "LandscapeProxy.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "NavModifierVolume.h"
 #include "Navigation/RTSHullClearance.h"
@@ -43,6 +45,7 @@
 #include "Units/RTSGround.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
+#include "WaterBodyActor.h"
 
 /**
  * The real scale of WORLD_SCALE_STANDARD.md (#136). The dimension test holds every placeholder unit and building to the
@@ -951,11 +954,29 @@ namespace RTSScaleTests
 	// ---- River Crossing ---------------------------------------------------------------------------------------------------
 
 	const TCHAR* RiverCrossingMap = TEXT("/Game/Maps/WD_RiverCrossing_01");
-	/** The bridges' decks stand at (0, +-BridgeY) (rivercrossing_greybox.py, 02_MAP_DESIGN.md), their tops at DeckTop. */
+	/**
+	 * The bridges' decks stand at (0, +-BridgeY) (rivercrossing_greybox.py, 02_MAP_DESIGN.md), their tops at DeckTop, 3 m
+	 * up on their ramps (#155).
+	 */
 	constexpr float BridgeY = 30000.f;
-	constexpr float DeckTop = 20.f;
+	constexpr float DeckTop = 300.f;
 	/** Half a deck's length and width: a path point inside this box around a deck is on that bridge. */
 	const FVector2D DeckHalfSize(4500.f, 700.f);
+	/** The middles of each bridge's three spans along X, where the lane across its deck is measured. */
+	const float SpanCenters[] = { -3000.f, 0.f, 3000.f };
+	/** The vehicle lane across a deck is at least this wide (02 "Bridges": the carriageway less the agent's radius twice). */
+	constexpr float MinBridgeLane = 600.f;
+	/** The lane is measured in steps this wide across the deck, out to DeckHalfSize.Y and this far past it. */
+	constexpr float LaneStep = 10.f;
+	constexpr float LaneOverhang = 100.f;
+	/** The river's surface (WATER_LEVEL): the ground under it lies well below, and the water itself never answers a trace. */
+	constexpr float WaterSurfaceZ = -300.f;
+	constexpr float BedBelowSurface = 50.f;
+	/** The playable square's half-size (PLAYABLE_HALF), which the navmesh covers. */
+	constexpr float RiverCrossingHalf = 100000.f;
+	/** Where in a Water_ box the river is sampled, as shares of its half length and half width: in the water, off the banks. */
+	const float WaterSamplesAlong[] = { -0.8f, -0.4f, 0.f, 0.4f, 0.8f };
+	const float WaterSamplesAcross[] = { -0.5f, 0.f, 0.5f };
 	/** The west bank's village stockpile (02 "Central village"); the east bank's is the same turned about the centre. */
 	const FVector WestVillageSource(-9000.f, 4000.f, 0.f);
 	/** A side's route to a target differs from the other side's by this share at most (02 "Balance checklist"). */
@@ -1037,12 +1058,116 @@ namespace RTSScaleTests
 		return Route;
 	}
 
+	/** Points over the river, off both bridges and inside the playable square: the Water_ boxes' samples, at the surface. */
+	TArray<FVector> GetRiverSamples(const TArray<const ANavModifierVolume*>& Water)
+	{
+		TArray<FVector> Samples;
+		for (const ANavModifierVolume* Volume : Water)
+		{
+			// The volume's brush is the default 2 m cube, scaled to the box.
+			const FTransform& Box = Volume->GetActorTransform();
+			for (const float Along : WaterSamplesAlong)
+			{
+				for (const float Across : WaterSamplesAcross)
+				{
+					const FVector At = Box.TransformPosition(FVector(100.f * Along, 100.f * Across, 0.f));
+					if (!IsOnBridge(At) && FMath::Abs(At.X) < RiverCrossingHalf && FMath::Abs(At.Y) < RiverCrossingHalf)
+					{
+						Samples.Add(FVector(At.X, At.Y, WaterSurfaceZ));
+					}
+				}
+			}
+		}
+		return Samples;
+	}
+
+	/**
+	 * The river is a Water plugin river that ground units cannot walk and ground traces see through (#155): no navmesh of
+	 * any agent over the water off the bridges, and the world-static trace of RTSGround goes through the surface to the
+	 * landscape's carved bed.
+	 */
+	void CheckRiverWater(FAutomationTestBase& Test, UWorld& World, const TArray<const ANavModifierVolume*>& Water)
+	{
+		int32 Rivers = 0;
+		for (TActorIterator<AWaterBody> It(&World); It; ++It)
+		{
+			++Rivers;
+			const UPrimitiveComponent* Body = It->GetWaterBodyComponent();
+			Test.TestTrue(*FString::Printf(TEXT("%s has no collision"), *It->GetActorLabel()), Body && Body->GetCollisionEnabled() == ECollisionEnabled::NoCollision);
+		}
+		Test.TestEqual(TEXT("The river is one Water plugin water body"), Rivers, 1);
+
+		const TArray<FVector> Samples = GetRiverSamples(Water);
+		Test.TestTrue(*FString::Printf(TEXT("The river has samples off the bridges (%d)"), Samples.Num()), Samples.Num() > 50);
+		for (const FNavDataConfig& Agent : RTSNavAgents::GetAgents())
+		{
+			const ARecastNavMesh* NavMesh = RTSNavAgents::GetNavMesh(World, Agent);
+			if (!Test.TestNotNull(*FString::Printf(TEXT("A %s navmesh"), *Agent.Name.ToString()), NavMesh))
+			{
+				continue;
+			}
+			int32 Walkable = 0;
+			for (const FVector& Sample : Samples)
+			{
+				FNavLocation On;
+				// From the bed to the banks' foot: the decks (DeckTop) stay out of reach.
+				if (NavMesh->ProjectPoint(Sample, On, FVector(25.f, 25.f, 500.f)) && Walkable++ < 5)
+				{
+					Test.AddError(FString::Printf(TEXT("%s navmesh over the river at %s"), *Agent.Name.ToString(), *On.Location.ToCompactString()));
+				}
+			}
+			Test.TestEqual(*FString::Printf(TEXT("No %s navmesh over the river off the bridges"), *Agent.Name.ToString()), Walkable, 0);
+		}
+
+		int32 OnBed = 0;
+		int32 OnOther = 0;
+		static const FName TraceTag(TEXT("RTSRiverTest"));
+		for (const FVector& Sample : Samples)
+		{
+			float GroundZ = 0.f;
+			const FVector From(Sample.X, Sample.Y, 0.f);
+			if (RTSGround::Trace(World, From, 2000.f, 2000.f, GroundZ) && GroundZ < WaterSurfaceZ - BedBelowSurface)
+			{
+				++OnBed;
+			}
+			// The same world-static ray: what it stops on must be the landscape.
+			FHitResult Hit;
+			if (World.LineTraceSingleByObjectType(Hit, From + FVector(0.f, 0.f, 2000.f), From - FVector(0.f, 0.f, 2000.f),
+				FCollisionObjectQueryParams(ECC_WorldStatic), FCollisionQueryParams(TraceTag)) && !Cast<ALandscapeProxy>(Hit.GetActor())
+				&& OnOther++ < 5)
+			{
+				Test.AddError(FString::Printf(TEXT("A ground trace over the river at %s stopped on %s, not the landscape"), *From.ToCompactString(),
+					Hit.GetActor() ? *Hit.GetActor()->GetActorLabel() : TEXT("nothing")));
+			}
+		}
+		Test.TestEqual(TEXT("Every ground trace over the river reaches the carved bed"), OnBed, Samples.Num());
+		Test.TestEqual(TEXT("No ground trace over the river stops on anything but the landscape"), OnOther, 0);
+	}
+
+	/** The widest run of NavMesh across the deck of the bridge at Y, at X along it, at the deck's height. */
+	float MeasureBridgeLane(const ARecastNavMesh& NavMesh, float X, float Y)
+	{
+		float Widest = 0.f;
+		float Run = 0.f;
+		for (float Across = -DeckHalfSize.Y - LaneOverhang; Across <= DeckHalfSize.Y + LaneOverhang; Across += LaneStep)
+		{
+			FNavLocation On;
+			const bool bLane = NavMesh.ProjectPoint(FVector(X, Y + Across, DeckTop), On, FVector(1.f, 1.f, 50.f))
+				&& FMath::Abs(On.Location.Z - DeckTop) < 50.f;
+			Run = bLane ? Run + LaneStep : 0.f;
+			Widest = FMath::Max(Widest, Run);
+		}
+		return Widest;
+	}
+
 	/**
 	 * The balance checklist of 02_MAP_DESIGN.md that the navmesh can measure, on WD_RiverCrossing_01 (#154): a tank finds a
 	 * full path from each base to both bridges, both village stockpiles and the other base; no path runs over the river off
 	 * a bridge, so the way from base to base always takes one; each side's routes are as long as the other side's turned
 	 * about the centre, within 3%; both bridge decks carry vehicle navmesh; the landscape outside both bases is dirt to the
-	 * vehicles' dust (#337); and a vehicle factory can be placed at every site of a grid on both base pads.
+	 * vehicles' dust (#337); and a vehicle factory can be placed at every site of a grid on both base pads. And of the Water
+	 * plugin river and the concrete bridges (#155): the river is walkable by no agent and transparent to ground traces
+	 * (CheckRiverWater), and the vehicle lane across every span of both decks is at least 6 m wide.
 	 */
 	DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FRTSCheckRiverCrossing, FAutomationTestBase*, Test);
 	bool FRTSCheckRiverCrossing::Update()
@@ -1082,7 +1207,14 @@ namespace RTSScaleTests
 			const bool bDeck = NavMesh->ProjectPoint(FVector(0.f, Y, DeckTop), OnDeck, FVector(100.f, 100.f, 100.f));
 			Test->TestTrue(*FString::Printf(TEXT("The bridge deck at y %.0f m has vehicle navmesh"), Y / 100.f),
 				bDeck && FMath::Abs(OnDeck.Location.Z - DeckTop) < 100.f);
+			for (const float X : SpanCenters)
+			{
+				const float Lane = MeasureBridgeLane(*NavMesh, X, Y);
+				Test->TestTrue(*FString::Printf(TEXT("The vehicle lane across the bridge at (%.0f, %.0f) m is %.1f m wide, at least %.0f"), X / 100.f,
+					Y / 100.f, Lane / 100.f, MinBridgeLane / 100.f), Lane >= MinBridgeLane);
+			}
 		}
+		CheckRiverWater(*Test, *World, Water);
 
 		// Each side leaves its base past the headquarters toward the middle, and stops beside a stockpile on the side facing
 		// its base, as the lane test does; team 1's targets are team 0's turned about the centre.
@@ -1191,6 +1323,148 @@ namespace RTSScaleTests
 		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSScaleWaitForPlay(this, MakeShared<double>(0.0)));
 		ADD_LATENT_AUTOMATION_COMMAND(FRTSCheckRiverCrossing(this));
+		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+		return true;
+	}
+
+	/** Tanks per bridge in the column test, their spacing, and where the column's head starts and its target lies along X. */
+	constexpr int32 ColumnTanks = 12;
+	constexpr float ColumnPitch = 1200.f;
+	constexpr float ColumnStart = 10500.f;
+	constexpr float ColumnTarget = 14000.f;
+	/** A tank has arrived this close to its formation slot (a long hull; units sent together crowd), within this game time. */
+	constexpr float ColumnArrival = 800.f;
+	constexpr double ColumnGameTimeout = 150.0;
+	constexpr double ColumnWallTimeout = 240.0;
+
+	struct FBridgeColumnState
+	{
+		/** Per bridge: 0 the north one, crossed west to east, 1 the south one, east to west. */
+		TArray<TWeakObjectPtr<ARTSUnit>> Units[2];
+		TArray<FVector> Slots[2];
+		TArray<bool> CrossedDeck[2];
+		double OrderGameTime = 0.0;
+		double OrderWallTime = 0.0;
+	};
+
+	/**
+	 * A column of ColumnTanks M20s before each bridge, on the other side of the river from its target, each column sent on
+	 * one order through RTSCommands::Dispatch, as an AI orders.
+	 */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSStartBridgeColumns, FAutomationTestBase*, Test, TSharedRef<FBridgeColumnState>, State);
+	bool FRTSStartBridgeColumns::Update()
+	{
+		UWorld* World = GetPlayWorld();
+		const ARTSPlayerController* Controller = World ? Cast<ARTSPlayerController>(World->GetFirstPlayerController()) : nullptr;
+		URTSUnitData* M20 = LoadObject<URTSUnitData>(nullptr, M20Path);
+		if (!World || !Controller || !M20)
+		{
+			Test->AddError(TEXT("No play world, controller or M20 data"));
+			return true;
+		}
+		for (int32 Bridge = 0; Bridge < 2; ++Bridge)
+		{
+			const float Y = Bridge == 0 ? BridgeY : -BridgeY;
+			const float Heading = Bridge == 0 ? 1.f : -1.f;
+			TArray<ARTSUnit*> Column;
+			for (int32 Index = 0; Index < ColumnTanks; ++Index)
+			{
+				FVector At(-Heading * (ColumnStart + Index * ColumnPitch), Y, 0.f);
+				float GroundZ = 0.f;
+				if (RTSGround::Trace(*World, At, 5000.f, 5000.f, GroundZ))
+				{
+					At.Z = GroundZ;
+				}
+				ARTSUnit* Tank = SpawnUnit(*World, M20, Controller->GetTeamId(), At);
+				Tank->SetActorRotation(FRotator(0.f, Bridge == 0 ? 0.f : 180.f, 0.f));
+				Column.Add(Tank);
+				State->Units[Bridge].Add(Tank);
+				State->CrossedDeck[Bridge].Add(false);
+			}
+			const FVector Target(Heading * ColumnTarget, Y, 0.f);
+			State->Slots[Bridge] = RTSCommands::PlanFormation(Column, Target);
+			FRTSCommand Move;
+			Move.Type = ERTSCommandType::Move;
+			Move.TargetLocation = Target;
+			RTSCommands::Dispatch(Column, Move);
+		}
+		State->OrderGameTime = World->GetTimeSeconds();
+		State->OrderWallTime = FPlatformTime::Seconds();
+		return true;
+	}
+
+	/** Waits until every tank of both columns stands at its slot across the river, having driven over its bridge's deck. */
+	DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSVerifyBridgeColumns, FAutomationTestBase*, Test, TSharedRef<FBridgeColumnState>, State);
+	bool FRTSVerifyBridgeColumns::Update()
+	{
+		UWorld* World = GetPlayWorld();
+		if (!World)
+		{
+			Test->AddError(TEXT("The play world went away"));
+			return true;
+		}
+		int32 Arrived[2] = { 0, 0 };
+		int32 Alive = 0;
+		for (int32 Bridge = 0; Bridge < 2; ++Bridge)
+		{
+			for (int32 Index = 0; Index < State->Units[Bridge].Num(); ++Index)
+			{
+				const ARTSUnit* Tank = State->Units[Bridge][Index].Get();
+				if (!Tank)
+				{
+					continue;
+				}
+				++Alive;
+				const FVector At = Tank->GetActorLocation();
+				State->CrossedDeck[Bridge][Index] |= IsOnBridge(At) && At.Z > DeckTop - 100.f;
+				const bool bThere = State->Slots[Bridge].IsValidIndex(Index) && FVector::Dist2D(At, State->Slots[Bridge][Index]) <= ColumnArrival;
+				Arrived[Bridge] += bThere && State->CrossedDeck[Bridge][Index] ? 1 : 0;
+			}
+		}
+		const double GameTime = World->GetTimeSeconds() - State->OrderGameTime;
+		const bool bAll = Arrived[0] == ColumnTanks && Arrived[1] == ColumnTanks;
+		if (!bAll && GameTime < ColumnGameTimeout && FPlatformTime::Seconds() - State->OrderWallTime < ColumnWallTimeout)
+		{
+			return false;
+		}
+		Test->TestEqual(TEXT("Every tank is still alive"), Alive, 2 * ColumnTanks);
+		for (int32 Bridge = 0; Bridge < 2; ++Bridge)
+		{
+			const TCHAR* Name = Bridge == 0 ? TEXT("north") : TEXT("south");
+			Test->TestEqual(*FString::Printf(TEXT("Tanks of the %s column across its bridge within %.0f s game time (took %.0f s)"), Name,
+				ColumnGameTimeout, GameTime), Arrived[Bridge], ColumnTanks);
+			for (int32 Index = 0; Index < State->Units[Bridge].Num(); ++Index)
+			{
+				const ARTSUnit* Tank = State->Units[Bridge][Index].Get();
+				const float Off = Tank && State->Slots[Bridge].IsValidIndex(Index) ? FVector::Dist2D(Tank->GetActorLocation(), State->Slots[Bridge][Index]) : 0.f;
+				if (Off > ColumnArrival || (Tank && !State->CrossedDeck[Bridge][Index]))
+				{
+					Test->AddInfo(FString::Printf(TEXT("The %s column's tank %d stopped at %s, %.0f m from its slot%s"), Name, Index,
+						*Tank->GetActorLocation().ToCompactString(), Off / 100.f, State->CrossedDeck[Bridge][Index] ? TEXT("") : TEXT(", never on the deck")));
+				}
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * A column of twelve M20s crosses each bridge of WD_RiverCrossing_01 on one order, and every tank reaches its slot on the
+	 * far side over the deck in time (#155): the bridges carry a real column, not just one path.
+	 */
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSRiverCrossingBridgeColumnTest, "WorldDivide.Maps.RiverCrossing.BridgeColumn", TestFlags)
+
+	bool FRTSRiverCrossingBridgeColumnTest::RunTest(const FString& Parameters)
+	{
+		if (!AutomationOpenMap(RiverCrossingMap))
+		{
+			AddError(FString::Printf(TEXT("Could not open %s"), RiverCrossingMap));
+			return false;
+		}
+		const TSharedRef<FBridgeColumnState> State = MakeShared<FBridgeColumnState>();
+		ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSScaleWaitForPlay(this, MakeShared<double>(0.0)));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSStartBridgeColumns(this, State));
+		ADD_LATENT_AUTOMATION_COMMAND(FRTSVerifyBridgeColumns(this, State));
 		ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 		return true;
 	}

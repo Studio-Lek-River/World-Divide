@@ -54,6 +54,10 @@ public class WorldDivide : ModuleRules
 		if (Target.bBuildEditor)
 		{
 			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "AssetRegistry", "RenderCore", "ApplicationCore", "MeshDescription", "StaticMeshDescription", "DeveloperToolSettings", "NiagaraEditor" });
+
+			// River Crossing's river (#155): rivercrossing_greybox.py lays a Water plugin river (URTSEditorScripting::CreateRiver),
+			// and its layout test checks the water never answers a ground trace. The game itself never touches the water.
+			PrivateDependencyModuleNames.Add("Water");
 		}
 	}
 }

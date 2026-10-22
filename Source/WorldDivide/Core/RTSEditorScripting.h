@@ -77,6 +77,20 @@ public:
 	static int32 SetLandscapePhysicalMaterial(UObject* WorldContextObject, UPhysicalMaterial* Material);
 
 	/**
+	 * Lays a Water plugin river (#155) in WorldContextObject's world along Points (world cm, Z its surface), Widths and
+	 * Depths cm at each point, as the editor's Place Actors panel does, so it comes with the water zone that draws it and
+	 * the water brush that carves it into the world's landscape through the landscape's Water edit layer. The bed lies
+	 * Depth under the surface and the banks rise from the water's edge at BankAngle degrees, ShoreHeight cm over the
+	 * surface at the edge. The river has no collision, so world-static ground traces (RTSGround) never stop on its surface,
+	 * and is a null nav area. It merges the edit layers before it returns, so the carved heights are what a level saved
+	 * afterwards keeps and what its navmesh builds on; that needs a renderer (-AllowCommandletRendering). Returns null and
+	 * logs why when the world has no landscape, there is no renderer or the river did not carve the landscape.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static AActor* CreateRiver(UObject* WorldContextObject, const TArray<FVector>& Points, const TArray<float>& Widths, const TArray<float>& Depths,
+		float BankAngle, float ShoreHeight, UMaterialInterface* WaterMaterial);
+
+	/**
 	 * Stores every actor of WorldContextObject's level in its own file (One File Per Actor), as the World Settings' "Use
 	 * External Actors" does, so actors can be LFS-locked one by one. Returns false without a level.
 	 */

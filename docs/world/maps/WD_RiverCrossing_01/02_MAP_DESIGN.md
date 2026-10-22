@@ -103,15 +103,15 @@ There are two road bridges, at roughly (0, +300) and (0, -300), a point-symmetri
 
 | Property | Target |
 |---|---|
-| Carriageway | ≥ 12 m, which is two lanes and more than 3× the widest vehicle (3.7 m) |
-| Overall deck | about 14 m including parapets |
-| Length | about 70–90 m including abutments |
-| Ramps | ≤ 8° (well under the 44° nav slope) |
-| Clearance | 5–6 m above the water (visual only; there are no boats in this map) |
+| Carriageway | ≥ 12 m, which is two lanes and more than 3× the widest vehicle (3.7 m); built: 13 m |
+| Overall deck | about 14 m including parapets; built: 14 m with 0.5 m parapets |
+| Length | about 70–90 m including abutments; built: three 30 m spans, 90 m between the abutments |
+| Ramps | ≤ 8° (well under the 44° nav slope); built: 3 m up over 30 m, 5.7° |
+| Clearance | 5–6 m above the water (visual only; there are no boats in this map); built: the deck's top 6 m over the water, the girders' feet about 4.3 m |
 | Approach | 60 m of straight, obstacle-free road on both ends for columns forming up |
 | Collision | Deck on **WorldStatic** so `RTSGround::Trace` and the building/HQ ground traces find it |
 
-The usable lane is the carriageway minus twice the vehicle nav agent radius (1.9 m), so 12 − 3.8 = 8.2 m, which meets the 6 m minimum.
+The usable lane is the carriageway minus twice the vehicle nav agent radius (1.9 m), so 12 − 3.8 = 8.2 m, which meets the 6 m minimum; the built 13 m carriageway leaves 9.2 m.
 
 The bridges can be destroyed later (DESIGN_FOUNDATION §6, persistent ruins). That is out of scope for 01, but the bridge mesh should be built as separate spans to allow it.
 

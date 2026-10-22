@@ -8,7 +8,7 @@ Each item is tagged **Verified** (checked in the project or the engine install),
 |---|---|---|
 | Engine | UE 5.8, DX12, SM6 | `WorldDivide.uproject`, `Config/DefaultEngine.ini` |
 | Project plugins enabled | ModelingToolsEditorMode, EnhancedInput, CommonUI, PythonScriptPlugin, EditorScriptingUtilities, ModelContextProtocol, EditorToolset, SlateInspectorToolset, WorldDivideMCP | `WorldDivide.uproject` |
-| Installed in the engine but **not enabled** | PCG (plus PCGGeometryScriptInterop, PCGWaterInterop (experimental), PCGPythonInterop), Water, WaterAdvanced, WaterExtras, Landmass, LandscapePatch, GeometryScripting, ProceduralVegetationEditor, Fab, Bridge | `D:\Program Files\Epic Games\UE_5.8\Engine\Plugins\` |
+| Installed in the engine but **not enabled** | PCG (plus PCGGeometryScriptInterop, PCGWaterInterop (experimental), PCGPythonInterop), WaterAdvanced, WaterExtras, Landmass, LandscapePatch, GeometryScripting, ProceduralVegetationEditor, Fab, Bridge. Water is enabled and used since #155 (§7). | `D:\Program Files\Epic Games\UE_5.8\Engine\Plugins\` |
 | Not installed | Cesium, Houdini Engine | same |
 | Lighting | `r.AllowStaticLighting=False`; Lumen, VSM and Nanite at engine defaults | `DefaultEngine.ini` |
 | Navigation | `NavigationSystemV1` with `bAllowClientSideNavigation=True`; `RecastNavMesh` with `RuntimeGeneration=Dynamic`; one default agent (radius 34, height 144, step 35, slope 44°, cell 19, tile 1000) | `DefaultEngine.ini`, engine `BaseEngine.ini` |
@@ -109,18 +109,20 @@ Heightmap authoring:
 
 ## 7. Water
 
-- **Water plugin `WaterBodyRiver`** along one spline.
-- **Width:** the spline width varies from 40 to 70 m.
-- **Depth:** 2–4 m.
-- **Carving:** riverbed carving is done through the Water landscape edit layer.
-- **Materials:** the engine river material, adjusted for colour and opacity. Riverbed mud and pebbles come from the landscape material's Mud layer.
+- **Water plugin `WaterBodyRiver`** along one spline (#155), laid by `URTSEditorScripting::CreateRiver` from `rivercrossing_greybox.py`: a point every 40 m on the S-curve, edge to edge.
+- **Decision (#155, producer 2026-10-22):** the Water plugin is used although it is experimental in 5.8. Gameplay does not depend on it: the `Water_*` volumes block the navmesh and the water body has no collision, so a later engine change to the plugin can break the look but not pathing, placement or grounding.
+- **Width:** the spline width varies from 45 m at the bridges to 70 m at the bends.
+- **Depth:** 2 m at the bridges to 3 m at the bends, under a surface 3 m below the fields.
+- **Carving:** the river's water brush (`AWaterBrushManager`) carves the bed through the landscape's Water edit layer; the heightmap itself has no channel. The brush draws on the GPU, so building the greybox needs a renderer (`ue.ps1 -Task rivercrossing -Rebuild -Render`), and `CreateRiver` merges the edit layers before the level is saved, so the saved heights and collision carry the bed. Banks rise from 16 cm over the water at 60° (angle falloff, no curve channel). In a commandlet `CreateRiver` makes the Water edit layer and the water brush itself before it spawns the river: the editor's own path asks where to insert the layer in a dialog and touches the level editor's mode tools, which a commandlet does not have. **Validated (#155):** the rebuild logs the bed under 62 of the 64 spline points (the two end points lie past the landscape), 5.2 m down in mid-river under a surface at -3 m.
+- **Materials:** `MI_RiverCrossing_River`, the engine river material with a murkier green-brown absorption and scattering. Riverbed mud and pebbles come from the landscape material's Mud layer (#156).
+- **Open (#155):** the water surface does not draw yet. The camera captures (`-game`) and the lobby preview show the carved channel and the banks but no water, even with the water mesh's wireframe on and an exaggerated colour. The body has its water zone, its water material and its water-info meshes, so the cause is in how the water mesh or the water-info texture renders in this project; it is a follow-up issue. Gameplay does not depend on it (above).
 - **Ground units must not cross the river.** Two blocks do this:
-  1. Banks above 44° slope in the carved section, so the navmesh is cut by slope.
+  1. Banks above 44° slope in the carved section (60°), so the navmesh is cut by slope.
   2. A chain of `NavModifierVolume`s with `NavArea_Null` labelled `Water_*` along the river. They follow the existing `spawn_water` and `Smoke.SolidObstacles` naming rule (labels `Wall_`, `Block_`, `Water_`).
-  - **To validate:** whether the water body's own navigation setting (`bAffectsNavigation` / `WaterNavAreaClass` in 5.8) can replace the volumes.
+  - **Decided (#155):** the water body's own navigation (`WaterNavAreaClass`) does not replace the volumes. It only acts through the body's collision, which must stay off (below), so the body's nav area is set to `NavArea_Null` as a fallback only and the volumes stay the block. **Validated:** `WorldDivide.Maps.RiverCrossing.Layout` passes its check that neither the Infantry nor the Vehicle navmesh lies anywhere over the water off the bridges (samples in every `Water_*` box inside the playable square).
 - **Trace risk:**
   - The Water body's collision must **not** answer the WorldStatic ground traces. Otherwise HQ placement, unit snapping and `CanPlace` could treat the water surface as ground.
-  - **To validate:** the water body's collision profile.
+  - The plugin's default profile (`WaterBodyCollision`, from `UWaterRuntimeSettings`) is a WorldStatic query profile, so it would answer them; `CreateRiver` turns the body's collision off. **Validated (#155):** `WorldDivide.Maps.RiverCrossing.Layout` passes with every `RTSGround::Trace` over the river reaching the carved bed at least 0.5 m under the surface, and every world-static ray there stopping on the landscape.
 - **Shoreline:** reeds, mud decals and stones from PCG along the spline (with PCGWaterInterop, or a spline copy).
 
 ## 8. Roads and bridges
@@ -129,12 +131,13 @@ Heightmap authoring:
   - They deform the landscape, so the road follows a smoothed height.
   - They write into the RVT for blending.
   - Purely visual for navigation: the road is part of the walkable ground.
-- **Bridges:**
-  - Static mesh actors (modular spans from the imported infrastructure pack, or a project-built Geometry Script bridge if no pack fits).
-  - **WorldStatic** collision with simple box collision on the deck.
-  - Bridges sit on the navmesh as normal geometry; no nav links are needed.
-  - **To validate** with a navmesh draw (`show Navigation`): deck connectivity and the gap between the deck and the `Water_*` volume.
-- **Bridge width:** a 12 m carriageway, checked against the vehicle agent radius of 190 cm (§9): lane = 12 m − 2 × 1.9 m = 8.2 m, which meets the ≥ 6 m rule.
+- **Bridges (#155):**
+  - A project-built concrete girder bridge from `Tools/Art/bridge_blender.py` (FBX in `Art/Shared/bridge/`, imported to `/Game/Art/Shared/Bridge`): three separate 30 m spans on two piers and two abutments, Nanite on. Each part is its own static mesh actor, `Bridge_<North|South>_<Span1-3|Pier1-2|AbutmentW|AbutmentE>`, so a span can be dropped later.
+  - **WorldStatic** `BlockAll` collision from `UCX_` boxes: the deck and both parapets of each span, the pier caps and columns, the abutments' seats, approach slabs and wing walls.
+  - The deck's top stands 3 m over the approaches, 6 m over the water, on earthen ramps in the heightmap: flat for 19.5 m behind each abutment's approach slab, then down over 30 m (5.7°), with sides steeper than any agent climbs.
+  - The ramps keep the navmesh linked across its tile seams (`TileSizeUU` 64 m): a seam on a ramp with walkable sides came out as one far-tile polygon at field height, which Detour does not link to the road at deck height, and the hull clearance read it as a wall across the road (every tank of the column test stopped there). Keep a tile seam off a raised road's slope, or give the road sides no agent can climb.
+  - Bridges sit on the navmesh as normal geometry; no nav links are needed. The decks stand well above the `Water_*` volumes (their top is 1 m under the water).
+- **Bridge width:** a 13 m carriageway between the parapets, checked against the vehicle agent radius of 190 cm (§9): lane = 13 m − 2 × 1.9 m = 9.2 m, which meets the ≥ 6 m rule. `WorldDivide.Maps.RiverCrossing.Layout` measures it on each span, and `WorldDivide.Maps.RiverCrossing.BridgeColumn` drives a column of twelve M20s across each bridge.
 
 ## 9. Navigation at 2 km
 
