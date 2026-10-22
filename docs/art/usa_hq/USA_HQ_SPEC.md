@@ -146,13 +146,14 @@ Warning lights: the data's `GarageBeacons` lights at the portal's beacon lamps (
 
 ## LODs and budgets
 
-- LODs are made at import with the vehicles' switch distances (`vehicle_art.LOD_DISTANCES`: 35, 110 and 260 m from the RTS camera).
-- The architecture, roofs, courtyard and garage interior are so large that the engine caps their screen sizes. They keep full detail up to about 108 m and draw LOD2 at the default zoom (150 m).
-- Meshes under 2,000 triangles keep one LOD. Nanite is off.
+The HQ follows [`MODEL_PERFORMANCE.md`](../MODEL_PERFORMANCE.md) (Buildings) with the producer's raised LOD0 budget (#358); the per-mesh breakdown is in `Art/USA/buildings/usa_hq/report_ue5.md` (LODs).
 
-| | LOD0 | LOD1 | LOD2 | LOD3 |
-|---|---|---|---|---|
-| Whole HQ, triangles (every part counted) | 3,241,808 | 428,225 | 118,123 | 26,753 |
-| Budget asserted by `WorldDivide.Art.USAHeadquarters` | n/a | ≤ 450k | ≤ 150k | ≤ 40k |
+- Two LODs, LOD0 and LOD1, no Nanite. The whole HQ switches to LOD1 at once at 260 m from the RTS camera (`usa_hq_recipe.SWITCH_DISTANCE`): setup stretches every mesh's bounds over the building's box (`building_art.cover_building`), so no part switches on its own.
+- `SM_HQ_Shell` is reduced in setup to `SHELL_LOD0` / `SHELL_LOD1`; `SM_HQ_ShellDetail` and the masts have hand-made LOD1s; the moving parts and the flag are reduced to their `BUDGETS`. Meshes under 2,000 triangles keep LOD0 only.
 
-The full-detail model is kept for close-ups. Performance acceptance with several HQs is #199.
+| | LOD0 | LOD1 |
+|---|---|---|
+| Whole HQ, triangles (every part counted each time it is drawn) | 349,568 | 39,032 |
+| Budget asserted by `WorldDivide.Art.USAHeadquarters` | ≤ 350,000 | ≤ 40,000 |
+
+The full-detail delivery is kept for close-ups. Kit pieces mounted on the HQ count towards these budgets ([`BUILDING_KIT.md`](../BUILDING_KIT.md)). Performance acceptance with several HQs is #199.
