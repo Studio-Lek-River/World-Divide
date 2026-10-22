@@ -38,6 +38,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task b
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task buildingshots -Building DA_BenchHQ_Nanite -Cvars r.Nanite=0
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task packaudit
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task surfaces -Path D:\Downloads\textures
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate -Scope broad -Baseline 4a2a706
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uibindings
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task uicheck -Path Saved/UIIntake/HUD_2026-10-14/staging/UI
@@ -139,10 +140,16 @@ may name, to -Out (default Saved/UIBriefs/bindings.json) for /ui-brief. Uicheck 
 (an unpacked delivery, for /ui-intake) and prints each problem. -Out and -Path are relative to the repository root.
 Packaudit reads the local marketplace packs in Content/ into Saved/PackAudit/ and builds the git-ignored scale level
 /Game/Developers/PackAudit/L_PackScale (Tools/Editor/audit_packs.py, #153); it fails when that level misses a reference.
+It also caps every pack texture over 4K at 4K (#330).
+Surfaces (#330) takes the scanned surface ZIPs in the folder -Path (Megascans raw or _ue_raw/_ue_high, or any set whose maps
+end in BaseColor/Albedo/Color/diff, Normal/nor_gl/NormalDX, Roughness/rough, AO, Metalness or ORM/arm): it skips snow and
+imperfection sets, keeps one set per Megascans id (an _ue variant first), scales the maps to 2K with a packed ORM into
+Saved/Surfaces/, and imports them with Tools/Editor/import_surfaces.py into the git-ignored, never cooked /Game/Surfaces/<Name>/
+as T_<Name>_BC/_N/_ORM and MI_<Name> of M_ScannedSurface (world-aligned, tiled at the JSON's scanArea).
 #>
 param(
 	[Parameter(Mandatory = $true)]
-	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'buildingshots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit', 'bakemap', 'rivercrossing')]
+	[ValidateSet('build', 'test', 'setup', 'editor', 'uishots', 'unitshots', 'trackshots', 'camerashots', 'buildingshots', 'bench', 'gate', 'uibindings', 'uicheck', 'packaudit', 'surfaces', 'bakemap', 'rivercrossing')]
 	[string]$Task,
 
 	[string]$Filter = 'WorldDivide',
@@ -1354,6 +1361,253 @@ function Invoke-PackAudit {
 	Write-Host "PACKAUDIT SUCCEEDED: $Summary"
 }
 
+# Scales the scanned maps and packs the ORM with GDI+, which every Windows has, so the surfaces need no image library.
+$SurfaceImageSource = @'
+using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Runtime.InteropServices;
+
+public static class WDSurfaceImage
+{
+	static Bitmap Scale(Image Source, int MaxSize)
+	{
+		double Factor = Math.Min(1.0, (double)MaxSize / Math.Max(Source.Width, Source.Height));
+		Bitmap Result = new Bitmap(Math.Max(1, (int)Math.Round(Source.Width * Factor)), Math.Max(1, (int)Math.Round(Source.Height * Factor)), PixelFormat.Format24bppRgb);
+		using (Graphics Canvas = Graphics.FromImage(Result))
+		using (ImageAttributes Wrap = new ImageAttributes())
+		{
+			Canvas.InterpolationMode = InterpolationMode.HighQualityBicubic;
+			Canvas.PixelOffsetMode = PixelOffsetMode.HighQuality;
+			Canvas.CompositingMode = CompositingMode.SourceCopy;
+			// Tiling sets: sample across the edges, so the scaled map still tiles.
+			Wrap.SetWrapMode(WrapMode.TileFlipXY);
+			Canvas.DrawImage(Source, new Rectangle(0, 0, Result.Width, Result.Height), 0, 0, Source.Width, Source.Height, GraphicsUnit.Pixel, Wrap);
+		}
+		return Result;
+	}
+
+	public static void Resize(Stream Source, string Target, int MaxSize)
+	{
+		using (Image Image = Image.FromStream(Source))
+		using (Bitmap Scaled = Scale(Image, MaxSize))
+		{
+			Scaled.Save(Target, ImageFormat.Png);
+		}
+	}
+
+	static byte[] RedChannel(Stream Source, int Width, int Height, byte Fallback)
+	{
+		byte[] Channel = new byte[Width * Height];
+		if (Source == null)
+		{
+			for (int Index = 0; Index < Channel.Length; ++Index) { Channel[Index] = Fallback; }
+			return Channel;
+		}
+		using (Image Image = Image.FromStream(Source))
+		using (Bitmap Scaled = Scale(Image, Math.Max(Width, Height)))
+		{
+			if (Scaled.Width != Width || Scaled.Height != Height)
+			{
+				throw new InvalidDataException("The ORM maps differ in aspect");
+			}
+			BitmapData Data = Scaled.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+			byte[] Row = new byte[Data.Stride];
+			for (int Y = 0; Y < Height; ++Y)
+			{
+				Marshal.Copy(Data.Scan0 + Y * Data.Stride, Row, 0, Data.Stride);
+				// 24bpp is stored B, G, R; the maps are grey, red is as good as any.
+				for (int X = 0; X < Width; ++X) { Channel[Y * Width + X] = Row[X * 3 + 2]; }
+			}
+			Scaled.UnlockBits(Data);
+		}
+		return Channel;
+	}
+
+	/** AO into red, roughness into green, metalness into blue; a missing map is the fallback value. */
+	public static void PackOrm(Stream Ao, Stream Roughness, Stream Metal, Stream Reference, string Target, int MaxSize)
+	{
+		int Width, Height;
+		using (Image Image = Image.FromStream(Reference))
+		{
+			double Factor = Math.Min(1.0, (double)MaxSize / Math.Max(Image.Width, Image.Height));
+			Width = Math.Max(1, (int)Math.Round(Image.Width * Factor));
+			Height = Math.Max(1, (int)Math.Round(Image.Height * Factor));
+		}
+		byte[] Red = RedChannel(Ao, Width, Height, 255);
+		byte[] Green = RedChannel(Roughness, Width, Height, 204);
+		byte[] Blue = RedChannel(Metal, Width, Height, 0);
+		using (Bitmap Result = new Bitmap(Width, Height, PixelFormat.Format24bppRgb))
+		{
+			BitmapData Data = Result.LockBits(new Rectangle(0, 0, Width, Height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+			byte[] Row = new byte[Data.Stride];
+			for (int Y = 0; Y < Height; ++Y)
+			{
+				for (int X = 0; X < Width; ++X)
+				{
+					int Index = Y * Width + X;
+					Row[X * 3] = Blue[Index];
+					Row[X * 3 + 1] = Green[Index];
+					Row[X * 3 + 2] = Red[Index];
+				}
+				Marshal.Copy(Row, 0, Data.Scan0 + Y * Data.Stride, Data.Stride);
+			}
+			Result.UnlockBits(Data);
+			Result.Save(Target, ImageFormat.Png);
+		}
+	}
+}
+'@
+
+# The map kind of a file in a surface ZIP, from the end of its name (Megascans, ambientCG, Poly Haven), or ''.
+function Get-SurfaceMapKind([string]$FileName) {
+	$Extension = [IO.Path]::GetExtension($FileName).ToLowerInvariant()
+	if ($Extension -notin '.jpg', '.jpeg', '.png', '.tga', '.tif', '.tiff', '.bmp') { return '' }
+	$Stem = [IO.Path]::GetFileNameWithoutExtension($FileName).ToLowerInvariant()
+	# Resolution tags sit before or after the kind: Lush_Grass_8K_Normal, rock_nor_gl_2k.
+	$Stem = $Stem -replace '[_-]\d+k$', ''
+	if ($Stem -match '(^|[_-])(orm|arm)$') { return 'ORM' }
+	if ($Stem -match '(^|[_-])(basecolor|albedo|diffuse|diff|color|col)$') { return 'BaseColor' }
+	if ($Stem -match '(^|[_-])(normaldx|nor_dx)$') { return 'NormalDX' }
+	if ($Stem -match '(^|[_-])(normal|normalgl|nor_gl)$') { return 'Normal' }
+	if ($Stem -match '(^|[_-])(roughness|rough)$') { return 'Roughness' }
+	if ($Stem -match '(^|[_-])(ao|ambientocclusion)$') { return 'AO' }
+	if ($Stem -match '(^|[_-])(metalness|metallic|metal)$') { return 'Metal' }
+	return ''
+}
+
+function Read-ZipEntry($Entry) {
+	$Memory = New-Object IO.MemoryStream
+	$Stream = $Entry.Open()
+	try { $Stream.CopyTo($Memory) } finally { $Stream.Dispose() }
+	$Memory.Position = 0
+	return , $Memory
+}
+
+function ConvertTo-SurfaceName([string]$Text) {
+	return (($Text -split '[^A-Za-z0-9]+' | Where-Object { $_ } | ForEach-Object { $_.Substring(0, 1).ToUpperInvariant() + $_.Substring(1) }) -join '')
+}
+
+function Invoke-Surfaces {
+	if (-not $Path -or -not (Test-Path $Path -PathType Container)) {
+		Write-Host "SURFACES FAILED: -Path must name a folder of surface ZIPs, got '$Path'."
+		exit 1
+	}
+	Assert-EditorClosed 'the import writes /Game/Surfaces, which the open editor may hold.'
+	Add-Type -AssemblyName System.IO.Compression.FileSystem
+	if (-not ('WDSurfaceImage' -as [type])) { Add-Type -TypeDefinition $SurfaceImageSource -ReferencedAssemblies System.Drawing }
+	$Staging = Join-Path $RepoRoot 'Saved\Surfaces'
+	if (Test-Path $Staging) { Remove-Item -Recurse -Force $Staging }
+	New-Item -ItemType Directory -Force $Staging | Out-Null
+
+	# Read every ZIP's description first, so a set found twice keeps its best variant.
+	$Candidates = @()
+	$Skipped = @()
+	foreach ($Zip in Get-ChildItem -Path $Path -Filter '*.zip' | Sort-Object Name) {
+		$Archive = [IO.Compression.ZipFile]::OpenRead($Zip.FullName)
+		try {
+			$Maps = @{}
+			$Info = $null
+			foreach ($Entry in $Archive.Entries) {
+				if ($Entry.Name -match '\.json$' -and -not $Info) {
+					$Reader = New-Object IO.StreamReader($Entry.Open())
+					try { $Info = $Reader.ReadToEnd() | ConvertFrom-Json } catch { $Info = $null } finally { $Reader.Dispose() }
+					continue
+				}
+				$Kind = Get-SurfaceMapKind $Entry.Name
+				if ($Kind -and -not $Maps.ContainsKey($Kind)) { $Maps[$Kind] = $Entry.FullName }
+			}
+			$Stem = $Zip.BaseName -replace '_ue_(raw|high)', '' -replace '_\d+k$', ''
+			$Id = if ($Info -and $Info.id) { [string]$Info.id } else { $Stem }
+			$Title = if ($Info -and $Info.name) { [string]$Info.name } else { $Stem -replace '_texture_pack$', '' }
+			# Some Megascans names end in their id already ('Military Trenches Ground Dirt Fine 01 yd0kabg').
+			$Title = ($Title -replace "[\s_-]*$([regex]::Escape($Id))$", '').Trim()
+			# Megascans: the tags and categories name the kind of set; snow does not fit the late-summer map (D3).
+			$Words = @($Title)
+			if ($Info) {
+				$Words += @($Info.categories) + @($Info.tags)
+				if ($Info.semanticTags) { $Words += @($Info.semanticTags.asset_type) + @($Info.semanticTags.contains) }
+			}
+			$Words = ($Words | Where-Object { $_ } | ForEach-Object { "$_".ToLowerInvariant() }) -join ' '
+			$Reason = ''
+			if ($Words -match 'imperfection') { $Reason = 'imperfection' }
+			elseif ($Words -match '\bsnow') { $Reason = 'snow' }
+			elseif (-not $Maps.ContainsKey('BaseColor') -or -not ($Maps.ContainsKey('Normal') -or $Maps.ContainsKey('NormalDX'))) {
+				$Reason = 'no base colour or normal map it can read'
+			}
+			if ($Reason) {
+				$Skipped += "$($Zip.Name) ($Reason)"
+				continue
+			}
+			$TileM = 2.0
+			if ($Info -and $Info.meta) {
+				$Scan = $Info.meta | Where-Object { $_.key -eq 'scanArea' } | Select-Object -First 1
+				if ($Scan -and "$($Scan.value)" -match '([\d.]+)') { $TileM = [double]$Matches[1] }
+			}
+			$Resolution = if ($Zip.BaseName -match '_(\d+)k($|_)') { [int]$Matches[1] } else { 0 }
+			$Candidates += [pscustomobject]@{
+				Zip = $Zip.FullName; Id = $Id; Name = (ConvertTo-SurfaceName $Title) + $(if ($Info -and $Info.id) { "_$Id" } else { '' })
+				TileM = $TileM; Maps = $Maps; UE = [bool]($Zip.BaseName -match '_ue_(raw|high)'); Resolution = $Resolution
+			}
+		} finally { $Archive.Dispose() }
+	}
+
+	$Sets = @()
+	foreach ($Group in $Candidates | Group-Object Id) {
+		$Best = $Group.Group | Sort-Object @{ Expression = 'UE'; Descending = $true }, @{ Expression = 'Resolution'; Descending = $true } | Select-Object -First 1
+		foreach ($Other in $Group.Group | Where-Object { $_ -ne $Best }) { $Skipped += "$(Split-Path -Leaf $Other.Zip) (duplicate of $(Split-Path -Leaf $Best.Zip))" }
+		$Sets += $Best
+	}
+
+	$Manifest = @()
+	foreach ($Set in $Sets | Sort-Object Name) {
+		Write-Host "SURFACES: $($Set.Name) from $(Split-Path -Leaf $Set.Zip)"
+		$Folder = Join-Path $Staging $Set.Name
+		New-Item -ItemType Directory -Force $Folder | Out-Null
+		$Archive = [IO.Compression.ZipFile]::OpenRead($Set.Zip)
+		try {
+			$Open = { param($Kind) if ($Set.Maps.ContainsKey($Kind)) { Read-ZipEntry $Archive.GetEntry($Set.Maps[$Kind]) } else { $null } }
+			$Files = @{}
+			foreach ($Kind in 'BaseColor', 'Normal') {
+				$Source = & $Open $(if ($Kind -eq 'Normal' -and -not $Set.Maps.ContainsKey('Normal')) { 'NormalDX' } else { $Kind })
+				$Target = Join-Path $Folder "$Kind.png"
+				try { [WDSurfaceImage]::Resize($Source, $Target, 2048) } finally { $Source.Dispose() }
+				$Files[$Kind] = $Target
+			}
+			$Target = Join-Path $Folder 'ORM.png'
+			if ($Set.Maps.ContainsKey('ORM')) {
+				$Source = & $Open 'ORM'
+				try { [WDSurfaceImage]::Resize($Source, $Target, 2048) } finally { $Source.Dispose() }
+			} else {
+				$Streams = @{}
+				foreach ($Kind in 'AO', 'Roughness', 'Metal', 'BaseColor') { $Streams[$Kind] = & $Open $Kind }
+				try { [WDSurfaceImage]::PackOrm($Streams.AO, $Streams.Roughness, $Streams.Metal, $Streams.BaseColor, $Target, 2048) }
+				finally { $Streams.Values | Where-Object { $_ } | ForEach-Object { $_.Dispose() } }
+			}
+			$Files['ORM'] = $Target
+		} finally { $Archive.Dispose() }
+		# Raw Megascans, ambientCG NormalGL and Poly Haven nor_gl are OpenGL (green up); Unreal wants DirectX. _ue sets are
+		# exported for Unreal already.
+		$Manifest += [ordered]@{
+			name = $Set.Name; id = $Set.Id; source = (Split-Path -Leaf $Set.Zip); tile_m = $Set.TileM
+			flip_green = ($Set.Maps.ContainsKey('Normal') -and -not $Set.UE); textures = $Files
+		}
+	}
+	ConvertTo-Json @{ sets = $Manifest; skipped = $Skipped } -Depth 5 | Set-Content -Encoding utf8 (Join-Path $Staging 'manifest.json')
+	$Skipped | ForEach-Object { Write-Host "SURFACES: skipped $_" }
+
+	$Script = Join-Path $RepoRoot 'Tools\Editor\import_surfaces.py'
+	$Report = Join-Path $Staging 'imported.md'
+	& $EditorCmd $Project -run=pythonscript "-script=$Script" $NoMCPPlugins -unattended -nosplash -nullrhi -nosound -stdout -FullStdOutLogOutput | Out-Null
+	if (-not (Test-Path $Report)) {
+		Write-Host "SURFACES FAILED (exit $LASTEXITCODE): no report written. See Saved\Logs\WorldDivide.log."
+		exit 1
+	}
+	Write-Host "SURFACES SUCCEEDED: $($Manifest.Count) set(s) imported, $($Skipped.Count) skipped. $Report"
+}
+
 switch ($Task) {
 	'build' { Invoke-Build }
 	'test' { Invoke-Test }
@@ -1369,6 +1623,7 @@ switch ($Task) {
 	'uibindings' { Invoke-UIBindings }
 	'uicheck' { Invoke-UICheck }
 	'packaudit' { Invoke-PackAudit }
+	'surfaces' { Invoke-Surfaces }
 	'bakemap' { Invoke-BakeMap }
 	'rivercrossing' { Invoke-RiverCrossing }
 }

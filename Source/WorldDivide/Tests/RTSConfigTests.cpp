@@ -25,8 +25,10 @@ namespace
 
 	const FName CookedMapDir(TEXT("/Game/Maps"));
 
-	/** The top-level Content folders that hold the project's own content; any other folder must be in DirectoriesToNeverCook. */
-	const TCHAR* ProjectFolders[] = { TEXT("Art"), TEXT("Collections"), TEXT("Data"), TEXT("Developers"), TEXT("Effects"), TEXT("Maps"), TEXT("Materials"), TEXT("UI") };
+	/** The top-level Content folders that hold the project's own content; any other folder must be in DirectoriesToNeverCook.
+	 *  __ExternalActors__/__ExternalObjects__ hold the World Partition maps' actors; the packs' demo subfolders are never cooked. */
+	const TCHAR* ProjectFolders[] = { TEXT("Art"), TEXT("Audio"), TEXT("Collections"), TEXT("Data"), TEXT("Developers"), TEXT("Effects"), TEXT("Maps"), TEXT("Materials"), TEXT("UI"),
+		TEXT("__ExternalActors__"), TEXT("__ExternalObjects__") };
 
 	FString GetPackageName(const FString& Path)
 	{

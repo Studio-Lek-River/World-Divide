@@ -7,23 +7,26 @@ git-ignored and never cooked (Config/DefaultGame.ini). This script reads what is
   tags, without loading them: per static or skeletal mesh the size in cm (1 uu = 1 cm), Nanite, LODs, triangles,
   collision and material slots; per texture its size; per asset whose class comes from a plugin this project lacks,
   that plugin. One CSV per pack and a summary go to Saved/PackAudit/.
+- Every pack texture over 4K gets a Max Texture Size of 4K (#330), so no 8K map reaches a map or the GPU.
 - /Game/Developers/PackAudit/L_PackScale puts a sample of the packs (trees, a building, stones, a bridge, the surface
-  materials on tiles) next to the Abrams and the M20 Guardian at real scale. The level references local-only assets, so
-  it is git-ignored too. After saving it, every /Game package it references is checked to exist.
+  materials and the scanned surfaces of ue.ps1 -Task surfaces on tiles) next to the Abrams and the M20 Guardian at real
+  scale. The level references local-only assets, so it is git-ignored too. After saving it, every /Game package it references is checked to exist.
 
 Run with Tools/Scripts/ue.ps1 -Task packaudit, which fails when the summary lists a missing reference.
 """
 
 import csv
 import os
+import stat
 
 import unreal
 
 CONTENT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir())
 OUT_DIR = os.path.join(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_saved_dir()), "PackAudit")
-# The project's own Content folders, as in RTSConfigTests.cpp; every other top-level folder is a pack.
-PROJECT_FOLDERS = {"Art", "Collections", "Data", "Developers", "Effects", "Maps", "Materials", "UI", "__ExternalActors__",
-                   "__ExternalObjects__"}
+# The project's own Content folders, as in RTSConfigTests.cpp, and the bench HQs of setup -BenchHQ (never capped: the
+# bench measures them as built); every other top-level folder is a pack.
+PROJECT_FOLDERS = {"Art", "Audio", "Bench", "Collections", "Data", "Developers", "Effects", "Maps", "Materials", "UI",
+                   "__ExternalActors__", "__ExternalObjects__"}
 LEVEL_PATH = "/Game/Developers/PackAudit/L_PackScale"
 
 # Flags in the summary.
@@ -46,6 +49,7 @@ SURFACE_SAMPLES = [
     ("/Game/SM_Tiles_02/Materials", "Granite", 1),
     ("/Game/Materials_StoneTiles/Materials/Instances", "MI_StoneTiles", 2),
 ]
+SCANNED_SURFACES = "/Game/Surfaces"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
 
 registry = unreal.AssetRegistryHelpers.get_asset_registry()
@@ -159,7 +163,35 @@ def audit_pack(name):
     return rows
 
 
-def summarize(name, rows):
+def cap_textures(name):
+    """Limits every texture of the pack over MAX_TEXTURE to it (#330): the Scans Matter, UnrealDrive and Deko packs ship
+    8K maps. The source stays in the asset; the editor and any cook build the mips from 4K down. Returns the count changed
+    and the count already capped."""
+    changed = kept = 0
+    for data in registry.get_assets_by_path(f"/Game/{name}", recursive=True):
+        if class_name(data) != "Texture2D":
+            continue
+        try:
+            if max(int(value) for value in tag(data, "Dimensions").split("x")[:2]) <= MAX_TEXTURE:
+                continue
+        except ValueError:
+            continue
+        texture = unreal.load_asset(str(data.package_name))
+        if 0 < texture.get_editor_property("max_texture_size") <= MAX_TEXTURE:
+            kept += 1
+            continue
+        texture.set_editor_property("max_texture_size", MAX_TEXTURE)
+        # Some packs install read-only (Deko, Megaplant). They are local, git-ignored copies, never LFS files.
+        file = os.path.join(CONTENT_DIR, str(data.package_name)[len("/Game/"):] + ".uasset")
+        if os.path.exists(file) and not os.access(file, os.W_OK):
+            os.chmod(file, stat.S_IWRITE | stat.S_IREAD)
+        if not assets.save_loaded_asset(texture, only_if_is_dirty=False):
+            raise RuntimeError(f"Could not save {data.package_name}")
+        changed += 1
+    return changed, kept
+
+
+def summarize(name, rows, capped=(0, 0)):
     counts = {}
     for row in rows:
         counts[row["class"]] = counts.get(row["class"], 0) + 1
@@ -172,6 +204,8 @@ def summarize(name, rows):
              f"- Meshes: {len(meshes)}, Nanite {sum(1 for row in meshes if row.get('nanite') == 'True')}, "
              f"more than 1 LOD {sum(1 for row in meshes if row.get('lods') not in ('', '1'))}",
              "- Texture sizes: " + ", ".join(f"{size} x{sizes.count(size)}" for size in sorted(set(sizes), key=lambda s: -sizes.count(s)))]
+    if sum(capped):
+        lines.append(f"- Textures over {MAX_TEXTURE} capped at {MAX_TEXTURE}: {sum(capped)} ({capped[0]} by this run)")
     plugins = sorted({row["needs_plugin"] for row in rows if row.get("needs_plugin")})
     if plugins:
         lines.append(f"- Needs plugin: {', '.join(plugins)} (not in this project; "
@@ -302,7 +336,11 @@ def build_level():
                 if "/landscape/" in path.lower() and "/vegetation/" not in path.lower()][:12]
     for root, contains, count in SURFACE_SAMPLES:
         surfaces += find(root, {"MaterialInstanceConstant"}, contains)[:count]
+    # The scanned surfaces of ue.ps1 -Task surfaces (#330), all of them, after the packs' rows.
+    surfaces += [""] * (-len(surfaces) % 12) + find(SCANNED_SURFACES, {"MaterialInstanceConstant"}, "MI_")
     for index, surface in enumerate(surfaces):
+        if not surface:
+            continue
         if missing_references(surface):
             broken[surface] = missing_references(surface)
             continue
@@ -340,7 +378,8 @@ def main():
     lines = ["# Pack audit", "", f"Engine {unreal.SystemLibrary.get_engine_version()}. Generated by Tools/Editor/audit_packs.py.", ""]
     for name in pack_roots():
         unreal.log(f"PackAudit: auditing {name}")
-        lines += summarize(name, audit_pack(name))
+        capped = cap_textures(name)
+        lines += summarize(name, audit_pack(name), capped)
 
     placed, broken = build_level()
     missing = missing_references(LEVEL_PATH)

@@ -40,6 +40,9 @@ Skeletal meshes have no size tag; the Megaplant trees' heights are checked by ey
 | `Materials_StoneTiles` | Stone Tiles materials | 0.3 GB | A, D | Realistic | **Use** for paving in the villages |
 | `AdvancedRealisticGlass` | Advanced Realistic Glass | 124 MB | D | Realistic | Later: windows for village buildings and the HQ |
 | `StylizedSurface_Lite` | Stylized Surface Lite | 311 MB | D | **Stylized** | Not usable |
+| `AccuCities` | AccuCities (London city sample) | 58 MB | D | Photogrammetry, UK city blocks | Not usable for the villages: low-detail city tiles, no interiors (added 2026-10-22, not yet audited) |
+| `FogArea` | Fog Area | 27 MB | G atmosphere | Volumetric fog volumes | Candidate for the river mist in #159 (added 2026-10-22, not yet audited) |
+| `Surfaces` | Megascans surface ZIPs in `D:\Downloads\textures`, through `ue.ps1 -Task surfaces` (#330) | 36 sets at 2K | A, F | Realistic, scanned | **Use** for grass, meadow, clover, dirt and tracks, gravel, forest floor, sand, rock faces. Snow sets skipped; desert, Thai beach, coal ash and swamp water are imported but off-biome |
 | `MeshRift_CW_MaterialPackSample` | Chiselled Wood Material Pack Sample | 0.8 GB | D | **Stylized** (carved wood) | Not usable |
 
 `NeonStrips`, `QuantumCharacter` and `Realistic_Starter_VFX_Pack_Vol2` are also in `Content/` but were committed to git in a7904b0; they are not environment packs (see the report of #153).
@@ -101,34 +104,43 @@ Skeletal meshes have no size tag; the Megaplant trees' heights are checked by ey
 - Materials: 15 asphalt (`Materials/MI_Asphalt/MI_Asphalt_Raw`, `MI_FreewayAsphalt_*`), 15 sidewalk, 6 concrete instances; textures 2048² to 8192² (40 at 8K).
 - Meshes: concrete barrier, metal bollard, rail guard, traffic cone (with LODs); the `Maps/Meshes/Road*` meshes are baked strips of the demo map, without collision.
 - 8 `RoadLaneAttributeDescriptorBlueprint` and 1 `RoadBuildPreset` need `/Script/MetaRoad` and `MetaRoadEditor`. MetaRoad is a code plugin installed per engine; it is not in UE 5.8 here, so the procedural road tool itself is not available.
+- **MetaRoad is out (2026-10-22, #330):** installing it to 5.8 from the launcher fails every time. Only the pack's meshes and materials are used; the roads of #383 are drawn with the engine's own splines.
 
 **MuddyGroundPack**, **SM_Concrete_07**, **SM_Tiles_02**, **Materials_StoneTiles**
 
 - Scanned surface materials, one instance per surface (`MI_MuddyGround_4K_Inst`, `MI_MT00082_Concrete_Clean`, `MI_MT00183_Rough_Concrete`, damaged concretes, `MI_MT00022_Large_Granite_Tiles`, `MI_MT00195_New_Large_Bricks`, `MI_StoneTiles_01`–`09`).
-- MuddyGround and StoneTiles 4096²; the two Scans Matter packs ship 20 textures at 8192² each (flagged); limit them to 4K with the texture LOD group before they go on a map.
+- MuddyGround and StoneTiles 4096²; the two Scans Matter packs ship 20 textures at 8192² each (flagged). Since #330 `packaudit` gives every pack texture over 4K a Max Texture Size of 4096 (the summary counts them per pack), so no 8K map reaches the map.
 
 **AdvancedRealisticGlass**, **StylizedSurface_Lite**, **MeshRift_CW_MaterialPackSample**
 
 - Glass: 13 glass material instances, 4096² textures; for buildings later.
 - The two others are hand-painted or carved stylized materials and do not meet the realism bar.
 
+**Surfaces** (`/Game/Surfaces/<Name>/`, from `ue.ps1 -Task surfaces -Path D:\Downloads\textures`, #330)
+
+- Not a Fab pack: the producer's 39 Megascans surface ZIPs (raw 8K or 4K JPGs with the scan's JSON) and one non-Megascans set (mud and pebbles). They are source textures, so the task scales them to 2K, packs AO, roughness and metalness into one ORM, and imports `T_<Name>_BC`, `_N` and `_ORM` with `MI_<Name>` of one master, `/Game/Surfaces/M_ScannedSurface`.
+- The master projects from above in world space (no UVs needed) and tiles at the JSON's `scanArea` (`TileSize`, mostly 2 m; 0.25–4 m), with `Tint` and `RoughnessScale`. It is meant for tiles, props and checks; the landscape material of #156 samples the same textures.
+- Raw Megascans normals are OpenGL (green up; checked against the displacement maps), so their green channel is flipped on import.
+- 36 sets imported, 3 snow sets skipped; one set per Megascans id. Git-ignored and never cooked like the packs. The run's list is `Saved/Surfaces/imported.md`.
+- For the late-summer map (D3): grass (lush, wild ×2, uncut, mossy, clover), dirt and tracks (soil, dry trampled soil, forest path, 8 military trench dirts, bark-soil mix), gravel, forest floor ×3, sand and riverbank (rippled ×2, rocky sand), rock (gouged cliff, rough rock ×2, rocky ground and steppe, rocky soil), mud (mud and pebbles). Off-biome but imported: bright desert sand, Thai beach sand, coal ash, swamp water.
+
 ### Coverage against the minimum set (05 §2)
 
-The gaps below are not closed by #153; they move to the follow-up issue that fills them before #156 and #157.
+Updated 2026-10-22 (#330). The village buildings and the bridge are made in-house (05 §2); the remaining gaps go to the follow-up of #330.
 
 
 | Category | Minimum set | Now | Status |
 |---|---|---|---|
-| A. Landscape surfaces | Grass, meadow, dirt, mud, gravel, rock, sand/riverbank, asphalt; one realistic family, 2K+ | Mud (MuddyGround), asphalt (UnrealDrive), concrete and paving (Scans Matter, StoneTiles); stylized auto-material (StylizedBridge) | **Partly**: grass, meadow, dirt, gravel, rock, sand missing |
+| A. Landscape surfaces | Grass, meadow, dirt, mud, gravel, rock, sand/riverbank, asphalt; one realistic family, 2K+ | Scanned surfaces (#330): grass, meadow, clover, dirt and tracks, gravel, forest floor, sand, rock; mud (MuddyGround, mud and pebbles), asphalt (UnrealDrive), concrete and paving (Scans Matter, StoneTiles) | **Met**; roof tiles and wood planks for the buildings still to add (CC0, 05 §2) |
 | B. Trees | 3 deciduous + 1–2 conifers, Nanite or LODs | Black alder, hazel, cherry; Norway spruce, Baltic pine (broken bark) | **Met** |
 | B. Bushes, grass, flowers | Hedgerow bushes, shrubs, grass and wildflower cards | Spindle, beach rose; no realistic grass or flower cards | **Partly**: grass and flowers missing |
-| D. Buildings | One modern European village kit | PBG slum prefabs, broken references; facade, paving and glass materials only | **Missing** |
-| E. Infrastructure | Road bridge, road decals, kerbs, fences, power poles and lines, streetlights, signs, barriers | Stylized bridge and roads; US freeway lamps, poles, barriers; UnrealDrive asphalt, kerbs, sidewalks, bollards, guardrails | **Partly**: realistic bridge, European signs, fences, power lines missing |
-| F. Natural details | Rocks, small cliffs, logs, debris, same family as A | 8 scanned stones | **Partly**: cliffs and logs missing |
+| D. Buildings | One modern European village kit | PBG slum prefabs, broken references; AccuCities city tiles; facade, paving and glass materials only | **Made in-house** (2026-10-22): enterable, garrisoned and destructible, which no pack offers |
+| E. Infrastructure | Road bridge, road decals, kerbs, fences, power poles and lines, streetlights, signs, barriers | Stylized bridge and roads; US freeway lamps, poles, barriers; UnrealDrive asphalt, kerbs, sidewalks, bollards, guardrails | **Partly**: European signs, fences, power lines missing; the bridge is made in-house with the buildings |
+| F. Natural details | Rocks, small cliffs, logs, debris, same family as A | 8 scanned stones; rock-face and cliff surfaces (#330) | **Partly**: cliff meshes and logs missing |
 
 ### L_PackScale
 
-`/Game/Developers/PackAudit/L_PackScale` holds, on a 300 m ground: the Abrams (`/Game/Art/Local/Meshes/SM_Abrams_*`) and the M20 Guardian at the origin; one variant of each Megaplant species except the Baltic pine, and `SM_HP_Tree`, along +x; four stones; one StylizedBridge pillar base; the packs' landscape and water materials on 10 m tiles, and a second row with the surface packs (mud, two asphalts, sidewalk, two concretes, granite tiles, two stone pavings). 36 assets placed, missing references: 0. No building is placed, because no pack has a usable one.
+`/Game/Developers/PackAudit/L_PackScale` holds, on a 300 m ground: the Abrams (`/Game/Art/Local/Meshes/SM_Abrams_*`) and the M20 Guardian at the origin; one variant of each Megaplant species except the Baltic pine, and `SM_HP_Tree`, along +x; four stones; one StylizedBridge pillar base; the packs' landscape and water materials on 10 m tiles, and a second row with the surface packs (mud, two asphalts, sidewalk, two concretes, granite tiles, two stone pavings). Since #330 the rows go on with every scanned surface of `/Game/Surfaces`. 36 assets placed (before #330), missing references: 0. No building is placed, because no pack has a usable one.
 
 ## How this was checked (2026-10-15)
 

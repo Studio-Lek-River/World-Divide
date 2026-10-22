@@ -17,16 +17,17 @@ What only the producer can do or decide, ordered by when it blocks work.
 
 ## 2. Assets to add from your Fab library
 
-Two batches of packs were imported and audited on 2026-10-20 (manifest and coverage in [01_ASSET_AUDIT.md](01_ASSET_AUDIT.md), "Imported packs"). Trees, rocks, mud, asphalt, concrete and paving are covered. #153 closed on those; these gaps moved to its follow-up issue, which comes before painting (#156) and the villages (#157):
+Two batches of packs were imported and audited on 2026-10-20 (#153), a third on 2026-10-22 (AccuCities, FogArea); the manifest and the coverage are in [01_ASSET_AUDIT.md](01_ASSET_AUDIT.md), "Imported packs". Trees, rocks, mud, asphalt, concrete and paving come from the packs; grass, meadow, dirt, gravel, rock faces and sand come from the Megascans ZIPs in `D:\Downloads\textures` through `ue.ps1 -Task surfaces -Path D:\Downloads\textures` (#330). What is still open, with a free source where one exists:
 
-| Category | Still missing (late-summer temperate Europe, realistic) |
-|---|---|
-| Landscape surfaces | Grass, meadow, dirt, gravel, rock, sand/riverbank. Megascans surface ZIPs already downloaded in `D:\Downloads\textures` (wild and lush grass, rocky soil, gravel, forest floor, leaves) are only source textures; the follow-up adds a script that imports them. Still to download: riverbank sand or silt, a rock face, a dry harvested field, a dirt track. |
-| Bushes, grass, flowers | Grass and wildflower cards for Landscape Grass; more hedgerow bushes |
-| Buildings | One modern European village kit: houses, farmhouse, barn, workshop/garage, a landmark (church or mill). The Procedural Building Generator is a slum kit with broken material references. Facade materials (brick, stucco, plaster, concrete) are in the ZIPs; roof tiles and wood planks are not. |
-| Infrastructure | A realistic two-lane road bridge or bridge kit, fences, power poles and lines, European signs. Freeway lamps, poles and barriers are covered by Deko_MatrixDemo; asphalt, kerbs, sidewalks and guardrails by UnrealDrive_CitySample. The **MetaRoad** road tool needs its plugin: Epic Games Launcher → Fab Library → MetaRoad → *Install to Engine* → 5.8, if the seller offers a 5.8 build. |
-| Natural details | Small cliffs, logs, debris, ideally from the surface family. Rocks are covered (Real Stones Pack 01). |
+| Category | Still missing (late-summer temperate Europe, realistic) | Free source |
+|---|---|---|
+| Landscape surfaces | Roof tiles, wood planks (for the buildings) | ambientCG or Poly Haven (CC0): download the 2K PNG ZIP into `D:\Downloads\textures` and run `-Task surfaces` again; it reads their file names |
+| Bushes, grass, flowers | Grass and wildflower cards for Landscape Grass and PCG; more hedgerow bushes | Fab's free Megascans plants when offered; Poly Haven has a few CC0 grass and plant models |
+| Buildings | Village houses, farmhouse, barn, workshop/garage, a landmark | **Made in-house** (decided 2026-10-22): the buildings must be enterable, take an infantry squad that fires from them, and break apart, which no pack does. They come through the building pipeline of the USA HQ, as their own issues. |
+| Infrastructure | A realistic two-lane road bridge, fences, power poles and lines, European signs | The bridge is part of the map and is made in-house like the buildings (it is crossed and fought over). Fences, poles and signs: Poly Haven CC0 models, Fab's free monthly content, or simple in-house kit meshes |
+| Natural details | Small cliffs, logs, debris | Rock faces are covered by the scanned surfaces; logs and debris from Poly Haven (CC0) or Fab's free monthly content |
 
+The road tool is out: **MetaRoad** fails to install to 5.8, so only `UnrealDrive_CitySample`'s meshes and materials are used (01, UnrealDrive_CitySample).
 **Storage:** the repository is public, so packs are never committed. Keep each in its own `Content/<Pack>/` root, add it to `.gitignore` and to `DirectoriesToNeverCook` in `Config/DefaultGame.ini` (the cook test fails otherwise), then run `Tools\Scripts\ue.ps1 -Task packaudit` and tell me the folder name.
 
 **How to add a pack** (no purchase is needed for packs already in your library):
