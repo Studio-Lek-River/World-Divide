@@ -31,6 +31,7 @@
 #include "Navigation/RTSHullClearance.h"
 #include "Navigation/RTSNavAgents.h"
 #include "NavigationSystem.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Player/RTSPlayerController.h"
 #include "Tests/AutomationCommon.h"
 #include "Tests/AutomationEditorCommon.h"
@@ -39,6 +40,7 @@
 #include "Tests/RTSTestPIE.h"
 #include "Tests/RTSTestScale.h"
 #include "Tests/RTSTestWorld.h"
+#include "Units/RTSGround.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
 
@@ -1039,8 +1041,8 @@ namespace RTSScaleTests
 	 * The balance checklist of 02_MAP_DESIGN.md that the navmesh can measure, on WD_RiverCrossing_01 (#154): a tank finds a
 	 * full path from each base to both bridges, both village stockpiles and the other base; no path runs over the river off
 	 * a bridge, so the way from base to base always takes one; each side's routes are as long as the other side's turned
-	 * about the centre, within 3%; both bridge decks carry vehicle navmesh; and a vehicle factory can be placed at every
-	 * site of a grid on both base pads.
+	 * about the centre, within 3%; both bridge decks carry vehicle navmesh; the landscape outside both bases is dirt to the
+	 * vehicles' dust (#337); and a vehicle factory can be placed at every site of a grid on both base pads.
 	 */
 	DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FRTSCheckRiverCrossing, FAutomationTestBase*, Test);
 	bool FRTSCheckRiverCrossing::Update()
@@ -1101,6 +1103,16 @@ namespace RTSScaleTests
 				Test->AddError(FString::Printf(TEXT("Team %d: no way out of its base or no dock beside a village stockpile"), Team));
 				return true;
 			}
+		}
+
+		// The landscape's collision reports its default physical material, so the vehicles' dust finds dirt on it (#337).
+		const UPhysicalMaterial* Dirt = LoadObject<UPhysicalMaterial>(nullptr, TEXT("/Game/Materials/Physical/PM_Dirt.PM_Dirt"));
+		for (int32 Team = 0; Team < 2; ++Team)
+		{
+			EPhysicalSurface Surface = SurfaceType_Max;
+			const bool bGround = RTSGround::TraceSurface(*World, Exits[Team], 500.f, 500.f, Surface);
+			Test->TestTrue(*FString::Printf(TEXT("Team %d: the landscape outside its base is dirt (surface %d)"), Team, int32(Surface)),
+				bGround && Dirt && Surface == Dirt->SurfaceType);
 		}
 
 		struct FTarget

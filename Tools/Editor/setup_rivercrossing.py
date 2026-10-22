@@ -63,6 +63,8 @@ def main():
         unreal.log(f"setup_rivercrossing: built the greybox of {path}")
 
     world = editor_world()
+    changed = greybox.apply_landscape_physics(world)
+    unreal.log(f"setup_rivercrossing: set the default physical material of {changed} landscape actors")
     tiles = unreal.RTSEditorScripting.build_navigation(world)
     if tiles == 0:
         raise RuntimeError(f"Could not build the navmesh of {path}")

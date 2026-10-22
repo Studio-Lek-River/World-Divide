@@ -17,6 +17,9 @@ MAP_PATH = "/Game/Maps/WD_RiverCrossing_01"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
 GROUND_MATERIAL = "/Game/Materials/M_Ground"
 WATER_MATERIAL = "/Game/Materials/M_Water"
+# Landscape collision ignores M_Ground's physical material: it reads the layers' ones, else the landscape's default
+# (#337, docs/engine/world-landscape.md). Per-layer grass, road, mud and water come with the landscape material (#156).
+GROUND_PHYSICAL_MATERIAL = "/Game/Materials/Physical/PM_Dirt"
 CRATE_MESH = "/Game/Art/Placeholder/Meshes/SM_SupplyCrate"
 BUILDER = "/Game/Data/Units/DA_TestBuilder"
 
@@ -224,6 +227,15 @@ def cm(point, z=0.0):
     return unreal.Vector(point[0] * 100.0, point[1] * 100.0, z * 100.0)
 
 
+def apply_landscape_physics(world):
+    """Gives every landscape in world GROUND_PHYSICAL_MATERIAL as its default physical material and rebuilds its
+    collision, so the vehicles' dust (RTSGround::TraceSurface) finds dirt on it. Returns how many changed."""
+    material = unreal.load_asset(GROUND_PHYSICAL_MATERIAL)
+    if not material:
+        raise RuntimeError(f"Could not load {GROUND_PHYSICAL_MATERIAL}")
+    return unreal.RTSEditorScripting.set_landscape_physical_material(world, material)
+
+
 def spawn(actor_class, location, yaw=0.0, label=None):
     actor = actors.spawn_actor_from_class(actor_class, location, unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw))
     if label:
@@ -337,6 +349,7 @@ def build_greybox(world, heightmap_file):
                                                            unreal.load_asset(GROUND_MATERIAL))
     if not landscape:
         raise RuntimeError(f"Could not create the landscape of {MAP_PATH}")
+    apply_landscape_physics(world)
 
     spawn_river()
     spawn_bridges()

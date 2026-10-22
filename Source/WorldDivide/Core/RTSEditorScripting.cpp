@@ -12,6 +12,7 @@
 #include "Engine/SceneCapture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
 #include "ImageCore.h"
 #include "ImageUtils.h"
@@ -24,6 +25,7 @@
 #include "NavMesh/RecastNavMesh.h"
 #include "Navigation/RTSNavAgents.h"
 #include "NavigationSystem.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 #include "WorldDivide.h"
 #include "RenderingThread.h"
 #include "ShaderCompiler.h"
@@ -238,6 +240,31 @@ ALandscape* URTSEditorScripting::CreateLandscape(UObject* WorldContextObject, co
 	return Landscape;
 #else
 	return nullptr;
+#endif
+}
+
+int32 URTSEditorScripting::SetLandscapePhysicalMaterial(UObject* WorldContextObject, UPhysicalMaterial* Material)
+{
+#if WITH_EDITOR
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	if (!World)
+	{
+		return 0;
+	}
+	int32 Changed = 0;
+	for (TActorIterator<ALandscapeProxy> It(World); It; ++It)
+	{
+		if (It->DefaultPhysMaterial != Material)
+		{
+			It->Modify();
+			It->DefaultPhysMaterial = Material;
+			It->RecreateCollisionComponents();
+			++Changed;
+		}
+	}
+	return Changed;
+#else
+	return 0;
 #endif
 }
 

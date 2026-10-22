@@ -9,6 +9,7 @@ class UFont;
 class UFontFace;
 class UMaterialInterface;
 class UNiagaraSystem;
+class UPhysicalMaterial;
 class USoundCue;
 class USoundWave;
 
@@ -66,6 +67,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
 	static ALandscape* CreateLandscape(UObject* WorldContextObject, const FString& HeightmapFileName, int32 Components, int32 QuadsPerSection,
 		FVector Location, FVector Scale, UMaterialInterface* Material);
+
+	/**
+	 * Gives every landscape in WorldContextObject's world Material as its default physical material, the one its collision
+	 * reports where no layer has its own (#337), and rebuilds the collision of each one that changed, since the physical
+	 * materials are cooked into it. Returns how many changed.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static int32 SetLandscapePhysicalMaterial(UObject* WorldContextObject, UPhysicalMaterial* Material);
 
 	/**
 	 * Stores every actor of WorldContextObject's level in its own file (One File Per Actor), as the World Settings' "Use
