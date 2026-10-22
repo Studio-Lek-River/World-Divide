@@ -7,7 +7,8 @@ Everything here builds in memory only; setup_testmap.py decides what needs rebui
 
 The masters read two custom primitive data channels the building writes to every one of its meshes: the owner's colour
 at vehicle_art.TEAM_COLOR_INDEX (M_HQ_Final_Ownership's PlayerColor) and whether it is operational at
-vehicle_art.LAMP_ON_INDEX (M_HQ_Final_Operational's Operational, multiplying its glow).
+vehicle_art.LAMP_ON_INDEX (M_HQ_Final_Operational's Operational, multiplying its glow). M_HQ_Final_Operational also reads
+its lighting group and the dark (LIGHT_GROUP_INDICES, LIGHT_NIGHT_INDEX, #195).
 """
 
 import json
@@ -105,6 +106,14 @@ return saturate((Duty - Cycle) / max(Fade, 0.001));"""
 
 # The ground masters' constant roughness.
 SOIL_ROUGHNESS = 0.94
+
+
+# M_HQ_Final_Operational's lighting groups (RTSPrimitiveData::LightWindows.., #195): an instance whose Group<name> weight is
+# 1 glows only while the building's custom primitive data at that index is 1 (ARTSBuilding::SetLightGroupOn, 1 unless
+# switched off); one of no group always glows. In the dark (LIGHT_NIGHT_INDEX 1, URTSBuildingLightSubsystem) the glow rises
+# to the instance's NightGain times its day strength.
+LIGHT_GROUP_INDICES = {"Windows": 9, "Fixtures": 10, "Accents": 11}
+LIGHT_NIGHT_INDEX = 12
 
 
 def read_layout(path):
@@ -207,7 +216,8 @@ def _finish(material):
 def build_surface_material(directory, name, kind):
     """The flat masters, each a colour, roughness, metallic and glow from its instance:
     "surface" (M_HQ17_Surface), "glass" (M_HQ17_Glass: translucent, lit per pixel, GlassOpacity),
-    "operational" (M_HQ_Final_Operational: the glow times Operational, custom primitive data, 1 on and 0 off) and
+    "operational" (M_HQ_Final_Operational: the glow times Operational, custom primitive data, 1 on and 0 off, its lighting
+    group's switch and, in the dark, NightGain: LIGHT_GROUP_INDICES) and
     "ownership" (M_HQ_Final_Ownership: the colour is the owner's PlayerColor, custom primitive data)."""
     material = _material(directory, name)
     if kind == "ownership":
@@ -222,7 +232,25 @@ def build_surface_material(directory, name, kind):
     _output(material, metallic, "", unreal.MaterialProperty.MP_METALLIC)
     if kind == "operational":
         operational = _scalar(material, -450, 640, "Operational", 1.0, vehicle_art.LAMP_ON_INDEX)
-        glow = _multiply(material, -200, 480, emission, "RGB", operational, "")
+        # The group's switch: 1 less each group's weight times how far it is off, so an instance of no group stays at 1.
+        gate = _constant(material, -900, 800, 1.0)
+        for row, (group, index) in enumerate(sorted(LIGHT_GROUP_INDICES.items(), key=lambda g: g[1])):
+            weight = _scalar(material, -1100, 900 + row * 200, f"Group{group}", 0.0)
+            switch = _scalar(material, -1100, 1000 + row * 200, f"{group}On", 1.0, index)
+            off = _node(material, unreal.MaterialExpressionOneMinus, -900, 1000 + row * 200)
+            _connect(switch, "", off, "")
+            less = _node(material, unreal.MaterialExpressionSubtract, -700, 900 + row * 200)
+            _connect(gate, "", less, "A")
+            _connect(_multiply(material, -800, 950 + row * 200, weight, "", off, ""), "", less, "B")
+            gate = less
+        night = _scalar(material, -1100, 1500, "Night", 0.0, LIGHT_NIGHT_INDEX)
+        gain = _scalar(material, -1100, 1600, "NightGain", 1.0)
+        strength = _node(material, unreal.MaterialExpressionLinearInterpolate, -700, 1500, const_a=1.0)
+        _connect(gain, "", strength, "B")
+        _connect(night, "", strength, "Alpha")
+        lit = _multiply(material, -450, 900, operational, "", gate, "")
+        lit = _multiply(material, -350, 1100, lit, "", strength, "")
+        glow = _multiply(material, -200, 480, emission, "RGB", lit, "")
         _output(material, glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     else:
         _output(material, emission, "RGB", unreal.MaterialProperty.MP_EMISSIVE_COLOR)

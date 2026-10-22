@@ -73,6 +73,24 @@ Hooks for #196 (no state logic yet):
 
 - `ARTSBuilding::SetEquipmentMotionScale(float)`: 1 full speed, 0 stopped in place, between slower; the subsystem integrates the angles, so changes never jump. Low power stops the fans and radar with 0.
 - Beacons and lit windows follow CPD 8 (`LampOn`/`Operational`), which `ARTSBuilding::ApplyTeamColor` writes as 1 today; write 0 for off.
+- `ARTSBuilding::SetLightGroupOn(Group, bOn)`: switches a lighting group (`Windows`, `Fixtures`, `Accents`), its glow and its real lights (see Night lighting).
+
+## Night lighting (#195)
+
+Rule: **light only comes from a lamp or window the model has.** No light component stands in the air; every one names the fixtures it shines from (`FRTSBuildingLight::Fixture`, islands of `Art/USA/buildings/usa_hq/issue195/fixtures.json`, written by `Tools/Art/usa_hq_light_probe.py` from the game shell's lamp and glass slots) and stands within their bounds (`WorldDivide.Art.USAHeadquarters` checks both). A lamp the model lacks is art first (`issue195/BRIEF_floodlights.md`).
+
+- Glow: `M_HQ_Final_Operational` multiplies EmissionColor × Operational × its group's switch × lerp(1, `NightGain`, Night). Groups by instance (`usa_hq_recipe.LIGHT_GROUPS`): `Windows` (InnerLight, InteriorWarm; night ×4), `Fixtures` (FixtureWarm; ×4), `Accents` (FixtureBlue, TeamLight; ×3). CPD 9–11 are the group switches (1 on, the default), CPD 12 the dark (`RTSPrimitiveData::LightWindows`..`LightNight`); the building writes all four together.
+- Real lights (`URTSBuildingData::Lights`, `usa_hq_recipe.LIGHTS`), all non-shadow-casting, no GI, tagged `Light.<Group>`:
+
+| Light | Group | From | Type |
+|---|---|---|---|
+| GarageLampsSouth / North | GarageLamps | the four ceiling-edge lamps along each side wall of the bay, 6.16 m up | Rect 1154 × 21 cm, 65° down into the bay, 400 cd, 18 m; square barn doors (45 cm) keep it off the wall behind |
+| CommandWindows | Windows | the entrance's door glass and flanking windows | Rect 654 × 272 cm on the glass plane, facing the courtyard, 300 cd, 14 m |
+| 2 façade floodlights | Fixtures | lamp heads to be modelled (Phase B of #195) | Spot |
+
+  Budget: 5 steady lights per HQ (3 now) plus at most 2 garage beacons. Shown only in the dark (`URTSDayNightSubsystem::IsDark`) and only for the `rts.Fx.BuildingLightMaxBuildings` (4) constructed buildings nearest a camera (`URTSBuildingLightSubsystem`); the rest only glow, and by day no light is on.
+- Garage lamps: the `GarageLamps` group is on only while the door is not closed (`URTSGarageComponent`): without shadows, a closed door would not stop their light reaching the apron. The lamps' glow stays on.
+- Garage beacons: the `GarageBeacons` group of `Lights`, which `URTSGarageComponent` flashes in turn while the door is not closed. The model has no amber beacon lamp yet, so the HQ has none (the brief asks for them).
 
 ## Collision, navigation and selection
 
@@ -106,7 +124,7 @@ Lane: `RTSBuildPlacement::GetExitLaneOffset` puts the exit lane on the garage's 
 
 Door motion: `CT_HQ20_DoorMotion` is imported as a curve table (`GarageDoorMotion`). The game plays its opening, 2 to 10 s of the delivered cycle, in `GarageDoorSeconds` (3 s), and closing plays it backward. Rows `Sxx_X/Z/P` pose the sixteen door instances, the bottom seal follows S00, the lift cables hang from S00 with `Cable_P` and the length scale `Cable_L`, and the drive shaft turns by `Drive_P`. The door's phase and start time replicate, and every machine but a dedicated server poses the door from the server clock.
 
-Warning lights: two amber point lights (300 cd, 12 m, no shadows) either side of the opening above `GarageDoorPivot`, flashing in turn while the door is not closed. They stand in until the HQ's lighting and VFX passes (#195, #197).
+Warning lights: the data's `GarageBeacons` lights at the portal's beacon lamps (#195), flashing in turn while the door is not closed. The free-standing amber point lights that stood in are gone; until the model has beacon lamps there are none.
 
 ## LODs and budgets
 

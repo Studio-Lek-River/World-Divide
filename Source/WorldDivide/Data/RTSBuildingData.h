@@ -120,6 +120,83 @@ struct FRTSBuildingCollisionBox
 	bool bGarage = false;
 };
 
+UENUM(BlueprintType)
+enum class ERTSBuildingLightType : uint8
+{
+	Point,
+	Spot,
+	/** A lit rectangle, SourceWidth by SourceHeight, facing along its X: a strip lamp or a lit window band. */
+	Rect,
+};
+
+/**
+ * A real light of a building (#195), at one of its lamps: it only ever shines from a lamp or window the model has, never
+ * from a point in the air. Non-shadow-casting and cosmetic; URTSBuildingLightSubsystem shows the steady ones in the dark,
+ * URTSGarageComponent flashes the GarageBeacons.
+ */
+USTRUCT(BlueprintType)
+struct FRTSBuildingLight
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
+	FName Name;
+
+	/**
+	 * The lighting group it belongs to (Windows, Fixtures, Accents, GarageLamps, GarageBeacons), which switches it with the
+	 * material glow of the same name, if any (ARTSBuilding::SetLightGroupOn). The light components carry it as the tag Light.<Group>.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
+	FName Group;
+
+	/** The lamp or window of the model it shines from (Art/USA/buildings/usa_hq/issue195/fixtures.json for the HQ). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
+	FName Fixture;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
+	ERTSBuildingLightType Type = ERTSBuildingLightType::Point;
+
+	/** Where it stands and which way it shines (its X), in the building's own frame, before MeshScale. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
+	FVector Location = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
+	FRotator Rotation = FRotator::ZeroRotator;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
+	FLinearColor Color = FLinearColor::White;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
+	float Candelas = 100.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
+	float Radius = 1000.f;
+
+	/** Spot: the cone's half angles in degrees. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0", ClampMax = "80"))
+	float InnerConeAngle = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0", ClampMax = "80"))
+	float OuterConeAngle = 44.f;
+
+	/** Rect: the lit rectangle across its Y and Z, in cm. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
+	float SourceWidth = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
+	float SourceHeight = 0.f;
+
+	/**
+	 * Rect: barn doors along its edges, their angle out of square in degrees (0 square to the rectangle, 88 open) and length
+	 * in cm, so a lamp against a wall does not light through it: with no shadows, only they keep the light to its side.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0", ClampMax = "88"))
+	float BarnDoorAngle = 88.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
+	float BarnDoorLength = 20.f;
+};
+
 /** A named point of a building's layout in its own frame, such as the garage's spawn and exit. */
 USTRUCT(BlueprintType)
 struct FRTSBuildingSocket
@@ -162,6 +239,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Placement")
 	TArray<FRTSBuildingSocket> Sockets;
 
+	/** The real lights at the building's lamps (#195). Empty for a building that only glows. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+	TArray<FRTSBuildingLight> Lights;
+
+	/** The group of Lights the garage flashes while its door is not closed (URTSGarageComponent). */
+	static inline const FName GarageBeaconsGroup = TEXT("GarageBeacons");
+
+	/**
+	 * The group of Lights inside the garage bay, on only while its door is not closed (URTSGarageComponent): a light casts no
+	 * shadow, so behind the closed door it would light the apron through it.
+	 */
+	static inline const FName GarageLampsGroup = TEXT("GarageLamps");
+
 	/** The flags there are (DA_FlagTypes), where FlagType is looked up. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
 	TObjectPtr<URTSFlagTypes> FlagTypes;
@@ -190,7 +280,7 @@ public:
 	/** The garage door's opening on the floor, on the same lane as GarageSpawnSocket. */
 	static inline const FName GarageExitSocket = TEXT("GarageExit");
 
-	/** Above the door, where its warning lights hang. */
+	/** The door's hinge line, above the opening. */
 	static inline const FName GarageDoorPivotSocket = TEXT("GarageDoorPivot");
 
 	/** A collision box is the garage bay and both garage sockets are there: produced vehicles leave through the garage. */

@@ -6,7 +6,7 @@
 
 class ARTSBuilding;
 class ARTSUnit;
-class UPointLightComponent;
+class ULocalLightComponent;
 class UStaticMeshComponent;
 class URTSUnitData;
 struct FRealCurve;
@@ -178,5 +178,5 @@ private:
 	float PosedOpenness = -1.f;
 
 	UPROPERTY(Transient)
-	TArray<TObjectPtr<UPointLightComponent>> Lights;
+	TArray<TObjectPtr<ULocalLightComponent>> Lights;
 };

@@ -10,9 +10,12 @@
 - game/game_meshes.json: the game shell that stands for the meshes that never move (#358);
 - Art/Shared/props/props.json and Art/Shared/flags/flags.json: the shared flag cloth and mast beacon (#351), which
   replace the delivered flag, and the flag the HQ flies;
-- issue379/mast_manifest.json: the communication masts, taken out of the shell as parts of their own (#379).
+- issue379/mast_manifest.json: the communication masts, taken out of the shell as parts of their own (#379);
+- issue195/fixtures.json: the lamps and windows of the game shell (Tools/Art/usa_hq_light_probe.py), where the real
+  lights (LIGHTS) stand (#195).
 
-The equipment's motion (MOTION), the beacons (BEACONS) and the flag (FLAG_*) are the game's own, set here (#351).
+The equipment's motion (MOTION), the beacons (BEACONS) and the flag (FLAG_*) are the game's own, set here (#351), as are
+the lighting groups (LIGHT_GROUPS) and the real lights (LIGHTS, #195).
 
 The delivered meshes the shell replaces stay listed under delivery_shell, with their parts, for the bench's dense HQ
 (setup -BenchHQ).
@@ -103,6 +106,44 @@ FLAG_WPO_DISABLE_DISTANCE = 12500.0
 # The delivered flag and the master of its colour instances, which the shared cloth replaces.
 DELIVERED_FLAG = "SM_HQ21_NationalFlag_Wind"
 DELIVERED_FLAG_MASTER = "M_HQ21_FlagWind"
+
+# The lighting groups (#195): the glow of each instance of M_HQ_Final_Operational belongs to one (building_art's
+# LIGHT_GROUP_INDICES, switched by ARTSBuilding::SetLightGroupOn) and rises in the dark to NightGain times its day glow.
+LIGHT_GROUPS = {
+    "MI_HQ17_InnerLight": ("Windows", 4.0),
+    "MI_HQ17_InteriorWarm": ("Windows", 4.0),
+    "MI_HQ20_FixtureWarm": ("Fixtures", 4.0),
+    "MI_HQ20_FixtureBlue": ("Accents", 3.0),
+    "MI_HQ17_TeamLight": ("Accents", 3.0),
+}
+
+# The real lights (#195), each only at lamps or windows of the model: its fixtures, islands of fixtures.json, all of one
+# slot. The light stands at the middle of their bounds, a Rect as wide as they are across its Y and as high along its Z;
+# "front" puts it on the outermost face along its X instead (a window band, so it lights what is outside). Rotation
+# [pitch, yaw, roll] turns its X, the way it shines. Candelas per light; none casts a shadow.
+# - The garage's eight ceiling-edge lamps (two rows of four along the bay's side walls, 6.16 m up), a strip light per
+#   row, shining down onto the bay floor and out of the open door onto the apron. Tilted 65 degrees down into the bay, with
+#   square barn doors keeping the light within 25 degrees of that across the strip, so none of it falls past the wall
+#   behind the lamp: the lights cast no shadows, so a wall does not stop them. For the same reason they are on only while
+#   the door is not closed (GarageLamps, URTSGarageComponent); the lamps' glow stays.
+# - The command entrance's windows and door glass onto the courtyard, from the glass plane: the window light.
+# The façade floodlights wait for lamp heads the model does not have yet (issue195/BRIEF_floodlights.md); the garage has no
+# amber beacon lamp either, so it has no GarageBeacons lights.
+FIXTURES = os.path.join(ROOT, "issue195", "fixtures.json")
+LIGHTS = [
+    {"name": "GarageLampsSouth", "group": "GarageLamps", "type": "Rect",
+     "fixtures": ["FixtureWarm_302", "FixtureWarm_304", "FixtureWarm_306", "FixtureWarm_308"],
+     "rotation": [-65.0, 90.0, 0.0], "across": "x", "high": "y", "color": [1.0, 0.86, 0.66], "candelas": 400.0,
+     "radius": 1800.0, "barn_door_angle": 0.0, "barn_door_length": 45.0},
+    {"name": "GarageLampsNorth", "group": "GarageLamps", "type": "Rect",
+     "fixtures": ["FixtureWarm_303", "FixtureWarm_305", "FixtureWarm_307", "FixtureWarm_309"],
+     "rotation": [-65.0, -90.0, 0.0], "across": "x", "high": "y", "color": [1.0, 0.86, 0.66], "candelas": 400.0,
+     "radius": 1800.0, "barn_door_angle": 0.0, "barn_door_length": 45.0},
+    {"name": "CommandWindows", "group": "Windows", "type": "Rect",
+     "fixtures": ["WarmGlass_248", "WarmGlass_254", "WarmGlass_255", "WarmGlass_249"], "front": "x",
+     "rotation": [0.0, 0.0, 0.0], "across": "y", "high": "z", "color": [1.0, 0.62, 0.3], "candelas": 300.0,
+     "radius": 1400.0},
+]
 
 # Gameplay collision: simple boxes around the building's blocks (USA_HQ_SPEC module schedule, in m), not the meshes.
 # The garage bay is a box of its own, "garage", so the garage sequence (#192) can open it; the apron in front of the
@@ -351,6 +392,38 @@ def shared_parts(helpers, flag):
     return result
 
 
+def lights():
+    """The real lights at the lamps (LIGHTS), from the probed fixtures; each stands within its fixtures' bounds."""
+    fixtures = {f["id"]: f for f in read(FIXTURES)["fixtures"]}
+    result = []
+    for spec in LIGHTS:
+        missing = [f for f in spec["fixtures"] if f not in fixtures]
+        if missing:
+            raise SystemExit(f"{spec['name']}: fixtures.json has no {missing}")
+        group = [fixtures[f] for f in spec["fixtures"]]
+        if len({f["slot"] for f in group}) != 1:
+            raise SystemExit(f"{spec['name']}: its fixtures are not all of one slot")
+        low = [min(f["centre"][i] - f["size"][i] / 2.0 for f in group) for i in range(3)]
+        high = [max(f["centre"][i] + f["size"][i] / 2.0 for f in group) for i in range(3)]
+        location = [(low[i] + high[i]) / 2.0 for i in range(3)]
+        if "front" in spec:
+            axis = "xyz".index(spec["front"])
+            location[axis] = high[axis]
+        record = {"name": spec["name"], "group": spec["group"], "fixture": "+".join(spec["fixtures"]),
+                  "type": spec["type"], "location": rounded(location, 1), "rotation": spec["rotation"],
+                  "color": spec["color"], "candelas": spec["candelas"], "radius": spec["radius"]}
+        for key in ("barn_door_angle", "barn_door_length"):
+            if key in spec:
+                record[key] = spec[key]
+        if spec["type"] == "Rect":
+            record["source_width"] = round(high["xyz".index(spec["across"])] - low["xyz".index(spec["across"])], 1)
+            record["source_height"] = round(min(f["size"]["xyz".index(spec["high"])] for f in group)
+                                            if "front" not in spec else
+                                            high["xyz".index(spec["high"])] - low["xyz".index(spec["high"])], 1)
+        result.append(record)
+    return result
+
+
 def props():
     """The shared props' mesh records, their slots bound to the HQ's flag and the shared beacon instance."""
     records = {}
@@ -402,6 +475,10 @@ def main():
     if missing:
         raise SystemExit(f"MOTION names parts the HQ does not have: {sorted(missing)}")
     instances = {name: record for name, record in materials().items() if record["parent"] != DELIVERED_FLAG_MASTER}
+    for name, (group, gain) in LIGHT_GROUPS.items():
+        if instances[name]["parent"] != "M_HQ_Final_Operational":
+            raise SystemExit(f"{name} is not an instance of M_HQ_Final_Operational, so it has no lighting group")
+        instances[name]["scalars"].update({f"Group{group}": 1.0, "NightGain": gain})
     layout = {
         "about": "Generated by Tools/Art/usa_hq_recipe.py from recipe/ and game/; read by Tools/Editor/building_art.py.",
         "footprint_cells": [38, 56],
@@ -419,6 +496,7 @@ def main():
         "material_instances": instances,
         "textures": textures(),
         "sockets": helpers,
+        "lights": lights(),
         "collision_boxes": [
             {"name": name, "min": rounded([v * 100.0 for v in low], 2), "max": rounded([v * 100.0 for v in high], 2),
              "garage": garage}

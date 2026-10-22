@@ -79,6 +79,10 @@ namespace
 	const TCHAR* HeadquartersMovingParts[] = { TEXT("ER_Cooling_Fan1_Rotor"), TEXT("WF_Condenser_Fan1_Rotor"), TEXT("WM_AHU_Fan1_Rotor"),
 		TEXT("WM_AHU_Fan2_Rotor"), TEXT("Radar_Azimuth"), TEXT("WingDish_Azimuth"), TEXT("WingDish_Elevation") };
 	const TCHAR* HeadquartersBeaconPrefix = TEXT("Beacon_");
+	/** The HQ's lamps and windows (Tools/Art/usa_hq_light_probe.py), where its real lights stand (#195). */
+	const TCHAR* HeadquartersFixturesFile = TEXT("Art/USA/buildings/usa_hq/issue195/fixtures.json");
+	/** Steady real lights per HQ, none casting a shadow (#195): two floodlights, two garage lamp rows and the window light. */
+	constexpr int32 HeadquartersMaxLights = 5;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSPlaceholderWithoutNaniteTest, "WorldDivide.Art.PlaceholderWithoutNanite", TestFlags)
@@ -435,6 +439,58 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 	const UMaterialInstance* TeamPanel = LoadObject<UMaterialInstance>(nullptr,
 		*FString::Printf(TEXT("%s/MI_HQ17_TeamPanel.MI_HQ17_TeamPanel"), HeadquartersMaterialDir));
 	TestTrue(TEXT("The team panels take the owner's colour"), TeamPanel && TeamPanel->Parent == LoadMaster(TEXT("M_HQ_Final_Ownership")));
+
+	// Night lighting (#195): the glow's groups and the dark on the operational master, and real lights only at the model's
+	// lamps and windows, within the budget.
+	const UMaterial* Operational = LoadMaster(TEXT("M_HQ_Final_Operational"));
+	const TPair<const TCHAR*, int32> GroupData[] = { { TEXT("WindowsOn"), RTSPrimitiveData::LightWindows },
+		{ TEXT("FixturesOn"), RTSPrimitiveData::LightFixtures }, { TEXT("AccentsOn"), RTSPrimitiveData::LightAccents },
+		{ TEXT("Night"), RTSPrimitiveData::LightNight } };
+	for (const TPair<const TCHAR*, int32>& Group : GroupData)
+	{
+		TestTrue(*FString::Printf(TEXT("The operational master reads %s"), Group.Key), ReadsPrimitiveData(Operational, Group.Key, Group.Value));
+	}
+	const TSet<FName> LightGroups = { TEXT("Windows"), TEXT("Fixtures"), TEXT("Accents"), URTSBuildingData::GarageLampsGroup,
+		URTSBuildingData::GarageBeaconsGroup };
+	const int32 GarageBeaconLights = Data->Lights.FilterByPredicate([](const FRTSBuildingLight& L) { return L.Group == URTSBuildingData::GarageBeaconsGroup; }).Num();
+	TestTrue(*FString::Printf(TEXT("At most %d steady lights"), HeadquartersMaxLights), Data->Lights.Num() - GarageBeaconLights <= HeadquartersMaxLights);
+	TestTrue(TEXT("At most two garage beacons"), GarageBeaconLights <= 2);
+	FString FixturesText;
+	TSharedPtr<FJsonObject> FixturesJson;
+	TMap<FString, FBox> Fixtures;
+	if (TestTrue(TEXT("fixtures.json is readable"),
+		FFileHelper::LoadFileToString(FixturesText, *FPaths::Combine(FPaths::ProjectDir(), HeadquartersFixturesFile))
+		&& FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(FixturesText), FixturesJson) && FixturesJson.IsValid()))
+	{
+		for (const TSharedPtr<FJsonValue>& Value : FixturesJson->GetArrayField(TEXT("fixtures")))
+		{
+			const TSharedPtr<FJsonObject>& Fixture = Value->AsObject();
+			auto Vector = [&Fixture](const TCHAR* Field)
+			{
+				const TArray<TSharedPtr<FJsonValue>>& V = Fixture->GetArrayField(Field);
+				return FVector(V[0]->AsNumber(), V[1]->AsNumber(), V[2]->AsNumber());
+			};
+			Fixtures.Add(Fixture->GetStringField(TEXT("id")), FBox::BuildAABB(Vector(TEXT("centre")), Vector(TEXT("size")) * 0.5));
+		}
+	}
+	for (const FRTSBuildingLight& Light : Data->Lights)
+	{
+		const FString Name = Light.Name.ToString();
+		TestTrue(*FString::Printf(TEXT("Light %s is of a lighting group"), *Name), LightGroups.Contains(Light.Group));
+		// It stands at its lamps: within the bounds of the fixtures it names, all of them of the model.
+		FBox Bounds(ForceInit);
+		TArray<FString> Ids;
+		Light.Fixture.ToString().ParseIntoArray(Ids, TEXT("+"));
+		bool bKnown = !Ids.IsEmpty();
+		for (const FString& Id : Ids)
+		{
+			const FBox* Fixture = Fixtures.Find(Id);
+			bKnown &= Fixture != nullptr;
+			Bounds += Fixture ? *Fixture : FBox(ForceInit);
+		}
+		TestTrue(*FString::Printf(TEXT("Light %s names lamps of the model"), *Name), bKnown);
+		TestTrue(*FString::Printf(TEXT("Light %s stands at its lamps"), *Name), bKnown && Bounds.ExpandBy(5.0).IsInside(Light.Location));
+	}
 
 	// Simple boxes block instead of the meshes: inside the footprint, the garage bay one of its own.
 	const FVector Half = FVector(HeadquartersSize.X, HeadquartersSize.Y, 0.0) * 0.5;

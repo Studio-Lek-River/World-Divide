@@ -1,0 +1,6515 @@
+{
+ "about": "Lamp, light-strip and window islands of the HQ game shell, Unreal building cm (#195).",
+ "fixtures": [
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1622.0,
+    -133.0,
+    241.5
+   ],
+   "normal": [
+    -0.647,
+    0.032,
+    -0.762
+   ],
+   "size": [
+    3.5,
+    122.0,
+    233.0
+   ],
+   "area": 58870.7,
+   "id": "CoolGlass_000"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1622.0,
+    265.9,
+    241.5
+   ],
+   "normal": [
+    -0.893,
+    0.043,
+    -0.448
+   ],
+   "size": [
+    3.5,
+    122.0,
+    233.0
+   ],
+   "area": 58870.7,
+   "id": "CoolGlass_001"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1468.7,
+    528.7,
+    241.5
+   ],
+   "normal": [
+    -0.969,
+    -0.147,
+    0.198
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.4,
+   "id": "CoolGlass_002"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1459.8,
+    -2137.6,
+    245.0
+   ],
+   "normal": [
+    -0.972,
+    -0.019,
+    -0.232
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.5,
+   "id": "CoolGlass_003"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1459.8,
+    -1427.6,
+    245.0
+   ],
+   "normal": [
+    -0.903,
+    -0.429,
+    0.009
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.5,
+   "id": "CoolGlass_004"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1459.8,
+    1669.4,
+    245.0
+   ],
+   "normal": [
+    -0.83,
+    0.005,
+    0.557
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.9,
+   "id": "CoolGlass_005"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1459.8,
+    2320.5,
+    245.0
+   ],
+   "normal": [
+    -0.99,
+    -0.042,
+    -0.138
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.8,
+   "id": "CoolGlass_006"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1386.4,
+    -611.2,
+    241.5
+   ],
+   "normal": [
+    -0.702,
+    -0.561,
+    -0.439
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.4,
+   "id": "CoolGlass_007"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1279.9,
+    73.8,
+    957.0
+   ],
+   "normal": [
+    0.87,
+    -0.01,
+    -0.493
+   ],
+   "size": [
+    3.5,
+    136.5,
+    132.0
+   ],
+   "area": 37577.9,
+   "id": "CoolGlass_008"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1262.6,
+    2526.4,
+    245.0
+   ],
+   "normal": [
+    0.161,
+    0.338,
+    0.927
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.6,
+   "id": "CoolGlass_009"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1252.3,
+    -1206.9,
+    245.0
+   ],
+   "normal": [
+    -0.154,
+    0.988,
+    0.001
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.7,
+   "id": "CoolGlass_010"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1165.0,
+    1463.4,
+    245.0
+   ],
+   "normal": [
+    0.133,
+    -0.386,
+    0.913
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.4,
+   "id": "CoolGlass_011"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1151.8,
+    -2358.4,
+    245.0
+   ],
+   "normal": [
+    0.023,
+    1.0,
+    0.003
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.8,
+   "id": "CoolGlass_012"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1119.0,
+    765.0,
+    241.5
+   ],
+   "normal": [
+    -0.974,
+    -0.228,
+    0.006
+   ],
+   "size": [
+    132.5,
+    3.5,
+    233.0
+   ],
+   "area": 63849.1,
+   "id": "CoolGlass_013"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1108.0,
+    -1054.5,
+    224.0
+   ],
+   "normal": [
+    -1.0,
+    0.004,
+    0.011
+   ],
+   "size": [
+    3.5,
+    92.0,
+    211.0
+   ],
+   "area": 40615.6,
+   "id": "CoolGlass_014"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1108.0,
+    -915.5,
+    224.0
+   ],
+   "normal": [
+    -1.0,
+    0.003,
+    0.008
+   ],
+   "size": [
+    3.5,
+    92.0,
+    211.0
+   ],
+   "area": 40615.6,
+   "id": "CoolGlass_015"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1108.0,
+    817.9,
+    224.0
+   ],
+   "normal": [
+    -1.0,
+    0.003,
+    0.029
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.0,
+   "id": "CoolGlass_016"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1108.0,
+    1407.1,
+    224.0
+   ],
+   "normal": [
+    -0.97,
+    0.045,
+    -0.238
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.1,
+   "id": "CoolGlass_017"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1027.4,
+    1463.4,
+    245.0
+   ],
+   "normal": [
+    -0.076,
+    -0.997,
+    -0.007
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.4,
+   "id": "CoolGlass_018"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -1011.3,
+    -2358.4,
+    245.0
+   ],
+   "normal": [
+    -0.2,
+    0.98,
+    -0.012
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.7,
+   "id": "CoolGlass_019"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -975.5,
+    -765.0,
+    241.5
+   ],
+   "normal": [
+    -0.019,
+    1.0,
+    0.008
+   ],
+   "size": [
+    132.5,
+    3.5,
+    233.0
+   ],
+   "area": 63849.0,
+   "id": "CoolGlass_020"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -833.2,
+    -383.3,
+    957.0
+   ],
+   "normal": [
+    -0.981,
+    -0.052,
+    0.189
+   ],
+   "size": [
+    130.1,
+    3.5,
+    132.0
+   ],
+   "area": 35852.8,
+   "id": "CoolGlass_021"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -833.2,
+    383.3,
+    957.0
+   ],
+   "normal": [
+    0.89,
+    0.139,
+    -0.435
+   ],
+   "size": [
+    130.1,
+    3.5,
+    132.0
+   ],
+   "area": 35852.8,
+   "id": "CoolGlass_022"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -832.0,
+    -816.5,
+    224.0
+   ],
+   "normal": [
+    -0.999,
+    0.0,
+    0.038
+   ],
+   "size": [
+    3.5,
+    92.0,
+    211.0
+   ],
+   "area": 40615.6,
+   "id": "CoolGlass_023"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -832.0,
+    1163.4,
+    224.0
+   ],
+   "normal": [
+    -0.931,
+    0.357,
+    0.079
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.1,
+   "id": "CoolGlass_024"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -832.0,
+    1305.2,
+    224.0
+   ],
+   "normal": [
+    -0.907,
+    -0.046,
+    -0.419
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.1,
+   "id": "CoolGlass_025"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -694.7,
+    2526.4,
+    245.0
+   ],
+   "normal": [
+    -0.502,
+    0.797,
+    0.337
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.6,
+   "id": "CoolGlass_026"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -688.4,
+    765.0,
+    241.5
+   ],
+   "normal": [
+    0.256,
+    -0.757,
+    0.601
+   ],
+   "size": [
+    132.5,
+    3.5,
+    233.0
+   ],
+   "area": 63849.0,
+   "id": "CoolGlass_027"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -669.7,
+    -1206.9,
+    245.0
+   ],
+   "normal": [
+    -0.01,
+    1.0,
+    0.025
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.7,
+   "id": "CoolGlass_028"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -623.9,
+    -286.6,
+    957.0
+   ],
+   "normal": [
+    -0.221,
+    -0.851,
+    0.476
+   ],
+   "size": [
+    126.9,
+    127.3,
+    132.0
+   ],
+   "area": 48538.7,
+   "id": "CoolGlass_029"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -542.2,
+    647.7,
+    224.0
+   ],
+   "normal": [
+    -0.827,
+    0.275,
+    -0.491
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.2,
+   "id": "CoolGlass_030"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -517.7,
+    -680.5,
+    224.0
+   ],
+   "normal": [
+    0.846,
+    0.473,
+    0.246
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.6,
+   "id": "CoolGlass_031"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -503.2,
+    -693.7,
+    241.5
+   ],
+   "normal": [
+    -0.733,
+    -0.641,
+    0.227
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.5,
+   "id": "CoolGlass_032"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -497.5,
+    2052.1,
+    245.0
+   ],
+   "normal": [
+    1.0,
+    0.013,
+    0.002
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.6,
+   "id": "CoolGlass_033"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -497.5,
+    2206.3,
+    245.0
+   ],
+   "normal": [
+    0.997,
+    0.071,
+    -0.037
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.6,
+   "id": "CoolGlass_034"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -462.2,
+    -1719.6,
+    245.0
+   ],
+   "normal": [
+    0.991,
+    0.027,
+    0.133
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.5,
+   "id": "CoolGlass_035"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -462.2,
+    -1553.6,
+    245.0
+   ],
+   "normal": [
+    0.999,
+    0.001,
+    -0.035
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.4,
+   "id": "CoolGlass_036"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -355.1,
+    -457.5,
+    224.0
+   ],
+   "normal": [
+    0.538,
+    0.693,
+    0.48
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.6,
+   "id": "CoolGlass_037"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -338.7,
+    528.7,
+    241.5
+   ],
+   "normal": [
+    0.829,
+    0.557,
+    -0.044
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.4,
+   "id": "CoolGlass_038"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -331.3,
+    1701.1,
+    245.0
+   ],
+   "normal": [
+    0.522,
+    -0.741,
+    -0.423
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46439.0,
+   "id": "CoolGlass_039"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -331.3,
+    2315.3,
+    245.0
+   ],
+   "normal": [
+    0.729,
+    -0.263,
+    -0.632
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46439.0,
+   "id": "CoolGlass_040"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -256.5,
+    -446.1,
+    241.5
+   ],
+   "normal": [
+    -0.376,
+    0.804,
+    -0.461
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.5,
+   "id": "CoolGlass_041"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -79.6,
+    700.6,
+    224.0
+   ],
+   "normal": [
+    0.208,
+    -0.801,
+    0.561
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.2,
+   "id": "CoolGlass_042"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -74.5,
+    1082.0,
+    224.0
+   ],
+   "normal": [
+    0.895,
+    -0.122,
+    -0.428
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.2,
+   "id": "CoolGlass_043"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    -62.9,
+    1534.2,
+    245.0
+   ],
+   "normal": [
+    -0.033,
+    0.997,
+    -0.075
+   ],
+   "size": [
+    96.5,
+    3.5,
+    223.0
+   ],
+   "area": 44907.9,
+   "id": "CoolGlass_044"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    0.7,
+    -1058.0,
+    224.0
+   ],
+   "normal": [
+    0.63,
+    0.6,
+    -0.492
+   ],
+   "size": [
+    9.5,
+    5.3,
+    211.0
+   ],
+   "area": 4907.2,
+   "id": "CoolGlass_045"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    31.5,
+    803.8,
+    224.0
+   ],
+   "normal": [
+    0.206,
+    0.625,
+    -0.752
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "CoolGlass_046"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    36.7,
+    1185.2,
+    224.0
+   ],
+   "normal": [
+    0.524,
+    -0.116,
+    0.844
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.2,
+   "id": "CoolGlass_047"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    80.5,
+    1534.2,
+    245.0
+   ],
+   "normal": [
+    -0.023,
+    -1.0,
+    0.019
+   ],
+   "size": [
+    96.5,
+    3.5,
+    223.0
+   ],
+   "area": 44907.9,
+   "id": "CoolGlass_048"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    184.0,
+    2482.2,
+    245.0
+   ],
+   "normal": [
+    -0.001,
+    0.995,
+    0.103
+   ],
+   "size": [
+    96.5,
+    3.5,
+    223.0
+   ],
+   "area": 44908.1,
+   "id": "CoolGlass_049"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    206.6,
+    -867.0,
+    224.0
+   ],
+   "normal": [
+    -0.052,
+    -0.155,
+    -0.987
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.6,
+   "id": "CoolGlass_050"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    338.3,
+    -963.0,
+    224.0
+   ],
+   "normal": [
+    0.498,
+    0.866,
+    0.041
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.5,
+   "id": "CoolGlass_051"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    348.9,
+    2061.6,
+    245.0
+   ],
+   "normal": [
+    1.0,
+    -0.017,
+    -0.004
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46438.9,
+   "id": "CoolGlass_052"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    348.9,
+    2208.5,
+    245.0
+   ],
+   "normal": [
+    0.998,
+    -0.018,
+    0.062
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46439.0,
+   "id": "CoolGlass_053"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    499.3,
+    1238.1,
+    224.0
+   ],
+   "normal": [
+    0.288,
+    -0.954,
+    -0.089
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.2,
+   "id": "CoolGlass_054"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    504.4,
+    1619.6,
+    224.0
+   ],
+   "normal": [
+    0.554,
+    -0.83,
+    -0.06
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.1,
+   "id": "CoolGlass_055"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    515.1,
+    1450.5,
+    245.0
+   ],
+   "normal": [
+    -0.971,
+    0.031,
+    -0.235
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59765.9,
+   "id": "CoolGlass_056"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    515.1,
+    2212.1,
+    245.0
+   ],
+   "normal": [
+    0.059,
+    -0.917,
+    0.394
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59765.9,
+   "id": "CoolGlass_057"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    610.4,
+    1341.3,
+    224.0
+   ],
+   "normal": [
+    0.837,
+    -0.26,
+    -0.482
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "CoolGlass_058"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    705.4,
+    2420.3,
+    245.0
+   ],
+   "normal": [
+    0.793,
+    0.61,
+    -0.003
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43932.9,
+   "id": "CoolGlass_059"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    806.7,
+    1242.3,
+    245.0
+   ],
+   "normal": [
+    -0.817,
+    -0.576,
+    -0.002
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43933.3,
+   "id": "CoolGlass_060"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    1049.3,
+    1242.3,
+    245.0
+   ],
+   "normal": [
+    -0.982,
+    -0.188,
+    -0.002
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43933.2,
+   "id": "CoolGlass_061"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    1251.9,
+    2420.3,
+    245.0
+   ],
+   "normal": [
+    -0.514,
+    -0.858,
+    0.001
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43933.0,
+   "id": "CoolGlass_062"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    1421.3,
+    -2423.5,
+    39.0
+   ],
+   "normal": [
+    0.124,
+    0.282,
+    0.951
+   ],
+   "size": [
+    2.5,
+    8.4,
+    8.4
+   ],
+   "area": 173.6,
+   "id": "CoolGlass_063"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    1421.3,
+    -1093.5,
+    39.0
+   ],
+   "normal": [
+    -0.027,
+    -0.661,
+    -0.75
+   ],
+   "size": [
+    2.5,
+    8.4,
+    8.4
+   ],
+   "area": 173.6,
+   "id": "CoolGlass_064"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    1442.2,
+    1899.4,
+    245.0
+   ],
+   "normal": [
+    -0.804,
+    -0.027,
+    0.593
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59765.9,
+   "id": "CoolGlass_065"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_CoolGlass",
+   "centre": [
+    1442.2,
+    2075.8,
+    245.0
+   ],
+   "normal": [
+    0.234,
+    0.444,
+    0.865
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59765.9,
+   "id": "CoolGlass_066"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureBlue",
+   "centre": [
+    380.0,
+    -2441.9,
+    395.0
+   ],
+   "normal": [
+    0.001,
+    -0.988,
+    0.152
+   ],
+   "size": [
+    100.0,
+    18.4,
+    8.0
+   ],
+   "area": 5461.0,
+   "id": "FixtureBlue_293"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureBlue",
+   "centre": [
+    380.0,
+    -1075.0,
+    395.0
+   ],
+   "normal": [
+    -0.012,
+    -0.527,
+    -0.85
+   ],
+   "size": [
+    100.0,
+    18.4,
+    8.0
+   ],
+   "area": 5461.0,
+   "id": "FixtureBlue_294"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureBlue",
+   "centre": [
+    1070.0,
+    -2441.9,
+    395.0
+   ],
+   "normal": [
+    0.003,
+    -0.958,
+    -0.287
+   ],
+   "size": [
+    100.0,
+    18.4,
+    8.0
+   ],
+   "area": 5461.0,
+   "id": "FixtureBlue_295"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureBlue",
+   "centre": [
+    1070.0,
+    -1075.0,
+    395.0
+   ],
+   "normal": [
+    0.0,
+    0.351,
+    -0.936
+   ],
+   "size": [
+    100.0,
+    18.4,
+    8.0
+   ],
+   "area": 5461.0,
+   "id": "FixtureBlue_296"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureBlue",
+   "centre": [
+    1521.9,
+    -1758.5,
+    566.0
+   ],
+   "normal": [
+    -0.815,
+    0.001,
+    -0.58
+   ],
+   "size": [
+    15.0,
+    224.0,
+    1.4
+   ],
+   "area": 7260.1,
+   "id": "FixtureBlue_297"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureBlue",
+   "centre": [
+    1560.1,
+    -2438.5,
+    175.0
+   ],
+   "normal": [
+    -0.102,
+    0.994,
+    -0.034
+   ],
+   "size": [
+    1.7,
+    13.0,
+    76.0
+   ],
+   "area": 2180.8,
+   "id": "FixtureBlue_298"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureBlue",
+   "centre": [
+    1560.1,
+    -2438.5,
+    470.0
+   ],
+   "normal": [
+    -0.035,
+    -0.999,
+    0.031
+   ],
+   "size": [
+    1.7,
+    13.0,
+    76.0
+   ],
+   "area": 2180.7,
+   "id": "FixtureBlue_299"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureBlue",
+   "centre": [
+    1560.1,
+    -1078.5,
+    175.0
+   ],
+   "normal": [
+    -0.177,
+    0.984,
+    0.011
+   ],
+   "size": [
+    1.7,
+    13.0,
+    76.0
+   ],
+   "area": 2180.8,
+   "id": "FixtureBlue_300"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureBlue",
+   "centre": [
+    1560.1,
+    -1078.5,
+    470.0
+   ],
+   "normal": [
+    -0.14,
+    -0.955,
+    -0.263
+   ],
+   "size": [
+    1.7,
+    13.0,
+    76.0
+   ],
+   "area": 2180.8,
+   "id": "FixtureBlue_301"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureWarm",
+   "centre": [
+    200.0,
+    -2433.4,
+    616.2
+   ],
+   "normal": [
+    0.007,
+    0.916,
+    0.402
+   ],
+   "size": [
+    114.0,
+    21.0,
+    2.5
+   ],
+   "area": 5265.3,
+   "id": "FixtureWarm_302"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureWarm",
+   "centre": [
+    200.0,
+    -1083.5,
+    616.2
+   ],
+   "normal": [
+    0.129,
+    0.134,
+    0.983
+   ],
+   "size": [
+    114.0,
+    21.0,
+    2.5
+   ],
+   "area": 5265.3,
+   "id": "FixtureWarm_303"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureWarm",
+   "centre": [
+    550.0,
+    -2433.4,
+    616.3
+   ],
+   "normal": [
+    -0.011,
+    0.953,
+    0.303
+   ],
+   "size": [
+    114.0,
+    21.0,
+    2.5
+   ],
+   "area": 5265.3,
+   "id": "FixtureWarm_304"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureWarm",
+   "centre": [
+    550.0,
+    -1083.5,
+    616.3
+   ],
+   "normal": [
+    0.064,
+    -0.501,
+    0.863
+   ],
+   "size": [
+    114.0,
+    21.0,
+    2.5
+   ],
+   "area": 5265.3,
+   "id": "FixtureWarm_305"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureWarm",
+   "centre": [
+    940.0,
+    -2433.4,
+    616.3
+   ],
+   "normal": [
+    0.001,
+    -0.245,
+    0.97
+   ],
+   "size": [
+    114.0,
+    21.0,
+    2.5
+   ],
+   "area": 5265.3,
+   "id": "FixtureWarm_306"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureWarm",
+   "centre": [
+    940.0,
+    -1083.5,
+    616.2
+   ],
+   "normal": [
+    0.342,
+    -0.816,
+    -0.465
+   ],
+   "size": [
+    114.0,
+    21.0,
+    2.5
+   ],
+   "area": 5265.3,
+   "id": "FixtureWarm_307"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureWarm",
+   "centre": [
+    1240.0,
+    -2433.4,
+    616.3
+   ],
+   "normal": [
+    -0.008,
+    -0.125,
+    -0.992
+   ],
+   "size": [
+    114.0,
+    21.0,
+    2.5
+   ],
+   "area": 5265.3,
+   "id": "FixtureWarm_308"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ20_FixtureWarm",
+   "centre": [
+    1240.0,
+    -1083.5,
+    616.2
+   ],
+   "normal": [
+    0.378,
+    -0.899,
+    -0.223
+   ],
+   "size": [
+    114.0,
+    21.0,
+    2.5
+   ],
+   "area": 5265.3,
+   "id": "FixtureWarm_309"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1575.5,
+    -265.9,
+    352.0
+   ],
+   "normal": [
+    -0.583,
+    0.568,
+    -0.581
+   ],
+   "size": [
+    8.0,
+    107.0,
+    6.0
+   ],
+   "area": 3004.3,
+   "id": "InnerLight_067"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1575.5,
+    -0.0,
+    352.0
+   ],
+   "normal": [
+    -0.852,
+    0.239,
+    -0.466
+   ],
+   "size": [
+    8.0,
+    107.0,
+    6.0
+   ],
+   "area": 3004.3,
+   "id": "InnerLight_068"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1575.5,
+    133.0,
+    352.0
+   ],
+   "normal": [
+    0.833,
+    0.132,
+    0.538
+   ],
+   "size": [
+    8.0,
+    107.0,
+    6.0
+   ],
+   "area": 3004.3,
+   "id": "InnerLight_069"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1518.0,
+    -413.3,
+    352.0
+   ],
+   "normal": [
+    -0.686,
+    -0.722,
+    -0.093
+   ],
+   "size": [
+    69.2,
+    69.4,
+    6.0
+   ],
+   "area": 2555.3,
+   "id": "InnerLight_070"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1518.0,
+    413.3,
+    352.0
+   ],
+   "normal": [
+    0.493,
+    -0.56,
+    0.666
+   ],
+   "size": [
+    69.2,
+    69.4,
+    6.0
+   ],
+   "area": 2555.4,
+   "id": "InnerLight_071"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1435.7,
+    -495.8,
+    352.0
+   ],
+   "normal": [
+    -0.423,
+    -0.112,
+    0.899
+   ],
+   "size": [
+    69.2,
+    69.4,
+    6.0
+   ],
+   "area": 2555.3,
+   "id": "InnerLight_072"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1417.8,
+    -2011.6,
+    349.5
+   ],
+   "normal": [
+    -0.131,
+    0.011,
+    0.991
+   ],
+   "size": [
+    8.0,
+    100.0,
+    5.0
+   ],
+   "area": 2599.2,
+   "id": "InnerLight_073"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1417.8,
+    -1553.6,
+    349.5
+   ],
+   "normal": [
+    -0.266,
+    0.063,
+    0.962
+   ],
+   "size": [
+    8.0,
+    100.0,
+    5.0
+   ],
+   "area": 2599.2,
+   "id": "InnerLight_074"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1417.8,
+    1783.6,
+    349.5
+   ],
+   "normal": [
+    -0.347,
+    0.504,
+    0.791
+   ],
+   "size": [
+    8.0,
+    88.2,
+    5.0
+   ],
+   "area": 2300.9,
+   "id": "InnerLight_075"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1417.8,
+    2206.3,
+    349.5
+   ],
+   "normal": [
+    0.179,
+    0.035,
+    0.983
+   ],
+   "size": [
+    8.0,
+    88.2,
+    5.0
+   ],
+   "area": 2300.9,
+   "id": "InnerLight_076"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1353.5,
+    578.4,
+    352.0
+   ],
+   "normal": [
+    -0.144,
+    0.704,
+    -0.695
+   ],
+   "size": [
+    69.2,
+    69.4,
+    6.0
+   ],
+   "area": 2555.4,
+   "id": "InnerLight_077"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1271.3,
+    -660.9,
+    352.0
+   ],
+   "normal": [
+    0.123,
+    0.713,
+    0.69
+   ],
+   "size": [
+    69.2,
+    69.4,
+    6.0
+   ],
+   "area": 2555.3,
+   "id": "InnerLight_078"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1271.3,
+    660.9,
+    352.0
+   ],
+   "normal": [
+    -0.817,
+    0.513,
+    0.263
+   ],
+   "size": [
+    69.2,
+    69.4,
+    6.0
+   ],
+   "area": 2555.4,
+   "id": "InnerLight_079"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1262.6,
+    1505.4,
+    349.5
+   ],
+   "normal": [
+    -0.002,
+    -0.996,
+    -0.09
+   ],
+   "size": [
+    71.6,
+    8.0,
+    5.0
+   ],
+   "area": 1880.1,
+   "id": "InnerLight_080"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1252.3,
+    -2316.4,
+    349.5
+   ],
+   "normal": [
+    0.008,
+    0.466,
+    0.885
+   ],
+   "size": [
+    74.5,
+    8.0,
+    5.0
+   ],
+   "area": 1954.4,
+   "id": "InnerLight_081"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1233.4,
+    -73.8,
+    1017.0
+   ],
+   "normal": [
+    -0.998,
+    -0.019,
+    -0.066
+   ],
+   "size": [
+    8.0,
+    121.5,
+    6.0
+   ],
+   "area": 3401.2,
+   "id": "InnerLight_082"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1165.0,
+    2484.4,
+    349.5
+   ],
+   "normal": [
+    0.027,
+    -0.835,
+    0.549
+   ],
+   "size": [
+    71.6,
+    8.0,
+    5.0
+   ],
+   "area": 1880.1,
+   "id": "InnerLight_083"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1151.8,
+    -1248.9,
+    349.5
+   ],
+   "normal": [
+    0.011,
+    -0.47,
+    -0.883
+   ],
+   "size": [
+    74.5,
+    8.0,
+    5.0
+   ],
+   "area": 1954.4,
+   "id": "InnerLight_084"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1150.6,
+    -253.8,
+    1017.0
+   ],
+   "normal": [
+    0.571,
+    0.747,
+    0.34
+   ],
+   "size": [
+    119.8,
+    120.1,
+    6.0
+   ],
+   "area": 4509.9,
+   "id": "InnerLight_085"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1150.6,
+    253.8,
+    1017.0
+   ],
+   "normal": [
+    0.622,
+    -0.746,
+    0.24
+   ],
+   "size": [
+    119.8,
+    120.1,
+    6.0
+   ],
+   "area": 4509.9,
+   "id": "InnerLight_086"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1119.0,
+    -718.5,
+    352.0
+   ],
+   "normal": [
+    -0.03,
+    0.95,
+    -0.31
+   ],
+   "size": [
+    117.5,
+    8.0,
+    6.0
+   ],
+   "area": 3292.2,
+   "id": "InnerLight_087"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1066.0,
+    -1153.5,
+    322.5
+   ],
+   "normal": [
+    -0.496,
+    0.635,
+    0.593
+   ],
+   "size": [
+    8.0,
+    73.0,
+    5.0
+   ],
+   "area": 1916.2,
+   "id": "InnerLight_088"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1066.0,
+    919.7,
+    322.5
+   ],
+   "normal": [
+    -0.112,
+    -0.296,
+    -0.948
+   ],
+   "size": [
+    8.0,
+    75.8,
+    5.0
+   ],
+   "area": 1987.9,
+   "id": "InnerLight_089"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -1066.0,
+    1305.3,
+    322.5
+   ],
+   "normal": [
+    -0.45,
+    -0.055,
+    -0.892
+   ],
+   "size": [
+    8.0,
+    75.8,
+    5.0
+   ],
+   "area": 1987.9,
+   "id": "InnerLight_090"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -975.5,
+    718.5,
+    352.0
+   ],
+   "normal": [
+    -0.03,
+    0.954,
+    -0.299
+   ],
+   "size": [
+    117.5,
+    8.0,
+    6.0
+   ],
+   "area": 3292.2,
+   "id": "InnerLight_091"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -974.3,
+    -336.8,
+    1017.0
+   ],
+   "normal": [
+    0.017,
+    -0.925,
+    -0.381
+   ],
+   "size": [
+    115.1,
+    8.0,
+    6.0
+   ],
+   "area": 3226.7,
+   "id": "InnerLight_092"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -974.3,
+    336.8,
+    1017.0
+   ],
+   "normal": [
+    -0.092,
+    0.74,
+    -0.667
+   ],
+   "size": [
+    115.1,
+    8.0,
+    6.0
+   ],
+   "area": 3226.7,
+   "id": "InnerLight_093"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -874.0,
+    -915.5,
+    322.5
+   ],
+   "normal": [
+    -1.0,
+    -0.002,
+    0.024
+   ],
+   "size": [
+    8.0,
+    73.0,
+    5.0
+   ],
+   "area": 1916.3,
+   "id": "InnerLight_094"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -874.0,
+    817.9,
+    322.5
+   ],
+   "normal": [
+    0.097,
+    0.031,
+    -0.995
+   ],
+   "size": [
+    8.0,
+    75.8,
+    5.0
+   ],
+   "area": 1987.9,
+   "id": "InnerLight_095"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -874.0,
+    919.8,
+    322.5
+   ],
+   "normal": [
+    0.37,
+    0.004,
+    -0.929
+   ],
+   "size": [
+    8.0,
+    75.8,
+    5.0
+   ],
+   "area": 1987.9,
+   "id": "InnerLight_096"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -874.0,
+    1407.1,
+    322.5
+   ],
+   "normal": [
+    -0.044,
+    0.646,
+    -0.762
+   ],
+   "size": [
+    8.0,
+    75.8,
+    5.0
+   ],
+   "area": 1987.9,
+   "id": "InnerLight_097"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -832.0,
+    -718.5,
+    352.0
+   ],
+   "normal": [
+    -0.013,
+    0.994,
+    0.107
+   ],
+   "size": [
+    117.5,
+    8.0,
+    6.0
+   ],
+   "area": 3292.2,
+   "id": "InnerLight_098"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -832.0,
+    718.5,
+    352.0
+   ],
+   "normal": [
+    0.154,
+    -0.324,
+    -0.933
+   ],
+   "size": [
+    117.5,
+    8.0,
+    6.0
+   ],
+   "area": 3292.2,
+   "id": "InnerLight_099"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -792.3,
+    1505.4,
+    349.5
+   ],
+   "normal": [
+    0.065,
+    -0.964,
+    0.256
+   ],
+   "size": [
+    71.6,
+    8.0,
+    5.0
+   ],
+   "area": 1880.1,
+   "id": "InnerLight_100"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -792.3,
+    2484.4,
+    349.5
+   ],
+   "normal": [
+    -0.008,
+    0.394,
+    0.919
+   ],
+   "size": [
+    71.6,
+    8.0,
+    5.0
+   ],
+   "area": 1880.1,
+   "id": "InnerLight_101"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -770.3,
+    -2316.4,
+    349.5
+   ],
+   "normal": [
+    -0.03,
+    -0.509,
+    0.86
+   ],
+   "size": [
+    74.5,
+    8.0,
+    5.0
+   ],
+   "area": 1954.4,
+   "id": "InnerLight_102"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -770.3,
+    -1248.9,
+    349.5
+   ],
+   "normal": [
+    0.023,
+    -0.472,
+    -0.881
+   ],
+   "size": [
+    74.5,
+    8.0,
+    5.0
+   ],
+   "area": 1954.4,
+   "id": "InnerLight_103"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -694.7,
+    1505.4,
+    349.5
+   ],
+   "normal": [
+    -0.01,
+    -0.516,
+    0.857
+   ],
+   "size": [
+    71.6,
+    8.0,
+    5.0
+   ],
+   "area": 1880.1,
+   "id": "InnerLight_104"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -688.4,
+    -718.5,
+    352.0
+   ],
+   "normal": [
+    0.001,
+    0.8,
+    0.6
+   ],
+   "size": [
+    117.5,
+    8.0,
+    6.0
+   ],
+   "area": 3292.1,
+   "id": "InnerLight_105"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -669.7,
+    -2316.4,
+    349.5
+   ],
+   "normal": [
+    -0.004,
+    -1.0,
+    -0.015
+   ],
+   "size": [
+    74.5,
+    8.0,
+    5.0
+   ],
+   "area": 1954.4,
+   "id": "InnerLight_106"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -656.8,
+    253.8,
+    1017.0
+   ],
+   "normal": [
+    -0.583,
+    -0.631,
+    0.513
+   ],
+   "size": [
+    119.8,
+    120.1,
+    6.0
+   ],
+   "area": 4509.8,
+   "id": "InnerLight_107"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -574.0,
+    -73.8,
+    1017.0
+   ],
+   "normal": [
+    -0.338,
+    -0.003,
+    -0.941
+   ],
+   "size": [
+    8.0,
+    121.5,
+    6.0
+   ],
+   "area": 3401.1,
+   "id": "InnerLight_108"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -574.0,
+    73.8,
+    1017.0
+   ],
+   "normal": [
+    0.258,
+    0.0,
+    -0.966
+   ],
+   "size": [
+    8.0,
+    121.5,
+    6.0
+   ],
+   "area": 3401.1,
+   "id": "InnerLight_109"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -539.5,
+    1669.4,
+    349.5
+   ],
+   "normal": [
+    -0.13,
+    0.147,
+    0.981
+   ],
+   "size": [
+    8.0,
+    88.2,
+    5.0
+   ],
+   "area": 2300.9,
+   "id": "InnerLight_110"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -539.5,
+    1783.6,
+    349.5
+   ],
+   "normal": [
+    -0.176,
+    -0.521,
+    0.835
+   ],
+   "size": [
+    8.0,
+    88.2,
+    5.0
+   ],
+   "area": 2300.9,
+   "id": "InnerLight_111"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -539.5,
+    2320.5,
+    349.5
+   ],
+   "normal": [
+    -0.066,
+    0.182,
+    0.981
+   ],
+   "size": [
+    8.0,
+    88.2,
+    5.0
+   ],
+   "area": 2300.9,
+   "id": "InnerLight_112"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -536.2,
+    660.9,
+    352.0
+   ],
+   "normal": [
+    -0.602,
+    -0.645,
+    -0.47
+   ],
+   "size": [
+    69.2,
+    69.4,
+    6.0
+   ],
+   "area": 2555.3,
+   "id": "InnerLight_113"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -504.2,
+    -2137.6,
+    349.5
+   ],
+   "normal": [
+    -0.498,
+    0.759,
+    -0.42
+   ],
+   "size": [
+    8.0,
+    100.0,
+    5.0
+   ],
+   "area": 2599.2,
+   "id": "InnerLight_114"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -504.2,
+    -2011.6,
+    349.5
+   ],
+   "normal": [
+    -0.029,
+    -0.029,
+    0.999
+   ],
+   "size": [
+    8.0,
+    100.0,
+    5.0
+   ],
+   "area": 2599.2,
+   "id": "InnerLight_115"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -504.2,
+    -1427.6,
+    349.5
+   ],
+   "normal": [
+    -0.034,
+    0.421,
+    0.906
+   ],
+   "size": [
+    8.0,
+    100.0,
+    5.0
+   ],
+   "area": 2599.2,
+   "id": "InnerLight_116"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -453.9,
+    -578.4,
+    352.0
+   ],
+   "normal": [
+    -0.669,
+    0.408,
+    -0.621
+   ],
+   "size": [
+    69.2,
+    69.4,
+    6.0
+   ],
+   "area": 2555.3,
+   "id": "InnerLight_117"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -453.9,
+    578.4,
+    352.0
+   ],
+   "normal": [
+    -0.616,
+    -0.611,
+    -0.497
+   ],
+   "size": [
+    69.2,
+    69.4,
+    6.0
+   ],
+   "area": 2555.3,
+   "id": "InnerLight_118"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -431.8,
+    692.9,
+    322.5
+   ],
+   "normal": [
+    0.336,
+    -0.579,
+    -0.743
+   ],
+   "size": [
+    67.9,
+    63.8,
+    5.0
+   ],
+   "area": 2236.3,
+   "id": "InnerLight_119"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -371.7,
+    -495.8,
+    352.0
+   ],
+   "normal": [
+    0.441,
+    -0.254,
+    -0.861
+   ],
+   "size": [
+    69.2,
+    69.4,
+    6.0
+   ],
+   "area": 2555.3,
+   "id": "InnerLight_120"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -289.4,
+    413.3,
+    352.0
+   ],
+   "normal": [
+    -0.72,
+    -0.548,
+    0.426
+   ],
+   "size": [
+    69.2,
+    69.4,
+    6.0
+   ],
+   "area": 2555.3,
+   "id": "InnerLight_121"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -289.3,
+    1808.0,
+    349.5
+   ],
+   "normal": [
+    0.372,
+    -0.145,
+    0.917
+   ],
+   "size": [
+    8.0,
+    80.8,
+    5.0
+   ],
+   "area": 2114.5,
+   "id": "InnerLight_122"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -289.3,
+    2208.5,
+    349.5
+   ],
+   "normal": [
+    0.151,
+    0.523,
+    -0.839
+   ],
+   "size": [
+    8.0,
+    80.8,
+    5.0
+   ],
+   "area": 2114.5,
+   "id": "InnerLight_123"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -280.4,
+    -563.9,
+    322.5
+   ],
+   "normal": [
+    -0.539,
+    -0.842,
+    -0.041
+   ],
+   "size": [
+    82.8,
+    63.3,
+    5.0
+   ],
+   "area": 2523.4,
+   "id": "InnerLight_124"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -261.8,
+    -815.1,
+    322.5
+   ],
+   "normal": [
+    0.523,
+    0.646,
+    0.557
+   ],
+   "size": [
+    82.8,
+    63.3,
+    5.0
+   ],
+   "area": 2523.4,
+   "id": "InnerLight_125"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -250.9,
+    -110.0,
+    218.0
+   ],
+   "normal": [
+    0.997,
+    0.016,
+    0.076
+   ],
+   "size": [
+    4.0,
+    7.0,
+    236.0
+   ],
+   "area": 5071.1,
+   "id": "InnerLight_126"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -250.9,
+    110.0,
+    218.0
+   ],
+   "normal": [
+    0.999,
+    -0.023,
+    0.049
+   ],
+   "size": [
+    4.0,
+    7.0,
+    236.0
+   ],
+   "area": 5071.1,
+   "id": "InnerLight_127"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -231.9,
+    -258.7,
+    352.0
+   ],
+   "normal": [
+    -0.044,
+    -0.049,
+    0.998
+   ],
+   "size": [
+    8.0,
+    121.4,
+    6.0
+   ],
+   "area": 3398.4,
+   "id": "InnerLight_128"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -231.9,
+    258.7,
+    352.0
+   ],
+   "normal": [
+    0.978,
+    -0.016,
+    -0.207
+   ],
+   "size": [
+    8.0,
+    121.4,
+    6.0
+   ],
+   "area": 3398.4,
+   "id": "InnerLight_129"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -190.0,
+    655.4,
+    322.5
+   ],
+   "normal": [
+    0.03,
+    -0.195,
+    -0.98
+   ],
+   "size": [
+    67.9,
+    63.8,
+    5.0
+   ],
+   "area": 2236.4,
+   "id": "InnerLight_130"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -166.4,
+    1576.2,
+    349.5
+   ],
+   "normal": [
+    0.037,
+    -0.999,
+    -0.03
+   ],
+   "size": [
+    77.5,
+    8.0,
+    5.0
+   ],
+   "area": 2028.9,
+   "id": "InnerLight_131"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -162.4,
+    -887.5,
+    322.5
+   ],
+   "normal": [
+    0.075,
+    0.101,
+    0.992
+   ],
+   "size": [
+    82.8,
+    63.3,
+    5.0
+   ],
+   "area": 2523.4,
+   "id": "InnerLight_132"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -127.7,
+    975.3,
+    322.5
+   ],
+   "normal": [
+    0.367,
+    -0.44,
+    0.82
+   ],
+   "size": [
+    67.9,
+    63.8,
+    5.0
+   ],
+   "area": 2236.4,
+   "id": "InnerLight_133"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    -74.4,
+    -0.0,
+    376.3
+   ],
+   "normal": [
+    -0.007,
+    0.001,
+    1.0
+   ],
+   "size": [
+    9.0,
+    348.0,
+    3.5
+   ],
+   "area": 8246.3,
+   "id": "InnerLight_134"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    80.5,
+    2440.2,
+    349.5
+   ],
+   "normal": [
+    -0.001,
+    -0.984,
+    -0.178
+   ],
+   "size": [
+    77.5,
+    8.0,
+    5.0
+   ],
+   "area": 2028.9,
+   "id": "InnerLight_135"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    82.4,
+    -828.5,
+    322.5
+   ],
+   "normal": [
+    -0.012,
+    -0.014,
+    -1.0
+   ],
+   "size": [
+    82.8,
+    63.3,
+    5.0
+   ],
+   "area": 2523.4,
+   "id": "InnerLight_136"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    195.9,
+    1013.8,
+    322.5
+   ],
+   "normal": [
+    -0.324,
+    0.557,
+    -0.765
+   ],
+   "size": [
+    67.9,
+    63.8,
+    5.0
+   ],
+   "area": 2236.4,
+   "id": "InnerLight_137"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    258.2,
+    1333.6,
+    322.5
+   ],
+   "normal": [
+    0.065,
+    -0.045,
+    -0.997
+   ],
+   "size": [
+    67.9,
+    63.8,
+    5.0
+   ],
+   "area": 2236.4,
+   "id": "InnerLight_138"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    277.7,
+    1089.7,
+    322.5
+   ],
+   "normal": [
+    0.621,
+    -0.631,
+    -0.466
+   ],
+   "size": [
+    67.9,
+    63.8,
+    5.0
+   ],
+   "area": 2236.4,
+   "id": "InnerLight_139"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    306.9,
+    1701.1,
+    349.5
+   ],
+   "normal": [
+    -0.093,
+    0.687,
+    -0.721
+   ],
+   "size": [
+    8.0,
+    80.8,
+    5.0
+   ],
+   "area": 2114.5,
+   "id": "InnerLight_140"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    306.9,
+    1808.0,
+    349.5
+   ],
+   "normal": [
+    0.053,
+    0.608,
+    -0.792
+   ],
+   "size": [
+    8.0,
+    80.8,
+    5.0
+   ],
+   "area": 2114.5,
+   "id": "InnerLight_141"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    306.9,
+    2315.3,
+    349.5
+   ],
+   "normal": [
+    0.803,
+    -0.542,
+    0.249
+   ],
+   "size": [
+    8.0,
+    80.8,
+    5.0
+   ],
+   "area": 2114.5,
+   "id": "InnerLight_142"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    340.0,
+    1409.6,
+    322.5
+   ],
+   "normal": [
+    0.434,
+    -0.332,
+    -0.837
+   ],
+   "size": [
+    67.9,
+    63.8,
+    5.0
+   ],
+   "area": 2236.4,
+   "id": "InnerLight_143"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    557.1,
+    1586.8,
+    349.5
+   ],
+   "normal": [
+    0.215,
+    -0.642,
+    -0.736
+   ],
+   "size": [
+    8.0,
+    110.3,
+    5.0
+   ],
+   "area": 2860.2,
+   "id": "InnerLight_144"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    557.1,
+    2075.8,
+    349.5
+   ],
+   "normal": [
+    -0.634,
+    -0.261,
+    -0.728
+   ],
+   "size": [
+    8.0,
+    110.3,
+    5.0
+   ],
+   "area": 2860.2,
+   "id": "InnerLight_145"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    663.6,
+    1448.1,
+    322.5
+   ],
+   "normal": [
+    -0.163,
+    0.131,
+    -0.978
+   ],
+   "size": [
+    67.9,
+    63.8,
+    5.0
+   ],
+   "area": 2236.3,
+   "id": "InnerLight_146"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    705.4,
+    1284.3,
+    349.5
+   ],
+   "normal": [
+    0.025,
+    -1.0,
+    -0.019
+   ],
+   "size": [
+    75.3,
+    8.0,
+    5.0
+   ],
+   "area": 1974.4,
+   "id": "InnerLight_147"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    908.0,
+    1284.3,
+    349.5
+   ],
+   "normal": [
+    0.029,
+    0.999,
+    -0.024
+   ],
+   "size": [
+    75.3,
+    8.0,
+    5.0
+   ],
+   "area": 1974.4,
+   "id": "InnerLight_148"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    1049.3,
+    2378.3,
+    349.5
+   ],
+   "normal": [
+    0.008,
+    0.961,
+    0.278
+   ],
+   "size": [
+    75.3,
+    8.0,
+    5.0
+   ],
+   "area": 1974.4,
+   "id": "InnerLight_149"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    1150.6,
+    2378.3,
+    349.5
+   ],
+   "normal": [
+    0.001,
+    1.0,
+    0.002
+   ],
+   "size": [
+    75.3,
+    8.0,
+    5.0
+   ],
+   "area": 1974.3,
+   "id": "InnerLight_150"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    1400.2,
+    1450.5,
+    349.5
+   ],
+   "normal": [
+    -0.245,
+    0.671,
+    -0.7
+   ],
+   "size": [
+    8.0,
+    110.3,
+    5.0
+   ],
+   "area": 2860.2,
+   "id": "InnerLight_151"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    1400.2,
+    1586.8,
+    349.5
+   ],
+   "normal": [
+    0.447,
+    0.8,
+    0.4
+   ],
+   "size": [
+    8.0,
+    110.3,
+    5.0
+   ],
+   "area": 2860.2,
+   "id": "InnerLight_152"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_InnerLight",
+   "centre": [
+    1400.2,
+    2212.1,
+    349.5
+   ],
+   "normal": [
+    -0.48,
+    0.876,
+    -0.049
+   ],
+   "size": [
+    8.0,
+    110.3,
+    5.0
+   ],
+   "area": 2860.2,
+   "id": "InnerLight_153"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ17_TeamLight",
+   "centre": [
+    -1280.0,
+    1766.0,
+    890.0
+   ],
+   "normal": [
+    -0.993,
+    -0.021,
+    0.115
+   ],
+   "size": [
+    6.0,
+    11.0,
+    32.0
+   ],
+   "area": 1140.0,
+   "id": "TeamLight_154"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ17_TeamLight",
+   "centre": [
+    -1280.0,
+    1884.0,
+    890.0
+   ],
+   "normal": [
+    -0.973,
+    0.047,
+    -0.228
+   ],
+   "size": [
+    6.0,
+    11.0,
+    32.0
+   ],
+   "area": 1140.0,
+   "id": "TeamLight_155"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ17_TeamLight",
+   "centre": [
+    -122.2,
+    -322.4,
+    588.0
+   ],
+   "normal": [
+    0.151,
+    -0.988,
+    -0.037
+   ],
+   "size": [
+    4.0,
+    13.0,
+    232.0
+   ],
+   "area": 7455.5,
+   "id": "TeamLight_156"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ17_TeamLight",
+   "centre": [
+    -122.2,
+    322.4,
+    588.0
+   ],
+   "normal": [
+    -0.111,
+    -0.972,
+    -0.208
+   ],
+   "size": [
+    4.0,
+    13.0,
+    232.0
+   ],
+   "area": 7455.6,
+   "id": "TeamLight_157"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ17_TeamLight",
+   "centre": [
+    -108.8,
+    -185.0,
+    216.0
+   ],
+   "normal": [
+    0.741,
+    0.638,
+    -0.21
+   ],
+   "size": [
+    3.8,
+    7.2,
+    208.0
+   ],
+   "area": 4316.5,
+   "id": "TeamLight_158"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ17_TeamLight",
+   "centre": [
+    -108.8,
+    185.0,
+    216.0
+   ],
+   "normal": [
+    0.998,
+    0.052,
+    -0.035
+   ],
+   "size": [
+    3.8,
+    7.2,
+    208.0
+   ],
+   "area": 4316.5,
+   "id": "TeamLight_159"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ17_TeamLight",
+   "centre": [
+    -99.1,
+    222.0,
+    174.0
+   ],
+   "normal": [
+    -0.54,
+    0.007,
+    0.842
+   ],
+   "size": [
+    1.3,
+    13.0,
+    16.0
+   ],
+   "area": 469.5,
+   "id": "TeamLight_160"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ17_TeamLight",
+   "centre": [
+    765.0,
+    2096.0,
+    774.0
+   ],
+   "normal": [
+    -0.991,
+    -0.105,
+    0.087
+   ],
+   "size": [
+    6.0,
+    11.0,
+    32.0
+   ],
+   "area": 1140.0,
+   "id": "TeamLight_161"
+  },
+  {
+   "mesh": "SM_HQ_ShellDetail",
+   "slot": "MI_HQ17_TeamLight",
+   "centre": [
+    765.0,
+    2214.0,
+    774.0
+   ],
+   "normal": [
+    -0.818,
+    0.508,
+    -0.268
+   ],
+   "size": [
+    6.0,
+    11.0,
+    32.0
+   ],
+   "area": 1140.0,
+   "id": "TeamLight_162"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1622.0,
+    -265.9,
+    241.5
+   ],
+   "normal": [
+    -0.977,
+    0.037,
+    0.212
+   ],
+   "size": [
+    3.5,
+    122.0,
+    233.0
+   ],
+   "area": 58870.7,
+   "id": "WarmGlass_163"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1622.0,
+    -0.0,
+    241.5
+   ],
+   "normal": [
+    0.984,
+    -0.001,
+    0.181
+   ],
+   "size": [
+    3.5,
+    122.0,
+    233.0
+   ],
+   "area": 58870.7,
+   "id": "WarmGlass_164"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1622.0,
+    133.0,
+    241.5
+   ],
+   "normal": [
+    -0.986,
+    0.007,
+    0.167
+   ],
+   "size": [
+    3.5,
+    122.0,
+    233.0
+   ],
+   "area": 58870.7,
+   "id": "WarmGlass_165"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1550.9,
+    -446.1,
+    241.5
+   ],
+   "normal": [
+    -0.174,
+    0.985,
+    -0.003
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.5,
+   "id": "WarmGlass_166"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1550.9,
+    446.1,
+    241.5
+   ],
+   "normal": [
+    -0.634,
+    0.773,
+    -0.035
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.5,
+   "id": "WarmGlass_167"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1468.7,
+    -528.7,
+    241.5
+   ],
+   "normal": [
+    -0.15,
+    -0.988,
+    0.022
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.5,
+   "id": "WarmGlass_168"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1459.8,
+    -2011.6,
+    245.0
+   ],
+   "normal": [
+    -0.752,
+    -0.657,
+    -0.061
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.7,
+   "id": "WarmGlass_169"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1459.8,
+    -1845.6,
+    245.0
+   ],
+   "normal": [
+    -0.999,
+    0.005,
+    0.032
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.6,
+   "id": "WarmGlass_170"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1459.8,
+    -1719.6,
+    245.0
+   ],
+   "normal": [
+    -1.0,
+    0.003,
+    0.028
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.6,
+   "id": "WarmGlass_171"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1459.8,
+    -1553.6,
+    245.0
+   ],
+   "normal": [
+    -0.999,
+    -0.007,
+    0.035
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.6,
+   "id": "WarmGlass_172"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1459.8,
+    1783.6,
+    245.0
+   ],
+   "normal": [
+    0.997,
+    0.031,
+    -0.068
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.7,
+   "id": "WarmGlass_173"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1459.8,
+    1937.8,
+    245.0
+   ],
+   "normal": [
+    0.894,
+    0.01,
+    0.448
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.9,
+   "id": "WarmGlass_174"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1459.8,
+    2052.1,
+    245.0
+   ],
+   "normal": [
+    -0.998,
+    -0.063,
+    0.007
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.7,
+   "id": "WarmGlass_175"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1459.8,
+    2206.3,
+    245.0
+   ],
+   "normal": [
+    -0.993,
+    -0.058,
+    0.106
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.6,
+   "id": "WarmGlass_176"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1386.4,
+    611.2,
+    241.5
+   ],
+   "normal": [
+    -0.628,
+    -0.776,
+    -0.054
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.4,
+   "id": "WarmGlass_177"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1304.2,
+    -693.7,
+    241.5
+   ],
+   "normal": [
+    0.418,
+    -0.762,
+    -0.494
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.4,
+   "id": "WarmGlass_178"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1304.2,
+    693.7,
+    241.5
+   ],
+   "normal": [
+    -0.094,
+    -0.933,
+    -0.348
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.5,
+   "id": "WarmGlass_179"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1279.9,
+    -73.8,
+    957.0
+   ],
+   "normal": [
+    0.995,
+    -0.003,
+    0.097
+   ],
+   "size": [
+    3.5,
+    136.5,
+    132.0
+   ],
+   "area": 37577.9,
+   "id": "WarmGlass_180"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1262.6,
+    1463.4,
+    245.0
+   ],
+   "normal": [
+    -0.537,
+    -0.669,
+    0.514
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.4,
+   "id": "WarmGlass_181"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1252.3,
+    -2358.4,
+    245.0
+   ],
+   "normal": [
+    -0.327,
+    0.945,
+    -0.016
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.8,
+   "id": "WarmGlass_182"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1183.6,
+    -286.6,
+    957.0
+   ],
+   "normal": [
+    -0.853,
+    -0.487,
+    -0.186
+   ],
+   "size": [
+    126.9,
+    127.3,
+    132.0
+   ],
+   "area": 48538.8,
+   "id": "WarmGlass_183"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1183.6,
+    286.6,
+    957.0
+   ],
+   "normal": [
+    0.701,
+    0.345,
+    0.624
+   ],
+   "size": [
+    126.9,
+    127.3,
+    132.0
+   ],
+   "area": 48538.7,
+   "id": "WarmGlass_184"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1165.0,
+    2526.4,
+    245.0
+   ],
+   "normal": [
+    0.808,
+    -0.589,
+    -0.0
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.7,
+   "id": "WarmGlass_185"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1151.8,
+    -1206.9,
+    245.0
+   ],
+   "normal": [
+    -0.419,
+    0.74,
+    -0.527
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.6,
+   "id": "WarmGlass_186"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1119.0,
+    -765.0,
+    241.5
+   ],
+   "normal": [
+    0.94,
+    -0.341,
+    0.01
+   ],
+   "size": [
+    132.5,
+    3.5,
+    233.0
+   ],
+   "area": 63849.1,
+   "id": "WarmGlass_187"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1108.0,
+    -1153.5,
+    224.0
+   ],
+   "normal": [
+    -1.0,
+    0.007,
+    0.019
+   ],
+   "size": [
+    3.5,
+    92.0,
+    211.0
+   ],
+   "area": 40615.6,
+   "id": "WarmGlass_188"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1108.0,
+    -816.5,
+    224.0
+   ],
+   "normal": [
+    -1.0,
+    0.002,
+    0.019
+   ],
+   "size": [
+    3.5,
+    92.0,
+    211.0
+   ],
+   "area": 40615.5,
+   "id": "WarmGlass_189"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1108.0,
+    919.7,
+    224.0
+   ],
+   "normal": [
+    -0.997,
+    -0.005,
+    0.077
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.1,
+   "id": "WarmGlass_190"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1108.0,
+    1061.6,
+    224.0
+   ],
+   "normal": [
+    -0.991,
+    0.056,
+    0.123
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.0,
+   "id": "WarmGlass_191"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1108.0,
+    1163.4,
+    224.0
+   ],
+   "normal": [
+    -0.996,
+    0.064,
+    0.057
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.0,
+   "id": "WarmGlass_192"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1108.0,
+    1305.3,
+    224.0
+   ],
+   "normal": [
+    -0.968,
+    0.013,
+    -0.252
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.1,
+   "id": "WarmGlass_193"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1027.4,
+    2526.4,
+    245.0
+   ],
+   "normal": [
+    -0.008,
+    -1.0,
+    0.014
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.7,
+   "id": "WarmGlass_194"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -1011.3,
+    -1206.9,
+    245.0
+   ],
+   "normal": [
+    -0.134,
+    0.991,
+    -0.005
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.6,
+   "id": "WarmGlass_195"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -975.5,
+    765.0,
+    241.5
+   ],
+   "normal": [
+    -0.992,
+    -0.129,
+    0.005
+   ],
+   "size": [
+    132.5,
+    3.5,
+    233.0
+   ],
+   "area": 63849.0,
+   "id": "WarmGlass_196"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -974.3,
+    -383.3,
+    957.0
+   ],
+   "normal": [
+    0.029,
+    0.999,
+    0.017
+   ],
+   "size": [
+    130.1,
+    3.5,
+    132.0
+   ],
+   "area": 35852.8,
+   "id": "WarmGlass_197"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -974.3,
+    383.3,
+    957.0
+   ],
+   "normal": [
+    -0.965,
+    -0.262,
+    -0.003
+   ],
+   "size": [
+    130.1,
+    3.5,
+    132.0
+   ],
+   "area": 35852.8,
+   "id": "WarmGlass_198"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -929.9,
+    1463.4,
+    245.0
+   ],
+   "normal": [
+    0.996,
+    -0.047,
+    -0.072
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.5,
+   "id": "WarmGlass_199"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -929.9,
+    2526.4,
+    245.0
+   ],
+   "normal": [
+    0.381,
+    0.924,
+    0.033
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.7,
+   "id": "WarmGlass_200"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -910.8,
+    -2358.4,
+    245.0
+   ],
+   "normal": [
+    -0.01,
+    1.0,
+    -0.002
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.8,
+   "id": "WarmGlass_201"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -910.8,
+    -1206.9,
+    245.0
+   ],
+   "normal": [
+    -0.016,
+    1.0,
+    -0.003
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.7,
+   "id": "WarmGlass_202"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -832.0,
+    -1153.5,
+    224.0
+   ],
+   "normal": [
+    1.0,
+    -0.023,
+    0.018
+   ],
+   "size": [
+    3.5,
+    92.0,
+    211.0
+   ],
+   "area": 40615.6,
+   "id": "WarmGlass_203"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -832.0,
+    -1054.5,
+    224.0
+   ],
+   "normal": [
+    1.0,
+    0.01,
+    0.023
+   ],
+   "size": [
+    3.5,
+    92.0,
+    211.0
+   ],
+   "area": 40615.6,
+   "id": "WarmGlass_204"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -832.0,
+    -915.5,
+    224.0
+   ],
+   "normal": [
+    -0.95,
+    0.303,
+    -0.078
+   ],
+   "size": [
+    3.5,
+    92.0,
+    211.0
+   ],
+   "area": 40615.6,
+   "id": "WarmGlass_205"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -832.0,
+    -765.0,
+    241.5
+   ],
+   "normal": [
+    -0.846,
+    0.215,
+    -0.489
+   ],
+   "size": [
+    132.5,
+    3.5,
+    233.0
+   ],
+   "area": 63849.1,
+   "id": "WarmGlass_206"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -832.0,
+    765.0,
+    241.5
+   ],
+   "normal": [
+    0.915,
+    -0.357,
+    0.189
+   ],
+   "size": [
+    132.5,
+    3.5,
+    233.0
+   ],
+   "area": 63849.0,
+   "id": "WarmGlass_207"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -832.0,
+    817.9,
+    224.0
+   ],
+   "normal": [
+    -0.714,
+    0.011,
+    0.7
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.1,
+   "id": "WarmGlass_208"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -832.0,
+    919.7,
+    224.0
+   ],
+   "normal": [
+    -1.0,
+    0.012,
+    0.02
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.1,
+   "id": "WarmGlass_209"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -832.0,
+    1061.6,
+    224.0
+   ],
+   "normal": [
+    -0.777,
+    -0.197,
+    0.598
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.1,
+   "id": "WarmGlass_210"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -832.0,
+    1407.1,
+    224.0
+   ],
+   "normal": [
+    -0.71,
+    0.007,
+    -0.704
+   ],
+   "size": [
+    3.5,
+    94.8,
+    211.0
+   ],
+   "area": 41828.1,
+   "id": "WarmGlass_211"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -792.3,
+    1463.4,
+    245.0
+   ],
+   "normal": [
+    -0.016,
+    0.967,
+    -0.255
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.4,
+   "id": "WarmGlass_212"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -792.3,
+    2526.4,
+    245.0
+   ],
+   "normal": [
+    -0.899,
+    0.436,
+    -0.037
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.6,
+   "id": "WarmGlass_213"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -770.3,
+    -2358.4,
+    245.0
+   ],
+   "normal": [
+    0.586,
+    0.5,
+    0.638
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.7,
+   "id": "WarmGlass_214"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -770.3,
+    -1206.9,
+    245.0
+   ],
+   "normal": [
+    -0.012,
+    1.0,
+    0.001
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.6,
+   "id": "WarmGlass_215"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -694.7,
+    1463.4,
+    245.0
+   ],
+   "normal": [
+    0.085,
+    -0.794,
+    -0.602
+   ],
+   "size": [
+    90.6,
+    3.5,
+    223.0
+   ],
+   "area": 42248.5,
+   "id": "WarmGlass_216"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -688.4,
+    -765.0,
+    241.5
+   ],
+   "normal": [
+    0.945,
+    -0.291,
+    -0.15
+   ],
+   "size": [
+    132.5,
+    3.5,
+    233.0
+   ],
+   "area": 63849.0,
+   "id": "WarmGlass_217"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -669.7,
+    -2358.4,
+    245.0
+   ],
+   "normal": [
+    0.346,
+    0.914,
+    -0.211
+   ],
+   "size": [
+    93.5,
+    3.5,
+    223.0
+   ],
+   "area": 43576.8,
+   "id": "WarmGlass_218"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -623.9,
+    286.6,
+    957.0
+   ],
+   "normal": [
+    -0.195,
+    -0.948,
+    0.25
+   ],
+   "size": [
+    126.9,
+    127.3,
+    132.0
+   ],
+   "area": 48538.7,
+   "id": "WarmGlass_219"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -527.5,
+    -73.8,
+    957.0
+   ],
+   "normal": [
+    -0.15,
+    -0.0,
+    -0.989
+   ],
+   "size": [
+    3.5,
+    136.5,
+    132.0
+   ],
+   "area": 37577.9,
+   "id": "WarmGlass_220"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -527.5,
+    73.8,
+    957.0
+   ],
+   "normal": [
+    -0.863,
+    -0.01,
+    -0.505
+   ],
+   "size": [
+    3.5,
+    136.5,
+    132.0
+   ],
+   "area": 37577.9,
+   "id": "WarmGlass_221"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -503.2,
+    693.7,
+    241.5
+   ],
+   "normal": [
+    0.989,
+    -0.097,
+    0.113
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.4,
+   "id": "WarmGlass_222"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -497.5,
+    1669.4,
+    245.0
+   ],
+   "normal": [
+    0.968,
+    -0.003,
+    0.252
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.8,
+   "id": "WarmGlass_223"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -497.5,
+    1783.6,
+    245.0
+   ],
+   "normal": [
+    0.998,
+    0.019,
+    -0.063
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.7,
+   "id": "WarmGlass_224"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -497.5,
+    1937.8,
+    245.0
+   ],
+   "normal": [
+    0.985,
+    0.026,
+    0.168
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.8,
+   "id": "WarmGlass_225"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -497.5,
+    2320.5,
+    245.0
+   ],
+   "normal": [
+    0.992,
+    0.118,
+    -0.037
+   ],
+   "size": [
+    3.5,
+    107.2,
+    223.0
+   ],
+   "area": 49770.6,
+   "id": "WarmGlass_226"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -462.2,
+    -2137.6,
+    245.0
+   ],
+   "normal": [
+    0.344,
+    0.73,
+    -0.591
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.4,
+   "id": "WarmGlass_227"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -462.2,
+    -2011.6,
+    245.0
+   ],
+   "normal": [
+    0.763,
+    -0.045,
+    -0.645
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.6,
+   "id": "WarmGlass_228"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -462.2,
+    -1845.6,
+    245.0
+   ],
+   "normal": [
+    0.894,
+    -0.427,
+    0.138
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.5,
+   "id": "WarmGlass_229"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -462.2,
+    -1427.6,
+    245.0
+   ],
+   "normal": [
+    0.996,
+    0.04,
+    0.079
+   ],
+   "size": [
+    3.5,
+    119.0,
+    223.0
+   ],
+   "area": 55101.4,
+   "id": "WarmGlass_230"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -460.4,
+    723.7,
+    224.0
+   ],
+   "normal": [
+    0.833,
+    -0.372,
+    0.41
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_231"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -421.0,
+    -611.2,
+    241.5
+   ],
+   "normal": [
+    0.584,
+    -0.112,
+    0.804
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.5,
+   "id": "WarmGlass_232"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -421.0,
+    611.2,
+    241.5
+   ],
+   "normal": [
+    0.467,
+    0.881,
+    -0.078
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.4,
+   "id": "WarmGlass_233"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -418.3,
+    -753.0,
+    224.0
+   ],
+   "normal": [
+    -0.647,
+    -0.745,
+    0.163
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.6,
+   "id": "WarmGlass_234"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -354.4,
+    445.4,
+    224.0
+   ],
+   "normal": [
+    -0.844,
+    0.452,
+    -0.289
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_235"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -349.3,
+    826.9,
+    224.0
+   ],
+   "normal": [
+    0.958,
+    -0.116,
+    -0.263
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.2,
+   "id": "WarmGlass_236"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -338.7,
+    -528.7,
+    241.5
+   ],
+   "normal": [
+    0.959,
+    -0.276,
+    -0.063
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.4,
+   "id": "WarmGlass_237"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -331.3,
+    1808.0,
+    245.0
+   ],
+   "normal": [
+    0.155,
+    0.337,
+    -0.929
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46439.1,
+   "id": "WarmGlass_238"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -331.3,
+    1954.8,
+    245.0
+   ],
+   "normal": [
+    -0.822,
+    -0.033,
+    -0.569
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46439.0,
+   "id": "WarmGlass_239"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -331.3,
+    2061.6,
+    245.0
+   ],
+   "normal": [
+    -0.995,
+    0.002,
+    0.097
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46438.9,
+   "id": "WarmGlass_240"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -331.3,
+    2208.5,
+    245.0
+   ],
+   "normal": [
+    0.98,
+    -0.022,
+    0.198
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46439.0,
+   "id": "WarmGlass_241"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -286.6,
+    -849.0,
+    224.0
+   ],
+   "normal": [
+    -0.8,
+    0.05,
+    0.598
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.5,
+   "id": "WarmGlass_242"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -272.6,
+    521.4,
+    224.0
+   ],
+   "normal": [
+    0.279,
+    -0.865,
+    -0.418
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.2,
+   "id": "WarmGlass_243"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -267.4,
+    902.8,
+    224.0
+   ],
+   "normal": [
+    0.989,
+    0.134,
+    -0.068
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_244"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -256.5,
+    446.1,
+    241.5
+   ],
+   "normal": [
+    0.838,
+    0.13,
+    0.531
+   ],
+   "size": [
+    76.3,
+    76.6,
+    233.0
+   ],
+   "area": 51109.4,
+   "id": "WarmGlass_245"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -255.7,
+    -530.0,
+    224.0
+   ],
+   "normal": [
+    -0.333,
+    0.804,
+    0.492
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.6,
+   "id": "WarmGlass_246"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -187.2,
+    -921.5,
+    224.0
+   ],
+   "normal": [
+    0.546,
+    -0.512,
+    -0.663
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.6,
+   "id": "WarmGlass_247"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -185.4,
+    -258.7,
+    241.5
+   ],
+   "normal": [
+    0.998,
+    -0.07,
+    0.007
+   ],
+   "size": [
+    3.5,
+    136.4,
+    233.0
+   ],
+   "area": 65685.7,
+   "id": "WarmGlass_248"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -185.4,
+    258.7,
+    241.5
+   ],
+   "normal": [
+    -0.961,
+    -0.115,
+    0.25
+   ],
+   "size": [
+    3.5,
+    136.4,
+    233.0
+   ],
+   "area": 65685.8,
+   "id": "WarmGlass_249"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -166.4,
+    1534.2,
+    245.0
+   ],
+   "normal": [
+    0.385,
+    -0.179,
+    -0.905
+   ],
+   "size": [
+    96.5,
+    3.5,
+    223.0
+   ],
+   "area": 44907.9,
+   "id": "WarmGlass_250"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -166.4,
+    2482.2,
+    245.0
+   ],
+   "normal": [
+    -0.27,
+    0.963,
+    0.01
+   ],
+   "size": [
+    96.5,
+    3.5,
+    223.0
+   ],
+   "area": 44908.1,
+   "id": "WarmGlass_251"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -161.4,
+    624.6,
+    224.0
+   ],
+   "normal": [
+    -0.194,
+    0.917,
+    0.349
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_252"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -156.3,
+    1006.0,
+    224.0
+   ],
+   "normal": [
+    0.077,
+    0.266,
+    0.961
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_253"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -148.4,
+    -77.5,
+    216.0
+   ],
+   "normal": [
+    0.673,
+    0.224,
+    0.705
+   ],
+   "size": [
+    3.0,
+    143.0,
+    260.0
+   ],
+   "area": 76050.5,
+   "id": "WarmGlass_254"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -148.4,
+    77.5,
+    216.0
+   ],
+   "normal": [
+    -0.654,
+    -0.414,
+    0.633
+   ],
+   "size": [
+    3.0,
+    143.0,
+    260.0
+   ],
+   "area": 76050.5,
+   "id": "WarmGlass_255"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -123.9,
+    -626.0,
+    224.0
+   ],
+   "normal": [
+    0.352,
+    0.895,
+    -0.274
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.6,
+   "id": "WarmGlass_256"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -62.9,
+    2482.2,
+    245.0
+   ],
+   "normal": [
+    -0.128,
+    -0.992,
+    -0.01
+   ],
+   "size": [
+    96.5,
+    3.5,
+    223.0
+   ],
+   "area": 44908.1,
+   "id": "WarmGlass_257"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -55.4,
+    -1017.5,
+    224.0
+   ],
+   "normal": [
+    -0.585,
+    -0.659,
+    -0.473
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.6,
+   "id": "WarmGlass_258"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    -24.6,
+    -698.5,
+    224.0
+   ],
+   "normal": [
+    0.416,
+    0.536,
+    0.734
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.6,
+   "id": "WarmGlass_259"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    80.5,
+    2482.2,
+    245.0
+   ],
+   "normal": [
+    0.251,
+    0.9,
+    0.355
+   ],
+   "size": [
+    96.5,
+    3.5,
+    223.0
+   ],
+   "area": 44908.1,
+   "id": "WarmGlass_260"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    107.2,
+    -794.5,
+    224.0
+   ],
+   "normal": [
+    0.061,
+    -0.996,
+    -0.072
+   ],
+   "size": [
+    95.3,
+    70.7,
+    211.0
+   ],
+   "area": 50891.6,
+   "id": "WarmGlass_261"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    113.3,
+    879.8,
+    224.0
+   ],
+   "normal": [
+    0.923,
+    0.081,
+    0.376
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_262"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    118.5,
+    1261.2,
+    224.0
+   ],
+   "normal": [
+    0.627,
+    -0.346,
+    -0.698
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.2,
+   "id": "WarmGlass_263"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    184.0,
+    1534.2,
+    245.0
+   ],
+   "normal": [
+    0.221,
+    -0.912,
+    0.345
+   ],
+   "size": [
+    96.5,
+    3.5,
+    223.0
+   ],
+   "area": 44907.9,
+   "id": "WarmGlass_264"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    224.5,
+    983.0,
+    224.0
+   ],
+   "normal": [
+    0.279,
+    -0.889,
+    -0.363
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.2,
+   "id": "WarmGlass_265"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    229.6,
+    1364.4,
+    224.0
+   ],
+   "normal": [
+    0.702,
+    -0.709,
+    -0.063
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_266"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    306.3,
+    1059.0,
+    224.0
+   ],
+   "normal": [
+    -0.87,
+    0.3,
+    -0.39
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_267"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    311.4,
+    1440.4,
+    224.0
+   ],
+   "normal": [
+    0.481,
+    -0.463,
+    0.745
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_268"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    348.9,
+    1701.1,
+    245.0
+   ],
+   "normal": [
+    0.777,
+    0.035,
+    -0.628
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46439.0,
+   "id": "WarmGlass_269"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    348.9,
+    1808.0,
+    245.0
+   ],
+   "normal": [
+    0.716,
+    0.698,
+    -0.026
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46439.1,
+   "id": "WarmGlass_270"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    348.9,
+    1954.8,
+    245.0
+   ],
+   "normal": [
+    0.806,
+    0.094,
+    -0.584
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46438.8,
+   "id": "WarmGlass_271"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    348.9,
+    2315.3,
+    245.0
+   ],
+   "normal": [
+    0.947,
+    -0.077,
+    -0.311
+   ],
+   "size": [
+    3.5,
+    99.8,
+    223.0
+   ],
+   "area": 46439.0,
+   "id": "WarmGlass_272"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    417.4,
+    1162.2,
+    224.0
+   ],
+   "normal": [
+    -0.126,
+    0.298,
+    0.946
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_273"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    422.6,
+    1543.6,
+    224.0
+   ],
+   "normal": [
+    0.337,
+    -0.328,
+    -0.882
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_274"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    431.6,
+    -1031.1,
+    224.0
+   ],
+   "normal": [
+    0.436,
+    0.633,
+    0.64
+   ],
+   "size": [
+    84.2,
+    59.8,
+    211.0
+   ],
+   "area": 44485.0,
+   "id": "WarmGlass_275"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    515.1,
+    1586.8,
+    245.0
+   ],
+   "normal": [
+    0.43,
+    -0.898,
+    -0.088
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59765.8,
+   "id": "WarmGlass_276"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    515.1,
+    1763.1,
+    245.0
+   ],
+   "normal": [
+    0.998,
+    0.02,
+    -0.055
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59766.1,
+   "id": "WarmGlass_277"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    515.1,
+    1899.4,
+    245.0
+   ],
+   "normal": [
+    0.812,
+    0.539,
+    0.224
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59765.9,
+   "id": "WarmGlass_278"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    515.1,
+    2075.8,
+    245.0
+   ],
+   "normal": [
+    0.842,
+    0.02,
+    0.539
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59765.9,
+   "id": "WarmGlass_279"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    692.2,
+    1417.3,
+    224.0
+   ],
+   "normal": [
+    0.41,
+    -0.849,
+    -0.334
+   ],
+   "size": [
+    78.5,
+    73.3,
+    211.0
+   ],
+   "area": 46033.3,
+   "id": "WarmGlass_280"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    705.4,
+    1242.3,
+    245.0
+   ],
+   "normal": [
+    -0.618,
+    0.786,
+    0.006
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43933.2,
+   "id": "WarmGlass_281"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    806.7,
+    2420.3,
+    245.0
+   ],
+   "normal": [
+    -0.093,
+    -0.996,
+    -0.001
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43933.0,
+   "id": "WarmGlass_282"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    908.0,
+    1242.3,
+    245.0
+   ],
+   "normal": [
+    -0.985,
+    0.173,
+    0.003
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43933.3,
+   "id": "WarmGlass_283"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    908.0,
+    2420.3,
+    245.0
+   ],
+   "normal": [
+    0.652,
+    -0.758,
+    0.001
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43933.0,
+   "id": "WarmGlass_284"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    1049.3,
+    2420.3,
+    245.0
+   ],
+   "normal": [
+    0.948,
+    -0.319,
+    -0.003
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43933.0,
+   "id": "WarmGlass_285"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    1150.6,
+    1242.3,
+    245.0
+   ],
+   "normal": [
+    -0.017,
+    1.0,
+    0.002
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43933.2,
+   "id": "WarmGlass_286"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    1150.6,
+    2420.3,
+    245.0
+   ],
+   "normal": [
+    0.012,
+    -1.0,
+    -0.006
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43933.0,
+   "id": "WarmGlass_287"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    1251.9,
+    1242.3,
+    245.0
+   ],
+   "normal": [
+    0.214,
+    0.977,
+    -0.002
+   ],
+   "size": [
+    94.3,
+    3.5,
+    223.0
+   ],
+   "area": 43933.2,
+   "id": "WarmGlass_288"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    1442.2,
+    1450.5,
+    245.0
+   ],
+   "normal": [
+    0.995,
+    0.044,
+    -0.09
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59766.0,
+   "id": "WarmGlass_289"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    1442.2,
+    1586.8,
+    245.0
+   ],
+   "normal": [
+    0.848,
+    0.053,
+    0.527
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59765.9,
+   "id": "WarmGlass_290"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    1442.2,
+    1763.1,
+    245.0
+   ],
+   "normal": [
+    -0.943,
+    -0.146,
+    -0.3
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59766.1,
+   "id": "WarmGlass_291"
+  },
+  {
+   "mesh": "SM_HQ_Shell",
+   "slot": "MI_HQ17_WarmGlass",
+   "centre": [
+    1442.2,
+    2212.1,
+    245.0
+   ],
+   "normal": [
+    0.988,
+    -0.014,
+    0.156
+   ],
+   "size": [
+    3.5,
+    129.3,
+    223.0
+   ],
+   "area": 59766.0,
+   "id": "WarmGlass_292"
+  }
+ ]
+}

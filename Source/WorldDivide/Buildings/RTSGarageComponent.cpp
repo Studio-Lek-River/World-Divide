@@ -6,7 +6,7 @@
 #include "Combat/RTSHealthComponent.h"
 #include "Commands/RTSCommand.h"
 #include "Components/InstancedStaticMeshComponent.h"
-#include "Components/PointLightComponent.h"
+#include "Components/LocalLightComponent.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSAircraftData.h"
 #include "Data/RTSBuildingData.h"
@@ -38,13 +38,6 @@ namespace
 
 	/** How far beyond the end of the lane the owner's idle units on it are sent. */
 	constexpr float LaneClearMargin = 300.f;
-
-	/** The warning lights hang either side of the 12.6 m door opening, this far from the lane's middle, above the door. */
-	constexpr float LightSpread = 680.f;
-	const FVector LightAbovePivot(40.f, 0.f, 60.f);
-	const FLinearColor LightColor(1.f, 0.45f, 0.05f);
-	constexpr float LightCandelas = 300.f;
-	constexpr float WarningLightRadius = 1200.f;
 
 	/** The two lights take turns, each lit for half of this many seconds. */
 	constexpr float FlashPeriod = 0.8f;
@@ -97,7 +90,7 @@ void URTSGarageComponent::ApplyBuildingData()
 {
 	ARTSBuilding* Building = GetBuilding();
 	const URTSBuildingData* Data = Building ? Building->GetBuildingData() : nullptr;
-	for (UPointLightComponent* Light : Lights)
+	for (ULocalLightComponent* Light : Lights)
 	{
 		if (Light)
 		{
@@ -161,24 +154,15 @@ void URTSGarageComponent::ApplyBuildingData()
 		Add(TEXT("DriveShaft"), TEXT("Drive"), TEXT("Drive_P"));
 	}
 
-	if (GetNetMode() != NM_DedicatedServer)
+	// The warning beacons are lights of the data at the garage's own beacon lamps (#195), none where the model has none.
+	for (const FRTSBuildingLight& Beacon : Data->Lights)
 	{
-		const FVector* Pivot = Data->FindSocket(URTSBuildingData::GarageDoorPivotSocket);
-		const FVector Above = (Pivot ? *Pivot * Scale : SpawnLocal) + LightAbovePivot;
-		for (const float Side : { -1.f, 1.f })
+		if (Beacon.Group == URTSBuildingData::GarageBeaconsGroup)
 		{
-			UPointLightComponent* Light = NewObject<UPointLightComponent>(Building, NAME_None, RF_Transient);
-			Light->SetupAttachment(Building->GetRootComponent());
-			Light->SetRelativeLocation(FVector(Above.X, SpawnLocal.Y + Side * LightSpread, Above.Z));
-			Light->SetIntensityUnits(ELightUnits::Candelas);
-			Light->SetIntensity(LightCandelas);
-			Light->SetLightColor(LightColor);
-			Light->SetAttenuationRadius(WarningLightRadius);
-			Light->SetCastShadows(false);
-			Light->SetVisibility(false);
-			Building->AddInstanceComponent(Light);
-			Light->RegisterComponent();
-			Lights.Add(Light);
+			if (ULocalLightComponent* Light = Building->CreateLight(Beacon))
+			{
+				Lights.Add(Light);
+			}
 		}
 	}
 	UpdateVisuals();
@@ -492,6 +476,8 @@ void URTSGarageComponent::UpdateVisuals()
 	{
 		PoseDoor(Openness);
 	}
+	// The bay's lamps light the bay and the apron only through the open door.
+	GetBuilding()->SetLightGroupOn(URTSBuildingData::GarageLampsGroup, AreLightsOn());
 	const bool bFirst = FMath::Fmod(GetWorld()->GetTimeSeconds(), FlashPeriod) < 0.5f * FlashPeriod;
 	for (int32 Index = 0; Index < Lights.Num(); ++Index)
 	{

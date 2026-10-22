@@ -37,4 +37,14 @@ namespace RTSPrimitiveData
 	 * of a vehicle with lights, as the team colour is.
 	 */
 	constexpr int32 LampOn = 8;
+
+	/**
+	 * M_HQ_Final_Operational's lighting groups (#195): 1 while the group glows, 0 switched off (ARTSBuilding::SetLightGroupOn,
+	 * for the state controller, #196), 1 when unset; each instance belongs to one group or none. Night is 1 in the dark,
+	 * when the glow rises to the instance's NightGain (URTSBuildingLightSubsystem).
+	 */
+	constexpr int32 LightWindows = 9;
+	constexpr int32 LightFixtures = 10;
+	constexpr int32 LightAccents = 11;
+	constexpr int32 LightNight = 12;
 }

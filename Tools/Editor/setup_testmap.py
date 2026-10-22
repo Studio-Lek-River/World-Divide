@@ -676,6 +676,23 @@ def make_usa_hq():
         value.set_editor_property("location", unreal.Vector(*location))
         return value
 
+    def light(record):
+        # A real light at one of the HQ's lamps (#195), placed from the probed fixtures by usa_hq_recipe.py.
+        value = unreal.RTSBuildingLight()
+        value.set_editor_property("name", record["name"])
+        value.set_editor_property("group", record["group"])
+        value.set_editor_property("fixture", record["fixture"])
+        value.set_editor_property("type", getattr(unreal.RTSBuildingLightType, record["type"].upper()))
+        value.set_editor_property("location", unreal.Vector(*record["location"]))
+        pitch, yaw, roll = record["rotation"]
+        value.set_editor_property("rotation", unreal.Rotator(roll=roll, pitch=pitch, yaw=yaw))
+        value.set_editor_property("color", unreal.LinearColor(*record["color"], 1.0))
+        for key in ("candelas", "radius", "inner_cone_angle", "outer_cone_angle", "source_width", "source_height",
+                    "barn_door_angle", "barn_door_length"):
+            if key in record:
+                value.set_editor_property(key, record[key])
+        return value
+
     door_source = os.path.join(USA_HQ_SOURCE_DIR, "animation", f"{USA_HQ_DOOR_MOTION}.csv")
     door_motion = plan_now(f"{USA_HQ_DIR}/Animation/{USA_HQ_DOOR_MOTION}",
                            lambda: import_curve_table(door_source, f"{USA_HQ_DIR}/Animation", USA_HQ_DOOR_MOTION),
@@ -686,6 +703,7 @@ def make_usa_hq():
         "parts": [part(p) for p in layout["parts"] if p is not root],
         "collision_boxes": [collision_box(b) for b in layout["collision_boxes"]],
         "sockets": [socket(name, location) for name, location in sorted(layout["sockets"].items())],
+        "lights": [light(l) for l in layout["lights"]],
         # The delivered 24 s door cycle opens from 2 to 10 s; the game plays that in GarageDoorSeconds (#192).
         "garage_door_motion": door_motion,
         "garage_door_open_start": 2.0,

@@ -62,7 +62,8 @@
  * drawn after driving head-on into Block_North and into a vehicle factory placed for it, along Block_North and round its
  * corner (the hull's overlap with each is logged, and the barrel's, now and at most on the way), then the unit's kind once
  * for each of four teams side by side at the default and the closest zoom and under a low sun (#150). The head- and rear
- * lights (#223) are taken by day and at night from the RTS camera at its default zoom (vehicle_lights_<day|night>). With
+ * lights (#223) are taken by day and at night from the RTS camera at its default zoom (vehicle_lights_<day|night>), and the
+ * nearest HQ's night lighting (#195) at its default and farthest zoom (hq_lights_<day|night>[_far]). With
  * StressCount, that many more of the unit stand in a grid and a last picture
  * shows them with stat unit and stat rhi; the frame time, game thread time, avoidance pass, draw calls and triangles are
  * logged. With a third argument "lods" (ue.ps1 -LODs; #149) it takes the LOD sheet instead: the unit at each LOD forced
@@ -609,6 +610,39 @@ namespace RTSUnitDebugCommands
 					Run.UseRTSCamera(Run.GetCameraPawn()->GetDefaultZoom(), 0.f);
 					return true;
 				}, bNight ? SettleSeconds + LightsSettleSeconds : TraverseSeconds });
+			}
+			// The HQ nearest the unit by day and at night (#195), from the RTS camera at its default and farthest zoom: its windows
+			// and lamps glow, and its real lights light only from them (hq_lights_<day|night>[_far]).
+			for (const bool bNight : { false, true })
+			{
+				for (const bool bFar : { false, true })
+				{
+					Shots.Add({ FString::Printf(TEXT("hq_lights_%s%s"), bNight ? TEXT("night") : TEXT("day"), bFar ? TEXT("_far") : TEXT("")),
+						[bNight, bFar](FUnitShotsRun& Run)
+					{
+						const ARTSBuilding* Nearest = nullptr;
+						for (TActorIterator<ARTSBuilding> It(Run.World.Get()); It; ++It)
+						{
+							if (It->GetBuildingData() && !It->GetBuildingData()->Lights.IsEmpty() && (!Nearest
+								|| FVector::DistSquared(It->GetActorLocation(), Run.Unit->GetActorLocation())
+									< FVector::DistSquared(Nearest->GetActorLocation(), Run.Unit->GetActorLocation())))
+							{
+								Nearest = *It;
+							}
+						}
+						if (!Nearest)
+						{
+							return false;
+						}
+						Run.ReleaseMuzzleFlash();
+						Run.SetNight(bNight);
+						ARTSCameraPawn* Camera = Run.GetCameraPawn();
+						Run.GetController()->SetViewTarget(Camera);
+						Camera->JumpTo(Nearest->GetActorLocation());
+						Camera->SetZoomNow(bFar ? Camera->GetMaxZoom() : Camera->GetDefaultZoom());
+						return true;
+					}, bNight ? SettleSeconds + LightsSettleSeconds : TraverseSeconds });
+				}
 			}
 			// The muzzle smoke (#221) by day, the gun at TurretShotAim: from the RTS camera just after the shot, then from in
 			// front just after another one and once the turret has turned back to the front, the puff left where it was fired.

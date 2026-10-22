@@ -2469,7 +2469,9 @@
    "parent": "M_HQ_Final_Operational",
    "scalars": {
     "Roughness": 0.4,
-    "Metallic": 0
+    "Metallic": 0,
+    "GroupWindows": 1.0,
+    "NightGain": 4.0
    },
    "vectors": {
     "SurfaceColor": [
@@ -2489,7 +2491,9 @@
   "MI_HQ17_InteriorWarm": {
    "parent": "M_HQ_Final_Operational",
    "scalars": {
-    "Roughness": 0.7
+    "Roughness": 0.7,
+    "GroupWindows": 1.0,
+    "NightGain": 4.0
    },
    "vectors": {
     "SurfaceColor": [
@@ -2510,7 +2514,9 @@
    "parent": "M_HQ_Final_Operational",
    "scalars": {
     "Roughness": 0.25,
-    "Metallic": 0.1
+    "Metallic": 0.1,
+    "GroupAccents": 1.0,
+    "NightGain": 3.0
    },
    "vectors": {
     "SurfaceColor": [
@@ -2531,7 +2537,9 @@
    "parent": "M_HQ_Final_Operational",
    "scalars": {
     "Metallic": 0,
-    "Roughness": 0.3
+    "Roughness": 0.3,
+    "GroupAccents": 1.0,
+    "NightGain": 3.0
    },
    "vectors": {
     "SurfaceColor": [
@@ -2552,7 +2560,9 @@
    "parent": "M_HQ_Final_Operational",
    "scalars": {
     "Metallic": 0,
-    "Roughness": 0.32
+    "Roughness": 0.32,
+    "GroupFixtures": 1.0,
+    "NightGain": 4.0
    },
    "vectors": {
     "SurfaceColor": [
@@ -2998,6 +3008,87 @@
    2400.0
   ]
  },
+ "lights": [
+  {
+   "name": "GarageLampsSouth",
+   "group": "GarageLamps",
+   "fixture": "FixtureWarm_302+FixtureWarm_304+FixtureWarm_306+FixtureWarm_308",
+   "type": "Rect",
+   "location": [
+    720.0,
+    -2433.4,
+    616.2
+   ],
+   "rotation": [
+    -65.0,
+    90.0,
+    0.0
+   ],
+   "color": [
+    1.0,
+    0.86,
+    0.66
+   ],
+   "candelas": 400.0,
+   "radius": 1800.0,
+   "barn_door_angle": 0.0,
+   "barn_door_length": 45.0,
+   "source_width": 1154.0,
+   "source_height": 21.0
+  },
+  {
+   "name": "GarageLampsNorth",
+   "group": "GarageLamps",
+   "fixture": "FixtureWarm_303+FixtureWarm_305+FixtureWarm_307+FixtureWarm_309",
+   "type": "Rect",
+   "location": [
+    720.0,
+    -1083.5,
+    616.2
+   ],
+   "rotation": [
+    -65.0,
+    -90.0,
+    0.0
+   ],
+   "color": [
+    1.0,
+    0.86,
+    0.66
+   ],
+   "candelas": 400.0,
+   "radius": 1800.0,
+   "barn_door_angle": 0.0,
+   "barn_door_length": 45.0,
+   "source_width": 1154.0,
+   "source_height": 21.0
+  },
+  {
+   "name": "CommandWindows",
+   "group": "Windows",
+   "fixture": "WarmGlass_248+WarmGlass_254+WarmGlass_255+WarmGlass_249",
+   "type": "Rect",
+   "location": [
+    -146.9,
+    0.0,
+    222.0
+   ],
+   "rotation": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "color": [
+    1.0,
+    0.62,
+    0.3
+   ],
+   "candelas": 300.0,
+   "radius": 1400.0,
+   "source_width": 653.8,
+   "source_height": 272.0
+  }
+ ],
  "collision_boxes": [
   {
    "name": "Rear",

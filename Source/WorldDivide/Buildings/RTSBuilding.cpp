@@ -2,6 +2,7 @@
 
 #include "AI/RTSAIPlayer.h"
 #include "Buildings/RTSBuildPlacement.h"
+#include "Buildings/RTSBuildingLightSubsystem.h"
 #include "Buildings/RTSBuildingMotionSubsystem.h"
 #include "Buildings/RTSGarageComponent.h"
 #include "Buildings/RTSProductionComponent.h"
@@ -10,6 +11,9 @@
 #include "Combat/RTSWeaponComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Components/PointLightComponent.h"
+#include "Components/RectLightComponent.h"
+#include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Core/RTSGameState.h"
 #include "Core/RTSPlayerState.h"
@@ -397,6 +401,10 @@ void ARTSBuilding::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		Motion->Unregister(*this);
 	}
+	if (URTSBuildingLightSubsystem* Lights = GetWorld() ? GetWorld()->GetSubsystem<URTSBuildingLightSubsystem>() : nullptr)
+	{
+		Lights->Unregister(*this);
+	}
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -601,6 +609,7 @@ void ARTSBuilding::ApplyBuildingData()
 	RTSBuildPlacement::GetMeshPlacement(*BuildingData, MeshBaseOffset, MeshHeight);
 	Mesh->SetStaticMesh(BuildingData->Mesh);
 	ApplyParts();
+	ApplyLights();
 	ApplyCollision(MeshHeight > 0.f ? MeshHeight : DefaultHeight);
 	GarageComponent->ApplyBuildingData();
 
@@ -799,6 +808,172 @@ void ARTSBuilding::ApplyTeamColor()
 		{
 			Part->SetCustomPrimitiveDataVector4(RTSPrimitiveData::TeamColor, Color);
 			Part->SetCustomPrimitiveDataFloat(RTSPrimitiveData::LampOn, 1.f);
+		}
+	}
+	ApplyLightData();
+}
+
+ULocalLightComponent* ARTSBuilding::CreateLight(const FRTSBuildingLight& Data)
+{
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return nullptr;
+	}
+	ULocalLightComponent* Light = nullptr;
+	switch (Data.Type)
+	{
+	case ERTSBuildingLightType::Spot:
+	{
+		USpotLightComponent* Spot = NewObject<USpotLightComponent>(this, NAME_None, RF_Transient);
+		Spot->SetInnerConeAngle(FMath::Min(Data.InnerConeAngle, Data.OuterConeAngle));
+		Spot->SetOuterConeAngle(Data.OuterConeAngle);
+		Light = Spot;
+		break;
+	}
+	case ERTSBuildingLightType::Rect:
+	{
+		URectLightComponent* Rect = NewObject<URectLightComponent>(this, NAME_None, RF_Transient);
+		Rect->SetSourceWidth(Data.SourceWidth);
+		Rect->SetSourceHeight(Data.SourceHeight);
+		Rect->SetBarnDoorAngle(Data.BarnDoorAngle);
+		Rect->SetBarnDoorLength(Data.BarnDoorLength);
+		Light = Rect;
+		break;
+	}
+	default:
+		Light = NewObject<UPointLightComponent>(this, NAME_None, RF_Transient);
+		break;
+	}
+	// It lights what it faces directly: no shadows, no GI, fog or translucency, as the vehicles' lights (#223). The lamp's
+	// own glow is its material's.
+	Light->SetMobility(EComponentMobility::Movable);
+	Light->SetCastShadows(false);
+	Light->bAffectGlobalIllumination = false;
+	Light->bAffectTranslucentLighting = false;
+	Light->IndirectLightingIntensity = 0.f;
+	Light->VolumetricScatteringIntensity = 0.f;
+	Light->SetIntensityUnits(ELightUnits::Candelas);
+	Light->SetIntensity(Data.Candelas);
+	Light->SetLightColor(Data.Color);
+	Light->SetAttenuationRadius(Data.Radius);
+	Light->SetCanEverAffectNavigation(false);
+	Light->ComponentTags.Add(GetLightGroupTag(Data.Group));
+	// On Mesh, as the parts, so the lamps stay on the model; its scale stays out of the light.
+	Light->SetUsingAbsoluteScale(true);
+	Light->SetupAttachment(Mesh);
+	Light->SetRelativeLocationAndRotation(Data.Location, Data.Rotation);
+	Light->SetVisibility(false);
+	AddInstanceComponent(Light);
+	Light->RegisterComponent();
+	return Light;
+}
+
+FName ARTSBuilding::GetLightGroupTag(FName Group)
+{
+	return FName(*(TEXT("Light.") + Group.ToString()));
+}
+
+void ARTSBuilding::ApplyLights()
+{
+	for (ULocalLightComponent* Light : LightComponents)
+	{
+		if (Light)
+		{
+			Light->DestroyComponent();
+		}
+	}
+	LightComponents.Reset();
+	bLightsShown = false;
+	for (const FRTSBuildingLight& Data : BuildingData->Lights)
+	{
+		if (Data.Group != URTSBuildingData::GarageBeaconsGroup)
+		{
+			if (ULocalLightComponent* Light = CreateLight(Data))
+			{
+				LightComponents.Add(Light);
+			}
+		}
+	}
+	// Every building with parts or lights: the subsystem raises their glow in the dark and shows the nearest ones' lights.
+	if (URTSBuildingLightSubsystem* Lights = GetWorld() ? GetWorld()->GetSubsystem<URTSBuildingLightSubsystem>() : nullptr)
+	{
+		if (!PartComponents.IsEmpty() || !LightComponents.IsEmpty())
+		{
+			Lights->Register(*this);
+		}
+		else
+		{
+			Lights->Unregister(*this);
+		}
+	}
+}
+
+void ARTSBuilding::ApplyLightData()
+{
+	// All four at once: writing one index fills those below it that were unset with 0, which would switch a group off.
+	const float Values[] = {
+		IsLightGroupOn(TEXT("Windows")) ? 1.f : 0.f,
+		IsLightGroupOn(TEXT("Fixtures")) ? 1.f : 0.f,
+		IsLightGroupOn(TEXT("Accents")) ? 1.f : 0.f,
+		bLightsNight ? 1.f : 0.f,
+	};
+	static_assert(RTSPrimitiveData::LightNight == RTSPrimitiveData::LightWindows + 3);
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(Values); ++Index)
+	{
+		Mesh->SetCustomPrimitiveDataFloat(RTSPrimitiveData::LightWindows + Index, Values[Index]);
+	}
+	for (UStaticMeshComponent* Part : PartComponents)
+	{
+		if (Part)
+		{
+			for (int32 Index = 0; Index < UE_ARRAY_COUNT(Values); ++Index)
+			{
+				Part->SetCustomPrimitiveDataFloat(RTSPrimitiveData::LightWindows + Index, Values[Index]);
+			}
+		}
+	}
+}
+
+void ARTSBuilding::SetLightGroupOn(FName Group, bool bOn)
+{
+	if (IsLightGroupOn(Group) == bOn)
+	{
+		return;
+	}
+	if (bOn)
+	{
+		LightGroupsOff.Remove(Group);
+	}
+	else
+	{
+		LightGroupsOff.Add(Group);
+	}
+	ApplyLightData();
+	ShowLights(bLightsShown);
+}
+
+void ARTSBuilding::SetLightsNight(bool bNight)
+{
+	if (bLightsNight != bNight)
+	{
+		bLightsNight = bNight;
+		ApplyLightData();
+	}
+}
+
+void ARTSBuilding::ShowLights(bool bShow)
+{
+	bLightsShown = bShow;
+	for (ULocalLightComponent* Light : LightComponents)
+	{
+		if (Light)
+		{
+			bool bGroupOn = true;
+			for (const FName& Off : LightGroupsOff)
+			{
+				bGroupOn &= !Light->ComponentHasTag(GetLightGroupTag(Off));
+			}
+			Light->SetVisibility(bShow && bGroupOn);
 		}
 	}
 }

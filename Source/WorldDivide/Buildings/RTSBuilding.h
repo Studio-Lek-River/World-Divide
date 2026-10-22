@@ -7,6 +7,7 @@
 
 class ARTSUnit;
 class UBoxComponent;
+class ULocalLightComponent;
 class UStaticMeshComponent;
 class URTSBuildingData;
 class URTSGarageComponent;
@@ -15,6 +16,7 @@ class URTSProductionComponent;
 class URTSSuperweaponComponent;
 class URTSUnitData;
 class URTSWeaponComponent;
+struct FRTSBuildingLight;
 struct FNavAgentProperties;
 
 /**
@@ -132,6 +134,35 @@ public:
 	const TArray<TObjectPtr<UStaticMeshComponent>>& GetPartComponents() const { return PartComponents; }
 
 	/**
+	 * The real lights at the building's lamps (URTSBuildingData::Lights, #195) but the garage's beacons, which the garage
+	 * flashes itself; hidden until URTSBuildingLightSubsystem shows them in the dark. None on a dedicated server.
+	 */
+	const TArray<TObjectPtr<ULocalLightComponent>>& GetLightComponents() const { return LightComponents; }
+
+	/**
+	 * A light of the data at its lamp, attached to Mesh and tagged Light.<Group>, hidden, casting no shadow; null on a
+	 * dedicated server. For the building's own lights and the garage's beacons.
+	 */
+	ULocalLightComponent* CreateLight(const FRTSBuildingLight& Light);
+
+	/** The tag of the light components of lighting group Group, Light.<Group>. */
+	static FName GetLightGroupTag(FName Group);
+
+	/**
+	 * Switches lighting group Group (Windows, Fixtures, Accents, GarageLamps) on or off: its lights and the glow of the
+	 * materials of that group, if any (RTSPrimitiveData::LightWindows..). All are on by default; the garage switches
+	 * GarageLamps with its door. A hook for the state controller (#196); this machine
+	 * only, it does not replicate.
+	 */
+	void SetLightGroupOn(FName Group, bool bOn);
+	bool IsLightGroupOn(FName Group) const { return !LightGroupsOff.Contains(Group); }
+
+	/** URTSBuildingLightSubsystem: the dark raises the glow to each material's NightGain; Show lights its lamps' lights. */
+	void SetLightsNight(bool bNight);
+	void ShowLights(bool bShow);
+	bool AreLightsShown() const { return bLightsShown; }
+
+	/**
 	 * The boxes that block units and cut the navmesh: the footprint box alone, or the data's CollisionBoxes, the first of them
 	 * in that box.
 	 */
@@ -201,6 +232,12 @@ private:
 	 */
 	void ApplyParts();
 
+	/** Makes the data's Lights but the garage's beacons, replacing any made before, and registers with URTSBuildingLightSubsystem. */
+	void ApplyLights();
+
+	/** Writes the lighting groups and the night (RTSPrimitiveData::LightWindows..LightNight) to Mesh and every part. */
+	void ApplyLightData();
+
 	/** Sizes the collision: one box over the footprint up to Height, or the data's CollisionBoxes. */
 	void ApplyCollision(float Height);
 
@@ -234,6 +271,15 @@ private:
 
 	/** Each part's index in PartComponents and its instance there, INDEX_NONE for a part drawn on its own. */
 	TMap<FName, TPair<int32, int32>> PartIndex;
+
+	/** The data's Lights but the garage's beacons (GetLightComponents). */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<ULocalLightComponent>> LightComponents;
+
+	/** The lighting groups switched off (SetLightGroupOn); the rest are on. */
+	TSet<FName> LightGroupsOff;
+	bool bLightsNight = false;
+	bool bLightsShown = false;
 
 	/** The data's CollisionBoxes after the first, which Collision takes. */
 	UPROPERTY(Transient)
