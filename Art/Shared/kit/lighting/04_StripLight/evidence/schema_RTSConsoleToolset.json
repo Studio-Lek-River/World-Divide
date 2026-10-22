@@ -1,0 +1,8 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"name\":\"WorldDivideMCP.RTSConsoleToolset\",\"version\":\"1.0\",\"description\":\"Runs console commands in the World Divide editor, in the running Play-In-Editor session when there is one.\",\"tools\":[{\"description\":\"Runs a console command, e.g. \\\"stat fps\\\" or \\\"rts.UI.Reload\\\".\\nDuring Play-In-Editor it runs on the first local player of the PIE session, so stat overlays show in the\\nPIE viewport; otherwise it runs in the editor world.\",\"name\":\"WorldDivideMCP.RTSConsoleToolset.ExecuteConsoleCommand\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\",\"description\":\"The console command line to run.\"}},\"required\":[\"command\"]},\"outputSchema\":{\"type\":\"object\",\"properties\":{\"returnValue\":{\"type\":\"string\",\"description\":\"The text the command printed, or a note that it printed nothing. An empty, unknown or refused command raises a script error, which the MCP caller receives as a tool error with the reason.\"}},\"required\":[\"returnValue\"]}}]}"
+    }
+  ]
+}

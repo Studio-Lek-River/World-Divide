@@ -1,0 +1,70 @@
+{
+  "SM_Kit_StripLight.fbx": {
+    "triangles": 300,
+    "vertices": 176,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "dimensions_m": [
+      0.12399999797344208,
+      1.2000000476837158,
+      0.18199999630451202
+    ],
+    "bounds_m": [
+      [
+        0.0,
+        0.12399999797344208
+      ],
+      [
+        -0.6000000238418579,
+        0.6000000238418579
+      ],
+      [
+        -0.09099999815225601,
+        0.09099999815225601
+      ]
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "sha256": "6fa08508e1ffcdf7f763bf206ddbde7385ebe75735c6d8bdaee3a1ef6349ddeb"
+  },
+  "SM_Kit_StripLight_LOD1.fbx": {
+    "triangles": 300,
+    "vertices": 176,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "dimensions_m": [
+      0.12399999797344208,
+      1.2000000476837158,
+      0.18199999630451202
+    ],
+    "bounds_m": [
+      [
+        0.0,
+        0.12399999797344208
+      ],
+      [
+        -0.6000000238418579,
+        0.6000000238418579
+      ],
+      [
+        -0.09099999815225601,
+        0.09099999815225601
+      ]
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "sha256": "00db18f21704a6d11a41a3a569017567ffa5f3d5606d9d84c71fc128372de7de"
+  }
+}

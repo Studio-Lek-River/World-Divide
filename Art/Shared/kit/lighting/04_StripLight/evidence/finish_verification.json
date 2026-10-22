@@ -1,0 +1,14 @@
+{
+  "before": "e4c91dbccc7eb922bf9b622a73554c981f7ed7311556f74f1e076a6c9529ccab",
+  "after": "e4c91dbccc7eb922bf9b622a73554c981f7ed7311556f74f1e076a6c9529ccab",
+  "triangles": 300,
+  "vertices": 176,
+  "geometry_uv0_unchanged": true,
+  "added_uv_channel": "FinishBake (UV1)",
+  "normal_basis": "original UV0 tangents; sample finish normal on UV1; DirectX map for Unreal",
+  "bevel_radius_m": {
+    "Housing": 0.0012,
+    "Lens": 0.0018
+  },
+  "normal_nonflat_fraction": 0.23482203483581543
+}

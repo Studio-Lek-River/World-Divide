@@ -1,0 +1,161 @@
+{
+  "triangles": 300,
+  "vertices": 176,
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "dimensions_m": [
+    0.12399999797344208,
+    1.2000000476837158,
+    0.18199999630451202
+  ],
+  "bounds_m": [
+    [
+      0.0,
+      0.12399999797344208
+    ],
+    [
+      -0.6000000238418579,
+      0.6000000238418579
+    ],
+    [
+      -0.09099999815225601,
+      0.09099999815225601
+    ]
+  ],
+  "degenerate_triangles": 0,
+  "degenerate_uv_triangles": 0,
+  "mesh": "SM_Kit_StripLight",
+  "lod0": 300,
+  "lod1": 300,
+  "source_frame": "metres; origin mount centre, +X out, long axis Y, Z up",
+  "lens_bounds_cm": [
+    [
+      6,
+      10.8
+    ],
+    [
+      -55.3,
+      55.3
+    ],
+    [
+      -7.3,
+      7.3
+    ]
+  ],
+  "preview_light": {
+    "type": "Rect",
+    "location_cm": [
+      10.7,
+      0,
+      0
+    ],
+    "direction": [
+      1,
+      0,
+      0
+    ],
+    "source_width_cm": 108,
+    "source_height_cm": 13,
+    "candela": 180,
+    "kelvin": 3500,
+    "radius_cm": 600,
+    "cast_shadows": false,
+    "indirect_lighting_intensity": 0
+  },
+  "textures": [
+    {
+      "file": "textures\\T_StripLight_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "7a10e5ff21807dee420cb96614bca69862da37c07a675cf7e5bf8f21f4c2beec"
+    },
+    {
+      "file": "textures\\T_StripLight_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "edb80ecd706f22d424d3f5550a3e33380faeae71f66f0a542e845617a8c5aa73"
+    },
+    {
+      "file": "textures\\T_StripLight_Housing_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "b47fa3ad767f7155f78f2b8bc415c7fd35548e247c774de9ada1d72669b0935a"
+    },
+    {
+      "file": "textures\\T_StripLight_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "f9089b0c358f1b5a34ac3b1272d375a599e36ef83eab24050f43c29b5f97ce43"
+    },
+    {
+      "file": "textures\\T_StripLight_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "611729bb6d0a202029f6e4b577c018be48fe5519dcdd0fe0d4ea59b2cd4b4fd9"
+    },
+    {
+      "file": "textures\\T_StripLight_Lens_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "37a3cf4eae18cdad135f6a255617fe9e845ec8a5653ab707ab2514f4836560e6"
+    },
+    {
+      "file": "textures\\T_StripLight_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "93a7199c416ced1ff6fb5f4d323ab0bb9215ecbdfe65ba97c63373b017b874ad"
+    },
+    {
+      "file": "textures/T_StripLight_Finish_Normal.png",
+      "sha256": "7959b62cafaf169e3ff0513c958278e4775878383e7412b33c66c6854f337d69",
+      "size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/T_StripLight_Finish_NormalGL.png",
+      "sha256": "56f76138938bae702538e74dd702063d5f3c34bf607bb17b7c70291710e8d901",
+      "size": [
+        2048,
+        2048
+      ]
+    }
+  ],
+  "approval": {
+    "scope": "Current lamp geometry and final material finish; production integration and gameplay validation remain with Claude",
+    "date": "2026-10-22",
+    "quote": "Yes is prima zo",
+    "status": "producer_approved"
+  },
+  "integration": "Claude; catalogue, shared atlas binding, runtime power and flicker not authored here",
+  "material_recipe": "material_recipe.json",
+  "finish": {
+    "tangent_basis_uv_channel": 0,
+    "uv_channel": 1,
+    "bevel_radius_m": {
+      "Lens": 0.0018,
+      "Housing": 0.0012
+    },
+    "normal_directx": "textures/T_StripLight_Finish_Normal.png",
+    "normal_opengl": "textures/T_StripLight_Finish_NormalGL.png",
+    "edge_roughness_adjustment": "subtract 0.12 * (1 - baked normal blue)"
+  },
+  "verification": "evidence/finish_verification.json"
+}

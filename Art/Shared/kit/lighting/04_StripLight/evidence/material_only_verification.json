@@ -1,0 +1,15 @@
+{
+  "geometry_before": "8d933603463347edb8127fc476fe4d5120f9407ed23d6b46ac447391c2e45beb",
+  "geometry_after_reload": "8d933603463347edb8127fc476fe4d5120f9407ed23d6b46ac447391c2e45beb",
+  "fbx_unchanged": {
+    "SM_Kit_StripLight.fbx": "3a29077989c70f5f6150bf79c88c4db89a14511a9f3f16cd10240a69e69c4925",
+    "SM_Kit_StripLight_LOD1.fbx": "98ac3e24a00042b2008daf3b32333580ba5ac348416a781528a0307b486162ee"
+  },
+  "triangles": 300,
+  "material_slots": [
+    "Housing",
+    "Lens"
+  ],
+  "uvs_unchanged": true,
+  "source_backup": "source\\StripLight_FlatMaterials.blend"
+}

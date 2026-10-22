@@ -1,0 +1,126 @@
+{
+  "housing": {
+    "roughness_range": [
+      0.3,
+      0.51
+    ],
+    "metallic": 0,
+    "ior": 1.5,
+    "normal_uv_scale": 8,
+    "orm_uv_scale": 4
+  },
+  "lens": {
+    "ior": 1.49,
+    "roughness": 0.43,
+    "transmission": 0.08,
+    "subsurface_weight": 0.18,
+    "scatter_distance_m": 0.0025,
+    "normal_uv_scale": 10,
+    "profile_uv_scale": [
+      0.9041591320072332,
+      6.849315068493151
+    ],
+    "profile_uv_offset": [
+      0.047920433996383405,
+      -2.9246575342465757
+    ]
+  },
+  "emission": {
+    "kelvin": 3500,
+    "linear_rgb": [
+      1,
+      0.779,
+      0.615
+    ],
+    "strength": 3.2,
+    "profile": "T_StripLight_Lens_LightProfile"
+  },
+  "textures": [
+    {
+      "file": "textures\\T_StripLight_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "7a10e5ff21807dee420cb96614bca69862da37c07a675cf7e5bf8f21f4c2beec"
+    },
+    {
+      "file": "textures\\T_StripLight_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "edb80ecd706f22d424d3f5550a3e33380faeae71f66f0a542e845617a8c5aa73"
+    },
+    {
+      "file": "textures\\T_StripLight_Housing_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "b47fa3ad767f7155f78f2b8bc415c7fd35548e247c774de9ada1d72669b0935a"
+    },
+    {
+      "file": "textures\\T_StripLight_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "f9089b0c358f1b5a34ac3b1272d375a599e36ef83eab24050f43c29b5f97ce43"
+    },
+    {
+      "file": "textures\\T_StripLight_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "611729bb6d0a202029f6e4b577c018be48fe5519dcdd0fe0d4ea59b2cd4b4fd9"
+    },
+    {
+      "file": "textures\\T_StripLight_Lens_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "37a3cf4eae18cdad135f6a255617fe9e845ec8a5653ab707ab2514f4836560e6"
+    },
+    {
+      "file": "textures\\T_StripLight_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "93a7199c416ced1ff6fb5f4d323ab0bb9215ecbdfe65ba97c63373b017b874ad"
+    },
+    {
+      "file": "textures/T_StripLight_Finish_Normal.png",
+      "sha256": "7959b62cafaf169e3ff0513c958278e4775878383e7412b33c66c6854f337d69",
+      "size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "file": "textures/T_StripLight_Finish_NormalGL.png",
+      "sha256": "56f76138938bae702538e74dd702063d5f3c34bf607bb17b7c70291710e8d901",
+      "size": [
+        2048,
+        2048
+      ]
+    }
+  ],
+  "normal_convention": "DirectX; invert G in Blender only",
+  "color_management": "BaseColor sRGB; Normal, ORM and LightProfile linear",
+  "ao": "ORM R=1; use spatial contact shadows/SSAO, never paint dirt into base colour",
+  "finish": {
+    "tangent_basis_uv_channel": 0,
+    "uv_channel": 1,
+    "bevel_radius_m": {
+      "Lens": 0.0018,
+      "Housing": 0.0012
+    },
+    "normal_directx": "textures/T_StripLight_Finish_Normal.png",
+    "normal_opengl": "textures/T_StripLight_Finish_NormalGL.png",
+    "edge_roughness_adjustment": "subtract 0.12 * (1 - baked normal blue)"
+  }
+}

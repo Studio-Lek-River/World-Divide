@@ -1,0 +1,37 @@
+{
+  "actors": {
+    "StripLight": {
+      "actor": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.StaticMeshActor_1",
+      "component": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.StaticMeshActor_1.StaticMeshComponent0"
+    },
+    "Ceiling": {
+      "actor": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.StaticMeshActor_2",
+      "component": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.StaticMeshActor_2.StaticMeshComponent0"
+    },
+    "Wall": {
+      "actor": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.StaticMeshActor_3",
+      "component": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.StaticMeshActor_3.StaticMeshComponent0"
+    },
+    "Floor": {
+      "actor": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.StaticMeshActor_4",
+      "component": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.StaticMeshActor_4.StaticMeshComponent0"
+    },
+    "LampLight": {
+      "actor": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.RectLight_0",
+      "component": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.RectLight_0.LightComponent0"
+    },
+    "PreviewKey": {
+      "actor": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.RectLight_1",
+      "component": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.RectLight_1.LightComponent0"
+    },
+    "PreviewFill": {
+      "actor": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.RectLight_2",
+      "component": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.RectLight_2.LightComponent0"
+    },
+    "PreviewExposure": {
+      "actor": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight.L_StripLight:PersistentLevel.PostProcessVolume_0",
+      "component": null
+    }
+  },
+  "materials": {}
+}

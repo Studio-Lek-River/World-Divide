@@ -235,6 +235,9 @@ Only **real** lights count. Emissive-only pieces (09, 12, 13, 14, and every lens
   - One **1K lens/LED atlas** for lenses, glass, diffusers and LEDs.
   - One shared **weathering mask set** (grime, streaks, edge wear).
   - These sizes are a starting point; an art issue may raise them with a reason. No 4K set per lamp.
+  - A piece may carry a baked **finish normal on UV1** (micro-bevel and surface detail). The masters sample it with
+    TexCoord 1 and keep the tangent basis on UV0; it replaces the atlas micro-normal for that piece instead of
+    stacking on it. 04 StripLight is the first (`Art/Shared/kit/lighting/04_StripLight/CLAUDE_HANDOFF.md`).
 - **Real dimensions** (see each piece's reference). Mounting plates, brackets, gaskets, cable glands and screws are
   geometry on L and XL pieces and normal-map detail on S and M ones (detail under 10 cm lives in the maps,
   `MODEL_PERFORMANCE.md`).
@@ -293,7 +296,7 @@ Present-day military and industrial fixtures, no brand look. Light values are th
 | 01 | Cast-aluminium LED wall pack, sloped top, four screws on the face plate | 30 × 20 × 13 | dark grey powder coat, light dust in the fins | frosted polycarbonate, facing down | 3000 K, 150 cd, 20/60°, 8 m |
 | 02 | Vapour-tight "jelly jar" bulkhead: round cast base, glass globe, steel wire cage | Ø 14 × 26 | olive-grey cast aluminium, galvanised cage, rust at the cage feet | clear ribbed glass globe, warm filament-look LED | 3000 K, 60 cd, point, 6 m |
 | 03 | Over-door canopy light: hooded box above a door, angled downward | 35 × 20 × 12 | matt black or grey sheet steel, drip edge | flat opal diffuser on the underside | 3500 K, 200 cd, 25/55°, 7 m |
-| 04 | IP65 linear LED batten on a ceiling or soffit, two clip brackets | 120 × 8 × 6 | white-grey polycarbonate body, stainless clips | opal diffuser along the length | 4000 K, 120 cd, rect 118 × 5 cm, 6 m |
+| 04 | IP65 linear LED batten on a ceiling or soffit (approved 2026-10-22) | 120 × 18.2 × 12.4 | graphite powder-coated housing, satin | neutral opal polycarbonate diffuser along the length | 3500 K, 180 cd, rect 108 × 13 cm, 6 m |
 | 05 | Compact LED floodlight head on a U-yoke bracket with a tilt knuckle | head 25 × 22 × 10, bracket 15 | dark grey die-cast with rear cooling fins | flat clear glass over a reflector grid | 4000 K, 600 cd, 10/30°, 20 m |
 | 06 | Vandal-resistant round bulkhead with an eyelid shield over the top half | Ø 25 × 10 | grey cast aluminium, four tamper screws | prismatic polycarbonate, lower half | 4000 K, 100 cd, 30/70°, 6 m |
 | 07 | Recessed high-bay panel set flush in a bay ceiling, trim frame | 60 × 30 × 10 | white enamel frame, steel trim | prismatic acrylic panel | 4000 K, 300 cd, rect 56 × 26 cm, 12 m |

@@ -1,0 +1,153 @@
+{
+  "level": "/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight",
+  "meshes": {
+    "/Game/Art/Candidates/Kit_StripLight/Candidate01/SM_Kit_StripLight": {
+      "triangles": 300,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bindings": {
+        "staticMaterials": [
+          {
+            "materialInterface": {
+              "refPath": "/Game/Art/Candidates/Kit_StripLight/Candidate01/M_StripLight_Housing.M_StripLight_Housing"
+            },
+            "materialSlotName": "Housing",
+            "importedMaterialSlotName": "Housing",
+            "uVChannelData": {
+              "bInitialized": true,
+              "bOverrideDensities": false,
+              "localUVDensities": [
+                413.1861572265625,
+                178.1772918701172,
+                0,
+                0
+              ]
+            },
+            "overlayMaterialInterface": "None"
+          },
+          {
+            "materialInterface": {
+              "refPath": "/Game/Art/Candidates/Kit_StripLight/Candidate01/MI_StripLight_Lens_On.MI_StripLight_Lens_On"
+            },
+            "materialSlotName": "Lens",
+            "importedMaterialSlotName": "Lens",
+            "uVChannelData": {
+              "bInitialized": true,
+              "bOverrideDensities": false,
+              "localUVDensities": [
+                104.2891616821289,
+                182.91615295410156,
+                0,
+                0
+              ]
+            },
+            "overlayMaterialInterface": "None"
+          }
+        ]
+      }
+    },
+    "/Game/Art/Candidates/Kit_StripLight/Candidate01/SM_Kit_StripLight_LOD1": {
+      "triangles": 300,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bindings": {
+        "staticMaterials": [
+          {
+            "materialInterface": {
+              "refPath": "/Game/Art/Candidates/Kit_StripLight/Candidate01/M_StripLight_Housing.M_StripLight_Housing"
+            },
+            "materialSlotName": "Housing",
+            "importedMaterialSlotName": "Housing",
+            "uVChannelData": {
+              "bInitialized": true,
+              "bOverrideDensities": false,
+              "localUVDensities": [
+                413.1861572265625,
+                178.1772918701172,
+                0,
+                0
+              ]
+            },
+            "overlayMaterialInterface": "None"
+          },
+          {
+            "materialInterface": {
+              "refPath": "/Game/Art/Candidates/Kit_StripLight/Candidate01/MI_StripLight_Lens_On.MI_StripLight_Lens_On"
+            },
+            "materialSlotName": "Lens",
+            "importedMaterialSlotName": "Lens",
+            "uVChannelData": {
+              "bInitialized": true,
+              "bOverrideDensities": false,
+              "localUVDensities": [
+                104.2891616821289,
+                182.91615295410156,
+                0,
+                0
+              ]
+            },
+            "overlayMaterialInterface": "None"
+          }
+        ]
+      }
+    }
+  },
+  "instances": {
+    "On": {
+      "parent": {
+        "refPath": "/Game/Art/Candidates/Kit_StripLight/Candidate01/M_StripLight_Lens.M_StripLight_Lens"
+      },
+      "scalarParameterValues": [
+        {
+          "atlasData": {
+            "bIsUsedAsAtlasPosition": false,
+            "curve": "None",
+            "atlas": "None"
+          },
+          "parameterInfo": {
+            "name": "LampLevel",
+            "association": "GlobalParameter",
+            "index": -1
+          },
+          "parameterValue": 1,
+          "expressionGUId": "9F0638FF-4A7D-6282-1E49-C48EAA260DCE"
+        }
+      ]
+    },
+    "Off": {
+      "parent": {
+        "refPath": "/Game/Art/Candidates/Kit_StripLight/Candidate01/M_StripLight_Lens.M_StripLight_Lens"
+      },
+      "scalarParameterValues": [
+        {
+          "atlasData": {
+            "bIsUsedAsAtlasPosition": false,
+            "curve": "None",
+            "atlas": "None"
+          },
+          "parameterInfo": {
+            "name": "LampLevel",
+            "association": "GlobalParameter",
+            "index": -1
+          },
+          "parameterValue": 0,
+          "expressionGUId": "9F0638FF-4A7D-6282-1E49-C48EAA260DCE"
+        }
+      ]
+    }
+  },
+  "fixture_light": {
+    "intensity": 180,
+    "intensityUnits": "Candelas",
+    "temperature": 3500,
+    "sourceWidth": 108,
+    "sourceHeight": 13,
+    "attenuationRadius": 600,
+    "castShadows": false
+  },
+  "scope": "Art candidate; no production or gameplay integration; level reloaded in same editor process"
+}
