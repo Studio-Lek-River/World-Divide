@@ -164,14 +164,22 @@ void RTSShotSound::Play(const UObject& WorldContext, const FVector& Location, fl
 		return;
 	}
 
-	if (!Sound)
-	{
-		Sound = GetWave(EffectScale, bImpact);
-	}
-
 	// Light weapons fire often, so they play quieter; a little pitch spread keeps a burst from sounding like one sample.
 	const float Volume = 0.5f + 0.5f * FMath::Min(EffectScale, 1.f);
-	const float Pitch = FMath::FRandRange(0.92f, 1.08f);
+	float Pitch = FMath::FRandRange(0.92f, 1.08f);
+	USoundAttenuation* Attenuation = nullptr;
+	if (Sound)
+	{
+		// A recorded sound brings its own attenuation and concurrency (#356). It is made for the M20's gun (EffectScale 2), so
+		// lighter guns reusing it play it higher.
+		Pitch *= FMath::Clamp(FMath::Pow(2.f / FMath::Max(EffectScale, 0.1f), 0.3f), 0.85f, 1.2f);
+	}
+	else
+	{
+		Sound = GetWave(EffectScale, bImpact);
+		Attenuation = GetAttenuation();
+	}
+
 	// Fire and forget: no audio component per shot.
-	UGameplayStatics::PlaySoundAtLocation(World, Sound, Location, FRotator::ZeroRotator, Volume, Pitch, 0.f, GetAttenuation());
+	UGameplayStatics::PlaySoundAtLocation(World, Sound, Location, FRotator::ZeroRotator, Volume, Pitch, 0.f, Attenuation);
 }

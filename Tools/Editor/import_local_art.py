@@ -12,6 +12,11 @@ setup_testmap.py leaves it alone. To undo a swap for good:
   git update-index --no-skip-worktree Content/Data/Units/DA_TestTank.uasset
   git checkout -- Content/Data/Units/DA_TestTank.uasset
 
+The World in Conflict Abrams cannon (Art/Source/Local/WiC/Abrams: us_tank_abrams_01a-03c.wav, a blast, a body and an
+echo tail per take) becomes SC_TankCannon_Local and the FireSound of DA_TestHeavyCannon (the M20's gun) and
+DA_TestCannon on this machine only (#356), marked skip-worktree the same way; undo it as above with
+Content/Data/Weapons/DA_TestHeavyCannon.uasset and DA_TestCannon.uasset.
+
   "<UE_5.8>/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "<repo>/WorldDivide.uproject"
       -run=pythonscript -script="<repo>/Tools/Editor/import_local_art.py" -unattended -nosplash -nullrhi
 """
@@ -56,6 +61,12 @@ TURRETS = [
 ]
 # The model DA_TestTank uses on this machine, or None to leave it alone.
 TEST_TANK_MODEL = None
+# The cannon sound's takes under Art/Source/Local, each a blast, a body and an echo tail, and the guns that fire it.
+CANNON_SOUND_DIR = os.path.join("WiC", "Abrams")
+CANNON_SOUND_TAKES = [f"us_tank_abrams_0{take}{layer}" for take in (1, 2, 3) for layer in "abc"]
+CANNON_SOUND = f"{LOCAL_DIR}/Audio/SC_TankCannon_Local"
+CANNON_WEAPONS = [("/Game/Data/Weapons/DA_TestHeavyCannon", "Content/Data/Weapons/DA_TestHeavyCannon.uasset"),
+                  ("/Game/Data/Weapons/DA_TestCannon", "Content/Data/Weapons/DA_TestCannon.uasset")]
 
 assets = unreal.EditorAssetLibrary
 
@@ -133,6 +144,37 @@ def use_for_test_tank(mesh):
     unreal.log(f"import_local_art: DA_TestTank uses {mesh.get_name()} on this machine (scale {scale:.3f})")
 
 
+def import_wave(source, name):
+    task = unreal.AssetImportTask()
+    task.filename = source
+    task.destination_path = f"{LOCAL_DIR}/Audio"
+    task.destination_name = name
+    task.automated = True
+    task.replace_existing = True
+    task.save = False
+    unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+    wave = unreal.load_asset(f"{LOCAL_DIR}/Audio/{name}")
+    if not isinstance(wave, unreal.SoundWave):
+        raise RuntimeError(f"Could not import {source}")
+    save(wave)
+    return wave
+
+
+def use_cannon_sound():
+    """Builds the cannon's firing sound from the local takes and sets it on the tank guns, hidden from git."""
+    waves = [import_wave(os.path.join(SOURCE_DIR, CANNON_SOUND_DIR, f"{take}.wav"), take) for take in CANNON_SOUND_TAKES]
+    cue = unreal.RTSEditorScripting.build_layered_shot_sound(CANNON_SOUND, waves)
+    if not cue:
+        raise RuntimeError(f"Could not build {CANNON_SOUND}")
+    save(cue)
+    for weapon_path, weapon_file in CANNON_WEAPONS:
+        keep_local(weapon_file)
+        weapon = unreal.load_asset(weapon_path)
+        weapon.set_editor_property("fire_sound", cue)
+        save(weapon)
+    unreal.log(f"import_local_art: the tank guns fire {cue.get_name()} on this machine")
+
+
 imported = {}
 for models, is_turret in ((MODELS, False), (TURRETS, True)):
     for model_name, model_source, model_yaw, model_strengths in models:
@@ -151,4 +193,8 @@ if TEST_TANK_MODEL in imported:
     use_for_test_tank(imported[TEST_TANK_MODEL])
 if "Abrams_Hull" in imported and "Abrams_Turret" in imported:
     use_for_abrams(imported["Abrams_Hull"], imported["Abrams_Turret"])
+if all(os.path.exists(os.path.join(SOURCE_DIR, CANNON_SOUND_DIR, f"{take}.wav")) for take in CANNON_SOUND_TAKES):
+    use_cannon_sound()
+else:
+    unreal.log_warning(f"import_local_art: {os.path.join(SOURCE_DIR, CANNON_SOUND_DIR)} incomplete, skipping the cannon sound")
 unreal.log("import_local_art: done")

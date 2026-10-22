@@ -9,6 +9,8 @@ class UFont;
 class UFontFace;
 class UMaterialInterface;
 class UNiagaraSystem;
+class USoundCue;
+class USoundWave;
 
 /** Engine calls Tools/Editor scripts need that Unreal does not expose to Python. */
 UCLASS()
@@ -130,4 +132,13 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
 	static UNiagaraSystem* BuildDustSystem(const FString& AssetPath, UMaterialInterface* HazeMaterial, UMaterialInterface* ChunkMaterial);
+
+	/**
+	 * Builds a cannon's firing sound (#356) as the sound cue AssetPath, new, in place of the one there: Python cannot build a
+	 * cue's graph. Waves holds the takes in threes, a blast, a body and an echo tail each; every shot plays one take at random,
+	 * the blast fading out with distance before the body and the echo last, duller the further away. At most a dozen play at
+	 * once. Returns null and logs why when it fails.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
+	static USoundCue* BuildLayeredShotSound(const FString& AssetPath, const TArray<USoundWave*>& Waves);
 };
