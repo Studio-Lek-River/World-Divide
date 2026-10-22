@@ -990,6 +990,8 @@ def make_shot_material(name):
 
 
 # The firing flipbooks Tools/Art/muzzle_fx_blender.py bakes from its fire and smoke simulation (#294): 8 x 8 frames each.
+# The materials take the grid as the scalar parameter Columns, so World in Conflict's 16 x 16 smoke can stand in on the
+# machines that have it (import_local_art.py, #355).
 EFFECT_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Source", "Effects")
 EFFECT_TEXTURE_DIR = f"{EFFECT_DIR}/Textures"
 FLIPBOOK_LAST_FRAME = 63.0
@@ -1075,20 +1077,22 @@ float A = floor(Frame);
 float B = min(A + 1.0, Last);
 float2 Local = UV;
 if (Random > 0.5) Local.x = 1.0 - Local.x;
-UVA = float3((float2(fmod(A, 8.0), floor(A / 8.0)) + Local) / 8.0, 0.0);
-UVB = float3((float2(fmod(B, 8.0), floor(B / 8.0)) + Local) / 8.0, 0.0);
+UVA = float3((float2(fmod(A, Columns), floor(A / Columns)) + Local) / Columns, 0.0);
+UVB = float3((float2(fmod(B, Columns), floor(B / Columns)) + Local) / Columns, 0.0);
 return Frame - A;"""
 
 
 def flipbook_frame(material, x, y, first, last):
-    """The flipbook frame node, its first and last frames scalar parameters FrameFirst and FrameLast."""
+    """The flipbook frame node, its first and last frames scalar parameters FrameFirst and FrameLast and its grid, frames
+    per row and column, Columns."""
     node = custom_node(material, x, y, FLIPBOOK_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT1,
-                       ["UV", "Age", "Random", "First", "Last"], ["UVA", "UVB"])
+                       ["UV", "Age", "Random", "First", "Last", "Columns"], ["UVA", "UVB"])
     connect(expression(material, unreal.MaterialExpressionTextureCoordinate, x - 300, y), "", node, "UV")
     connect(expression(material, unreal.MaterialExpressionParticleRelativeTime, x - 300, y + 80), "", node, "Age")
     connect(expression(material, unreal.MaterialExpressionParticleRandom, x - 300, y + 160), "", node, "Random")
     connect(scalar_parameter(material, x - 300, y + 240, "FrameFirst", first), "", node, "First")
     connect(scalar_parameter(material, x - 300, y + 320, "FrameLast", last), "", node, "Last")
+    connect(scalar_parameter(material, x - 300, y + 400, "Columns", 8.0), "", node, "Columns")
     return node
 
 
@@ -1100,9 +1104,13 @@ def component_mask(material, x, y, channels):
     return mask
 
 
-def flipbook_sample(material, x, y, texture, frame, pin):
-    """A sample of texture at the frame node's UVA or UVB."""
-    sample = expression(material, unreal.MaterialExpressionTextureSample, x, y)
+def flipbook_sample(material, x, y, texture, frame, pin, parameter=None):
+    """A sample of texture at the frame node's UVA or UVB; with a parameter name, a texture parameter that defaults to it."""
+    if parameter:
+        sample = expression(material, unreal.MaterialExpressionTextureSampleParameter2D, x, y)
+        sample.set_editor_property("parameter_name", parameter)
+    else:
+        sample = expression(material, unreal.MaterialExpressionTextureSample, x, y)
     sample.set_editor_property("texture", texture)
     sample.set_editor_property("sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR)
     mask = component_mask(material, x - 150, y, "rg")
@@ -1111,11 +1119,11 @@ def flipbook_sample(material, x, y, texture, frame, pin):
     return sample
 
 
-def blended_sample(material, x, y, texture, frame):
-    """texture's two neighbouring frames, blended by the frame node."""
+def blended_sample(material, x, y, texture, frame, parameter=None):
+    """texture's two neighbouring frames, blended by the frame node; with a parameter name, through a texture parameter."""
     blend = expression(material, unreal.MaterialExpressionLinearInterpolate, x + 300, y)
-    connect(flipbook_sample(material, x, y, texture, frame, "UVA"), "RGBA", blend, "A")
-    connect(flipbook_sample(material, x, y + 250, texture, frame, "UVB"), "RGBA", blend, "B")
+    connect(flipbook_sample(material, x, y, texture, frame, "UVA", parameter), "RGBA", blend, "A")
+    connect(flipbook_sample(material, x, y + 250, texture, frame, "UVB", parameter), "RGBA", blend, "B")
     connect(frame, "", blend, "Alpha")
     return blend
 
@@ -1248,7 +1256,8 @@ def build_muzzle_smoke_material(name, rlt, bbf):
     the particle's life. The six views give each pixel a normal, so the sun, the sky and the muzzle light shade the cloud
     from wherever they are; the particle colour tints it. It thins from its edges inward by Erosion as it ages and fades
     over FadeDistance cm where it meets the ground or a hull. The instances (SMOKE_LOOKS) set the frames, the erosion and
-    the Brightness, which scales the albedo, of the blast clouds, the veil and the dust."""
+    the Brightness, which scales the albedo, of the blast clouds, the veil and the dust. The flipbooks are the texture
+    parameters SmokeRLT and SmokeBBF, so import_local_art.py can swap in World in Conflict's (#355)."""
     material = new_material(name)
     material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
     material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_DEFAULT_LIT)
@@ -1257,8 +1266,8 @@ def build_muzzle_smoke_material(name, rlt, bbf):
     material.set_editor_property("used_with_niagara_sprites", True)
 
     frame = flipbook_frame(material, -1400, 0, 0.0, FLIPBOOK_LAST_FRAME)
-    rlt_sample = blended_sample(material, -1000, 0, rlt, frame)
-    bbf_sample = blended_sample(material, -1000, 600, bbf, frame)
+    rlt_sample = blended_sample(material, -1000, 0, rlt, frame, "SmokeRLT")
+    bbf_sample = blended_sample(material, -1000, 600, bbf, frame, "SmokeBBF")
     shade = custom_node(material, -300, 200, SMOKE_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT1,
                         ["RLT", "BBF", "Color", "Age", "Erosion", "Brightness"], ["Normal", "Albedo"])
     connect(rlt_sample, "", shade, "RLT")

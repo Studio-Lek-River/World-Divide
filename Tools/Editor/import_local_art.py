@@ -17,6 +17,11 @@ echo tail per take) becomes SC_TankCannon_Local and the FireSound of DA_TestHeav
 DA_TestCannon on this machine only (#356), marked skip-worktree the same way; undo it as above with
 Content/Data/Weapons/DA_TestHeavyCannon.uasset and DA_TestCannon.uasset.
 
+World in Conflict's tank smoke flipbook (Art/Source/Local/WiC/Smoke: T_WiCSmoke_RLT.png and _BBF.png, written from the
+installed game by Tools/Art/wic_smoke_flipbook.py) draws the blast clouds and the veil of NS_MuzzleSmoke_Local, which
+becomes the MuzzleSmoke of the same two guns on this machine only (#355). It is NS_MuzzleSmoke built again with
+instances of M_MuzzleSmoke that point at those flipbooks; the dust keeps ours.
+
   "<UE_5.8>/Engine/Binaries/Win64/UnrealEditor-Cmd.exe" "<repo>/WorldDivide.uproject"
       -run=pythonscript -script="<repo>/Tools/Editor/import_local_art.py" -unattended -nosplash -nullrhi
 """
@@ -65,6 +70,17 @@ TEST_TANK_MODEL = None
 CANNON_SOUND_DIR = os.path.join("WiC", "Abrams")
 CANNON_SOUND_TAKES = [f"us_tank_abrams_0{take}{layer}" for take in (1, 2, 3) for layer in "abc"]
 CANNON_SOUND = f"{LOCAL_DIR}/Audio/SC_TankCannon_Local"
+# World in Conflict's smoke flipbook under Art/Source/Local: 16 x 16 frames, and what the blast clouds and the veil play of
+# it. Like SMOKE_LOOKS in setup_testmap.py, which they stand in for, over WiC's longer frame run.
+SMOKE_SOURCE_DIR = os.path.join("WiC", "Smoke")
+SMOKE_TEXTURES = {"SmokeRLT": "T_WiCSmoke_RLT", "SmokeBBF": "T_WiCSmoke_BBF"}
+SMOKE_LOOKS = {
+    "MI_WiCSmoke_Blast": {"FrameFirst": 0.0, "FrameLast": 160.0, "Erosion": 0.35, "Brightness": 0.2, "Columns": 16.0},
+    "MI_WiCSmoke_Veil": {"FrameFirst": 72.0, "FrameLast": 255.0, "Erosion": 0.6, "Brightness": 0.2, "Columns": 16.0},
+}
+SMOKE_MATERIAL = "/Game/Materials/M_MuzzleSmoke"
+DUST_LOOK = "/Game/Materials/MI_MuzzleSmoke_Dust"
+MUZZLE_SMOKE = f"{LOCAL_DIR}/Effects/NS_MuzzleSmoke_Local"
 CANNON_WEAPONS = [("/Game/Data/Weapons/DA_TestHeavyCannon", "Content/Data/Weapons/DA_TestHeavyCannon.uasset"),
                   ("/Game/Data/Weapons/DA_TestCannon", "Content/Data/Weapons/DA_TestCannon.uasset")]
 
@@ -175,6 +191,65 @@ def use_cannon_sound():
     unreal.log(f"import_local_art: the tank guns fire {cue.get_name()} on this machine")
 
 
+def import_smoke_texture(source, name):
+    """A six-way smoke flipbook as linear data in the effects group, as setup_testmap.py imports ours."""
+    task = unreal.AssetImportTask()
+    task.filename = source
+    task.destination_path = f"{LOCAL_DIR}/Textures"
+    task.destination_name = name
+    task.automated = True
+    task.replace_existing = True
+    task.save = False
+    unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+    texture = unreal.load_asset(f"{LOCAL_DIR}/Textures/{name}")
+    if not isinstance(texture, unreal.Texture2D):
+        raise RuntimeError(f"Could not import {source}")
+    texture.set_editor_property("srgb", False)
+    texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_DEFAULT)
+    texture.set_editor_property("lod_group", unreal.TextureGroup.TEXTUREGROUP_EFFECTS)
+    save(texture)
+    return texture
+
+
+def build_smoke_look(name, parent, textures, scalars):
+    path = f"{LOCAL_DIR}/Materials/{name}"
+    editing = unreal.MaterialEditingLibrary
+    if assets.does_asset_exist(path):
+        instance = unreal.load_asset(path)
+    else:
+        instance = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
+            name, f"{LOCAL_DIR}/Materials", unreal.MaterialInstanceConstant, unreal.MaterialInstanceConstantFactoryNew())
+    editing.set_material_instance_parent(instance, parent)
+    for parameter, texture in textures.items():
+        editing.set_material_instance_texture_parameter_value(instance, parameter, texture)
+    for parameter, value in scalars.items():
+        editing.set_material_instance_scalar_parameter_value(instance, parameter, value)
+    editing.update_material_instance(instance)
+    save(instance)
+    return instance
+
+
+def use_muzzle_smoke():
+    """Builds the muzzle smoke with World in Conflict's flipbook and sets it on the tank guns, hidden from git."""
+    textures = {parameter: import_smoke_texture(os.path.join(SOURCE_DIR, SMOKE_SOURCE_DIR, f"{name}.png"), name)
+                for parameter, name in SMOKE_TEXTURES.items()}
+    parent = unreal.load_asset(SMOKE_MATERIAL)
+    looks = {name: build_smoke_look(name, parent, textures, scalars) for name, scalars in SMOKE_LOOKS.items()}
+    if not unreal.RTSEditorScripting.load_editor_module("NiagaraEditor"):
+        raise RuntimeError("Could not load the NiagaraEditor module")
+    system = unreal.RTSEditorScripting.build_muzzle_smoke_system(
+        MUZZLE_SMOKE, looks["MI_WiCSmoke_Blast"], looks["MI_WiCSmoke_Veil"], unreal.load_asset(DUST_LOOK))
+    if not system:
+        raise RuntimeError(f"Could not build {MUZZLE_SMOKE}; the log says why")
+    save(system)
+    for weapon_path, weapon_file in CANNON_WEAPONS:
+        keep_local(weapon_file)
+        weapon = unreal.load_asset(weapon_path)
+        weapon.set_editor_property("muzzle_smoke", system)
+        save(weapon)
+    unreal.log(f"import_local_art: the tank guns leave {system.get_name()} on this machine")
+
+
 imported = {}
 for models, is_turret in ((MODELS, False), (TURRETS, True)):
     for model_name, model_source, model_yaw, model_strengths in models:
@@ -197,4 +272,8 @@ if all(os.path.exists(os.path.join(SOURCE_DIR, CANNON_SOUND_DIR, f"{take}.wav"))
     use_cannon_sound()
 else:
     unreal.log_warning(f"import_local_art: {os.path.join(SOURCE_DIR, CANNON_SOUND_DIR)} incomplete, skipping the cannon sound")
+if all(os.path.exists(os.path.join(SOURCE_DIR, SMOKE_SOURCE_DIR, f"{name}.png")) for name in SMOKE_TEXTURES.values()):
+    use_muzzle_smoke()
+else:
+    unreal.log_warning(f"import_local_art: {os.path.join(SOURCE_DIR, SMOKE_SOURCE_DIR)} incomplete, skipping the muzzle smoke")
 unreal.log("import_local_art: done")

@@ -59,3 +59,6 @@ Content/Art/Local/**/*Abrams*
 # World in Conflict's Abrams cannon sound (#356): Massive's, kept on this machine only, never committed or shipped
 Art/Source/Local/WiC/
 Content/Art/Local/Audio/
+# World in Conflict's smoke flipbook and the muzzle smoke drawn with it (#355), from Tools/Art/wic_smoke_flipbook.py
+Content/Art/Local/**/*WiCSmoke*
+Content/Art/Local/Effects/
