@@ -420,9 +420,12 @@ AActor* URTSEditorScripting::CreateRiver(UObject* WorldContextObject, const TArr
 	Falloff.FalloffAngle = BankAngle;
 	Falloff.EdgeOffset = 0.f;
 	Falloff.ZOffset = ShoreHeight;
-	// Never ground: the water profile is world-static (UWaterRuntimeSettings), which RTSGround's traces would stop on. The
-	// river's Water_ NavArea_Null volumes block the navmesh; the null nav area here only matters if it ever affects it.
-	Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// Never ground: the plugin's water profile is world-static (UWaterRuntimeSettings), which RTSGround's traces would stop
+	// on. Nor off: the water mesh lays a river's tiles over the boxes of its enabled collision only, so without
+	// any the surface never draws (#381). RTSWaterSurface (DefaultEngine.ini) queries as its own object type that nothing
+	// asks for and ignores every channel. The river's Water_ NavArea_Null volumes block the navmesh; the null nav area here
+	// only matters if it ever affects it.
+	Body->SetCollisionProfileName(TEXT("RTSWaterSurface"));
 	Body->SetCanEverAffectNavigation(false);
 	Body->SetNavAreaClass(UNavArea_Null::StaticClass());
 

@@ -1093,7 +1093,9 @@ namespace RTSScaleTests
 		{
 			++Rivers;
 			const UPrimitiveComponent* Body = It->GetWaterBodyComponent();
-			Test.TestTrue(*FString::Printf(TEXT("%s has no collision"), *It->GetActorLabel()), Body && Body->GetCollisionEnabled() == ECollisionEnabled::NoCollision);
+			// Query-only collision that nothing hits: the water mesh needs it to draw the river (#381).
+			Test.TestTrue(*FString::Printf(TEXT("%s has the RTSWaterSurface collision"), *It->GetActorLabel()), Body
+				&& Body->GetCollisionProfileName() == FName(TEXT("RTSWaterSurface")) && Body->GetCollisionObjectType() != ECC_WorldStatic);
 		}
 		Test.TestEqual(TEXT("The river is one Water plugin water body"), Rivers, 1);
 
