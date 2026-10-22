@@ -6,8 +6,52 @@
 
 class UCurveTable;
 class UStaticMesh;
+class URTSFlagTypes;
 class URTSUnitData;
 class URTSUpgradeData;
+
+/**
+ * How a building part turns on its own while the building stands (#351): the HQ's fans spin, its radar turns and its wing
+ * dish sweeps, about the part's pivot in its own frame. URTSBuildingMotionSubsystem drives it on every machine that draws;
+ * ARTSBuilding::SetEquipmentMotionScale slows or stops it.
+ */
+USTRUCT(BlueprintType)
+struct FRTSPartMotion
+{
+	GENERATED_BODY()
+
+	/** Degrees a second the part turns about each of its own axes, on and on. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Motion")
+	FRotator SpinRate = FRotator::ZeroRotator;
+
+	/** Degrees the part swings either way of its rest about each of its own axes, a sine over SweepPeriod. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Motion")
+	FRotator SweepAmplitude = FRotator::ZeroRotator;
+
+	/** Seconds of one full swing of SweepAmplitude, there and back. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Motion", meta = (ClampMin = "0"))
+	float SweepPeriod = 0.f;
+
+	/** Where the part turns about, in cm in its own frame; zero at its origin. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Motion")
+	FVector PivotOffset = FVector::ZeroVector;
+
+	/** A part this one rides on, turning with it about that part's pivot as well as its own (the dish on its azimuth). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Motion")
+	FName FollowPart;
+
+	/**
+	 * Each building runs the part up to this share faster or slower than its rates, picked from where it stands, and starts it
+	 * at its own phase, so neighbouring buildings never turn in step.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Motion", meta = (ClampMin = "0", ClampMax = "1"))
+	float RateJitter = 0.f;
+
+	bool IsAnimated() const
+	{
+		return !SpinRate.IsNearlyZero() || (!SweepAmplitude.IsNearlyZero() && SweepPeriod > 0.f);
+	}
+};
 
 /**
  * One more mesh of a building made of several (the USA HQ, #191): drawn with the building's Mesh, rising with it during
@@ -43,6 +87,14 @@ struct FRTSBuildingPart
 	/** The part stops drawing farther than this from the camera, in cm; 0 to always draw it. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part", meta = (ClampMin = "0"))
 	float MaxDrawDistance = 0.f;
+
+	/** Its material stops moving it (world position offset, the flag's wind) farther than this from the camera, in cm; 0 never. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part", meta = (ClampMin = "0"))
+	float WPODisableDistance = 0.f;
+
+	/** How the part turns on its own (#351); none for a part that stands still or that the building poses (the door). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Part")
+	FRTSPartMotion Motion;
 };
 
 /** A box that blocks units and cuts the navmesh, in the building's own frame, before MeshScale. */
@@ -109,6 +161,21 @@ public:
 	/** Named points of the building's layout, such as GarageSpawn and GarageExit (#192). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Placement")
 	TArray<FRTSBuildingSocket> Sockets;
+
+	/** The flags there are (DA_FlagTypes), where FlagType is looked up. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+	TObjectPtr<URTSFlagTypes> FlagTypes;
+
+	/**
+	 * The flag the building flies, a key of FlagTypes such as USA (#351): its material goes on the part FlagPart, and that
+	 * part's width becomes its height times the flag's aspect. None for a building without a flag.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+	FName FlagType;
+
+	/** The part of Parts that is the flag's cloth, at the pole's hoist. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+	FName FlagPart;
 
 	/** The location of the socket Name, or null when the data has none of that name. */
 	const FVector* FindSocket(FName Name) const

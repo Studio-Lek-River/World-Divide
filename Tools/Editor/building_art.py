@@ -36,14 +36,70 @@ TEXTURE_GROUPS = {
 COATING_ROUGHNESS_MEAN = 0.67
 COATING_ROUGHNESS_RANGE = (0.06, 0.98)
 
-# The flag's wind (M_HQ21_FlagWind): two travelling waves along the world position, pinned at the hoist by UV0.U
-# squared, 18 cm at the fly, pushed along this direction. The normal follows the moved surface (screen derivatives).
-FLAG_WAVE = (0.0, 0.008, 0.006)
-FLAG_SPEED = 1.55
-FLAG_RIPPLE = (2.7, 0.23)
-FLAG_AMPLITUDE = 18.0
-FLAG_DIRECTION = (1.0, 0.12, 0.18)
-FLAG_ROUGHNESS = 0.85
+# The shared waving flag (M_Flag_Cloth, #351), its parameters' defaults, which a flag's instance may override. Lengths in
+# cm, rates in cycles a second, wave numbers in cycles over the flag's length (U 0 to 1). Waves travel from the hoist to
+# the fly, growing as U^1.5 to FlagWaveAmplitude at the fly, plus a second, faster harmonic; the fly flutters, U^3, faster
+# and smaller; the fly sags under gravity, U^2, more in a lull; gusts swell the amplitude by FlagGustStrength and the
+# waves' speed by FlagGustSpeed over FlagGustPeriod seconds (two incommensurate sines); every flag picks its own phases
+# from where it stands. The wind fades out from FlagFadeStart to FlagFadeEnd cm from the camera, inside its part's world
+# position offset disable distance (usa_hq_recipe.FLAG_WPO_DISABLE_DISTANCE).
+FLAG_PARAMETERS = {
+    "FlagWaveAmplitude": 24.0,
+    "FlagWaveNumber": 1.35,
+    "FlagWaveSpeed": 0.85,
+    "FlagHarmonic": 0.3,
+    "FlagFlutterAmplitude": 5.0,
+    "FlagFlutterNumber": 4.5,
+    "FlagFlutterSpeed": 2.6,
+    "FlagSag": 22.0,
+    "FlagGustStrength": 0.45,
+    "FlagGustSpeed": 0.3,
+    "FlagGustPeriod": 7.0,
+    "FlagFadeStart": 9000.0,
+    "FlagFadeEnd": 12000.0,
+    "Roughness": 0.85,
+}
+FLAG_WPO_HLSL = """float3 S = frac(Seed * float3(0.1031, 0.1030, 0.0973));
+S += dot(S, S.yzx + 33.33);
+S = frac((S.xxy + S.yzz) * S.zyx);
+float Tau = 6.2831853;
+float Gust = 0.5 + 0.5 * (0.6 * sin(Tau * (Time / GustPeriod + S.x)) + 0.4 * sin(Tau * (Time / (GustPeriod * 1.618) + S.y)));
+float Strength = lerp(1.0 - GustStrength, 1.0, Gust);
+float Travel = WaveSpeed * (Time - GustSpeed * GustPeriod / Tau * cos(Tau * Time / GustPeriod + Tau * S.x));
+float Phase = Tau * (UV.x * WaveNumber - Travel + S.z);
+float Wave = sin(Phase) + Harmonic * sin(1.7 * Phase + 2.0 * UV.y + Tau * S.y);
+float Flutter = FlutterAmplitude * pow(UV.x, 3.0) * sin(Tau * (UV.x * FlutterNumber - Time * FlutterSpeed + 1.3 * UV.y + S.x));
+float Across = Strength * (WaveAmplitude * pow(UV.x, 1.5) * Wave + Flutter);
+float Down = Sag * UV.x * UV.x * (1.4 - 0.8 * Strength);
+float Fade = 1.0 - saturate((Distance - FadeStart) / max(FadeEnd - FadeStart, 1.0));
+return (normalize(Normal) * Across - float3(0.0, 0.0, Down)) * Fade;"""
+FLAG_WPO_INPUTS = {"WaveAmplitude": "FlagWaveAmplitude", "WaveNumber": "FlagWaveNumber", "WaveSpeed": "FlagWaveSpeed",
+                   "Harmonic": "FlagHarmonic", "FlutterAmplitude": "FlagFlutterAmplitude",
+                   "FlutterNumber": "FlagFlutterNumber", "FlutterSpeed": "FlagFlutterSpeed", "Sag": "FlagSag",
+                   "GustStrength": "FlagGustStrength", "GustSpeed": "FlagGustSpeed", "GustPeriod": "FlagGustPeriod",
+                   "FadeStart": "FlagFadeStart", "FadeEnd": "FlagFadeEnd"}
+
+# The shared mast beacon (M_Beacon_Obstruction, #351): its lens (UV0.U >= 0.5) a red emissive flash BeaconRate times a
+# second, on for BeaconDuty of it and fading over its last BeaconFade, times Operational (custom primitive data
+# LAMP_ON_INDEX, as M_HQ_Final_Operational); every beacon runs up to BeaconRateJitter faster or slower and at its own
+# phase, from where it stands. The housing (U < 0.5) is dark and never glows.
+BEACON_PARAMETERS = {
+    "BeaconRate": 1.0,
+    "BeaconDuty": 0.18,
+    "BeaconFade": 0.06,
+    "BeaconRateJitter": 0.08,
+    "BeaconIntensity": 60.0,
+    "Roughness": 0.35,
+}
+BEACON_COLORS = {
+    "LensColor": (1.0, 0.03, 0.01, 1.0),
+    "HousingColor": (0.03, 0.03, 0.03, 1.0),
+}
+BEACON_HLSL = """float3 S = frac(Seed * float3(0.1031, 0.1030, 0.0973));
+S += dot(S, S.yzx + 33.33);
+S = frac((S.xxy + S.yzz) * S.zyx);
+float Cycle = frac(Time * Rate * (1.0 + RateJitter * (2.0 * S.x - 1.0)) + S.y);
+return saturate((Duty - Cycle) / max(Fade, 0.001));"""
 
 # The ground masters' constant roughness.
 SOIL_ROUGHNESS = 0.94
@@ -227,44 +283,49 @@ def build_ground_material(directory, name, base_color, second, normal):
     return _finish(material)
 
 
-def build_flag_material(directory, name):
-    """M_HQ21_FlagWind: the national flag's colours (SurfaceColor, never the owner's) waving by world position offset
-    (FLAG_*): sin(p) + FLAG_RIPPLE[1] sin(FLAG_RIPPLE[0] p), p the wave phase along the world position plus time, times
-    FLAG_AMPLITUDE, times UV0.U squared so the hoist stays put, along FLAG_DIRECTION. Two-sided, its normal the cross of
-    the moved surface's screen derivatives in world space, turned to the side seen."""
+def _seed(material, x, y):
+    """Where the object stands, in metres within a kilometre: what the shared props pick their own phases from."""
+    position = _node(material, unreal.MaterialExpressionObjectPositionWS, x, y)
+    kilometres = _multiply(material, x + 200, y, position, "", _constant(material, x, y + 120, 0.00001), "")
+    within = _node(material, unreal.MaterialExpressionFrac, x + 400, y)
+    _connect(kilometres, "", within, "")
+    return _multiply(material, x + 600, y, within, "", _constant(material, x + 400, y + 120, 1000.0), "")
+
+
+def build_flag_material(directory, name, texture):
+    """M_Flag_Cloth, the shared waving flag (#351) on SM_Flag_Cloth: the flag's texture (FlagTexture, an instance's per
+    flag, texture by default) over UV0, never the owner's colours, waving by world position offset (FLAG_WPO_HLSL with
+    FLAG_PARAMETERS): across the cloth (its local Y in the world) and sagging down, nothing at the hoist (U 0), so the cloth
+    stays on its pole, and fading out with the distance from the camera. Two-sided, its normal the cross of the moved
+    surface's screen derivatives in world space, turned to the side seen."""
     material = _material(directory, name)
     material.set_editor_property("two_sided", True)
     material.set_editor_property("tangent_space_normal", False)
-    color = _vector(material, -450, -300, "SurfaceColor", (0.4, 0.025, 0.035, 1.0))
+    parameters = {key: _scalar(material, -1700, 120 * index, key, value)
+                  for index, (key, value) in enumerate(sorted(FLAG_PARAMETERS.items()))}
+    color = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, -450, -400, parameter_name="FlagTexture",
+                  texture=texture, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
     _output(material, color, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
-    _output(material, _constant(material, -450, -150, FLAG_ROUGHNESS), "", unreal.MaterialProperty.MP_ROUGHNESS)
+    _output(material, parameters["Roughness"], "", unreal.MaterialProperty.MP_ROUGHNESS)
 
-    position = _node(material, unreal.MaterialExpressionWorldPosition, -1400, 0)
-    wave = _node(material, unreal.MaterialExpressionConstant3Vector, -1400, 120,
-                 constant=unreal.LinearColor(*FLAG_WAVE, 1.0))
-    along = _node(material, unreal.MaterialExpressionDotProduct, -1200, 0)
-    _connect(position, "XYZ", along, "A")
-    _connect(wave, "", along, "B")
-    time = _node(material, unreal.MaterialExpressionTime, -1400, 240)
-    moving = _multiply(material, -1200, 240, time, "", _constant(material, -1400, 340, FLAG_SPEED), "")
-    phase = _add(material, -1000, 0, along, "", moving, "")
-    first = _node(material, unreal.MaterialExpressionSine, -800, 0, period=6.283185)
-    _connect(phase, "", first, "")
-    faster = _multiply(material, -800, 160, phase, "", _constant(material, -1000, 200, FLAG_RIPPLE[0]), "")
-    second = _node(material, unreal.MaterialExpressionSine, -600, 160, period=6.283185)
-    _connect(faster, "", second, "")
-    ripple = _multiply(material, -400, 160, second, "", _constant(material, -600, 280, FLAG_RIPPLE[1]), "")
-    waves = _add(material, -400, 0, first, "", ripple, "")
-    sized = _multiply(material, -200, 0, waves, "", _constant(material, -400, 300, FLAG_AMPLITUDE), "")
-    uv = _node(material, unreal.MaterialExpressionTextureCoordinate, -800, 420, coordinate_index=0)
-    u = _node(material, unreal.MaterialExpressionComponentMask, -600, 420, r=True, g=False, b=False, a=False)
-    _connect(uv, "", u, "")
-    pinned = _multiply(material, -400, 420, u, "", u, "")
-    weighted = _multiply(material, 0, 0, sized, "", pinned, "")
-    direction = _node(material, unreal.MaterialExpressionConstant3Vector, 0, 160,
-                      constant=unreal.LinearColor(*FLAG_DIRECTION, 1.0))
-    offset = _multiply(material, 200, 0, weighted, "", direction, "")
-    _output(material, offset, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
+    wind = vehicle_art._custom(material, -900, 0, FLAG_WPO_HLSL,
+                               ["UV", "Time", "Seed", "Normal", "Distance"] + list(FLAG_WPO_INPUTS))
+    _connect(_node(material, unreal.MaterialExpressionTextureCoordinate, -1300, -300, coordinate_index=0), "", wind, "UV")
+    _connect(_node(material, unreal.MaterialExpressionTime, -1300, -200), "", wind, "Time")
+    _connect(_seed(material, -1900, -600), "", wind, "Seed")
+    across = _node(material, unreal.MaterialExpressionConstant3Vector, -1500, -900,
+                   constant=unreal.LinearColor(0.0, 1.0, 0.0, 1.0))
+    normal = vehicle_art._transform(material, -1300, -900, unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL,
+                                    unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    _connect(across, "", normal, "")
+    _connect(normal, "", wind, "Normal")
+    distance = _node(material, unreal.MaterialExpressionDistance, -1300, -750)
+    _connect(_node(material, unreal.MaterialExpressionCameraPositionWS, -1500, -780), "", distance, "A")
+    _connect(_node(material, unreal.MaterialExpressionObjectPositionWS, -1500, -700), "", distance, "B")
+    _connect(distance, "", wind, "Distance")
+    for pin, parameter in FLAG_WPO_INPUTS.items():
+        _connect(parameters[parameter], "", wind, pin)
+    _output(material, wind, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
 
     moved = _node(material, unreal.MaterialExpressionWorldPosition, -800, 700)
     ddx = _node(material, unreal.MaterialExpressionDDX, -600, 650)
@@ -277,8 +338,66 @@ def build_flag_material(directory, name):
     normalized = _node(material, unreal.MaterialExpressionNormalize, -200, 700)
     _connect(cross, "", normalized, "VectorInput")
     side = _node(material, unreal.MaterialExpressionTwoSidedSign, -200, 820)
-    normal = _multiply(material, 0, 700, normalized, "", side, "")
-    _output(material, normal, "", unreal.MaterialProperty.MP_NORMAL)
+    shaded = _multiply(material, 0, 700, normalized, "", side, "")
+    _output(material, shaded, "", unreal.MaterialProperty.MP_NORMAL)
+    return _finish(material)
+
+
+def build_flag_instance(directory, name, parent, texture):
+    """MI_Flag_<key>: M_Flag_Cloth flying texture. The parent is set first and the instance updated after, as
+    build_material_instance does."""
+    path = f"{directory}/{name}"
+    if assets.does_asset_exist(path):
+        instance = assets.load_asset(path)
+        editing.clear_all_material_instance_parameters(instance)
+    else:
+        instance = asset_tools.create_asset(name, directory, unreal.MaterialInstanceConstant,
+                                            unreal.MaterialInstanceConstantFactoryNew())
+    editing.set_material_instance_parent(instance, parent)
+    editing.set_material_instance_texture_parameter_value(instance, "FlagTexture", texture)
+    editing.update_material_instance(instance)
+    if instance.get_editor_property("parent") != parent:
+        raise RuntimeError(f"{name} did not keep its parent {parent.get_name()}")
+    return instance
+
+
+def build_beacon_material(directory, name):
+    """M_Beacon_Obstruction, the shared mast beacon (#351) on SM_Beacon_Obstruction: the housing (UV0.U < 0.5)
+    HousingColor, the lens LensColor and flashing as BEACON_HLSL works it out from BEACON_PARAMETERS, times Operational
+    (custom primitive data LAMP_ON_INDEX), so it is dark while the building is not operational. No light, no shadow: the
+    glow alone."""
+    material = _material(directory, name)
+    parameters = {key: _scalar(material, -1500, 120 * index, key, value)
+                  for index, (key, value) in enumerate(sorted(BEACON_PARAMETERS.items()))}
+    colors = {key: _vector(material, -900, -400 + 160 * index, key, value)
+              for index, (key, value) in enumerate(sorted(BEACON_COLORS.items()))}
+    uv = _node(material, unreal.MaterialExpressionTextureCoordinate, -1300, -600, coordinate_index=0)
+    u = _node(material, unreal.MaterialExpressionComponentMask, -1100, -600, r=True, g=False, b=False, a=False)
+    _connect(uv, "", u, "")
+    doubled = _multiply(material, -900, -600, u, "", _constant(material, -1100, -500, 2.0), "")
+    floor = _node(material, unreal.MaterialExpressionFloor, -700, -600)
+    _connect(doubled, "", floor, "")
+    lens = _node(material, unreal.MaterialExpressionSaturate, -500, -600)
+    _connect(floor, "", lens, "")
+    base = _node(material, unreal.MaterialExpressionLinearInterpolate, -300, -400)
+    _connect(colors["HousingColor"], "RGB", base, "A")
+    _connect(colors["LensColor"], "RGB", base, "B")
+    _connect(lens, "", base, "Alpha")
+    _output(material, base, "", unreal.MaterialProperty.MP_BASE_COLOR)
+    _output(material, parameters["Roughness"], "", unreal.MaterialProperty.MP_ROUGHNESS)
+
+    flash = vehicle_art._custom(material, -900, 300, BEACON_HLSL, ["Time", "Seed", "Rate", "RateJitter", "Duty", "Fade"],
+                                output=unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    _connect(_node(material, unreal.MaterialExpressionTime, -1300, 900), "", flash, "Time")
+    _connect(_seed(material, -1900, 1000), "", flash, "Seed")
+    for pin in ("Rate", "RateJitter", "Duty", "Fade"):
+        _connect(parameters[f"Beacon{pin}"], "", flash, pin)
+    operational = _scalar(material, -900, 600, "Operational", 1.0, vehicle_art.LAMP_ON_INDEX)
+    on = _multiply(material, -600, 300, flash, "", operational, "")
+    lit = _multiply(material, -400, 300, on, "", lens, "")
+    strength = _multiply(material, -200, 300, lit, "", parameters["BeaconIntensity"], "")
+    glow = _multiply(material, 0, 300, colors["LensColor"], "RGB", strength, "")
+    _output(material, glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     return _finish(material)
 
 

@@ -89,6 +89,14 @@ public:
 	 */
 	bool FindPart(FName Name, UStaticMeshComponent*& OutComponent, int32& OutInstance) const;
 
+	/**
+	 * How fast the parts that turn on their own run (URTSBuildingMotionSubsystem, #351): 1 at their data's rates, 0 stopped
+	 * where they are, between them slower. A hook for the power state (#196), which stops the fans and radar on low power;
+	 * this machine only, it does not replicate.
+	 */
+	void SetEquipmentMotionScale(float Scale) { EquipmentMotionScale = FMath::Max(Scale, 0.f); }
+	float GetEquipmentMotionScale() const { return EquipmentMotionScale; }
+
 	/** Aircraft pads, from the data; 0 for a building that is not an airfield. */
 	int32 GetPadCount() const;
 
@@ -162,6 +170,7 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void Destroyed() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
@@ -186,7 +195,10 @@ private:
 	void ApplyBuildingData();
 	void ApplyTeamColor();
 
-	/** Makes the data's Parts, replacing any made before, attached to Mesh so they rise and scale with it. */
+	/**
+	 * Makes the data's Parts, replacing any made before, attached to Mesh so they rise and scale with it; the flag part flies
+	 * the data's FlagType, and the parts that turn on their own go to URTSBuildingMotionSubsystem.
+	 */
 	void ApplyParts();
 
 	/** Sizes the collision: one box over the footprint up to Height, or the data's CollisionBoxes. */
@@ -269,4 +281,6 @@ private:
 
 	/** Server only. The aircraft bound to each pad; one destroyed frees its pad by itself. */
 	TArray<TWeakObjectPtr<ARTSUnit>> Pads;
+
+	float EquipmentMotionScale = 1.f;
 };

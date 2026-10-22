@@ -2,6 +2,7 @@
 
 #include "AI/RTSAIPlayer.h"
 #include "Buildings/RTSBuildPlacement.h"
+#include "Buildings/RTSBuildingMotionSubsystem.h"
 #include "Buildings/RTSGarageComponent.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Buildings/RTSSuperweaponComponent.h"
@@ -14,6 +15,7 @@
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSAircraftData.h"
+#include "Data/RTSFlagTypes.h"
 #include "Data/RTSUnitData.h"
 #include "Economy/RTSHarvesterComponent.h"
 #include "Engine/World.h"
@@ -389,6 +391,15 @@ void ARTSBuilding::Destroyed()
 	Super::Destroyed();
 }
 
+void ARTSBuilding::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (URTSBuildingMotionSubsystem* Motion = GetWorld() ? GetWorld()->GetSubsystem<URTSBuildingMotionSubsystem>() : nullptr)
+	{
+		Motion->Unregister(*this);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
 void ARTSBuilding::SpawnCompletionUnit()
 {
 	ARTSUnit* Unit = SpawnUnitAtExit(BuildingData->SpawnOnComplete);
@@ -609,12 +620,22 @@ void ARTSBuilding::ApplyParts()
 	PartComponents.Reset();
 	PartIndex.Reset();
 
+	// The flag the building flies: its cloth part takes the flag's material and is as wide as its height times the flag's
+	// aspect (#351).
+	const FRTSFlagType* Flag = BuildingData->FlagTypes && !BuildingData->FlagPart.IsNone()
+		? BuildingData->FlagTypes->Find(BuildingData->FlagType) : nullptr;
+
 	// Parts that share a mesh and how it draws (the HQ's sixteen door sections) draw as one instanced component, one
-	// instance per part in the data's order: one draw per material section instead of one per part (#358).
-	auto SameDraw = [](const FRTSBuildingPart& A, const FRTSBuildingPart& B)
+	// instance per part in the data's order: one draw per material section instead of one per part (#358). A part that turns
+	// on its own and the flag draw on their own.
+	auto Shares = [this](const FRTSBuildingPart& Part)
 	{
-		return A.Mesh == B.Mesh && A.bCastShadow == B.bCastShadow && A.BoundsScale == B.BoundsScale
-			&& A.MaxDrawDistance == B.MaxDrawDistance;
+		return !Part.Motion.IsAnimated() && Part.Name != BuildingData->FlagPart;
+	};
+	auto SameDraw = [&Shares](const FRTSBuildingPart& A, const FRTSBuildingPart& B)
+	{
+		return Shares(A) && Shares(B) && A.Mesh == B.Mesh && A.bCastShadow == B.bCastShadow && A.BoundsScale == B.BoundsScale
+			&& A.MaxDrawDistance == B.MaxDrawDistance && A.WPODisableDistance == B.WPODisableDistance;
 	};
 	const TArray<FRTSBuildingPart>& Parts = BuildingData->Parts;
 	TArray<bool> Done;
@@ -630,12 +651,19 @@ void ARTSBuilding::ApplyParts()
 		TArray<FName> Names;
 		for (int32 Other = Index; Other < Parts.Num(); ++Other)
 		{
-			if (!Done[Other] && SameDraw(Data, Parts[Other]))
+			if (!Done[Other] && (Other == Index || SameDraw(Data, Parts[Other])))
 			{
 				Done[Other] = true;
 				Instances.Add(Parts[Other].Transform);
 				Names.Add(Parts[Other].Name);
 			}
+		}
+		const bool bFlag = Flag && Data.Name == BuildingData->FlagPart && Instances.Num() == 1;
+		if (bFlag)
+		{
+			FVector Scale = Instances[0].GetScale3D();
+			Scale.X = Scale.Z * Flag->Aspect;
+			Instances[0].SetScale3D(Scale);
 		}
 
 		// Cosmetic, like Mesh: the collision boxes alone block and are picked.
@@ -649,9 +677,14 @@ void ARTSBuilding::ApplyParts()
 		else
 		{
 			Part = NewObject<UStaticMeshComponent>(this, NAME_None, RF_Transient);
-			Part->SetRelativeTransform(Data.Transform);
+			Part->SetRelativeTransform(Instances[0]);
 		}
 		Part->SetStaticMesh(Data.Mesh);
+		if (bFlag)
+		{
+			Part->SetMaterial(0, Flag->Material);
+		}
+		Part->SetWorldPositionOffsetDisableDistance(FMath::RoundToInt(Data.WPODisableDistance));
 		Part->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		Part->SetGenerateOverlapEvents(false);
 		Part->SetCanEverAffectNavigation(false);
@@ -666,6 +699,11 @@ void ARTSBuilding::ApplyParts()
 			PartIndex.Add(Names[Instance], { PartComponents.Num(), Instances.Num() > 1 ? Instance : INDEX_NONE });
 		}
 		PartComponents.Add(Part);
+	}
+
+	if (URTSBuildingMotionSubsystem* Motion = GetWorld() ? GetWorld()->GetSubsystem<URTSBuildingMotionSubsystem>() : nullptr)
+	{
+		Motion->Register(*this);
 	}
 }
 

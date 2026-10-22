@@ -105,6 +105,12 @@ M20_DIR = "/Game/Art/USA/Vehicles/M20Guardian"
 # The USA HQ as delivered (#187-#191): its layout usa_hq.json (Tools/Art/usa_hq_recipe.py), and where its assets go.
 USA_HQ_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "USA", "buildings", "usa_hq")
 USA_HQ_DIR = "/Game/Art/USA/Buildings/USAHQ"
+# The props and flags every building may use (#351): the flag cloth and mast beacon (Art/Shared/props, imported with each
+# building that places them), the flags of Art/Shared/flags/flags.json, their shared masters, and DA_FlagTypes.
+SHARED_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Shared")
+SHARED_DIR = "/Game/Art/Shared"
+FLAG_DATA_DIR = "/Game/Data/Flags"
+FLAG_TEXTURE_SETTINGS = {"srgb": True, "compression": "TC_Default", "lod_group": "TEXTUREGROUP_World", "resize": None}
 # The garage door's cycle as delivered (animation/CT_HQ20_DoorMotion.csv), a curve table the garage plays (#192).
 USA_HQ_DOOR_MOTION = "CT_HQ20_DoorMotion"
 # The bench's dense HQ (#349), built only with ue.ps1 -Task setup -BenchHQ (WD_SETUP_BENCH_HQ=1) and never committed
@@ -454,7 +460,6 @@ USA_HQ_MASTERS = {
     "M_HQ17_Coating": lambda d, n, t: building_art.build_coating_material(d, n, {
         "CoatingBaseColor": t["T_HQ17_Coating_2m_BaseColor"], "CoatingRoughness": t["T_HQ17_Coating_2m_Roughness"],
         "CoatingNormal": t["T_HQ17_Coating_2m_Normal"]}),
-    "M_HQ21_FlagWind": lambda d, n, t: building_art.build_flag_material(d, n),
     "M_HQ20_FloorWear": lambda d, n, t: building_art.build_ground_material(
         d, n, t["T_HQ20_Floor_BaseColor"], t["T_HQ20_Floor_Roughness"], False),
     "M_HQ21_PavingWear": lambda d, n, t: building_art.build_ground_material(
@@ -480,29 +485,83 @@ def log_building_budget(label, meshes, layout):
                f"LOD1 from {layout['switch_distance'] / 100:.0f} m")
 
 
-def delete_stale_meshes(directory, names):
-    """Deletes the meshes under directory that are not in names: those a layout no longer has (the delivered shell meshes
-    SM_HQ_Shell replaced, #358). Nothing setup builds refers to them once it is rebuilt."""
+def delete_stale_assets(directory, names):
+    """Deletes the assets under directory that are not in names: those a layout no longer has (the delivered shell meshes
+    SM_HQ_Shell replaced, #358, the delivered flag and its materials, #351). Nothing setup builds refers to them once it is
+    rebuilt."""
     for object_path_name in assets.list_assets(directory, recursive=False, include_folder=False):
         path = object_path_name.split(".", 1)[0]
         if path.rsplit("/", 1)[-1] not in names:
             if blocked_by(path, ".uasset") or read_only:
                 continue
-            pending.append((path, ".uasset", True, lambda path=path: delete_mesh(path)))
+            pending.append((path, ".uasset", True, lambda path=path: delete_asset(path)))
 
 
-def delete_mesh(path):
+def delete_asset(path):
     if not assets.delete_asset(path):
         raise RuntimeError(f"Could not delete {path}")
     unreal.log(f"setup_testmap: deleted {path}, which the layout no longer has")
+
+
+def make_shared_props():
+    """The shared flags and beacon (#351): T_Flag_<key> and MI_Flag_<key> in SHARED_DIR/Flags for every flag of
+    flags.json, on M_Flag_Cloth, M_Beacon_Obstruction and MI_Beacon_Obstruction in SHARED_DIR/Materials, and
+    DA_FlagTypes, which lists each flag's instance and aspect. Returns the instances by name and DA_FlagTypes."""
+    flags_dir, material_dir = f"{SHARED_DIR}/Flags", f"{SHARED_DIR}/Materials"
+    flags = building_art.read_layout(os.path.join(SHARED_SOURCE_DIR, "flags", "flags.json"))["flags"]
+    textures = {}
+    for key, record in sorted(flags.items()):
+        source = os.path.join(SHARED_SOURCE_DIR, "flags", record["texture"])
+        name = f"T_Flag_{key}"
+        textures[key] = plan_now(
+            f"{flags_dir}/{name}",
+            lambda s=source, n=name: building_art.import_texture(s, flags_dir, n, FLAG_TEXTURE_SETTINGS),
+            spec_hash([building_art.import_texture], flags_dir, name, sorted(FLAG_TEXTURE_SETTINGS.items()), file_hash(source)))
+
+    # The master's default texture is the first flag's, so it draws a flag without an instance too.
+    default = textures[sorted(textures)[0]]
+    cloth = plan_now(
+        f"{material_dir}/M_Flag_Cloth", lambda: building_art.build_flag_material(material_dir, "M_Flag_Cloth", default),
+        spec_hash([building_art.build_flag_material, building_art._seed, building_art._material, building_art._scalar,
+                   building_art._multiply, vehicle_art._custom, vehicle_art._transform], material_dir,
+                  sorted(building_art.FLAG_PARAMETERS.items()), building_art.FLAG_WPO_HLSL,
+                  sorted(building_art.FLAG_WPO_INPUTS.items()), default))
+    beacon = plan_now(
+        f"{material_dir}/M_Beacon_Obstruction",
+        lambda: building_art.build_beacon_material(material_dir, "M_Beacon_Obstruction"),
+        spec_hash([building_art.build_beacon_material, building_art._seed, building_art._material, building_art._scalar,
+                   building_art._vector, building_art._multiply, vehicle_art._custom], material_dir,
+                  sorted(building_art.BEACON_PARAMETERS.items()), sorted(building_art.BEACON_COLORS.items()),
+                  building_art.BEACON_HLSL, vehicle_art.LAMP_ON_INDEX))
+    instances = {"MI_Beacon_Obstruction": plan_now(
+        f"{material_dir}/MI_Beacon_Obstruction",
+        lambda: building_art.build_material_instance(material_dir, "MI_Beacon_Obstruction", beacon, {}, {}),
+        spec_hash([building_art.build_material_instance], material_dir, "MI_Beacon_Obstruction", beacon))}
+
+    types = {}
+    for key, record in sorted(flags.items()):
+        name = f"MI_Flag_{key}"
+        instances[name] = plan_now(
+            f"{flags_dir}/{name}",
+            lambda n=name, t=textures[key]: building_art.build_flag_instance(flags_dir, n, cloth, t),
+            spec_hash([building_art.build_flag_instance], flags_dir, name, cloth, textures[key]))
+        flag = unreal.RTSFlagType()
+        flag.set_editor_property("material", instances[name])
+        hoist, fly = record["ratio"]
+        flag.set_editor_property("aspect", fly / hoist)
+        types[key] = flag
+    flag_types = plan_data_asset("DA_FlagTypes", FLAG_DATA_DIR, unreal.RTSFlagTypes, {"flags": types})
+    return instances, flag_types
 
 
 def make_usa_hq():
     """Imports the USA HQ (building_art.py) as usa_hq.json lays it out and returns its root mesh, its footprint and its
     building data properties: the architecture is Mesh at real size, every other mesh a part where the delivery placed
     it with the garage door closed, the collision boxes go around its blocks with the garage bay a box of its own, and
-    the sockets give the garage's spawn and exit."""
+    the sockets give the garage's spawn and exit. The shared flag cloth and beacons (#351) are imported with it, so they
+    switch LODs with it too; the flag flies the layout's flag from DA_FlagTypes, and the parts that turn have their motion."""
     layout = building_art.read_layout(os.path.join(USA_HQ_SOURCE_DIR, "usa_hq.json"))
+    shared_instances, flag_types = make_shared_props()
     texture_dir, material_dir, mesh_dir = (f"{USA_HQ_DIR}/{folder}" for folder in ("Textures", "Materials", "Meshes"))
 
     textures = {}
@@ -514,12 +573,10 @@ def make_usa_hq():
             spec_hash([building_art.import_texture], texture_dir, name, sorted(settings.items()), file_hash(source)))
 
     builders = [building_art.build_surface_material, building_art.build_coating_material,
-                building_art.build_ground_material, building_art.build_flag_material, building_art._material,
+                building_art.build_ground_material, building_art._material,
                 building_art._vector, building_art._scalar, building_art._multiply, building_art._add]
     constants = (vehicle_art.TEAM_COLOR_INDEX, vehicle_art.LAMP_ON_INDEX, building_art.COATING_ROUGHNESS_MEAN,
-                 building_art.COATING_ROUGHNESS_RANGE, building_art.FLAG_WAVE, building_art.FLAG_SPEED,
-                 building_art.FLAG_RIPPLE, building_art.FLAG_AMPLITUDE, building_art.FLAG_DIRECTION,
-                 building_art.FLAG_ROUGHNESS, building_art.SOIL_ROUGHNESS)
+                 building_art.COATING_ROUGHNESS_RANGE, building_art.SOIL_ROUGHNESS)
     masters = {}
     for name, build in USA_HQ_MASTERS.items():
         masters[name] = plan_now(
@@ -554,7 +611,7 @@ def make_usa_hq():
     for name, record in sorted(layout["meshes"].items()):
         source = os.path.join(USA_HQ_SOURCE_DIR, *record["fbx"].split("/"))
         lod1 = os.path.join(USA_HQ_SOURCE_DIR, *record["lod1_fbx"].split("/")) if record.get("lod1_fbx") else None
-        slots = {slot: instances[instance] for slot, instance in record["slots"].items()}
+        slots = {slot: dict(instances, **shared_instances)[instance] for slot, instance in record["slots"].items()}
         where = placements[name]
         meshes[name] = plan_now(
             f"{mesh_dir}/{name}",
@@ -569,7 +626,9 @@ def make_usa_hq():
                                                                           for p in where],
                       layout["switch_distance"], vehicle_art.SCREEN_MULTIPLE))
     log_building_budget("USA HQ", meshes, layout)
-    delete_stale_meshes(mesh_dir, set(layout["meshes"]))
+    delete_stale_assets(mesh_dir, set(layout["meshes"]))
+    # The delivered flag's master and colour instances, which the shared cloth replaced (#351).
+    delete_stale_assets(material_dir, set(masters) | set(instances))
 
     def part(record):
         value = unreal.RTSBuildingPart()
@@ -583,7 +642,25 @@ def make_usa_hq():
         value.set_editor_property("cast_shadow", record["cast_shadow"])
         value.set_editor_property("bounds_scale", record["bounds_scale"])
         value.set_editor_property("max_draw_distance", record["max_draw_distance"])
+        value.set_editor_property("wpo_disable_distance", record["wpo_disable_distance"])
+        motion = unreal.RTSPartMotion()
+        if record["motion"]:
+            m = record["motion"]
+            motion.set_editor_property("spin_rate", unreal.Rotator(
+                roll=m["spin_rate"][2], pitch=m["spin_rate"][0], yaw=m["spin_rate"][1]))
+            motion.set_editor_property("sweep_amplitude", unreal.Rotator(
+                roll=m["sweep_amplitude"][2], pitch=m["sweep_amplitude"][0], yaw=m["sweep_amplitude"][1]))
+            motion.set_editor_property("sweep_period", m["sweep_period"])
+            motion.set_editor_property("pivot_offset", unreal.Vector(*m["pivot_offset"]))
+            motion.set_editor_property("follow_part", m["follow_part"])
+            motion.set_editor_property("rate_jitter", m["rate_jitter"])
+        value.set_editor_property("motion", motion)
         return value
+
+    # The flag's wind fades out before its part stops moving it at all.
+    flag_part = next(p for p in layout["parts"] if p["name"] == layout["flag_part"])
+    if flag_part["wpo_disable_distance"] < building_art.FLAG_PARAMETERS["FlagFadeEnd"]:
+        raise RuntimeError("usa_hq.json: the flag's WPO disable distance is inside M_Flag_Cloth's fade")
 
     def collision_box(record):
         value = unreal.RTSBuildingCollisionBox()
@@ -614,6 +691,9 @@ def make_usa_hq():
         "garage_door_open_start": 2.0,
         "garage_door_open_end": 10.0,
         "garage_door_seconds": 3.0,
+        "flag_types": flag_types,
+        "flag_type": layout["flag"],
+        "flag_part": layout["flag_part"],
     }
 
 

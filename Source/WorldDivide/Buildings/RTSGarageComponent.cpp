@@ -44,7 +44,7 @@ namespace
 	const FVector LightAbovePivot(40.f, 0.f, 60.f);
 	const FLinearColor LightColor(1.f, 0.45f, 0.05f);
 	constexpr float LightCandelas = 300.f;
-	constexpr float LightRadius = 1200.f;
+	constexpr float WarningLightRadius = 1200.f;
 
 	/** The two lights take turns, each lit for half of this many seconds. */
 	constexpr float FlashPeriod = 0.8f;
@@ -173,7 +173,7 @@ void URTSGarageComponent::ApplyBuildingData()
 			Light->SetIntensityUnits(ELightUnits::Candelas);
 			Light->SetIntensity(LightCandelas);
 			Light->SetLightColor(LightColor);
-			Light->SetAttenuationRadius(LightRadius);
+			Light->SetAttenuationRadius(WarningLightRadius);
 			Light->SetCastShadows(false);
 			Light->SetVisibility(false);
 			Building->AddInstanceComponent(Light);

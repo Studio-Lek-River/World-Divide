@@ -28,14 +28,15 @@ Earlier candidates, recovery archives and the blockout are gone from the reposit
 | GarageSpawn | (742.2, −1758.5, 5) |
 | GarageExit | (1494.4, −1758.5, 5) |
 | GarageDoorPivot | (1474.4, −1758.5, 565) |
-| FlagCourtyard / FlagCore / MastTip | (1115.3, 0, 1700) / (−1238.7, −694.5, 1210) / (−1080.0, 0, 1800) |
+| FlagCourtyard / FlagCore / MastTip | (1115.3, 0, 1700) / (−1238.7, −694.5, 1210) / (−1080.0, 0, 1800), as delivered; MastTip stands 1.8 m off the core mast's rod |
+| MastTipCore / MastTipEast | (−898.7, 0, 1798) / (−1090, −1995, 1650), measured on the shell: the tops of the core tower's and east roof's antenna rods (#351) |
 | RadarPivot, WingDish pivots, DriveShaftPivot | see `usa_hq.json` |
 
 ## Assembly
 
 - Mesh: `SM_HQ20_Architecture_WallCorrected`. The other 37 components are `URTSBuildingData::Parts`, attached to Mesh so they rise and scale with the construction visual and the rebuild.
 - The 16 door sections, bottom seal, top rollers, lift cables and drive shaft stand at the closed pose of the delivered door cycle (time 0). The radar, wing dish and four fans stand at rest. They are flagged movable for #192 and #194.
-- Small parts (fan rotors, lift cables, rollers, seal, drive shaft) stop drawing beyond 120 m. The four fan rotors cast no shadow. The flag's bounds scale is 1.2 for its wind.
+- Small parts (fan rotors, lift cables, rollers, seal, drive shaft) stop drawing beyond 120 m. The four fan rotors cast no shadow. Every mesh's bounds cover the whole building (#358), which also holds the flag's wind; no part needs a bounds scale.
 
 ## Materials
 
@@ -44,8 +45,33 @@ The 10 delivery masters are rebuilt by `building_art.py` (the unused `HQ14_Pavin
 - `M_HQ_Final_Ownership`: PlayerColor from custom primitive data 4–7 (`RTSPrimitiveData::TeamColor`). Only `MI_HQ17_TeamPanel` uses it.
 - `M_HQ_Final_Operational`: EmissionColor × Operational from custom primitive data 8 (`RTSPrimitiveData::LampOn`), 1 on and 0 off. `ARTSBuilding` writes 1 for now; #196 drives it from power.
 - `M_HQ17_Coating`: roughness clamp(Roughness + CoatingRoughness.R − 0.67, 0.06, 0.98), with the 2 m coating texture set.
-- `M_HQ21_FlagWind`: world position offset wind (two waves, speed 1.55, 18 cm, pinned by UV0.U²). It is two-sided, with a derivative normal. The national colours are fixed and never the owner's.
+- The delivered flag (`SM_HQ21_NationalFlag_Wind`, `M_HQ21_FlagWind` and its three colour instances) is replaced by the shared flag (#351, below).
 - `ARTSBuilding::ApplyTeamColor` writes the same custom primitive data to Mesh and every part. Every HQ shares the same instances, so there are no dynamic instances.
+
+## Equipment motion, beacons and flag (#351)
+
+All values are data: `Tools/Art/usa_hq_recipe.py` (`MOTION`, `BEACONS`, `FLAG_*`) → `usa_hq.json` → `URTSBuildingData::Parts` (`FRTSPartMotion`, `WPODisableDistance`), and `Tools/Editor/building_art.py` (`FLAG_PARAMETERS`, `BEACON_PARAMETERS`) for the shared materials' parameter defaults.
+
+| Part | Motion (about its own axes) | Per-HQ jitter |
+|---|---|---|
+| ER_Cooling_Fan1_Rotor | spin 240°/s yaw | ±10 % |
+| WF_Condenser_Fan1_Rotor | spin 205°/s yaw | ±10 % |
+| WM_AHU_Fan1_Rotor | spin 280°/s yaw | ±10 % |
+| WM_AHU_Fan2_Rotor | spin 255°/s yaw | ±10 % |
+| Radar_Azimuth | spin 72°/s yaw (a turn in 5 s) | ±5 % |
+| WingDish_Azimuth | sweep ±12° yaw over 24 s | ±10 % |
+| WingDish_Elevation | sweep ±4° pitch over 24 s about `WingDishElevationPivot` (+20 cm), riding on WingDish_Azimuth | ±10 % |
+
+- `URTSBuildingMotionSubsystem` (one `FTickFunction` in `TG_PostUpdateWork`, no tick per HQ) turns them: relative transform = turn about the pivot × rest × the followed part's turn about its pivot, so placement rotation and the construction scale come from `Mesh`. Each HQ picks its rates and phases from where it stands. A part is posed only while its HQ was drawn in the last 0.2 s and a camera is within the part's draw distance; the angles run on regardless. Nothing on a dedicated server. `rts.Fx.BuildingMotion 0` freezes them.
+- Beacons: `SM_Beacon_Obstruction` (shared prop, 44 × 56 cm, 314 triangles, no shadow) at MastTipCore and MastTipEast, drawn as one instanced component. `M_Beacon_Obstruction`: the lens flashes red (1 Hz, on 18 % of the cycle, ±8 % rate and its own phase per beacon from its world position), emissive only, times `Operational` (CPD 8, `RTSPrimitiveData::LampOn`). No light components.
+- Flag: `SM_Flag_Cloth` (shared prop, 40 × 24 quads, 1 × 1 m, origin at the hoist's top, U hoist → fly, V top → bottom) at (1150, 10.5, 690), yaw 90, flying along +Y from just outside the pole (13 cm, top at 7.1 m), its top 20 cm under the pole's. Size: hoist 2.2 m, fly 4.18 m (10:19). `URTSBuildingData::FlagType` (`USA`) is looked up in `DA_FlagTypes` (`URTSFlagTypes`, written by setup from `Art/Shared/flags/flags.json`); `ARTSBuilding::ApplyParts` puts its instance (`MI_Flag_USA` on `M_Flag_Cloth`) on `FlagPart` and sets the cloth's width to its height × the flag's aspect. Adding a flag: a PNG in `Art/Shared/flags/`, an entry in `flags.json`, setup.
+- `usa.png` (2048 × 1024, drawn by `Tools/Art/flag_textures.py`): Executive Order 10834 — 13 stripes, 50 stars in nine rows of six and five, the union over seven stripes, 0.5385 × 0.76 of the hoist, at the hoist.
+- `M_Flag_Cloth`: two-sided, derivative world normal, colours from `FlagTexture`. World position offset: waves travelling hoist → fly (1.35 per flag length, 0.85 Hz), growing as U^1.5 to 24 cm at the fly, plus a faster harmonic; flutter (4.5 per length, 2.6 Hz, U³, 5 cm); sag U² up to 22 cm, more in a lull; gusts over 7 s swell amplitude by 45 % and wave speed by 30 %; per-flag phases from `ObjectPositionWS`; nothing at the hoist, so the cloth never leaves or crosses the pole. The wind fades out from 90 to 120 m from the camera, and the part's `WPODisableDistance` (125 m) stops it beyond.
+
+Hooks for #196 (no state logic yet):
+
+- `ARTSBuilding::SetEquipmentMotionScale(float)`: 1 full speed, 0 stopped in place, between slower; the subsystem integrates the angles, so changes never jump. Low power stops the fans and radar with 0.
+- Beacons and lit windows follow CPD 8 (`LampOn`/`Operational`), which `ARTSBuilding::ApplyTeamColor` writes as 1 today; write 0 for off.
 
 ## Collision, navigation and selection
 

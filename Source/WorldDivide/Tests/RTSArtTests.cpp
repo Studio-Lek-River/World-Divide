@@ -5,6 +5,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Data/RTSBuildingData.h"
+#include "Data/RTSFlagTypes.h"
 #include "Data/RTSUnitData.h"
 #include "Dom/JsonObject.h"
 #include "Engine/StaticMesh.h"
@@ -71,6 +72,13 @@ namespace
 	constexpr double HeadquartersSwitchDistance = 26000.0;
 	/** The material sections the HQ draws with, once per mesh: its parts that share a mesh draw instanced (#358). */
 	constexpr int32 HeadquartersMaxSections = 80;
+	/** The shared props' masters (#351): the flag's cloth and the mast beacon. */
+	const TCHAR* SharedMaterialDir = TEXT("/Game/Art/Shared/Materials");
+	const TCHAR* FlagTypesPath = TEXT("/Game/Data/Flags/DA_FlagTypes.DA_FlagTypes");
+	/** The HQ's parts that turn on their own (#351): four fans, the radar and the wing dish's azimuth and elevation. */
+	const TCHAR* HeadquartersMovingParts[] = { TEXT("ER_Cooling_Fan1_Rotor"), TEXT("WF_Condenser_Fan1_Rotor"), TEXT("WM_AHU_Fan1_Rotor"),
+		TEXT("WM_AHU_Fan2_Rotor"), TEXT("Radar_Azimuth"), TEXT("WingDish_Azimuth"), TEXT("WingDish_Elevation") };
+	const TCHAR* HeadquartersBeaconPrefix = TEXT("Beacon_");
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSPlaceholderWithoutNaniteTest, "WorldDivide.Art.PlaceholderWithoutNanite", TestFlags)
@@ -219,8 +227,10 @@ bool FRTSM20GuardianArtTest::RunTest(const FString& Parameters)
  * mesh of usa_hq.json a part of it, without Nanite or collision of its own, at LOD0 and LOD1 within the large building's
  * budget and every mesh's own (#358), each covering the building's bounds so the whole HQ switches to LOD1 at once, at
  * 260 m, in few material sections, the glass in glass slots. Its slots use the delivery's masters, the
- * owner's colour and the operational glow read from the custom primitive data the building writes, and the flag keeps its
- * wind. Simple boxes collide instead, and the garage bay is one of its own; the garage's sockets are in the data.
+ * owner's colour and the operational glow read from the custom primitive data the building writes. Its fans, radar and
+ * wing dish have their motion, its mast beacons glow only while it is operational, and its flag flies a flag of
+ * DA_FlagTypes on the shared waving cloth, still past a distance (#351). Simple boxes collide instead, and the garage bay is
+ * one of its own; the garage's sockets are in the data.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSUSAHeadquartersArtTest, "WorldDivide.Art.USAHeadquarters", TestFlags)
 
@@ -330,8 +340,8 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		{
 			const UMaterialInstance* Instance = Cast<UMaterialInstance>(Slot.MaterialInterface);
 			const UMaterialInterface* Parent = Instance ? Instance->Parent.Get() : nullptr;
-			TestTrue(*FString::Printf(TEXT("%s slot %s is an instance of an HQ master"), *Mesh->GetName(), *Slot.MaterialSlotName.ToString()),
-				Parent && Parent->GetPathName().StartsWith(HeadquartersMaterialDir));
+			TestTrue(*FString::Printf(TEXT("%s slot %s is an instance of an HQ or shared master"), *Mesh->GetName(), *Slot.MaterialSlotName.ToString()),
+				Parent && (Parent->GetPathName().StartsWith(HeadquartersMaterialDir) || Parent->GetPathName().StartsWith(SharedMaterialDir)));
 			// The glass is a slot of its own, so it can draw translucent or opaque without touching the rest.
 			const bool bGlass = Parent && Parent->GetName() == TEXT("M_HQ17_Glass");
 			TestEqual(*FString::Printf(TEXT("%s slot %s is glass only if named so"), *Mesh->GetName(), *Slot.MaterialSlotName.ToString()),
@@ -347,9 +357,9 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 	TestTrue(*FString::Printf(TEXT("The HQ draws %d material sections, at most %d"), Sections, HeadquartersMaxSections),
 		Sections <= HeadquartersMaxSections);
 
-	auto LoadMaster = [](const TCHAR* Name)
+	auto LoadMaster = [](const TCHAR* Name, const TCHAR* Dir = HeadquartersMaterialDir)
 	{
-		return LoadObject<UMaterial>(nullptr, *FString::Printf(TEXT("%s/%s.%s"), HeadquartersMaterialDir, Name, Name));
+		return LoadObject<UMaterial>(nullptr, *FString::Printf(TEXT("%s/%s.%s"), Dir, Name, Name));
 	};
 	auto ReadsPrimitiveData = [](const UMaterial* Material, FName Parameter, int32 Index)
 	{
@@ -367,9 +377,59 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		ReadsPrimitiveData(LoadMaster(TEXT("M_HQ_Final_Ownership")), TEXT("PlayerColor"), RTSPrimitiveData::TeamColor));
 	TestTrue(TEXT("The operational master reads whether the HQ is operational"),
 		ReadsPrimitiveData(LoadMaster(TEXT("M_HQ_Final_Operational")), TEXT("Operational"), RTSPrimitiveData::LampOn));
-	const UMaterial* Flag = LoadMaster(TEXT("M_HQ21_FlagWind"));
-	TestTrue(TEXT("The flag is two-sided and waves"), Flag && Flag->IsTwoSided()
-		&& Flag->GetEditorOnlyData()->WorldPositionOffset.IsConnected());
+
+	// The equipment turns on its own (#351): each moving part has a motion, drawn on its own, riding on a part there is.
+	for (const TCHAR* Name : HeadquartersMovingParts)
+	{
+		const FRTSBuildingPart* Part = Data->Parts.FindByPredicate([Name](const FRTSBuildingPart& P) { return P.Name == Name; });
+		if (TestNotNull(*FString::Printf(TEXT("The HQ has the moving part %s"), Name), Part))
+		{
+			TestTrue(*FString::Printf(TEXT("%s turns on its own"), Name), Part->Motion.IsAnimated());
+			TestTrue(*FString::Printf(TEXT("%s rides on a part the HQ has, if any"), Name), Part->Motion.FollowPart.IsNone()
+				|| Data->Parts.ContainsByPredicate([Part](const FRTSBuildingPart& P) { return P.Name == Part->Motion.FollowPart; }));
+		}
+	}
+
+	// Red beacons on the mast tips, glowing only while the HQ is operational, without a shadow.
+	const UMaterial* Beacon = LoadMaster(TEXT("M_Beacon_Obstruction"), SharedMaterialDir);
+	TestTrue(TEXT("The beacon master glows only while the HQ is operational"),
+		ReadsPrimitiveData(Beacon, TEXT("Operational"), RTSPrimitiveData::LampOn) && Beacon->GetEditorOnlyData()->EmissiveColor.IsConnected());
+	const TArray<FRTSBuildingPart> Beacons = Data->Parts.FilterByPredicate([](const FRTSBuildingPart& P)
+	{
+		return P.Name.ToString().StartsWith(HeadquartersBeaconPrefix);
+	});
+	TestTrue(TEXT("The HQ has mast beacons"), !Beacons.IsEmpty());
+	for (const FRTSBuildingPart& Part : Beacons)
+	{
+		const UMaterialInstance* Instance = Part.Mesh ? Cast<UMaterialInstance>(Part.Mesh->GetMaterial(0)) : nullptr;
+		TestTrue(*FString::Printf(TEXT("%s draws with the beacon master"), *Part.Name.ToString()), Instance && Instance->Parent == Beacon);
+		TestFalse(*FString::Printf(TEXT("%s casts no shadow"), *Part.Name.ToString()), Part.bCastShadow);
+	}
+
+	// The flag: a flag of DA_FlagTypes on the shared cloth, which waves and stops waving past a distance.
+	const UMaterial* Cloth = LoadMaster(TEXT("M_Flag_Cloth"), SharedMaterialDir);
+	TestTrue(TEXT("The flag's cloth is two-sided and waves"), Cloth && Cloth->IsTwoSided()
+		&& Cloth->GetEditorOnlyData()->WorldPositionOffset.IsConnected());
+	const URTSFlagTypes* FlagTypes = LoadObject<URTSFlagTypes>(nullptr, FlagTypesPath);
+	if (TestNotNull(TEXT("DA_FlagTypes loads"), FlagTypes))
+	{
+		TestTrue(TEXT("It lists flags"), !FlagTypes->Flags.IsEmpty());
+		for (const TPair<FName, FRTSFlagType>& Flag : FlagTypes->Flags)
+		{
+			const UMaterialInstance* Instance = Cast<UMaterialInstance>(Flag.Value.Material);
+			UTexture* Texture = nullptr;
+			TestTrue(*FString::Printf(TEXT("Flag %s is a textured instance of the cloth"), *Flag.Key.ToString()), Instance
+				&& Instance->Parent == Cloth && Instance->GetTextureParameterValue(TEXT("FlagTexture"), Texture, /*bOveriddenOnly*/ true)
+				&& Texture);
+			TestTrue(*FString::Printf(TEXT("Flag %s has a proportion"), *Flag.Key.ToString()), Flag.Value.Aspect > 0.f);
+		}
+		TestTrue(TEXT("The HQ flies a flag there is"), Data->FlagTypes == FlagTypes && FlagTypes->Find(Data->FlagType));
+	}
+	const FRTSBuildingPart* FlagPart = Data->Parts.FindByPredicate([Data](const FRTSBuildingPart& P) { return P.Name == Data->FlagPart; });
+	if (TestNotNull(TEXT("The HQ has its flag part"), FlagPart))
+	{
+		TestTrue(TEXT("The flag stops waving past a distance"), FlagPart->WPODisableDistance > 0.f);
+	}
 	const UMaterialInstance* TeamPanel = LoadObject<UMaterialInstance>(nullptr,
 		*FString::Printf(TEXT("%s/MI_HQ17_TeamPanel.MI_HQ17_TeamPanel"), HeadquartersMaterialDir));
 	TestTrue(TEXT("The team panels take the owner's colour"), TeamPanel && TeamPanel->Parent == LoadMaster(TEXT("M_HQ_Final_Ownership")));

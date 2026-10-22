@@ -1,0 +1,6 @@
+{
+ "about": "Every flag a building can fly, by key: its texture in this folder (hoist at the left, U 0 to 1 hoist to fly) and its proportion [hoist, fly]. setup_testmap.py imports each as T_Flag_<key> and MI_Flag_<key> on M_Flag_Cloth and writes DA_FlagTypes. usa.png is drawn by Tools/Art/flag_textures.py.",
+ "flags": {
+  "USA": {"texture": "usa.png", "ratio": [10, 19]}
+ }
+}
