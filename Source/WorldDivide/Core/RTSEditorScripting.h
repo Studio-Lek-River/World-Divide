@@ -83,7 +83,9 @@ public:
 	 * Depth under the surface and the banks rise from the water's edge at BankAngle degrees, ShoreHeight cm over the
 	 * surface at the edge. The river has no collision, so world-static ground traces (RTSGround) never stop on its surface,
 	 * and is a null nav area. It merges the edit layers before it returns, so the carved heights are what a level saved
-	 * afterwards keeps and what its navmesh builds on; that needs a renderer (-AllowCommandletRendering). Returns null and
+	 * afterwards keeps and what its navmesh builds on; that needs a renderer (-AllowCommandletRendering). It then bakes the
+	 * carve into the base edit layer and destroys the brush and its Water layer (#382), so the saved level has no actor of
+	 * the editor-only WaterEditor module and editing the river no longer carves the landscape. Returns null and
 	 * logs why when the world has no landscape, there is no renderer or the river did not carve the landscape.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))

@@ -34,6 +34,8 @@
 #include "ActorFactories/ActorFactory.h"
 #include "Editor.h"
 #include "LandscapeBlueprintBrushBase.h"
+#include "LandscapeEdit.h"
+#include "LandscapeEditLayer.h"
 #include "NavAreas/NavArea_Null.h"
 #include "WaterBodyRiverActor.h"
 #include "WaterBodyRiverComponent.h"
@@ -310,6 +312,45 @@ namespace
 		UE_LOG(LogWorldDivide, Error, TEXT("MergeEditLayers: %s still had edit-layer work after %d updates"), *Landscape.GetActorLabel(), MaxEditLayerUpdates);
 		return false;
 	}
+
+	/**
+	 * Writes Landscape's merged heights, its brushes' carving included, into its base edit layer, then destroys the brushes of
+	 * BrushLayerIndex and deletes that layer. ALandscape::CollapseLayer would not do: it renders the layers without their
+	 * brushes. Run after MergeEditLayers and merge again afterwards. Returns whether it baked.
+	 */
+	bool BakeBrushLayer(ALandscape& Landscape, int32 BrushLayerIndex)
+	{
+		ULandscapeInfo* Info = Landscape.GetLandscapeInfo();
+		const ULandscapeEditLayerBase* BaseLayer = Landscape.GetEditLayerConst(0);
+		FIntRect Extent;
+		if (!Info || !BaseLayer || BrushLayerIndex <= 0 || !Info->GetLandscapeExtent(Extent))
+		{
+			UE_LOG(LogWorldDivide, Error, TEXT("BakeBrushLayer: %s has no base edit layer under layer %d or no extent"), *Landscape.GetActorLabel(), BrushLayerIndex);
+			return false;
+		}
+		// The components' final heightmaps hold the merged heights when no edit layer is being edited.
+		const int32 Stride = Extent.Width() + 1;
+		TArray<uint16> Heights;
+		Heights.SetNumZeroed(Stride * (Extent.Height() + 1));
+		{
+			FLandscapeEditDataInterface Data(Info);
+			Data.GetHeightDataFast(Extent.Min.X, Extent.Min.Y, Extent.Max.X, Extent.Max.Y, Heights.GetData(), Stride);
+		}
+		for (ALandscapeBlueprintBrushBase* Brush : Landscape.GetBrushesForLayer(BrushLayerIndex))
+		{
+			Landscape.RemoveBrush(Brush);
+			Brush->GetWorld()->EditorDestroyActor(Brush, true);
+		}
+		if (!Landscape.DeleteLayer(BrushLayerIndex))
+		{
+			UE_LOG(LogWorldDivide, Error, TEXT("BakeBrushLayer: could not delete edit layer %d of %s"), BrushLayerIndex, *Landscape.GetActorLabel());
+			return false;
+		}
+		FScopedSetLandscapeEditingLayer Editing(&Landscape, BaseLayer->GetGuid());
+		FLandscapeEditDataInterface Data(Info);
+		Data.SetHeightData(Extent.Min.X, Extent.Min.Y, Extent.Max.X, Extent.Max.Y, Heights.GetData(), Stride, true);
+		return true;
+	}
 }
 #endif
 
@@ -420,8 +461,8 @@ AActor* URTSEditorScripting::CreateRiver(UObject* WorldContextObject, const TArr
 	Falloff.FalloffAngle = BankAngle;
 	Falloff.EdgeOffset = 0.f;
 	Falloff.ZOffset = ShoreHeight;
-	// Never ground: the plugin's water profile is world-static (UWaterRuntimeSettings), which RTSGround's traces would stop
-	// on. Nor off: the water mesh lays a river's tiles over the boxes of its enabled collision only, so without
+	// Never ground: the plugin's own water profile is world-static, which RTSGround's traces would stop on (DefaultEngine.ini
+	// points UWaterRuntimeSettings at this one too). Nor off: the water mesh lays a river's tiles over the boxes of its enabled collision only, so without
 	// any the surface never draws (#381). RTSWaterSurface (DefaultEngine.ini) queries as its own object type that nothing
 	// asks for and ignores every channel. The river's Water_ NavArea_Null volumes block the navmesh; the null nav area here
 	// only matters if it ever affects it.
@@ -439,6 +480,14 @@ AActor* URTSEditorScripting::CreateRiver(UObject* WorldContextObject, const TArr
 	{
 		return nullptr;
 	}
+	// The carve baked into the base layer, without the brush (#382): its class lives in the editor-only WaterEditor module,
+	// which a -game run never loads, so a saved brush fails to load there. Editing the river no longer carves the landscape;
+	// the map's script rebuilds it instead.
+	if (!BakeBrushLayer(*Landscape, Landscape->GetLayerIndex(WaterLayer)) || !MergeEditLayers(*Landscape))
+	{
+		return nullptr;
+	}
+	Body->bAffectsLandscape = false;
 	// The merge outside landscape mode only lists the landscape's packages as modified; the level must save them.
 	if (ULandscapeInfo* Info = Landscape->GetLandscapeInfo())
 	{

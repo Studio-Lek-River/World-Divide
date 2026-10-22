@@ -58,6 +58,8 @@ public class WorldDivide : ModuleRules
 			// River Crossing's river (#155): rivercrossing_greybox.py lays a Water plugin river (URTSEditorScripting::CreateRiver),
 			// and its layout test checks the water never answers a ground trace. The game itself never touches the water.
 			PrivateDependencyModuleNames.Add("Water");
+			// CreateRiver bakes the river's carve through the landscape's edit data interface, whose header includes Foliage's (#382).
+			PrivateDependencyModuleNames.Add("Foliage");
 		}
 	}
 }
