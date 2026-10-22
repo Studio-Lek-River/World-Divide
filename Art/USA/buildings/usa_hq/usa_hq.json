@@ -2462,6 +2462,12 @@
      0.0,
      0.0,
      1.0
+    ],
+    "NightGlow": [
+     0.9,
+     0.5,
+     0.16,
+     1.0
     ]
    }
   },
@@ -3064,29 +3070,85 @@
    "source_height": 21.0
   },
   {
-   "name": "CommandWindows",
+   "name": "EntranceDoor",
    "group": "Windows",
-   "fixture": "WarmGlass_248+WarmGlass_254+WarmGlass_255+WarmGlass_249",
+   "fixture": "WarmGlass_254+WarmGlass_255",
    "type": "Rect",
    "location": [
     -146.9,
     0.0,
-    222.0
+    216.0
    ],
    "rotation": [
-    0.0,
+    -20.0,
     0.0,
     0.0
    ],
    "color": [
     1.0,
-    0.62,
-    0.3
+    0.66,
+    0.36
    ],
-   "candelas": 300.0,
-   "radius": 1400.0,
-   "source_width": 653.8,
-   "source_height": 272.0
+   "candelas": 120.0,
+   "radius": 700.0,
+   "barn_door_angle": 45.0,
+   "barn_door_length": 60.0,
+   "source_width": 298.0,
+   "source_height": 260.0
+  },
+  {
+   "name": "EntranceWindowEast",
+   "group": "Windows",
+   "fixture": "WarmGlass_248",
+   "type": "Rect",
+   "location": [
+    -183.7,
+    -258.7,
+    241.5
+   ],
+   "rotation": [
+    -20.0,
+    0.0,
+    0.0
+   ],
+   "color": [
+    1.0,
+    0.66,
+    0.36
+   ],
+   "candelas": 90.0,
+   "radius": 650.0,
+   "barn_door_angle": 45.0,
+   "barn_door_length": 60.0,
+   "source_width": 136.4,
+   "source_height": 233.0
+  },
+  {
+   "name": "EntranceWindowWest",
+   "group": "Windows",
+   "fixture": "WarmGlass_249",
+   "type": "Rect",
+   "location": [
+    -183.7,
+    258.7,
+    241.5
+   ],
+   "rotation": [
+    -20.0,
+    0.0,
+    0.0
+   ],
+   "color": [
+    1.0,
+    0.66,
+    0.36
+   ],
+   "candelas": 90.0,
+   "radius": 650.0,
+   "barn_door_angle": 45.0,
+   "barn_door_length": 60.0,
+   "source_width": 136.4,
+   "source_height": 233.0
   }
  ],
  "collision_boxes": [

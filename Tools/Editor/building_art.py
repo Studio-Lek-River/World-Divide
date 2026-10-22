@@ -215,7 +215,8 @@ def _finish(material):
 
 def build_surface_material(directory, name, kind):
     """The flat masters, each a colour, roughness, metallic and glow from its instance:
-    "surface" (M_HQ17_Surface), "glass" (M_HQ17_Glass: translucent, lit per pixel, GlassOpacity),
+    "surface" (M_HQ17_Surface), "glass" (M_HQ17_Glass: translucent, lit per pixel, GlassOpacity, at night
+    NightGlow, the rooms lit behind it),
     "operational" (M_HQ_Final_Operational: the glow times Operational, custom primitive data, 1 on and 0 off, its lighting
     group's switch and, in the dark, NightGain: LIGHT_GROUP_INDICES) and
     "ownership" (M_HQ_Final_Ownership: the colour is the owner's PlayerColor, custom primitive data)."""
@@ -251,6 +252,17 @@ def build_surface_material(directory, name, kind):
         lit = _multiply(material, -450, 900, operational, "", gate, "")
         lit = _multiply(material, -350, 1100, lit, "", strength, "")
         glow = _multiply(material, -200, 480, emission, "RGB", lit, "")
+        _output(material, glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    elif kind == "glass":
+        # The rooms lit behind the glass at night (#195): NightGlow while it is dark, the Windows group is on and the
+        # building is operational, on top of the glass's own glow.
+        night_glow = _vector(material, -1100, 900, "NightGlow", (0.0, 0.0, 0.0, 1.0))
+        night = _scalar(material, -1100, 1100, "Night", 0.0, LIGHT_NIGHT_INDEX)
+        windows = _scalar(material, -1100, 1200, "WindowsOn", 1.0, LIGHT_GROUP_INDICES["Windows"])
+        operational = _scalar(material, -1100, 1300, "Operational", 1.0, vehicle_art.LAMP_ON_INDEX)
+        lit = _multiply(material, -800, 1150, night, "", windows, "")
+        lit = _multiply(material, -650, 1200, lit, "", operational, "")
+        glow = _add(material, -200, 480, emission, "RGB", _multiply(material, -450, 900, night_glow, "RGB", lit, ""), "")
         _output(material, glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     else:
         _output(material, emission, "RGB", unreal.MaterialProperty.MP_EMISSIVE_COLOR)

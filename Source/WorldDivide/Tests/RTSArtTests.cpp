@@ -81,8 +81,11 @@ namespace
 	const TCHAR* HeadquartersBeaconPrefix = TEXT("Beacon_");
 	/** The HQ's lamps and windows (Tools/Art/usa_hq_light_probe.py), where its real lights stand (#195). */
 	const TCHAR* HeadquartersFixturesFile = TEXT("Art/USA/buildings/usa_hq/issue195/fixtures.json");
-	/** Steady real lights per HQ, none casting a shadow (#195): two floodlights, two garage lamp rows and the window light. */
-	constexpr int32 HeadquartersMaxLights = 5;
+	/**
+	 * Steady real lights per HQ, none casting a shadow (#195): two floodlights, two garage lamp rows and the soft light of
+	 * the entrance's door and two windows.
+	 */
+	constexpr int32 HeadquartersMaxLights = 7;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSPlaceholderWithoutNaniteTest, "WorldDivide.Art.PlaceholderWithoutNanite", TestFlags)

@@ -80,15 +80,16 @@ Hooks for #196 (no state logic yet):
 Rule: **light only comes from a lamp or window the model has.** No light component stands in the air; every one names the fixtures it shines from (`FRTSBuildingLight::Fixture`, islands of `Art/USA/buildings/usa_hq/issue195/fixtures.json`, written by `Tools/Art/usa_hq_light_probe.py` from the game shell's lamp and glass slots) and stands within their bounds (`WorldDivide.Art.USAHeadquarters` checks both). A lamp the model lacks is art first (`issue195/BRIEF_floodlights.md`).
 
 - Glow: `M_HQ_Final_Operational` multiplies EmissionColor × Operational × its group's switch × lerp(1, `NightGain`, Night). Groups by instance (`usa_hq_recipe.LIGHT_GROUPS`): `Windows` (InnerLight, InteriorWarm; night ×4), `Fixtures` (FixtureWarm; ×4), `Accents` (FixtureBlue, TeamLight; ×3). CPD 9–11 are the group switches (1 on, the default), CPD 12 the dark (`RTSPrimitiveData::LightWindows`..`LightNight`); the building writes all four together.
+- Windows at night: `M_HQ17_Glass` adds `NightGlow` × Night × WindowsOn × Operational, so the warm glass glows with the rooms lit behind it (`usa_hq_recipe.GLASS_NIGHT_GLOW`); the cool glass stays dark. With Lumen (#159) the glow alone would light the ground and the entrance lights could go.
 - Real lights (`URTSBuildingData::Lights`, `usa_hq_recipe.LIGHTS`), all non-shadow-casting, no GI, tagged `Light.<Group>`:
 
 | Light | Group | From | Type |
 |---|---|---|---|
 | GarageLampsSouth / North | GarageLamps | the four ceiling-edge lamps along each side wall of the bay, 6.16 m up | Rect 1154 × 21 cm, 65° down into the bay, 400 cd, 18 m; square barn doors (45 cm) keep it off the wall behind |
-| CommandWindows | Windows | the entrance's door glass and flanking windows | Rect 654 × 272 cm on the glass plane, facing the courtyard, 300 cd, 14 m |
+| EntranceDoor, EntranceWindowEast / West | Windows | the entrance's door glass and each flanking window | a Rect the size of each opening on its glass, 20° down, 90–120 cd, 6.5–7 m, barn doors 45° × 60 cm: a soft warm pool in front of each opening, not a floodlight |
 | 2 façade floodlights | Fixtures | lamp heads to be modelled (Phase B of #195) | Spot |
 
-  Budget: 5 steady lights per HQ (3 now) plus at most 2 garage beacons. Shown only in the dark (`URTSDayNightSubsystem::IsDark`) and only for the `rts.Fx.BuildingLightMaxBuildings` (4) constructed buildings nearest a camera (`URTSBuildingLightSubsystem`); the rest only glow, and by day no light is on.
+  Budget: 7 steady lights per HQ (5 now) plus at most 2 garage beacons. Shown only in the dark (`URTSDayNightSubsystem::IsDark`) and only for the `rts.Fx.BuildingLightMaxBuildings` (4) constructed buildings nearest a camera (`URTSBuildingLightSubsystem`); the rest only glow, and by day no light is on.
 - Garage lamps: the `GarageLamps` group is on only while the door is not closed (`URTSGarageComponent`): without shadows, a closed door would not stop their light reaching the apron. The lamps' glow stays on.
 - Garage beacons: the `GarageBeacons` group of `Lights`, which `URTSGarageComponent` flashes in turn while the door is not closed. The model has no amber beacon lamp yet, so the HQ has none (the brief asks for them).
 
