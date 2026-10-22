@@ -2038,46 +2038,50 @@ TEST_GROUND_STRIPS = (("Grass", -13500.0), ("Road", -16500.0), ("Sand", -19500.0
 SKIRMISH_MAP = SkirmishMap("/Game/Maps/L_Skirmish", 30000.0, TEST_SPOTS, TEST_OBSTACLES, ())
 DUEL_MAP = SkirmishMap("/Game/Maps/L_SkirmishDuel", 30000.0, TEST_SPOTS[:2], TEST_OBSTACLES, ())
 
-# 500 x 500 m, west against east across a 24 m river running north to south from edge to edge. It is crossed at two
-# 36 m fords, each between two rocks, with a supply source by each ford, one on either bank.
-RIVER_FORD_MAP = SkirmishMap("/Game/Maps/L_RiverFord", 25000.0, (
-    (0, -16500.0, 0.0, 0.0), (1, 16500.0, 0.0, 180.0),
+# The skirmish maps are at least as large as Zero Hour's official maps for as many players (ZH_PROPORTIONS.md section 4,
+# measured with our MBT as the ruler): 1000 m for two players (ZH's median 963 m), 1250 m for four and six (1225 and
+# 1246 m). L_Skirmish and L_SkirmishDuel keep L_TestMap's 600 m: they are the lobby's test maps the tests play.
+
+# 1000 x 1000 m, west against east, 760 m apart, across a 24 m river running north to south from edge to edge. It is
+# crossed at two 36 m fords, each between two rocks, with a supply source by each ford, one on either bank.
+RIVER_FORD_MAP = SkirmishMap("/Game/Maps/L_RiverFord", 50000.0, (
+    (0, -38000.0, 0.0, 0.0), (1, 38000.0, 0.0, 180.0),
 ), (
-    ("water", "Water_South", (0.0, -19400.0, 1.0), (24.0, 112.0, 0.1)),
-    ("water", "Water_Middle", (0.0, 0.0, 1.0), (24.0, 204.0, 0.1)),
-    ("water", "Water_North", (0.0, 19400.0, 1.0), (24.0, 112.0, 0.1)),
-    ("block", "Block_FordNorthWest", (-4500.0, 15900.0, 150.0), (5.0, 5.0, 3.0)),
-    ("block", "Block_FordNorthEast", (4500.0, 8100.0, 150.0), (5.0, 5.0, 3.0)),
-    ("block", "Block_FordSouthWest", (-4500.0, -8100.0, 150.0), (5.0, 5.0, 3.0)),
-    ("block", "Block_FordSouthEast", (4500.0, -15900.0, 150.0), (5.0, 5.0, 3.0)),
-    ("wall", "Wall_West", (-11400.0, -13500.0, 150.0), (2.0, 72.0, 3.0)),
-    ("wall", "Wall_East", (11400.0, 13500.0, 150.0), (2.0, 72.0, 3.0)),
+    ("water", "Water_South", (0.0, -37900.0, 1.0), (24.0, 242.0, 0.1)),
+    ("water", "Water_Middle", (0.0, 0.0, 1.0), (24.0, 444.0, 0.1)),
+    ("water", "Water_North", (0.0, 37900.0, 1.0), (24.0, 242.0, 0.1)),
+    ("block", "Block_FordNorthWest", (-4500.0, 27900.0, 150.0), (5.0, 5.0, 3.0)),
+    ("block", "Block_FordNorthEast", (4500.0, 20100.0, 150.0), (5.0, 5.0, 3.0)),
+    ("block", "Block_FordSouthWest", (-4500.0, -20100.0, 150.0), (5.0, 5.0, 3.0)),
+    ("block", "Block_FordSouthEast", (4500.0, -27900.0, 150.0), (5.0, 5.0, 3.0)),
+    ("wall", "Wall_West", (-22800.0, -27000.0, 150.0), (2.0, 144.0, 3.0)),
+    ("wall", "Wall_East", (22800.0, 27000.0, 150.0), (2.0, 144.0, 3.0)),
 ), (
-    (-7500.0, 16500.0, 8000), (7500.0, -16500.0, 8000),
+    (-7500.0, 28500.0, 8000), (7500.0, -28500.0, 8000),
 ))
 
-# 660 x 660 m, a base in each corner. A quarry in the middle, walled to the west and east and open to the north and
-# south, holds two rich supply sources; a rock stands between every two neighbouring bases.
-QUARRY_CROSS_MAP = SkirmishMap("/Game/Maps/L_QuarryCross", 33000.0, (
-    (0, -21000.0, -21000.0, 45.0), (1, 21000.0, 21000.0, -135.0), (2, 21000.0, -21000.0, 135.0),
-    (3, -21000.0, 21000.0, -45.0),
+# 1250 x 1250 m, a base in each corner, 880 m from its neighbours. A quarry in the middle, walled to the west and east
+# and open to the north and south, holds two rich supply sources; a rock stands between every two neighbouring bases.
+QUARRY_CROSS_MAP = SkirmishMap("/Game/Maps/L_QuarryCross", 62500.0, (
+    (0, -44000.0, -44000.0, 45.0), (1, 44000.0, 44000.0, -135.0), (2, 44000.0, -44000.0, 135.0),
+    (3, -44000.0, 44000.0, -45.0),
 ), (
-    ("wall", "Wall_QuarryWest", (-6000.0, 0.0, 150.0), (2.0, 120.0, 3.0)),
-    ("wall", "Wall_QuarryEast", (6000.0, 0.0, 150.0), (2.0, 120.0, 3.0)),
-    ("block", "Block_East", (21000.0, 0.0, 200.0), (8.0, 8.0, 4.0)),
-    ("block", "Block_West", (-21000.0, 0.0, 200.0), (8.0, 8.0, 4.0)),
-    ("block", "Block_North", (0.0, 21000.0, 200.0), (8.0, 8.0, 4.0)),
-    ("block", "Block_South", (0.0, -21000.0, 200.0), (8.0, 8.0, 4.0)),
+    ("wall", "Wall_QuarryWest", (-11400.0, 0.0, 150.0), (2.0, 228.0, 3.0)),
+    ("wall", "Wall_QuarryEast", (11400.0, 0.0, 150.0), (2.0, 228.0, 3.0)),
+    ("block", "Block_East", (44000.0, 0.0, 200.0), (8.0, 8.0, 4.0)),
+    ("block", "Block_West", (-44000.0, 0.0, 200.0), (8.0, 8.0, 4.0)),
+    ("block", "Block_North", (0.0, 44000.0, 200.0), (8.0, 8.0, 4.0)),
+    ("block", "Block_South", (0.0, -44000.0, 200.0), (8.0, 8.0, 4.0)),
 ), (
-    (0.0, 3000.0, 10000), (0.0, -3000.0, 10000),
+    (0.0, 5700.0, 10000), (0.0, -5700.0, 10000),
 ))
 
-# 720 x 720 m, six bases on a ring, each opposite another. A peak stands between every two neighbouring bases and six
-# rocks ring the middle; a supply source lies in front of each peak.
-SIX_PEAKS_MAP = SkirmishMap("/Game/Maps/L_SixPeaks", 36000.0, ring_spots(27000.0, (180.0, 0.0, 240.0, 60.0, 120.0, 300.0)), (
-    *(("block", f"Block_Peak{index}", (*ring(24000.0, 30.0 + 60.0 * index), 250.0), (8.0, 8.0, 5.0)) for index in range(6)),
-    *(("block", f"Block_Middle{index}", (*ring(9000.0, 60.0 * index), 150.0), (6.0, 6.0, 3.0)) for index in range(6)),
-), tuple((*ring(16500.0, 30.0 + 60.0 * index), 6000) for index in range(6)))
+# 1250 x 1250 m, six bases on a ring, each opposite another and 470 m from its neighbours. A peak stands between every
+# two neighbouring bases and six rocks ring the middle; a supply source lies in front of each peak.
+SIX_PEAKS_MAP = SkirmishMap("/Game/Maps/L_SixPeaks", 62500.0, ring_spots(47000.0, (180.0, 0.0, 240.0, 60.0, 120.0, 300.0)), (
+    *(("block", f"Block_Peak{index}", (*ring(42000.0, 30.0 + 60.0 * index), 250.0), (8.0, 8.0, 5.0)) for index in range(6)),
+    *(("block", f"Block_Middle{index}", (*ring(15600.0, 60.0 * index), 150.0), (6.0, 6.0, 3.0)) for index in range(6)),
+), tuple((*ring(28700.0, 30.0 + 60.0 * index), 6000) for index in range(6)))
 
 
 def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
