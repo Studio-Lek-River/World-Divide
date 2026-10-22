@@ -990,8 +990,8 @@ def make_shot_material(name):
 
 
 # The firing flipbooks Tools/Art/muzzle_fx_blender.py bakes from its fire and smoke simulation (#294): 8 x 8 frames each.
-# The materials take the grid as the scalar parameter Columns, so World in Conflict's 16 x 16 smoke can stand in on the
-# machines that have it (import_local_art.py, #355).
+# The materials take the grid as the scalar parameters Columns and Rows, so World in Conflict's 16 x 8 smoke can stand in
+# on the machines that have it (import_local_art.py, #355).
 EFFECT_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "Source", "Effects")
 EFFECT_TEXTURE_DIR = f"{EFFECT_DIR}/Textures"
 FLIPBOOK_LAST_FRAME = 63.0
@@ -1077,22 +1077,23 @@ float A = floor(Frame);
 float B = min(A + 1.0, Last);
 float2 Local = UV;
 if (Random > 0.5) Local.x = 1.0 - Local.x;
-UVA = float3((float2(fmod(A, Columns), floor(A / Columns)) + Local) / Columns, 0.0);
-UVB = float3((float2(fmod(B, Columns), floor(B / Columns)) + Local) / Columns, 0.0);
+UVA = float3((float2(fmod(A, Columns), floor(A / Columns)) + Local) / float2(Columns, Rows), 0.0);
+UVB = float3((float2(fmod(B, Columns), floor(B / Columns)) + Local) / float2(Columns, Rows), 0.0);
 return Frame - A;"""
 
 
 def flipbook_frame(material, x, y, first, last):
     """The flipbook frame node, its first and last frames scalar parameters FrameFirst and FrameLast and its grid, frames
-    per row and column, Columns."""
+    across and down, Columns and Rows."""
     node = custom_node(material, x, y, FLIPBOOK_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT1,
-                       ["UV", "Age", "Random", "First", "Last", "Columns"], ["UVA", "UVB"])
+                       ["UV", "Age", "Random", "First", "Last", "Columns", "Rows"], ["UVA", "UVB"])
     connect(expression(material, unreal.MaterialExpressionTextureCoordinate, x - 300, y), "", node, "UV")
     connect(expression(material, unreal.MaterialExpressionParticleRelativeTime, x - 300, y + 80), "", node, "Age")
     connect(expression(material, unreal.MaterialExpressionParticleRandom, x - 300, y + 160), "", node, "Random")
     connect(scalar_parameter(material, x - 300, y + 240, "FrameFirst", first), "", node, "First")
     connect(scalar_parameter(material, x - 300, y + 320, "FrameLast", last), "", node, "Last")
     connect(scalar_parameter(material, x - 300, y + 400, "Columns", 8.0), "", node, "Columns")
+    connect(scalar_parameter(material, x - 300, y + 480, "Rows", 8.0), "", node, "Rows")
     return node
 
 
@@ -1241,11 +1242,14 @@ def make_muzzle_flash():
 # A smoke sprite's normal from its six-way light, so the side it is lit from most faces that way, in the sprite's tangent
 # space (+X right, +Y down the flipbook, +Z toward the camera): only a little toward the camera, so the sun shades the
 # cloud's sides rather than lighting it flat (#361). Its albedo a little brighter where it is lit through, scaled by
-# Brightness; its opacity eaten from the edges inward by Erosion as it ages, over a soft ramp rather than a hard edge.
+# Brightness; its opacity eaten from the edges inward by Erosion as it ages, over a soft ramp rather than a hard edge. A
+# particle colour above 1 glows by what it is over, so smoke born in the fireball burns orange before it cools (#355).
 SMOKE_CODE = """float3 N = float3(RLT.r - RLT.g, BBF.r - RLT.b, (BBF.b - BBF.g) * 0.5 + 0.25);
 Normal = normalize(N);
 float Light = (RLT.r + RLT.g + RLT.b + BBF.r + BBF.g + BBF.b) / 6.0;
-Albedo = Color.rgb * lerp(0.8, 1.05, saturate(Light * 1.6)) * Brightness;
+float3 Base = min(Color.rgb, 1.0);
+Albedo = Base * lerp(0.8, 1.05, saturate(Light * 1.6)) * Brightness;
+Glow = (Color.rgb - Base) * lerp(0.6, 1.0, saturate(Light * 1.6));
 float Thin = saturate(Age) * Erosion;
 return smoothstep(Thin, min(Thin + 0.45, 1.0), RLT.a) * Color.a;"""
 
@@ -1269,7 +1273,7 @@ def build_muzzle_smoke_material(name, rlt, bbf):
     rlt_sample = blended_sample(material, -1000, 0, rlt, frame, "SmokeRLT")
     bbf_sample = blended_sample(material, -1000, 600, bbf, frame, "SmokeBBF")
     shade = custom_node(material, -300, 200, SMOKE_CODE, unreal.CustomMaterialOutputType.CMOT_FLOAT1,
-                        ["RLT", "BBF", "Color", "Age", "Erosion", "Brightness"], ["Normal", "Albedo"])
+                        ["RLT", "BBF", "Color", "Age", "Erosion", "Brightness"], ["Normal", "Albedo", "Glow"])
     connect(rlt_sample, "", shade, "RLT")
     connect(bbf_sample, "", shade, "BBF")
     connect(expression(material, unreal.MaterialExpressionParticleColor, -600, 400), "RGBA", shade, "Color")
@@ -1285,6 +1289,7 @@ def build_muzzle_smoke_material(name, rlt, bbf):
     editing = unreal.MaterialEditingLibrary
     editing.connect_material_property(shade, "Albedo", unreal.MaterialProperty.MP_BASE_COLOR)
     editing.connect_material_property(shade, "Normal", unreal.MaterialProperty.MP_NORMAL)
+    editing.connect_material_property(shade, "Glow", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     editing.connect_material_property(fade, "", unreal.MaterialProperty.MP_OPACITY)
     editing.connect_material_property(roughness, "", unreal.MaterialProperty.MP_ROUGHNESS)
     editing.recompile_material(material)

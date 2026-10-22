@@ -4,11 +4,15 @@ art: it is written to Art/Source/Local/WiC/Smoke (gitignored) and never committe
 
   python Tools/Art/wic_smoke_flipbook.py "<World in Conflict>/wic1.sdf"
 
-The archive keeps each texture as bare pixels (extract_sdf.py): 1024 x 1024 with one smaller mip after it, 16 x 16
-frames of 64 px row by row from the top left. 0pos holds the smoke lit from the right, from above and from the front in
+WiC's tanks draw the 64 px frames of rotatesmokefill_6p_*_64x64_256; this takes its 128 px set (_128x128_128, the same
+smoke in half the frames) and scales it up twice with a Lanczos filter to 256 px frames, the size of ours. Scaling adds
+no detail the frames do not have, but it keeps their edges smooth where the sprite is drawn larger than 128 px.
+
+The archive keeps each texture as bare pixels (extract_sdf.py): 2048 x 1024 with one smaller mip after it, 16 x 8
+frames of 128 px row by row from the top left. 0pos holds the smoke lit from the right, from above and from the front in
 its R, G and B and the opacity in A; 1neg (no alpha) lit from the left, from below and from behind. Both are stored
 B, G, R(, A). They become T_WiCSmoke_RLT.png (right, left, top, opacity) and T_WiCSmoke_BBF.png (bottom, back, front),
-the channels muzzle_fx_blender.py bakes ours into, so M_MuzzleSmoke shades both the same.
+4096 x 2048, the channels muzzle_fx_blender.py bakes ours into, so M_MuzzleSmoke shades both the same.
 
 Plain desktop Python with numpy and Pillow.
 """
@@ -24,15 +28,22 @@ import extract_sdf  # noqa: E402
 
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT_DIR = os.path.join(PROJECT_DIR, "Art", "Source", "Local", "WiC", "Smoke")
-SIZE = 1024
-POSITIVE = "rotatesmokefill_6p_0pos_64x64_256.dds"
-NEGATIVE = "rotatesmokefill_6p_1neg_64x64_256.dds"
+WIDTH, HEIGHT = 2048, 1024
+UPSCALE = 2
+POSITIVE = "rotatesmokefill_6p_0pos_128x128_128.dds"
+NEGATIVE = "rotatesmokefill_6p_1neg_128x128_128.dds"
 
 
 def top_mip(data, channels):
     """The largest mip of a bare B, G, R(, A) texture as R, G, B(, A)."""
-    pixels = np.frombuffer(data[:SIZE * SIZE * channels], np.uint8).reshape(SIZE, SIZE, channels)
+    pixels = np.frombuffer(data[:WIDTH * HEIGHT * channels], np.uint8).reshape(HEIGHT, WIDTH, channels)
     return pixels[..., [2, 1, 0, 3][:channels]]
+
+
+def upscale(channel):
+    """One channel scaled up UPSCALE times, on its own so the light channels are not weighted by the opacity."""
+    size = (WIDTH * UPSCALE, HEIGHT * UPSCALE)
+    return np.asarray(Image.fromarray(channel, "L").resize(size, Image.Resampling.LANCZOS))
 
 
 def main():
@@ -46,7 +57,7 @@ def main():
     bbf = np.stack([negative[..., 1], negative[..., 2], positive[..., 2], np.full_like(opacity, 255)], axis=-1)
     for name, pixels in (("T_WiCSmoke_RLT", rlt), ("T_WiCSmoke_BBF", bbf)):
         path = os.path.join(OUT_DIR, f"{name}.png")
-        Image.fromarray(pixels, "RGBA").save(path)
+        Image.fromarray(np.stack([upscale(np.ascontiguousarray(pixels[..., i])) for i in range(4)], axis=-1), "RGBA").save(path)
         print(path)
 
 

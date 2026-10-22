@@ -514,46 +514,50 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& Asset
 		const float Brake = 12.f;
 		// From about a second on they rise, at 1.25 m/s a unit of scale once the drag holds them.
 		const FString Rise(TEXT("float3(0.0, 0.0, 1500.0 * User.Scale * saturate((Particles.Age - 0.8) / 0.6))"));
-		// A cloud's colour by its age in seconds: warm from the flash at birth, dark charcoal at Dark s, mid grey at Mid s and
-		// light grey from Light s on, a little brown as cordite smoke is. The material's Brightness calibrates it (#327).
+		// A cloud's colour by its age in seconds: born inside the fireball, it glows orange from it (a colour above 1 glows in
+		// the smoke material) and cools to dark charcoal at Dark s as the fireball dies, then mid grey at Mid s and light grey
+		// from Light s on, a little brown as cordite smoke is. The material's Brightness calibrates it (#327).
 		const auto Greys = [](float Dark, float Mid, float Light)
 		{
-			return FString::Printf(TEXT("lerp(float3(0.3, 0.22, 0.14), float3(1.0, 0.97, 0.92) * lerp(lerp(0.03, 0.12, saturate((Particles.Age - %g) / %g)), 0.4, saturate((Particles.Age - %g) / %g)), saturate(Particles.Age / %g))"),
+			return FString::Printf(TEXT("lerp(float3(6.0, 2.6, 0.8), float3(1.0, 0.97, 0.92) * lerp(lerp(0.03, 0.12, saturate((Particles.Age - %g) / %g)), 0.4, saturate((Particles.Age - %g) / %g)), pow(saturate(Particles.Age / %g), 0.6))"),
 				Dark, Mid - Dark, Mid, Light - Mid, Dark);
 		};
-		// Dense while dark, thinner as it swells, faded out over the end of its life.
-		const FString Thinning(TEXT("lerp(1.0, 0.55, saturate((Particles.Age - 0.2) / 1.5)) * saturate(Particles.Age * 30.0) * (1.0 - Particles.NormalizedAge * Particles.NormalizedAge)"));
+		// Thin while the fireball burns over it, so the fire shows through and the smoke grows out of it, dense once it has
+		// cooled at 0.15 s, thinner as it swells, faded out over the end of its life.
+		const FString Thinning(TEXT("lerp(1.0, 0.55, saturate((Particles.Age - 0.2) / 1.5)) * lerp(0.25, 1.0, saturate((Particles.Age - 0.03) / 0.12)) * (1.0 - Particles.NormalizedAge * Particles.NormalizedAge)"));
 
 		// Many smaller, thinner sprites rather than a few large ones (#361), sorted back to front so their overlaps blend into
 		// one rolling cloud, each churning (SetChurn) from about 0.3 s on as the blast's push dies.
 		const FString Sorted(TEXT(", \"SortMode\": \"ViewDepth\""));
 		const FString Churn(TEXT("User.Scale * 90.0 * saturate((Particles.Age - 0.3) / 0.6)"));
 
-		// The blast clouds: four in ten of User.Count (16 at epic up close), thrown 6 to 36 m/s a unit of scale along the bore
-		// and spread sideways, so the air stops them anywhere from 0.5 to 3 m out and they overlap into one cloud a tank-length
-		// long on the M20. 2 to 3 m across under the flash, swelling to 4.5 to 7 m. Gone after 3 to 7 s.
+		// The blast clouds: four in ten of User.Count (16 at epic up close), born at the mouth of the barrel where the fireball
+		// is, thrown 6 to 36 m/s a unit of scale along the bore and spread sideways, so the air stops them anywhere from 0.5 to
+		// 3 m out: the slow ones stay at the muzzle and the fast ones carry the cloud out, one cloud from the barrel to a
+		// tank-length out on the M20 (#355). The size of the fireball's puffs at birth, 2 to 3 m across by 0.15 s, swelling to
+		// 4.5 to 7 m. Gone after 3 to 7 s.
 		AddSpriteBurst(System, TEXT("Blast"), TEXT("max(User.Count * 4 / 10, 2)"), LoopSeconds, TEXT("3.0 + rand(4.0)"),
 			TEXT("User.Scale * 250.0"), TEXT("float4(0.3, 0.22, 0.14, 0.6)"), BlastMaterial, Bounds, false, Context, Sorted);
 		SetRandomRotation(System, TEXT("Blast"), Context);
-		SetSpawnSphere(System, TEXT("Blast"), TEXT("User.Scale * 30.0"), TEXT("User.Direction * (User.Scale * 60.0)"), Context);
+		SetSpawnSphere(System, TEXT("Blast"), TEXT("User.Scale * 10.0"), TEXT("User.Direction * (User.Scale * 25.0)"), Context);
 		SetMotion(System, TEXT("Blast"),
 			TEXT("User.Direction * (User.Scale * (600.0 + rand(3000.0))) + float3(rand(500.0) - 250.0, rand(500.0) - 250.0, rand(240.0) - 100.0) * User.Scale"),
 			Brake, Rise, Context);
 		SetBirthAttribute(System, TEXT("Blast"), TEXT("Particles.CloudSize"), FNiagaraTypeDefinition::GetVec2Def(), FVector2f(250.f, 575.f),
 			TEXT("float2(200.0 + rand(100.0), 450.0 + rand(250.0)) * User.Scale"), Context);
 		SetSpriteSizeOverLife(System, TEXT("Blast"),
-			TEXT("float2(1.0, 1.0) * (Particles.CloudSize.x * lerp(0.6, 1.0, saturate(Particles.Age / 0.1)) + (Particles.CloudSize.y - Particles.CloudSize.x) * (1.0 - exp(-Particles.Age * 1.6)))"),
+			TEXT("float2(1.0, 1.0) * (lerp(User.Scale * 50.0, Particles.CloudSize.x, saturate(Particles.Age / 0.15)) + (Particles.CloudSize.y - Particles.CloudSize.x) * (1.0 - exp(-Particles.Age * 1.6)))"),
 			Context);
-		SetColorOverLife(System, TEXT("Blast"), FString::Printf(TEXT("float4(%s, 0.6 * %s)"), *Greys(0.1f, 0.2f, 1.2f), *Thinning), Context);
+		SetColorOverLife(System, TEXT("Blast"), FString::Printf(TEXT("float4(%s, 0.6 * %s)"), *Greys(0.15f, 0.25f, 1.2f), *Thinning), Context);
 		SetChurn(System, TEXT("Blast"), 35.f, Churn, Context);
 
-		// The bore puffs: three in ten of User.Count (12 at epic up close) and at least one, born along the first 3 m of the bore
-		// a unit of scale and thrown 2 to 20 m/s down it, so they fill the way from the muzzle to the blast clouds. 0.5 m
+		// The bore puffs: three in ten of User.Count (12 at epic up close) and at least one, born at the muzzle and thrown 2 to
+		// 20 m/s down the bore, so they fill the way from the barrel to the blast clouds. 0.5 m
 		// growing to 1.5 m by 0.06 s and 1.7 to 2 m by 0.16 s, then swelling to 3.5 to 4.5 m. Gone after about 5 s.
 		AddSpriteBurst(System, TEXT("Puffs"), TEXT("max(User.Count * 3 / 10, 1)"), LoopSeconds, TEXT("4.5 + rand(0.5)"), TEXT("User.Scale * 50.0"),
 			TEXT("float4(0.3, 0.22, 0.14, 0.6)"), BlastMaterial, Bounds, false, Context, Sorted);
 		SetRandomRotation(System, TEXT("Puffs"), Context);
-		SetSpawnSphere(System, TEXT("Puffs"), TEXT("User.Scale * 20.0"), TEXT("User.Direction * (User.Scale * (30.0 + rand(300.0)))"), Context);
+		SetSpawnSphere(System, TEXT("Puffs"), TEXT("User.Scale * 10.0"), TEXT("User.Direction * (User.Scale * 25.0)"), Context);
 		SetMotion(System, TEXT("Puffs"),
 			TEXT("User.Direction * (User.Scale * (200.0 + rand(1800.0))) + float3(rand(200.0) - 100.0, rand(200.0) - 100.0, rand(160.0) - 60.0) * User.Scale"),
 			Brake, Rise, Context);
@@ -562,7 +566,7 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& Asset
 		SetSpriteSizeOverLife(System, TEXT("Puffs"),
 			TEXT("float2(1.0, 1.0) * lerp(lerp(lerp(50.0 * User.Scale, 150.0 * User.Scale, saturate(Particles.Age / 0.06)), Particles.CloudSize.x, saturate((Particles.Age - 0.06) / 0.1)), Particles.CloudSize.y, 1.0 - exp(-max(Particles.Age - 0.16, 0.0) * 1.2))"),
 			Context);
-		SetColorOverLife(System, TEXT("Puffs"), FString::Printf(TEXT("float4(%s, 0.6 * %s)"), *Greys(0.06f, 0.16f, 1.2f), *Thinning), Context);
+		SetColorOverLife(System, TEXT("Puffs"), FString::Printf(TEXT("float4(%s, 0.6 * %s)"), *Greys(0.1f, 0.2f, 1.2f), *Thinning), Context);
 		SetChurn(System, TEXT("Puffs"), 25.f, Churn, Context);
 
 		// The veil: one wide, thin grey sheet over the gun and the view close to it, there from 0.1 to 0.6 s after the shot,
@@ -574,6 +578,23 @@ UNiagaraSystem* URTSEditorScripting::BuildMuzzleSmokeSystem(const FString& Asset
 		SetMotion(System, TEXT("Veil"), TEXT("User.Direction * (User.Scale * 200.0)"), 3.f, FString(), Context);
 		SetColorOverLife(System, TEXT("Veil"),
 			TEXT("float4(0.15, 0.145, 0.14, 0.4 * saturate((Particles.Age - 0.1) / 0.08) * (1.0 - saturate((Particles.Age - 0.3) / 0.3)))"), Context);
+
+		// The wisp: after the blast, thin smoke goes on leaking from the muzzle for 1.5 s, fewer puffs as it runs out, each
+		// drifting slowly down the bore and up, swelling from 0.4 to 1.5 m and fading over 1.5 to 2.5 s. Left out where the
+		// veil is.
+		AddSpriteStream(System, TEXT("Wisp"), TEXT("User.Count >= 3 ? 10.0 * (1.0 - saturate(Emitter.Age / 1.5)) : 0.0"),
+			TEXT("1.5 + rand(1.0)"), TEXT("User.Scale * 20.0"), TEXT("float4(0.5, 0.49, 0.47, 0.0)"), VeilMaterial, Bounds, Context);
+		const FName EmitterUpdate(TEXT("EmitterUpdateScript"));
+		SetEnum(ModuleInput(System, TEXT("Wisp"), EmitterUpdate, TEXT("EmitterState"), TEXT("Loop Behavior")), TEXT("Once"), Context);
+		SetFloat(ModuleInput(System, TEXT("Wisp"), EmitterUpdate, TEXT("EmitterState"), TEXT("Loop Duration")), 1.5f, Context);
+		SetRandomRotation(System, TEXT("Wisp"), Context);
+		SetSpawnSphere(System, TEXT("Wisp"), TEXT("User.Scale * 5.0"), TEXT("User.Direction * (User.Scale * 20.0)"), Context);
+		SetMotion(System, TEXT("Wisp"), TEXT("User.Direction * (User.Scale * (20.0 + rand(30.0))) + float3(0.0, 0.0, User.Scale * 30.0)"), 0.5f,
+			FString(), Context);
+		SetSpriteSizeOverLife(System, TEXT("Wisp"), TEXT("float2(1.0, 1.0) * User.Scale * lerp(20.0, 75.0, Particles.NormalizedAge)"), Context);
+		SetColorOverLife(System, TEXT("Wisp"),
+			TEXT("float4(0.5, 0.49, 0.47, 0.3 * saturate(Particles.Age * 8.0) * (1.0 - Particles.NormalizedAge))"), Context);
+		SetChurn(System, TEXT("Wisp"), 20.f, TEXT("User.Scale * 30.0"), Context);
 
 		// The ground blast: when the muzzle is less than 3 m a unit of scale above the ground, the pressure wave kicks dust off
 		// it under and ahead of the muzzle, thrown out flat along the bore and to the sides, settling in 0.6 to 1 s.

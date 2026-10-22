@@ -70,13 +70,13 @@ TEST_TANK_MODEL = None
 CANNON_SOUND_DIR = os.path.join("WiC", "Abrams")
 CANNON_SOUND_TAKES = [f"us_tank_abrams_0{take}{layer}" for take in (1, 2, 3) for layer in "abc"]
 CANNON_SOUND = f"{LOCAL_DIR}/Audio/SC_TankCannon_Local"
-# World in Conflict's smoke flipbook under Art/Source/Local: 16 x 16 frames, and what the blast clouds and the veil play of
+# World in Conflict's smoke flipbook under Art/Source/Local: 16 x 8 frames, and what the blast clouds and the veil play of
 # it. Like SMOKE_LOOKS in setup_testmap.py, which they stand in for, over WiC's longer frame run.
 SMOKE_SOURCE_DIR = os.path.join("WiC", "Smoke")
 SMOKE_TEXTURES = {"SmokeRLT": "T_WiCSmoke_RLT", "SmokeBBF": "T_WiCSmoke_BBF"}
 SMOKE_LOOKS = {
-    "MI_WiCSmoke_Blast": {"FrameFirst": 0.0, "FrameLast": 160.0, "Erosion": 0.35, "Brightness": 0.2, "Columns": 16.0},
-    "MI_WiCSmoke_Veil": {"FrameFirst": 72.0, "FrameLast": 255.0, "Erosion": 0.6, "Brightness": 0.2, "Columns": 16.0},
+    "MI_WiCSmoke_Blast": {"FrameFirst": 0.0, "FrameLast": 80.0, "Erosion": 0.35, "Brightness": 0.2, "Columns": 16.0, "Rows": 8.0},
+    "MI_WiCSmoke_Veil": {"FrameFirst": 36.0, "FrameLast": 127.0, "Erosion": 0.6, "Brightness": 0.2, "Columns": 16.0, "Rows": 8.0},
 }
 SMOKE_MATERIAL = "/Game/Materials/M_MuzzleSmoke"
 DUST_LOOK = "/Game/Materials/MI_MuzzleSmoke_Dust"
