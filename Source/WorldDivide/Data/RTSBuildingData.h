@@ -267,6 +267,33 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
 	FName FlagPart;
 
+	/** At or below this share of its health the building shows Damaged (URTSBuildingStateComponent, #196). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Presentation", meta = (ClampMin = "0", ClampMax = "1"))
+	float DamagedHealthFraction = 0.5f;
+
+	/** At or below this share of its health the building shows Critical. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Presentation", meta = (ClampMin = "0", ClampMax = "1"))
+	float CriticalHealthFraction = 0.25f;
+
+	/**
+	 * The rubble a destroyed building leaves (ARTSBuildingRuin), at the building's mesh placement. None draws the building's
+	 * own meshes collapsed flat and charred in its place.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Presentation")
+	TObjectPtr<UStaticMesh> RuinMesh;
+
+	/** Seconds the building takes to collapse into rubble. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Presentation", meta = (ClampMin = "0.1"))
+	float RuinCollapseSeconds = 3.f;
+
+	/** Seconds the rubble lies before it sinks away. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Presentation", meta = (ClampMin = "0"))
+	float RuinSeconds = 60.f;
+
+	/** Seconds the rubble takes to sink into the ground and go. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Presentation", meta = (ClampMin = "0.1"))
+	float RuinFadeSeconds = 5.f;
+
 	/** The location of the socket Name, or null when the data has none of that name. */
 	const FVector* FindSocket(FName Name) const
 	{

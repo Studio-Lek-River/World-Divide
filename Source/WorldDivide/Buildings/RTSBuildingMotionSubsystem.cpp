@@ -145,7 +145,9 @@ void URTSBuildingMotionSubsystem::UpdateAll(float DeltaSeconds)
 			Entries.RemoveAtSwap(Index);
 			continue;
 		}
-		const float Scale = Building->GetEquipmentMotionScale();
+		const float Target = Building->GetEquipmentMotionScale();
+		Entry.Scale = Entry.Scale < 0.f ? Target : FMath::FInterpConstantTo(Entry.Scale, Target, DeltaSeconds, MotionScaleRate);
+		const float Scale = Entry.Scale;
 		bool bDrawn = bPoseUnseen;
 		for (FRTSMovingPart& Part : Entry.Parts)
 		{

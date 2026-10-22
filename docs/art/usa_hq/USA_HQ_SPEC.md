@@ -43,7 +43,7 @@ Earlier candidates, recovery archives and the blockout are gone from the reposit
 The 10 delivery masters are rebuilt by `building_art.py` (the unused `HQ14_Paving` is dropped), with the 49 instances at the delivery's exact values (`usa_hq.json` → `material_instances`):
 
 - `M_HQ_Final_Ownership`: PlayerColor from custom primitive data 4–7 (`RTSPrimitiveData::TeamColor`). Only `MI_HQ17_TeamPanel` uses it.
-- `M_HQ_Final_Operational`: EmissionColor × Operational from custom primitive data 8 (`RTSPrimitiveData::LampOn`), 1 on and 0 off. `ARTSBuilding` writes 1 for now; #196 drives it from power.
+- `M_HQ_Final_Operational`: EmissionColor × Operational from custom primitive data 8 (`RTSPrimitiveData::LampOn`), 1 on and 0 off. `URTSBuildingStateComponent` drives it (#196, below).
 - `M_HQ17_Coating`: roughness clamp(Roughness + CoatingRoughness.R − 0.67, 0.06, 0.98), with the 2 m coating texture set.
 - The delivered flag (`SM_HQ21_NationalFlag_Wind`, `M_HQ21_FlagWind` and its three colour instances) is replaced by the shared flag (#351, below).
 - `ARTSBuilding::ApplyTeamColor` writes the same custom primitive data to Mesh and every part. Every HQ shares the same instances, so there are no dynamic instances.
@@ -69,11 +69,28 @@ All values are data: `Tools/Art/usa_hq_recipe.py` (`MOTION`, `BEACONS`, `FLAG_*`
 - `usa.png` (2048 × 1024, drawn by `Tools/Art/flag_textures.py`): Executive Order 10834 — 13 stripes, 50 stars in nine rows of six and five, the union over seven stripes, 0.5385 × 0.76 of the hoist, at the hoist.
 - `M_Flag_Cloth`: two-sided, derivative world normal, colours from `FlagTexture`. World position offset: waves travelling hoist → fly (1.35 per flag length, 0.85 Hz), growing as U^1.5 to 24 cm at the fly, plus a faster harmonic; flutter (4.5 per length, 2.6 Hz, U³, 5 cm); sag U² up to 22 cm, more in a lull; gusts over 7 s swell amplitude by 45 % and wave speed by 30 %; per-flag phases from `ObjectPositionWS`; nothing at the hoist, so the cloth never leaves or crosses the pole. The wind fades out from 90 to 120 m from the camera, and the part's `WPODisableDistance` (125 m) stops it beyond.
 
-Hooks for #196 (no state logic yet):
+Hooks, driven by the presentation state (#196, below):
 
-- `ARTSBuilding::SetEquipmentMotionScale(float)`: 1 full speed, 0 stopped in place, between slower; the subsystem integrates the angles, so changes never jump. Low power stops the fans and radar with 0.
-- Beacons and lit windows follow CPD 8 (`LampOn`/`Operational`), which `ARTSBuilding::ApplyTeamColor` writes as 1 today; write 0 for off.
+- `ARTSBuilding::SetEquipmentMotionScale(float)`: 1 full speed, 0 stopped in place, between slower; the subsystem eases the parts to a new scale at 0.5 per second and integrates the angles, so the radar spins down and up and never jumps.
+- Beacons and lit windows follow CPD 8 (`LampOn`/`Operational`), 1 on, 0 out.
 - `ARTSBuilding::SetLightGroupOn(Group, bOn)`: switches a lighting group (`Windows`, `Fixtures`, `Accents`), its glow and its real lights (see Night lighting).
+
+## Presentation state (#196)
+
+`URTSBuildingStateComponent` on every building works out what it shows on every machine that draws, from replicated state only: health, `ARTSBuilding::IsOwnerLowPower` (set by the server whenever the owner's grid changes, so every player sees a building go dark) and the production queue. It only reads; production, power and the garage stay authoritative. The building's tick looks every 0.25 s and writes the hooks when the look changes.
+
+Priority: Destroyed > Critical > Damaged > LowPower > Producing > Idle. Each channel of the look takes the most restrictive condition that holds, so a damaged HQ low on power is as dark and still as one only low on power:
+
+| Condition | Motion scale | LampOn (beacons, lit windows) | Groups out |
+|---|---|---|---|
+| Idle, Producing | 1 | on | none |
+| LowPower, or still under construction | 0 | out | Windows, Fixtures, Accents |
+| Damaged (health ≤ `DamagedHealthFraction`, 50 %) | 0.6 | on | Accents |
+| Critical (health ≤ `CriticalHealthFraction`, 25 %) | 0.2 | on | Accents, Fixtures |
+
+The garage keeps its door, beacons and `GarageLamps` (#192): it never closes on a unit, and on low power it opens only once a vehicle completed. `OnStateChanged` is the hook for the VFX and audio (#197).
+
+Destroyed: the HQ goes at once, so placement, power and the rebuild (#38) are free immediately, and an `ARTSBuildingRuin` takes its place: no collision, not selectable, not a building. Every machine that draws collapses the HQ's meshes to 12 % of their height, leaning 3°, dark, every lamp out, over `RuinCollapseSeconds` (3 s); the rubble lies `RuinSeconds` (60 s) and sinks into the ground over `RuinFadeSeconds` (5 s). `URTSBuildingData::RuinMesh` replaces the collapsed meshes with real rubble once the collapse is done; the HQ has none yet.
 
 ## Night lighting (#195)
 

@@ -43,14 +43,16 @@ struct FRTSMotionEntry
 {
 	TWeakObjectPtr<ARTSBuilding> Building;
 	TArray<FRTSMovingPart> Parts;
+	/** The motion scale the parts run at, easing towards the building's (MotionScaleRate); below zero until the first frame. */
+	float Scale = -1.f;
 };
 
 /**
  * Every machine that draws: the parts of every building whose data gives them a motion (FRTSPartMotion, #351), such as the
  * HQ's fans, radar and wing dish, turned once a frame about their pivots, in place of a tick per building. A part is posed
  * only while its building was drawn lately and a camera is within its draw distance; the angles run on regardless, at the
- * building's equipment motion scale (ARTSBuilding::SetEquipmentMotionScale), so slowing never jumps. A dedicated server
- * keeps none.
+ * building's equipment motion scale (ARTSBuilding::SetEquipmentMotionScale), eased towards it at MotionScaleRate, so the
+ * parts spin down and up again rather than stop dead. A dedicated server keeps none.
  */
 UCLASS()
 class WORLDDIVIDE_API URTSBuildingMotionSubsystem : public UWorldSubsystem
@@ -64,6 +66,9 @@ public:
 
 	/** Turns every registered part DeltaSeconds on and poses those in view. Public for the tests. */
 	void UpdateAll(float DeltaSeconds);
+
+	/** How fast a building's parts follow a change of its equipment motion scale, per second. */
+	static constexpr float MotionScaleRate = 0.5f;
 
 	/** The building's moving parts, 0 for one not registered. For the tests. */
 	int32 GetMovingPartCount(const ARTSBuilding& Building) const;

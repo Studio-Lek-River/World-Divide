@@ -4,6 +4,8 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuildingLightSubsystem.h"
 #include "Buildings/RTSBuildingMotionSubsystem.h"
+#include "Buildings/RTSBuildingRuin.h"
+#include "Buildings/RTSBuildingStateComponent.h"
 #include "Buildings/RTSGarageComponent.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Buildings/RTSSuperweaponComponent.h"
@@ -83,6 +85,7 @@ ARTSBuilding::ARTSBuilding()
 	ProductionComponent = CreateDefaultSubobject<URTSProductionComponent>(TEXT("Production"));
 	SuperweaponComponent = CreateDefaultSubobject<URTSSuperweaponComponent>(TEXT("Superweapon"));
 	GarageComponent = CreateDefaultSubobject<URTSGarageComponent>(TEXT("Garage"));
+	StateComponent = CreateDefaultSubobject<URTSBuildingStateComponent>(TEXT("State"));
 
 	bReplicates = true;
 	SetNetUpdateFrequency(10.f);
@@ -164,7 +167,10 @@ void ARTSBuilding::HandleDamaged(float Amount, AActor* DamageInstigator)
 
 void ARTSBuilding::HandleDeath(AActor* Killer)
 {
-	// Only cancelling refunds; a construction site the enemy destroys is lost with everything paid for it.
+	// Only cancelling refunds; a construction site the enemy destroys is lost with everything paid for it. Its rubble is
+	// cosmetic, so the footprint is free at once.
+	StateComponent->Refresh();
+	ARTSBuildingRuin::SpawnFor(*this);
 	Destroy();
 }
 
@@ -186,6 +192,10 @@ void ARTSBuilding::Tick(float DeltaSeconds)
 	if (bNavCutPending)
 	{
 		UpdateNavCut(DeltaSeconds);
+	}
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		StateComponent->Update(DeltaSeconds);
 	}
 	// Construction, production and a superweapon's charge hold once the match is over.
 	if (!HasAuthority() || ARTSGameState::IsMatchOver(*GetWorld()))
@@ -243,7 +253,8 @@ void ARTSBuilding::UpdateConstruction(float DeltaSeconds)
 void ARTSBuilding::RefreshWeapon()
 {
 	check(HasAuthority());
-	const bool bPowered = BuildingData && (!BuildingData->bRequiresPower || !ARTSPlayerState::IsLowPowerForTeam(*GetWorld(), TeamId));
+	bOwnerLowPower = ARTSPlayerState::IsLowPowerForTeam(*GetWorld(), TeamId);
+	const bool bPowered = BuildingData && (!BuildingData->bRequiresPower || !bOwnerLowPower);
 	WeaponComponent->SetWeaponData(IsConstructed() && bPowered ? BuildingData->Weapon.Get() : nullptr);
 }
 
@@ -797,20 +808,19 @@ void ARTSBuilding::ApplyConstructionVisual()
 void ARTSBuilding::ApplyTeamColor()
 {
 	// As custom primitive data, so buildings of a kind keep sharing their material instances whatever their team (#150).
-	// A building of several meshes colours them all; their lit windows and lamps (CPD LampOn, the HQ's Operational) stay on
-	// until the building's power state drives them (#196).
+	// A building of several meshes colours them all; the state component puts their lamps (CPD LampOn, the HQ's
+	// Operational) on or out (#196).
 	const FVector4 Color(ARTSUnit::GetTeamColor(TeamId));
 	Mesh->SetCustomPrimitiveDataVector4(RTSPrimitiveData::TeamColor, Color);
-	Mesh->SetCustomPrimitiveDataFloat(RTSPrimitiveData::LampOn, 1.f);
 	for (UStaticMeshComponent* Part : PartComponents)
 	{
 		if (Part)
 		{
 			Part->SetCustomPrimitiveDataVector4(RTSPrimitiveData::TeamColor, Color);
-			Part->SetCustomPrimitiveDataFloat(RTSPrimitiveData::LampOn, 1.f);
 		}
 	}
 	ApplyLightData();
+	StateComponent->Refresh(/*bForce*/ true);
 }
 
 ULocalLightComponent* ARTSBuilding::CreateLight(const FRTSBuildingLight& Data)
@@ -986,4 +996,5 @@ void ARTSBuilding::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME_CONDITION(ARTSBuilding, TeamId, COND_InitialOnly);
 	DOREPLIFETIME(ARTSBuilding, ConstructionProgress);
 	DOREPLIFETIME_CONDITION(ARTSBuilding, PaidCost, COND_InitialOnly);
+	DOREPLIFETIME(ARTSBuilding, bOwnerLowPower);
 }

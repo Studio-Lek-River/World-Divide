@@ -10,6 +10,7 @@ class UBoxComponent;
 class ULocalLightComponent;
 class UStaticMeshComponent;
 class URTSBuildingData;
+class URTSBuildingStateComponent;
 class URTSGarageComponent;
 class URTSHealthComponent;
 class URTSProductionComponent;
@@ -47,8 +48,17 @@ public:
 	 */
 	void UpdateConstruction(float DeltaSeconds);
 
-	/** Server only. Arms the weapon once constructed, unless the data requires power and the owner is low on power. */
+	/**
+	 * Server only. Arms the weapon once constructed, unless the data requires power and the owner is low on power, and
+	 * records the owner's power for every machine (IsOwnerLowPower).
+	 */
 	void RefreshWeapon();
+
+	/**
+	 * Whether the owner was low on power when the grid last changed (ARTSPlayerState::RecalculatePower), on every machine:
+	 * the player's power replicates to that player alone, but everyone sees a building go dark (URTSBuildingStateComponent).
+	 */
+	bool IsOwnerLowPower() const { return bOwnerLowPower; }
 
 	/**
 	 * Server only. Fire at Target, of any team, until it dies or leaves range; when it is null, at the ground at Location until
@@ -67,6 +77,7 @@ public:
 	URTSProductionComponent* GetProductionComponent() const { return ProductionComponent; }
 	URTSSuperweaponComponent* GetSuperweaponComponent() const { return SuperweaponComponent; }
 	URTSGarageComponent* GetGarageComponent() const { return GarageComponent; }
+	URTSBuildingStateComponent* GetStateComponent() const { return StateComponent; }
 
 	/**
 	 * Where units leave the building: outside its front edge (the data's +X edge, turned with the building), Clearance beyond
@@ -93,7 +104,7 @@ public:
 
 	/**
 	 * How fast the parts that turn on their own run (URTSBuildingMotionSubsystem, #351): 1 at their data's rates, 0 stopped
-	 * where they are, between them slower. A hook for the power state (#196), which stops the fans and radar on low power;
+	 * where they are, between them slower. Set by URTSBuildingStateComponent (#196), which stops the fans and radar on low power;
 	 * this machine only, it does not replicate.
 	 */
 	void SetEquipmentMotionScale(float Scale) { EquipmentMotionScale = FMath::Max(Scale, 0.f); }
@@ -151,7 +162,7 @@ public:
 	/**
 	 * Switches lighting group Group (Windows, Fixtures, Accents, GarageLamps) on or off: its lights and the glow of the
 	 * materials of that group, if any (RTSPrimitiveData::LightWindows..). All are on by default; the garage switches
-	 * GarageLamps with its door. A hook for the state controller (#196); this machine
+	 * GarageLamps with its door. URTSBuildingStateComponent switches the other three (#196); this machine
 	 * only, it does not replicate.
 	 */
 	void SetLightGroupOn(FName Group, bool bOn);
@@ -218,7 +229,7 @@ protected:
 	UFUNCTION()
 	void HandleDamaged(float Amount, AActor* DamageInstigator);
 
-	/** Server only. */
+	/** Server only. Leaves a ruin (ARTSBuildingRuin) and goes at once. */
 	UFUNCTION()
 	void HandleDeath(AActor* Killer);
 
@@ -300,6 +311,9 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	TObjectPtr<URTSGarageComponent> GarageComponent;
 
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	TObjectPtr<URTSBuildingStateComponent> StateComponent;
+
 	UPROPERTY(ReplicatedUsing = OnRep_BuildingData)
 	TObjectPtr<URTSBuildingData> BuildingData;
 
@@ -311,6 +325,9 @@ private:
 
 	UPROPERTY(Replicated)
 	int32 PaidCost = 0;
+
+	UPROPERTY(Replicated)
+	bool bOwnerLowPower = false;
 
 	float MeshBaseOffset = 0.f;
 
