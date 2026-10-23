@@ -1,28 +1,13 @@
 # 04 StripLight — current art state
 
-## Latest: final finish pass
+## Issue #437 Round 1 — source rebake, 2026-10-23
 
-**Producer appearance approval — 2026-10-22:** "Yes is prima zo". This approves the current lamp shape and final material finish shown in this conversation. Art review is complete; Claude's production integration and runtime validation remain outstanding. This approval supersedes the pending-review statements in the historical record below.
+Seven maps now follow the shared finish sampling contract: BaseColor/ORM and Lens LightProfile on untiled UV0; DirectX Finish_Normal on UV1 (FinishBake), tangent basis on UV0. Lens UV0 alone is uniformly scaled about (0.5, 0.5), to 0.003906–0.996094. Geometry, normals, transforms, slots, UV1 and housing UV0 match the archived approved source after save/reload. Still 300 triangles / 176 vertices / Housing then Lens. Source: [StripLight.blend](source/StripLight.blend).
 
-Current source is `source/StripLight.blend`, refined from the previous pass. Original geometry and UV0 are unchanged; a new UV1 channel contains the baked micro-bevel/frost/paint normals. Still 300 triangles, 176 vertices and two slots. The FBXs are refreshed to carry UV1. They are no longer byte-identical to the previous pass, whose files are preserved in `archive/material_pass01/`.
+Housing maps are 2048². Lens BaseColor/ORM/16-bit linear LightProfile are 1024²; Lens Finish_Normal currently retains the approved 2048² bake. All seven names, sizes, hashes and verification numbers are in [material_recipe.json](material_recipe.json) and [rebake_verification.json](evidence/rebake_verification.json). Four matched renders show no visible regression (mean absolute differences 0.0077–0.0206 / 255). Review: [rebake gallery](review/rebake/). See [handoff](CLAUDE_HANDOFF.md) for integration values and unresolved checks.
 
-Final model verification: `evidence/finish_verification.json`. The final DirectX map is `textures/T_StripLight_Finish_Normal.png`, sampled on UV1 with the original UV0 tangent basis. Refined housing roughness and lower diffuser emission are described at the top of `CLAUDE_HANDOFF.md`. Latest `pbr_*` renders show the final finish; `ue_*` images and candidate assets remain the PREVIOUS pass. Integration stays with Claude. Appearance review remains pending.
+The producer's 2026-10-22 approval (“Yes is prima zo”) covers the archived shape and finish. This round does not claim new producer approval or Unreal acceptance. Claude owns export and integration; root FBXs were not written.
 
-## Previous pass record
+## Historical — final finish / material passes
 
-Material realism pass complete for producer review, 2026-10-22. Shape accepted as the base by the producer; final material appearance approval pending. Scope is model, materials and art preview only. Claude owns all production integration.
-
-Authoritative model: `source/StripLight.blend`. PBR settings: `material_recipe.json`. Delivery/integration context: `CLAUDE_HANDOFF.md`.
-
-Geometry, topology, UVs, surface assignments and transforms are unchanged after save/reload. Both original FBX files are byte-identical to their pre-material-pass versions. LOD0 and LOD1 each have 300 triangles and the two original slots, Housing and Lens. Receipt: `evidence/material_only_verification.json`.
-
-Seven generated maps: 2K housing BaseColor/Normal/ORM and 1K lens BaseColor/Normal/ORM/LightProfile. Microstructure is deliberately restrained and clean. No added fasteners, ribs, geometry, dirt or damage. Shader-based frosted scattering is approximate, not a volumetric simulation of internal LED hardware.
-
-Review evidence:
-- `review/pbr_day_on.png`, `pbr_day_off.png`, `pbr_night_on.png`, `pbr_night_off.png`: 3840 × 2742 Blender Cycles renders.
-- `review/ue_day_on.png`, `ue_day_off.png`, `ue_night_on.png`, `ue_night_off.png`: native Unreal editor captures from isolated candidate.
-- `evidence/unreal_verified.json`: saved mesh bindings, instance parents and on/off values verified after candidate level reload in the same process.
-
-Unreal preview: `/Game/Art/Candidates/Kit_StripLight/Candidate01/L_StripLight`. No production level edits or runtime code. Rect fixture light is 180 cd / 3500 K. Preview manual exposure compensation is -5 EV; review key/fill lights are presentation assets only.
-
-Remaining: producer visual review; Claude's catalogue/shared-atlas adoption, runtime control, actual gameplay-distance validation and WorldDivide.Art.Kit test. Do not claim issue #393 closed or production integration complete.
+The complete previous state and handoff, approved source, preview, tiled textures and recipe are retained in [archive/material_pass02](archive/material_pass02/). Earlier material pass evidence remains in its existing locations. Historical pending-approval statements there are superseded by the producer's approval above; historical FBX and UV0 claims describe those passes only.

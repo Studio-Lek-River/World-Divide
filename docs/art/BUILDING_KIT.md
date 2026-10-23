@@ -294,12 +294,12 @@ Only **real** lights count. Emissive-only pieces (09, 12, 13, 14, and every lens
     TexCoord 1 and keep the tangent basis on UV0; it replaces the atlas micro-normal for that piece instead of
     stacking on it. 04 StripLight is the first (`Art/Shared/kit/lighting/04_StripLight/CLAUDE_HANDOFF.md`).
   - Until the shared atlases exist, a piece may bring its own maps at the atlas sizes (2K housing, 1K lens) through
-    its catalogue `finish` (#392: 01, 02, 03, 05, 06). `M_Kit_Housing` and `M_Kit_Lens` take BaseColor times
+    its catalogue `finish` (#392: 01, 02, 03, 05, 06; #437: 04). `M_Kit_Housing` and `M_Kit_Lens` take BaseColor times
     SurfaceColor and ORM times Roughness and Metallic on UV0, FinishNormal on UV1; the lens's glow is also times its
     LightProfile (red) and EmissionTint, turning to HotCoreTint where the profile is above 0.55 by HotCore (#393). Every
     map defaults to white or flat, so an instance without maps draws as before. Moving these pieces onto the shared
-    atlases is the atlas issue's work. 04's delivered maps tile and do not fit this contract yet, so it draws on the
-    neutral variant set until they are rebaked.
+    atlases is the atlas issue's work. 04's lens finish normal stays 2048² (#437): at 1K the narrow end highlight
+    softens.
   - A finish's `true`/`false` values are the masters' static switches (#393), off by default. `Glass` (lens): the
     LightProfile's green marks a thin shell, drawn dithered so what is inside shows through, 1 − GlassTransmission ×
     (1 − Fresnel), its base colour times GlassDarken; the instance draws masked and two-sided. `Sweep` (both masters):

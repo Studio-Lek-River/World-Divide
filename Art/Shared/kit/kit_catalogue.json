@@ -104,6 +104,7 @@
    "faction": "neutral",
    "slots": ["Housing", "Lens"],
    "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.779, 0.615], "Intensity": 3.2}},
    "light": {"anchor": "Lens", "type": "Rect", "candela": 180, "kelvin": 3500, "radius": 600, "group": "Fixtures", "behaviour": "Steady", "priority": "Primary", "max_draw_distance": 15000},
    "emergency_default": false,
    "fault_response": "Flicker",

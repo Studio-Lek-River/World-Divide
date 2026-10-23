@@ -1,0 +1,194 @@
+{
+  "before": {
+    "geometry": "0dd185e55fd2030e54a4c651e5e944f06ea24329f6405ef12e04e664106953bc",
+    "uv1": "d67543995f683c84028dbb173674ba27305b2716f3299c779f095efa7f7e9528",
+    "housing_uv0": "7f43bdc3e00449231dc9e5b1e15fa1de8158246a8e947c7d0967f8a6fce6f8f5",
+    "triangles": 300,
+    "vertices": 176
+  },
+  "after_reload": {
+    "geometry": "0dd185e55fd2030e54a4c651e5e944f06ea24329f6405ef12e04e664106953bc",
+    "uv1": "d67543995f683c84028dbb173674ba27305b2716f3299c779f095efa7f7e9528",
+    "housing_uv0": "7f43bdc3e00449231dc9e5b1e15fa1de8158246a8e947c7d0967f8a6fce6f8f5",
+    "triangles": 300,
+    "vertices": 176
+  },
+  "geometry_equal": true,
+  "uv1_equal": true,
+  "housing_uv0_equal": true,
+  "lens_uv0_min": [
+    0.003906273748725653,
+    0.003906273748725653
+  ],
+  "lens_uv0_max": [
+    0.99609375,
+    0.99609375
+  ],
+  "lens_uv0_uniform_scale": 0.8970953887884267,
+  "tangent_max_abs_difference": 1.7881393432617188e-7,
+  "maps": [
+    {
+      "file": "textures/T_StripLight_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "3a2527174ba6c0304fd847dc5dc89482427669b51c5756134d7f549d17f45fb4",
+      "uv_channel": 0,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "sRGB",
+      "bit_depth": 8
+    },
+    {
+      "file": "textures/T_StripLight_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "7959b62cafaf169e3ff0513c958278e4775878383e7412b33c66c6854f337d69",
+      "uv_channel": 1,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "linear",
+      "bit_depth": 8
+    },
+    {
+      "file": "textures/T_StripLight_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "7ead475145441f2894482dbc53c8e90deb8bdad205c51795d6115ff0379fd6be",
+      "uv_channel": 0,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "linear",
+      "bit_depth": 8
+    },
+    {
+      "file": "textures/T_StripLight_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "40e596152489b1e34ee40f7f66b5527ec00533ec621a90a9346145a5c8205888",
+      "uv_channel": 0,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "sRGB",
+      "bit_depth": 8
+    },
+    {
+      "file": "textures/T_StripLight_Lens_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "7959b62cafaf169e3ff0513c958278e4775878383e7412b33c66c6854f337d69",
+      "uv_channel": 1,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "linear",
+      "bit_depth": 8
+    },
+    {
+      "file": "textures/T_StripLight_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "78aaa99644e340162a19fb923873ec06db3240041548466e84331c8acb34bd5a",
+      "uv_channel": 0,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "linear",
+      "bit_depth": 16
+    },
+    {
+      "file": "textures/T_StripLight_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "d89a9337154a8440169ce5a191dc183017e617abb45ad2f1c948fad2f6042c58",
+      "uv_channel": 0,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "linear",
+      "bit_depth": 8
+    }
+  ],
+  "render_comparisons": {
+    "day_on": {
+      "mean_absolute_difference_0_1": 0.00008085811714408919,
+      "mean_absolute_difference_8bit": 0.020618820562958717,
+      "max_absolute_difference": 0.07058824598789215,
+      "before": "review/pbr_day_on.png",
+      "after": "review/rebake/after_day_on.png",
+      "camera_lighting": "archived approved preview scene, unchanged camera and matching four-state light settings"
+    },
+    "day_off": {
+      "mean_absolute_difference_0_1": 0.00006456207484006882,
+      "mean_absolute_difference_8bit": 0.016463328152894974,
+      "max_absolute_difference": 0.07058824598789215,
+      "before": "review/pbr_day_off.png",
+      "after": "review/rebake/after_day_off.png",
+      "camera_lighting": "archived approved preview scene, unchanged camera and matching four-state light settings"
+    },
+    "night_on": {
+      "mean_absolute_difference_0_1": 0.00006718147778883576,
+      "mean_absolute_difference_8bit": 0.017131276428699493,
+      "max_absolute_difference": 0.10196077823638916,
+      "before": "review/pbr_night_on.png",
+      "after": "review/rebake/after_night_on.png",
+      "camera_lighting": "archived approved preview scene, unchanged camera and matching four-state light settings"
+    },
+    "night_off": {
+      "mean_absolute_difference_0_1": 0.000030174804123817012,
+      "mean_absolute_difference_8bit": 0.0076945750042796135,
+      "max_absolute_difference": 0.0313725508749485,
+      "before": "review/pbr_night_off.png",
+      "after": "review/rebake/after_night_off.png",
+      "camera_lighting": "archived approved preview scene, unchanged camera and matching four-state light settings"
+    }
+  },
+  "open_issues": [
+    "Technical approximation: old housing UV1-normal-blue roughness subtraction is omitted to match shared-master UV0 ORM sampling; no visible regression observed in matched four-state renders. Claude should retain this note during integration.",
+    "Unreal import, production export/setup, runtime validation and acceptance remain Claude-owned and were not attempted."
+  ],
+  "build_piece_verified": true,
+  "fbx_unchanged": {
+    "SM_Kit_StripLight.fbx": "c19622d6ef8025c2fc197ec5f72d07e02179a1cc439dfb461c6a44334a71a8d0",
+    "SM_Kit_StripLight_LOD1.fbx": "5ed369218942166fed3e52e3f4e73eeee5c03b72d1ef2651640943e0364bfe59"
+  },
+  "source_sha256": "d0fb21bc55465d30337ee98307199c58f4c28530b3377b9e62c84e17f9a2983c",
+  "packed_graph_verified": true,
+  "independent_png_headers_and_hashes_verified": true,
+  "visual_review": "Matched four-state sheets and detail renders inspected; no visible difference in housing colour/roughness/roundover or lens brightness/glow shape at supplied views. This is an art-source check, not producer approval or Unreal acceptance.",
+  "lens_finish_resolution": {
+    "size": [
+      2048,
+      2048
+    ],
+    "reason": "Controlled 1024 test softens narrow return highlight; identical approved 2048 bake retained",
+    "comparison": [
+      "review/rebake/lens_end_2k.png",
+      "review/rebake/lens_end_1k.png"
+    ]
+  }
+}

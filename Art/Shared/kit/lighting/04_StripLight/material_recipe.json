@@ -1,126 +1,148 @@
 {
-  "housing": {
-    "roughness_range": [
-      0.3,
-      0.51
-    ],
-    "metallic": 0,
-    "ior": 1.5,
-    "normal_uv_scale": 8,
-    "orm_uv_scale": 4
-  },
-  "lens": {
-    "ior": 1.49,
-    "roughness": 0.43,
-    "transmission": 0.08,
-    "subsurface_weight": 0.18,
-    "scatter_distance_m": 0.0025,
-    "normal_uv_scale": 10,
-    "profile_uv_scale": [
-      0.9041591320072332,
-      6.849315068493151
-    ],
-    "profile_uv_offset": [
-      0.047920433996383405,
-      -2.9246575342465757
-    ]
-  },
+  "textures": [
+    {
+      "file": "textures/T_StripLight_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "3a2527174ba6c0304fd847dc5dc89482427669b51c5756134d7f549d17f45fb4",
+      "uv_channel": 0,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "sRGB",
+      "bit_depth": 8
+    },
+    {
+      "file": "textures/T_StripLight_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "7959b62cafaf169e3ff0513c958278e4775878383e7412b33c66c6854f337d69",
+      "uv_channel": 1,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "linear",
+      "bit_depth": 8
+    },
+    {
+      "file": "textures/T_StripLight_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "7ead475145441f2894482dbc53c8e90deb8bdad205c51795d6115ff0379fd6be",
+      "uv_channel": 0,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "linear",
+      "bit_depth": 8
+    },
+    {
+      "file": "textures/T_StripLight_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "40e596152489b1e34ee40f7f66b5527ec00533ec621a90a9346145a5c8205888",
+      "uv_channel": 0,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "sRGB",
+      "bit_depth": 8
+    },
+    {
+      "file": "textures/T_StripLight_Lens_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "7959b62cafaf169e3ff0513c958278e4775878383e7412b33c66c6854f337d69",
+      "uv_channel": 1,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "linear",
+      "bit_depth": 8
+    },
+    {
+      "file": "textures/T_StripLight_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "78aaa99644e340162a19fb923873ec06db3240041548466e84331c8acb34bd5a",
+      "uv_channel": 0,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "linear",
+      "bit_depth": 16
+    },
+    {
+      "file": "textures/T_StripLight_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "d89a9337154a8440169ce5a191dc183017e617abb45ad2f1c948fad2f6042c58",
+      "uv_channel": 0,
+      "uv_scale": [
+        1,
+        1
+      ],
+      "color_space": "linear",
+      "bit_depth": 8
+    }
+  ],
+  "normal_convention": "DirectX; UV0 tangent basis, UV1 FinishBake sampling; microstructure already included",
   "emission": {
-    "kelvin": 3500,
     "linear_rgb": [
       1,
       0.779,
       0.615
     ],
     "strength": 3.2,
-    "profile": "T_StripLight_Lens_LightProfile"
+    "kelvin": 3500,
+    "profile": "T_StripLight_Lens_LightProfile.png"
   },
-  "textures": [
-    {
-      "file": "textures\\T_StripLight_Housing_BaseColor.png",
-      "size": [
-        2048,
-        2048
+  "catalogue_finish": {
+    "Housing": {},
+    "Lens": {
+      "EmissionTint": [
+        1,
+        0.779,
+        0.615
       ],
-      "sha256": "7a10e5ff21807dee420cb96614bca69862da37c07a675cf7e5bf8f21f4c2beec"
-    },
-    {
-      "file": "textures\\T_StripLight_Housing_ORM.png",
-      "size": [
-        2048,
-        2048
-      ],
-      "sha256": "edb80ecd706f22d424d3f5550a3e33380faeae71f66f0a542e845617a8c5aa73"
-    },
-    {
-      "file": "textures\\T_StripLight_Housing_Normal.png",
-      "size": [
-        2048,
-        2048
-      ],
-      "sha256": "b47fa3ad767f7155f78f2b8bc415c7fd35548e247c774de9ada1d72669b0935a"
-    },
-    {
-      "file": "textures\\T_StripLight_Lens_BaseColor.png",
-      "size": [
-        1024,
-        1024
-      ],
-      "sha256": "f9089b0c358f1b5a34ac3b1272d375a599e36ef83eab24050f43c29b5f97ce43"
-    },
-    {
-      "file": "textures\\T_StripLight_Lens_ORM.png",
-      "size": [
-        1024,
-        1024
-      ],
-      "sha256": "611729bb6d0a202029f6e4b577c018be48fe5519dcdd0fe0d4ea59b2cd4b4fd9"
-    },
-    {
-      "file": "textures\\T_StripLight_Lens_Normal.png",
-      "size": [
-        1024,
-        1024
-      ],
-      "sha256": "37a3cf4eae18cdad135f6a255617fe9e845ec8a5653ab707ab2514f4836560e6"
-    },
-    {
-      "file": "textures\\T_StripLight_Lens_LightProfile.png",
-      "size": [
-        1024,
-        1024
-      ],
-      "sha256": "93a7199c416ced1ff6fb5f4d323ab0bb9215ecbdfe65ba97c63373b017b874ad"
-    },
-    {
-      "file": "textures/T_StripLight_Finish_Normal.png",
-      "sha256": "7959b62cafaf169e3ff0513c958278e4775878383e7412b33c66c6854f337d69",
-      "size": [
-        2048,
-        2048
-      ]
-    },
-    {
-      "file": "textures/T_StripLight_Finish_NormalGL.png",
-      "sha256": "56f76138938bae702538e74dd702063d5f3c34bf607bb17b7c70291710e8d901",
-      "size": [
-        2048,
-        2048
-      ]
+      "Intensity": 3.2
     }
-  ],
-  "normal_convention": "DirectX; invert G in Blender only",
-  "color_management": "BaseColor sRGB; Normal, ORM and LightProfile linear",
-  "ao": "ORM R=1; use spatial contact shadows/SSAO, never paint dirt into base colour",
-  "finish": {
-    "tangent_basis_uv_channel": 0,
-    "uv_channel": 1,
-    "bevel_radius_m": {
-      "Lens": 0.0018,
-      "Housing": 0.0012
-    },
-    "normal_directx": "textures/T_StripLight_Finish_Normal.png",
-    "normal_opengl": "textures/T_StripLight_Finish_NormalGL.png",
-    "edge_roughness_adjustment": "subtract 0.12 * (1 - baked normal blue)"
+  },
+  "lens_uv0_scale_about_center": 0.8970953887884267,
+  "lens_finish_resolution_reason": "Controlled 1024 test softens narrow return highlight; identical approved 2048 bake retained",
+  "sampling": "Untiled UV0 scale 1, offset 0, wrap; finish normal UV1 scale 1",
+  "housing": {
+    "ior": 1.5,
+    "metallic": 0,
+    "orm_uv_scale": 1,
+    "normal_uv_scale": 1
+  },
+  "lens": {
+    "ior": 1.49,
+    "transmission": 0.08,
+    "subsurface_weight": 0.18,
+    "scatter_distance_m": 0.0025,
+    "orm_uv_scale": 1,
+    "normal_uv_scale": 1
   }
 }
