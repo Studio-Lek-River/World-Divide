@@ -72,8 +72,9 @@ namespace
 	const int32 HeadquartersLODBudgets[] = { 150000, 40000 };
 	/** Where the whole HQ switches to LOD1, cm from the camera (docs/art/MODEL_PERFORMANCE.md, Buildings). */
 	constexpr double HeadquartersSwitchDistance = 26000.0;
-	/** The material sections the HQ draws with, once per mesh: its parts that share a mesh draw instanced (#358). */
-	constexpr int32 HeadquartersMaxSections = 80;
+	/** The material sections the HQ draws with, once per mesh: its parts that share a mesh draw instanced (#358), plus the
+	 * mast beacon's own lens since it is a kit piece with a housing and a lens (#393). */
+	constexpr int32 HeadquartersMaxSections = 81;
 	/** The shared props' masters (#351): the flag's cloth and the mast beacon. */
 	const TCHAR* SharedMaterialDir = TEXT("/Game/Art/Shared/Materials");
 	/** The generic building masters every building draws with (#388), and the kit's masters. */
@@ -434,7 +435,7 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		}
 	}
 
-	// Red beacons on the mast tips, glowing at their kit lens level (on battery on low power, #391), without a shadow.
+	// Red beacons on the mast tips, glowing at their kit lens level (on battery on low power, #391).
 	const UMaterial* Beacon = LoadMaster(TEXT("M_Beacon_Obstruction"), SharedMaterialDir);
 	TestTrue(TEXT("The beacon master glows at its lens level"),
 		ReadsLensLevel(Beacon) && Beacon->GetEditorOnlyData()->EmissiveColor.IsConnected());
@@ -445,11 +446,16 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		return P.Name.ToString().StartsWith(HeadquartersBeaconPrefix);
 	});
 	TestTrue(TEXT("The HQ has mast beacons"), !Beacons.IsEmpty());
+	// Since #393 the beacon is kit piece 12, its red dome on the kit's lens, which blinks as the beacon master did.
 	for (const FRTSBuildingPart& Part : Beacons)
 	{
-		const UMaterialInstance* Instance = Part.Mesh ? Cast<UMaterialInstance>(Part.Mesh->GetMaterial(0)) : nullptr;
-		TestTrue(*FString::Printf(TEXT("%s draws with the beacon master"), *Part.Name.ToString()), Instance && Instance->Parent == Beacon);
-		TestFalse(*FString::Printf(TEXT("%s casts no shadow"), *Part.Name.ToString()), Part.bCastShadow);
+		const int32 LensSlot = Part.Mesh ? Part.Mesh->GetMaterialIndex(TEXT("Lens")) : INDEX_NONE;
+		const UMaterialInstance* Instance = LensSlot != INDEX_NONE ? Cast<UMaterialInstance>(Part.Mesh->GetMaterial(LensSlot)) : nullptr;
+		float Blink = 0.f;
+		TestTrue(*FString::Printf(TEXT("%s's lens draws with the kit lens"), *Part.Name.ToString()), Instance && Instance->Parent == Lens);
+		TestTrue(*FString::Printf(TEXT("%s's lens blinks"), *Part.Name.ToString()),
+			Instance && Instance->GetScalarParameterValue(FHashedMaterialParameterInfo(TEXT("Blink")), Blink) && Blink > 0.f);
+		TestTrue(*FString::Printf(TEXT("%s casts a shadow, as a class M piece"), *Part.Name.ToString()), Part.bCastShadow);
 	}
 
 	// The flag: a flag of DA_FlagTypes on the shared cloth, which waves and stops waving past a distance.

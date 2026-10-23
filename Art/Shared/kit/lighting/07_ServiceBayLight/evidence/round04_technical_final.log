@@ -1,0 +1,25 @@
+00:00.704  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\source\ServiceBayLight.blend"
+BlenderMCP addon registered
+BlenderMCP addon unregistered
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA PASS ServiceBayLight
+00:01.313  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\source\WarningBeacon.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA PASS WarningBeacon
+00:01.829  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\source\IndicatorLED.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA PASS IndicatorLED
+00:02.672  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\12_MastBeaconSingle\source\MastBeaconSingle.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA PASS MastBeaconSingle
+00:03.454  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\13_MastBeaconDual\source\MastBeaconDual.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA PASS MastBeaconDual
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

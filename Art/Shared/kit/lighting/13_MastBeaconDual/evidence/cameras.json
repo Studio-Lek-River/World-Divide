@@ -1,0 +1,38 @@
+{
+  "close_location_m": [
+    1.0637925863265991,
+    -1.0637925863265991,
+    0.331379234790802
+  ],
+  "target_m": [
+    0,
+    0,
+    0.22499999403953552
+  ],
+  "lens_mm": 58,
+  "close_resolution": [
+    1200,
+    1100
+  ],
+  "distance_resolution": [
+    1920,
+    1080
+  ],
+  "distance_horizontal_fov_degrees": 60,
+  "engine": "Cycles",
+  "samples": 64,
+  "seed": 393,
+  "distance_samples": 128,
+  "distance_denoising": false,
+  "context": "Blender-only review; no Unreal/runtime evidence",
+  "day": "neutral sky and sun, level .05 on / 0 off",
+  "night": "studio environment, level 1 on / 0 off / .3 LowPower",
+  "round": 4,
+  "night_studio_powers_watts": [
+    8,
+    8,
+    3
+  ],
+  "bloom": "none",
+  "warning": "Studio light values are illustrative, not Unreal candela calibration"
+}

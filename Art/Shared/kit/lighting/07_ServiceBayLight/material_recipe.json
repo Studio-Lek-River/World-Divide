@@ -1,0 +1,139 @@
+{
+  "piece": "lighting/07_ServiceBayLight",
+  "round": 4,
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "textures": [
+    {
+      "path": "textures\\T_ServiceBayLight_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "BaseColor",
+      "srgb": true
+    },
+    {
+      "path": "textures\\T_ServiceBayLight_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "ORM",
+      "srgb": false
+    },
+    {
+      "path": "textures\\T_ServiceBayLight_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "BaseColor",
+      "srgb": true
+    },
+    {
+      "path": "textures\\T_ServiceBayLight_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "ORM",
+      "srgb": false
+    },
+    {
+      "path": "textures\\T_ServiceBayLight_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "LightProfile",
+      "srgb": false
+    },
+    {
+      "path": "textures/T_ServiceBayLight_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "Finish_Normal",
+      "srgb": false
+    },
+    {
+      "path": "textures/T_ServiceBayLight_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "Finish_Normal",
+      "srgb": false
+    }
+  ],
+  "orm": "R occlusion, G roughness, B metallic",
+  "normal_format": "DirectX, no Unreal green flip",
+  "normal_binding": "ONE Finish_Normal per slot; sample FinishBake UV1; retain UV0 tangents; no normal stacking",
+  "housing": {
+    "coating": "approved 392 graphite powder coat; silver edge rubbing; sparse local rust/dust/pits",
+    "roughness_mid": 0.48,
+    "metallic": "0 coating; up to .9 exposed fasteners",
+    "bevel_m": 0.001
+  },
+  "lens": {
+    "display_tint": [
+      0.89,
+      0.94,
+      1
+    ],
+    "emission_strength": 3.5,
+    "profile": "p=LightProfile.r; hot=saturate((p-.55)/.35); emission=p*LampLevel*emission_strength*lerp(display_tint,hot_core_tint,hot)",
+    "hot_core_tint": [
+      1,
+      1,
+      1
+    ],
+    "ior": 1.49,
+    "coat_weight": 0.25,
+    "coat_roughness": 0.15,
+    "orm_roughness": ".24 to .34",
+    "representation": "ribbed opal diffuser"
+  },
+  "light": {
+    "anchor": "Lens",
+    "type": "Rect",
+    "candela": 300,
+    "kelvin": 4000,
+    "radius": 1200,
+    "cone": [
+      60,
+      70
+    ],
+    "group": "GarageLamps",
+    "behaviour": "Steady",
+    "priority": "Primary"
+  },
+  "approval": "Round 4; unapproved",
+  "lod_textures": "Separate LOD charts in the same maps; every LOD painted and finish-baked",
+  "frame": "metres, +X forward, Z up; origin base underside for 08/12/13, mounting plane for 07/09",
+  "uv_beacon": "08 one dome island, U begins +X and increases towards +Y; 13 negative Y U<.5, positive Y U>=.5; seam/caps included in their dome chart",
+  "light_anchor": {
+    "anchor_m": [
+      -0.004,
+      0,
+      0
+    ],
+    "direction": [
+      1,
+      0,
+      0
+    ],
+    "text": "Rect, 300 cd, 4000 K, attenuation 12 m. Aperture 0.532 × 0.232 m; anchor (-0.004,0,0) m, direction +X. Mount pitch places it on the ceiling."
+  }
+}

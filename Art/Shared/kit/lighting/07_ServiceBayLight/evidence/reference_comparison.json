@@ -1,0 +1,10 @@
+{
+  "reference": "style_reference_04.png",
+  "crop_xyxy": [
+    40,
+    160,
+    1080,
+    770
+  ],
+  "order": "reference LEFT, Round 4 RIGHT; 07 left is family finish reference, not its silhouette"
+}

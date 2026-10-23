@@ -1,0 +1,13 @@
+00:18.781  image.write      | ERROR OpenImageIO write failed: Could not open file "퍰桟\.thumbnails\large\blender_46168_15aa312adf1fc6658c05d3ff3641081f.png.png"
+BlenderMCP addon registered
+BlenderMCP addon unregistered
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "WarningBeacon.blend"
+PREPARED lighting/08_WarningBeacon [2312, 784]
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

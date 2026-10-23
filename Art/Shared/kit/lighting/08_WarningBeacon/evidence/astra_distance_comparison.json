@@ -1,0 +1,61 @@
+{
+  "scope": "Blender fixture-centre distances; both LODs forced for comparison, no runtime or master approval claim",
+  "records": {
+    "12": {
+      "camera_distance_m": 12,
+      "source_prefix": "distance",
+      "frame": [
+        1920,
+        1080
+      ],
+      "horizontal_fov_degrees": 60,
+      "comparison_roi_pixels": 4356,
+      "roi_radius_pixels": 33,
+      "changed_pixels_gt_1_of_255": 770,
+      "max_display_delta": 0.41568630933761597,
+      "mean_delta_over_comparison_roi": 0.008657880127429962
+    },
+    "150": {
+      "camera_distance_m": 150,
+      "source_prefix": "stable",
+      "frame": [
+        1920,
+        1080
+      ],
+      "horizontal_fov_degrees": 60,
+      "comparison_roi_pixels": 196,
+      "roi_radius_pixels": 7,
+      "changed_pixels_gt_1_of_255": 11,
+      "max_display_delta": 0.062745101749897,
+      "mean_delta_over_comparison_roi": 0.0015406162710860372
+    },
+    "260": {
+      "camera_distance_m": 260,
+      "source_prefix": "stable",
+      "frame": [
+        1920,
+        1080
+      ],
+      "horizontal_fov_degrees": 60,
+      "comparison_roi_pixels": 144,
+      "roi_radius_pixels": 6,
+      "changed_pixels_gt_1_of_255": 6,
+      "max_display_delta": 0.05098039656877518,
+      "mean_delta_over_comparison_roi": 0.0012254903558641672
+    },
+    "450": {
+      "camera_distance_m": 450,
+      "source_prefix": "distance",
+      "frame": [
+        1920,
+        1080
+      ],
+      "horizontal_fov_degrees": 60,
+      "comparison_roi_pixels": 100,
+      "roi_radius_pixels": 5,
+      "changed_pixels_gt_1_of_255": 3,
+      "max_display_delta": 0.019607843831181526,
+      "mean_delta_over_comparison_roi": 0.0005490195471793413
+    }
+  }
+}

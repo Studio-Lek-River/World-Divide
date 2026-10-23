@@ -1,0 +1,141 @@
+{
+  "piece": "lighting/08_WarningBeacon",
+  "round": "4b",
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "textures": [
+    {
+      "path": "textures\\T_WarningBeacon_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "BaseColor",
+      "srgb": true
+    },
+    {
+      "path": "textures\\T_WarningBeacon_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "ORM",
+      "srgb": false
+    },
+    {
+      "path": "textures\\T_WarningBeacon_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "BaseColor",
+      "srgb": true
+    },
+    {
+      "path": "textures\\T_WarningBeacon_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "ORM",
+      "srgb": false
+    },
+    {
+      "path": "textures\\T_WarningBeacon_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "LightProfile",
+      "srgb": false
+    },
+    {
+      "path": "textures/T_WarningBeacon_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "Finish_Normal",
+      "srgb": false
+    },
+    {
+      "path": "textures/T_WarningBeacon_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "Finish_Normal",
+      "srgb": false
+    }
+  ],
+  "orm": "R occlusion, G roughness, B metallic",
+  "normal_format": "DirectX, no Unreal green flip",
+  "normal_binding": "ONE Finish_Normal per slot; sample FinishBake UV1; retain UV0 tangents; no normal stacking",
+  "housing": {
+    "coating": "near-black cast housing with local pits and silver wear",
+    "roughness_mid": 0.48,
+    "metallic": "0 coating; up to .9 exposed fasteners",
+    "bevel_m": 0.001
+  },
+  "lens": {
+    "display_tint": [
+      1,
+      0.22,
+      0.001
+    ],
+    "emission_strength": 24,
+    "profile": "LightProfile R energy, G thin-shell mask, B reserved zero; emission uses R only. Existing hot range .55-.90 and strength 24.",
+    "hot_core_tint": [
+      1,
+      0.92,
+      0.48
+    ],
+    "ior": 1.49,
+    "coat_weight": 0.3,
+    "coat_roughness": 0.035,
+    "orm_roughness": "shell .075 to .475 (scuffs/rim), bulb .15, mirror .16",
+    "representation": "Real Housing holder/bracket and Lens bulb/concave mirror under thin transparent amber dome; no projected interior",
+    "thin_shell": "Mix opaque optical BSDF with pow(BaseColor,.45)-tinted Transparent at G * .91 * (1-Fresnel(1.49)); actual interior geometry preserves parallax. ORM B gives mirror metallic=1.",
+    "specular_ior_level": 0.5,
+    "thin_shell_surface_albedo_scale": 0.18,
+    "transmission_colour": "pow(linear BaseColor,.45)",
+    "channels": {
+      "R": "radiance energy",
+      "G": "thin shell=1; bulb/mirror=0",
+      "B": "reserved zero"
+    },
+    "rotation": "Rigid local-Z material vertex rotation of Lens G<.5 and Housing z>=.177m/radius<.055m, common phase; shell fixed. See handoff."
+  },
+  "light": {
+    "anchor": "Lens",
+    "type": "Point",
+    "candela": 80,
+    "kelvin": 2200,
+    "radius": 800,
+    "group": "Warning",
+    "behaviour": "Rotate",
+    "priority": "Primary"
+  },
+  "approval": "Producer review pending",
+  "lod_textures": "Separate LOD charts in the same maps; every LOD painted and finish-baked",
+  "frame": "metres, +X forward, Z up; origin base underside for 08/12/13, mounting plane for 07/09",
+  "uv_beacon": "08 one continuous +X toward +Y outer dome island in each LOD; separate real bulb and mirror islands. Do not sweep/wrap the entire atlas.",
+  "light_anchor": {
+    "anchor_m": [
+      0,
+      0,
+      0.25
+    ],
+    "direction": "omnidirectional",
+    "text": "Point, 80 cd, amber/2200 K, attenuation 8 m; anchor (0,0,0.25) m. Mirror faces +X at rest; Claude supplies the material sweep."
+  }
+}

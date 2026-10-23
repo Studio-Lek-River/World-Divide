@@ -121,7 +121,19 @@ def report(o):
             'degenerate_triangles':len(bad),'degenerate_uv_triangles':bad_uv}
 
 
-def build():
+def build(piece):
+    """The kit generator's entry (Tools/Art/kit_blender.py, #393): the approved model from source/StripLight.blend, as LOD0
+    and, unchanged, as LOD1 (300 triangles, inside class M's LOD1 budget)."""
+    with bpy.data.libraries.load(str(OUT/'source/StripLight.blend')) as (data_from,data_to):
+        data_to.objects=[piece['mesh']]
+    lod0=data_to.objects[0]
+    bpy.context.scene.collection.objects.link(lod0)
+    lod1=lod0.copy();lod1.data=lod0.data.copy();lod1.name=f"{piece['mesh']}_LOD1"
+    bpy.context.scene.collection.objects.link(lod1)
+    return lod0,lod1
+
+
+def build_source():
     OUT.mkdir(parents=True,exist_ok=True)
     for p in ('source','review','evidence'): (OUT/p).mkdir(exist_ok=True)
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -284,4 +296,4 @@ def detail():
 if __name__=='__main__':
     from strip_light_finish import finish
     args=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else ['build']
-    {'build':build,'materials':materials,'finish':finish,'verify':verify,'render':render,'detail':detail}[args[0]]()
+    {'build':build_source,'materials':materials,'finish':finish,'verify':verify,'render':render,'detail':detail}[args[0]]()

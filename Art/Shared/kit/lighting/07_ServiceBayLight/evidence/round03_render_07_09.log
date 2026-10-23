@@ -1,0 +1,143 @@
+00:00.328  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\source\ServiceBayLight.blend"
+CYCLES DEVICES [('NVIDIA GeForce RTX 4090', True), ('AMD Ryzen 7 7800X3D 8-Core Processor', False), ('NVIDIA GeForce RTX 4090', True), ('AMD Radeon(TM) Graphics', True)]
+D:\Lek River Studio\World-Divide\Tools\Art\kit\lighting_393_review.py:82: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  world=bpy.data.worlds.new('REVIEW world');world.use_nodes=True;scene.world=world;bg=next(n for n in world.node_tree.nodes if n.type=='BACKGROUND')
+D:\Lek River Studio\World-Divide\Tools\Art\kit\lighting_393_review.py:97: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  concrete=bpy.data.materials.new('REVIEW concrete');concrete.use_nodes=True;nt=concrete.node_tree;p=next(n for n in nt.nodes if n.type=='BSDF_PRINCIPLED');p.inputs['Base Color'].default_value=(.12,.13,.14,1);p.inputs['Roughness'].default_value=.85
+00:03.453  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:08.250  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\pbr_day_off.png'
+RENDERED ServiceBayLight pbr_day_off
+00:11.297  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:15.891  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\pbr_day_on.png'
+RENDERED ServiceBayLight pbr_day_on
+00:18.891  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:23.860  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\ref_match_day.png'
+RENDERED ServiceBayLight ref_match_day
+00:26.953  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:32.125  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\pbr_night_off.png'
+RENDERED ServiceBayLight pbr_night_off
+00:35.172  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:39.703  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\pbr_night_on.png'
+RENDERED ServiceBayLight pbr_night_on
+00:42.735  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:47.688  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\ref_match_night.png'
+RENDERED ServiceBayLight ref_match_night
+00:50.781  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:52.453  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\distance_12m_lod0.png'
+RENDERED ServiceBayLight distance_12m_lod0
+00:55.485  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:57.922  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\distance_12m_lod1.png'
+RENDERED ServiceBayLight distance_12m_lod1
+01:00.922  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:03.094  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\distance_150m_lod0.png'
+RENDERED ServiceBayLight distance_150m_lod0
+01:06.188  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:07.813  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\distance_150m_lod1.png'
+RENDERED ServiceBayLight distance_150m_lod1
+01:10.844  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:13.266  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\switch_260m_lod0.png'
+RENDERED ServiceBayLight switch_260m_lod0
+01:16.297  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:19.641  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\switch_260m_lod1.png'
+RENDERED ServiceBayLight switch_260m_lod1
+01:22.813  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:24.469  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\distance_450m_lod0.png'
+RENDERED ServiceBayLight distance_450m_lod0
+01:27.500  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:30.344  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\distance_450m_lod1.png'
+RENDERED ServiceBayLight distance_450m_lod1
+01:33.360  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:35.219  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\distance_day_150m_lod0.png'
+RENDERED ServiceBayLight distance_day_150m_lod0
+01:38.313  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:39.938  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\distance_day_450m_lod0.png'
+RENDERED ServiceBayLight distance_day_450m_lod0
+01:42.938  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:45.047  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\rts_lod0.png'
+RENDERED ServiceBayLight rts_lod0
+01:48.063  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:50.172  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\review\rts_lod1.png'
+RENDERED ServiceBayLight rts_lod1
+01:50.188  image.write      | ERROR OpenImageIO write failed: Could not open file "˘ɨ\.thumbnails\large\blender_60740_3bdf02fdd84f46e079b6b33679d0f1b4.png.png"
+01:50.188  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\source\IndicatorLED.blend"
+Info: Saved as "ServiceBayLight_Preview.blend"
+CYCLES DEVICES [('NVIDIA GeForce RTX 4090', True), ('AMD Ryzen 7 7800X3D 8-Core Processor', False), ('NVIDIA GeForce RTX 4090', True), ('AMD Radeon(TM) Graphics', True)]
+01:53.219  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:57.891  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\pbr_day_off.png'
+RENDERED IndicatorLED pbr_day_off
+02:00.906  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+02:07.406  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\pbr_day_on.png'
+RENDERED IndicatorLED pbr_day_on
+02:10.453  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+02:15.328  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\ref_match_day.png'
+RENDERED IndicatorLED ref_match_day
+02:18.375  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+02:23.516  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\pbr_night_off.png'
+RENDERED IndicatorLED pbr_night_off
+02:26.563  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+02:31.610  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\pbr_night_on.png'
+RENDERED IndicatorLED pbr_night_on
+02:34.641  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+02:39.735  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\ref_match_night.png'
+RENDERED IndicatorLED ref_match_night
+02:42.797  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+02:48.250  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\tint_blue.png'
+RENDERED IndicatorLED tint_blue
+02:51.297  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+02:56.688  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\tint_red.png'
+RENDERED IndicatorLED tint_red
+02:59.719  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+03:04.578  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\tint_green.png'
+RENDERED IndicatorLED tint_green
+03:07.641  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+03:09.453  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\distance_12m_lod0.png'
+RENDERED IndicatorLED distance_12m_lod0
+03:12.485  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+03:14.110  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\distance_150m_lod0.png'
+RENDERED IndicatorLED distance_150m_lod0
+03:17.078  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+03:18.703  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\distance_450m_lod0.png'
+RENDERED IndicatorLED distance_450m_lod0
+03:21.750  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+03:23.313  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\distance_day_150m_lod0.png'
+RENDERED IndicatorLED distance_day_150m_lod0
+03:26.344  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+03:27.938  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\review\distance_day_450m_lod0.png'
+RENDERED IndicatorLED distance_day_450m_lod0
+03:27.953  image.write      | ERROR OpenImageIO write failed: Could not open file "쵐峟Ø\.thumbnails\large\blender_60740_e82cef502814c04c76e2f14b0ad50536.png.png"
+Info: Saved as "IndicatorLED_Preview.blend"
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

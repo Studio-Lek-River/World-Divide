@@ -17,14 +17,15 @@
   {
    "id": "lighting/12_MastBeaconSingle",
    "mesh": "SM_Kit_MastBeaconSingle",
-   "class": "S",
+   "class": "M",
    "faction": "neutral",
-   "slots": ["Beacon"],
-   "materials": {"Beacon": "MI_Beacon_Obstruction"},
+   "slots": ["Housing", "Lens"],
+   "atlas": {"Housing": "Trim", "Lens": "Lens"},
    "emergency_default": true,
    "fault_response": "None",
    "mount_points": {"Base": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
-   "budgets": {"lod0": 250, "lod1": 250, "slots": 1}
+   "budgets": {"lod0": 1200, "lod1": 400, "slots": 2},
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.001, 0.0004], "HotCoreTint": [1, 0.22, 0.035], "HotCore": 1, "Intensity": 14, "Blink": 1}}
   },
   {
    "id": "lighting/01_WallLamp",
@@ -95,6 +96,75 @@
    "mount_points": {"Roof": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
    "budgets": {"lod0": 2500, "lod1": 800, "slots": 2},
    "finish": {"Housing": {}, "Lens": {"EmissionTint": [0.89, 0.94, 1], "Intensity": 3.0}}
+  },
+  {
+   "id": "lighting/04_StripLight",
+   "mesh": "SM_Kit_StripLight",
+   "class": "M",
+   "faction": "neutral",
+   "slots": ["Housing", "Lens"],
+   "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "light": {"anchor": "Lens", "type": "Rect", "candela": 180, "kelvin": 3500, "radius": 600, "group": "Fixtures", "behaviour": "Steady", "priority": "Primary", "max_draw_distance": 15000},
+   "emergency_default": false,
+   "fault_response": "Flicker",
+   "mount_points": {"Ceiling": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 1200, "lod1": 400, "slots": 2}
+  },
+  {
+   "id": "lighting/07_ServiceBayLight",
+   "mesh": "SM_Kit_ServiceBayLight",
+   "class": "M",
+   "faction": "neutral",
+   "slots": ["Housing", "Lens"],
+   "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "light": {"anchor": "Lens", "type": "Rect", "candela": 300, "kelvin": 4000, "radius": 1200, "group": "GarageLamps", "behaviour": "Steady", "priority": "Primary", "max_draw_distance": 15000},
+   "emergency_default": false,
+   "fault_response": "None",
+   "mount_points": {"Ceiling": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 1200, "lod1": 400, "slots": 2},
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [0.89, 0.94, 1], "HotCoreTint": [1, 1, 1], "HotCore": 1, "Intensity": 3.5}}
+  },
+  {
+   "id": "lighting/08_WarningBeacon",
+   "mesh": "SM_Kit_WarningBeacon",
+   "class": "L",
+   "faction": "neutral",
+   "slots": ["Housing", "Lens"],
+   "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "light": {"anchor": "Lens", "type": "Point", "candela": 80, "kelvin": 2200, "radius": 800, "group": "Warning", "behaviour": "Rotate", "priority": "Primary", "max_draw_distance": 20000},
+   "wpo_disable_distance": 15000,
+   "emergency_default": false,
+   "fault_response": "None",
+   "mount_points": {"Base": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 2500, "lod1": 800, "slots": 2},
+   "finish": {"Housing": {"Sweep": true, "SweepMinZ": 17.7, "SweepRadius": 5.5},
+              "Lens": {"EmissionTint": [1, 0.22, 0.001], "HotCoreTint": [1, 0.92, 0.48], "HotCore": 1, "Intensity": 24, "Glass": true, "Sweep": true}}
+  },
+  {
+   "id": "lighting/09_IndicatorLED",
+   "mesh": "SM_Kit_IndicatorLED",
+   "class": "S",
+   "faction": "neutral",
+   "slots": ["Housing", "Lens"],
+   "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "emergency_default": false,
+   "fault_response": "None",
+   "mount_points": {"Wall": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 250, "lod1": 250, "slots": 2},
+   "finish": {"Housing": {}, "Lens": {"HotCoreTint": [1, 1, 1], "HotCore": 1, "Intensity": 10}}
+  },
+  {
+   "id": "lighting/13_MastBeaconDual",
+   "mesh": "SM_Kit_MastBeaconDual",
+   "class": "M",
+   "faction": "neutral",
+   "slots": ["Housing", "Lens"],
+   "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "emergency_default": true,
+   "fault_response": "None",
+   "mount_points": {"Base": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 1200, "lod1": 400, "slots": 2},
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.001, 0.0004], "HotCoreTint": [1, 0.22, 0.035], "HotCore": 1, "Intensity": 14, "Blink": 1, "Alternate": 1}}
   }
  ]
 }

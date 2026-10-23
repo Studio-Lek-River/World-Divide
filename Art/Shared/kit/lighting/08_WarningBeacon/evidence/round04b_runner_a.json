@@ -1,0 +1,36 @@
+{
+  "mesh": "SM_Kit_WarningBeacon",
+  "directory": "Art/Shared/kit/lighting/08_WarningBeacon",
+  "triangles": [
+    2312,
+    784
+  ],
+  "digest": [
+    "b662505025cdf9e2cd8267afd0e9d5dc843bb29d",
+    "11c2a8ff8271dc165b52ef4ecf1f06c5b2230088"
+  ],
+  "bounds": [
+    [
+      -9,
+      -9,
+      0
+    ],
+    [
+      9,
+      9,
+      32
+    ]
+  ],
+  "lens_bounds": [
+    [
+      -7.1,
+      -7.1,
+      18
+    ],
+    [
+      7.1,
+      7.1,
+      32
+    ]
+  ]
+}

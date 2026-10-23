@@ -33,28 +33,42 @@
   "lighting/12_MastBeaconSingle": {
    "mesh": "SM_Kit_MastBeaconSingle",
    "fbx": "lighting/12_MastBeaconSingle/SM_Kit_MastBeaconSingle.fbx",
-   "lod1_fbx": null,
+   "lod1_fbx": "lighting/12_MastBeaconSingle/SM_Kit_MastBeaconSingle_LOD1.fbx",
    "slots": [
-    "Beacon"
+    "Housing",
+    "Lens"
    ],
    "triangles": [
-    234
+    842,
+    346
    ],
    "bounds": [
     [
-     -22.0,
-     -22.0,
+     -23.1,
+     -23.1,
      0.0
     ],
     [
-     22.0,
-     22.0,
+     23.1,
+     23.1,
      56.0
     ]
    ],
-   "lens_bounds": null,
+   "lens_bounds": [
+    [
+     -17.0,
+     -17.0,
+     23.0
+    ],
+    [
+     17.0,
+     17.0,
+     56.0
+    ]
+   ],
    "digest": [
-    "da9db671beca1fa82a3bce897a857231978407b6"
+    "d1f56f3553041acfb5f09f4e36be256e7c3960c9",
+    "58266c93bd16575d28e90cae1606fe74972dd9db"
    ]
   },
   "lighting/01_WallLamp": {
@@ -260,6 +274,209 @@
    "digest": [
     "e15345af9127c0bbdc1022b0d7cebe163f1ce6b5",
     "808569497a6f0ddf0cf002267d0bc95c45fd7446"
+   ]
+  },
+  "lighting/04_StripLight": {
+   "mesh": "SM_Kit_StripLight",
+   "fbx": "lighting/04_StripLight/SM_Kit_StripLight.fbx",
+   "lod1_fbx": "lighting/04_StripLight/SM_Kit_StripLight_LOD1.fbx",
+   "slots": [
+    "Housing",
+    "Lens"
+   ],
+   "triangles": [
+    300,
+    300
+   ],
+   "bounds": [
+    [
+     0.0,
+     -60.0,
+     -9.1
+    ],
+    [
+     12.4,
+     60.0,
+     9.1
+    ]
+   ],
+   "lens_bounds": [
+    [
+     6.0,
+     -55.3,
+     -7.3
+    ],
+    [
+     10.8,
+     55.3,
+     7.3
+    ]
+   ],
+   "digest": [
+    "8f897f6fabe9ffd439b5e26fdb7f0676ec799af1",
+    "f2c728dc8bebaef8200d3039cfd59f449379d1e2"
+   ]
+  },
+  "lighting/07_ServiceBayLight": {
+   "mesh": "SM_Kit_ServiceBayLight",
+   "fbx": "lighting/07_ServiceBayLight/SM_Kit_ServiceBayLight.fbx",
+   "lod1_fbx": "lighting/07_ServiceBayLight/SM_Kit_ServiceBayLight_LOD1.fbx",
+   "slots": [
+    "Housing",
+    "Lens"
+   ],
+   "triangles": [
+    452,
+    164
+   ],
+   "bounds": [
+    [
+     -10.0,
+     -30.0,
+     -15.0
+    ],
+    [
+     1.9,
+     30.0,
+     15.0
+    ]
+   ],
+   "lens_bounds": [
+    [
+     -0.4,
+     -26.6,
+     -11.6
+    ],
+    [
+     -0.4,
+     26.6,
+     11.6
+    ]
+   ],
+   "digest": [
+    "e93507089623da2831fe0b234b136afdb27f71c3",
+    "86191a08d491ffd73a2c58d6001113edd1f0b5a8"
+   ]
+  },
+  "lighting/08_WarningBeacon": {
+   "mesh": "SM_Kit_WarningBeacon",
+   "fbx": "lighting/08_WarningBeacon/SM_Kit_WarningBeacon.fbx",
+   "lod1_fbx": "lighting/08_WarningBeacon/SM_Kit_WarningBeacon_LOD1.fbx",
+   "slots": [
+    "Housing",
+    "Lens"
+   ],
+   "triangles": [
+    2312,
+    784
+   ],
+   "bounds": [
+    [
+     -9.0,
+     -9.0,
+     0.0
+    ],
+    [
+     9.0,
+     9.0,
+     32.0
+    ]
+   ],
+   "lens_bounds": [
+    [
+     -7.1,
+     -7.1,
+     18.0
+    ],
+    [
+     7.1,
+     7.1,
+     32.0
+    ]
+   ],
+   "digest": [
+    "b662505025cdf9e2cd8267afd0e9d5dc843bb29d",
+    "11c2a8ff8271dc165b52ef4ecf1f06c5b2230088"
+   ]
+  },
+  "lighting/09_IndicatorLED": {
+   "mesh": "SM_Kit_IndicatorLED",
+   "fbx": "lighting/09_IndicatorLED/SM_Kit_IndicatorLED.fbx",
+   "lod1_fbx": null,
+   "slots": [
+    "Housing",
+    "Lens"
+   ],
+   "triangles": [
+    222
+   ],
+   "bounds": [
+    [
+     0.0,
+     -12.0,
+     -4.95
+    ],
+    [
+     9.0,
+     12.35,
+     4.5
+    ]
+   ],
+   "lens_bounds": [
+    [
+     2.0,
+     -9.7,
+     -4.7
+    ],
+    [
+     7.4,
+     9.7,
+     -4.7
+    ]
+   ],
+   "digest": [
+    "bb2c3e215c82267336cbb0b025a752f3316af1d0"
+   ]
+  },
+  "lighting/13_MastBeaconDual": {
+   "mesh": "SM_Kit_MastBeaconDual",
+   "fbx": "lighting/13_MastBeaconDual/SM_Kit_MastBeaconDual.fbx",
+   "lod1_fbx": "lighting/13_MastBeaconDual/SM_Kit_MastBeaconDual_LOD1.fbx",
+   "slots": [
+    "Housing",
+    "Lens"
+   ],
+   "triangles": [
+    1184,
+    376
+   ],
+   "bounds": [
+    [
+     -17.33,
+     -40.0,
+     0.0
+    ],
+    [
+     17.33,
+     40.0,
+     45.0
+    ]
+   ],
+   "lens_bounds": [
+    [
+     -12.75,
+     -35.25,
+     20.25
+    ],
+    [
+     12.75,
+     35.25,
+     45.0
+    ]
+   ],
+   "digest": [
+    "87ac9a764bcf805ac088c082701a18be5689542f",
+    "7c76cb845e8f4ab48346c948e73402726d9bbb4d"
    ]
   }
  }

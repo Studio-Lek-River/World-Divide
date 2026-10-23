@@ -1,0 +1,26 @@
+{
+  "round": "4b",
+  "piece": "08_WarningBeacon",
+  "reviewed": [
+    "reference_left_round04b_right_day.png",
+    "reference_left_round04b_right_night.png",
+    "reference_left_round04b_right_lowpower.png",
+    "construction_angles_day.png",
+    "astra_12m_LOD0_left_LOD1_right.png",
+    "astra_150m_LOD0_left_LOD1_right.png",
+    "astra_260m_LOD0_left_LOD1_right.png",
+    "astra_450m_LOD0_left_LOD1_right.png"
+  ],
+  "findings": {
+    "glass": "Thin amber transmission over real optics, dark edges, bright reflections, moulded ribs/lip, baked sparse wear",
+    "grounding": "Both LODs have positive holder/top-plate, bulb/socket and bracket/reflector intersections",
+    "night": "Compact hot filament and curved mirror separated from amber shell",
+    "lowpower": "Same shader at .3, retains core and mirror",
+    "collar_ratio": 1.154929577464789
+  },
+  "limits": [
+    "Thin-wall approximation, not solid-volume refraction",
+    "Small native LOD intensity differences documented",
+    "Unreal material/sorting/rotation and producer approval pending"
+  ]
+}

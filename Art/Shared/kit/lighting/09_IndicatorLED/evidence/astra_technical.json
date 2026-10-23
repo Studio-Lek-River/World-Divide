@@ -1,0 +1,137 @@
+{
+  "round": 4,
+  "scope": "Independent Blender inspection; producer and Unreal acceptance pending",
+  "factory_reset_repeat_digests": [
+    [
+      "ab9ccdb697a1d5c651ba83e99a0b91cd5a7fa7e3db4c7c248e040d22e0aa503d"
+    ],
+    [
+      "ab9ccdb697a1d5c651ba83e99a0b91cd5a7fa7e3db4c7c248e040d22e0aa503d"
+    ]
+  ],
+  "source_equals_generator": true,
+  "lods": [
+    {
+      "closed_components": 6,
+      "intentionally_open_components": 1,
+      "negative_closed_volumes": [],
+      "digest": "ab9ccdb697a1d5c651ba83e99a0b91cd5a7fa7e3db4c7c248e040d22e0aa503d",
+      "triangles": 222,
+      "unit_normal_max_error": 7.450580874479584e-08,
+      "orthonormal_tangent_max_error": 9.68575448734299e-08,
+      "uv0_uv1_physical_chart_max_error_m": 2.0906804622760322e-07,
+      "charts": 75,
+      "smooth_triangles": 64,
+      "hard_triangles": 158
+    }
+  ],
+  "projected_convex_outline_hausdorff_px": {},
+  "material_bindings": {
+    "Housing": [
+      {
+        "image": "T_IndicatorLED_Housing_BaseColor.png",
+        "colorspace": "sRGB",
+        "uv": "UVMap",
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "image": "T_IndicatorLED_Housing_ORM.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "image": "T_IndicatorLED_Housing_Finish_Normal.png",
+        "colorspace": "Non-Color",
+        "uv": "FinishBake",
+        "size": [
+          2048,
+          2048
+        ]
+      }
+    ],
+    "Lens": [
+      {
+        "image": "T_IndicatorLED_Lens_BaseColor.png",
+        "colorspace": "sRGB",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_IndicatorLED_Lens_ORM.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_IndicatorLED_Lens_Finish_Normal.png",
+        "colorspace": "Non-Color",
+        "uv": "FinishBake",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_IndicatorLED_Lens_LightProfile.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      }
+    ]
+  },
+  "final_normal_bake_coverage": {
+    "Housing": [
+      {
+        "lod": "SM_Kit_IndicatorLED",
+        "triangle_centres": 220,
+        "min_blue": 0.5490196347236633
+      }
+    ],
+    "Lens": [
+      {
+        "lod": "SM_Kit_IndicatorLED",
+        "triangle_centres": 2,
+        "min_blue": 0.988235354423523
+      }
+    ]
+  },
+  "lens_chart_kinds": {
+    "SM_Kit_IndicatorLED": [
+      "indicator_ribs"
+    ]
+  },
+  "indicator_achromatic_max_channel_error": {
+    "BaseColor": 0.0,
+    "LightProfile": 0.0
+  },
+  "uv0_texel_density": {
+    "SM_Kit_IndicatorLED": {
+      "Housing": {
+        "min_px_per_m": 389.0213751991345,
+        "median_px_per_m": 512.000013704653,
+        "max_px_per_m": 517.3094421019616
+      },
+      "Lens": {
+        "min_px_per_m": 1843.199962366316,
+        "median_px_per_m": 1843.199962366316,
+        "max_px_per_m": 1843.199962366316
+      }
+    }
+  }
+}

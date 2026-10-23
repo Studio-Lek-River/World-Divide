@@ -1,0 +1,69 @@
+{
+  "round": 4,
+  "note": "Round 3 protected inputs match; no git or Unreal actions.",
+  "files": [
+    {
+      "path": "Art/Shared/kit/lighting/_work_393/BRIEF.md",
+      "sha256": "b5255dda093ee5b4934c60c48e5a9a2b6e1bd7f5fe148762ce50fb25b82e6dbf",
+      "round02_match": true,
+      "round03_match": true
+    },
+    {
+      "path": "Art/Shared/kit/lighting/_work_393/REVIEW_R1.md",
+      "sha256": "6175f80bda5aa7498e1266f752079093b7647ef996ab24dac2115d5af11974b2",
+      "round02_match": true,
+      "round03_match": true
+    },
+    {
+      "path": "Art/Shared/kit/lighting/_work_393/catalogue_393.json",
+      "sha256": "947566c837b4c1291e8c1903d784ac97d746fdff609aefc7f6bf5cd2691b7fe4",
+      "round02_match": true,
+      "round03_match": true
+    },
+    {
+      "path": "Art/Shared/kit/lighting/_work_393/run_pieces.py",
+      "sha256": "b4c31cc0c312a93b14b2f31bc4c0e63b9b1e0d487c91ea48303890ed1e25b25b",
+      "round02_match": true,
+      "round03_match": true
+    },
+    {
+      "path": "Tools/Art/kit/mast_beacon_single.py",
+      "sha256": "477aed0075e5fb4a21a28cc163cb39d7481ef77dcf47e78f8695dfd101a8286a",
+      "round02_match": true,
+      "round03_match": true
+    },
+    {
+      "path": "Tools/Art/kit/wall_lamp_materials.py",
+      "sha256": "11f0cea41684f5932a3dd25b887bc3b338f32b860a5970c29f48cf5b8981fba1",
+      "round02_match": true,
+      "round03_match": true
+    },
+    {
+      "path": "Tools/Art/kit/wall_lamp_render.py",
+      "sha256": "92e6b39eb0db6c55c4a146c829b317a76bbf960a420697b4e4012a2b1abd6c37",
+      "round02_match": true,
+      "round03_match": true
+    },
+    {
+      "path": "Tools/Art/kit_blender.py",
+      "sha256": "76f140c590a7820b9a7b6853a2aa48a854ad7e60bee7dc5cd48e6b0734874760",
+      "round02_match": true,
+      "round03_match": true
+    },
+    {
+      "path": "Art/Shared/kit/lighting/12_MastBeaconSingle/SM_Kit_MastBeaconSingle.fbx",
+      "sha256": "1b05771d7ce797034b6fdc49ce704bc31f62117276b93fe01d369cc60eb46169",
+      "round02_match": true,
+      "round03_match": true
+    },
+    {
+      "path": "Art/Shared/kit/lighting/_work_393/REVIEW_R2.md",
+      "sha256": "0aa442c69af917c868a4a3edb544e456e3d0ce2a4424acceff889a05a5467bec",
+      "round03_match": true
+    },
+    {
+      "path": "Art/Shared/kit/lighting/_work_393/REVIEW_R3.md",
+      "sha256": "b3791737f5029cb58c5b39e64fb8064a857e8ec72537491e79f437362f854a89"
+    }
+  ]
+}

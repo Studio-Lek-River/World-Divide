@@ -71,8 +71,9 @@ Tools/Art/kit/<piece>.py                one module per piece
   *mounts* pieces.
 - The shared flag and the obstruction beacon moved from `Art/Shared/props/` into the kit in M7.00-04 (#389), as
   `identity/01_FlagCloth` (`SM_Kit_FlagCloth`) and `lighting/12_MastBeaconSingle` (`SM_Kit_MastBeaconSingle`, cut to class
-  S: 12 segments, 234 triangles, one LOD). Until 12 is remodelled (M7.00-08) it keeps its one `Beacon` slot, its lens told
-  apart by UV0, on `M_Beacon_Obstruction`; the flag keeps `M_Flag_Cloth`, its flag set per building from `DA_FlagTypes`.
+  S: 12 segments, 234 triangles, one LOD). M7.00-08 (#393) remodelled 12 from the producer's image as a class M piece
+  with `Housing` and `Lens` on the kit masters, its lens blinking as `M_Beacon_Obstruction` did (`Blink`), which no
+  piece uses any more; the flag keeps `M_Flag_Cloth`, its flag set per building from `DA_FlagTypes`.
 
 ## Naming
 
@@ -295,8 +296,18 @@ Only **real** lights count. Emissive-only pieces (09, 12, 13, 14, and every lens
   - Until the shared atlases exist, a piece may bring its own maps at the atlas sizes (2K housing, 1K lens) through
     its catalogue `finish` (#392: 01, 02, 03, 05, 06). `M_Kit_Housing` and `M_Kit_Lens` take BaseColor times
     SurfaceColor and ORM times Roughness and Metallic on UV0, FinishNormal on UV1; the lens's glow is also times its
-    LightProfile (red) and EmissionTint. Every map defaults to white or flat, so an instance without maps draws as
-    before. Moving these pieces onto the shared atlases is the atlas issue's work.
+    LightProfile (red) and EmissionTint, turning to HotCoreTint where the profile is above 0.55 by HotCore (#393). Every
+    map defaults to white or flat, so an instance without maps draws as before. Moving these pieces onto the shared
+    atlases is the atlas issue's work. 04's delivered maps tile and do not fit this contract yet, so it draws on the
+    neutral variant set until they are rebaked.
+  - A finish's `true`/`false` values are the masters' static switches (#393), off by default. `Glass` (lens): the
+    LightProfile's green marks a thin shell, drawn dithered so what is inside shows through, 1 − GlassTransmission ×
+    (1 − Fresnel), its base colour times GlassDarken; the instance draws masked and two-sided. `Sweep` (both masters):
+    world position offset turns part of the piece about its Z axis at SweepRate (1.5 turns a second, as the turning
+    light), on the lens where the profile's green is 0, on the housing above SweepMinZ within SweepRadius (cm). 08 uses
+    both for its dome and its turning reflector. A lens with `Blink` 1 blinks on its own, its phase from where it stands,
+    and with `Alternate` 1 its half at U ≥ 0.5 half a cycle later (13's second dome); only lenses without a real light
+    blink.
 - **Real dimensions** (see each piece's reference). Mounting plates, brackets, gaskets, cable glands and screws are
   geometry on L and XL pieces and normal-map detail on S and M ones (detail under 10 cm lives in the maps,
   `MODEL_PERFORMANCE.md`).
@@ -311,8 +322,8 @@ Only **real** lights count. Emissive-only pieces (09, 12, 13, 14, and every lens
 
 | Class | Pieces | LOD0 | LOD1 |
 |---|---|---:|---:|
-| S (LED) | 09, 12, 13, 14 | ≤ 250 | = LOD0 (nothing disappears) |
-| M | 01, 02, 03, 04, 07 | ≤ 1,200 | ≤ 400 |
+| S (LED) | 09, 14 | ≤ 250 | = LOD0 (nothing disappears) |
+| M | 01, 02, 03, 04, 07, 12, 13 | ≤ 1,200 | ≤ 400 |
 | L | 05, 06, 08, 10 | ≤ 2,500 | ≤ 800 |
 | XL | 11 | ≤ 4,000 | ≤ 1,200 |
 
@@ -341,8 +352,8 @@ approved.
 | 09 | Small configurable indicator LED | `SM_Kit_IndicatorLED` | S | none (emissive) | colour per mount | None | — |
 | 10 | Path/area lamp | `SM_Kit_PathLamp` | L | Spot down, Secondary | Fixtures | None | — |
 | 11 | Perimeter pole lamp | `SM_Kit_PoleLamp` | XL | Spot down | Fixtures | None | — |
-| 12 | Single red mast LED beacon | `SM_Kit_MastBeaconSingle` | S | none (emissive) | obstruction, battery | None | was `SM_Beacon_Obstruction` (#389) |
-| 13 | Dual red mast LED beacon | `SM_Kit_MastBeaconDual` | S | none (emissive) | obstruction, battery | None | — |
+| 12 | Single red mast LED beacon | `SM_Kit_MastBeaconSingle` | M | none (emissive) | obstruction, battery | None | was `SM_Beacon_Obstruction` (#389) |
+| 13 | Dual red mast LED beacon | `SM_Kit_MastBeaconDual` | M | none (emissive) | obstruction, battery | None | — |
 | 14 | Multicolour status LED cluster | `SM_Kit_StatusCluster` | S | none (emissive) | colour/pattern per mount | None | — |
 
 ### Appearance references
@@ -359,19 +370,20 @@ Present-day military and industrial fixtures, no brand look. Light values are th
 | 05 | Cylindrical spot can on a slotted swivel arm and a two-bolt wall plate, braided cable | can Ø 18 × 24, arm 25, plate 10 × 30 | dark weathered die-cast | clear glass over a honeycomb reflector | 3000 K, 600 cd, 10/30°, 20 m |
 | 06 | Two rectangular LED flood heads on a U-yoke, square post and four-bolt roof base plate | 82 × 28 × 71 | dark weathered steel, rear cooling fins | three LED panels per head behind glass | 4000 K, 500 cd, 25/55°, 20 m |
 | 07 | Recessed high-bay panel set flush in a bay ceiling, trim frame | 60 × 30 × 10 | white enamel frame, steel trim | prismatic acrylic panel | 4000 K, 300 cd, rect 56 × 26 cm, 12 m |
-| 08 | Rotating warning beacon on a flat base, amber Fresnel dome | Ø 14 × 18 | black polycarbonate base, three bolts | amber Fresnel dome with an inner mirror (rotates in the material) | amber (2200 K), 80 cd, point, 8 m; Rotate 1.5 Hz or Flash 1 Hz |
-| 09 | Panel-mount pilot light with a chrome bezel | Ø 3 × 2 | bezel only | domed LED cap | emissive, colour per mount |
+| 08 | Rotating warning beacon: amber Fresnel dome on a two-band cast collar, short stem, bolted square base plate (#393) | Ø 18 × 32 | blackened cast iron, four hex bolts | see-through amber dome over a real bulb, holder and mirror that turn (`Glass`, `Sweep`) | amber (2200 K), 80 cd, point, 8 m; Rotate 1.5 Hz or Flash 1 Hz |
+| 09 | Small chamfered wall box with a ribbed diffuser underneath, slotted end plug, two Torx screws (#393) | 24 × 9 × 9 | worn bare steel | ribbed neutral diffuser in a screwed bezel | emissive, colour per mount |
 | 10 | Bollard path light with a louvred head | Ø 20 × 100 | dark grey extruded aluminium, base plate with four anchor bolts | louvres throw light down only | 3000 K, 80 cd, 30/60°, 6 m |
 | 11 | Galvanised perimeter pole with a flat "shoebox" LED head on a short arm | pole 600 tall, head 60 × 30 × 10 | galvanised steel pole and base plate, grey head | flat glass underside | 4000 K, 800 cd, 30/55°, 22 m |
-| 12 | Aviation obstruction light (low-intensity, red) on a mast tip | the existing beacon, 44 × 56 at scale 1 | grey base, red dome | red glass dome, dark between flashes | emissive red, existing flash |
-| 13 | Two red obstruction lights on a short horizontal bar bracket | 40 × 10 × 15 | galvanised bar, two grey bases | two red domes | emissive red, both steady or alternating |
+| 12 | Aviation obstruction light (low-intensity, red) on a mast tip: dome, clamp-lug collar, stem with a gland nut (#393) | 46 × 46 × 56 at scale 1 | dark cast metal | red glass dome over an LED column | emissive red, blinking (`Blink`) |
+| 13 | Two red obstruction lights (12's head at 0.75 ×) on a bolted horizontal bar (#393) | 80 × 35 × 45 | weathered steel bar, gland nuts | two red domes | emissive red, blinking in turn (`Alternate`) |
 | 14 | Stack light: three or four LED segments on a short pole, or a cluster of four pilot lights on a plate | Ø 6 × 25 | black base, grey cap | segment lenses red, amber, green, blue/white | emissive, colour and pattern per mount |
 
 Appearance approval is per piece: Codex delivers a candidate with close-up and RTS-camera shots, the producer approves
-it, and only then does Claude add its catalogue entry. 01, 02, 03, 05 and 06 were approved on 2026-10-23 (#392; each
-piece's `STATE.md`). The game-side shots of a piece come from `DA_TestKitLighting` in `/Game/Data/Showcase`, a plain block
-with 01, 02, 03 and 05 on its front and 06 on its roof: `ue.ps1 -Task buildingshots -Building DA_TestKitLighting`, and
-with `-Cvars rts.Light.ForceDark=1` for the night.
+it, and only then does Claude add its catalogue entry. 01, 02, 03, 05 and 06 were approved on 2026-10-23 (#392), 04 on
+2026-10-22 and 07, 08, 09, 12 and 13 on 2026-10-23 (#393; each piece's `STATE.md`). The game-side shots of a piece come
+from `DA_TestKitLighting` in `/Game/Data/Showcase`, a plain Large block with 01, 02, 03, 05, 09 (blue), 04 and 07 on its
+front and 06, 08, 12 and 13 on its roof: `ue.ps1 -Task buildingshots -Building DA_TestKitLighting`, with `-Cvars
+rts.Light.ForceDark=1` for the night and `rts.Light.ForceDark=1,rts.Debug.BuildingState=2` for low power.
 
 ## Other kits (outline)
 
@@ -484,6 +496,15 @@ which happens only as the camera crosses 260 m; per-instance data survives it.
 |---|---|
 | The producer's reference images (issue comments, now `lighting/<NN>_<Piece>/reference/`) differ from the archetype text | The images win (2026-10-23). 05 is a cylindrical spot on a swivel arm, not a U-yoke flood, and the Phase B flood is not its source. |
 | 06's image is a twin roof flood light, not the shielded stairwell light | 06 becomes the roof flood light `SM_Kit_RoofFloodLight`, class L, in the Fixtures group. |
+
+## Producer decisions (#393)
+
+| Question | Decision |
+|---|---|
+| The producer's images are numbered 07 (rotating beacon) and 08 (small indicator light), the catalogue's 07 and 08 are the service-bay light and the warning beacon | The catalogue numbers stay (2026-10-23): image "07" is 08 `SM_Kit_WarningBeacon`, image "08" is 09 `SM_Kit_IndicatorLED` (a small worn-steel wall box, its colour per mount), and 07 `SM_Kit_ServiceBayLight` is modelled from its archetype text. |
+| 12 versus `SM_Beacon_Obstruction` | 12 is the obstruction beacon (#386), remodelled from the producer's image; the HQ's two mast tips draw it. |
+| 12 and 13 at 250 triangles read as polygons up close, and 12 stands on the HQ's mast tips at 1.75 × | 12 and 13 are class M (1,200 / 400) and cast a shadow; 13's domes are 0.75 × 12's, 80 × 35 × 45 cm. |
+| 08's colour | Amber, as the archetype, not the image's red-orange; its inside is real geometry that turns (`Sweep`) behind a see-through dome (`Glass`). |
 
 ## Approval
 

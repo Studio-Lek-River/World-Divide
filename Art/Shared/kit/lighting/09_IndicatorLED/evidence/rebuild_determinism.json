@@ -1,0 +1,86 @@
+{
+  "round": 4,
+  "runner": "_work_393/run_pieces.py",
+  "all_five_built_twice": true,
+  "both_exit_codes": [
+    0,
+    0
+  ],
+  "logs": [
+    "07_ServiceBayLight/evidence/round04_retained_a.log",
+    "07_ServiceBayLight/evidence/round04_retained_b.log"
+  ],
+  "first": {
+    "mesh": "SM_Kit_IndicatorLED",
+    "directory": "Art/Shared/kit/lighting/09_IndicatorLED",
+    "triangles": [
+      222
+    ],
+    "digest": [
+      "bb2c3e215c82267336cbb0b025a752f3316af1d0"
+    ],
+    "bounds": [
+      [
+        0,
+        -12,
+        -4.95
+      ],
+      [
+        9,
+        12.35,
+        4.5
+      ]
+    ],
+    "lens_bounds": [
+      [
+        2,
+        -9.7,
+        -4.7
+      ],
+      [
+        7.4,
+        9.7,
+        -4.7
+      ]
+    ]
+  },
+  "second": {
+    "mesh": "SM_Kit_IndicatorLED",
+    "directory": "Art/Shared/kit/lighting/09_IndicatorLED",
+    "triangles": [
+      222
+    ],
+    "digest": [
+      "bb2c3e215c82267336cbb0b025a752f3316af1d0"
+    ],
+    "bounds": [
+      [
+        0,
+        -12,
+        -4.95
+      ],
+      [
+        9,
+        12.35,
+        4.5
+      ]
+    ],
+    "lens_bounds": [
+      [
+        2,
+        -9.7,
+        -4.7
+      ],
+      [
+        7.4,
+        9.7,
+        -4.7
+      ]
+    ]
+  },
+  "matching_digests": true,
+  "log_sha256": {
+    "07_ServiceBayLight/evidence/round04_retained_a.log": "e048c662b093151ba884e9585811618c88e2ffb2edcdf65a7dc0a4ed8a4ac782",
+    "07_ServiceBayLight/evidence/round04_retained_b.log": "f82adeb327a66b1e2229f8edbbacaa22dd9e01114082029d52d2ead7bc0279c2"
+  }
+}

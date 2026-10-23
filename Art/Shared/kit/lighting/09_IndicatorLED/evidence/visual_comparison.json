@@ -1,0 +1,46 @@
+{
+  "round": 4,
+  "scope": "Independent reference and native-distance review, Blender only",
+  "observations": "The box chamfer, plug, front screws and ribbed underside match the reference construction. Night review lighting now reveals worn steel; maps remain unchanged and neutral. The elevated RTS camera sees the top of the housing and occludes the downward-facing diffuser; 150/450 m elevated views therefore do not show a bright indicator. The reference-angle blue/red/green views demonstrate the actual emitting face.",
+  "changes": "Retained the chamfered worn-steel box, slotted end plug, two front screws and recessed ribbed underside diffuser. Increased only night review lighting for readable steel. BaseColor and LightProfile are exactly achromatic; colour variants change emission tint only.",
+  "limits": "The underside lens is physically hidden from the elevated RTS test camera. No artificial upper emitting surface was added. The product-angle tint views, not the top view, establish optical appearance.",
+  "images": [
+    {
+      "path": "review/reference_left_round04_right_day.png",
+      "sha256": "ebf4232928d2ace27faf01a3455f65a7cb2fcac2216f7eb50969b5b78eb2b290"
+    },
+    {
+      "path": "review/reference_left_round04_right_night.png",
+      "sha256": "d77baf93a93d8197aff2d870900614f210f0afb8a5d247a6a23489058dace1e3"
+    },
+    {
+      "path": "review/ref_match_day.png",
+      "sha256": "28e9eef501c80427afc1db90613e1ac104de25585c1e0a032a81d0d97c921a92"
+    },
+    {
+      "path": "review/ref_match_night.png",
+      "sha256": "ccdbc8d1c004e0164f25d297dd45913009a0c653492ae797e7b6550e9235b1b5"
+    },
+    {
+      "path": "review/astra_12m_LOD0_only.png",
+      "sha256": "0d1757884e960700254bffa1389b6799bab2b19f164f28368c56e648ab68f04c"
+    },
+    {
+      "path": "review/astra_150m_LOD0_only.png",
+      "sha256": "33b5ae6c00aec1373e9dddd2bfc978f561d3202e37e0fcbd8d9b633b03373fca"
+    },
+    {
+      "path": "review/astra_260m_LOD0_only.png",
+      "sha256": "84fe3737cc7031845a755ecda6d263468697c4121aaa00c352f3596d5854b319"
+    },
+    {
+      "path": "review/astra_450m_LOD0_only.png",
+      "sha256": "ed46e339488bc2d18520d948007491178247825ceb2b9121487bda488a9fa8c3"
+    },
+    {
+      "path": "review/astra_distance_contact.png",
+      "sha256": "e0d3e941c948f94fd356291c5e390c8bea7a6ba07f746d1e1049a5f330c6f64d"
+    }
+  ],
+  "approval": "pending"
+}

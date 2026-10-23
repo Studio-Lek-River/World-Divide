@@ -1,0 +1,25 @@
+00:29.031  image.write      | ERROR OpenImageIO write failed: Could not open file "틐乿\.thumbnails\large\blender_46448_7ef2be0e95af48ce73ca1862a8842a72.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "ServiceBayLight.blend"
+PREPARED lighting/07_ServiceBayLight [452, 164]
+00:39.219  image.write      | ERROR OpenImageIO write failed: Could not open file "틐乿\.thumbnails\large\blender_46448_3c88900b3d3eed1daea345b463ee59db.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "IndicatorLED.blend"
+PREPARED lighting/09_IndicatorLED [222]
+01:10.844  image.write      | ERROR OpenImageIO write failed: Could not open file "틐乿\.thumbnails\large\blender_46448_d95f87d74b3721c69f7038f6d0f8427c.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "MastBeaconDual.blend"
+PREPARED lighting/13_MastBeaconDual [1184, 376]
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

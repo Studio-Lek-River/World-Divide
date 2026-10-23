@@ -1,0 +1,36 @@
+{
+  "mesh": "SM_Kit_MastBeaconDual",
+  "directory": "Art/Shared/kit/lighting/13_MastBeaconDual",
+  "triangles": [
+    1184,
+    376
+  ],
+  "digest": [
+    "87ac9a764bcf805ac088c082701a18be5689542f",
+    "7c76cb845e8f4ab48346c948e73402726d9bbb4d"
+  ],
+  "bounds": [
+    [
+      -17.33,
+      -40,
+      0
+    ],
+    [
+      17.33,
+      40,
+      45
+    ]
+  ],
+  "lens_bounds": [
+    [
+      -12.75,
+      -35.25,
+      20.25
+    ],
+    [
+      12.75,
+      35.25,
+      45
+    ]
+  ]
+}

@@ -1,0 +1,31 @@
+00:01.344  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\source\ServiceBayLight.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+VERIFIED lighting/07_ServiceBayLight
+00:02.984  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\source\WarningBeacon.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+VERIFIED lighting/08_WarningBeacon
+00:04.406  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\source\IndicatorLED.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+VERIFIED lighting/09_IndicatorLED
+00:06.156  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\12_MastBeaconSingle\source\MastBeaconSingle.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+VERIFIED lighting/12_MastBeaconSingle
+00:07.625  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\13_MastBeaconDual\source\MastBeaconDual.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+VERIFIED lighting/13_MastBeaconDual
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

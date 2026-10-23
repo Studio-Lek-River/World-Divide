@@ -1,0 +1,180 @@
+{
+  "lighting/07_ServiceBayLight": {
+    "mesh": "SM_Kit_ServiceBayLight",
+    "directory": "Art/Shared/kit/lighting/07_ServiceBayLight",
+    "triangles": [
+      452,
+      164
+    ],
+    "digest": [
+      "e93507089623da2831fe0b234b136afdb27f71c3",
+      "86191a08d491ffd73a2c58d6001113edd1f0b5a8"
+    ],
+    "bounds": [
+      [
+        -10,
+        -30,
+        -15
+      ],
+      [
+        1.9,
+        30,
+        15
+      ]
+    ],
+    "lens_bounds": [
+      [
+        -0.4,
+        -26.6,
+        -11.6
+      ],
+      [
+        -0.4,
+        26.6,
+        11.6
+      ]
+    ]
+  },
+  "lighting/08_WarningBeacon": {
+    "mesh": "SM_Kit_WarningBeacon",
+    "directory": "Art/Shared/kit/lighting/08_WarningBeacon",
+    "triangles": [
+      1828,
+      724
+    ],
+    "digest": [
+      "96d655fa58c2f73223a4735eb725f15fd42ddd41",
+      "b6dfa01dc916fd0b0cee96538d17cf71c572c8ee"
+    ],
+    "bounds": [
+      [
+        -9,
+        -9,
+        0
+      ],
+      [
+        9,
+        9,
+        32
+      ]
+    ],
+    "lens_bounds": [
+      [
+        -7,
+        -7,
+        18
+      ],
+      [
+        7,
+        7,
+        32
+      ]
+    ]
+  },
+  "lighting/09_IndicatorLED": {
+    "mesh": "SM_Kit_IndicatorLED",
+    "directory": "Art/Shared/kit/lighting/09_IndicatorLED",
+    "triangles": [
+      222
+    ],
+    "digest": [
+      "bb2c3e215c82267336cbb0b025a752f3316af1d0"
+    ],
+    "bounds": [
+      [
+        0,
+        -12,
+        -4.95
+      ],
+      [
+        9,
+        12.35,
+        4.5
+      ]
+    ],
+    "lens_bounds": [
+      [
+        2,
+        -9.7,
+        -4.7
+      ],
+      [
+        7.4,
+        9.7,
+        -4.7
+      ]
+    ]
+  },
+  "lighting/12_MastBeaconSingle": {
+    "mesh": "SM_Kit_MastBeaconSingle",
+    "directory": "Art/Shared/kit/lighting/12_MastBeaconSingle/candidate",
+    "triangles": [
+      842,
+      346
+    ],
+    "digest": [
+      "d1f56f3553041acfb5f09f4e36be256e7c3960c9",
+      "58266c93bd16575d28e90cae1606fe74972dd9db"
+    ],
+    "bounds": [
+      [
+        -23.1,
+        -23.1,
+        0
+      ],
+      [
+        23.1,
+        23.1,
+        56
+      ]
+    ],
+    "lens_bounds": [
+      [
+        -17,
+        -17,
+        23
+      ],
+      [
+        17,
+        17,
+        56
+      ]
+    ]
+  },
+  "lighting/13_MastBeaconDual": {
+    "mesh": "SM_Kit_MastBeaconDual",
+    "directory": "Art/Shared/kit/lighting/13_MastBeaconDual",
+    "triangles": [
+      1184,
+      376
+    ],
+    "digest": [
+      "87ac9a764bcf805ac088c082701a18be5689542f",
+      "7c76cb845e8f4ab48346c948e73402726d9bbb4d"
+    ],
+    "bounds": [
+      [
+        -17.33,
+        -40,
+        0
+      ],
+      [
+        17.33,
+        40,
+        45
+      ]
+    ],
+    "lens_bounds": [
+      [
+        -12.75,
+        -35.25,
+        20.25
+      ],
+      [
+        12.75,
+        35.25,
+        45
+      ]
+    ]
+  }
+}

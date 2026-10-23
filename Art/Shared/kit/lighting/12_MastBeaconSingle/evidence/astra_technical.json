@@ -1,0 +1,183 @@
+{
+  "round": 4,
+  "scope": "Independent Blender inspection; producer and Unreal acceptance pending",
+  "factory_reset_repeat_digests": [
+    [
+      "f68f84e883e9d29dc0be8d97ace8fa12d80e44f04de93bc2fc55717953802d50",
+      "17cc389fc3acd35a9065d66a0167f8776cd7b2981f64fbe6ad16cab803ebd329"
+    ],
+    [
+      "f68f84e883e9d29dc0be8d97ace8fa12d80e44f04de93bc2fc55717953802d50",
+      "17cc389fc3acd35a9065d66a0167f8776cd7b2981f64fbe6ad16cab803ebd329"
+    ]
+  ],
+  "source_equals_generator": true,
+  "lods": [
+    {
+      "closed_components": 5,
+      "intentionally_open_components": 2,
+      "negative_closed_volumes": [],
+      "digest": "f68f84e883e9d29dc0be8d97ace8fa12d80e44f04de93bc2fc55717953802d50",
+      "triangles": 842,
+      "unit_normal_max_error": 1.0058283295144577e-07,
+      "orthonormal_tangent_max_error": 1.1175718794831369e-07,
+      "uv0_uv1_physical_chart_max_error_m": 2.4027400458748785e-07,
+      "charts": 30,
+      "smooth_triangles": 736,
+      "hard_triangles": 106
+    },
+    {
+      "closed_components": 5,
+      "intentionally_open_components": 2,
+      "negative_closed_volumes": [],
+      "digest": "17cc389fc3acd35a9065d66a0167f8776cd7b2981f64fbe6ad16cab803ebd329",
+      "triangles": 346,
+      "unit_normal_max_error": 9.685755242294647e-08,
+      "orthonormal_tangent_max_error": 1.1315569925507418e-07,
+      "uv0_uv1_physical_chart_max_error_m": 2.497889789080651e-07,
+      "charts": 30,
+      "smooth_triangles": 272,
+      "hard_triangles": 74
+    }
+  ],
+  "projected_convex_outline_hausdorff_px": {
+    "150": {
+      "fixture": 0.17018197421273176,
+      "lens": 0.17018197421273176
+    },
+    "260": {
+      "fixture": 0.09781241685624595,
+      "lens": 0.09781241685624595
+    }
+  },
+  "material_bindings": {
+    "Housing": [
+      {
+        "image": "T_MastBeaconSingle_Housing_BaseColor.png",
+        "colorspace": "sRGB",
+        "uv": "UVMap",
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "image": "T_MastBeaconSingle_Housing_ORM.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "image": "T_MastBeaconSingle_Housing_Finish_Normal.png",
+        "colorspace": "Non-Color",
+        "uv": "FinishBake",
+        "size": [
+          2048,
+          2048
+        ]
+      }
+    ],
+    "Lens": [
+      {
+        "image": "T_MastBeaconSingle_Lens_BaseColor.png",
+        "colorspace": "sRGB",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_MastBeaconSingle_Lens_ORM.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_MastBeaconSingle_Lens_Finish_Normal.png",
+        "colorspace": "Non-Color",
+        "uv": "FinishBake",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_MastBeaconSingle_Lens_LightProfile.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      }
+    ]
+  },
+  "final_normal_bake_coverage": {
+    "Housing": [
+      {
+        "lod": "SM_Kit_MastBeaconSingle",
+        "triangle_centres": 490,
+        "min_blue": 0.9098039865493774
+      },
+      {
+        "lod": "SM_Kit_MastBeaconSingle_LOD1",
+        "triangle_centres": 266,
+        "min_blue": 0.9333333969116211
+      }
+    ],
+    "Lens": [
+      {
+        "lod": "SM_Kit_MastBeaconSingle",
+        "triangle_centres": 352,
+        "min_blue": 1.0
+      },
+      {
+        "lod": "SM_Kit_MastBeaconSingle_LOD1",
+        "triangle_centres": 80,
+        "min_blue": 1.0
+      }
+    ]
+  },
+  "lens_chart_kinds": {
+    "SM_Kit_MastBeaconSingle": [
+      "mastglass"
+    ],
+    "SM_Kit_MastBeaconSingle_LOD1": [
+      "mastglass"
+    ]
+  },
+  "indicator_achromatic_max_channel_error": null,
+  "uv0_texel_density": {
+    "SM_Kit_MastBeaconSingle": {
+      "Housing": {
+        "min_px_per_m": 511.9957507489214,
+        "median_px_per_m": 513.2666723217628,
+        "max_px_per_m": 517.519423933765
+      },
+      "Lens": {
+        "min_px_per_m": 664.0850828352341,
+        "median_px_per_m": 808.8157149330943,
+        "max_px_per_m": 1940.793739715561
+      }
+    },
+    "SM_Kit_MastBeaconSingle_LOD1": {
+      "Housing": {
+        "min_px_per_m": 511.9988788329022,
+        "median_px_per_m": 516.123313110873,
+        "max_px_per_m": 534.5596748932734
+      },
+      "Lens": {
+        "min_px_per_m": 665.6919791675264,
+        "median_px_per_m": 679.7357610324341,
+        "max_px_per_m": 898.9666713778056
+      }
+    }
+  }
+}

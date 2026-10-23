@@ -1,0 +1,17 @@
+00:00.406  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\13_MastBeaconDual\source\MastBeaconDual_Preview.blend"
+BlenderMCP addon registered
+CYCLES DEVICES [('NVIDIA GeForce RTX 4090', True), ('AMD Ryzen 7 7800X3D 8-Core Processor', False), ('NVIDIA GeForce RTX 4090', True), ('AMD Radeon(TM) Graphics', True)]
+00:03.625  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:05.265  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\13_MastBeaconDual\review\stable_150m_lod0.png'
+00:08.484  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:09.906  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\13_MastBeaconDual\review\stable_150m_lod1.png'
+00:13.047  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:14.672  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\13_MastBeaconDual\review\stable_260m_lod0.png'
+00:17.781  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:19.187  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\13_MastBeaconDual\review\stable_260m_lod1.png'
+BlenderMCP addon unregistered
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)

@@ -1,0 +1,371 @@
+{
+  "piece": "lighting/09_IndicatorLED",
+  "round": 4,
+  "textures": [
+    {
+      "path": "textures\\T_IndicatorLED_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "eb2b89ddd1bf5296062161467be9842d14de6fd49d49037a10673a82b90d9610"
+    },
+    {
+      "path": "textures\\T_IndicatorLED_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "0898fad4d856d6f878ecc9a8b27985661eda5066e16edc75bf51bbc49d3483a5"
+    },
+    {
+      "path": "textures\\T_IndicatorLED_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "a89e631492ca0657654d11c7668da5423a6931a55fe674eb37573ab86c7e23f8"
+    },
+    {
+      "path": "textures\\T_IndicatorLED_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "c62eaff962f1dfba2978833f78c29d82e9c45d226fbdc28ebf053c3bddb785dd"
+    },
+    {
+      "path": "textures\\T_IndicatorLED_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "LightProfile",
+      "srgb": false,
+      "sha256": "c434f5f9abfecbc5f18ae78c5bb8023fbf29754320f0e2001863be95aab03058"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "53377a23c592e09f3e9e7345df3b8d30ec2d1190e6d2d8bbf57d7948790c6cae"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "58bf08084666c357d09706572df81911fb5d4648e07e48f9492c995aa0559791"
+    }
+  ],
+  "source_inventory": [
+    "SM_Kit_IndicatorLED"
+  ],
+  "bake": "Cycles geometry Bevel plus authored metric microfinish, baked to UV1, UV0 tangent parameterization; final maps DirectX",
+  "lod0": {
+    "triangles": 222,
+    "vertices": 126,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        0,
+        -0.12349999696016312,
+        -0.0495000034570694
+      ],
+      [
+        0.09000000357627869,
+        0.11999999731779099,
+        0.04500000178813934
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        0.019999999552965164,
+        -0.09700000286102295,
+        -0.04699999839067459
+      ],
+      [
+        0.07400000095367432,
+        0.09700000286102295,
+        -0.04699999839067459
+      ]
+    ],
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 389.0213682882398,
+        "median": 512.0000220757933,
+        "max": 517.3094440639137
+      },
+      "Lens": {
+        "min": 1843.199979770178,
+        "median": 1843.199979770178,
+        "max": 1843.199979770178
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0,
+    "uv0_overlap": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    "uv1_overlap": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  },
+  "fbx_reimport": {
+    "SM_Kit_IndicatorLED.fbx": {
+      "triangles": 222,
+      "vertices": 126,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -1.955048212209931e-08,
+          -0.12350000441074371,
+          -0.0495000034570694
+        ],
+        [
+          0.09000002592802048,
+          0.11999999731779099,
+          0.04500000178813934
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.01999998465180397,
+          -0.09700001776218414,
+          -0.04699999839067459
+        ],
+        [
+          0.07400001585483551,
+          0.09700000286102295,
+          -0.04699999839067459
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 389.0213682882398,
+          "median": 512.0000220757933,
+          "max": 517.3094440639137
+        },
+        "Lens": {
+          "min": 1843.199979770178,
+          "median": 1843.199979770178,
+          "max": 1843.199979770178
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv0_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "uv1_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "tangent_error": 9.68575448734299e-08,
+      "emitting_normal_axis": [
+        0,
+        0,
+        -1
+      ],
+      "sha256": "042ca93ab70396837361592cf580480da9d59d11f07d0376d1b0672e5a84600f"
+    }
+  },
+  "packed_images": [
+    {
+      "name": "T_IndicatorLED_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "eb2b89ddd1bf5296062161467be9842d14de6fd49d49037a10673a82b90d9610"
+    },
+    {
+      "name": "T_IndicatorLED_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "53377a23c592e09f3e9e7345df3b8d30ec2d1190e6d2d8bbf57d7948790c6cae"
+    },
+    {
+      "name": "T_IndicatorLED_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "0898fad4d856d6f878ecc9a8b27985661eda5066e16edc75bf51bbc49d3483a5"
+    },
+    {
+      "name": "T_IndicatorLED_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "a89e631492ca0657654d11c7668da5423a6931a55fe674eb37573ab86c7e23f8"
+    },
+    {
+      "name": "T_IndicatorLED_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "58bf08084666c357d09706572df81911fb5d4648e07e48f9492c995aa0559791"
+    },
+    {
+      "name": "T_IndicatorLED_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "c434f5f9abfecbc5f18ae78c5bb8023fbf29754320f0e2001863be95aab03058"
+    },
+    {
+      "name": "T_IndicatorLED_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "c62eaff962f1dfba2978833f78c29d82e9c45d226fbdc28ebf053c3bddb785dd"
+    }
+  ],
+  "lens_shader": {
+    "tint": [
+      1,
+      1,
+      1
+    ],
+    "hot_core_tint": [
+      1,
+      1,
+      1
+    ],
+    "hot_core_profile_range": [
+      0.55,
+      0.9
+    ],
+    "emission_strength": 10,
+    "representation": "opaque continuous optical backing; compact hot-core tint blend"
+  },
+  "normal_binding": {
+    "Housing": {
+      "image": "T_IndicatorLED_Housing_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap"
+    },
+    "Lens": {
+      "image": "T_IndicatorLED_Lens_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap"
+    }
+  },
+  "export_roundtrip": "passed; independent FBX reimport, real metre bounds, slots, triangles, UV0/UV1, packed image byte equality",
+  "source_geometry_digests": [
+    "bb2c3e215c82267336cbb0b025a752f3316af1d0"
+  ],
+  "combined_lod_uv_overlap": "one LOD; see per-LOD checks",
+  "lens_uv_contract": {},
+  "png_headers": [
+    {
+      "path": "textures/T_IndicatorLED_Housing_BaseColor.png",
+      "width": 2048,
+      "height": 2048,
+      "bit_depth": 8,
+      "sha256": "eb2b89ddd1bf5296062161467be9842d14de6fd49d49037a10673a82b90d9610"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Housing_Finish_Normal.png",
+      "width": 2048,
+      "height": 2048,
+      "bit_depth": 8,
+      "sha256": "53377a23c592e09f3e9e7345df3b8d30ec2d1190e6d2d8bbf57d7948790c6cae"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Housing_ORM.png",
+      "width": 2048,
+      "height": 2048,
+      "bit_depth": 8,
+      "sha256": "0898fad4d856d6f878ecc9a8b27985661eda5066e16edc75bf51bbc49d3483a5"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_BaseColor.png",
+      "width": 1024,
+      "height": 1024,
+      "bit_depth": 8,
+      "sha256": "a89e631492ca0657654d11c7668da5423a6931a55fe674eb37573ab86c7e23f8"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_Finish_Normal.png",
+      "width": 1024,
+      "height": 1024,
+      "bit_depth": 8,
+      "sha256": "58bf08084666c357d09706572df81911fb5d4648e07e48f9492c995aa0559791"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_LightProfile.png",
+      "width": 1024,
+      "height": 1024,
+      "bit_depth": 16,
+      "sha256": "c434f5f9abfecbc5f18ae78c5bb8023fbf29754320f0e2001863be95aab03058"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_ORM.png",
+      "width": 1024,
+      "height": 1024,
+      "bit_depth": 8,
+      "sha256": "c62eaff962f1dfba2978833f78c29d82e9c45d226fbdc28ebf053c3bddb785dd"
+    }
+  ]
+}

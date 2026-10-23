@@ -1,0 +1,46 @@
+{
+  "round": 4,
+  "scope": "Independent reference and native-distance review, Blender only",
+  "observations": "Spec-led panel: recessed depth, real enamel returns and trim/latches read clearly. The 04 image establishes the metal/diffuser family, not this panel silhouette. At 12 m the frame remains readable; at 150 m the lit rectangle persists and at 450 m it reduces to a small pale signal.",
+  "changes": "Retained the recessed 60 × 30 cm panel, stepped graphite trim, enamel reflector, corner screws and latch clips. The prismatic neutral diffuser remains centre-weighted; the rear tray sits behind the mounting plane.",
+  "limits": "No producer image for the panel itself; appearance remains spec-led. Blender camera evidence is not Unreal/gameplay acceptance.",
+  "images": [
+    {
+      "path": "review/reference_left_round04_right_day.png",
+      "sha256": "35148aa5791930339449736de9edc366f13aeb14d09f141ddc67c62b2ba663b7"
+    },
+    {
+      "path": "review/reference_left_round04_right_night.png",
+      "sha256": "fb24ad7044356bad65a61c538a5b97ebe537699e21d3b72bad088807253a53a4"
+    },
+    {
+      "path": "review/ref_match_day.png",
+      "sha256": "661dd18f610c3bf4998b51be56bb540bdf06f1cf19badf07688f509b97e23fc7"
+    },
+    {
+      "path": "review/ref_match_night.png",
+      "sha256": "25cb1cbee2112b359da4211e9aef124d85d1adbbcf0f063fbd2c7a107e1966f1"
+    },
+    {
+      "path": "review/astra_12m_LOD0_left_LOD1_right.png",
+      "sha256": "96ebdeb927456fea12ab66476eb93836b62aeb5660f384915be3a08f29d48446"
+    },
+    {
+      "path": "review/astra_150m_LOD0_left_LOD1_right.png",
+      "sha256": "e1dea8af6b2a0a8f053bdf89a99d56fd44f33a9bec5c9e52d355b5138fa2275e"
+    },
+    {
+      "path": "review/astra_260m_LOD0_left_LOD1_right.png",
+      "sha256": "cfe8c2fdf6c3b25d4f02e9bd90435ab3d9cadb5b443d1228cb906454bcebb7e7"
+    },
+    {
+      "path": "review/astra_450m_LOD0_left_LOD1_right.png",
+      "sha256": "c781e0c7c629ff5d9e2be74142094fe64c520721b4eff0c1101883442f28d748"
+    },
+    {
+      "path": "review/astra_distance_contact.png",
+      "sha256": "bb706c3e8831d75667f11f1fdec1bff42b19a53d8fe824493da372878af27eb9"
+    }
+  ],
+  "approval": "pending"
+}

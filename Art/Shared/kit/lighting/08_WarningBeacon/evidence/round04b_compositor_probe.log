@@ -1,0 +1,9 @@
+BlenderMCP addon registered
+COMPOSITOR True
+GLARE [('Image', '<bpy_float[4], NodeSocketColor.default_value>'), ('Type', 'Streaks'), ('Quality', 'Medium'), ('Threshold', '1.0'), ('Smoothness', '0.10000000149011612'), ('Clamp', 'False'), ('Maximum', '10.0'), ('Strength', '1.0'), ('Saturation', '1.0'), ('Tint', '<bpy_float[4], NodeSocketColor.default_value>'), ('Size', '0.5'), ('Streaks', '4'), ('Streaks Angle', '0.0'), ('Iterations', '3'), ('Fade', '0.8999999761581421'), ('Color Modulation', '0.25'), ('Diagonal', 'True'), ('Sun Position', '<bpy_float[2], NodeSocketVectorFactor2D.default_value>'), ('Jitter', '0.0'), ('Kernel Data Type', 'Float'), ('Kernel', '0.0'), ('Kernel', '<bpy_float[4], NodeSocketColor.default_value>')]
+OUT ['Image', 'Glare', 'Highlights']
+SCENE ['compositing_node_group']
+BlenderMCP addon unregistered
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

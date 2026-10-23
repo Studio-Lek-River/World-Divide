@@ -1,0 +1,284 @@
+{
+  "round": 3,
+  "archive": "archive/round02/",
+  "files": [
+    {
+      "path": "CLAUDE_HANDOFF.md",
+      "bytes": 4119,
+      "sha256": "58bb02d1b1ac8e699b3f61ef2d1ba8c876f3aa5dd9f2fdba3d8ee5e86ab65cb9"
+    },
+    {
+      "path": "evidence/archive_round01.json",
+      "bytes": 304,
+      "sha256": "741045e99a1c921d96e6800ef4362108c24abcdb712fcb912eda4067bfdf9627"
+    },
+    {
+      "path": "evidence/cameras.json",
+      "bytes": 636,
+      "sha256": "c3fd951fd688316c16eb2b936e72c2c30796c566eaf5ca2532e4fd58d5d99d11"
+    },
+    {
+      "path": "evidence/delivery.json",
+      "bytes": 12806,
+      "sha256": "69117169a2ce95e835bafbf3285da336a83645f93d9756d6e536f60ffd6df5c3"
+    },
+    {
+      "path": "evidence/normal_bake_repair.json",
+      "bytes": 486,
+      "sha256": "b44be7a14056560ea26353b26e78143e035c4d266cd14a56f1e07eb1a637c6c2"
+    },
+    {
+      "path": "evidence/rebuild_determinism.json",
+      "bytes": 1288,
+      "sha256": "d6c6acd7dc698491829a97be88138dba7cdd43af40d9a47dc8bd8f4dcd818e54"
+    },
+    {
+      "path": "evidence/reference_comparison.json",
+      "bytes": 211,
+      "sha256": "26b59db9c5ffe290886f040573473fb06224db49beb3c78e81bb9de39c6d00c2"
+    },
+    {
+      "path": "evidence/review_R1_resolution.md",
+      "bytes": 1194,
+      "sha256": "1d9490a57c0a927746b733ef66d5bd0350dff01dbd049b8f2dd54d1a4ae70c98"
+    },
+    {
+      "path": "evidence/round02_prepare_09.log",
+      "bytes": 632,
+      "sha256": "ad7dbef06e0e553af1eb4d0ec359c2bbf14e0421b6de312f43e8577115edf2c6"
+    },
+    {
+      "path": "evidence/round02_render_09.log",
+      "bytes": 8369,
+      "sha256": "6caadf871877389294eff643fbdce12698f667e09f655c2a0544c90ccc581dcd"
+    },
+    {
+      "path": "evidence/runner_first.json",
+      "bytes": 412,
+      "sha256": "96ceda304f83242738d84865ac7f3a65257c27ec14fe75b5fd1edaebede4f4ee"
+    },
+    {
+      "path": "evidence/verification.json",
+      "bytes": 8016,
+      "sha256": "c03626133d5b01b8263d8ab42ee304bbd9b56b167f09b374b186e3bf3960a52c"
+    },
+    {
+      "path": "generator/indicator_led.py",
+      "bytes": 1042,
+      "sha256": "9d6288dcda2f64b0d7a005c4cfc88b0faec7eb49e80a13f797a20d6d2d644668"
+    },
+    {
+      "path": "generator/lighting_393_common.py",
+      "bytes": 5896,
+      "sha256": "8bbdc4301b1b8e9a77504bbb4f2539732636c41bb4c70a4bee216c7f476038ac"
+    },
+    {
+      "path": "generator/lighting_393_finish.py",
+      "bytes": 16775,
+      "sha256": "d2f558ee048dc0c9c3d4e817c0de24f7add388a0d71f596e9e73cd702753b4f9"
+    },
+    {
+      "path": "generator/lighting_393_optical_master.py",
+      "bytes": 10032,
+      "sha256": "84ef962ee6f7ac03dc5f07b43aa02ba4a6e1666a06dc74456ffc40392a490a41"
+    },
+    {
+      "path": "generator/lighting_393_review.py",
+      "bytes": 23135,
+      "sha256": "5d0ca96edfe19f2ffc581fa6ad3edca04b7a5846ad31ec8521cbc242db90ae81"
+    },
+    {
+      "path": "generator/mast_beacon_dual.py",
+      "bytes": 732,
+      "sha256": "a1e8827c00657b75e982b92c0dd2ff7ea222494c01d7634adf95e8346fca0523"
+    },
+    {
+      "path": "generator/mast_beacon_single_393.py",
+      "bytes": 391,
+      "sha256": "2e619d4330a8da85055ba426c535b828c9142b7114c272777151f5d998e89436"
+    },
+    {
+      "path": "generator/service_bay_light.py",
+      "bytes": 1389,
+      "sha256": "67873e47992aee0eea8bf5b83eafcedc14ddb3f7854dae9ce18dcdcac69f4b85"
+    },
+    {
+      "path": "generator/warning_beacon.py",
+      "bytes": 1082,
+      "sha256": "79d24299366d4e404764e4d98bc9e8a4876033df768806c7d05345b45f3ac096"
+    },
+    {
+      "path": "material_recipe.json",
+      "bytes": 4447,
+      "sha256": "0e3c769d319fed221896ab313ea65f601d6170c108ed19425a306ecdd1aa87d5"
+    },
+    {
+      "path": "review/crop_12m_lod0_8x.png",
+      "bytes": 9285,
+      "sha256": "9110939c8538e7cf6863974ab34d2ed0abf69d8a44b701aea09029f9b5826219"
+    },
+    {
+      "path": "review/crop_150m_lod0_8x.png",
+      "bytes": 8326,
+      "sha256": "edbb890e8d036b60482151f9c11de604a1204f548ea08bcd91e5d2110bab2c44"
+    },
+    {
+      "path": "review/crop_450m_lod0_8x.png",
+      "bytes": 8296,
+      "sha256": "8c70c677ddcfb8f26d37da64f9eae90f4d8d50c7e39c57295a08686a08c8d0df"
+    },
+    {
+      "path": "review/distance_12m_lod0.png",
+      "bytes": 1938915,
+      "sha256": "e792e3852b1bc889184addf67c588213ece9367802ab01b28611b5ea09d6f765"
+    },
+    {
+      "path": "review/distance_150m_lod0.png",
+      "bytes": 1939345,
+      "sha256": "67712049705033f8b11d30da9a7edb650236516c057c96fdfc4d9d00b7aa66b3"
+    },
+    {
+      "path": "review/distance_450m_lod0.png",
+      "bytes": 1939387,
+      "sha256": "897f26f943e6b3a2051aac524617d10635f94151dfc8c78ea4a9a2f68ad9e490"
+    },
+    {
+      "path": "review/distance_day_150m_lod0.png",
+      "bytes": 1476681,
+      "sha256": "e007f12f92c89daa3e417b7050c4f46f48190c0fef35ac95889eb88b7c393a68"
+    },
+    {
+      "path": "review/distance_day_450m_lod0.png",
+      "bytes": 1476604,
+      "sha256": "ffc38fd061df58f60117de025b2521cd8693197e9535f801da3df0ee390dd7d0"
+    },
+    {
+      "path": "review/pbr_day_off.png",
+      "bytes": 1502880,
+      "sha256": "dba8e85a675691da3d49c2da64914c19643c1d769c28b2963991c187ece701bb"
+    },
+    {
+      "path": "review/pbr_day_on.png",
+      "bytes": 1512078,
+      "sha256": "dc27fc1a4ee39206859f06758e1a629fcec5d62636811493e99fbf3347eb977a"
+    },
+    {
+      "path": "review/pbr_night_off.png",
+      "bytes": 1294705,
+      "sha256": "58ec489e1e736c33d03ea2944bf536981e2f174361c1ef890cab45c4edba596f"
+    },
+    {
+      "path": "review/pbr_night_on.png",
+      "bytes": 1443153,
+      "sha256": "77d6fe372a1243a08f6ccb94ddff060b57996797b5e2e0e441ba4b846af0ec33"
+    },
+    {
+      "path": "review/README.md",
+      "bytes": 984,
+      "sha256": "5977faf81863cd3e16891d03376d5af0d2e6b602a85a312c17c6d35b18a34785"
+    },
+    {
+      "path": "review/reference_left_round02_right_day.png",
+      "bytes": 1925732,
+      "sha256": "c88de8e1da3dce52e387e328497e456ba651a9acc2f2b8a7a9cef9b3abcc88a0"
+    },
+    {
+      "path": "review/reference_left_round02_right_night.png",
+      "bytes": 1913308,
+      "sha256": "aa5a674101ecf83248546b393a78e5595eaebc563b623d2e1bb1229ea1ed1aa1"
+    },
+    {
+      "path": "review/ref_match_day.png",
+      "bytes": 1512023,
+      "sha256": "9b614209fdc100a07ca927405cc50bf8fc5f713f26992c9854e5a504ad506f69"
+    },
+    {
+      "path": "review/ref_match_night.png",
+      "bytes": 1436562,
+      "sha256": "388f876b602b59a518c9423d68e48eaca0e9c9cd7ccddbf76ca454bad4237457"
+    },
+    {
+      "path": "review/tint_blue.png",
+      "bytes": 1476650,
+      "sha256": "3bc99f1750b1cd39fec1fb23c6e3b2118c4b51b946048ed3319193aeb112e0fe"
+    },
+    {
+      "path": "review/tint_green.png",
+      "bytes": 1487572,
+      "sha256": "0fe8837d4fe235e0b0c729db53846af4f4bc2e8be9cf5f1862f1e966b6921ffb"
+    },
+    {
+      "path": "review/tint_red.png",
+      "bytes": 1479232,
+      "sha256": "3fe880cf68b1cbf01c981ffe5f5e1d93c3d2e0297ce42537eaf6d3fd4361b5d6"
+    },
+    {
+      "path": "SM_Kit_IndicatorLED.fbx",
+      "bytes": 41660,
+      "sha256": "e77d767c60ef1c943bb32a13f7bc5e5892ab8b70cb4546e406aeb937f8891c35"
+    },
+    {
+      "path": "source/bake_inputs/T_IndicatorLED_Housing_Micro_Normal.png",
+      "bytes": 6445518,
+      "sha256": "26c7556437b9f62f099df246d8effa6217af5f9c73fe18cec8f5aab00c5148a0"
+    },
+    {
+      "path": "source/bake_inputs/T_IndicatorLED_Lens_Micro_Normal.png",
+      "bytes": 1807523,
+      "sha256": "72f9489084b6eab3eef4ef67064b433716894bff0688a7f9efd969456c6f8ca7"
+    },
+    {
+      "path": "source/IndicatorLED.blend",
+      "bytes": 10866263,
+      "sha256": "384dcc3c35d63f338f00bad666f2b7ed27ceb0a037c8c4576dc1cd6dde872a3b"
+    },
+    {
+      "path": "source/IndicatorLED_Preview.blend",
+      "bytes": 10871621,
+      "sha256": "b7e3db5008eed8003a79942594f543665810ca9e313e899f3e6438d0262c6b68"
+    },
+    {
+      "path": "STATE.md",
+      "bytes": 1016,
+      "sha256": "80efe9cdf3aa060103e7b23bebfe4e082e6df873e37a68a99ddfbab6dbde99b7"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Housing_BaseColor.png",
+      "bytes": 5247038,
+      "sha256": "6465e17b0d7f72a67cb5e328f09b21ddaff26f8b3f846c74117ad5c720dd49e9"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Housing_Finish_Normal.png",
+      "bytes": 2236011,
+      "sha256": "abde3555c6c84589ca735dbde8474544af804b70c799df7ad889c1362cc3aeea"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Housing_ORM.png",
+      "bytes": 3264694,
+      "sha256": "3d3ec5bbd234d174f77b15852721c9cbecabb4512997db890de7ed0afca391cf"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_BaseColor.png",
+      "bytes": 23546,
+      "sha256": "a89e631492ca0657654d11c7668da5423a6931a55fe674eb37573ab86c7e23f8"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_Finish_Normal.png",
+      "bytes": 55183,
+      "sha256": "58bf08084666c357d09706572df81911fb5d4648e07e48f9492c995aa0559791"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_LightProfile.png",
+      "bytes": 98867,
+      "sha256": "c434f5f9abfecbc5f18ae78c5bb8023fbf29754320f0e2001863be95aab03058"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_ORM.png",
+      "bytes": 22824,
+      "sha256": "c62eaff962f1dfba2978833f78c29d82e9c45d226fbdc28ebf053c3bddb785dd"
+    }
+  ],
+  "round02_delivery_hashes_checked": 44,
+  "round02_generator_hashes_checked": 9,
+  "all_match": true
+}

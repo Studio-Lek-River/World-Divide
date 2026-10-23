@@ -3,9 +3,9 @@
   blender -b --python Tools/Art/kit_blender.py
 
 Each piece <category>/<NN>_<Piece> is built by its module Tools/Art/kit/<piece>.py, the piece's name in snake case
-(FlagCloth: flag_cloth.py), whose build(piece) gets the piece's catalogue entry and returns its LOD0 object and its LOD1
-object, or None for a piece that keeps LOD0 alone (class S). Its slots are its materials' names, in the catalogue's order.
-The lit glass is the material Lens.
+(FlagCloth: flag_cloth.py, an acronym one word: IndicatorLED: indicator_led.py), whose build(piece) gets the piece's
+catalogue entry and returns its LOD0 object and its LOD1 object, or None for a piece that keeps LOD0 alone (class S). Its
+slots are its materials' names, in the catalogue's order. The lit glass is the material Lens.
 
 It writes Art/Shared/kit/<category>/<NN>_<Piece>/SM_Kit_<Piece>.fbx and _LOD1.fbx, and the derived manifest
 Art/Shared/kit/build/kit_manifest.json: each piece's FBX, slots, triangles per LOD, bounds and the bounds of its Lens faces,
@@ -41,7 +41,8 @@ ATTRIBUTE_PROPERTIES = {"FLOAT_VECTOR": "vector", "FLOAT2": "vector", "FLOAT_COL
 
 def module(piece):
     """The piece's module, Tools/Art/kit/<piece in snake case>.py."""
-    name = re.sub(r"(?<!^)(?=[A-Z])", "_", piece["id"].split("/")[1].split("_", 1)[1]).lower()
+    words = r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])"
+    name = re.sub(words, "_", piece["id"].split("/")[1].split("_", 1)[1]).lower()
     spec = importlib.util.spec_from_file_location(f"kit_{name}", os.path.join(MODULE_DIR, f"{name}.py"))
     loaded = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(loaded)

@@ -1,0 +1,192 @@
+{
+  "round": "4b",
+  "scope": "Independent Blender inspection; producer and Unreal acceptance pending",
+  "factory_reset_repeat_digests": [
+    [
+      "e3096056d85a79e5c224a28e70bcc27597484cb02b040d52599823a232f55fc3",
+      "3a7207c2a8e1570527854ad224d76ad6ef4e52811b5db285d269fff4c87cdc7d"
+    ],
+    [
+      "e3096056d85a79e5c224a28e70bcc27597484cb02b040d52599823a232f55fc3",
+      "3a7207c2a8e1570527854ad224d76ad6ef4e52811b5db285d269fff4c87cdc7d"
+    ]
+  ],
+  "source_equals_generator": true,
+  "lods": [
+    {
+      "closed_components": 14,
+      "intentionally_open_components": 2,
+      "negative_closed_volumes": [],
+      "digest": "e3096056d85a79e5c224a28e70bcc27597484cb02b040d52599823a232f55fc3",
+      "triangles": 2312,
+      "unit_normal_max_error": 1.0430813379702641e-07,
+      "orthonormal_tangent_max_error": 1.1175895298087823e-07,
+      "uv0_uv1_physical_chart_max_error_m": 2.694855535985056e-07,
+      "charts": 70,
+      "smooth_triangles": 1968,
+      "hard_triangles": 344
+    },
+    {
+      "closed_components": 14,
+      "intentionally_open_components": 2,
+      "negative_closed_volumes": [],
+      "digest": "3a7207c2a8e1570527854ad224d76ad6ef4e52811b5db285d269fff4c87cdc7d",
+      "triangles": 784,
+      "unit_normal_max_error": 8.940696316628305e-08,
+      "orthonormal_tangent_max_error": 1.1920928399966613e-07,
+      "uv0_uv1_physical_chart_max_error_m": 2.385349660155493e-07,
+      "charts": 50,
+      "smooth_triangles": 640,
+      "hard_triangles": 144
+    }
+  ],
+  "projected_convex_outline_hausdorff_px": {
+    "150": {
+      "fixture": 0.026485799693350444,
+      "lens": 0.026485799693350444
+    },
+    "260": {
+      "fixture": 0.015296722943350955,
+      "lens": 0.015296722943350955
+    }
+  },
+  "material_bindings": {
+    "Housing": [
+      {
+        "image": "T_WarningBeacon_Housing_BaseColor.png",
+        "colorspace": "sRGB",
+        "uv": "UVMap",
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "image": "T_WarningBeacon_Housing_ORM.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "image": "T_WarningBeacon_Housing_Finish_Normal.png",
+        "colorspace": "Non-Color",
+        "uv": "FinishBake",
+        "size": [
+          2048,
+          2048
+        ]
+      }
+    ],
+    "Lens": [
+      {
+        "image": "T_WarningBeacon_Lens_BaseColor.png",
+        "colorspace": "sRGB",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_WarningBeacon_Lens_ORM.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_WarningBeacon_Lens_Finish_Normal.png",
+        "colorspace": "Non-Color",
+        "uv": "FinishBake",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_WarningBeacon_Lens_LightProfile.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      }
+    ]
+  },
+  "final_normal_bake_coverage": {
+    "Housing": [
+      {
+        "lod": "SM_Kit_WarningBeacon",
+        "triangle_centres": 1260,
+        "min_blue": 0.6274510025978088
+      },
+      {
+        "lod": "SM_Kit_WarningBeacon_LOD1",
+        "triangle_centres": 532,
+        "min_blue": 0.7686275243759155
+      }
+    ],
+    "Lens": [
+      {
+        "lod": "SM_Kit_WarningBeacon",
+        "triangle_centres": 1052,
+        "min_blue": 0.9450981020927429
+      },
+      {
+        "lod": "SM_Kit_WarningBeacon_LOD1",
+        "triangle_centres": 252,
+        "min_blue": 0.9411765336990356
+      }
+    ]
+  },
+  "lens_chart_kinds": {
+    "SM_Kit_WarningBeacon": [
+      "amberglass",
+      "beacon_bulb",
+      "beacon_mirror"
+    ],
+    "SM_Kit_WarningBeacon_LOD1": [
+      "amberglass",
+      "beacon_bulb",
+      "beacon_mirror"
+    ]
+  },
+  "indicator_achromatic_max_channel_error": null,
+  "uv0_texel_density": {
+    "SM_Kit_WarningBeacon": {
+      "Housing": {
+        "min_px_per_m": 389.02645317858855,
+        "median_px_per_m": 512.4141596739878,
+        "max_px_per_m": 523.943245959309
+      },
+      "Lens": {
+        "min_px_per_m": 768.825299505915,
+        "median_px_per_m": 779.9219313114752,
+        "max_px_per_m": 1954.450051650471
+      }
+    },
+    "SM_Kit_WarningBeacon_LOD1": {
+      "Housing": {
+        "min_px_per_m": 511.98939587299566,
+        "median_px_per_m": 514.9409406292534,
+        "max_px_per_m": 541.7316662382904
+      },
+      "Lens": {
+        "min_px_per_m": 771.1518186230801,
+        "median_px_per_m": 801.575284101972,
+        "max_px_per_m": 1882.271140194739
+      }
+    }
+  },
+  "geometry_approach": "True connected assembly. Holder z=.178-.232; top plate=.180; bulb base=.231 overlaps socket by 1mm; rear bracket z=.178-.238 intersects mirror lower meridian at (-.027875,0,.235). Thin-shell Lens G=1, opaque interior G=0.",
+  "collar_diameter_m": 0.164,
+  "dome_lip_diameter_m": 0.142,
+  "collar_dome_ratio": 1.154929577464789,
+  "optical_shader": "R-only emission; G thin-shell transmission; actual Lens bulb/mirror and Housing holder/bracket in both LODs"
+}

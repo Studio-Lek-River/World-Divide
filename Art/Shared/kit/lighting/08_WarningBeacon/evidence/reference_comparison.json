@@ -1,0 +1,11 @@
+{
+  "reference": "producer_reference.png",
+  "crop_xyxy": [
+    70,
+    110,
+    600,
+    1010
+  ],
+  "order": "Producer reference LEFT, Round 4b RIGHT; separate day, night and LowPower comparisons",
+  "round": "4b"
+}

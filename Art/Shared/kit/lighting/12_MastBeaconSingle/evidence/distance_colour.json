@@ -1,0 +1,38 @@
+{
+  "night_150m": {
+    "peak_display_rgb": [
+      0.960784375667572,
+      0.5686274766921997,
+      0.4745098352432251
+    ],
+    "red_amber_pixels": 31,
+    "scope": "48x48 centre crop of native frame, no bloom; brightest day pixel can be background"
+  },
+  "night_450m": {
+    "peak_display_rgb": [
+      0.6666666865348816,
+      0.1764705926179886,
+      0.003921568859368563
+    ],
+    "red_amber_pixels": 8,
+    "scope": "48x48 centre crop of native frame, no bloom; brightest day pixel can be background"
+  },
+  "day_150m": {
+    "peak_display_rgb": [
+      0.847058892250061,
+      0.40000003576278687,
+      0.364705890417099
+    ],
+    "red_amber_pixels": 16,
+    "scope": "48x48 centre crop of native frame, no bloom; brightest day pixel can be background"
+  },
+  "day_450m": {
+    "peak_display_rgb": [
+      0.6980392336845398,
+      0.5411764979362488,
+      0.5568627715110779
+    ],
+    "red_amber_pixels": 2,
+    "scope": "48x48 centre crop of native frame, no bloom; brightest day pixel can be background"
+  }
+}

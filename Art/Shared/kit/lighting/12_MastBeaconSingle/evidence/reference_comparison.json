@@ -1,0 +1,10 @@
+{
+  "reference": "producer_reference.png",
+  "crop_xyxy": [
+    160,
+    180,
+    480,
+    730
+  ],
+  "order": "reference LEFT, Round 4 RIGHT; 07 left is family finish reference, not its silhouette"
+}

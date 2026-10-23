@@ -1,0 +1,13 @@
+{
+  "scope": "Blender-only 512 fixed samples without denoising/adaptive sampling; 128x128 centre render region at native 1920x1080 / 60deg; outside region unrendered",
+  "distances": {
+    "150": {
+      "changed_pixels_gt_1_of_255": 11,
+      "max_display_delta": 0.062745101749897
+    },
+    "260": {
+      "changed_pixels_gt_1_of_255": 6,
+      "max_display_delta": 0.05098039656877518
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "round": 4,
+  "runner": "_work_393/run_pieces.py",
+  "all_five_built_twice": true,
+  "both_exit_codes": [
+    0,
+    0
+  ],
+  "logs": [
+    "07_ServiceBayLight/evidence/round04_retained_a.log",
+    "07_ServiceBayLight/evidence/round04_retained_b.log"
+  ],
+  "first": {
+    "mesh": "SM_Kit_MastBeaconDual",
+    "directory": "Art/Shared/kit/lighting/13_MastBeaconDual",
+    "triangles": [
+      1184,
+      376
+    ],
+    "digest": [
+      "87ac9a764bcf805ac088c082701a18be5689542f",
+      "7c76cb845e8f4ab48346c948e73402726d9bbb4d"
+    ],
+    "bounds": [
+      [
+        -17.33,
+        -40,
+        0
+      ],
+      [
+        17.33,
+        40,
+        45
+      ]
+    ],
+    "lens_bounds": [
+      [
+        -12.75,
+        -35.25,
+        20.25
+      ],
+      [
+        12.75,
+        35.25,
+        45
+      ]
+    ]
+  },
+  "second": {
+    "mesh": "SM_Kit_MastBeaconDual",
+    "directory": "Art/Shared/kit/lighting/13_MastBeaconDual",
+    "triangles": [
+      1184,
+      376
+    ],
+    "digest": [
+      "87ac9a764bcf805ac088c082701a18be5689542f",
+      "7c76cb845e8f4ab48346c948e73402726d9bbb4d"
+    ],
+    "bounds": [
+      [
+        -17.33,
+        -40,
+        0
+      ],
+      [
+        17.33,
+        40,
+        45
+      ]
+    ],
+    "lens_bounds": [
+      [
+        -12.75,
+        -35.25,
+        20.25
+      ],
+      [
+        12.75,
+        35.25,
+        45
+      ]
+    ]
+  },
+  "matching_digests": true,
+  "log_sha256": {
+    "07_ServiceBayLight/evidence/round04_retained_a.log": "e048c662b093151ba884e9585811618c88e2ffb2edcdf65a7dc0a4ed8a4ac782",
+    "07_ServiceBayLight/evidence/round04_retained_b.log": "f82adeb327a66b1e2229f8edbbacaa22dd9e01114082029d52d2ead7bc0279c2"
+  }
+}

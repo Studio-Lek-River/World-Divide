@@ -1,0 +1,27 @@
+00:29.078  image.write      | ERROR OpenImageIO write failed: Could not open file "쳰㈿\.thumbnails\large\blender_3820_15aa312adf1fc6658c05d3ff3641081f.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "WarningBeacon.blend"
+PREPARED lighting/08_WarningBeacon [1828, 724]
+01:22.937  image.write      | ERROR OpenImageIO write failed: Could not open file "쳰㈿\.thumbnails\large\blender_3820_51d0351338c4b2e160b574eab0c4d5b8.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "MastBeaconSingle.blend"
+PREPARED lighting/12_MastBeaconSingle [842, 346]
+02:08.187  image.write      | ERROR OpenImageIO write failed: Could not open file "쳰㈿\.thumbnails\large\blender_3820_d95f87d74b3721c69f7038f6d0f8427c.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "MastBeaconDual.blend"
+PREPARED lighting/13_MastBeaconDual [1184, 376]
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

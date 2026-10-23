@@ -1,0 +1,40 @@
+00:00.984  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\07_ServiceBayLight\source\ServiceBayLight.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+VERIFIED lighting/07_ServiceBayLight
+00:02.390  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\source\WarningBeacon.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+VERIFIED lighting/08_WarningBeacon
+00:03.078  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\09_IndicatorLED\source\IndicatorLED.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+VERIFIED lighting/09_IndicatorLED
+00:04.281  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\12_MastBeaconSingle\source\MastBeaconSingle.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+VERIFIED lighting/12_MastBeaconSingle
+00:05.703  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\13_MastBeaconDual\source\MastBeaconDual.blend"
+Traceback (most recent call last):
+  File "D:\Lek River Studio\World-Divide\Tools\Art\kit\lighting_393_review.py", line 241, in <module>
+    globals()[args[0]](piece)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "D:\Lek River Studio\World-Divide\Tools\Art\kit\lighting_393_review.py", line 60, in verify
+    assert bounds[0][2]>.070 and bounds[1][2]<.130 and bounds[1][0]>.102,('bar bolt anchor/relief',bounds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('bar bolt anchor/relief', [[0.09000000357627869, -0.3084999918937683, 0.08150000125169754], [0.15692433714866638, -0.27149999141693115, 0.41999998688697815]])
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+FBX version: 7400
+
+Error: script failed, file: 'Tools/Art/kit/lighting_393_review.py', exiting.
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

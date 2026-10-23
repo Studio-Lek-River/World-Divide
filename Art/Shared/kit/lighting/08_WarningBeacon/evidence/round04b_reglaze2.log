@@ -1,0 +1,8 @@
+00:00.485  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\source\WarningBeacon.blend"
+00:01.563  image.write      | ERROR OpenImageIO write failed: Could not open file "츰홟;\.thumbnails\large\blender_52232_15aa312adf1fc6658c05d3ff3641081f.png.png"
+BlenderMCP addon registered
+Info: Saved as "WarningBeacon.blend"
+BlenderMCP addon unregistered
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

@@ -1,0 +1,50 @@
+{
+  "round": 4,
+  "scope": "Independent reference and native-distance review, Blender only",
+  "observations": "Two .75-scale shared heads, raised bolted bar and exposed glands retain the decided construction and envelope. Both heads remain signal red at night and LowPower, with compact hot columns. At 150 m two light points are readable; at 450 m their footprints approach/merge into a tiny red cluster. The original 376-triangle LOD1 is retained: tested rounder-crown reallocations increased the measured switch difference.",
+  "changes": "Applied the shared red optical changes to both heads. Retained the decided .75 head scale, raised 80 cm bolted bar, exposed gland nuts, 45 cm height and approximately 34.7 cm clamp depth. Both LODs retain the separate U halves for alternating flashes.",
+  "limits": "Opaque mapped glass has no true transmission/parallax. Measurable subpixel shading/brightness differences remain at the forced LOD switch; strict no-pop acceptance is still a producer/runtime review item.",
+  "images": [
+    {
+      "path": "review/reference_left_round04_right_day.png",
+      "sha256": "41c35506c4c27f37c4ad2b00939127bb25aac1d4d36c92564a189ebf93ac7a46"
+    },
+    {
+      "path": "review/reference_left_round04_right_night.png",
+      "sha256": "dc2df696cf7ca98f0e638018ff0f8f2311d3f64b383cc10176af8ef0ccf9795b"
+    },
+    {
+      "path": "review/ref_match_day.png",
+      "sha256": "0217bc94fa3989b789f849aac94fd258669e31c69ab977cb1bf68ff5c537e658"
+    },
+    {
+      "path": "review/ref_match_night.png",
+      "sha256": "24bde683c0010ec4cdd785f0ef53577e34a8d42780d6a70869c05430c49acd92"
+    },
+    {
+      "path": "review/astra_12m_LOD0_left_LOD1_right.png",
+      "sha256": "43c45cf6151709b7257f31055d8ccfc40d9be0840c8964c449d9af010ca2d101"
+    },
+    {
+      "path": "review/astra_150m_LOD0_left_LOD1_right.png",
+      "sha256": "ea5e1ac57216d85e4e8a9db53f5dc69b9836e2b0d1f832a0724b16e4c32e3b71"
+    },
+    {
+      "path": "review/astra_260m_LOD0_left_LOD1_right.png",
+      "sha256": "1a3d8f8a1ea87fefc42900cdeb4ca156c164a779a27b5d64882e6ab6f9235cd8"
+    },
+    {
+      "path": "review/astra_450m_LOD0_left_LOD1_right.png",
+      "sha256": "d332c0a0e0fe4c4a3b07cdf70017fd60eb6234b12303cee0323bf73fea0a957e"
+    },
+    {
+      "path": "review/lowpower_night.png",
+      "sha256": "1907717222e10af8679d7efda3237090c2d22dd31539eb12ad348811632e5377"
+    },
+    {
+      "path": "review/astra_distance_contact.png",
+      "sha256": "0e6e72408d110fa5a169df9887f7fc51fd3c7645780430a0e148d272de12ed29"
+    }
+  ],
+  "approval": "pending"
+}

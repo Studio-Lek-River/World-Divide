@@ -1,0 +1,34 @@
+{
+  "mesh": "SM_Kit_IndicatorLED",
+  "directory": "Art/Shared/kit/lighting/09_IndicatorLED",
+  "triangles": [
+    222
+  ],
+  "digest": [
+    "bb2c3e215c82267336cbb0b025a752f3316af1d0"
+  ],
+  "bounds": [
+    [
+      0,
+      -12,
+      -4.95
+    ],
+    [
+      9,
+      12.35,
+      4.5
+    ]
+  ],
+  "lens_bounds": [
+    [
+      2,
+      -9.7,
+      -4.7
+    ],
+    [
+      7.4,
+      9.7,
+      -4.7
+    ]
+  ]
+}

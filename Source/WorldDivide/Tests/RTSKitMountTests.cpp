@@ -22,7 +22,8 @@ namespace
 	const TCHAR* HeadquartersDataPath = TEXT("/Game/Data/Buildings/DA_TestHeadquarters.DA_TestHeadquarters");
 	const TCHAR* CubePath = TEXT("/Engine/BasicShapes/Cube.Cube");
 
-	/** A part of the HQ as usa_hq.json placed it before its kit pieces were mounts (#390). */
+	/** A part of the HQ as usa_hq.json placed it before its kit pieces were mounts (#390); the beacons cast a shadow since
+	 * 12 is a class M piece (#393). */
 	struct FExpectedPart
 	{
 		const TCHAR* Name;
@@ -36,9 +37,9 @@ namespace
 
 	const FExpectedPart HeadquartersKitParts[] = {
 		{ TEXT("Beacon_MastTipCore"), TEXT("SM_Kit_MastBeaconSingle"), FVector(-898.7123, 0.0, 2800.0), FRotator::ZeroRotator,
-			FVector(1.75), false, 0.f },
+			FVector(1.75), true, 0.f },
 		{ TEXT("Beacon_MastTipEast"), TEXT("SM_Kit_MastBeaconSingle"), FVector(-1090.0, -1995.0001, 2400.0), FRotator::ZeroRotator,
-			FVector(1.75), false, 0.f },
+			FVector(1.75), true, 0.f },
 		{ TEXT("NationalFlag"), TEXT("SM_Kit_FlagCloth"), FVector(1150.0, 10.5, 690.0), FRotator(0.0, 90.0, 0.0),
 			FVector(4.18, 1.0, 2.2), true, 12500.f },
 	};

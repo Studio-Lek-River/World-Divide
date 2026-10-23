@@ -1,0 +1,87 @@
+00:00.344  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\source\WarningBeacon.blend"
+CYCLES DEVICES [('NVIDIA GeForce RTX 4090', True), ('AMD Ryzen 7 7800X3D 8-Core Processor', False), ('NVIDIA GeForce RTX 4090', True), ('AMD Radeon(TM) Graphics', True)]
+D:\Lek River Studio\World-Divide\Tools\Art\kit\lighting_393_review.py:82: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  world=bpy.data.worlds.new('REVIEW world');world.use_nodes=True;scene.world=world;bg=next(n for n in world.node_tree.nodes if n.type=='BACKGROUND')
+D:\Lek River Studio\World-Divide\Tools\Art\kit\lighting_393_review.py:97: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  concrete=bpy.data.materials.new('REVIEW concrete');concrete.use_nodes=True;nt=concrete.node_tree;p=next(n for n in nt.nodes if n.type=='BSDF_PRINCIPLED');p.inputs['Base Color'].default_value=(.12,.13,.14,1);p.inputs['Roughness'].default_value=.85
+00:03.469  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:09.313  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\pbr_day_off.png'
+RENDERED WarningBeacon pbr_day_off
+00:12.344  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:16.938  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\pbr_day_on.png'
+RENDERED WarningBeacon pbr_day_on
+00:19.969  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:24.672  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\ref_match_day.png'
+RENDERED WarningBeacon ref_match_day
+00:27.688  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:32.313  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\pbr_night_off.png'
+RENDERED WarningBeacon pbr_night_off
+00:35.328  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:42.016  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\pbr_night_on.png'
+RENDERED WarningBeacon pbr_night_on
+00:45.047  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:49.594  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\ref_match_night.png'
+RENDERED WarningBeacon ref_match_night
+00:52.609  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:57.203  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\lowpower_night.png'
+RENDERED WarningBeacon lowpower_night
+01:00.234  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:01.906  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\distance_12m_lod0.png'
+RENDERED WarningBeacon distance_12m_lod0
+01:04.906  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:06.531  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\distance_12m_lod1.png'
+RENDERED WarningBeacon distance_12m_lod1
+01:09.563  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:11.203  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\distance_150m_lod0.png'
+RENDERED WarningBeacon distance_150m_lod0
+01:14.234  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:17.000  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\distance_150m_lod1.png'
+RENDERED WarningBeacon distance_150m_lod1
+01:20.000  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:22.500  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\switch_260m_lod0.png'
+RENDERED WarningBeacon switch_260m_lod0
+01:25.656  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:27.938  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\switch_260m_lod1.png'
+RENDERED WarningBeacon switch_260m_lod1
+01:30.922  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:33.484  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\distance_450m_lod0.png'
+RENDERED WarningBeacon distance_450m_lod0
+01:36.578  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:39.016  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\distance_450m_lod1.png'
+RENDERED WarningBeacon distance_450m_lod1
+01:42.063  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:44.094  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\distance_day_150m_lod0.png'
+RENDERED WarningBeacon distance_day_150m_lod0
+01:47.219  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:49.453  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\distance_day_450m_lod0.png'
+RENDERED WarningBeacon distance_day_450m_lod0
+01:52.516  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:55.563  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\rts_lod0.png'
+RENDERED WarningBeacon rts_lod0
+01:58.625  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+02:01.531  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\08_WarningBeacon\review\rts_lod1.png'
+RENDERED WarningBeacon rts_lod1
+02:01.594  image.write      | ERROR OpenImageIO write failed: Could not open file "폠替O\.thumbnails\large\blender_62680_95b463b2522898c720464f70b687ec2d.png.png"
+Info: Saved as "WarningBeacon_Preview.blend"
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

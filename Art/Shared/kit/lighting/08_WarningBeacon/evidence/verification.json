@@ -1,0 +1,482 @@
+{
+  "piece": "lighting/08_WarningBeacon",
+  "round": "4b",
+  "textures": [
+    {
+      "path": "textures\\T_WarningBeacon_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "f2ae3acd44736484e156b1b4fbcc808133340f238907531d04c489d35c60a333"
+    },
+    {
+      "path": "textures\\T_WarningBeacon_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "bcf129ab4494ca60179c3b2cd4f184466b93af08748bc976afb5903e1bed7928"
+    },
+    {
+      "path": "textures\\T_WarningBeacon_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "25d32a093389dbe1b71ab7e84426067b9768368ee54b63f540cfaf1c4e1ec3ca"
+    },
+    {
+      "path": "textures\\T_WarningBeacon_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "8a3e5304de6333d0a659f20e978a9130194138a9d0a1ab4a43155f2f60edcf51"
+    },
+    {
+      "path": "textures\\T_WarningBeacon_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "LightProfile",
+      "srgb": false,
+      "sha256": "bfc62abf6f174d1d69a1fd2c45f197829adc1db5df9ef8ab8e89bca88495504e"
+    },
+    {
+      "path": "textures/T_WarningBeacon_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "1be26c489aee0479529edf6d4aa91748d079f436789bb2ebddd351f87a7351c9"
+    },
+    {
+      "path": "textures/T_WarningBeacon_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "4583961e532674b58c9d5ace0829e6214830d9ef70158519a3d2d28b89c9913a"
+    }
+  ],
+  "source_inventory": [
+    "SM_Kit_WarningBeacon",
+    "SM_Kit_WarningBeacon_LOD1"
+  ],
+  "bake": "Cycles geometry Bevel plus authored metric microfinish, baked to UV1, UV0 tangent parameterization; final maps DirectX",
+  "lod0": {
+    "triangles": 2312,
+    "vertices": 1241,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        -0.09000000357627869,
+        -0.09000000357627869,
+        0.0
+      ],
+      [
+        0.09000000357627869,
+        0.09000000357627869,
+        0.3199999928474426
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        -0.07100000232458115,
+        -0.07100000232458115,
+        0.18000000715255737
+      ],
+      [
+        0.07100000232458115,
+        0.07100000232458115,
+        0.3199999928474426
+      ]
+    ],
+    "origin_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 389.0264484178061,
+        "median": 512.414164713983,
+        "max": 523.9432395128131
+      },
+      "Lens": {
+        "min": 768.8252915816827,
+        "median": 779.9219223465453,
+        "max": 1954.4500352084808
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0,
+    "uv0_overlap": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    "uv1_overlap": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  },
+  "lod1": {
+    "triangles": 784,
+    "vertices": 437,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        -0.09000000357627869,
+        -0.09000000357627869,
+        0.0
+      ],
+      [
+        0.09000000357627869,
+        0.09000000357627869,
+        0.3199999928474426
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        -0.07100000232458115,
+        -0.07100000232458115,
+        0.18000000715255737
+      ],
+      [
+        0.07100000232458115,
+        0.07100000232458115,
+        0.3199999928474426
+      ]
+    ],
+    "origin_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 511.98938930098564,
+        "median": 514.9409337181008,
+        "max": 541.7316663032685
+      },
+      "Lens": {
+        "min": 771.151817290162,
+        "median": 801.5753113973265,
+        "max": 1882.2711447125475
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0,
+    "uv0_overlap": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    "uv1_overlap": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  },
+  "fbx_reimport": {
+    "SM_Kit_WarningBeacon.fbx": {
+      "triangles": 2312,
+      "vertices": 1241,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -0.09000001847743988,
+          -0.09000001847743988,
+          0.0
+        ],
+        [
+          0.09000001847743988,
+          0.09000001847743988,
+          0.3199999928474426
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          -0.07100000232458115,
+          -0.07100000232458115,
+          0.18000000715255737
+        ],
+        [
+          0.07100000232458115,
+          0.07100000232458115,
+          0.3199999928474426
+        ]
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 389.0264484178061,
+          "median": 512.414164713983,
+          "max": 523.9432395128131
+        },
+        "Lens": {
+          "min": 768.8252915816827,
+          "median": 779.9219223465453,
+          "max": 1954.4500352084808
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv0_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "uv1_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "tangent_error": 1.1175895298087823e-07,
+      "sha256": "5d355960349a67f49097ebf0021ad9b761458db7dd79be2d3ebb77257342f451"
+    },
+    "SM_Kit_WarningBeacon_LOD1.fbx": {
+      "triangles": 784,
+      "vertices": 437,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -0.09000001847743988,
+          -0.09000001847743988,
+          0.0
+        ],
+        [
+          0.09000001847743988,
+          0.09000001847743988,
+          0.3199999928474426
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          -0.07100000232458115,
+          -0.07100000232458115,
+          0.18000000715255737
+        ],
+        [
+          0.07100000232458115,
+          0.07100000232458115,
+          0.3199999928474426
+        ]
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 511.98938930098564,
+          "median": 514.9409337181008,
+          "max": 541.7316663032685
+        },
+        "Lens": {
+          "min": 771.151817290162,
+          "median": 801.5753113973265,
+          "max": 1882.2711447125475
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv0_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "uv1_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "tangent_error": 1.1920928399966613e-07,
+      "sha256": "d90aa8bfecf38b9dd5371ad180e9b7b3b3f7aafa29e54a4f335aba21d6116005"
+    }
+  },
+  "packed_images": [
+    {
+      "name": "T_WarningBeacon_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "f2ae3acd44736484e156b1b4fbcc808133340f238907531d04c489d35c60a333"
+    },
+    {
+      "name": "T_WarningBeacon_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "1be26c489aee0479529edf6d4aa91748d079f436789bb2ebddd351f87a7351c9"
+    },
+    {
+      "name": "T_WarningBeacon_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "bcf129ab4494ca60179c3b2cd4f184466b93af08748bc976afb5903e1bed7928"
+    },
+    {
+      "name": "T_WarningBeacon_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "25d32a093389dbe1b71ab7e84426067b9768368ee54b63f540cfaf1c4e1ec3ca"
+    },
+    {
+      "name": "T_WarningBeacon_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "4583961e532674b58c9d5ace0829e6214830d9ef70158519a3d2d28b89c9913a"
+    },
+    {
+      "name": "T_WarningBeacon_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "bfc62abf6f174d1d69a1fd2c45f197829adc1db5df9ef8ab8e89bca88495504e"
+    },
+    {
+      "name": "T_WarningBeacon_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "8a3e5304de6333d0a659f20e978a9130194138a9d0a1ab4a43155f2f60edcf51"
+    }
+  ],
+  "lens_shader": {
+    "tint": [
+      1.0,
+      0.2199999988079071,
+      0.0010000000474974513
+    ],
+    "hot_core_tint": [
+      1.0,
+      0.9200000166893005,
+      0.47999998927116394
+    ],
+    "hot_core_profile_range": [
+      0.55,
+      0.9
+    ],
+    "emission_strength": 24,
+    "representation": "Thin transparent moulded shell over real Lens bulb/concave mirror and Housing holder/bracket; no projected interior",
+    "channels": {
+      "R": "emission energy",
+      "G": "thin shell mask",
+      "B": "reserved zero"
+    }
+  },
+  "normal_binding": {
+    "Housing": {
+      "image": "T_WarningBeacon_Housing_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap"
+    },
+    "Lens": {
+      "image": "T_WarningBeacon_Lens_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap"
+    }
+  },
+  "export_roundtrip": "passed; independent FBX reimport, real metre bounds, slots, triangles, UV0/UV1, packed image byte equality",
+  "source_geometry_digests": [
+    "b662505025cdf9e2cd8267afd0e9d5dc843bb29d",
+    "11c2a8ff8271dc165b52ef4ecf1f06c5b2230088"
+  ],
+  "combined_lod_uv_overlap": {
+    "0": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    "1": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  },
+  "lens_uv_contract": {
+    "lod0": {
+      "U0_at_positive_X": 0.008,
+      "U_width": 0.3325061664559437,
+      "V0": 0.008,
+      "V_height": 0.14181151581963602,
+      "angular_direction": "+X toward +Y counterclockwise",
+      "dome_islands": 1
+    },
+    "lod1": {
+      "U0_at_positive_X": 0.3483186664559437,
+      "U_width": 0.3325061664559437,
+      "V0": 0.008,
+      "V_height": 0.14122590723733208,
+      "angular_direction": "+X toward +Y counterclockwise",
+      "dome_islands": 1
+    }
+  }
+}

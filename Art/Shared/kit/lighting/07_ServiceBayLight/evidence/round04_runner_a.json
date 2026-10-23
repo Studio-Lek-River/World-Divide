@@ -1,0 +1,36 @@
+{
+  "mesh": "SM_Kit_ServiceBayLight",
+  "directory": "Art/Shared/kit/lighting/07_ServiceBayLight",
+  "triangles": [
+    452,
+    164
+  ],
+  "digest": [
+    "e93507089623da2831fe0b234b136afdb27f71c3",
+    "86191a08d491ffd73a2c58d6001113edd1f0b5a8"
+  ],
+  "bounds": [
+    [
+      -10,
+      -30,
+      -15
+    ],
+    [
+      1.9,
+      30,
+      15
+    ]
+  ],
+  "lens_bounds": [
+    [
+      -0.4,
+      -26.6,
+      -11.6
+    ],
+    [
+      -0.4,
+      26.6,
+      11.6
+    ]
+  ]
+}

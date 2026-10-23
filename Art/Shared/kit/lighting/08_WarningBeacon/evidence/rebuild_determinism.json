@@ -1,0 +1,85 @@
+{
+  "round": "4b",
+  "selection": [
+    "08_WarningBeacon"
+  ],
+  "command": "run_pieces.py -- 08_WarningBeacon",
+  "first": {
+    "mesh": "SM_Kit_WarningBeacon",
+    "directory": "Art/Shared/kit/lighting/08_WarningBeacon",
+    "triangles": [
+      2312,
+      784
+    ],
+    "digest": [
+      "b662505025cdf9e2cd8267afd0e9d5dc843bb29d",
+      "11c2a8ff8271dc165b52ef4ecf1f06c5b2230088"
+    ],
+    "bounds": [
+      [
+        -9,
+        -9,
+        0
+      ],
+      [
+        9,
+        9,
+        32
+      ]
+    ],
+    "lens_bounds": [
+      [
+        -7.1,
+        -7.1,
+        18
+      ],
+      [
+        7.1,
+        7.1,
+        32
+      ]
+    ]
+  },
+  "second": {
+    "mesh": "SM_Kit_WarningBeacon",
+    "directory": "Art/Shared/kit/lighting/08_WarningBeacon",
+    "triangles": [
+      2312,
+      784
+    ],
+    "digest": [
+      "b662505025cdf9e2cd8267afd0e9d5dc843bb29d",
+      "11c2a8ff8271dc165b52ef4ecf1f06c5b2230088"
+    ],
+    "bounds": [
+      [
+        -9,
+        -9,
+        0
+      ],
+      [
+        9,
+        9,
+        32
+      ]
+    ],
+    "lens_bounds": [
+      [
+        -7.1,
+        -7.1,
+        18
+      ],
+      [
+        7.1,
+        7.1,
+        32
+      ]
+    ]
+  },
+  "matching_digests": true,
+  "other_manifest_entries_unchanged": true,
+  "logs": [
+    "round04b_runner_a_final.log",
+    "round04b_runner_b_final.log"
+  ]
+}

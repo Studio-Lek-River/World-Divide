@@ -1,0 +1,126 @@
+{
+  "piece": "lighting/09_IndicatorLED",
+  "round": 4,
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "textures": [
+    {
+      "path": "textures\\T_IndicatorLED_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "BaseColor",
+      "srgb": true
+    },
+    {
+      "path": "textures\\T_IndicatorLED_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "ORM",
+      "srgb": false
+    },
+    {
+      "path": "textures\\T_IndicatorLED_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "BaseColor",
+      "srgb": true
+    },
+    {
+      "path": "textures\\T_IndicatorLED_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "ORM",
+      "srgb": false
+    },
+    {
+      "path": "textures\\T_IndicatorLED_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "LightProfile",
+      "srgb": false
+    },
+    {
+      "path": "textures/T_IndicatorLED_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "Finish_Normal",
+      "srgb": false
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "Finish_Normal",
+      "srgb": false
+    }
+  ],
+  "orm": "R occlusion, G roughness, B metallic",
+  "normal_format": "DirectX, no Unreal green flip",
+  "normal_binding": "ONE Finish_Normal per slot; sample FinishBake UV1; retain UV0 tangents; no normal stacking",
+  "housing": {
+    "coating": "worn bare/galvanised steel, neutral grey, pits and silver edge wear",
+    "roughness_mid": 0.48,
+    "metallic": "0 coating; up to .9 exposed fasteners",
+    "bevel_m": 0.001
+  },
+  "lens": {
+    "display_tint": [
+      1,
+      1,
+      1
+    ],
+    "emission_strength": 10,
+    "profile": "p=LightProfile.r; hot=saturate((p-.55)/.35); emission=p*LampLevel*emission_strength*lerp(display_tint,hot_core_tint,hot)",
+    "hot_core_tint": [
+      1,
+      1,
+      1
+    ],
+    "ior": 1.49,
+    "coat_weight": 0.25,
+    "coat_roughness": 0.15,
+    "orm_roughness": ".23 to .39",
+    "representation": "ribbed opal diffuser"
+  },
+  "light": "emissive only; no real light",
+  "approval": "Round 4; unapproved",
+  "lod_textures": "Separate LOD charts in the same maps; every LOD painted and finish-baked",
+  "frame": "metres, +X forward, Z up; origin base underside for 08/12/13, mounting plane for 07/09",
+  "uv_beacon": "08 one dome island, U begins +X and increases towards +Y; 13 negative Y U<.5, positive Y U>=.5; seam/caps included in their dome chart",
+  "light_anchor": {
+    "anchor_m": [
+      0.047,
+      0,
+      -0.047
+    ],
+    "direction": [
+      0,
+      0,
+      -1
+    ],
+    "text": "Emissive only, no real light. Wall mounting frame faces +X; the actual underside diffuser faces −Z. Optical centre (0.047,0,-0.047) m."
+  }
+}

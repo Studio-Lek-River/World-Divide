@@ -655,7 +655,8 @@ def kit_light(light, lens):
     size = [high - low for low, high in zip(*lens)]
     axis = max(range(3), key=lambda i: abs(forward[i]))
     location = list(centre)
-    location[axis] += math.copysign(size[axis] / 2.0, forward[axis])
+    # A flat lens (07's panel, #393): a millimetre in front of it, so it still shines out of it.
+    location[axis] += math.copysign(max(size[axis] / 2.0, 0.1), forward[axis])
     value = unreal.RTSKitLight()
     value.set_editor_property("type", getattr(unreal.RTSBuildingLightType, light["type"].upper()))
     value.set_editor_property("location", unreal.Vector(*location))
@@ -678,7 +679,8 @@ def make_kit_finish(piece, masters, kept):
     """A piece's own finish (#392, kit_catalogue.json's "finish"): per slot it names, the delivered maps of its folder's
     textures/ (KIT_FINISH_MAPS) as T_Kit_<Piece>_<Slot>_<Map> in KIT_TEXTURE_DIR and MI_Kit_<Piece>_<Slot> in
     KIT_MATERIAL_DIR on the slot's kit master (KIT_FINISH_MASTERS), white, Roughness and Metallic 1 so the maps rule, and
-    the slot's values from the catalogue (a number a scalar, a list a colour). Adds what it makes to kept and returns the
+    the slot's values from the catalogue (a number a scalar, a list a colour, true or false a static switch: Glass,
+    Sweep, #393). Adds what it makes to kept and returns the
     instances by slot; {} for a piece without a finish."""
     short = piece["mesh"][len("SM_Kit_"):]
     folder = os.path.join(KIT_SOURCE_DIR, *piece["id"].split("/"), "textures")
@@ -699,8 +701,11 @@ def make_kit_finish(piece, masters, kept):
             kept.add(f"{KIT_TEXTURE_DIR}/{name}")
         scalars = {"Roughness": 1.0, "Metallic": 1.0}
         vectors = {"SurfaceColor": (1.0, 1.0, 1.0, 1.0)}
+        switches = {}
         for key, value in values.items():
-            if isinstance(value, list):
+            if isinstance(value, bool):
+                switches[key] = value
+            elif isinstance(value, list):
                 vectors[key] = tuple(value) + (1.0,) * (4 - len(value))
             else:
                 scalars[key] = float(value)
@@ -708,11 +713,11 @@ def make_kit_finish(piece, masters, kept):
         parent = masters[KIT_FINISH_MASTERS[slot]]
         slots[slot] = plan_now(
             f"{KIT_MATERIAL_DIR}/{name}",
-            lambda n=name, p=parent, t=textures, s=scalars, v=vectors: building_art.build_kit_finish_instance(
-                KIT_MATERIAL_DIR, n, p, t, s, v),
+            lambda n=name, p=parent, t=textures, s=scalars, v=vectors, w=switches: building_art.build_kit_finish_instance(
+                KIT_MATERIAL_DIR, n, p, t, s, v, w),
             spec_hash([building_art.build_kit_finish_instance], KIT_MATERIAL_DIR, name, object_path(parent),
                       sorted((k, object_path(t)) for k, t in textures.items()), sorted(scalars.items()),
-                      sorted(vectors.items())))
+                      sorted(vectors.items()), sorted(switches.items()), building_art.GLASS))
         kept.add(f"{KIT_MATERIAL_DIR}/{name}")
     return slots
 
@@ -843,20 +848,23 @@ def make_building_masters():
             f"{BUILDING_MATERIAL_DIR}/{name}", lambda b=build, n=name: b(BUILDING_MATERIAL_DIR, n, sources),
             spec_hash(builders + [build], BUILDING_MATERIAL_DIR, name, constants,
                       sorted(map(object_path, sources.values()))))
-    kit_builders = [building_art._kit_surface, building_art._material, building_art._vector, building_art._scalar,
-                    building_art._multiply]
+    kit_builders = [building_art._kit_surface, building_art._sweep, building_art._seed, building_art._material,
+                    building_art._vector, building_art._scalar, building_art._multiply, building_art._constant,
+                    vehicle_art._custom, vehicle_art._transform, vehicle_art._mask]
+    kit_constants = (building_art.SWEEP, building_art.SWEEP_HLSL, building_art.GLASS, building_art.DITHER_FUNCTION)
     defaults = (white["T_Kit_White"], white["T_Kit_WhiteMasks"])
     masters["M_Kit_Lens"] = plan_now(
         f"{KIT_MATERIAL_DIR}/M_Kit_Lens", lambda: building_art.build_lens_material(KIT_MATERIAL_DIR, "M_Kit_Lens", *defaults),
-        spec_hash(kit_builders + [building_art.build_lens_material, vehicle_art._custom], KIT_MATERIAL_DIR, constants,
-                  building_art.LENS_HLSL, building_art.FLAT_NORMAL, sorted(map(object_path, defaults)),
+        spec_hash(kit_builders + [building_art.build_lens_material], KIT_MATERIAL_DIR, constants, kit_constants,
+                  building_art.LENS_HLSL, building_art.LENS_SHAPE_HLSL, sorted(building_art.LENS_BLINK.items()),
+                  building_art.FLAT_NORMAL, sorted(map(object_path, defaults)),
                   (building_art.LENS_LEVEL, building_art.LENS_GROUP, building_art.LENS_FAULT, building_art.LENS_FLASH,
                    building_art.LENS_COLOR)))
     masters["M_Kit_Housing"] = plan_now(
         f"{KIT_MATERIAL_DIR}/M_Kit_Housing",
         lambda: building_art.build_kit_housing_material(KIT_MATERIAL_DIR, "M_Kit_Housing", *defaults),
-        spec_hash(kit_builders + [building_art.build_kit_housing_material], KIT_MATERIAL_DIR, building_art.FLAT_NORMAL,
-                  sorted(map(object_path, defaults))))
+        spec_hash(kit_builders + [building_art.build_kit_housing_material], KIT_MATERIAL_DIR, kit_constants,
+                  building_art.FLAT_NORMAL, sorted(map(object_path, defaults))))
     delete_stale_assets(texture_dir, set(textures))
     delete_stale_assets(BUILDING_MATERIAL_DIR, set(BUILDING_MASTERS))
     return masters
@@ -3330,10 +3338,11 @@ add_properties(headquarters, headquarters_layout)
 
 
 def make_kit_lighting_showcase(mesh, footprint, height):
-    """DA_TestKitLighting (#392): the kit's wall, entrance and directional fixtures (01, 02, 03, 05) mounted on the front of
-    a plain block, footprint cells and height cm, and the roof flood light (06) on its roof, for ue.ps1 -Task
-    buildingshots -Building DA_TestKitLighting. Test content only: nothing produces it. Its five steady lights are a
-    Medium building's budget (BUILDING_KIT.md, Light budgets)."""
+    """DA_TestKitLighting (#392, #393): the kit's wall fixtures (01, 02, 03, 05, 09, the indicator blue) and its ceiling
+    fixtures (04, 07, facing out like the wall ones) mounted on the front of a plain block, footprint cells and height cm,
+    and the roof flood light (06), the warning beacon (08) and the mast beacons (12, 13) on its roof, for ue.ps1 -Task
+    buildingshots -Building DA_TestKitLighting. Test content only: nothing produces it. Its seven steady lights and one
+    warning light are a Large building's budget (BUILDING_KIT.md, Light budgets)."""
     scale = building_fit(mesh, footprint, height)
     bounds = mesh.get_bounds()
     front = (bounds.origin.x + bounds.box_extent.x) * scale[0]
@@ -3343,7 +3352,13 @@ def make_kit_lighting_showcase(mesh, footprint, height):
                   ("CageWallLamp", "lighting/02_CageWallLamp", (front, -150.0, base + 250.0)),
                   ("EntranceLight", "lighting/03_EntranceLight", (front, 0.0, base + 300.0)),
                   ("DirectionalSpot", "lighting/05_DirectionalSpot", (front, 150.0, base + 350.0)),
-                  ("RoofFloodLight", "lighting/06_RoofFloodLight", (front - 60.0, 300.0, top))]
+                  ("IndicatorLED", "lighting/09_IndicatorLED", (front, 300.0, base + 250.0)),
+                  ("StripLight", "lighting/04_StripLight", (front, -250.0, base + 480.0)),
+                  ("ServiceBayLight", "lighting/07_ServiceBayLight", (front, 50.0, base + 480.0)),
+                  ("RoofFloodLight", "lighting/06_RoofFloodLight", (front - 60.0, 300.0, top)),
+                  ("WarningBeacon", "lighting/08_WarningBeacon", (front - 60.0, -300.0, top)),
+                  ("MastBeaconSingle", "lighting/12_MastBeaconSingle", (front - 60.0, -100.0, top)),
+                  ("MastBeaconDual", "lighting/13_MastBeaconDual", (front - 60.0, 100.0, top))]
     # Mounted parts and their lights hang under the building's mesh, so they take its MeshScale: each mount undoes it, to
     # stand at its place at real size.
     mounts = []
@@ -3355,10 +3370,12 @@ def make_kit_lighting_showcase(mesh, footprint, height):
         mount.set_editor_property("transform", unreal.Transform(
             unreal.Vector(*(value / axis for value, axis in zip(location, scale))), unreal.Rotator(),
             unreal.Vector(*(1.0 / axis for axis in scale))))
+        if short == "IndicatorLED":
+            mount.set_editor_property("indicator_color", unreal.LinearColor(0.05, 0.2, 1.0, 1.0))
         mounts.append(mount)
     showcase = make_building("DA_TestKitLighting", "Test Kit Lighting", mesh, scale, footprint, 1000.0, None, 0, 1.0, 0, 0,
                              directory=SHOWCASE_DIR)
-    add_properties(showcase, {"mounts": mounts, "size": unreal.RTSBuildingSize.MEDIUM})
+    add_properties(showcase, {"mounts": mounts, "size": unreal.RTSBuildingSize.LARGE})
     return showcase
 
 

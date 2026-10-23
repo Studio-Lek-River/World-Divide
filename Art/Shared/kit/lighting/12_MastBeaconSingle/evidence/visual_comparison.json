@@ -1,0 +1,50 @@
+{
+  "round": 4,
+  "scope": "Independent reference and native-distance review, Blender only",
+  "observations": "Tip-mounted reference variant preserves the collar, lugs, flared base and short stem. The day view retains the LED carrier with darker red edges and stronger skirt rings. Night and 30% LowPower remain red with a compact warm core and smooth local halo. The 12 m mesh reads as a small fixture; at 150/450 m it becomes a red signal cluster. Mapped optics do not reproduce refractive depth.",
+  "changes": "Deepened red at the dome silhouette and lower band, strengthened skirt rings, reduced whole-dome emission and tightened the smooth red halo around the compact LED column. Retained the tip-mount collar, clamp lugs, stepped stem and M-class LODs. Corrected excess UV density at the dome tip by reducing chart scale; no geometry was removed.",
+  "limits": "Opaque mapped glass has no true transmission/parallax. Measurable subpixel shading/brightness differences remain at the forced LOD switch; strict no-pop acceptance is still a producer/runtime review item.",
+  "images": [
+    {
+      "path": "review/reference_left_round04_right_day.png",
+      "sha256": "0b844d81df20c6c883f8d7b288c8248e8352ce7ec77eb3651597063f854b0adf"
+    },
+    {
+      "path": "review/reference_left_round04_right_night.png",
+      "sha256": "fbaa452f019380cb2783b897098e70f96d661b528a9dffee8a8b221745a96223"
+    },
+    {
+      "path": "review/ref_match_day.png",
+      "sha256": "6c49e194d9dc674992fe17ea592e9cb01f22fa898297039842f21b66a0c87994"
+    },
+    {
+      "path": "review/ref_match_night.png",
+      "sha256": "31e1962a21f6af5a05868620de91428898c739b317effc97ae30abdaca9a7d7d"
+    },
+    {
+      "path": "review/astra_12m_LOD0_left_LOD1_right.png",
+      "sha256": "398bdf28b1de1cd4e627ca7ff7ad11374b22a2f647865c733d77fc75214de364"
+    },
+    {
+      "path": "review/astra_150m_LOD0_left_LOD1_right.png",
+      "sha256": "ef439a0dae3f212b7d8a785f147da5b4733964aaf7ac0a80468ca4a20f13b761"
+    },
+    {
+      "path": "review/astra_260m_LOD0_left_LOD1_right.png",
+      "sha256": "2972b7fb3f4bec5abc49699f483dc834913e19ad2f9261391578d11e3c67e837"
+    },
+    {
+      "path": "review/astra_450m_LOD0_left_LOD1_right.png",
+      "sha256": "94849552ad185ad082657fd6031cc97d6bbd6cf268d7013ec4ece64683089332"
+    },
+    {
+      "path": "review/lowpower_night.png",
+      "sha256": "dd3b8d4c9885deee20d2ceda6e14ece3a0aec4f2dcfe3151b82143ae957b1571"
+    },
+    {
+      "path": "review/astra_distance_contact.png",
+      "sha256": "662cf0a868ef0e6eaf0ceeff6916d608e3b9b2718ac11b318c0c2ef376cf971f"
+    }
+  ],
+  "approval": "pending"
+}

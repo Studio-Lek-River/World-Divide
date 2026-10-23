@@ -1,0 +1,18 @@
+{
+  "12": {
+    "changed_pixels_gt_1_of_255": 770,
+    "max_display_delta": 0.41568630933761597
+  },
+  "150": {
+    "changed_pixels_gt_1_of_255": 10,
+    "max_display_delta": 0.07058823853731155
+  },
+  "260": {
+    "changed_pixels_gt_1_of_255": 3,
+    "max_display_delta": 0.11372548341751099
+  },
+  "450": {
+    "changed_pixels_gt_1_of_255": 3,
+    "max_display_delta": 0.019607843831181526
+  }
+}

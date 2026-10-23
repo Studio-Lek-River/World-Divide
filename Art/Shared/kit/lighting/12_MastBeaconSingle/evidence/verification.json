@@ -1,0 +1,511 @@
+{
+  "piece": "lighting/12_MastBeaconSingle",
+  "round": 4,
+  "textures": [
+    {
+      "path": "textures\\T_MastBeaconSingle_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "3f74f5115e34299ec94e27122b2ca980ebf3660499017424849894adb0f75bf2"
+    },
+    {
+      "path": "textures\\T_MastBeaconSingle_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "3e8a5813ef97d22df8057f837b91827a84bd9006dc86ab02948c39c08e66104d"
+    },
+    {
+      "path": "textures\\T_MastBeaconSingle_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "913ca44845a03def6232f999cb95d2226fb534eedf8f33664d57738dee5ef22d"
+    },
+    {
+      "path": "textures\\T_MastBeaconSingle_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "45a4f4233b57cfe80efffff3daea9c4ad5123e2ed558e61186019c9b4fc40bcb"
+    },
+    {
+      "path": "textures\\T_MastBeaconSingle_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "LightProfile",
+      "srgb": false,
+      "sha256": "0f4786fc1ffcb74bcd8034667d7fda630bdce86c3a57f7a53f2e3c1460418c6d"
+    },
+    {
+      "path": "textures/T_MastBeaconSingle_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "597d11b64562b5a5b778a89e50c4dff3ec2d217fa96a4c47248280021480afa9"
+    },
+    {
+      "path": "textures/T_MastBeaconSingle_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "ed2cf8d5bf468667afd08aea4a179ec892b5118d7d595a0445674d4035610922"
+    }
+  ],
+  "source_inventory": [
+    "SM_Kit_MastBeaconSingle",
+    "SM_Kit_MastBeaconSingle_LOD1"
+  ],
+  "bake": "Cycles geometry Bevel plus authored metric microfinish, baked to UV1, UV0 tangent parameterization; final maps DirectX",
+  "lod0": {
+    "triangles": 842,
+    "vertices": 465,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        -0.23099999129772186,
+        -0.23099999129772186,
+        0
+      ],
+      [
+        0.23099999129772186,
+        0.23099999129772186,
+        0.5600000023841858
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        -0.17000000178813934,
+        -0.17000000178813934,
+        0.23000000417232513
+      ],
+      [
+        0.17000000178813934,
+        0.17000000178813934,
+        0.5600000023841858
+      ]
+    ],
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 511.9957458553298,
+        "median": 513.2666650531461,
+        "max": 517.519457912677
+      },
+      "Lens": {
+        "min": 664.085086946855,
+        "median": 808.8157066617977,
+        "max": 1940.7936905739944
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0,
+    "uv0_overlap": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    "uv1_overlap": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  },
+  "lod1": {
+    "triangles": 346,
+    "vertices": 201,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        -0.23099999129772186,
+        -0.23099999129772186,
+        0
+      ],
+      [
+        0.23099999129772186,
+        0.23099999129772186,
+        0.5600000023841858
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        -0.17000000178813934,
+        -0.17000000178813934,
+        0.23000000417232513
+      ],
+      [
+        0.17000000178813934,
+        0.17000000178813934,
+        0.5600000023841858
+      ]
+    ],
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 511.9988546853667,
+        "median": 516.1233176892342,
+        "max": 534.5596845376919
+      },
+      "Lens": {
+        "min": 665.6919711819959,
+        "median": 679.7357543630305,
+        "max": 898.9666574264181
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0,
+    "uv0_overlap": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    "uv1_overlap": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  },
+  "fbx_reimport": {
+    "SM_Kit_MastBeaconSingle.fbx": {
+      "triangles": 842,
+      "vertices": 465,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -0.23099999129772186,
+          -0.23099999129772186,
+          0
+        ],
+        [
+          0.23099999129772186,
+          0.23099999129772186,
+          0.5600000023841858
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          -0.17000000178813934,
+          -0.17000000178813934,
+          0.23000000417232513
+        ],
+        [
+          0.17000000178813934,
+          0.17000000178813934,
+          0.5600000023841858
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 511.9957458553298,
+          "median": 513.2666650531461,
+          "max": 517.519457912677
+        },
+        "Lens": {
+          "min": 664.085086946855,
+          "median": 808.8157066617977,
+          "max": 1940.7936905739944
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv0_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "uv1_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "tangent_error": 1.1175718794831369e-07,
+      "sha256": "4cb3e53b9f6bd135cfd31f05d29d81416e8fa2bd745d69d369224cc4c8e4ce07"
+    },
+    "SM_Kit_MastBeaconSingle_LOD1.fbx": {
+      "triangles": 346,
+      "vertices": 201,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -0.23099999129772186,
+          -0.23099999129772186,
+          0
+        ],
+        [
+          0.23099999129772186,
+          0.23099999129772186,
+          0.5600000023841858
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          -0.17000000178813934,
+          -0.17000000178813934,
+          0.23000000417232513
+        ],
+        [
+          0.17000000178813934,
+          0.17000000178813934,
+          0.5600000023841858
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 511.9988546853667,
+          "median": 516.1233176892342,
+          "max": 534.5596845376919
+        },
+        "Lens": {
+          "min": 665.6919711819959,
+          "median": 679.7357543630305,
+          "max": 898.9666574264181
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv0_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "uv1_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "tangent_error": 1.1315569925507418e-07,
+      "sha256": "c49876a0115abd7c51feb1d1f6ce1497f996782a0e72988cd3808741fb9a75b6"
+    }
+  },
+  "packed_images": [
+    {
+      "name": "T_MastBeaconSingle_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "3f74f5115e34299ec94e27122b2ca980ebf3660499017424849894adb0f75bf2"
+    },
+    {
+      "name": "T_MastBeaconSingle_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "597d11b64562b5a5b778a89e50c4dff3ec2d217fa96a4c47248280021480afa9"
+    },
+    {
+      "name": "T_MastBeaconSingle_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "sha256": "3e8a5813ef97d22df8057f837b91827a84bd9006dc86ab02948c39c08e66104d"
+    },
+    {
+      "name": "T_MastBeaconSingle_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "913ca44845a03def6232f999cb95d2226fb534eedf8f33664d57738dee5ef22d"
+    },
+    {
+      "name": "T_MastBeaconSingle_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "ed2cf8d5bf468667afd08aea4a179ec892b5118d7d595a0445674d4035610922"
+    },
+    {
+      "name": "T_MastBeaconSingle_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "0f4786fc1ffcb74bcd8034667d7fda630bdce86c3a57f7a53f2e3c1460418c6d"
+    },
+    {
+      "name": "T_MastBeaconSingle_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "45a4f4233b57cfe80efffff3daea9c4ad5123e2ed558e61186019c9b4fc40bcb"
+    }
+  ],
+  "lens_shader": {
+    "tint": [
+      1,
+      0.0010000000474974513,
+      0.00039999998989515007
+    ],
+    "hot_core_tint": [
+      1,
+      0.2199999988079071,
+      0.03500000014901161
+    ],
+    "hot_core_profile_range": [
+      0.55,
+      0.9
+    ],
+    "emission_strength": 14,
+    "representation": "opaque continuous optical backing; compact hot-core tint blend"
+  },
+  "normal_binding": {
+    "Housing": {
+      "image": "T_MastBeaconSingle_Housing_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap"
+    },
+    "Lens": {
+      "image": "T_MastBeaconSingle_Lens_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap"
+    }
+  },
+  "export_roundtrip": "passed; independent FBX reimport, real metre bounds, slots, triangles, UV0/UV1, packed image byte equality",
+  "source_geometry_digests": [
+    "d1f56f3553041acfb5f09f4e36be256e7c3960c9",
+    "58266c93bd16575d28e90cae1606fe74972dd9db"
+  ],
+  "combined_lod_uv_overlap": {
+    "0": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    "1": {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  },
+  "lens_uv_contract": {},
+  "png_headers": [
+    {
+      "path": "textures/T_MastBeaconSingle_Housing_BaseColor.png",
+      "width": 2048,
+      "height": 2048,
+      "bit_depth": 8,
+      "sha256": "3f74f5115e34299ec94e27122b2ca980ebf3660499017424849894adb0f75bf2"
+    },
+    {
+      "path": "textures/T_MastBeaconSingle_Housing_Finish_Normal.png",
+      "width": 2048,
+      "height": 2048,
+      "bit_depth": 8,
+      "sha256": "597d11b64562b5a5b778a89e50c4dff3ec2d217fa96a4c47248280021480afa9"
+    },
+    {
+      "path": "textures/T_MastBeaconSingle_Housing_ORM.png",
+      "width": 2048,
+      "height": 2048,
+      "bit_depth": 8,
+      "sha256": "3e8a5813ef97d22df8057f837b91827a84bd9006dc86ab02948c39c08e66104d"
+    },
+    {
+      "path": "textures/T_MastBeaconSingle_Lens_BaseColor.png",
+      "width": 1024,
+      "height": 1024,
+      "bit_depth": 8,
+      "sha256": "913ca44845a03def6232f999cb95d2226fb534eedf8f33664d57738dee5ef22d"
+    },
+    {
+      "path": "textures/T_MastBeaconSingle_Lens_Finish_Normal.png",
+      "width": 1024,
+      "height": 1024,
+      "bit_depth": 8,
+      "sha256": "ed2cf8d5bf468667afd08aea4a179ec892b5118d7d595a0445674d4035610922"
+    },
+    {
+      "path": "textures/T_MastBeaconSingle_Lens_LightProfile.png",
+      "width": 1024,
+      "height": 1024,
+      "bit_depth": 16,
+      "sha256": "0f4786fc1ffcb74bcd8034667d7fda630bdce86c3a57f7a53f2e3c1460418c6d"
+    },
+    {
+      "path": "textures/T_MastBeaconSingle_Lens_ORM.png",
+      "width": 1024,
+      "height": 1024,
+      "bit_depth": 8,
+      "sha256": "45a4f4233b57cfe80efffff3daea9c4ad5123e2ed558e61186019c9b4fc40bcb"
+    }
+  ]
+}

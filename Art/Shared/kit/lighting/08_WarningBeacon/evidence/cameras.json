@@ -1,0 +1,33 @@
+{
+  "close_location_m": [
+    0.750987708568573,
+    -0.1952567994594574,
+    0.2050592601299286
+  ],
+  "target_m": [
+    0.0,
+    0.0,
+    0.1599999964237213
+  ],
+  "lens_mm": 58,
+  "close_resolution": [
+    1200,
+    1100
+  ],
+  "distance_resolution": [
+    1920,
+    1080
+  ],
+  "distance_horizontal_fov_degrees": 60,
+  "engine": "Cycles",
+  "samples": 64,
+  "seed": 393,
+  "distance_samples": 128,
+  "distance_denoising": false,
+  "context": "Blender-only review; no Unreal/runtime evidence",
+  "day": "neutral sky and sun, level .05 on / 0 off",
+  "night": "studio environment, level 1 on / 0 off / .3 LowPower",
+  "round": "4b",
+  "glass_reflection_cards": "Two review-only vertical area cards at (.08,-.4,.245)/(.12,.4,.245) m, .25/.18 W; .028 x .23 m.",
+  "compositor": "Close views only: Fog Glow, threshold 1.5, strength .45, size .4. Native distance frames and stable ROI: disabled."
+}

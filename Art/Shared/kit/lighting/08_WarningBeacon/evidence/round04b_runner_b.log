@@ -1,0 +1,13 @@
+BlenderMCP addon registered
+BlenderMCP addon unregistered
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\08_WarningBeacon\\SM_Kit_WarningBeacon.fbx'
+export finished in 0.0117 sec.
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\08_WarningBeacon\\SM_Kit_WarningBeacon_LOD1.fbx'
+export finished in 0.0067 sec.
+run_pieces: lighting/08_WarningBeacon [2312, 784] triangles, bounds [[-9.0, -9.0, 0.0], [9.0, 9.0, 32.0]], lens [[-7.1, -7.1, 18.0], [7.1, 7.1, 32.0]]
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

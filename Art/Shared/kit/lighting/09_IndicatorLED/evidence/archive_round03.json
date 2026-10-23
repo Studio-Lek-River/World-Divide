@@ -1,0 +1,246 @@
+{
+  "round": 4,
+  "prior_delivery_mismatches": [],
+  "files": [
+    {
+      "path": "CLAUDE_HANDOFF.md",
+      "sha256": "827e52f2c80c3c4b48d7ae270dd8f5d9ad5da121cd283b21c94e1411675ef15e"
+    },
+    {
+      "path": "evidence/archive_round02.json",
+      "sha256": "a0c2348ae80554dff4edc06b7041d7d9130eca5a0a20cd2d09a22093b396bbbc"
+    },
+    {
+      "path": "evidence/cameras.json",
+      "sha256": "519da662a829c702a1aef6d8c61bc0a207c4eacddc1017e4a4f6bc3240b65543"
+    },
+    {
+      "path": "evidence/delivery.json",
+      "sha256": "96f802c6f658e669bca9c42819afa2c607a193e08c9e1c6c08cc11c7462544bc"
+    },
+    {
+      "path": "evidence/distance_colour.json",
+      "sha256": "ad0ddfd62b4058bf8798bde4a1fb04a4b08d92e135e86cc5ecb0122a6feb3c6d"
+    },
+    {
+      "path": "evidence/normal_bake_repair.json",
+      "sha256": "c771bac27550197a8d048afac457285da268ce3a8b32fc0b3dea1f0ae3b897cf"
+    },
+    {
+      "path": "evidence/protected_inputs.json",
+      "sha256": "781a09c05407b1e39070dd48c310728ce144b77e03035db0a75f9602e52a2567"
+    },
+    {
+      "path": "evidence/rebuild_determinism.json",
+      "sha256": "d5503d959845b1b5e7b6a6d9f2ff1651856317ceca0c0698371efc0163ab6892"
+    },
+    {
+      "path": "evidence/reference_comparison.json",
+      "sha256": "97b9764e011c79ad6e5d9a52472f6ebe32770007fd0d48e8a6d96a34dd5baee7"
+    },
+    {
+      "path": "evidence/review_R2_resolution.md",
+      "sha256": "f33ddc9fa778705b30beb325266d06fa088e8492f01efd7aa86b615b6021f72f"
+    },
+    {
+      "path": "evidence/verification.json",
+      "sha256": "bca5eaa7d5f94b4aac51031a41b1d78cdeef876e9a106216e0a38cfe27aa1af1"
+    },
+    {
+      "path": "evidence/visual_comparison.json",
+      "sha256": "48e8598beb3157e1e1f332bd496ad8ae3480f299daaca728a08e1a25fdb3d01e"
+    },
+    {
+      "path": "evidence/visual_comparison.md",
+      "sha256": "e80e36d87f7997c21309bb4a3d8f3d3b662959fd0edc0cdb9868af23d890e0a2"
+    },
+    {
+      "path": "generators/indicator_led.py",
+      "sha256": "9d6288dcda2f64b0d7a005c4cfc88b0faec7eb49e80a13f797a20d6d2d644668"
+    },
+    {
+      "path": "generators/lighting_393_common.py",
+      "sha256": "dcc7b5a58a37e92790f968469bf3d93261166e0cf404ff859ffd9ea604ae9d79"
+    },
+    {
+      "path": "generators/lighting_393_finish.py",
+      "sha256": "e7c8ade7948f65fea59fa15186f1c19c848a5eefc0bab834d6b2ab1c986ed93b"
+    },
+    {
+      "path": "generators/lighting_393_glass.py",
+      "sha256": "d344e4df6397177c96cc8278cb60d1eedcb761bf3f6ba96a6ca896627ef99881"
+    },
+    {
+      "path": "generators/lighting_393_optical_master.py",
+      "sha256": "84ef962ee6f7ac03dc5f07b43aa02ba4a6e1666a06dc74456ffc40392a490a41"
+    },
+    {
+      "path": "generators/lighting_393_review.py",
+      "sha256": "984a99b4c9d311984a25782f63bc7d44962b459fde3d1e0f8c4b291b92ff34d3"
+    },
+    {
+      "path": "generators/mast_beacon_dual.py",
+      "sha256": "4b8b88a274f574776c9c43b3d13a5703bee4a79c40c2e5f98a1bc4bb64e858ec"
+    },
+    {
+      "path": "generators/mast_beacon_single_393.py",
+      "sha256": "2e619d4330a8da85055ba426c535b828c9142b7114c272777151f5d998e89436"
+    },
+    {
+      "path": "generators/service_bay_light.py",
+      "sha256": "67873e47992aee0eea8bf5b83eafcedc14ddb3f7854dae9ce18dcdcac69f4b85"
+    },
+    {
+      "path": "generators/warning_beacon.py",
+      "sha256": "d27d10d1bc59eccce96eb120ab1a05cae422e0e333273fe467a2a1c57452a897"
+    },
+    {
+      "path": "material_recipe.json",
+      "sha256": "a65d3afa53e31ef88f3f8b203ef21e31199a92b44ca0dbc160a372cc4f3d78fc"
+    },
+    {
+      "path": "reference/producer_reference.png",
+      "sha256": "9501777ef66f1bd506baed17978c04a0e981e041f2b79caa513d397d599e2208"
+    },
+    {
+      "path": "review/crop_12m_lod0_8x.png",
+      "sha256": "30baa51177597560e67b2230ca665b8243d0c22858b60a20b515a068fa4a0141"
+    },
+    {
+      "path": "review/crop_150m_lod0_8x.png",
+      "sha256": "327a6ebca93dbf005711ef2a20d51871ec742c2da3fde0076a00985b4c0a3348"
+    },
+    {
+      "path": "review/crop_450m_lod0_8x.png",
+      "sha256": "8c70c677ddcfb8f26d37da64f9eae90f4d8d50c7e39c57295a08686a08c8d0df"
+    },
+    {
+      "path": "review/crop_day_150m_lod0_8x.png",
+      "sha256": "b359811bf1c4f131095f57f06495e1b0bb680f3fe0d6c32e2b83acdd193499ec"
+    },
+    {
+      "path": "review/crop_day_450m_lod0_8x.png",
+      "sha256": "c31030e6845e74f0391796f364fc9392f58268a8a2c197be8e1d92c4f57f72ef"
+    },
+    {
+      "path": "review/distance_12m_lod0.png",
+      "sha256": "d04bf431324992080075a859d05d27dfc306aa08d834964c3b0f81a35bd51115"
+    },
+    {
+      "path": "review/distance_150m_lod0.png",
+      "sha256": "68c4fea03b7ba0871fc452c88040dc58ee85f35e1789484015db72e8775288c8"
+    },
+    {
+      "path": "review/distance_450m_lod0.png",
+      "sha256": "f86bab60aab774af0c0757c2f0dd3a57547a3ae423914a50712e57f300fbbd41"
+    },
+    {
+      "path": "review/distance_day_150m_lod0.png",
+      "sha256": "6180c3fd807c8e7c67990d5308e0852c7374d0711a66e3c3c0209788ef20355f"
+    },
+    {
+      "path": "review/distance_day_450m_lod0.png",
+      "sha256": "92d823ac17214ed79057b9d96ab7a33d997ae4cc67fab38846b0b5de1ea6055a"
+    },
+    {
+      "path": "review/pbr_day_off.png",
+      "sha256": "f9fcc8d521ca801d6407ef0c3f3af2dee853cfb1c0b045b44ab6e13971d72ad8"
+    },
+    {
+      "path": "review/pbr_day_on.png",
+      "sha256": "a1205fa38a679d8f7d192f1b66ea97257aa3b6d77570e4a996f88ac0b3adcf57"
+    },
+    {
+      "path": "review/pbr_night_off.png",
+      "sha256": "eca91170c7db507baac861ffbefe48c30662113b16cc68dd7c64557863afc22c"
+    },
+    {
+      "path": "review/pbr_night_on.png",
+      "sha256": "5e2000e0c46355b976cee1de6a9e59df59bf7c101a90a25974fe98255b7abf09"
+    },
+    {
+      "path": "review/README.md",
+      "sha256": "814ec2563cc07932d7998796132f72fe2c2674cc574756fd166b20ecee1a237c"
+    },
+    {
+      "path": "review/reference_left_round03_right_day.png",
+      "sha256": "9aa4b30f3645020dfb6cb38458d5fcd5b49de69c30eb83ee5b79f3992013f672"
+    },
+    {
+      "path": "review/reference_left_round03_right_night.png",
+      "sha256": "ed872ca21d7ec951803972c5d4e6184ef3e33f48290774edafc251db2c53c43e"
+    },
+    {
+      "path": "review/ref_match_day.png",
+      "sha256": "b210b1516713427702e7385c636a0f8385ddc5b16ad7cb64be3200d0be5b27b7"
+    },
+    {
+      "path": "review/ref_match_night.png",
+      "sha256": "f19a208ebc47747a21da7cb4caf91accdd6af8f659511331ba734ac9fa9222b1"
+    },
+    {
+      "path": "review/tint_blue.png",
+      "sha256": "3b1b87066ce8db4eadb97196aff3819b66786bd470c6f15228b99729f70866f3"
+    },
+    {
+      "path": "review/tint_green.png",
+      "sha256": "349ad0931d3c38c650939a4aaecf14bafde118c17a801ed9c68b62f461bd45ea"
+    },
+    {
+      "path": "review/tint_red.png",
+      "sha256": "f3565019aa5c425a21d4ba3fa7ed955835179d88aa6b2152810d8ec2880c684a"
+    },
+    {
+      "path": "SM_Kit_IndicatorLED.fbx",
+      "sha256": "8941ea1341eeec0914d46fedbbc8057379a243b5c221b51ee7b6959b314c960b"
+    },
+    {
+      "path": "source/bake_inputs/T_IndicatorLED_Housing_Micro_Normal.png",
+      "sha256": "26c7556437b9f62f099df246d8effa6217af5f9c73fe18cec8f5aab00c5148a0"
+    },
+    {
+      "path": "source/bake_inputs/T_IndicatorLED_Lens_Micro_Normal.png",
+      "sha256": "72f9489084b6eab3eef4ef67064b433716894bff0688a7f9efd969456c6f8ca7"
+    },
+    {
+      "path": "source/IndicatorLED.blend",
+      "sha256": "bc3c3da778daedf825633ccf3cef12e5d573fcc8ef17a533f3238965d24829f1"
+    },
+    {
+      "path": "source/IndicatorLED_Preview.blend",
+      "sha256": "e529723ef20bec48df1e65f751ef57d25860e102a29940ad7f4568a3410fb964"
+    },
+    {
+      "path": "STATE.md",
+      "sha256": "6323769ee9eca64191d43d5fe1a937ad3d55cd37e8a3e301d0d776991305022f"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Housing_BaseColor.png",
+      "sha256": "eb2b89ddd1bf5296062161467be9842d14de6fd49d49037a10673a82b90d9610"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Housing_Finish_Normal.png",
+      "sha256": "53377a23c592e09f3e9e7345df3b8d30ec2d1190e6d2d8bbf57d7948790c6cae"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Housing_ORM.png",
+      "sha256": "0898fad4d856d6f878ecc9a8b27985661eda5066e16edc75bf51bbc49d3483a5"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_BaseColor.png",
+      "sha256": "a89e631492ca0657654d11c7668da5423a6931a55fe674eb37573ab86c7e23f8"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_Finish_Normal.png",
+      "sha256": "58bf08084666c357d09706572df81911fb5d4648e07e48f9492c995aa0559791"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_LightProfile.png",
+      "sha256": "c434f5f9abfecbc5f18ae78c5bb8023fbf29754320f0e2001863be95aab03058"
+    },
+    {
+      "path": "textures/T_IndicatorLED_Lens_ORM.png",
+      "sha256": "c62eaff962f1dfba2978833f78c29d82e9c45d226fbdc28ebf053c3bddb785dd"
+    }
+  ]
+}

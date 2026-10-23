@@ -1,0 +1,40 @@
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\07_ServiceBayLight\\SM_Kit_ServiceBayLight.fbx'
+export finished in 0.0527 sec.
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\07_ServiceBayLight\\SM_Kit_ServiceBayLight_LOD1.fbx'
+export finished in 0.0061 sec.
+run_pieces: lighting/07_ServiceBayLight [452, 164] triangles, bounds [[-10.0, -30.0, -15.0], [1.9, 30.0, 15.0]], lens [[-0.4, -26.6, -11.6], [-0.4, 26.6, 11.6]]
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\08_WarningBeacon\\SM_Kit_WarningBeacon.fbx'
+export finished in 0.0104 sec.
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\08_WarningBeacon\\SM_Kit_WarningBeacon_LOD1.fbx'
+export finished in 0.0073 sec.
+run_pieces: lighting/08_WarningBeacon [1828, 724] triangles, bounds [[-9.0, -9.0, 0.0], [9.0, 9.0, 32.0]], lens [[-7.0, -7.0, 18.0], [7.0, 7.0, 32.0]]
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\09_IndicatorLED\\SM_Kit_IndicatorLED.fbx'
+export finished in 0.0061 sec.
+run_pieces: lighting/09_IndicatorLED [222] triangles, bounds [[0.0, -12.0, -4.95], [9.0, 12.35, 4.5]], lens [[2.0, -9.7, -4.7], [7.4, 9.7, -4.7]]
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\12_MastBeaconSingle\\candidate\\SM_Kit_MastBeaconSingle.fbx'
+export finished in 0.0089 sec.
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\12_MastBeaconSingle\\candidate\\SM_Kit_MastBeaconSingle_LOD1.fbx'
+export finished in 0.0053 sec.
+run_pieces: lighting/12_MastBeaconSingle [842, 346] triangles, bounds [[-23.1, -23.1, 0.0], [23.1, 23.1, 56.0]], lens [[-17.0, -17.0, 23.0], [17.0, 17.0, 56.0]]
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:/Users/basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\13_MastBeaconDual\\SM_Kit_MastBeaconDual.fbx'
+export finished in 0.0091 sec.
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\13_MastBeaconDual\\SM_Kit_MastBeaconDual_LOD1.fbx'
+export finished in 0.0060 sec.
+run_pieces: lighting/13_MastBeaconDual [1184, 376] triangles, bounds [[-17.33, -40.0, 0.0], [17.33, 40.0, 45.0]], lens [[-12.75, -35.25, 20.25], [12.75, 35.25, 45.0]]
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

@@ -1,0 +1,90 @@
+{
+  "round": 4,
+  "runner": "_work_393/run_pieces.py",
+  "all_five_built_twice": true,
+  "both_exit_codes": [
+    0,
+    0
+  ],
+  "logs": [
+    "07_ServiceBayLight/evidence/round04_retained_a.log",
+    "07_ServiceBayLight/evidence/round04_retained_b.log"
+  ],
+  "first": {
+    "mesh": "SM_Kit_ServiceBayLight",
+    "directory": "Art/Shared/kit/lighting/07_ServiceBayLight",
+    "triangles": [
+      452,
+      164
+    ],
+    "digest": [
+      "e93507089623da2831fe0b234b136afdb27f71c3",
+      "86191a08d491ffd73a2c58d6001113edd1f0b5a8"
+    ],
+    "bounds": [
+      [
+        -10,
+        -30,
+        -15
+      ],
+      [
+        1.9,
+        30,
+        15
+      ]
+    ],
+    "lens_bounds": [
+      [
+        -0.4,
+        -26.6,
+        -11.6
+      ],
+      [
+        -0.4,
+        26.6,
+        11.6
+      ]
+    ]
+  },
+  "second": {
+    "mesh": "SM_Kit_ServiceBayLight",
+    "directory": "Art/Shared/kit/lighting/07_ServiceBayLight",
+    "triangles": [
+      452,
+      164
+    ],
+    "digest": [
+      "e93507089623da2831fe0b234b136afdb27f71c3",
+      "86191a08d491ffd73a2c58d6001113edd1f0b5a8"
+    ],
+    "bounds": [
+      [
+        -10,
+        -30,
+        -15
+      ],
+      [
+        1.9,
+        30,
+        15
+      ]
+    ],
+    "lens_bounds": [
+      [
+        -0.4,
+        -26.6,
+        -11.6
+      ],
+      [
+        -0.4,
+        26.6,
+        11.6
+      ]
+    ]
+  },
+  "matching_digests": true,
+  "log_sha256": {
+    "07_ServiceBayLight/evidence/round04_retained_a.log": "e048c662b093151ba884e9585811618c88e2ffb2edcdf65a7dc0a4ed8a4ac782",
+    "07_ServiceBayLight/evidence/round04_retained_b.log": "f82adeb327a66b1e2229f8edbbacaa22dd9e01114082029d52d2ead7bc0279c2"
+  }
+}

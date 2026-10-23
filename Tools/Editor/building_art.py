@@ -123,12 +123,46 @@ LIGHT_NIGHT_INDEX = 12
 # included, so a battery lens stays lit on low power: the lens no longer reads Operational. RTSKit::IsLensLit repeats the
 # fault and flash sums for the real lights; change both together.
 LENS_LEVEL, LENS_GROUP, LENS_FAULT, LENS_FLASH, LENS_COLOR = 0, 1, 2, 3, 4
+# A lens with Blink 1 (the mast LEDs, #393) also blinks on its own, as the obstruction beacon did (BEACON_HLSL), its phase
+# from where it stands; with Alternate 1 its lens at U >= 0.5 (13's second dome) blinks half a cycle later. Only lenses
+# without a real light blink, so RTSKit::IsLensLit has no blink to repeat.
 LENS_HLSL = """
 float gate = lerp(1.0, Fixtures, saturate(Group));
 float fault = Fault > 0.0 ? step(0.35, frac(Time * 2.3 + Fault + 0.5 * sin(Time * 17.0 + Fault * 40.0))) : 1.0;
 float flash = Flash > 0.0 ? step(0.5, frac(Time + Flash)) : 1.0;
-return Color * Level * gate * fault * flash * lerp(DayGain, 1.0, Night) * Intensity;
+float blink = 1.0;
+if (Blink > 0.0)
+{
+    float3 S = frac(Seed * float3(0.1031, 0.1030, 0.0973));
+    S += dot(S, S.yzx + 33.33);
+    S = frac((S.xxy + S.yzz) * S.zyx);
+    float Cycle = frac(Time * BlinkRate * (1.0 + BlinkJitter * (2.0 * S.x - 1.0)) + S.y + 0.5 * Alternate * step(0.5, U));
+    blink = saturate((BlinkDuty - Cycle) / max(BlinkFade, 0.001));
+}
+return Color * Level * gate * fault * flash * blink * lerp(DayGain, 1.0, Night) * Intensity;
 """
+# The lens's colour from its LightProfile's red P (#393): EmissionTint, turning to HotCoreTint where the profile is hottest,
+# by HotCore (0, the default, keeps EmissionTint throughout).
+LENS_SHAPE_HLSL = """
+float hot = saturate((P - 0.55) / 0.35) * HotCore;
+return P * lerp(Tint, HotTint, hot);
+"""
+# The lens's blink, as the obstruction beacon's (BEACON_PARAMETERS).
+LENS_BLINK = {"BlinkRate": 1.0, "BlinkDuty": 0.18, "BlinkFade": 0.06, "BlinkJitter": 0.08}
+# Sweep (#393, 08's rotating beacon): a static switch, off by default, that turns the masked part of the piece about its
+# local Z axis at SweepRate turns a second, the turning light's 1.5 (ARTSBuilding::UpdateKitLights), by world position
+# offset. P is the local position (cm), Mask 1 where it turns.
+SWEEP = "Sweep"
+SWEEP_HLSL = """
+float a = 6.2831853 * frac(Time * Rate) * Mask;
+float2 r = float2(P.x * cos(a) - P.y * sin(a), P.x * sin(a) + P.y * cos(a));
+return float3(r - P.xy, 0.0);
+"""
+# Glass (#393, 08's dome): a static switch, off by default, that lets a lens's thin shell (its LightProfile's green 1) show
+# what is behind it: dithered opacity 1 - Transmission x (1 - Fresnel), its base colour times GlassDarken. Its instance
+# draws masked and two-sided (build_kit_finish_instance).
+GLASS = "Glass"
+DITHER_FUNCTION = "/Engine/Functions/Engine_MaterialFunctions02/Utility/DitherTemporalAA"
 # The engine's flat normal: a lens without a baked finish normal draws as if it had none.
 FLAT_NORMAL = "/Engine/EngineMaterials/FlatNormal"
 # A game mesh baked from its master (#373, docs/art/MODEL_PERFORMANCE.md rule 7): the building masters' static switch
@@ -518,7 +552,7 @@ def _kit_surface(material, white, white_masks):
     """The textured surface the kit's masters share (#392): BaseColor times SurfaceColor, the ORM map (occlusion,
     roughness, metallic) times Roughness and Metallic, all on UV0, and the finish normal baked on UV1 (FinishNormal, the
     tangent basis on UV0, BUILDING_KIT.md). The maps default to white and flat, so an instance without them draws from
-    its values alone."""
+    its values alone. Returns the Roughness, Metallic and SurfaceColor parameters and the base colour."""
     uv1 = _node(material, unreal.MaterialExpressionTextureCoordinate, -1050, -100, coordinate_index=1)
     base = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, -750, -700, parameter_name="BaseColor",
                  texture=white, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
@@ -530,26 +564,55 @@ def _kit_surface(material, white, white_masks):
     color = _vector(material, -750, -900, "SurfaceColor", (1.0, 1.0, 1.0, 1.0))
     roughness = _scalar(material, -450, -340, "Roughness", 1.0)
     metallic = _scalar(material, -450, -180, "Metallic", 1.0)
-    _output(material, _multiply(material, -250, -700, base, "RGB", color, "RGB"), "", unreal.MaterialProperty.MP_BASE_COLOR)
+    surface = _multiply(material, -250, -700, base, "RGB", color, "RGB")
+    _output(material, surface, "", unreal.MaterialProperty.MP_BASE_COLOR)
     _output(material, orm, "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
     _output(material, _multiply(material, -250, -340, orm, "G", roughness, ""), "", unreal.MaterialProperty.MP_ROUGHNESS)
     _output(material, _multiply(material, -250, -180, orm, "B", metallic, ""), "", unreal.MaterialProperty.MP_METALLIC)
     _output(material, finish, "RGB", unreal.MaterialProperty.MP_NORMAL)
-    return roughness, metallic, color
+    return roughness, metallic, color, surface
+
+
+def _sweep(material, mask, mask_pin):
+    """The SWEEP static switch (#393): on, world position offset turns the vertices where mask is 1 about the piece's
+    local Z axis (SWEEP_HLSL, SweepRate turns a second); off, no offset."""
+    position = _node(material, unreal.MaterialExpressionLocalPosition, -1900, 1500)
+    turn = vehicle_art._custom(material, -1500, 1500, SWEEP_HLSL, ["P", "Mask", "Time", "Rate"])
+    _connect(position, "", turn, "P")
+    _connect(mask, mask_pin, turn, "Mask")
+    _connect(_node(material, unreal.MaterialExpressionTime, -1900, 1700), "", turn, "Time")
+    _connect(_scalar(material, -1900, 1800, "SweepRate", 1.5), "", turn, "Rate")
+    world = vehicle_art._transform(material, -1200, 1500, unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL,
+                                   unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    _connect(turn, "", world, "")
+    switch = _node(material, unreal.MaterialExpressionStaticSwitchParameter, -900, 1500, parameter_name=SWEEP,
+                   default_value=False)
+    _connect(world, "", switch, "True")
+    _connect(_node(material, unreal.MaterialExpressionConstant3Vector, -1200, 1700), "", switch, "False")
+    _output(material, switch, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
 
 
 def build_kit_housing_material(directory, name, white, white_masks):
     """M_Kit_Housing, a kit piece's textured housing (#392): its delivered BaseColor, ORM and finish normal (_kit_surface),
-    which the piece's MI_Kit_<Piece>_Housing sets. No glow; it draws on instanced meshes like every kit master."""
+    which the piece's MI_Kit_<Piece>_Housing sets. No glow; it draws on instanced meshes like every kit master. With SWEEP
+    (08's turning reflector holder, #393) the part above SweepMinZ within SweepRadius of the Z axis (cm) turns."""
     material = _material(directory, name)
     _kit_surface(material, white, white_masks)
+    inside = vehicle_art._custom(material, -1900, 1300, "return (P.z >= MinZ && length(P.xy) < Radius) ? 1.0 : 0.0;",
+                                 ["P", "MinZ", "Radius"], output=unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    _connect(_node(material, unreal.MaterialExpressionLocalPosition, -2200, 1300), "", inside, "P")
+    _connect(_scalar(material, -2200, 1400, "SweepMinZ", 0.0), "", inside, "MinZ")
+    _connect(_scalar(material, -2200, 1500, "SweepRadius", 0.0), "", inside, "Radius")
+    _sweep(material, inside, "")
     material.set_editor_property("used_with_instanced_static_meshes", True)
     return _finish(material)
 
 
-def build_kit_finish_instance(directory, name, parent, textures, scalars, vectors):
+def build_kit_finish_instance(directory, name, parent, textures, scalars, vectors, switches):
     """MI_Kit_<Piece>_<Slot>: a piece's own finish on a kit master (#392), its delivered maps as texture parameters
-    ({parameter: texture}) and its values. Parent first and the instance updated after, as build_material_instance does."""
+    ({parameter: texture}), its values and its static switches ({parameter: bool}). With GLASS on it draws masked and
+    two-sided, so its dithered shell shows what is behind it. Parent first and the instance updated after, as
+    build_material_instance does."""
     path = f"{directory}/{name}"
     if assets.does_asset_exist(path):
         instance = assets.load_asset(path)
@@ -564,6 +627,19 @@ def build_kit_finish_instance(directory, name, parent, textures, scalars, vector
         editing.set_material_instance_scalar_parameter_value(instance, parameter, value)
     for parameter, value in sorted(vectors.items()):
         editing.set_material_instance_vector_parameter_value(instance, parameter, unreal.LinearColor(*value))
+    # The parent's static switches are known to the instance only once it is updated with that parent.
+    editing.update_material_instance(instance)
+    for parameter, value in sorted(switches.items()):
+        editing.set_material_instance_static_switch_parameter_value(instance, parameter, value)
+        if editing.get_material_instance_static_switch_parameter_value(instance, parameter) != value:
+            raise RuntimeError(f"{name}: its parent {parent.get_name()} has no static switch {parameter}")
+    glass = switches.get(GLASS, False)
+    overrides = instance.get_editor_property("base_property_overrides")
+    overrides.set_editor_property("override_blend_mode", glass)
+    overrides.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED if glass else unreal.BlendMode.BLEND_OPAQUE)
+    overrides.set_editor_property("override_two_sided", glass)
+    overrides.set_editor_property("two_sided", glass)
+    instance.set_editor_property("base_property_overrides", overrides)
     editing.update_material_instance(instance)
     if instance.get_editor_property("parent") != parent:
         raise RuntimeError(f"{name} did not keep its parent {parent.get_name()}")
@@ -574,10 +650,11 @@ def build_lens_material(directory, name, white, white_masks):
     """M_Kit_Lens, every kit piece's lit glass (#388): metal, glass or LED from its instance's SurfaceColor, Roughness and
     Metallic, times a piece's own maps where it has them (_kit_surface, #392), with the finish normal baked on UV1. It
     glows as LENS_HLSL works out from its instance's custom data (LENS_LEVEL..LENS_COLOR), the building's Fixtures group
-    and the dark (LIGHT_NIGHT_INDEX), which lifts it from DayGain to full Intensity, times the piece's LightProfile (red,
-    UV0) and EmissionTint, white by default. No light of its own."""
+    and the dark (LIGHT_NIGHT_INDEX), which lifts it from DayGain to full Intensity, and its own blink (LENS_BLINK, with
+    Blink 1), times the piece's LightProfile (red, UV0) in EmissionTint and HotCoreTint (LENS_SHAPE_HLSL), white by
+    default. No light of its own. GLASS lets the shell (the profile's green) show through, SWEEP turns the rest (#393)."""
     material = _material(directory, name)
-    roughness, metallic, color = _kit_surface(material, white, white_masks)
+    roughness, metallic, color, surface = _kit_surface(material, white, white_masks)
     color.set_editor_property("default_value", unreal.LinearColor(0.8, 0.8, 0.8, 1.0))
     roughness.set_editor_property("default_value", 0.4)
     metallic.set_editor_property("default_value", 0.0)
@@ -592,17 +669,62 @@ def build_lens_material(directory, name, white, white_masks):
     pins["DayGain"] = _scalar(material, -900, 920, "DayGain", 0.1)
     pins["Intensity"] = _scalar(material, -900, 1020, "Intensity", 3.0)
     pins["Time"] = _node(material, unreal.MaterialExpressionTime, -900, 1120)
+    pins["Blink"] = _scalar(material, -1200, 0, "Blink", 0.0)
+    pins["Alternate"] = _scalar(material, -1200, 100, "Alternate", 0.0)
+    pins["Seed"] = _seed(material, -1900, 200)
+    for index, (key, value) in enumerate(sorted(LENS_BLINK.items())):
+        pins[key] = _scalar(material, -1200, 300 + 100 * index, key, value)
+    pins["U"] = vehicle_art._mask(material, -1200, 800, _node(material, unreal.MaterialExpressionTextureCoordinate,
+                                                              -1400, 800, coordinate_index=0), "r")
     glow = vehicle_art._custom(material, -400, 400, LENS_HLSL, list(pins))
     for pin, node in pins.items():
         _connect(node, "", glow, pin)
     profile = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, -400, 700, parameter_name="LightProfile",
                     texture=white_masks, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
-    tint = _vector(material, -400, 950, "EmissionTint", (1.0, 1.0, 1.0, 1.0))
-    shaped = _multiply(material, -150, 700, profile, "R", tint, "RGB")
-    _output(material, _multiply(material, 0, 400, glow, "", shaped, ""), "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    shape = vehicle_art._custom(material, -150, 700, LENS_SHAPE_HLSL, ["P", "Tint", "HotTint", "HotCore"])
+    _connect(profile, "R", shape, "P")
+    _connect(_vector(material, -400, 950, "EmissionTint", (1.0, 1.0, 1.0, 1.0)), "RGB", shape, "Tint")
+    _connect(_vector(material, -400, 1100, "HotCoreTint", (1.0, 1.0, 1.0, 1.0)), "RGB", shape, "HotTint")
+    _connect(_scalar(material, -400, 1250, "HotCore", 0.0), "", shape, "HotCore")
+    _output(material, _multiply(material, 0, 400, glow, "", shape, ""), "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+
+    # GLASS: the shell darkened in base colour and dithered through, 1 - Transmission x (1 - Fresnel), where it is shell.
+    fresnel = _node(material, unreal.MaterialExpressionFresnel, -1200, -1300, exponent=5.0, base_reflect_fraction=0.04)
+    facing = _node(material, unreal.MaterialExpressionOneMinus, -1000, -1300)
+    _connect(fresnel, "", facing, "")
+    shell = _multiply(material, -800, -1300, profile, "G", _scalar(material, -1000, -1200, "GlassTransmission", 0.91), "")
+    through = _node(material, unreal.MaterialExpressionOneMinus, -450, -1300)
+    _connect(_multiply(material, -600, -1300, shell, "", facing, ""), "", through, "")
+    dither = _node(material, unreal.MaterialExpressionMaterialFunctionCall, -250, -1300,
+                   material_function=unreal.load_asset(DITHER_FUNCTION))
+    _connect(through, "", dither, "Alpha Threshold")
+    opacity = _node(material, unreal.MaterialExpressionStaticSwitchParameter, 0, -1300, parameter_name=GLASS,
+                    default_value=False)
+    _connect(dither, "", opacity, "True")
+    _connect(_constant(material, -250, -1150, 1.0), "", opacity, "False")
+    _output(material, opacity, "", unreal.MaterialProperty.MP_OPACITY_MASK)
+    darken = _node(material, unreal.MaterialExpressionLinearInterpolate, -250, -1000)
+    _connect(_constant(material, -450, -1000, 1.0), "", darken, "A")
+    _connect(_scalar(material, -450, -900, "GlassDarken", 0.18), "", darken, "B")
+    _connect(profile, "G", darken, "Alpha")
+    base = _node(material, unreal.MaterialExpressionStaticSwitchParameter, 0, -800, parameter_name=GLASS,
+                 default_value=False)
+    _connect(_multiply(material, -100, -900, surface, "", darken, ""), "", base, "True")
+    _connect(surface, "", base, "False")
+    _output(material, base, "", unreal.MaterialProperty.MP_BASE_COLOR)
+
+    # SWEEP turns what is not shell, the profile's green read at full detail in the vertex shader.
+    vertex_profile = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, -2200, 1300,
+                           parameter_name="LightProfile", texture=white_masks,
+                           sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_MASKS,
+                           mip_value_mode=unreal.TextureMipValueMode.TMVM_MIP_LEVEL, const_mip_value=0)
+    inner = _node(material, unreal.MaterialExpressionOneMinus, -1900, 1300)
+    _connect(vertex_profile, "G", inner, "")
+    _sweep(material, inner, "")
     # The kit's pieces are drawn instanced, one component per mesh per building.
     material.set_editor_property("used_with_instanced_static_meshes", True)
     return _finish(material)
+
 
 def build_rubble_material(directory, name, textures, recipe):
     """One slot of a building's rubble (#403, as its material_recipe.json describes it): BaseColor and ORM (occlusion,

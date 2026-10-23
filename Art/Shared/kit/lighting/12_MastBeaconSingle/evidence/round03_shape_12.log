@@ -1,0 +1,17 @@
+00:00.343  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\12_MastBeaconSingle\source\MastBeaconSingle.blend"
+CYCLES DEVICES [('NVIDIA GeForce RTX 4090', True), ('AMD Ryzen 7 7800X3D 8-Core Processor', False), ('NVIDIA GeForce RTX 4090', True), ('AMD Radeon(TM) Graphics', True)]
+D:\Lek River Studio\World-Divide\Tools\Art\kit\lighting_393_review.py:82: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  world=bpy.data.worlds.new('REVIEW world');world.use_nodes=True;scene.world=world;bg=next(n for n in world.node_tree.nodes if n.type=='BACKGROUND')
+D:\Lek River Studio\World-Divide\Tools\Art\kit\lighting_393_review.py:97: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  concrete=bpy.data.materials.new('REVIEW concrete');concrete.use_nodes=True;nt=concrete.node_tree;p=next(n for n in nt.nodes if n.type=='BSDF_PRINCIPLED');p.inputs['Base Color'].default_value=(.12,.13,.14,1);p.inputs['Roughness'].default_value=.85
+00:03.484  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:08.859  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\12_MastBeaconSingle\review\ref_match_day.png'
+RENDERED MastBeaconSingle ref_match_day
+00:11.968  cycles           | WARNING Could not open database file: C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:/Users/basvh/AppData/Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:16.484  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\12_MastBeaconSingle\review\ref_match_night.png'
+RENDERED MastBeaconSingle ref_match_night
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit
