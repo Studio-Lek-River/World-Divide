@@ -211,8 +211,11 @@ level. The lens samples an optional baked finish normal on UV1 (`FinishNormal`, 
 
 ## Light rule
 
-- **Every building light comes from a visible, physical fixture:** a kit `Lens` or an existing building fixture island
-  (`FRTSBuildingLight::Fixture`). No light stands in the air.
+- **Every real building light comes from a kit lamp** mounted on the building, with its light shining from the lamp's
+  `Lens`. No light stands in the air, and a building has no lights of its own: its recipe gives mounts, not `lights`.
+- **A building mounts lamps from its faction's lamp pack:** pieces whose `faction` is the building's or `neutral`. All
+  lamps are neutral for now; a faction pack is added when a faction needs a lamp of its own look.
+- **Windows glow, they do not light.** Interior light through glass is the shell's emissive only, with no real light.
 - **No broad floodlighting.** A building is lit in pools at its doors, walkways and bays, not washed from below.
 - **Restrained, natural brightness**, from the real fixture classes. The validator checks each piece against its class:
 
@@ -223,7 +226,8 @@ level. The lens samples an optional baked finish normal on UV1 (`FinishNormal`, 
 | L | 600 cd | 60° | 20 m |
 | XL | 1,000 cd | 60° | 25 m |
 
-The HQ's own building lights (garage lamps 400 cd, entrance glass 90–120 cd) already sit inside these values.
+The HQ's own building lights (garage lamps 400 cd, entrance glass 90–120 cd) sit inside these values; #394 moves them onto kit
+lamps.
 
 ## States
 

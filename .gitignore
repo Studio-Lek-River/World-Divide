@@ -70,3 +70,6 @@ Content/Art/Local/**/*Abrams*
 Art/Source/Local/WiC/
 Content/Art/Local/**/*WiCSmoke*
 Content/Art/Local/Effects/
+
+# Codex's intermediate review rounds of the kit lamps (#392, #393): kept on this machine, the final delivery is committed
+Art/Shared/kit/*/*/archive/round*/
