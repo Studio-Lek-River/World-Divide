@@ -20,9 +20,8 @@ import unreal
 
 MAP_PATH = "/Game/Maps/WD_RiverCrossing_01"
 CUBE = "/Engine/BasicShapes/Cube.Cube"
-GROUND_MATERIAL = "/Game/Materials/M_Ground"
-# Landscape collision ignores M_Ground's physical material: it reads the layers' ones, else the landscape's default
-# (#337, docs/engine/world-landscape.md). Per-layer grass, road, mud and water come with the landscape material (#156).
+# Landscape collision reports the strongest paint layer's physical material (LANDSCAPE_LAYERS, #156), else the
+# landscape's default (#337, docs/engine/world-landscape.md).
 GROUND_PHYSICAL_MATERIAL = "/Game/Materials/Physical/PM_Dirt"
 CRATE_MESH = "/Game/Art/Placeholder/Meshes/SM_SupplyCrate"
 BUILDER = "/Game/Data/Units/DA_TestBuilder"
@@ -194,9 +193,8 @@ ROAD_RAMP_SPACING = 5.0
 # How far a road keeps from the river's edge and, with its falloff, from a house.
 ROAD_RIVER_CLEARANCE = 20.0
 ROAD_HOUSE_CLEARANCE = 1.0
-# The road surfaces (placeholders until the landscape material, #156): one master that draws both in the main pass and
-# into the landscape's runtime virtual texture, tiled along the splines on the engine cube (a slab, so occlusion culling
-# sees its top over the ground; AddLandscapeSplineRoad sets its depth), ROAD_TILE long a tile.
+# The road surfaces: one master drawn only into the landscape's runtime virtual texture, which the landscape material
+# reads (#156), tiled along the splines on the engine cube (AddLandscapeSplineRoad sets its depth), ROAD_TILE long a tile.
 ROAD_MATERIAL_DIR = "/Game/Materials/Road"
 ROAD_MASTER = "M_RiverCrossing_Road"
 ROAD_SLOTS = {
@@ -205,9 +203,82 @@ ROAD_SLOTS = {
 }
 ROAD_MESH = "/Engine/BasicShapes/Cube.Cube"
 ROAD_TILE = 4.0
-# The landscape's runtime virtual texture (03 section 5): base colour, normal and roughness for the material of #156.
+# The landscape's runtime virtual texture (03 section 5): base colour, normal and roughness, which the landscape material
+# writes and reads (#156) and the roads draw into. RVT_TILE_COUNT and RVT_TILE_SIZE are log2: 2048 tiles of 256 texels,
+# about 5 mm a texel over the landscape, finer than the closest zoom's 7 mm a pixel. Adaptive keeps the page table small.
 RVT_DIR = "/Game/World/Landscape"
 RVT_NAME = "RVT_WD_RiverCrossing_01"
+RVT_TILE_COUNT = 11
+RVT_TILE_SIZE = 2
+
+# The landscape material (#156, 03 section 5): M_Landscape_WD_Temperate and its instance, 7 paint layers of the scanned
+# surfaces of #330. The textures each layer uses are copied from the git-ignored /Game/Surfaces into
+# LANDSCAPE_TEXTURE_DIR, which is committed and cooked (the producer's decision on #156, 01_ASSET_AUDIT.md). Per layer:
+# (surface, its tile in metres, physical material, tint). Grass and Meadow carry grass (LANDSCAPE_GRASS).
+LANDSCAPE_DIR = RVT_DIR
+LANDSCAPE_TEXTURE_DIR = f"{LANDSCAPE_DIR}/Textures"
+LANDSCAPE_LAYER_DIR = f"{LANDSCAPE_DIR}/Layers"
+LANDSCAPE_MASTER = "M_Landscape_WD_Temperate"
+LANDSCAPE_INSTANCE = "MI_Landscape_WD_Temperate"
+SURFACES_DIR = "/Game/Surfaces"
+PHYSICAL_DIR = "/Game/Materials/Physical"
+LANDSCAPE_LAYERS = (
+    ("Grass", "UncutGrass_oilpt20", 2.0, "PM_Grass", (1.0, 1.0, 1.0)),
+    ("Meadow", "WildGrass_sfknaeoa", 2.0, "PM_Grass", (1.6, 1.55, 1.35)),
+    ("Dirt", "MilitaryTrenchesGroundDirtFine03_yd0jchk", 2.0, "PM_Dirt", (1.0, 1.0, 1.0)),
+    ("Mud", "MudPebbles", 2.0, "PM_Mud", (1.0, 1.0, 1.0)),
+    ("Gravel", "GravelGround_vi0maebg", 2.0, "PM_Sand", (1.0, 1.0, 1.0)),
+    ("Rock", "GougedRockCliff_vlcpcbc", 2.0, "PM_Dirt", (1.0, 1.0, 1.0)),
+    ("Asphalt", "MilitaryTrenchesGroundDirtCoarse01_yd0ldai", 2.0, "PM_Road", (1.0, 1.0, 1.0)),
+)
+LANDSCAPE_LAYER_NAMES = tuple(layer[0] for layer in LANDSCAPE_LAYERS)
+LANDSCAPE_LAYER_INDEX = {name: number for number, name in enumerate(LANDSCAPE_LAYER_NAMES)}
+# Against tiling at the farthest zoom (520 m across): each layer's base colour mixes its own tile with LANDSCAPE_FAR_SCALE
+# times it, LANDSCAPE_FAR_MIX of the far one, and the whole is shaded by a macro mask from LANDSCAPE_MACRO's low to its
+# high: the Meadow surface's green over LANDSCAPE_MACRO_TILES metres, both samples summed, times MACRO_GAIN less
+# MACRO_BIAS, so the sum's mean (about 0.07 linear) lands mid-way and two standard deviations either side span 0 to 1.
+LANDSCAPE_FAR_SCALE = 6.3
+LANDSCAPE_FAR_MIX = 0.4
+LANDSCAPE_MACRO_TILES = (47.0, 213.0)
+LANDSCAPE_MACRO = (0.82, 1.15)
+MACRO_GAIN = 14.7
+MACRO_BIAS = 0.53
+
+# The paint (#156, 02 "Fields"): a patchwork of fields, FIELD_SIZE metres turned FIELD_YAW degrees, each pasture (Grass),
+# meadow or fallow (Dirt) by FIELD_KINDS' shares, with a FIELD_MARGIN metres strip of meadow along its edges; mud along
+# the river (RIVER_MUD over the water's edge, rough meadow to RIVER_MEADOW), trampled dirt on the base pads, pasture on
+# the village rise and rock on slopes over ROCK_SLOPE degrees. Weights blend over PAINT_BLEND m. Inside a field, patches
+# about FIELD_PATCH metres across of FIELD_PATCHES' other layer, up to its share, break the field's one colour.
+FIELD_SIZE = (240.0, 120.0)
+FIELD_YAW = 12.0
+FIELD_KINDS = (("Grass", 0.45), ("Meadow", 0.25), ("Dirt", 0.3))
+FIELD_MARGIN = 1.5
+FIELD_PATCH = 35.0
+FIELD_PATCHES = {"Grass": ("Meadow", 0.45), "Meadow": ("Grass", 0.35), "Dirt": ("Grass", 0.3)}
+PAINT_BLEND = 2.5
+RIVER_MUD = 8.0
+RIVER_MEADOW = 30.0
+ROCK_SLOPE = 30.0
+# The roads' paint layers (#156): what a road lays under itself, its shoulder ROAD_SHOULDER metres to each side and,
+# fading, its falloff, which also gives the road its physical material (the slabs have no collision). Painted into the
+# imported weightmaps (road_paint), so every component the roads cross has the layer from the start, and by the splines,
+# so a road moved in the editor takes its paint along.
+ROAD_LAYERS = {"asphalt": "Asphalt", "ring": "Asphalt", "track": "Gravel"}
+ROAD_SHOULDER = 1.0
+
+# Landscape Grass Types on Grass and Meadow (03 section 5): at most GRASS_HEIGHT tall, culled from GRASS_CULL metres, no
+# collision and no shadows. Per layer: (grass type, Poly Haven model copied from the never-cooked /Game/PolyHaven, its
+# meshes, its base colour, instances per 10 m by 10 m, the clumps' height range in metres). The copies and their master
+# live in LANDSCAPE_GRASS_DIR.
+LANDSCAPE_GRASS_DIR = f"{LANDSCAPE_DIR}/Grass"
+POLYHAVEN_DIR = "/Game/PolyHaven"
+GRASS_MASTER = "M_LandscapeGrass"
+GRASS_HEIGHT = 0.6
+GRASS_CULL = (120.0, 150.0)
+LANDSCAPE_GRASS = {
+    "Grass": ("LGT_WD_Grass", "grass_bermuda_01", ("medium_a", "medium_b", "medium_c"), "BC", 300.0, (0.15, 0.25)),
+    "Meadow": ("LGT_WD_Meadow", "grass_medium_02", ("a", "b", "c"), "dry_BC", 500.0, (0.35, GRASS_HEIGHT)),
+}
 
 actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
@@ -300,16 +371,162 @@ def height(x, y):
 
 
 def write_heightmap(file_name):
-    """Writes the greybox heights, VERTICES x VERTICES 16-bit steps, row by row from the south-west corner along +X."""
+    """Writes the greybox heights, VERTICES x VERTICES 16-bit steps, row by row from the south-west corner along +X.
+    Returns the heights in metres in the same order."""
+    heights = []
     rows = []
     for row in range(VERTICES):
         y = -LANDSCAPE_HALF + row * QUAD
-        steps = [min(65535, max(0, round(32768 + height(-LANDSCAPE_HALF + column * QUAD, y) * HEIGHT_STEPS_PER_METRE)))
-                 for column in range(VERTICES)]
+        metres = [height(-LANDSCAPE_HALF + column * QUAD, y) for column in range(VERTICES)]
+        heights += metres
+        steps = [min(65535, max(0, round(32768 + value * HEIGHT_STEPS_PER_METRE))) for value in metres]
         rows.append(struct.pack(f"<{VERTICES}H", *steps))
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
     with open(file_name, "wb") as file:
         file.write(b"".join(rows))
+    return heights
+
+
+def cell_hash(a, b, salt=0):
+    """A fixed hash of the integer cell (a, b), 0 to 1, the same on every run."""
+    value = (a * 0x9E3779B1 + b * 0x85EBCA77 + salt * 0xC2B2AE3D) & 0xFFFFFFFF
+    for multiplier, shift in ((0x2C1B3C6D, 15), (0x297A2D39, 12), (0x9E3779B1, 15)):
+        value ^= value >> shift
+        value = (value * multiplier) & 0xFFFFFFFF
+    return (value ^ (value >> 16)) / float(0xFFFFFFFF)
+
+
+def field_kind(x, y):
+    """The field (x, y) lies in, as (its layer, how far (x, y) is from the field's edge in metres). The fields lie in rows
+    FIELD_SIZE[1] deep, each row's fields its own width around FIELD_SIZE[0] and shifted along it, so the patchwork does
+    not read as a grid. The fields of the east side are the west side's turned about the centre, so both sides farm alike."""
+    if x > 0.0 or (x == 0.0 and y > 0.0):
+        x, y = -x, -y
+    yaw = math.radians(FIELD_YAW)
+    v = (-x * math.sin(yaw) + y * math.cos(yaw)) / FIELD_SIZE[1]
+    row = math.floor(v)
+    width = FIELD_SIZE[0] * (0.6 + 0.9 * cell_hash(row, 0, 1))
+    u = (x * math.cos(yaw) + y * math.sin(yaw)) / width + cell_hash(row, 0, 2)
+    column = math.floor(u)
+    edge = min(min(u - column, column + 1 - u) * width, min(v - row, row + 1 - v) * FIELD_SIZE[1])
+    share = cell_hash(column, row)
+    for kind, kind_share in FIELD_KINDS:
+        if share < kind_share:
+            return kind, edge
+        share -= kind_share
+    return FIELD_KINDS[-1][0], edge
+
+
+def value_noise(x, y, size, salt):
+    """Smooth value noise, 0 to 1, in blobs about size metres across."""
+    u, v = x / size, y / size
+    column, row = math.floor(u), math.floor(v)
+    fu, fv = u - column, v - row
+    fu, fv = fu * fu * (3.0 - 2.0 * fu), fv * fv * (3.0 - 2.0 * fv)
+    low = cell_hash(column, row, salt) + (cell_hash(column + 1, row, salt) - cell_hash(column, row, salt)) * fu
+    high = cell_hash(column, row + 1, salt) + (cell_hash(column + 1, row + 1, salt) - cell_hash(column, row + 1, salt)) * fu
+    return low + (high - low) * fv
+
+
+def patchiness(x, y):
+    """0 to 1, in soft irregular patches about FIELD_PATCH metres across, the same at (x, y) and (-x, -y)."""
+    if x > 0.0 or (x == 0.0 and y > 0.0):
+        x, y = -x, -y
+    noise = 0.65 * value_noise(x, y, FIELD_PATCH, 3) + 0.35 * value_noise(x, y, FIELD_PATCH * 0.37, 4)
+    return smoothstep((noise - 0.45) / 0.25)
+
+
+def paint_weights(x, y, slope):
+    """The 7 layers' weights at (x, y), in LANDSCAPE_LAYER_NAMES' order, summing to 1; slope in degrees."""
+    index = LANDSCAPE_LAYER_INDEX
+    weights = [0.0] * len(LANDSCAPE_LAYER_NAMES)
+
+    def lay(name, amount):
+        if amount > 0.0:
+            for number in range(len(weights)):
+                weights[number] *= 1.0 - amount
+            weights[index[name]] += amount
+
+    kind, edge = field_kind(x, y)
+    # The margins wander a metre or so, as a plough's edge does.
+    wobble = math.sin(x * 0.31 + y * 0.17) + math.sin(x * 0.13 - y * 0.29)
+    inside = smoothstep((edge - FIELD_MARGIN - 0.5 * wobble) / PAINT_BLEND)
+    patch, share = FIELD_PATCHES[kind]
+    patched = share * patchiness(x, y)
+    weights[index[kind]] = inside * (1.0 - patched)
+    weights[index[patch]] += inside * patched
+    weights[index["Meadow"]] += 1.0 - inside
+
+    r = math.sqrt((x / VILLAGE_RADII[0]) ** 2 + (y / VILLAGE_RADII[1]) ** 2)
+    lay("Grass", 1.0 - smoothstep((r - 0.8) / 0.2))
+    for base in (WEST_BASE, rotate(WEST_BASE)):
+        lay("Dirt", box_mask(x - base[0], y - base[1], PAD_HALF + 10.0, PAD_HALF + 10.0, PAINT_BLEND * 5.0))
+    distance, half_width = river_distance(x, y)
+    bank = distance - half_width
+    lay("Meadow", 1.0 - smoothstep((bank - RIVER_MEADOW) / (PAINT_BLEND * 4.0)))
+    lay("Mud", 1.0 - smoothstep((bank - RIVER_MUD) / PAINT_BLEND))
+    lay("Rock", smoothstep((slope - ROCK_SLOPE) / 5.0))
+    return weights
+
+
+def road_paint():
+    """Every road's paint (ROAD_LAYERS) by vertex index: (layer, amount), the strongest where roads meet."""
+    paint = {}
+    for name, kind, waypoints in WEST_ROADS + tuple(ramp_roads()):
+        width, falloff, _ = ROAD_KINDS[kind]
+        layer = LANDSCAPE_LAYER_INDEX[ROAD_LAYERS[kind]]
+        inner = width / 2.0 + ROAD_SHOULDER
+        reach = width / 2.0 + falloff
+        path = waypoints if name.startswith("Ramp") else road_path(waypoints)
+        for flip in (False, True):
+            points = [rotate(point) if flip else point for point in path]
+            for (ax, ay), (bx, by) in zip(points, points[1:]):
+                length_sq = max((bx - ax) ** 2 + (by - ay) ** 2, 1e-6)
+                first_column = max(0, int((min(ax, bx) - reach + LANDSCAPE_HALF) / QUAD))
+                last_column = min(VERTICES - 1, int((max(ax, bx) + reach + LANDSCAPE_HALF) / QUAD) + 1)
+                first_row = max(0, int((min(ay, by) - reach + LANDSCAPE_HALF) / QUAD))
+                last_row = min(VERTICES - 1, int((max(ay, by) + reach + LANDSCAPE_HALF) / QUAD) + 1)
+                for row in range(first_row, last_row + 1):
+                    y = -LANDSCAPE_HALF + row * QUAD
+                    for column in range(first_column, last_column + 1):
+                        x = -LANDSCAPE_HALF + column * QUAD
+                        t = min(1.0, max(0.0, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / length_sq))
+                        distance = math.hypot(x - ax - t * (bx - ax), y - ay - t * (by - ay))
+                        if distance >= reach:
+                            continue
+                        amount = 1.0 - smoothstep((distance - inner) / max(reach - inner, 0.1))
+                        at = row * VERTICES + column
+                        if amount > paint.get(at, (0, 0.0))[1]:
+                            paint[at] = (layer, amount)
+    return paint
+
+
+def write_weightmaps(heights, file_names):
+    """Writes the 7 paint layers' weights (paint_weights, then the roads' road_paint over them) to file_names, in
+    LANDSCAPE_LAYER_NAMES' order, each VERTICES x VERTICES bytes as the heightmap, the 7 summing to 255 at every vertex;
+    heights are write_heightmap's."""
+    layers = [bytearray(VERTICES * VERTICES) for _ in LANDSCAPE_LAYER_NAMES]
+    roads = road_paint()
+    for row in range(VERTICES):
+        y = -LANDSCAPE_HALF + row * QUAD
+        above, below = min(row + 1, VERTICES - 1) * VERTICES, max(row - 1, 0) * VERTICES
+        for column in range(VERTICES):
+            at = row * VERTICES + column
+            dx = (heights[row * VERTICES + min(column + 1, VERTICES - 1)] - heights[row * VERTICES + max(column - 1, 0)])
+            dy = heights[above + column] - heights[below + column]
+            slope = math.degrees(math.atan(math.hypot(dx, dy) / (2.0 * QUAD)))
+            weights = paint_weights(-LANDSCAPE_HALF + column * QUAD, y, slope)
+            if at in roads:
+                layer, amount = roads[at]
+                weights = [weight * (1.0 - amount) for weight in weights]
+                weights[layer] += amount
+            steps = [int(weight * 255.0) for weight in weights]
+            steps[weights.index(max(weights))] += 255 - sum(steps)
+            for number, step in enumerate(steps):
+                layers[number][at] = step
+    for file_name, data in zip(file_names, layers):
+        with open(file_name, "wb") as file:
+            file.write(bytes(data))
 
 
 def check_layout():
@@ -555,12 +772,306 @@ def create_virtual_texture(world):
     if not texture:
         raise RuntimeError("Could not give the landscape a runtime virtual texture (CreateLandscapeVirtualTexture in the log)")
     texture.set_editor_property("material_type", unreal.RuntimeVirtualTextureMaterialType.BASE_COLOR_NORMAL_ROUGHNESS)
+    texture.set_editor_property("tile_count", RVT_TILE_COUNT)
+    texture.set_editor_property("tile_size", RVT_TILE_SIZE)
+    texture.set_editor_property("adaptive", True)
     return texture
 
 
+def copy_asset(source, target):
+    """The asset target, copied from source when it does not exist yet: the copies are committed, so a checkout without
+    the git-ignored packs still builds. Does not save."""
+    if unreal.EditorAssetLibrary.does_asset_exist(target):
+        return unreal.load_asset(target)
+    if not unreal.EditorAssetLibrary.does_asset_exist(source):
+        raise RuntimeError(f"Neither {target} nor its source {source} exists: import the packs first (ue.ps1 -Task surfaces, "
+                           "-Task freeassets)")
+    copied = unreal.EditorAssetLibrary.duplicate_asset(source, target)
+    if not copied:
+        raise RuntimeError(f"Could not copy {source} to {target}")
+    return copied
+
+
+def landscape_textures():
+    """Each layer's base colour, normal and ORM textures, by layer name, copied from /Game/Surfaces."""
+    textures = {}
+    for name, surface, _, _, _ in LANDSCAPE_LAYERS:
+        textures[name] = {kind: copy_asset(f"{SURFACES_DIR}/{surface}/T_{surface}_{kind}",
+                                           f"{LANDSCAPE_TEXTURE_DIR}/T_{surface}_{kind}") for kind in ("BC", "N", "ORM")}
+    return textures
+
+
+def create_layer_infos():
+    """The 7 paint layers' layer infos with their physical materials, in LANDSCAPE_LAYERS' order. Does not save."""
+    layers = []
+    for name, _, _, physical, _ in LANDSCAPE_LAYERS:
+        material = unreal.load_asset(f"{PHYSICAL_DIR}/{physical}")
+        if not material:
+            raise RuntimeError(f"Could not load {PHYSICAL_DIR}/{physical} (setup_testmap.py makes it)")
+        layer = unreal.RTSEditorScripting.create_landscape_layer_info(f"{LANDSCAPE_LAYER_DIR}/LI_{name}", name, material)
+        if not layer:
+            raise RuntimeError(f"Could not make the layer info of {name}")
+        layers.append(layer)
+    return layers
+
+
+def material_node(material, kind, x, y):
+    return editing.create_material_expression(material, kind, x, y)
+
+
+def texture_sample(material, texture, uv, sampler_type, x, y):
+    """A sample of texture at uv through the shared wrap sampler (03 section 5: a landscape material soon reaches the 16
+    samplers otherwise)."""
+    sample = material_node(material, unreal.MaterialExpressionTextureSample, x, y)
+    sample.set_editor_property("texture", texture)
+    sample.set_editor_property("sampler_type", sampler_type)
+    sample.set_editor_property("sampler_source", unreal.SamplerSourceMode.SSM_WRAP_WORLD_GROUP_SETTINGS)
+    editing.connect_material_expressions(uv, "", sample, "UVs")
+    return sample
+
+
+def world_uv(material, world_xy, tile_m, x, y):
+    """World XY over tile_m metres: a texture's UVs at its real size, from above."""
+    size = material_node(material, unreal.MaterialExpressionConstant, x - 200, y + 80)
+    size.set_editor_property("r", tile_m * 100.0)
+    uv = material_node(material, unreal.MaterialExpressionDivide, x, y)
+    editing.connect_material_expressions(world_xy, "", uv, "A")
+    editing.connect_material_expressions(size, "", uv, "B")
+    return uv
+
+
+def layer_blend(material, name, x, y):
+    """A height-blended landscape layer blend of the 7 layers."""
+    blend = material_node(material, unreal.MaterialExpressionLandscapeLayerBlend, x, y)
+    inputs = []
+    for layer in LANDSCAPE_LAYER_NAMES:
+        entry = unreal.LayerBlendInput()
+        entry.set_editor_property("layer_name", layer)
+        entry.set_editor_property("blend_type", unreal.LandscapeLayerBlendType.LB_HEIGHT_BLEND)
+        entry.set_editor_property("preview_weight", 1.0 if layer == "Grass" else 0.0)
+        inputs.append(entry)
+    blend.set_editor_property("layers", inputs)
+    blend.set_editor_property("desc", name)
+    return blend
+
+
+def connect_layer(material, source, output, blend, layer):
+    if not editing.connect_material_expressions(source, output, blend, f"Layer {layer}"):
+        raise RuntimeError(f"{LANDSCAPE_MASTER}: could not connect the layer input of {layer}")
+
+
+def build_landscape_material(textures, virtual_texture):
+    """M_Landscape_WD_Temperate (03 section 5) and its instance, which the landscape draws in. Into virtual_texture, the
+    landscape's runtime virtual texture, it writes the 7 layers height-blended (each layer's ORM ambient occlusion as its
+    height) at their real size from above, each base colour mixed with its own far tile and shaded by the macro mask;
+    the roads draw over that. In the main pass it only reads the texture, so the layers cost nothing per frame once a
+    page is drawn. It also places the grass of Grass and Meadow. Does not save; returns the instance."""
+    # Made anew each time: rebuilt in place, the landscape's material kept a stale texture list and failed to compile.
+    for name in (LANDSCAPE_INSTANCE, LANDSCAPE_MASTER):
+        if unreal.EditorAssetLibrary.does_asset_exist(f"{LANDSCAPE_DIR}/{name}"):
+            if not unreal.EditorAssetLibrary.delete_asset(f"{LANDSCAPE_DIR}/{name}"):
+                raise RuntimeError(f"Could not delete {LANDSCAPE_DIR}/{name} to make it anew (LFS lock it)")
+    material = asset_tools.create_asset(LANDSCAPE_MASTER, LANDSCAPE_DIR, unreal.Material, unreal.MaterialFactoryNew())
+    # The virtual texture holds the world-space normal.
+    material.set_editor_property("tangent_space_normal", False)
+
+    world = material_node(material, unreal.MaterialExpressionWorldPosition, -4200, 0)
+    world_xy = material_node(material, unreal.MaterialExpressionComponentMask, -4000, 0)
+    world_xy.set_editor_property("r", True)
+    world_xy.set_editor_property("g", True)
+    editing.connect_material_expressions(world, "", world_xy, "")
+
+    colors = layer_blend(material, "Base colour", -800, -600)
+    normals = layer_blend(material, "Normal", -800, 0)
+    roughness = layer_blend(material, "Roughness", -800, 600)
+    far_mix = material_node(material, unreal.MaterialExpressionConstant, -2600, -900)
+    far_mix.set_editor_property("r", LANDSCAPE_FAR_MIX)
+    for index, (name, _, tile_m, _, tint_default) in enumerate(LANDSCAPE_LAYERS):
+        y = -2400 + index * 700
+        near = world_uv(material, world_xy, tile_m, -3600, y)
+        far = world_uv(material, world_xy, tile_m * LANDSCAPE_FAR_SCALE, -3600, y + 250)
+        layer = textures[name]
+        color_near = texture_sample(material, layer["BC"], near, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -3200, y)
+        color_far = texture_sample(material, layer["BC"], far, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -3200, y + 200)
+        normal = texture_sample(material, layer["N"], near, unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, -3200, y + 400)
+        masks = texture_sample(material, layer["ORM"], near, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS, -3200, y + 600)
+        mixed = material_node(material, unreal.MaterialExpressionLinearInterpolate, -2800, y)
+        editing.connect_material_expressions(color_near, "RGB", mixed, "A")
+        editing.connect_material_expressions(color_far, "RGB", mixed, "B")
+        editing.connect_material_expressions(far_mix, "", mixed, "Alpha")
+        tint = material_node(material, unreal.MaterialExpressionVectorParameter, -2800, y + 150)
+        tint.set_editor_property("parameter_name", f"{name}Tint")
+        tint.set_editor_property("group", "Layers")
+        tint.set_editor_property("default_value", unreal.LinearColor(*tint_default, 1.0))
+        tinted = material_node(material, unreal.MaterialExpressionMultiply, -2500, y)
+        editing.connect_material_expressions(mixed, "", tinted, "A")
+        editing.connect_material_expressions(tint, "", tinted, "B")
+        connect_layer(material, tinted, "", colors, name)
+        connect_layer(material, normal, "RGB", normals, name)
+        connect_layer(material, masks, "G", roughness, name)
+        for blend in (colors, normals, roughness):
+            if not editing.connect_material_expressions(masks, "R", blend, f"Height {name}"):
+                raise RuntimeError(f"{LANDSCAPE_MASTER}: could not connect the height input of {name}")
+    macro_texture = textures["Meadow"]["BC"]
+    macro = None
+    for index, tiles in enumerate(LANDSCAPE_MACRO_TILES):
+        uv = world_uv(material, world_xy, tiles, -2400, -1800 + index * 250)
+        sample = texture_sample(material, macro_texture, uv, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -2100,
+                                -1800 + index * 250)
+        if macro is None:
+            macro = sample
+            continue
+        summed = material_node(material, unreal.MaterialExpressionAdd, -1800, -1700)
+        editing.connect_material_expressions(macro, "G", summed, "A")
+        editing.connect_material_expressions(sample, "G", summed, "B")
+        macro = summed
+    stretch = material_node(material, unreal.MaterialExpressionMultiply, -1650, -1700)
+    stretch.set_editor_property("const_b", MACRO_GAIN)
+    editing.connect_material_expressions(macro, "", stretch, "A")
+    shifted = material_node(material, unreal.MaterialExpressionSubtract, -1550, -1700)
+    shifted.set_editor_property("const_b", MACRO_BIAS)
+    editing.connect_material_expressions(stretch, "", shifted, "A")
+    clamped = material_node(material, unreal.MaterialExpressionSaturate, -1450, -1700)
+    editing.connect_material_expressions(shifted, "", clamped, "")
+    shade = material_node(material, unreal.MaterialExpressionLinearInterpolate, -1300, -1700)
+    for pin, value, parameter in (("A", LANDSCAPE_MACRO[0], "MacroLow"), ("B", LANDSCAPE_MACRO[1], "MacroHigh")):
+        bound = material_node(material, unreal.MaterialExpressionScalarParameter, -1450, -1900 if pin == "A" else -1800)
+        bound.set_editor_property("parameter_name", parameter)
+        bound.set_editor_property("group", "Macro")
+        bound.set_editor_property("default_value", value)
+        editing.connect_material_expressions(bound, "", shade, pin)
+    editing.connect_material_expressions(clamped, "", shade, "Alpha")
+    shaded = material_node(material, unreal.MaterialExpressionMultiply, -500, -600)
+    editing.connect_material_expressions(colors, "", shaded, "A")
+    editing.connect_material_expressions(shade, "", shaded, "B")
+    world_normal = material_node(material, unreal.MaterialExpressionTransform, -500, 0)
+    world_normal.set_editor_property("transform_source_type", unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_TANGENT)
+    world_normal.set_editor_property("transform_type", unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    editing.connect_material_expressions(normals, "", world_normal, "")
+
+    output = material_node(material, unreal.MaterialExpressionRuntimeVirtualTextureOutput, -200, -300)
+    editing.connect_material_expressions(shaded, "", output, "BaseColor")
+    editing.connect_material_expressions(world_normal, "", output, "Normal")
+    editing.connect_material_expressions(roughness, "", output, "Roughness")
+    sample = material_node(material, unreal.MaterialExpressionRuntimeVirtualTextureSample, -200, 300)
+    sample.set_editor_property("virtual_texture", virtual_texture)
+    sample.set_editor_property("material_type", unreal.RuntimeVirtualTextureMaterialType.BASE_COLOR_NORMAL_ROUGHNESS)
+    editing.connect_material_property(sample, "BaseColor", unreal.MaterialProperty.MP_BASE_COLOR)
+    editing.connect_material_property(sample, "Normal", unreal.MaterialProperty.MP_NORMAL)
+    editing.connect_material_property(sample, "Roughness", unreal.MaterialProperty.MP_ROUGHNESS)
+
+    grass = material_node(material, unreal.MaterialExpressionLandscapeGrassOutput, -200, 900)
+    grass_inputs = []
+    for layer, (grass_name, *_rest) in LANDSCAPE_GRASS.items():
+        entry = unreal.GrassInput()
+        entry.set_editor_property("name", layer)
+        entry.set_editor_property("grass_type", unreal.load_asset(f"{LANDSCAPE_GRASS_DIR}/{grass_name}"))
+        grass_inputs.append(entry)
+    grass.set_editor_property("grass_types", grass_inputs)
+    for index, layer in enumerate(LANDSCAPE_GRASS):
+        weight = material_node(material, unreal.MaterialExpressionLandscapeLayerSample, -500, 900 + index * 150)
+        weight.set_editor_property("parameter_name", layer)
+        if not editing.connect_material_expressions(weight, "", grass, layer):
+            raise RuntimeError(f"{LANDSCAPE_MASTER}: could not connect the grass of {layer}")
+    editing.recompile_material(material)
+
+    made = instance(LANDSCAPE_DIR, LANDSCAPE_INSTANCE, material)
+    for name, _, _, _, tint_default in LANDSCAPE_LAYERS:
+        editing.set_material_instance_vector_parameter_value(made, f"{name}Tint", unreal.LinearColor(*tint_default, 1.0))
+    editing.update_material_instance(made)
+    return made
+
+
+def build_grass_master(defaults):
+    """M_LandscapeGrass: masked, two-sided foliage (as /Game/PolyHaven's M_PolyHavenFoliage), base colour, normal, the
+    ARM's AO and roughness and the alpha map's red as the mask, for instanced grass. defaults are textures by kind."""
+    path = f"{LANDSCAPE_GRASS_DIR}/{GRASS_MASTER}"
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        material = unreal.load_asset(path)
+    else:
+        material = asset_tools.create_asset(GRASS_MASTER, LANDSCAPE_GRASS_DIR, unreal.Material, unreal.MaterialFactoryNew())
+    editing.delete_all_material_expressions(material)
+    samplers = {}
+    for index, (parameter, kind, sampler_type) in enumerate((
+            ("BaseColor", "BC", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR),
+            ("Normal", "N", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL),
+            ("ARM", "ARM", unreal.MaterialSamplerType.SAMPLERTYPE_MASKS),
+            ("Alpha", "A", unreal.MaterialSamplerType.SAMPLERTYPE_MASKS))):
+        sample = material_node(material, unreal.MaterialExpressionTextureSampleParameter2D, -600, -300 + 350 * index)
+        sample.set_editor_property("parameter_name", parameter)
+        sample.set_editor_property("texture", defaults[kind])
+        sample.set_editor_property("sampler_type", sampler_type)
+        samplers[kind] = sample
+    editing.connect_material_property(samplers["BC"], "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
+    editing.connect_material_property(samplers["BC"], "RGB", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
+    editing.connect_material_property(samplers["N"], "RGB", unreal.MaterialProperty.MP_NORMAL)
+    editing.connect_material_property(samplers["ARM"], "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
+    editing.connect_material_property(samplers["ARM"], "G", unreal.MaterialProperty.MP_ROUGHNESS)
+    editing.connect_material_property(samplers["A"], "R", unreal.MaterialProperty.MP_OPACITY_MASK)
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
+    material.set_editor_property("two_sided", True)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
+    # The Poly Haven grass meshes are Nanite.
+    for usage in (unreal.MaterialUsage.MATUSAGE_INSTANCED_STATIC_MESHES, unreal.MaterialUsage.MATUSAGE_NANITE):
+        editing.set_material_usage(material, usage)
+        if not editing.has_material_usage(material, usage):
+            raise RuntimeError(f"{GRASS_MASTER}: could not set the usage {usage}")
+    editing.recompile_material(material)
+    return material
+
+
+def per_platform(kind, value):
+    made = kind()
+    made.set_editor_property("default", value)
+    return made
+
+
+def build_grass_types():
+    """LANDSCAPE_GRASS's grass types, their meshes, textures and instances copied out of /Game/PolyHaven, each mesh
+    scaled to its type's height range. Does not save."""
+    master = None
+    for layer, (grass_name, model, meshes, color, density, heights) in LANDSCAPE_GRASS.items():
+        source = f"{POLYHAVEN_DIR}/{model}"
+        textures = {kind: copy_asset(f"{source}/T_{model}_{suffix}", f"{LANDSCAPE_GRASS_DIR}/T_{model}_{suffix}")
+                    for kind, suffix in (("BC", color), ("N", "N"), ("ARM", "ARM"), ("A", "A"))}
+        if master is None:
+            master = build_grass_master(textures)
+        made = instance(LANDSCAPE_GRASS_DIR, f"MI_{grass_name}", master)
+        for parameter, kind in (("BaseColor", "BC"), ("Normal", "N"), ("ARM", "ARM"), ("Alpha", "A")):
+            editing.set_material_instance_texture_parameter_value(made, parameter, textures[kind])
+        editing.update_material_instance(made)
+
+        path = f"{LANDSCAPE_GRASS_DIR}/{grass_name}"
+        if unreal.EditorAssetLibrary.does_asset_exist(path):
+            grass = unreal.load_asset(path)
+        else:
+            grass = asset_tools.create_asset(grass_name, LANDSCAPE_GRASS_DIR, unreal.LandscapeGrassType,
+                                             unreal.LandscapeGrassTypeFactory())
+        varieties = []
+        for suffix in meshes:
+            mesh = copy_asset(f"{source}/SM_{model}_{suffix}", f"{LANDSCAPE_GRASS_DIR}/SM_{model}_{suffix}")
+            for index in range(len(mesh.static_materials)):
+                mesh.set_material(index, made)
+            box = mesh.get_bounding_box()
+            tall = max(box.max.z - box.min.z, 1.0)
+            variety = unreal.GrassVariety()
+            variety.set_editor_property("grass_mesh", mesh)
+            variety.set_editor_property("grass_density", per_platform(unreal.PerPlatformFloat, density / len(meshes)))
+            variety.set_editor_property("start_cull_distance", per_platform(unreal.PerPlatformInt, int(GRASS_CULL[0] * 100.0)))
+            variety.set_editor_property("end_cull_distance", per_platform(unreal.PerPlatformInt, int(GRASS_CULL[1] * 100.0)))
+            variety.set_editor_property("scaling", unreal.GrassScaling.UNIFORM)
+            variety.set_editor_property("scale_x", unreal.FloatInterval(heights[0] * 100.0 / tall, heights[1] * 100.0 / tall))
+            variety.set_editor_property("random_rotation", True)
+            variety.set_editor_property("align_to_surface", True)
+            variety.set_editor_property("cast_dynamic_shadow", False)
+            variety.set_editor_property("cast_contact_shadow", False)
+            varieties.append(variety)
+        grass.set_editor_property("grass_varieties", varieties)
+
+
 def create_roads(world, materials, texture):
-    """Both sides' roads as landscape splines that shape the ground to them (#383), in materials and drawn into texture,
-    then applied to the landscape. Needs a renderer."""
+    """Both sides' roads as landscape splines that shape the ground to them (#383) and paint their layer (ROAD_LAYERS,
+    #156), in materials drawn into texture only, then applied to the landscape. Needs a renderer."""
     check_roads()
     mesh = unreal.load_asset(ROAD_MESH)
     segments = 0
@@ -573,7 +1084,7 @@ def create_roads(world, materials, texture):
             points = [rotate(point) if flip else point for point in path]
             added = unreal.RTSEditorScripting.add_landscape_spline_road(
                 world, [cm(point, height(*point)) for point in points], width * 100.0, falloff * 100.0, shape, mesh,
-                ROAD_TILE * 100.0, materials[slot], texture)
+                ROAD_TILE * 100.0, materials[slot], texture, ROAD_LAYERS[kind])
             if added == 0:
                 raise RuntimeError(f"Could not lay road {name} (AddLandscapeSplineRoad in the log says why)")
             segments += added
@@ -765,26 +1276,34 @@ def spawn_lighting():
 
 
 def build_greybox(world, heightmap_file, river_material, bridge_meshes, road_materials):
-    """Fills world, a new empty level, with the greybox: One File Per Actor, the landscape, the river in river_material
+    """Fills world, a new empty level, with the greybox: One File Per Actor, the landscape with its paint layers, grass and
+    material (#156), the river in river_material
     and its Water_ blockers, the bridges of bridge_meshes (build_bridge_assets), the runtime virtual texture and the roads
     in road_materials (build_road_materials), the village, both sides' start spots, builders and supply sources, the
     lighting and the navmesh bounds. Does not save."""
     check_layout()
     if not unreal.RTSEditorScripting.use_external_actors(world):
         raise RuntimeError(f"Could not turn on One File Per Actor in {MAP_PATH}")
-    write_heightmap(heightmap_file)
+    heights = write_heightmap(heightmap_file)
+    weightmap_files = [f"{os.path.splitext(heightmap_file)[0]}_{name}.r8" for name in LANDSCAPE_LAYER_NAMES]
+    write_weightmaps(heights, weightmap_files)
+    del heights
     corner = unreal.Vector(-LANDSCAPE_HALF * 100.0, -LANDSCAPE_HALF * 100.0, 0.0)
     landscape = unreal.RTSEditorScripting.create_landscape(world, heightmap_file, COMPONENTS, QUADS_PER_SECTION, corner,
-                                                           unreal.Vector(QUAD * 100.0, QUAD * 100.0, 100.0),
-                                                           unreal.load_asset(GROUND_MATERIAL))
+                                                           unreal.Vector(QUAD * 100.0, QUAD * 100.0, 100.0), None,
+                                                           create_layer_infos(), weightmap_files)
     if not landscape:
         raise RuntimeError(f"Could not create the landscape of {MAP_PATH}")
     apply_landscape_physics(world)
+    # The material reads the runtime virtual texture, which needs the landscape for its bounds.
+    texture = create_virtual_texture(world)
+    build_grass_types()
+    landscape.set_editor_property("landscape_material", build_landscape_material(landscape_textures(), texture))
 
     create_river(world, river_material)
     spawn_water_blockers()
     spawn_bridges(bridge_meshes)
-    create_roads(world, road_materials, create_virtual_texture(world))
+    create_roads(world, road_materials, texture)
     spawn_village()
     yaw = math.degrees(math.atan2(-WEST_BASE[1], -WEST_BASE[0]))
     spawn_side(0, WEST_BASE, yaw)

@@ -1,7 +1,9 @@
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Data/RTSUnitData.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "HAL/IConsoleManager.h"
+#include "LandscapeLayerInfoObject.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/AutomationTest.h"
 #include "NiagaraComponent.h"
@@ -161,6 +163,23 @@ bool FRTSVehicleDustTest::RunTest(const FString& Parameters)
 	const UPhysicalMaterial* WaterSurface = Water->GetPhysicalMaterial();
 	TestTrue(TEXT("M_Water has a surface type of its own"), WaterSurface && WaterSurface->SurfaceType != SurfaceType_Default);
 
+	// River Crossing's paint layers each give the ground a surface of its own (#156): its layer infos, one per layer.
+	TArray<FAssetData> LayerInfos;
+	FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get().GetAssetsByPath(
+		TEXT("/Game/World/Landscape/Layers"), LayerInfos, true);
+	TestEqual(TEXT("River Crossing's landscape has its 7 paint layers"), LayerInfos.Num(), 7);
+	TArray<const UPhysicalMaterial*> LayerSurfaces;
+	for (const FAssetData& Asset : LayerInfos)
+	{
+		const ULandscapeLayerInfoObject* Layer = Cast<ULandscapeLayerInfoObject>(Asset.GetAsset());
+		const UPhysicalMaterial* Surface = Layer ? Layer->GetPhysicalMaterial() : nullptr;
+		if (TestTrue(*FString::Printf(TEXT("Layer %s has a physical material with a surface type"), *Asset.AssetName.ToString()),
+			Surface && Surface->SurfaceType != SurfaceType_Default))
+		{
+			LayerSurfaces.Add(Surface);
+		}
+	}
+
 	// The physics engine's own of each, as a map that uses them makes them when it loads, before a body is made with them.
 	const_cast<UPhysicalMaterial*>(Dirt)->GetPhysicsMaterial();
 	if (WaterSurface)
@@ -188,6 +207,10 @@ bool FRTSVehicleDustTest::RunTest(const FString& Parameters)
 		const FRTSDustSurface* WaterDust = WaterSurface ? UnitDust.FindSurface(WaterSurface->SurfaceType) : nullptr;
 		TestTrue(*FString::Printf(TEXT("%s: dirt raises dust"), *What), DirtDust && DirtDust->RateScale > 0.f);
 		TestTrue(*FString::Printf(TEXT("%s: water raises none"), *What), WaterDust && WaterDust->RateScale == 0.f);
+		for (const UPhysicalMaterial* Surface : LayerSurfaces)
+		{
+			TestNotNull(*FString::Printf(TEXT("%s: %s has a dust setting"), *What, *Surface->GetName()), UnitDust.FindSurface(Surface->SurfaceType));
+		}
 
 		// Behind the hull's middle, one each side, on the ground.
 		TArray<FVector> Contacts;

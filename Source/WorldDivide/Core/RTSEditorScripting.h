@@ -5,6 +5,7 @@
 #include "RTSEditorScripting.generated.h"
 
 class ALandscape;
+class ULandscapeLayerInfoObject;
 class UFont;
 class UFontFace;
 class UMaterialInterface;
@@ -63,12 +64,23 @@ public:
 	 * Spawns a Landscape in WorldContextObject's world from the 16-bit heightmap at HeightmapFileName (raw, little endian,
 	 * row by row along +X, 32768 at the actor's Z), Components x Components components of 2 x 2 sections of QuadsPerSection
 	 * quads each, its first vertex at Location and Scale cm per quad (Z: cm per 128 height steps), drawn in Material, for a map's scripted
-	 * greybox (rivercrossing_greybox.py, #154): Python cannot import a heightmap. Returns null and logs why when the file is
-	 * missing or the wrong size.
+	 * greybox (rivercrossing_greybox.py, #154): Python cannot import a heightmap. Layers are its paint layers (#156), each
+	 * painted from the 8-bit weightmap of the same index in WeightmapFileNames (raw, as the heightmap, 255 full weight).
+	 * Returns null and logs why when a file is missing or the wrong size.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
 	static ALandscape* CreateLandscape(UObject* WorldContextObject, const FString& HeightmapFileName, int32 Components, int32 QuadsPerSection,
-		FVector Location, FVector Scale, UMaterialInterface* Material);
+		FVector Location, FVector Scale, UMaterialInterface* Material, const TArray<ULandscapeLayerInfoObject*>& Layers,
+		const TArray<FString>& WeightmapFileNames);
+
+	/**
+	 * The landscape layer info AssetPath (such as /Game/World/Landscape/Layers/LI_Grass) for the paint layer LayerName, made
+	 * when it does not exist yet (#156): advanced weight blending (PremultipliedAlphaBlending, docs/engine/world-landscape.md)
+	 * and PhysMaterial, which the landscape's collision reports where the layer is the strongest, so the vehicles' dust
+	 * reads the surface. Python cannot make the asset. Does not save.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
+	static ULandscapeLayerInfoObject* CreateLandscapeLayerInfo(const FString& AssetPath, FName LayerName, UPhysicalMaterial* PhysMaterial);
 
 	/**
 	 * Gives every landscape in WorldContextObject's world Material as its default physical material, the one its collision
@@ -113,13 +125,16 @@ public:
 	 * splines edit layer, made when it is missing; without, the road only lies on the ground there (a bridge ramp, whose steep
 	 * sides keep the navmesh linked across a tile seam, 03_TECHNICAL_PLAN.md section 8). Each segment is tiled with Mesh in
 	 * Material, TileLength cm a tile, scaled to the road's width and half a metre deep, its top a few cm over the ground,
-	 * with no collision and no shadow, drawn both in the main pass and into VirtualTexture. Python cannot make spline points.
-	 * The ground changes only in ApplyLandscapeSplines. Returns how many segments it added, 0 and logs why when the world has
-	 * no landscape or Points are fewer than two.
+	 * with no collision and no shadow. With a VirtualTexture the meshes draw only into it, over the landscape, whose material
+	 * reads it (#156); without, in the main pass. LayerName, unless none, is the paint layer the road lays on the landscape
+	 * under it and its falloff, which gives the road its physical material, since the meshes have no collision; moving the
+	 * road in the editor moves its paint. Python cannot make spline points. The ground changes only in ApplyLandscapeSplines.
+	 * Returns how many segments it added, 0 and logs why when the world has no landscape or Points are fewer than two.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
 	static int32 AddLandscapeSplineRoad(UObject* WorldContextObject, const TArray<FVector>& Points, float Width, float SideFalloff,
-		bool bShapeGround, UStaticMesh* Mesh, float TileLength, UMaterialInterface* Material, URuntimeVirtualTexture* VirtualTexture);
+		bool bShapeGround, UStaticMesh* Mesh, float TileLength, UMaterialInterface* Material, URuntimeVirtualTexture* VirtualTexture,
+		FName LayerName);
 
 	/**
 	 * Applies the landscape splines of WorldContextObject's world to its landscape's heights and collision, merging the edit

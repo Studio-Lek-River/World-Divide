@@ -18,6 +18,7 @@
 #include "ImageUtils.h"
 #include "Landscape.h"
 #include "LandscapeInfo.h"
+#include "LandscapeLayerInfoObject.h"
 #include "Misc/App.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
@@ -219,12 +220,18 @@ void URTSEditorScripting::ReadMapLayout(UObject* WorldContextObject, FBox2D& Out
 }
 
 ALandscape* URTSEditorScripting::CreateLandscape(UObject* WorldContextObject, const FString& HeightmapFileName, int32 Components,
-	int32 QuadsPerSection, FVector Location, FVector Scale, UMaterialInterface* Material)
+	int32 QuadsPerSection, FVector Location, FVector Scale, UMaterialInterface* Material, const TArray<ULandscapeLayerInfoObject*>& Layers,
+	const TArray<FString>& WeightmapFileNames)
 {
 #if WITH_EDITOR
 	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
 	if (!World || Components <= 0 || QuadsPerSection <= 0)
 	{
+		return nullptr;
+	}
+	if (Layers.Num() != WeightmapFileNames.Num() || Layers.Contains(nullptr))
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("CreateLandscape: %d layers but %d weightmaps, or a layer is missing"), Layers.Num(), WeightmapFileNames.Num());
 		return nullptr;
 	}
 	constexpr int32 SectionsPerComponent = 2;
@@ -242,14 +249,30 @@ ALandscape* URTSEditorScripting::CreateLandscape(UObject* WorldContextObject, co
 		Heights[Index] = static_cast<uint16>(Bytes[Index * 2] | (Bytes[Index * 2 + 1] << 8));
 	}
 
-	// As the editor's New Landscape tool: the heights of the default edit layer and no paint layers.
+	// As the editor's New Landscape tool with its layers imported from files: the heights and the paint layers' weights of
+	// the default edit layer.
+	TArray<FLandscapeImportLayerInfo> PaintLayers;
+	for (int32 Index = 0; Index < Layers.Num(); ++Index)
+	{
+		FLandscapeImportLayerInfo& PaintLayer = PaintLayers.Emplace_GetRef(Layers[Index]->GetLayerName());
+		PaintLayer.LayerInfo = Layers[Index];
+		if (!FFileHelper::LoadFileToArray(PaintLayer.LayerData, *WeightmapFileNames[Index]) || PaintLayer.LayerData.Num() != Size * Size)
+		{
+			UE_LOG(LogWorldDivide, Error, TEXT("CreateLandscape: %s is missing or not %d x %d 8-bit weights"), *WeightmapFileNames[Index], Size, Size);
+			return nullptr;
+		}
+	}
 	TMap<FGuid, TArray<uint16>> HeightsPerLayer;
 	HeightsPerLayer.Add(FGuid(), MoveTemp(Heights));
 	TMap<FGuid, TArray<FLandscapeImportLayerInfo>> PaintLayersPerLayer;
-	PaintLayersPerLayer.Add(FGuid(), TArray<FLandscapeImportLayerInfo>());
+	PaintLayersPerLayer.Add(FGuid(), PaintLayers);
 	ALandscape* Landscape = World->SpawnActor<ALandscape>(Location, FRotator::ZeroRotator);
 	Landscape->LandscapeMaterial = Material;
 	Landscape->SetActorRelativeScale3D(Scale);
+	for (const FLandscapeImportLayerInfo& PaintLayer : PaintLayers)
+	{
+		Landscape->AddTargetLayer(PaintLayer.LayerName, FLandscapeTargetLayerSettings(PaintLayer.LayerInfo), false);
+	}
 	Landscape->Import(FGuid::NewGuid(), 0, 0, Size - 1, Size - 1, SectionsPerComponent, QuadsPerSection, HeightsPerLayer, TEXT(""),
 		PaintLayersPerLayer, ELandscapeImportAlphamapType::Additive, TArrayView<const FLandscapeLayer>());
 	Landscape->SetActorLabel(TEXT("Landscape"));
@@ -258,6 +281,27 @@ ALandscape* URTSEditorScripting::CreateLandscape(UObject* WorldContextObject, co
 		Info->UpdateLayerInfoMap(Landscape);
 	}
 	return Landscape;
+#else
+	return nullptr;
+#endif
+}
+
+ULandscapeLayerInfoObject* URTSEditorScripting::CreateLandscapeLayerInfo(const FString& AssetPath, FName LayerName, UPhysicalMaterial* PhysMaterial)
+{
+#if WITH_EDITOR
+	const FString Name = FPackageName::GetLongPackageAssetName(AssetPath);
+	ULandscapeLayerInfoObject* LayerInfo = LoadObject<ULandscapeLayerInfoObject>(nullptr, *(AssetPath + TEXT(".") + Name), nullptr, LOAD_NoWarn | LOAD_Quiet);
+	if (!LayerInfo)
+	{
+		UPackage* Package = CreatePackage(*AssetPath);
+		LayerInfo = NewObject<ULandscapeLayerInfoObject>(Package, *Name, RF_Public | RF_Standalone | RF_Transactional);
+		FAssetRegistryModule::AssetCreated(LayerInfo);
+	}
+	LayerInfo->SetLayerName(LayerName, true);
+	LayerInfo->SetBlendMethod(ELandscapeTargetLayerBlendMethod::PremultipliedAlphaBlending, true);
+	LayerInfo->SetPhysicalMaterial(PhysMaterial, true);
+	LayerInfo->MarkPackageDirty();
+	return LayerInfo;
 #else
 	return nullptr;
 #endif
@@ -557,8 +601,11 @@ URuntimeVirtualTexture* URTSEditorScripting::CreateLandscapeVirtualTexture(UObje
 		Volume = World->SpawnActor<ARuntimeVirtualTextureVolume>();
 		Volume->SetActorLabel(TEXT("RVT_Landscape"));
 	}
-	// As the volume's "Set Bounds" button for an unrotated landscape: a unit box from the bounds' corner, scaled to their size.
-	const FBox Bounds = Landscape->GetComponentsBoundingBox(true);
+	// As the volume's "Set Bounds" button for an unrotated landscape: a unit box from the bounds' corner, scaled to their size,
+	// with VolumeHeadroom over and under: the river and the roads carve and raise the ground after this, and ground outside
+	// the volume draws nothing into the texture, so the landscape material showed it black (#156).
+	constexpr double VolumeHeadroom = 2000.0;
+	const FBox Bounds = Landscape->GetComponentsBoundingBox(true).ExpandBy(FVector(0.0, 0.0, VolumeHeadroom));
 	Volume->SetActorTransform(FTransform(FRotator::ZeroRotator, Bounds.Min, Bounds.GetSize()));
 	Volume->VirtualTextureComponent->SetBoundsAlignActor(Landscape);
 	Volume->VirtualTextureComponent->SetVirtualTexture(Texture);
@@ -576,7 +623,8 @@ URuntimeVirtualTexture* URTSEditorScripting::CreateLandscapeVirtualTexture(UObje
 }
 
 int32 URTSEditorScripting::AddLandscapeSplineRoad(UObject* WorldContextObject, const TArray<FVector>& Points, float Width, float SideFalloff,
-	bool bShapeGround, UStaticMesh* Mesh, float TileLength, UMaterialInterface* Material, URuntimeVirtualTexture* VirtualTexture)
+	bool bShapeGround, UStaticMesh* Mesh, float TileLength, UMaterialInterface* Material, URuntimeVirtualTexture* VirtualTexture,
+	FName LayerName)
 {
 #if WITH_EDITOR
 	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
@@ -639,6 +687,7 @@ int32 URTSEditorScripting::AddLandscapeSplineRoad(UObject* WorldContextObject, c
 			ControlPoint->SegmentMeshOffset = MeshOffset;
 			ControlPoint->bRaiseTerrain = bShapeGround;
 			ControlPoint->bLowerTerrain = bShapeGround;
+			ControlPoint->LayerName = LayerName;
 			Splines->GetControlPoints().Add(ControlPoint);
 		}
 		Road.Add(ControlPoint);
@@ -670,13 +719,20 @@ int32 URTSEditorScripting::AddLandscapeSplineRoad(UObject* WorldContextObject, c
 		Segment->Connections[1].TangentLen = Length;
 		Segment->bRaiseTerrain = bShapeGround;
 		Segment->bLowerTerrain = bShapeGround;
+		Segment->LayerName = LayerName;
 		Segment->SplineMeshes.Add(Entry);
 		Segment->bCastShadow = false;
 		Segment->BodyInstance.SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
 		if (VirtualTexture)
 		{
+			// Only into the texture, which the landscape material reads (#156): the slabs no longer draw in the main pass.
+			// Drawn after the landscape, which writes the same texture, so the road lies on top.
 			Segment->RuntimeVirtualTextures.Add(VirtualTexture);
-			// In the main pass too while the landscape material (#156) does not read the texture yet.
+			Segment->VirtualTextureRenderPassType = ERuntimeVirtualTextureMainPassType::Exclusive;
+			Segment->TranslucencySortPriority = 1;
+		}
+		else
+		{
 			Segment->VirtualTextureRenderPassType = ERuntimeVirtualTextureMainPassType::Always;
 		}
 		Splines->GetSegments().Add(Segment);

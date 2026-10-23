@@ -80,15 +80,16 @@ namespace RTSCameraShots
 	const FVector BattlefieldCentre(-6000.f, 0.f, 0.f);
 
 	/**
-	 * River Crossing's scenes (rivercrossing_greybox.py, metres there): where, and the camera's yaw. A scene on the map's
-	 * border gets a marker unit just inside it, so the picture shows where the map ends rather than plain grass.
+	 * River Crossing's scenes (rivercrossing_greybox.py, metres there): where, and the camera's yaw. A scene with a marker
+	 * gets a marker unit at its focus, or just inside the border when the focus lies past it: on the border the picture
+	 * shows where the map ends rather than plain grass, on a paint layer whether a unit stays distinct against it (#156).
 	 */
 	struct FLandscapeScene
 	{
 		const TCHAR* Name;
 		FVector2D Focus;
 		float Yaw;
-		bool bBorder = false;
+		bool bMarker = false;
 	};
 	const FLandscapeScene RiverCrossingScenes[] = {
 		{ TEXT("hills"), FVector2D(-35000.f, -65000.f), 0.f },
@@ -99,11 +100,19 @@ namespace RTSCameraShots
 		{ TEXT("edge"), FVector2D(-100000.f, -100000.f), 0.f, true },
 		{ TEXT("edge_yaw45"), FVector2D(-100000.f, -100000.f), 45.f, true },
 		{ TEXT("past_west_yaw45"), FVector2D(-160000.f, 0.f), 45.f, true },
+		// A unit on each paint layer it can drive on (#156): a pasture, a meadow and a fallow field, the mud of the west
+		// bank, the farm track's gravel and the main road's asphalt.
+		{ TEXT("layer_grass"), FVector2D(-27800.f, -74600.f), 0.f, true },
+		{ TEXT("layer_meadow"), FVector2D(-34800.f, -88600.f), 0.f, true },
+		{ TEXT("layer_dirt"), FVector2D(-46000.f, -79500.f), 0.f, true },
+		{ TEXT("layer_mud"), FVector2D(-9700.f, -15000.f), 0.f, true },
+		{ TEXT("layer_gravel"), FVector2D(-66500.f, 1000.f), 0.f, true },
+		{ TEXT("layer_asphalt"), FVector2D(-53000.f, -24500.f), 0.f, true },
 	};
 	/** The playable ground's half-size (rivercrossing_greybox.py's PLAYABLE_HALF), and how far inside it the markers stand. */
 	constexpr float PlayableHalf = 100000.f;
 	constexpr float BorderMarkerInset = 3000.f;
-	const TCHAR* BorderMarker = TEXT("DA_TestM20Guardian");
+	const TCHAR* SceneMarker = TEXT("DA_TestM20Guardian");
 
 	bool IsRiverCrossing(const UWorld& World)
 	{
@@ -286,7 +295,7 @@ namespace RTSCameraShots
 				Profiles = { { TEXT("Final"), *OwnTuning } };
 				MeasureUnits();
 				BuildRiverCrossingShots();
-				StageBorderMarkers();
+				StageSceneMarkers();
 				GoTo(EStep::Stage);
 				return true;
 			}
@@ -392,19 +401,19 @@ namespace RTSCameraShots
 			}
 		}
 
-		/** A marker unit just inside the border at each border scene's focus; staged at runtime, the map is not changed. */
-		void StageBorderMarkers()
+		/** A marker unit at each marked scene's focus, inside the border; staged at runtime, the map is not changed. */
+		void StageSceneMarkers()
 		{
-			URTSUnitData* Data = LoadUnitData(BorderMarker);
+			URTSUnitData* Data = LoadUnitData(SceneMarker);
 			if (!Data)
 			{
-				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.CameraShots: %s did not load; the edge shots show no border marker"), BorderMarker);
+				UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.CameraShots: %s did not load; the marked shots show no marker unit"), SceneMarker);
 				return;
 			}
 			TSet<FVector2D> Placed;
 			for (const FLandscapeScene& Scene : RiverCrossingScenes)
 			{
-				if (!Scene.bBorder || Placed.Contains(Scene.Focus))
+				if (!Scene.bMarker || Placed.Contains(Scene.Focus))
 				{
 					continue;
 				}
@@ -418,7 +427,7 @@ namespace RTSCameraShots
 				}
 				else
 				{
-					UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.CameraShots: could not place the border marker %s"), BorderMarker);
+					UE_LOG(LogWorldDivide, Warning, TEXT("rts.Debug.CameraShots: could not place the marker unit %s"), SceneMarker);
 				}
 			}
 		}

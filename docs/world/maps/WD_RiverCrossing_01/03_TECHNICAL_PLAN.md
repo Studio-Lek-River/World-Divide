@@ -77,6 +77,25 @@ Heightmap authoring:
 - **Grass:** Landscape Grass Types tied to the Grass and Meadow layers for short grass and wildflowers (≤ 0.6 m, cull about 150 m, no collision).
 - **Budget:** at most 3 texture samplers per layer (albedo plus height, normal, ORM packing).
 
+As built (#156, `Tools/Editor/rivercrossing_greybox.py`):
+
+| Layer | Surface | Physical material | Where |
+|---|---|---|---|
+| Grass | UncutGrass | PM_Grass | Pasture fields, the village rise |
+| Meadow | WildGrass (dark, tinted up) | PM_Grass | Meadow fields, field margins, the river's rough banks |
+| Dirt | Military trench dirt, fine 03 | PM_Dirt | Fallow fields, the base pads |
+| Mud | MudPebbles | PM_Mud | 8 m along the water's edge |
+| Gravel | GravelGround | PM_Sand | Under the tracks and their falloff |
+| Rock | GougedRockCliff | PM_Dirt | Slopes over 30° (the bridge ramps' sides) |
+| Asphalt | Military trench dirt, coarse 01 | PM_Road | Under the asphalt roads, their shoulders and falloff |
+
+- The script paints the layers from the layout, not the material: a seeded patchwork of fields 240 × 120 m (rows of varied width, symmetric about the centre), each with soft patches of a second layer and a 1.5 m meadow margin that wanders a little. The roads paint their layer twice: into the imported weightmaps, so every component they cross has it from the start, and through the splines' `LayerName`, so a road moved in the editor takes its paint along. The physical material under a unit is therefore always the layer it shows.
+- The material writes the layers into the RVT and the main pass only reads the RVT. In the RVT they are height-blended, with each ORM's AO as the height, and each base colour is mixed with its own tile 6.3 times larger and shaded by a macro mask. The roads draw into the RVT only (`Exclusive`), over the landscape.
+- Samples: 4 per layer (base colour twice, normal, ORM) from 3 textures per layer, all through the shared wrap sampler, plus the macro mask's 2 samples of one of them: 21 textures and 30 samples, paid only when an RVT page is drawn. The main pass samples the RVT's 2 textures and the weightmaps.
+- RVT: 2048 tiles of 256 texels over 2,520 m (about 5 mm a texel), adaptive. Its volume reaches 20 m above and below the landscape, so ground the river and roads carve stays inside it; ground outside it draws black.
+- Grass: `LGT_WD_Grass` (Bermuda grass, 0.15–0.25 m, 300 per 100 m²) and `LGT_WD_Meadow` (dry medium grass, 0.35–0.6 m, 500 per 100 m²), culled from 120 to 150 m, no collision or shadows.
+- Exposure: River Crossing has no post-process volume yet, so auto exposure lifts the scanned ground about 1.5 stops and washes it out. The #156 sign-off sheets were also taken with `r.ExposureOffset -1.5`. Setting the exposure is #159's.
+
 ## 6. Vegetation and PCG
 
 | Purpose | Method | Collision |

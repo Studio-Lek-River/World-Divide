@@ -9,7 +9,8 @@ Phase 1. First audit 2026-10-15 (no packs yet, from "How this was checked" down)
 The repository is public and the pack licences do not allow sharing the files, so the packs are **not** in git:
 
 - Each pack stays in its own `Content/<Pack>/` root, as Fab installs it. Moving them to `/Game/World/Packs/` would only rewrite references in files nobody else has.
-- Each is git-ignored (`.gitignore`) and never cooked (`Config/DefaultGame.ini`, `DirectoriesToNeverCook`; `WorldDivide.Config.Cook` checks it). Cooking what the map uses is decided with #154 onwards.
+- Each is git-ignored (`.gitignore`) and never cooked (`Config/DefaultGame.ini`, `DirectoriesToNeverCook`; `WorldDivide.Config.Cook` checks it).
+- Exception (producer's decision on #156, 2026-10-23): the textures the landscape material uses (21 of the Surfaces, 3 per layer) and the two grass models' meshes and textures are copied into `/Game/World/Landscape/Textures` and `/Game/World/Landscape/Grass`, committed and cooked. `rivercrossing_greybox.py` copies them only when the copy is missing, so a checkout without the packs still builds the map. Nothing else of a pack is committed.
 - Every machine adds the packs in the manifest below from Fab (*My Library → Add to project*, see [05_PRODUCER_ACTIONS.md](05_PRODUCER_ACTIONS.md) §2), runs `ue.ps1 -Task freeassets` (the CC0 models and surface ZIPs, downloaded again) and `ue.ps1 -Task surfaces -Path D:\Downloads\textures`, and then runs `ue.ps1 -Task packaudit`.
 - The CC0 models follow the same rule although their licence would allow committing them: they are 0.6 GB and download again in minutes. Only the in-house roadside kit (`Art/Shared/roadside` → `/Game/Art/Shared/Roadside`, own work) is committed and may cook.
 
@@ -165,7 +166,7 @@ Skeletal meshes have no size tag; the Megaplant trees' heights are checked by ey
 | Poly Haven models (`/Game/PolyHaven`) | CC0 1.0 (polyhaven.com/license) | Yes, no attribution required | Authors per model above; source URL per mesh in `Saved/FreeAssets/imported.md` |
 | ambientCG surfaces (the four sets above) | CC0 1.0 (ambientcg.com) | Yes, no attribution required | Set ids above |
 | Roadside kit | Own work of this project | Yes | `Tools/Art/roadside_*.py` |
-| Megascans surfaces, Fab packs | Fab / Quixel licences, local only | Not committed or cooked; settled with #154 onwards | Manifest above |
+| Megascans surfaces, Fab packs | Fab / Quixel licences | Packs not committed or cooked; the landscape's 21 surface textures are committed and cooked (#156, producer's decision) | Manifest above; layer table in 03 §5 |
 
 ### Coverage against the minimum set (05 §2)
 
@@ -228,7 +229,7 @@ Content holds 359 files (about 49.5 MB). The project has **one** real environmen
 |---|---|---|---|
 | M_Ground | `/Game/Materials/M_Ground` | Material (header verified) | Constant colour (0.06, 0.075, 0.04) with roughness 0.9 (generator verified). No textures and not a landscape material. **Not suitable.** |
 
-There are no landscape materials, layer infos, terrain textures, RVT assets or blend materials.
+Since #156 the landscape draws in `/Game/World/Landscape/MI_Landscape_WD_Temperate` (03 §5), with layer infos in `/Game/World/Landscape/Layers` and the RVT `RVT_WD_RiverCrossing_01`.
 
 ## B. Vegetation
 
