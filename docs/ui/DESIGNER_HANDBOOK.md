@@ -303,6 +303,8 @@ The three attached USA air force upgrade icons (radar array, open weapons bay, a
 - No text, numbers, letters or watermarks anywhere. The only real insignia allowed is the US star-and-bar roundel, kept small.
 - An icon must still read at 64x64: one clear silhouette, strong value contrast.
 
+Unit and building icons differ from the above on two points (producer decision, #198): they show the subject in neutral daylight on its own terrain (grass, dirt, shrubs), not on the navy hexagon background, as in `T_Icon_USA_M20Guardian.png` and `T_Icon_USA_Headquarters.png`; and a building is painted over a render of its in-game model from the elevated three-quarter RTS angle, with nothing added that the model lacks. Deliver them square (1024x1024 or larger); `unit_icon.py` scales them to 256x256. Upgrade icons and HUD pieces keep the navy look.
+
 Faction variants (same rendering quality and composition rules):
 - **USA:** as above (blue rim light, navy hexagon background).
 - **China:** red rim light, dark charcoal background with a faint riveted steel-plate grid, heavier industrial forms, red star markings.
