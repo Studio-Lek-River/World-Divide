@@ -13,6 +13,7 @@ lens (M_Kit_Lens) are every building's, in /Game/Art/Shared (#388).
 """
 
 import json
+import re
 import os
 
 import unreal
@@ -130,6 +131,10 @@ return Color * Level * gate * fault * flash * lerp(DayGain, 1.0, Night) * Intens
 """
 # The engine's flat normal: a lens without a baked finish normal draws as if it had none.
 FLAT_NORMAL = "/Engine/EngineMaterials/FlatNormal"
+# A game mesh baked from its master (#373, docs/art/MODEL_PERFORMANCE.md rule 7): the building masters' static switch
+# SHELL_BAKE, off by default, turns on the master's fine detail baked on UV1, the normal map BakedNormal (on the tiling
+# normal where the master has one) and the occlusion BakedAO (its R). An instance sets it with its maps.
+SHELL_BAKE = "ShellBake"
 
 
 def read_layout(path):
@@ -224,18 +229,53 @@ def _add(material, x, y, a, a_pin, b, b_pin):
     return node
 
 
+def _shell_bake(material, white_masks, normal=None, normal_pin=""):
+    """The normal and occlusion of SHELL_BAKE: on, normal (or flat) with BakedNormal on UV1 laid over it,
+    normalize(normal + baked - (0, 0, 1)), and BakedAO's R; off, normal (or flat) and no occlusion. Returns the two
+    switches, for MP_NORMAL and MP_AMBIENT_OCCLUSION."""
+    uv1 = _node(material, unreal.MaterialExpressionTextureCoordinate, -1900, 1900, coordinate_index=1)
+    baked_normal = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, -1600, 1900,
+                         parameter_name="BakedNormal", texture=unreal.load_asset(FLAT_NORMAL),
+                         sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
+    baked_ao = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, -1600, 2200, parameter_name="BakedAO",
+                     texture=white_masks, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+    _connect(uv1, "", baked_normal, "UVs")
+    _connect(uv1, "", baked_ao, "UVs")
+    up = _node(material, unreal.MaterialExpressionConstant3Vector, -1600, 1750,
+               constant=unreal.LinearColor(0.0, 0.0, 1.0, 1.0))
+    normal_switch = _node(material, unreal.MaterialExpressionStaticSwitchParameter, -800, 1850, parameter_name=SHELL_BAKE,
+                          default_value=False)
+    if normal is None:
+        _connect(baked_normal, "RGB", normal_switch, "True")
+        _connect(up, "", normal_switch, "False")
+    else:
+        less = _node(material, unreal.MaterialExpressionSubtract, -1150, 1850)
+        _connect(_add(material, -1300, 1850, normal, normal_pin, baked_normal, "RGB"), "", less, "A")
+        _connect(up, "", less, "B")
+        unit = _node(material, unreal.MaterialExpressionNormalize, -1000, 1850)
+        _connect(less, "", unit, "VectorInput")
+        _connect(unit, "", normal_switch, "True")
+        _connect(normal, normal_pin, normal_switch, "False")
+    ao_switch = _node(material, unreal.MaterialExpressionStaticSwitchParameter, -800, 2150, parameter_name=SHELL_BAKE,
+                      default_value=False)
+    _connect(baked_ao, "R", ao_switch, "True")
+    _connect(_constant(material, -1000, 2300, 1.0), "", ao_switch, "False")
+    return normal_switch, ao_switch
+
+
 def _finish(material):
     editing.recompile_material(material)
     return material
 
 
-def build_surface_material(directory, name, kind):
+def build_surface_material(directory, name, kind, white_masks):
     """The flat masters, each a colour, roughness, metallic and glow from its instance:
     "surface" (M_Bld_Surface), "glass" (M_Bld_Glass: translucent, lit per pixel, GlassOpacity, at night
     NightGlow, the rooms lit behind it),
     "operational" (M_Bld_Operational: the glow times Operational, custom primitive data, 1 on and 0 off, its lighting
     group's switch and, in the dark, NightGain: LIGHT_GROUP_INDICES) and
-    "ownership" (M_Bld_Ownership: the colour is the owner's PlayerColor, custom primitive data)."""
+    "ownership" (M_Bld_Ownership: the colour is the owner's PlayerColor, custom primitive data).
+    Each has SHELL_BAKE, a baked mesh's normal and occlusion (white_masks: BakedAO's white default)."""
     material = _material(directory, name)
     if kind == "ownership":
         color = _vector(material, -450, 0, "PlayerColor", (0.025, 0.095, 0.2, 1.0), vehicle_art.TEAM_COLOR_INDEX)
@@ -247,6 +287,9 @@ def build_surface_material(directory, name, kind):
     _output(material, color, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
     _output(material, roughness, "", unreal.MaterialProperty.MP_ROUGHNESS)
     _output(material, metallic, "", unreal.MaterialProperty.MP_METALLIC)
+    normal, occlusion = _shell_bake(material, white_masks)
+    _output(material, normal, "", unreal.MaterialProperty.MP_NORMAL)
+    _output(material, occlusion, "", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
     if kind == "operational":
         operational = _scalar(material, -450, 640, "Operational", 1.0, vehicle_art.LAMP_ON_INDEX)
         # The group's switch: 1 less each group's weight times how far it is off, so an instance of no group stays at 1.
@@ -294,9 +337,10 @@ def build_surface_material(directory, name, kind):
     return _finish(material)
 
 
-def build_coating_material(directory, name, textures):
+def build_coating_material(directory, name, textures, white_masks):
     """M_Bld_Coating: painted and coated surfaces, the instance's colour times the 2 m coating texture, its roughness
-    moved by the coating's (COATING_ROUGHNESS_MEAN), the coating's normal. textures: {parameter: texture}."""
+    moved by the coating's (COATING_ROUGHNESS_MEAN), the coating's normal, and SHELL_BAKE over it (white_masks: BakedAO's
+    white default). textures: {parameter: texture}."""
     material = _material(directory, name)
     color = _vector(material, -450, 0, "SurfaceColor", (0.5, 0.5, 0.5, 1.0))
     roughness = _scalar(material, -450, 160, "Roughness", 0.5)
@@ -318,7 +362,9 @@ def build_coating_material(directory, name, textures):
     _output(material, base, "", unreal.MaterialProperty.MP_BASE_COLOR)
     _output(material, clamp, "", unreal.MaterialProperty.MP_ROUGHNESS)
     _output(material, metallic, "", unreal.MaterialProperty.MP_METALLIC)
-    _output(material, samplers["CoatingNormal"], "RGB", unreal.MaterialProperty.MP_NORMAL)
+    normal, occlusion = _shell_bake(material, white_masks, samplers["CoatingNormal"], "RGB")
+    _output(material, normal, "", unreal.MaterialProperty.MP_NORMAL)
+    _output(material, occlusion, "", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
     _output(material, emission, "RGB", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     return _finish(material)
 
@@ -602,9 +648,10 @@ def build_rubble_material(directory, name, textures, recipe):
     return _finish(material)
 
 
-def build_material_instance(directory, name, parent, scalars, vectors):
-    """An instance of parent with the delivery's values. The parent is set first and the instance updated after, so the
-    saved instance keeps it (the delivery lost a parent set without an update: audit/ownership_persistence_repair)."""
+def build_material_instance(directory, name, parent, scalars, vectors, textures=None, switches=None):
+    """An instance of parent with the delivery's values, and textures ({parameter: texture}) and static switches
+    ({parameter: bool}) where given. The parent is set first and the instance updated after, so the saved instance keeps
+    it (the delivery lost a parent set without an update: audit/ownership_persistence_repair)."""
     path = f"{directory}/{name}"
     if assets.does_asset_exist(path):
         instance = assets.load_asset(path)
@@ -617,6 +664,14 @@ def build_material_instance(directory, name, parent, scalars, vectors):
         editing.set_material_instance_scalar_parameter_value(instance, parameter, value)
     for parameter, value in sorted(vectors.items()):
         editing.set_material_instance_vector_parameter_value(instance, parameter, unreal.LinearColor(*value))
+    for parameter, texture in sorted((textures or {}).items()):
+        editing.set_material_instance_texture_parameter_value(instance, parameter, texture)
+    # The parent's static switches are known to the instance only once it is updated with that parent.
+    editing.update_material_instance(instance)
+    for parameter, value in sorted((switches or {}).items()):
+        editing.set_material_instance_static_switch_parameter_value(instance, parameter, value)
+        if editing.get_material_instance_static_switch_parameter_value(instance, parameter) != value:
+            raise RuntimeError(f"{name}: its parent {parent.get_name()} has no static switch {parameter}")
     editing.update_material_instance(instance)
     if instance.get_editor_property("parent") != parent:
         raise RuntimeError(f"{name} did not keep its parent {parent.get_name()}")
@@ -654,6 +709,28 @@ def cover_building(mesh, building_box, placements):
     mesh.set_editor_property("positive_bounds_extension", unreal.Vector(*(w - h for w, h in zip(wanted_high, high))))
 
 
+def _rejoin_lod_slots(mesh, lod, slots, source):
+    """The LOD's sections back on LOD0's slots (slots, by name) and the slots its import added dropped. The import matches
+    a section to a slot by its material's name, so a slot whose instance is named otherwise than the slot (the baked
+    shell's, #373) gets a new slot of the same name, or that name and a number."""
+    mesh_editing = vehicle_art._mesh_editing()
+    names = [str(slot.material_slot_name) for slot in mesh.static_materials]
+    if names == slots:
+        return
+    for section in range(mesh.get_num_sections(lod)):
+        index = mesh_editing.get_lod_material_slot(mesh, lod, section)
+        if index < len(slots):
+            continue
+        wanted = names[index] if names[index] in slots else re.sub(r"_\d+$", "", names[index])
+        if wanted not in slots:
+            raise RuntimeError(f"{mesh.get_name()}: {source} brought the slot {names[index]}, which LOD0 does not have "
+                               f"(LOD0's {slots}, now {names})")
+        mesh_editing.set_lod_material_slot(mesh, slots.index(wanted), lod, section)
+    mesh.set_editor_property("static_materials", list(mesh.static_materials)[:len(slots)])
+    if [str(slot.material_slot_name) for slot in mesh.static_materials] != slots:
+        raise RuntimeError(f"{mesh.get_name()}: {source} changed LOD0's slots")
+
+
 def import_mesh(source, directory, name, slot_materials, bounds, expected_triangles, budgets, building_box, placements,
                 switch_distance, lod1_source=None, spare_materials=None):
     """Imports one mesh of the building at its own origin (vehicle_art.import_part: normals and tangents as exported, no
@@ -676,6 +753,13 @@ def import_mesh(source, directory, name, slot_materials, bounds, expected_triang
     if stale:
         unreal.log_warning(f"building_art: {name} keeps the slots {stale} an earlier import gave it, without faces")
     _reset_lods(mesh, expected_triangles)
+    # A reimport keeps the slots the asset had: the sections of a slot it did not have (the baked shell's PavingWear,
+    # #373) point past them, at the slots the FBX adds after its own, in its (sorted) order.
+    names = [str(slot.material_slot_name) for slot in mesh.static_materials]
+    for slot in sorted(set(slot_materials) - set(names)):
+        materials = list(mesh.static_materials)
+        materials.append(unreal.StaticMaterial(material_interface=slot_materials[slot], material_slot_name=slot))
+        mesh.set_editor_property("static_materials", materials)
     imported = mesh.get_num_triangles(0)
     if imported < expected_triangles * 0.99:
         raise RuntimeError(f"{source} imported {imported} triangles instead of {expected_triangles}")
@@ -705,8 +789,7 @@ def import_mesh(source, directory, name, slot_materials, bounds, expected_triang
         slots = [str(slot.material_slot_name) for slot in mesh.static_materials]
         if mesh_editing.import_lod(mesh, 1, lod1_source) != 1:
             raise RuntimeError(f"{name}: could not import LOD1 from {lod1_source}")
-        if [str(slot.material_slot_name) for slot in mesh.static_materials] != slots:
-            raise RuntimeError(f"{name}: {lod1_source} brought slots LOD0 does not have")
+        _rejoin_lod_slots(mesh, 1, slots, lod1_source)
     if not mesh_editing.set_lod_screen_sizes(mesh, screen_sizes):
         raise RuntimeError(f"{name}: could not set its LOD screen sizes")
     unreal.log(f"building_art: {name} LODs " + ", ".join(f"{mesh.get_num_triangles(i)}" for i in range(mesh.get_num_lods())) +
@@ -757,6 +840,13 @@ def import_bench_shell(source, directory, name, slot_materials, bounds, expected
     size = bounds[1][0] - bounds[0][0]
     mesh = vehicle_art.import_part(source, directory, name, slot_materials, size)
     _reset_lods(mesh, expected_triangles)
+    # A reimport keeps the slots the asset had: the sections of a slot it did not have (the baked shell's PavingWear,
+    # #373) point past them, at the slots the FBX adds after its own, in its (sorted) order.
+    names = [str(slot.material_slot_name) for slot in mesh.static_materials]
+    for slot in sorted(set(slot_materials) - set(names)):
+        materials = list(mesh.static_materials)
+        materials.append(unreal.StaticMaterial(material_interface=slot_materials[slot], material_slot_name=slot))
+        mesh.set_editor_property("static_materials", materials)
     imported = mesh.get_num_triangles(0)
     if imported < expected_triangles * 0.99:
         raise RuntimeError(f"{source} imported {imported} triangles instead of {expected_triangles}")

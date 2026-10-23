@@ -391,9 +391,8 @@ Gate A closes the framework and the first lighting kit **on the HQ**: catalogue 
 per-instance lens states, the state table, the light budgets, the lighting pieces the HQ needs, and the HQ lit from kit
 fixtures within 7 + 2 lights. The bench measures the hypotheses above and the producer sets the budgets.
 
-The HQ has almost no triangle headroom: 349,568 of its 350,000 at LOD0 and 39,032 of 40,000 at LOD1 (#358). Its kit
-fixtures fit only after the shell bake (#373) frees room, or with the producer raising the HQ budget for them; M7.00-09
-settles which before it mounts more than the phase B fixtures it replaces.
+Since the shell bake (#373) the HQ draws 144,485 of its 150,000 triangles at LOD0 and 39,596 of 40,000 at LOD1: its kit
+fixtures (M7.00-09) have about 5,500 at LOD0 and 400 at LOD1.
 
 Reuse on a second building (the Barracks) is not part of Gate A: it follows when that building is worked on, and must
 need no kit change.

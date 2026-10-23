@@ -3,10 +3,11 @@ building's two LODs (docs/art/MODEL_PERFORMANCE.md, Buildings): the nine meshes 
 material slot per material instance:
 
   blender -b --python Tools/Art/usa_hq_game_blender.py
+  blender -b --python Tools/Art/usa_hq_game_blender.py -- --baked-shell    (SM_HQ_Shell alone, the rest kept)
 
-- SM_HQ_Shell, the bulk (frames, panels, roofs, tiles), at LOD0 as delivered, with the delivery's normals, for setup to
-  reduce to LOD0 and LOD1 with the engine's reduction, which keeps those normals and UVs (setup_testmap.py,
-  usa_hq_recipe.py's budgets);
+- SM_HQ_Shell, the bulk (frames, panels, roofs, tiles): the baked game mesh made from the approved master (#373,
+  issue373/), LOD0 and LOD1 by hand within the large building's budget, its fine detail in the normal and AO maps on UV1
+  (T_HQ_ShellBake_Set*, usa_hq_recipe.py's SHELL_BAKE), taken in as it is but for its tangents (BAKED_SHELL);
 - SM_HQ_ShellDetail, the faces of DETAIL, the small details that read at the RTS camera (solar cells, team lights,
   markings, door light strips, leaves, soil), which LOD0 keeps whole: an engine reduction over the whole shell lost the roof's
   solar cells (#349);
@@ -25,6 +26,7 @@ import json
 import math
 import os
 import re
+import sys
 
 import bmesh
 import bpy
@@ -38,6 +40,10 @@ FBX_DIR = os.path.join(ROOT, "fbx")
 GAME_DIR = os.path.join(ROOT, "game")
 SHELL_NAME = "SM_HQ_Shell"
 DETAIL_NAME = "SM_HQ_ShellDetail"
+# The baked shell (#373): the accepted source and its LOD0 and LOD1 objects, the same slots in the same order. Codex's
+# last round stopped in an unchecked UV edit, so this is that round's save from before it (round4/HQ373_Round4_Final.blend1).
+BAKED_SHELL = os.path.join(ROOT, "issue373", "final", "HQ373_Shell_Final.blend")
+BAKED_OBJECTS = ("SM_HQ373_R4_Shell", "SM_HQ373_R4_Shell_LOD1")
 
 # The shell's source meshes and their LOD1 triangle budgets, by what reads past the 260 m switch, each with the step the
 # collapse takes on the way: straight from the delivery's density it stalls far above the budget.
@@ -465,11 +471,52 @@ def split(obj, detail, label):
     return part
 
 
+def record_for(mesh, joined, order):
+    """game_meshes.json's record of mesh: its FBX, slots, triangles per LOD and slot, bounds."""
+    slots = [per_slot(obj) for obj in joined]
+    record = {
+        "fbx": f"game/{mesh}.fbx",
+        "lod1_fbx": f"game/{mesh}_LOD1.fbx" if len(joined) > 1 else None,
+        "slots": order,
+        "triangles": [sum(counts.values()) for counts in slots],
+        "slot_triangles": slots,
+        "bounds": bounds(joined[0]),
+    }
+    print(f"usa_hq_game: {mesh} {record['triangles']} triangles, {len(order)} slots, bounds {record['bounds']}")
+    for slot in order:
+        print(f"usa_hq_game:   {slot} " + " / ".join(str(counts[slot]) for counts in slots))
+    return record
+
+
+def baked_shell():
+    """SM_HQ_Shell and its LOD1 from BAKED_SHELL (#373) as they are, the two LODs' slots in one order, each face's UV0
+    whose tangents collapse reprojected (repair_detail_tangent_uvs: Unreal rebuilds them and warns), and its record."""
+    with bpy.data.libraries.load(BAKED_SHELL, link=False) as (source, target):
+        missing = set(BAKED_OBJECTS) - set(source.objects)
+        if missing:
+            raise RuntimeError(f"{BAKED_SHELL} has no {sorted(missing)}")
+        target.objects = list(BAKED_OBJECTS)
+    joined, order = [], None
+    for obj, path in zip(target.objects, (f"{SHELL_NAME}.fbx", f"{SHELL_NAME}_LOD1.fbx")):
+        bpy.context.collection.objects.link(obj)
+        slots = [re.sub(r"\.\d{3}$", "", material.name) for material in obj.data.materials]
+        if slots != sorted(slots) or (order is not None and slots != order):
+            raise RuntimeError(f"{obj.name}: slots {slots} are not the shell's, in order")
+        order = slots
+        if [layer.name for layer in obj.data.uv_layers] != ["UV0", "UV1"]:
+            raise RuntimeError(f"{obj.name}: UV channels {[layer.name for layer in obj.data.uv_layers]}, not UV0 and UV1")
+        obj.data.uv_layers.active_index = 0
+        print(f"usa_hq_game: {obj.name} repaired {repair_detail_tangent_uvs(obj)} UV faces whose tangents collapse")
+        export(obj, os.path.join(GAME_DIR, path))
+        joined.append(obj)
+    return record_for(SHELL_NAME, joined, order)
+
+
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     instances = slot_instances()
     os.makedirs(GAME_DIR, exist_ok=True)
-    pieces = {SHELL_NAME: ([], []), DETAIL_NAME: ([], [])}
+    pieces = {DETAIL_NAME: ([], [])}
     report = {}
     for name, (step, budget) in SHELL.items():
         source = import_source(name, instances[name])
@@ -480,7 +527,7 @@ def main():
         report[name] = {"source": triangles(source), "lod1": triangles(lod1), "budget": budget,
                         "removed_mast_triangles": removed_mast_triangles}
         print(f"usa_hq_game: {name} {report[name]['source']} -> LOD1 {report[name]['lod1']} (budget {budget})")
-        for mesh, detail in ((SHELL_NAME, False), (DETAIL_NAME, True)):
+        for mesh, detail in ((DETAIL_NAME, True),):
             for lod, obj in enumerate((source, lod1)):
                 piece = split(obj, detail, f"{name}_{mesh}_LOD{lod}")
                 if piece.data.polygons:
@@ -491,41 +538,37 @@ def main():
         bpy.data.objects.remove(lod1)
 
     record = {
-        "about": "Generated by Tools/Art/usa_hq_game_blender.py from the delivery's fbx/ (#358); read by usa_hq_recipe.py.",
-        "meshes": {},
+        "about": "Generated by Tools/Art/usa_hq_game_blender.py from the delivery's fbx/ (#358) and the baked shell (#373); "
+                 "read by usa_hq_recipe.py.",
+        "meshes": {SHELL_NAME: baked_shell()},
     }
     for mesh, (lod0, lod1) in pieces.items():
         order = sorted({obj.data.materials[polygon.material_index].name for obj in lod0 for polygon in obj.data.polygons})
-        joined = [join(lod0, mesh, order)]
-        # The bulk's LOD1 is the engine's, reduced from its LOD0 in setup: collapsed here, its tiles' joints and the
-        # roofs' laps came out as a saw of tilted faces.
-        if mesh == SHELL_NAME:
-            for obj in lod1:
-                bpy.data.objects.remove(obj)
-        else:
-            joined.append(join(lod1, f"{mesh}_LOD1", order))
+        joined = [join(lod0, mesh, order), join(lod1, f"{mesh}_LOD1", order)]
         for obj, path in zip(joined, (f"{mesh}.fbx", f"{mesh}_LOD1.fbx")):
             export(obj, os.path.join(GAME_DIR, path))
             if obj.name == f'{DETAIL_NAME}_LOD1':
                 finalize_detail_lod1(obj, os.path.join(GAME_DIR, path))
-        slots = [per_slot(obj) for obj in joined]
-        record["meshes"][mesh] = {
-            "fbx": f"game/{mesh}.fbx",
-            "lod1_fbx": f"game/{mesh}_LOD1.fbx" if len(joined) > 1 else None,
-            "slots": order,
-            "triangles": [sum(counts.values()) for counts in slots],
-            "slot_triangles": slots,
-            "bounds": bounds(joined[0]),
-        }
-        print(f"usa_hq_game: {mesh} {record['meshes'][mesh]['triangles']} triangles, {len(order)} slots, "
-              f"bounds {record['meshes'][mesh]['bounds']}")
-        for slot in order:
-            print(f"usa_hq_game:   {slot} " + " / ".join(str(counts[slot]) for counts in slots))
+        record["meshes"][mesh] = record_for(mesh, joined, order)
     record["sources"] = report
     with open(os.path.join(GAME_DIR, "game_meshes.json"), "w", encoding="utf-8", newline="\n") as file:
         json.dump(record, file, indent=1)
         file.write("\n")
 
 
+def main_baked_shell():
+    """--baked-shell: SM_HQ_Shell alone again from BAKED_SHELL, game_meshes.json's other records kept."""
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    path = os.path.join(GAME_DIR, "game_meshes.json")
+    with open(path, encoding="utf-8") as file:
+        record = json.load(file)
+    record["about"] = ("Generated by Tools/Art/usa_hq_game_blender.py from the delivery's fbx/ (#358) and the baked shell "
+                       "(#373); read by usa_hq_recipe.py.")
+    record["meshes"][SHELL_NAME] = baked_shell()
+    with open(path, "w", encoding="utf-8", newline="\n") as file:
+        json.dump(record, file, indent=1)
+        file.write("\n")
+
+
 if __name__ == "__main__":
-    main()
+    main_baked_shell() if "--baked-shell" in sys.argv else main()

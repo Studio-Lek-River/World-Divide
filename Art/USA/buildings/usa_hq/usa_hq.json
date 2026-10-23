@@ -1285,44 +1285,44 @@
   },
   "SM_HQ_Shell": {
    "fbx": "game/SM_HQ_Shell.fbx",
-   "lod1_fbx": null,
+   "lod1_fbx": "game/SM_HQ_Shell_LOD1.fbx",
    "slots": {
     "MI_HQ14_Paving": "MI_HQ14_Paving",
-    "MI_HQ14_Roof": "MI_HQ14_Roof",
-    "MI_HQ14_Shell": "MI_HQ14_Shell",
-    "MI_HQ17_Brass": "MI_HQ17_Brass",
-    "MI_HQ17_CoolGlass": "MI_HQ17_CoolGlass",
-    "MI_HQ17_DarkStructure": "MI_HQ17_DarkStructure",
-    "MI_HQ17_FramePaint": "MI_HQ17_FramePaint",
-    "MI_HQ17_InnerLight": "MI_HQ17_InnerLight",
+    "MI_HQ14_Roof": "MI_HQ14_Roof_Baked",
+    "MI_HQ14_Shell": "MI_HQ14_Shell_Baked",
+    "MI_HQ17_Brass": "MI_HQ17_Brass_Baked",
+    "MI_HQ17_CoolGlass": "MI_HQ17_CoolGlass_Baked",
+    "MI_HQ17_DarkStructure": "MI_HQ17_DarkStructure_Baked",
+    "MI_HQ17_FramePaint": "MI_HQ17_FramePaint_Baked",
+    "MI_HQ17_InnerLight": "MI_HQ17_InnerLight_Baked",
     "MI_HQ17_InteriorWarm": "MI_HQ17_InteriorWarm",
-    "MI_HQ17_IvoryCeramic": "MI_HQ17_IvoryCeramic",
-    "MI_HQ17_Roof": "MI_HQ17_Roof",
-    "MI_HQ17_Seals": "MI_HQ17_Seals",
-    "MI_HQ17_Steel": "MI_HQ17_Steel",
-    "MI_HQ17_WarmGlass": "MI_HQ17_WarmGlass",
-    "MI_HQ19_DrainGrate": "MI_HQ19_DrainGrate",
-    "MI_HQ19_DuctGalvanized": "MI_HQ19_DuctGalvanized",
-    "MI_HQ19_EquipmentPaint": "MI_HQ19_EquipmentPaint",
-    "MI_HQ19_Membrane": "MI_HQ19_Membrane",
-    "MI_HQ19_MembraneLap": "MI_HQ19_MembraneLap",
-    "MI_HQ19_SafetyOchre": "MI_HQ19_SafetyOchre",
+    "MI_HQ17_IvoryCeramic": "MI_HQ17_IvoryCeramic_Baked",
+    "MI_HQ17_Roof": "MI_HQ17_Roof_Baked",
+    "MI_HQ17_Seals": "MI_HQ17_Seals_Baked",
+    "MI_HQ17_Steel": "MI_HQ17_Steel_Baked",
+    "MI_HQ17_WarmGlass": "MI_HQ17_WarmGlass_Baked",
+    "MI_HQ19_DrainGrate": "MI_HQ19_DrainGrate_Baked",
+    "MI_HQ19_DuctGalvanized": "MI_HQ19_DuctGalvanized_Baked",
+    "MI_HQ19_EquipmentPaint": "MI_HQ19_EquipmentPaint_Baked",
+    "MI_HQ19_Membrane": "MI_HQ19_Membrane_Baked",
+    "MI_HQ19_MembraneLap": "MI_HQ19_MembraneLap_Baked",
+    "MI_HQ19_SafetyOchre": "MI_HQ19_SafetyOchre_Baked",
     "MI_HQ19_Walkpad": "MI_HQ19_Walkpad",
-    "MI_HQ20_DoorPaint": "MI_HQ20_DoorPaint",
-    "MI_HQ20_Rubber": "MI_HQ20_Rubber",
-    "MI_HQ20_SafetyOchre": "MI_HQ20_SafetyOchre",
-    "MI_HQ20_ServiceOlive": "MI_HQ20_ServiceOlive",
-    "MI_HQ20_WallLiner": "MI_HQ20_WallLiner",
-    "MI_HQ21_Coping": "MI_HQ21_Coping",
-    "MI_HQ21_DrainSteel": "MI_HQ21_DrainSteel",
-    "MI_HQ21_Gravel": "MI_HQ21_Gravel",
-    "MI_HQ21_Joint": "MI_HQ21_Joint",
-    "MI_HQ21_Ochre": "MI_HQ21_Ochre",
-    "MI_HQ21_Olive": "MI_HQ21_Olive",
+    "MI_HQ20_DoorPaint": "MI_HQ20_DoorPaint_Baked",
+    "MI_HQ20_Rubber": "MI_HQ20_Rubber_Baked",
+    "MI_HQ20_SafetyOchre": "MI_HQ20_SafetyOchre_Baked",
+    "MI_HQ20_ServiceOlive": "MI_HQ20_ServiceOlive_Baked",
+    "MI_HQ20_WallLiner": "MI_HQ20_WallLiner_Baked",
+    "MI_HQ21_Coping": "MI_HQ21_Coping_Baked",
+    "MI_HQ21_DrainSteel": "MI_HQ21_DrainSteel_Baked",
+    "MI_HQ21_Gravel": "MI_HQ21_Gravel_Baked",
+    "MI_HQ21_Joint": "MI_HQ21_Joint_Baked",
+    "MI_HQ21_Ochre": "MI_HQ21_Ochre_Baked",
+    "MI_HQ21_Olive": "MI_HQ21_Olive_Baked",
     "MI_USA_HQ_HQ20_FloorWear": "MI_USA_HQ_HQ20_FloorWear",
     "MI_USA_HQ_HQ21_PavingWear": "MI_USA_HQ_HQ21_PavingWear"
    },
-   "triangles": 2915364,
+   "triangles": 62077,
    "bounds": [
     [
      -1900.0,
@@ -1332,12 +1332,12 @@
     [
      1900.0,
      2800.0,
-     1343.08
+     1343.27
     ]
    ],
    "lods": [
-    267000,
-    19000
+    62077,
+    19255
    ]
   },
   "SM_HQ_ShellDetail": {
@@ -2838,6 +2838,828 @@
    "parent": "M_HQ21_Soil",
    "scalars": {},
    "vectors": {}
+  },
+  "MI_HQ14_Roof_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Roughness": 0.86,
+    "Metallic": 0
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.095,
+     0.12,
+     0.13,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ14_Shell_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Roughness": 0.64,
+    "Metallic": 0
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.57,
+     0.53,
+     0.44,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ17_Brass_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Roughness": 0.42,
+    "Metallic": 0.72
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.35,
+     0.25,
+     0.095,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ17_CoolGlass_Baked": {
+   "parent": "M_HQ17_Glass",
+   "scalars": {
+    "Roughness": 0.12,
+    "Metallic": 0,
+    "GlassOpacity": 0.3
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.025,
+     0.074,
+     0.105,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set0_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set0_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ17_DarkStructure_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Roughness": 0.43,
+    "Metallic": 0.65
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.075,
+     0.095,
+     0.102,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set0_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set0_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ17_FramePaint_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Roughness": 0.48,
+    "Metallic": 0.18
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.7,
+     0.66,
+     0.55,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set0_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set0_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ17_InnerLight_Baked": {
+   "parent": "M_HQ_Final_Operational",
+   "scalars": {
+    "Roughness": 0.4,
+    "Metallic": 0,
+    "GroupWindows": 1.0,
+    "NightGain": 4.0
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.95,
+     0.49,
+     0.14,
+     1.0
+    ],
+    "EmissionColor": [
+     1.9,
+     0.98,
+     0.28,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ17_IvoryCeramic_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Roughness": 0.64,
+    "Metallic": 0
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.57,
+     0.53,
+     0.44,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set0_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set0_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ17_Roof_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Roughness": 0.86,
+    "Metallic": 0
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.095,
+     0.12,
+     0.13,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ17_Seals_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Roughness": 0.82,
+    "Metallic": 0
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.018,
+     0.025,
+     0.029,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ17_Steel_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Roughness": 0.33,
+    "Metallic": 0.85
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.25,
+     0.29,
+     0.29,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ17_WarmGlass_Baked": {
+   "parent": "M_HQ17_Glass",
+   "scalars": {
+    "Roughness": 0.1,
+    "Metallic": 0,
+    "GlassOpacity": 0.22
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.075,
+     0.11,
+     0.135,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "NightGlow": [
+     0.9,
+     0.5,
+     0.16,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set0_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set0_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ19_DrainGrate_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Roughness": 0.57,
+    "Metallic": 0.7
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.2,
+     0.23,
+     0.23,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set0_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set0_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ19_DuctGalvanized_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Roughness": 0.48,
+    "Metallic": 0.75
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.37,
+     0.405,
+     0.4,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ19_EquipmentPaint_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Roughness": 0.59,
+    "Metallic": 0.18
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.41,
+     0.44,
+     0.405,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ19_Membrane_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Roughness": 0.88,
+    "Metallic": 0
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.072,
+     0.083,
+     0.087,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ19_MembraneLap_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Roughness": 0.88,
+    "Metallic": 0
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.09,
+     0.102,
+     0.105,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ19_SafetyOchre_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Roughness": 0.65,
+    "Metallic": 0.08
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.56,
+     0.36,
+     0.07,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ20_DoorPaint_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Metallic": 0.18,
+    "Roughness": 0.48
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.7,
+     0.66,
+     0.55,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ20_Rubber_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Metallic": 0,
+    "Roughness": 0.85
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.015,
+     0.019,
+     0.019,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ20_SafetyOchre_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Metallic": 0.1,
+    "Roughness": 0.62
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.58,
+     0.32,
+     0.055,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ20_ServiceOlive_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Metallic": 0.38,
+    "Roughness": 0.58
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.16,
+     0.19,
+     0.12,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ20_WallLiner_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Metallic": 0,
+    "Roughness": 0.68
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.57,
+     0.53,
+     0.44,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ21_Coping_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Metallic": 0,
+    "Roughness": 0.68
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.57,
+     0.53,
+     0.44,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ21_DrainSteel_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Metallic": 0.7,
+    "Roughness": 0.6
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.065,
+     0.075,
+     0.072,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set0_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set0_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ21_Gravel_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Metallic": 0,
+    "Roughness": 0.95
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.22,
+     0.19,
+     0.14,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ21_Joint_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Metallic": 0,
+    "Roughness": 0.96
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.07,
+     0.065,
+     0.052,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ21_Ochre_Baked": {
+   "parent": "M_HQ17_Surface",
+   "scalars": {
+    "Metallic": 0.15,
+    "Roughness": 0.68
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.52,
+     0.32,
+     0.065,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
+  },
+  "MI_HQ21_Olive_Baked": {
+   "parent": "M_HQ17_Coating",
+   "scalars": {
+    "Metallic": 0.32,
+    "Roughness": 0.62
+   },
+   "vectors": {
+    "SurfaceColor": [
+     0.13,
+     0.16,
+     0.095,
+     1.0
+    ],
+    "EmissionColor": [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   },
+   "textures": {
+    "BakedNormal": "T_HQ_ShellBake_Set1_Normal",
+    "BakedAO": "T_HQ_ShellBake_Set1_AO"
+   },
+   "switches": {
+    "ShellBake": true
+   }
   }
  },
  "textures": {
@@ -2899,6 +3721,30 @@
    "compression": "TC_Normalmap",
    "srgb": false,
    "lod_group": "TEXTUREGROUP_WorldNormalMap",
+   "resize": null
+  },
+  "T_HQ_ShellBake_Set1_Normal": {
+   "compression": "TC_Normalmap",
+   "srgb": false,
+   "lod_group": "TEXTUREGROUP_WorldNormalMap",
+   "resize": null
+  },
+  "T_HQ_ShellBake_Set1_AO": {
+   "compression": "TC_Masks",
+   "srgb": false,
+   "lod_group": "TEXTUREGROUP_World",
+   "resize": null
+  },
+  "T_HQ_ShellBake_Set0_Normal": {
+   "compression": "TC_Normalmap",
+   "srgb": false,
+   "lod_group": "TEXTUREGROUP_WorldNormalMap",
+   "resize": null
+  },
+  "T_HQ_ShellBake_Set0_AO": {
+   "compression": "TC_Masks",
+   "srgb": false,
+   "lod_group": "TEXTUREGROUP_World",
    "resize": null
   }
  },

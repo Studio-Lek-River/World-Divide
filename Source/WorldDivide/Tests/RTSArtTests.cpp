@@ -67,8 +67,9 @@ namespace
 	const TCHAR* HeadquartersLayoutFile = TEXT("Art/USA/buildings/usa_hq/usa_hq.json");
 	/** The slab: 38 x 56 m, 17.98 m to the top of its central tower. */
 	const FVector HeadquartersSize(3800.0, 5600.0, 1343.08);
-	/** The whole HQ's triangles at LOD0 and LOD1, every part counted each time it is drawn: LOD0 raised for its 12 m look (#358). */
-	const int32 HeadquartersLODBudgets[] = { 350000, 40000 };
+	/** The whole HQ's triangles at LOD0 and LOD1, every part counted each time it is drawn: the large building's, met by the
+	 * shell baked from the master (#373). */
+	const int32 HeadquartersLODBudgets[] = { 150000, 40000 };
 	/** Where the whole HQ switches to LOD1, cm from the camera (docs/art/MODEL_PERFORMANCE.md, Buildings). */
 	constexpr double HeadquartersSwitchDistance = 26000.0;
 	/** The material sections the HQ draws with, once per mesh: its parts that share a mesh draw instanced (#358). */

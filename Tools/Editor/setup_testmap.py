@@ -519,15 +519,15 @@ def make_m20_guardian(exhaust_system, dust_system):
 
 
 # The generic building masters (building_art.py, #388) in BUILDING_MATERIAL_DIR: name -> how to build it from the shared
-# textures.
+# textures (and the kit's white masks, the baked occlusion's default, #373).
 BUILDING_MASTERS = {
-    "M_Bld_Surface": lambda d, n, t: building_art.build_surface_material(d, n, "surface"),
-    "M_Bld_Glass": lambda d, n, t: building_art.build_surface_material(d, n, "glass"),
-    "M_Bld_Operational": lambda d, n, t: building_art.build_surface_material(d, n, "operational"),
-    "M_Bld_Ownership": lambda d, n, t: building_art.build_surface_material(d, n, "ownership"),
+    "M_Bld_Surface": lambda d, n, t: building_art.build_surface_material(d, n, "surface", t["T_Kit_WhiteMasks"]),
+    "M_Bld_Glass": lambda d, n, t: building_art.build_surface_material(d, n, "glass", t["T_Kit_WhiteMasks"]),
+    "M_Bld_Operational": lambda d, n, t: building_art.build_surface_material(d, n, "operational", t["T_Kit_WhiteMasks"]),
+    "M_Bld_Ownership": lambda d, n, t: building_art.build_surface_material(d, n, "ownership", t["T_Kit_WhiteMasks"]),
     "M_Bld_Coating": lambda d, n, t: building_art.build_coating_material(d, n, {
         "CoatingBaseColor": t["T_Bld_Coating_2m_BaseColor"], "CoatingRoughness": t["T_Bld_Coating_2m_Roughness"],
-        "CoatingNormal": t["T_Bld_Coating_2m_Normal"]}),
+        "CoatingNormal": t["T_Bld_Coating_2m_Normal"]}, t["T_Kit_WhiteMasks"]),
 }
 # The 2 m coating M_Bld_Coating samples: the USA HQ's delivered textures (usa_hq.json's settings), imported as the shared
 # T_Bld_Coating_2m_<map>.
@@ -820,7 +820,8 @@ def make_building_masters():
             lambda s=source, n=name, t=settings: building_art.import_texture(s, texture_dir, n, t),
             spec_hash([building_art.import_texture], texture_dir, name, sorted(settings.items()), file_hash(source)))
 
-    # The kit's masters draw a piece's own maps where its catalogue entry has a finish (#392), white and flat without.
+    # The kit's masters draw a piece's own maps where its catalogue entry has a finish (#392), white and flat without; the
+    # building masters' baked occlusion is white without its map (#373).
     white_source = os.path.join(KIT_SOURCE_DIR, "atlases", "T_Kit_White.png")
     white = {}
     for name, settings in sorted(KIT_WHITE_TEXTURES.items()):
@@ -830,16 +831,18 @@ def make_building_masters():
             spec_hash([building_art.import_texture], KIT_TEXTURE_DIR, name, sorted(settings.items()),
                       file_hash(white_source)))
     builders = [building_art.build_surface_material, building_art.build_coating_material, building_art._material,
-                building_art._vector, building_art._scalar, building_art._multiply, building_art._add]
+                building_art._vector, building_art._scalar, building_art._multiply, building_art._add,
+                building_art._shell_bake]
     constants = (vehicle_art.TEAM_COLOR_INDEX, vehicle_art.LAMP_ON_INDEX, building_art.COATING_ROUGHNESS_MEAN,
                  building_art.COATING_ROUGHNESS_RANGE, sorted(building_art.LIGHT_GROUP_INDICES.items()),
-                 building_art.LIGHT_NIGHT_INDEX)
+                 building_art.LIGHT_NIGHT_INDEX, building_art.SHELL_BAKE, building_art.FLAT_NORMAL)
+    sources = dict(textures, **white)
     masters = {}
     for name, build in BUILDING_MASTERS.items():
         masters[name] = plan_now(
-            f"{BUILDING_MATERIAL_DIR}/{name}", lambda b=build, n=name: b(BUILDING_MATERIAL_DIR, n, textures),
+            f"{BUILDING_MATERIAL_DIR}/{name}", lambda b=build, n=name: b(BUILDING_MATERIAL_DIR, n, sources),
             spec_hash(builders + [build], BUILDING_MATERIAL_DIR, name, constants,
-                      sorted(map(object_path, textures.values()))))
+                      sorted(map(object_path, sources.values()))))
     kit_builders = [building_art._kit_surface, building_art._material, building_art._vector, building_art._scalar,
                     building_art._multiply]
     defaults = (white["T_Kit_White"], white["T_Kit_WhiteMasks"])
@@ -892,15 +895,21 @@ def make_usa_hq():
                       sorted(map(object_path, textures.values()))))
     parents = dict(masters, **{delivered: shared_masters[shared] for delivered, shared in USA_HQ_SHARED_PARENTS.items()})
 
+    # The baked shell's instances (#373) also set its maps and the masters' SHELL_BAKE. A blocked run writes nothing and
+    # has not rebuilt the masters, which may not have the switch yet, so it leaves the switches out.
     instances = {}
     for name, record in sorted(layout["material_instances"].items()):
         parent = parents[record["parent"]]
+        maps = {parameter: textures[texture] for parameter, texture in record.get("textures", {}).items()}
+        switches = record.get("switches", {})
         instances[name] = plan_now(
             f"{material_dir}/{name}",
-            lambda n=name, p=parent, r=record: building_art.build_material_instance(material_dir, n, p, r["scalars"],
-                                                                                     r["vectors"]),
+            lambda n=name, p=parent, r=record, m=maps, w=switches: building_art.build_material_instance(
+                material_dir, n, p, r["scalars"], r["vectors"], m, {} if read_only else w),
             spec_hash([building_art.build_material_instance], material_dir, name, parent,
-                      sorted(record["scalars"].items()), sorted(record["vectors"].items())))
+                      sorted(record["scalars"].items()), sorted(record["vectors"].items()),
+                      sorted((parameter, object_path(texture)) for parameter, texture in maps.items()),
+                      sorted(switches.items())))
 
     # Every mesh's placements in the building, the root (the shell) where the building stands: each mesh's bounds cover
     # the building's from each of them, so the whole building switches to LOD1 at once (#358).
@@ -928,7 +937,8 @@ def make_usa_hq():
                 s, mesh_dir, n, m, r["bounds"], r["triangles"], r["lods"], building_box, [transform(p) for p in w],
                 layout["switch_distance"], l, instances),
             spec_hash([building_art.import_mesh, building_art._reset_lods, building_art.cover_building,
-                       vehicle_art.import_part, vehicle_art.lod_radius], mesh_dir, name, file_hash(source),
+                       building_art._rejoin_lod_slots, vehicle_art.import_part, vehicle_art.lod_radius], mesh_dir, name,
+                      file_hash(source),
                       file_hash(lod1) if lod1 else None,
                       sorted((slot, object_path(material)) for slot, material in slots.items()), record["bounds"],
                       record["triangles"], record["lods"], building_box, [(p["location"], p["rotation"], p["scale"])
