@@ -9,7 +9,8 @@ git-ignored and never cooked (Config/DefaultGame.ini). This script reads what is
   that plugin. One CSV per pack and a summary go to Saved/PackAudit/.
 - Every pack texture over 4K gets a Max Texture Size of 4K (#330), so no 8K map reaches a map or the GPU.
 - /Game/Developers/PackAudit/L_PackScale puts a sample of the packs (trees, a building, stones, a bridge, the props of
-  ue.ps1 -Task freeassets, the surface materials and the scanned surfaces of ue.ps1 -Task surfaces on tiles) next to the
+  ue.ps1 -Task freeassets, the in-house village set in its three states (#408), the surface materials and the scanned
+  surfaces of ue.ps1 -Task surfaces on tiles) next to the
   Abrams and the M20 Guardian at real scale. The level references local-only assets, so it is git-ignored too. After saving it, every /Game package it references is checked to exist.
 
 Run with Tools/Scripts/ue.ps1 -Task packaudit, which fails when the summary lists a missing reference.
@@ -39,6 +40,14 @@ MIN_SENSIBLE_CM = 1.0
 ABRAMS = ["/Game/Art/Local/Meshes/SM_Abrams_Hull", "/Game/Art/Local/Meshes/SM_Abrams_Turret"]
 M20 = ["/Game/Art/USA/Vehicles/M20Guardian/Meshes/SM_M20_Hull", "/Game/Art/USA/Vehicles/M20Guardian/Meshes/SM_M20_Turret"]
 GROUND = "/Game/Materials/M_Ground"
+# The in-house village set and the bridge span (#408): every DA_Civil_<Type> of setup as an ARTSCivilBuilding in each of its
+# three states, one row per state, a column per type, with an Abrams at the head of the rows. The spans stand on a deck
+# height over the ground, as over the river.
+CIVIL_DIR = "/Game/Data/Civil"
+VILLAGE_ROWS = {"PRISTINE": 8000.0, "DAMAGED": 10500.0, "RUBBLE": 13000.0}
+VILLAGE_START_X = -12000.0
+VILLAGE_STEP_X = 3500.0
+SPAN_HEIGHT = 800.0
 # Surface materials outside the packs' landscape folders: (folder, name filter, how many), checked against A in 01.
 SURFACE_SAMPLES = [
     ("/Game/MuddyGroundPack/Materials", "MI_MuddyGround", 1),
@@ -356,6 +365,23 @@ def build_level():
     bridges = find("/Game/StylizedBridge/StaticMesh/Bridge", {"StaticMesh"})
     if bridges:
         put(bridges[0], (0.0, 5000.0, 0.0), "Bridge")
+    # The village set (#408), an Abrams beside it for scale.
+    for index, path in enumerate(ABRAMS):
+        put(path, (VILLAGE_START_X - 2000.0, VILLAGE_ROWS["DAMAGED"], 0.0), f"Village_Abrams_{index}")
+    civil = find(CIVIL_DIR, {"RTSCivilBuildingData"})
+    # The bridge span last: it is the longest.
+    civil.sort(key=lambda path: (path.endswith("BridgeSpan"), path))
+    for column, path in enumerate(civil):
+        data = unreal.load_asset(path)
+        x = VILLAGE_START_X + VILLAGE_STEP_X * column + (VILLAGE_STEP_X / 2.0 if path.endswith("BridgeSpan") else 0.0)
+        z = SPAN_HEIGHT if path.endswith("BridgeSpan") else 0.0
+        for state, y in VILLAGE_ROWS.items():
+            building = spawn(unreal.RTSCivilBuilding, (x, y, z), 0.0, f"{os.path.basename(path)}_{state.capitalize()}")
+            building.set_editor_property("data", data)
+            building.set_editor_property("start_state", getattr(unreal.RTSCivilBuildingState, state))
+            building.get_component_by_class(unreal.StaticMeshComponent).set_static_mesh(
+                data.get_mesh(getattr(unreal.RTSCivilBuildingState, state)))
+        placed.append(path)
     # The free props (#409), from the Abrams along -x.
     x = -1000.0
     for root, contains, count, spacing, *yaw in PROP_SAMPLES:

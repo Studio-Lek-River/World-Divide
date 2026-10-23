@@ -1159,8 +1159,9 @@ def build_bridge_master():
     return material
 
 
-def import_bridge_mesh(source, name, record, slots):
-    """One bridge part's FBX as a Nanite static mesh with its UCX_ boxes as its collision, the slots bound by name."""
+def import_bridge_mesh(source, name, record, slots, directory=BRIDGE_DIR, nanite=True):
+    """One bridge part's FBX as a static mesh in directory, Nanite unless nanite is off, with its UCX_ boxes as its
+    collision, the slots bound by name; the village set (#408) imports the same way, its greybox without Nanite."""
     pipeline = unreal.InterchangeGenericAssetsPipeline()
     common = pipeline.get_editor_property("common_meshes_properties")
     common.set_editor_property("force_all_mesh_as_type", unreal.InterchangeForceMeshType.IFMT_STATIC_MESH)
@@ -1169,7 +1170,7 @@ def import_bridge_mesh(source, name, record, slots):
     meshes.set_editor_property("import_skeletal_meshes", False)
     meshes.set_editor_property("collision", True)
     meshes.set_editor_property("import_collision_according_to_mesh_name", True)
-    meshes.set_editor_property("build_nanite", True)
+    meshes.set_editor_property("build_nanite", nanite)
     materials = pipeline.get_editor_property("material_pipeline")
     materials.set_editor_property("import_materials", False)
     materials.get_editor_property("texture_pipeline").set_editor_property("import_textures", False)
@@ -1180,8 +1181,8 @@ def import_bridge_mesh(source, name, record, slots):
     parameters.destination_name = name
     parameters.override_pipelines.append(unreal.SoftObjectPath(pipeline.get_path_name()))
     manager = unreal.InterchangeManager.get_interchange_manager_scripted()
-    manager.import_asset(BRIDGE_DIR, unreal.InterchangeManager.create_source_data(source), parameters)
-    mesh = unreal.load_asset(f"{BRIDGE_DIR}/{name}")
+    manager.import_asset(directory, unreal.InterchangeManager.create_source_data(source), parameters)
+    mesh = unreal.load_asset(f"{directory}/{name}")
     if not isinstance(mesh, unreal.StaticMesh):
         raise RuntimeError(f"Could not import {source} as a static mesh")
 
@@ -1201,14 +1202,15 @@ def import_bridge_mesh(source, name, record, slots):
         if slot_name not in slots:
             raise RuntimeError(f"{source}: no material for slot {slot_name}")
         mesh.set_material(index, slots[slot_name])
-    nanite = mesh.get_editor_property("nanite_settings")
-    if not nanite.enabled:
-        nanite.enabled = True
-        mesh.set_editor_property("nanite_settings", nanite)
+    settings = mesh.get_editor_property("nanite_settings")
+    if settings.enabled != nanite:
+        settings.enabled = nanite
+        mesh.set_editor_property("nanite_settings", settings)
     # Traces and the navmesh use the boxes, never the render triangles.
     mesh.get_editor_property("body_setup").set_editor_property("collision_trace_flag",
                                                                unreal.CollisionTraceFlag.CTF_USE_SIMPLE_AS_COMPLEX)
-    unreal.log(f"rivercrossing_greybox: {name} {mesh.get_num_triangles(0)} triangles, {collision} collision boxes, Nanite on")
+    unreal.log(f"rivercrossing_greybox: {name} {mesh.get_num_triangles(0)} triangles, {collision} collision boxes, "
+               f"Nanite {'on' if nanite else 'off'}")
     return mesh
 
 

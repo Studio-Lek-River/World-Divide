@@ -882,11 +882,11 @@ void ARTSPlayerController::OnMoveOrder()
 	}
 
 	// Right-clicking an enemy unit or building attacks it, an own construction site resumes it, a supply source harvests it;
-	// anywhere else is a move.
+	// anywhere else is a move. A civilian building (ARTSCivilBuilding) belongs to no team and is no enemy: force-fire shoots it.
 	FRTSCommand Command;
 	const IRTSTargetable* Clicked = Cast<IRTSTargetable>(Hit.GetActor());
 	const ARTSBuilding* ClickedBuilding = Cast<ARTSBuilding>(Hit.GetActor());
-	if (Clicked && Clicked->GetTeamId() != GetTeamId())
+	if (Clicked && Clicked->GetTeamId() != GetTeamId() && Clicked->GetTeamId() != INDEX_NONE)
 	{
 		Command.Type = ERTSCommandType::Attack;
 		Command.TargetActor = Hit.GetActor();

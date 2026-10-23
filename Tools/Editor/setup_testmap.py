@@ -40,6 +40,7 @@ import building_art  # noqa: E402
 import map_preview  # noqa: E402
 import placeholder_art as art  # noqa: E402
 import placeholder_icons  # noqa: E402
+import rivercrossing_greybox  # noqa: E402
 import ui_sources  # noqa: E402
 import vehicle_art  # noqa: E402
 
@@ -121,6 +122,22 @@ KIT_FACTIONS = {"neutral": "Neutral", "usa": "USA"}
 KIT_NEUTRAL_VARIANTS = {"MI_Kit_Neutral_Housing": "M_Bld_Surface", "MI_Kit_Neutral_Lens": "M_Kit_Lens"}
 # A kit mesh's LOD1 comes in at a building's switch (docs/art/MODEL_PERFORMANCE.md), cm from the camera.
 KIT_SWITCH_DISTANCE = 26000.0
+# River Crossing's village set and the bridge span's damage states (#408), as Tools/Art/village_blender.py exported them
+# (village.json): the meshes in VILLAGE_DIR (the spans' beside SM_Bridge_Span), a DA_Civil_<Type> (URTSCivilBuildingData)
+# per type in CIVIL_DIR. The flat slots are instances of the bridge's M_Bridge master: (colour, roughness); the spans'
+# Concrete and Asphalt keep the bridge's own instances.
+VILLAGE_SOURCE_DIR = os.path.join(SHARED_SOURCE_DIR, "village")
+VILLAGE_DIR = f"{SHARED_DIR}/Village"
+CIVIL_DIR = "/Game/Data/Civil"
+VILLAGE_SLOTS = {
+    "Wall": ((0.55, 0.52, 0.46), 0.9),
+    "Roof": ((0.30, 0.10, 0.06), 0.7),
+    "Trim": ((0.60, 0.60, 0.58), 0.6),
+    "Glass": ((0.02, 0.03, 0.035), 0.08),
+    "Wood": ((0.18, 0.11, 0.06), 0.85),
+    "Char": ((0.015, 0.014, 0.013), 0.95),
+    "Rubble": ((0.30, 0.28, 0.25), 0.95),
+}
 FLAG_DATA_DIR = "/Game/Data/Flags"
 FLAG_TEXTURE_SETTINGS = {"srgb": True, "compression": "TC_Default", "lod_group": "TEXTUREGROUP_World", "resize": None}
 # The garage door's cycle as delivered (animation/CT_HQ20_DoorMotion.csv), a curve table the garage plays (#192).
@@ -918,6 +935,56 @@ def make_usa_hq():
         "flag_type": layout["flag"],
         "flag_part": layout["flag_part"],
     }
+
+
+def make_village():
+    """River Crossing's in-house village set (#408): every mesh of Art/Shared/village/village.json imported as the bridge's
+    are (rivercrossing_greybox.import_bridge_mesh: UCX_ collision, checked against the record; no Nanite, whose fallback would thin the greybox's count) and a
+    DA_Civil_<Type> per building with its three state meshes, health and garrison data. Returns the data by type."""
+    master = unreal.load_asset(f"{rivercrossing_greybox.BRIDGE_DIR}/{rivercrossing_greybox.BRIDGE_MASTER}")
+    if not master:
+        raise RuntimeError("M_Bridge is missing: run ue.ps1 -Task rivercrossing first")
+    slots = {name: plan_now(f"{VILLAGE_DIR}/MI_Village_{name}",
+                            lambda n=name, c=color, r=roughness: building_art.build_material_instance(
+                                VILLAGE_DIR, f"MI_Village_{n}", master, {"Roughness": r}, {"Color": (*c, 1.0)}),
+                            spec_hash([building_art.build_material_instance], VILLAGE_DIR, name, master, color, roughness))
+             for name, (color, roughness) in VILLAGE_SLOTS.items()}
+    for slot, (name, _, _) in rivercrossing_greybox.BRIDGE_SLOTS.items():
+        slots[slot] = unreal.load_asset(f"{rivercrossing_greybox.BRIDGE_DIR}/{name}")
+
+    village = building_art.read_layout(os.path.join(VILLAGE_SOURCE_DIR, "village.json"))
+    meshes = {}
+    for name, record in village["meshes"].items():
+        directory = rivercrossing_greybox.BRIDGE_DIR if name.startswith("SM_Bridge_") else VILLAGE_DIR
+        source = os.path.join(VILLAGE_SOURCE_DIR, record["fbx"])
+        bound = {slot: slots[slot] for slot in record["slots"]}
+        meshes[name] = plan_now(
+            f"{directory}/{name}",
+            lambda s=source, n=name, r=record, b=bound, d=directory: rivercrossing_greybox.import_bridge_mesh(
+                s, n, r, b, d, nanite=False),
+            spec_hash([rivercrossing_greybox.import_bridge_mesh], directory, name, file_hash(source), record,
+                      sorted((slot, object_path(m)) for slot, m in bound.items())))
+    meshes["SM_Bridge_Span"] = unreal.load_asset(f"{rivercrossing_greybox.BRIDGE_DIR}/SM_Bridge_Span")
+
+    civil = {}
+    for key, building in village["buildings"].items():
+        pristine, damaged, rubble = (meshes[name] for name in building["states"])
+        civil[key] = plan_data_asset(f"DA_Civil_{key}", CIVIL_DIR, unreal.RTSCivilBuildingData, {
+            "display_name": unreal.Text(building["name"]),
+            "pristine_mesh": pristine,
+            "damaged_mesh": damaged,
+            "rubble_mesh": rubble,
+            "max_health": float(building["health"]),
+            "garrison_capacity": building["capacity"],
+            "entry_point": unreal.Vector(*building["entry"]),
+            "firing_positions": [make_struct(unreal.RTSGarrisonFiringPosition, {
+                "name": unreal.Name(position["name"]),
+                "location": unreal.Vector(*position["location"]),
+                "yaw": float(position["yaw"]),
+                "arc_degrees": float(position["arc"]),
+            }) for position in building["firing_positions"]],
+        })
+    return civil
 
 
 def import_curve_table(source, directory, name):
@@ -3218,6 +3285,7 @@ make_map_data("DA_MapSixPeaks", "Six Peaks", SIX_PEAKS_MAP,
               [(unreal.RTSSeatType.OPEN, 0), (unreal.RTSSeatType.AI, 1)] + [(unreal.RTSSeatType.CLOSED, -1)] * 4)
 make_menu_map(MAIN_MENU_MAP_PATH, unreal.RTSMainMenuGameMode)
 make_menu_map(LOBBY_MAP_PATH, unreal.RTSLobbyGameMode)
+make_village()
 make_placeholder_icons()
 make_ui_styles()
 plan_data_assets()
