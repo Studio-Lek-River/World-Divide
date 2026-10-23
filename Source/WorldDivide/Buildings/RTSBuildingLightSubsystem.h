@@ -21,7 +21,8 @@ struct FRTSBuildingLightTickFunction : public FTickFunction
  * Every machine that draws: the night look of the buildings (#195). In the dark (URTSDayNightSubsystem::IsDark) every
  * registered building's lit windows and lamps glow at their night strength (ARTSBuilding::SetLightsNight), and of the
  * constructed ones with real lights at their lamps, the rts.Fx.BuildingLightMaxBuildings nearest a camera show them
- * (ARTSBuilding::ShowLights). By day every light is off and costs nothing. A dedicated server keeps none. It also makes
+ * (ARTSBuilding::ShowLights), and of those the kit lights flash, flicker and turn here, at most rts.Fx.BuildingLightMax of them
+ * (ARTSBuilding::UpdateKitLights). By day every light is off and costs nothing. A dedicated server keeps none. It also makes
  * each building's one LOD decision for its LODSwitchDistance (ARTSBuilding::SetForcedLOD, BUILDING_KIT.md option C2).
  */
 UCLASS()
@@ -45,6 +46,9 @@ public:
 
 	/** rts.Fx.BuildingLightMaxBuildings: most buildings showing their real lights at once, those nearest a camera. */
 	static int32 GetMaxBuildings();
+
+	/** rts.Fx.BuildingLightMax: most real kit lights shown at once, the nearest buildings' first. */
+	static int32 GetMaxKitLights();
 
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	virtual void Deinitialize() override;

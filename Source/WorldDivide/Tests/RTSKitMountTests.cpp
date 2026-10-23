@@ -1,4 +1,5 @@
 #include "Algo/AllOf.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Buildings/RTSBuilding.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -251,6 +252,45 @@ bool FRTSKitMountHeadquartersTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("The shell and the flag are among them"), Forced >= 2 && FlagComponent->ForcedLodModel == 2);
 	HQ->SetForcedLOD(INDEX_NONE);
 	TestTrue(TEXT("Then the renderer picks again"), Algo::AllOf(Meshes, [](const UStaticMeshComponent* Mesh) { return Mesh->ForcedLodModel == 0; }));
+	return true;
+}
+
+/**
+ * Every building's real lights within its size class's budget (BUILDING_KIT.md, Light budgets, #391): its own and its mounted
+ * pieces', steady and warning apart. The HQ is Large.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSKitMountLightBudgetTest, "WorldDivide.Buildings.KitMount.LightBudget", TestFlags)
+
+bool FRTSKitMountLightBudgetTest::RunTest(const FString& Parameters)
+{
+	const IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+	FARFilter Filter;
+	Filter.ClassPaths.Add(URTSBuildingData::StaticClass()->GetClassPathName());
+	Filter.bRecursiveClasses = true;
+	Filter.PackagePaths.Add(TEXT("/Game"));
+	Filter.bRecursivePaths = true;
+	TArray<FAssetData> Found;
+	Registry.GetAssets(Filter, Found);
+	if (!TestTrue(TEXT("There are buildings"), Found.Num() > 0))
+	{
+		return false;
+	}
+	for (const FAssetData& Asset : Found)
+	{
+		const URTSBuildingData* Data = Cast<URTSBuildingData>(Asset.GetAsset());
+		if (!Data)
+		{
+			continue;
+		}
+		const RTSKit::FLightBudget Budget = RTSKit::GetLightBudget(Data->Size);
+		const RTSKit::FLightBudget Count = RTSKit::CountLights(*Data);
+		TestTrue(*FString::Printf(TEXT("%s: %d steady lights within %d"), *Data->GetName(), Count.Steady, Budget.Steady),
+			Count.Steady <= Budget.Steady);
+		TestTrue(*FString::Printf(TEXT("%s: %d warning lights within %d"), *Data->GetName(), Count.Warning, Budget.Warning),
+			Count.Warning <= Budget.Warning);
+	}
+	const URTSBuildingData* HQ = LoadObject<URTSBuildingData>(nullptr, HeadquartersDataPath);
+	TestTrue(TEXT("The HQ is a Large building"), HQ && HQ->Size == ERTSBuildingSize::Large);
 	return true;
 }
 

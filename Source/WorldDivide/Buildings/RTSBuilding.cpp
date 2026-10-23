@@ -35,6 +35,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Player/RTSPlayerController.h"
 #include "Units/RTSAircraftComponent.h"
+#include "Units/RTSNearestToView.h"
 #include "Units/RTSPrimitiveData.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
@@ -680,6 +681,8 @@ void ARTSBuilding::ApplyParts(const FRTSKitExpansion& Kit)
 	}
 	PartComponents.Reset();
 	PartIndex.Reset();
+	KitParts = Kit.PartInfo;
+	KitLooks.Init(FRTSKitLook(), KitParts.Num());
 
 	// The flag the building flies: its cloth part takes the flag's material and is as wide as its height times the flag's
 	// aspect (#351).
@@ -967,21 +970,34 @@ void ARTSBuilding::ApplyLights(const FRTSKitExpansion& Kit)
 		}
 	}
 	LightComponents.Reset();
+	KitLights.Reset();
 	bLightsShown = false;
-	const TArray<FRTSBuildingLight>* Sources[] = { &BuildingData->Lights, &Kit.Lights };
-	for (const TArray<FRTSBuildingLight>* Lights : Sources)
+	for (const FRTSBuildingLight& Data : BuildingData->Lights)
 	{
-		for (const FRTSBuildingLight& Data : *Lights)
+		if (Data.Group != URTSBuildingData::GarageBeaconsGroup)
 		{
-			if (Data.Group != URTSBuildingData::GarageBeaconsGroup)
+			if (ULocalLightComponent* Light = CreateLight(Data))
 			{
-				if (ULocalLightComponent* Light = CreateLight(Data))
-				{
-					LightComponents.Add(Light);
-				}
+				LightComponents.Add(Light);
 			}
 		}
 	}
+	OwnLightCount = LightComponents.Num();
+	// Kit.Lights holds one light per part whose piece has one, in the parts' order.
+	int32 KitLight = 0;
+	for (int32 Part = 0; Part < KitParts.Num() && KitLight < Kit.Lights.Num(); ++Part)
+	{
+		if (!KitParts[Part].bHasLight)
+		{
+			continue;
+		}
+		const FRTSBuildingLight& Data = Kit.Lights[KitLight++];
+		if (ULocalLightComponent* Light = CreateLight(Data))
+		{
+			KitLights.Add({ Part, LightComponents.Add(Light), Data.Candelas, Data.Color, Data.Rotation });
+		}
+	}
+	ApplyKitLightLooks();
 	// Every building with parts or lights: the subsystem raises their glow in the dark and shows the nearest ones' lights.
 	if (URTSBuildingLightSubsystem* Lights = GetWorld() ? GetWorld()->GetSubsystem<URTSBuildingLightSubsystem>() : nullptr)
 	{
@@ -1052,18 +1068,129 @@ void ARTSBuilding::SetLightsNight(bool bNight)
 void ARTSBuilding::ShowLights(bool bShow)
 {
 	bLightsShown = bShow;
-	for (ULocalLightComponent* Light : LightComponents)
+	for (int32 Index = 0; Index < LightComponents.Num(); ++Index)
 	{
-		if (Light)
+		ULocalLightComponent* Light = LightComponents[Index];
+		if (!Light)
 		{
-			bool bGroupOn = true;
-			for (const FName& Off : LightGroupsOff)
-			{
-				bGroupOn &= !Light->ComponentHasTag(GetLightGroupTag(Off));
-			}
-			Light->SetVisibility(bShow && bGroupOn);
+			continue;
 		}
+		if (Index >= OwnLightCount)
+		{
+			// A kit light: its look switches it (UpdateKitLights), not its group, so a battery light outlives the Fixtures.
+			if (!bShow)
+			{
+				Light->SetVisibility(false);
+			}
+			continue;
+		}
+		bool bGroupOn = true;
+		for (const FName& Off : LightGroupsOff)
+		{
+			bGroupOn &= !Light->ComponentHasTag(GetLightGroupTag(Off));
+		}
+		Light->SetVisibility(bShow && bGroupOn);
 	}
+}
+
+void ARTSBuilding::SetKitLooks(TConstArrayView<FRTSKitLook> Looks)
+{
+	if (Looks.Num() != KitParts.Num())
+	{
+		return;
+	}
+	KitLooks = Looks;
+	// Per instance, then one update of each component's instances: never a render state rebuild (BUILDING_KIT.md, #387).
+	TArray<UInstancedStaticMeshComponent*, TInlineAllocator<8>> Touched;
+	for (int32 Index = 0; Index < KitParts.Num(); ++Index)
+	{
+		const FRTSKitPart& Part = KitParts[Index];
+		const FRTSKitLook& Look = KitLooks[Index];
+		UStaticMeshComponent* Component = nullptr;
+		int32 Instance = INDEX_NONE;
+		UInstancedStaticMeshComponent* Instanced = FindPart(Part.Name, Component, Instance) ? Cast<UInstancedStaticMeshComponent>(Component) : nullptr;
+		if (!Instanced || Instance == INDEX_NONE || Instanced->NumCustomDataFloats != RTSKitLensData::Floats)
+		{
+			continue;
+		}
+		const FLinearColor Color = Part.IndicatorColor * (Look.bBattery ? RTSBuildingState::BatteryTint : FLinearColor::White);
+		float Lens[RTSKitLensData::Floats] = {};
+		Lens[RTSKitLensData::Level] = Look.Level;
+		// The state already puts a normal lens out with its group; the Fixtures gate stays for the look between refreshes.
+		Lens[RTSKitLensData::Group] = Part.Group == TEXT("Fixtures") && !Look.bBattery && !Part.bEmergency ? 1.f : 0.f;
+		Lens[RTSKitLensData::Fault] = Look.Fault;
+		Lens[RTSKitLensData::Flash] = Look.Flash;
+		Lens[RTSKitLensData::Color + 0] = Color.R;
+		Lens[RTSKitLensData::Color + 1] = Color.G;
+		Lens[RTSKitLensData::Color + 2] = Color.B;
+		Instanced->SetCustomData(Instance, Lens);
+		Touched.AddUnique(Instanced);
+	}
+	for (UInstancedStaticMeshComponent* Instanced : Touched)
+	{
+		Instanced->MarkRenderInstancesDirty();
+	}
+	ApplyKitLightLooks();
+}
+
+void ARTSBuilding::ApplyKitLightLooks()
+{
+	for (const FKitLight& Kit : KitLights)
+	{
+		ULocalLightComponent* Light = LightComponents[Kit.Component];
+		if (!Light || !KitLooks.IsValidIndex(Kit.Part))
+		{
+			continue;
+		}
+		const FRTSKitLook& Look = KitLooks[Kit.Part];
+		Light->SetIntensity(Kit.Candelas * Look.Level);
+		Light->SetLightColor(Kit.Color * (Look.bBattery ? RTSBuildingState::BatteryTint : FLinearColor::White));
+	}
+}
+
+void ARTSBuilding::UpdateKitLights(double Time, TConstArrayView<FVector> Cameras, const TOptional<FVector>& Override, bool bSecondary, int32& Budget)
+{
+	// A beacon that turns sweeps round once in this many seconds (BUILDING_KIT.md, 08: Rotate 1.5 Hz).
+	constexpr double RotateSeconds = 1.0 / 1.5;
+	for (const FKitLight& Kit : KitLights)
+	{
+		ULocalLightComponent* Light = LightComponents[Kit.Component];
+		if (!Light)
+		{
+			continue;
+		}
+		const FRTSKitPart& Part = KitParts[Kit.Part];
+		const FRTSKitLook& Look = KitLooks[Kit.Part];
+		bool bOn = bLightsShown && Look.Level > 0.f && Budget > 0
+			&& (Part.Priority == ERTSKitLightPriority::Primary || bSecondary);
+		if (bOn && Part.MaxDrawDistance > 0.f)
+		{
+			bOn = RTSNearestToView::GetDistance(Cameras, Override, Light->GetComponentLocation()) <= Part.MaxDrawDistance;
+		}
+		if (bOn)
+		{
+			// A light in the dark part of its flash or flicker still holds its place, so the others do not swap in and out.
+			--Budget;
+			bOn = RTSKit::IsLensLit(Look.Fault, Look.Flash, Time);
+		}
+		if (bOn && Part.Behaviour == ERTSKitLightBehaviour::Rotate)
+		{
+			const double Turn = FMath::Frac(Time / RotateSeconds) * 360.0;
+			Light->SetRelativeRotation(FRotator(Kit.Rotation.Pitch, Kit.Rotation.Yaw + Turn, Kit.Rotation.Roll));
+		}
+		Light->SetVisibility(bOn);
+	}
+}
+
+int32 ARTSBuilding::GetLitKitLightCount() const
+{
+	int32 Count = 0;
+	for (const FKitLight& Kit : KitLights)
+	{
+		const ULocalLightComponent* Light = LightComponents[Kit.Component];
+		Count += Light && Light->IsVisible() ? 1 : 0;
+	}
+	return Count;
 }
 
 void ARTSBuilding::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

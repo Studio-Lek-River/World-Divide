@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "HAL/IConsoleManager.h"
 #include "ProfilingDebugging/CpuProfilerTrace.h"
+#include "Scalability.h"
 #include "Units/RTSNearestToView.h"
 
 namespace
@@ -16,6 +17,13 @@ namespace
 	TAutoConsoleVariable<int32> CVarBuildingLightMaxBuildings(
 		TEXT("rts.Fx.BuildingLightMaxBuildings"), 4,
 		TEXT("Most buildings showing the real lights at their lamps at once in the dark (#195), those nearest a camera; the rest only glow."));
+
+	TAutoConsoleVariable<int32> CVarBuildingLightMax(
+		TEXT("rts.Fx.BuildingLightMax"), 24,
+		TEXT("Most real kit lights shown at once in the dark (BUILDING_KIT.md, Light budgets, #391), the nearest buildings' first; a starting hypothesis Gate A measures."));
+
+	/** Secondary kit lights shine only at this effects quality and above: High. */
+	constexpr int32 SecondaryLightQuality = 2;
 }
 
 void FRTSBuildingLightTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
@@ -29,6 +37,11 @@ void FRTSBuildingLightTickFunction::ExecuteTick(float DeltaTime, ELevelTick Tick
 FString FRTSBuildingLightTickFunction::DiagnosticMessage()
 {
 	return TEXT("URTSBuildingLightSubsystem::UpdateAll");
+}
+
+int32 URTSBuildingLightSubsystem::GetMaxKitLights()
+{
+	return FMath::Max(CVarBuildingLightMax.GetValueOnGameThread(), 0);
 }
 
 int32 URTSBuildingLightSubsystem::GetMaxBuildings()
@@ -112,6 +125,21 @@ void URTSBuildingLightSubsystem::UpdateAll(float DeltaSeconds)
 		{
 			Building.ShowLights(Shows[Index]);
 		}
+	}
+
+	// The kit lights of the buildings that show theirs, nearest first, within the budget: they flash, flicker and turn with
+	// their lenses. Nothing here by day, when none is shown.
+	if (Nearest.IsEmpty())
+	{
+		return;
+	}
+	Nearest.Sort([](const TPair<float, int32>& A, const TPair<float, int32>& B) { return A.Key < B.Key; });
+	const double Time = GetWorld()->GetTimeSeconds();
+	const bool bSecondary = Scalability::GetQualityLevels().EffectsQuality >= SecondaryLightQuality;
+	int32 Budget = GetMaxKitLights();
+	for (const TPair<float, int32>& Near : Nearest)
+	{
+		Entries[Near.Value].Building->UpdateKitLights(Time, CameraLocations, ViewLocationOverride, bSecondary, Budget);
 	}
 }
 

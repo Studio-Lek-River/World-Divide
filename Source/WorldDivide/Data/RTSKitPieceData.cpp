@@ -8,6 +8,38 @@ namespace
 	const FName FixturesGroup = TEXT("Fixtures");
 }
 
+bool FRTSKitPart::IsWarning() const
+{
+	return Group == RTSKit::WarningGroup || Behaviour != ERTSKitLightBehaviour::Steady;
+}
+
+RTSKit::FLightBudget RTSKit::CountLights(const URTSBuildingData& Data)
+{
+	FLightBudget Count{ 0, 0 };
+	for (const FRTSBuildingLight& Light : Data.Lights)
+	{
+		++(Light.Group == URTSBuildingData::GarageBeaconsGroup ? Count.Warning : Count.Steady);
+	}
+	for (const FRTSKitPart& Part : Expand(Data).PartInfo)
+	{
+		if (Part.bHasLight)
+		{
+			++(Part.IsWarning() ? Count.Warning : Count.Steady);
+		}
+	}
+	return Count;
+}
+
+bool RTSKit::IsLensLit(float Fault, float Flash, double Time)
+{
+	// LENS_HLSL's step(0.35, ...) and step(0.5, ...), in the same game time the material reads.
+	if (Fault > 0.f && FMath::Frac(Time * 2.3 + Fault + 0.5 * FMath::Sin(Time * 17.0 + Fault * 40.0)) < 0.35)
+	{
+		return false;
+	}
+	return Flash <= 0.f || FMath::Frac(Time + Flash) >= 0.5;
+}
+
 bool RTSKit::GetMountFrame(const URTSBuildingData& Data, const FRTSKitMount& Mount, FTransform& OutFrame, FString& OutError)
 {
 	if (!Mount.Piece || !Mount.Piece->Mesh)
@@ -73,6 +105,18 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 		Part.WPODisableDistance = Piece.WPODisableDistance;
 
 		const FName Group = !Mount.Group.IsNone() ? Mount.Group : Piece.bHasLight ? Piece.Light.Group : NAME_None;
+		FRTSKitPart& Info = Result.PartInfo.AddDefaulted_GetRef();
+		Info.Name = Name;
+		Info.Group = Group;
+		Info.bEmergency = Mount.Emergency == ERTSKitOverride::Default ? Piece.bEmergencyDefault : Mount.Emergency == ERTSKitOverride::On;
+		Info.FaultResponse = Mount.bOverrideFaultResponse ? Mount.FaultResponse : Piece.FaultResponse;
+		Info.bHasLight = Piece.bHasLight;
+		Info.Behaviour = Piece.Light.Behaviour;
+		Info.Priority = Piece.Light.Priority;
+		Info.MaxDrawDistance = Piece.Light.MaxDrawDistance;
+		Info.IndicatorColor = Mount.IndicatorColor;
+		Info.MountIndex = Index;
+
 		if (Piece.bHasLight)
 		{
 			const FRTSKitLight& Kit = Piece.Light;
@@ -95,7 +139,8 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 
 		float Lens[RTSKitLensData::Floats] = {};
 		Lens[RTSKitLensData::Level] = 1.f;
-		Lens[RTSKitLensData::Group] = Group == FixturesGroup ? 1.f : 0.f;
+		// A battery-backed lens stays on when the building's Fixtures go out (URTSBuildingStateComponent).
+		Lens[RTSKitLensData::Group] = Group == FixturesGroup && !Info.bEmergency ? 1.f : 0.f;
 		Lens[RTSKitLensData::Color + 0] = Mount.IndicatorColor.R;
 		Lens[RTSKitLensData::Color + 1] = Mount.IndicatorColor.G;
 		Lens[RTSKitLensData::Color + 2] = Mount.IndicatorColor.B;

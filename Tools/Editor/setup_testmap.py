@@ -880,6 +880,16 @@ def make_usa_hq():
         location, (pitch, yaw, roll), scale = record.get("transform", [[0.0] * 3, [0.0] * 3, [1.0] * 3])
         value.set_editor_property("transform", unreal.Transform(
             unreal.Vector(*location), unreal.Rotator(roll=roll, pitch=pitch, yaw=yaw), unreal.Vector(*scale)))
+        # What the state does to it (BUILDING_KIT.md, States, #391); a mount that does not say keeps its piece's.
+        if "emergency" in record:
+            value.set_editor_property("emergency", unreal.RTSKitOverride.ON if record["emergency"] else unreal.RTSKitOverride.OFF)
+        if "fault" in record:
+            value.set_editor_property("override_fault_response", True)
+            value.set_editor_property("fault_response", getattr(unreal.RTSKitFaultResponse, record["fault"].upper()))
+        if "group" in record:
+            value.set_editor_property("group", record["group"])
+        if "color" in record:
+            value.set_editor_property("indicator_color", unreal.LinearColor(*record["color"], 1.0))
         return value
 
     def collision_box(record):
@@ -926,6 +936,8 @@ def make_usa_hq():
         "lights": [light(l) for l in layout["lights"]],
         "mounts": [mount(m) for m in layout["mounts"]],
         "lod_switch_distance": float(layout["switch_distance"]),
+        # Its class for the light budget (RTSKit::GetLightBudget, #391).
+        "size": getattr(unreal.RTSBuildingSize, layout.get("size", "Medium").upper()),
         # The delivered 24 s door cycle opens from 2 to 10 s; the game plays that in GarageDoorSeconds (#192).
         "garage_door_motion": door_motion,
         "garage_door_open_start": 2.0,

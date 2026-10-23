@@ -139,6 +139,15 @@ enum class ERTSKitLightBehaviour : uint8
 	Rotate,
 };
 
+/** A building's size class: how many real lights it may have (RTSKit::GetLightBudget, BUILDING_KIT.md, Light budgets). */
+UENUM(BlueprintType)
+enum class ERTSBuildingSize : uint8
+{
+	Small,
+	Medium,
+	Large,
+};
+
 /** What damage does to a kit piece's light (the state table of BUILDING_KIT.md). */
 UENUM(BlueprintType)
 enum class ERTSKitFaultResponse : uint8
@@ -337,6 +346,10 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual", meta = (ClampMin = "0"))
 	float LODSwitchDistance = 0.f;
+
+	/** Its size class, which sets how many real lights it may have (RTSKit::GetLightBudget). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+	ERTSBuildingSize Size = ERTSBuildingSize::Medium;
 
 	/** The group of Lights the garage flashes while its door is not closed (URTSGarageComponent). */
 	static inline const FName GarageBeaconsGroup = TEXT("GarageBeacons");

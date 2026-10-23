@@ -1,7 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Buildings/RTSBuildingStateComponent.h"
 #include "Combat/RTSTargetable.h"
+#include "Data/RTSKitPieceData.h"
 #include "GameFramework/Actor.h"
 #include "RTSBuilding.generated.h"
 
@@ -10,7 +12,6 @@ class UBoxComponent;
 class ULocalLightComponent;
 class UStaticMeshComponent;
 class URTSBuildingData;
-class URTSBuildingStateComponent;
 class URTSGarageComponent;
 class URTSHealthComponent;
 class URTSProductionComponent;
@@ -19,7 +20,6 @@ class URTSUnitData;
 class URTSWeaponComponent;
 struct FRTSBuildingFootprint;
 struct FRTSBuildingLight;
-struct FRTSKitExpansion;
 struct FNavAgentProperties;
 
 /**
@@ -109,6 +109,26 @@ public:
 	 * update of its component's instances. False when Part is not a mounted piece.
 	 */
 	bool SetKitInstanceData(FName Part, TConstArrayView<float> Values);
+
+	/** The mounted kit pieces as RTSKit::Expand resolved their mounts (FRTSKitExpansion::PartInfo), in mount order. */
+	const TArray<FRTSKitPart>& GetKitParts() const { return KitParts; }
+
+	/**
+	 * Shows Looks, one per GetKitParts (URTSBuildingStateComponent, BUILDING_KIT.md, States): each lens's RTSKitLensData with
+	 * one MarkRenderInstancesDirty per component, and each real light's intensity and colour with it.
+	 */
+	void SetKitLooks(TConstArrayView<FRTSKitLook> Looks);
+	const TArray<FRTSKitLook>& GetKitLooks() const { return KitLooks; }
+
+	/**
+	 * URTSBuildingLightSubsystem, each frame this building's lights are shown: switches each kit light with its lens's flash and
+	 * fault phase at Time (game seconds), turns the Rotate ones, and keeps out those beyond their MaxDrawDistance from the
+	 * nearest of Cameras (or Override), the Secondary ones unless bSecondary, and every one past Budget, which it counts down.
+	 */
+	void UpdateKitLights(double Time, TConstArrayView<FVector> Cameras, const TOptional<FVector>& Override, bool bSecondary, int32& Budget);
+
+	/** The kit lights lit now, of GetLightComponents. */
+	int32 GetLitKitLightCount() const;
 
 	/**
 	 * Draws every mesh of the building with LODs, shell, parts and kit pieces, at LOD, or lets the renderer pick again for
@@ -313,6 +333,25 @@ private:
 	/** The data's Lights but the garage's beacons (GetLightComponents). */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<ULocalLightComponent>> LightComponents;
+
+	/** The data's own lights lead LightComponents; the kit pieces' follow, which their looks switch, not their groups. */
+	int32 OwnLightCount = 0;
+
+	/** A kit piece's light: its part (KitParts), its place in LightComponents and how it shines at full. */
+	struct FKitLight
+	{
+		int32 Part = INDEX_NONE;
+		int32 Component = INDEX_NONE;
+		float Candelas = 0.f;
+		FLinearColor Color = FLinearColor::White;
+		FRotator Rotation = FRotator::ZeroRotator;
+	};
+	TArray<FKitLight> KitLights;
+	TArray<FRTSKitPart> KitParts;
+	TArray<FRTSKitLook> KitLooks;
+
+	/** Shows KitLooks on the kit lights' intensity and colour. */
+	void ApplyKitLightLooks();
 
 	/** The lighting groups switched off (SetLightGroupOn); the rest are on. */
 	TSet<FName> LightGroupsOff;

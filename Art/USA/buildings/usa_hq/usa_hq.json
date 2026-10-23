@@ -11,6 +11,7 @@
  ],
  "root_part": "Shell",
  "switch_distance": 26000.0,
+ "size": "Large",
  "flag": "USA",
  "flag_part": "NationalFlag",
  "parts": [

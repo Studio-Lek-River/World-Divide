@@ -478,6 +478,7 @@ def main():
         "reference_size_cm": [3800.0, 5600.0, 1343.08],
         "root_part": "Shell",
         "switch_distance": SWITCH_DISTANCE,
+        "size": "Large",
         "flag": FLAG_TYPE,
         "flag_part": FLAG_PART,
         "parts": game_parts,

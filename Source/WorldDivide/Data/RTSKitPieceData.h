@@ -146,11 +146,36 @@ public:
 	bool CastsShadow() const { return Class != ERTSKitClass::S; }
 };
 
+/** What a mounted piece's lens and light do in each state (BUILDING_KIT.md, States): its mount resolved against its piece. */
+struct FRTSKitPart
+{
+	FName Name;
+	/** The mount's lighting group, or its piece's light's. */
+	FName Group;
+	/** Battery-backed: stays on, dimmed, on low power. */
+	bool bEmergency = false;
+	ERTSKitFaultResponse FaultResponse = ERTSKitFaultResponse::None;
+	/** Whether the piece has a real light; one without is an LED, which battery power keeps at full. */
+	bool bHasLight = false;
+	ERTSKitLightBehaviour Behaviour = ERTSKitLightBehaviour::Steady;
+	ERTSKitLightPriority Priority = ERTSKitLightPriority::Primary;
+	float MaxDrawDistance = 0.f;
+	FLinearColor IndicatorColor = FLinearColor::White;
+	/** Its place among the building's mounts, which fixes its flash and flicker phases on every machine. */
+	int32 MountIndex = 0;
+
+	/** A warning light: in the Warning group, or one that flashes or turns. */
+	bool IsWarning() const;
+};
+
 /** A building's mounts (URTSBuildingData::Mounts) as what the building draws: RTSKit::Expand. */
 struct FRTSKitExpansion
 {
 	/** One part per mount, in the mounts' order; ARTSBuilding always draws them instanced. */
 	TArray<FRTSBuildingPart> Parts;
+
+	/** What each part does in each state, in Parts' order. */
+	TArray<FRTSKitPart> PartInfo;
 
 	/** The real lights of the mounted pieces that have one, at their lens, Fixture the mount's name. */
 	TArray<FRTSBuildingLight> Lights;
@@ -173,6 +198,37 @@ namespace RTSKit
 
 	/** The building frame Mount puts its piece's origin in, or false with Error set when it cannot be placed. */
 	WORLDDIVIDE_API bool GetMountFrame(const URTSBuildingData& Data, const FRTSKitMount& Mount, FTransform& OutFrame, FString& OutError);
+
+	/** The lighting groups the kit adds to Windows, Fixtures and Accents (BUILDING_KIT.md, States). */
+	inline const FName EmergencyGroup = TEXT("Emergency");
+	inline const FName WarningGroup = TEXT("Warning");
+
+	/** How many real lights a building of a size class may have, steady and warning (BUILDING_KIT.md, Light budgets). */
+	struct FLightBudget
+	{
+		int32 Steady;
+		int32 Warning;
+	};
+
+	/** Starting hypotheses that Gate A measures. */
+	inline FLightBudget GetLightBudget(ERTSBuildingSize Size)
+	{
+		switch (Size)
+		{
+		case ERTSBuildingSize::Small: return { 3, 1 };
+		case ERTSBuildingSize::Large: return { 8, 2 };
+		default: return { 5, 2 };
+		}
+	}
+
+	/** Data's real lights, its own and its mounted pieces', as its budget counts them: the garage's beacons and kit warning lights warn. */
+	WORLDDIVIDE_API FLightBudget CountLights(const URTSBuildingData& Data);
+
+	/**
+	 * Whether a lens with this fault and flash phase (RTSKitLensData, 0 for none) is lit at Time seconds of game time: the
+	 * same sums M_Kit_Lens does (building_art.py LENS_HLSL), so a real light goes out with its lens.
+	 */
+	WORLDDIVIDE_API bool IsLensLit(float Fault, float Flash, double Time);
 
 	/** The class limits of BUILDING_KIT.md, starting hypotheses that Gate A measures. */
 	struct FClassLimits

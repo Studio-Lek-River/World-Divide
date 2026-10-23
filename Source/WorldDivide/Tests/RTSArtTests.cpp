@@ -408,14 +408,18 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 	const UMaterial* Lens = LoadMaster(TEXT("M_Kit_Lens"), KitMaterialDir);
 	TestTrue(TEXT("The kit lens can draw on instanced meshes"), Lens && Lens->bUsedWithInstancedStaticMeshes);
 	TestTrue(TEXT("The kit lens reads the dark"), ReadsPrimitiveData(Lens, TEXT("Night"), RTSPrimitiveData::LightNight));
-	TestTrue(TEXT("The kit lens reads its level per instance"), Lens && Algo::AnyOf(Lens->GetExpressions(), [](const TObjectPtr<UMaterialExpression>& Expression)
+	auto ReadsLensLevel = [](const UMaterial* Material)
 	{
-		// The engine does not export the expression's class, so its index is read through reflection.
-		const UClass* Class = Expression ? Expression->GetClass() : nullptr;
-		const FUInt32Property* Index = Class && Class->GetFName() == TEXT("MaterialExpressionPerInstanceCustomData")
-			? CastField<FUInt32Property>(Class->FindPropertyByName(TEXT("DataIndex"))) : nullptr;
-		return Index && Index->GetPropertyValue_InContainer(Expression.Get()) == static_cast<uint32>(RTSKitLensData::Level);
-	}));
+		return Material && Algo::AnyOf(Material->GetExpressions(), [](const TObjectPtr<UMaterialExpression>& Expression)
+		{
+			// The engine does not export the expression's class, so its index is read through reflection.
+			const UClass* Class = Expression ? Expression->GetClass() : nullptr;
+			const FUInt32Property* Index = Class && Class->GetFName() == TEXT("MaterialExpressionPerInstanceCustomData")
+				? CastField<FUInt32Property>(Class->FindPropertyByName(TEXT("DataIndex"))) : nullptr;
+			return Index && Index->GetPropertyValue_InContainer(Expression.Get()) == static_cast<uint32>(RTSKitLensData::Level);
+		});
+	};
+	TestTrue(TEXT("The kit lens reads its level per instance"), ReadsLensLevel(Lens));
 
 	// The equipment turns on its own (#351): each moving part has a motion, drawn on its own, riding on a part there is.
 	for (const TCHAR* Name : HeadquartersMovingParts)
@@ -429,10 +433,10 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		}
 	}
 
-	// Red beacons on the mast tips, glowing only while the HQ is operational, without a shadow.
+	// Red beacons on the mast tips, glowing at their kit lens level (on battery on low power, #391), without a shadow.
 	const UMaterial* Beacon = LoadMaster(TEXT("M_Beacon_Obstruction"), SharedMaterialDir);
-	TestTrue(TEXT("The beacon master glows only while the HQ is operational"),
-		ReadsPrimitiveData(Beacon, TEXT("Operational"), RTSPrimitiveData::LampOn) && Beacon->GetEditorOnlyData()->EmissiveColor.IsConnected());
+	TestTrue(TEXT("The beacon master glows at its lens level"),
+		ReadsLensLevel(Beacon) && Beacon->GetEditorOnlyData()->EmissiveColor.IsConnected());
 	// The beacons share one instanced component: without the usage a game draws them in the default material (#379).
 	TestTrue(TEXT("The beacon master can draw on instanced meshes"), Beacon && Beacon->bUsedWithInstancedStaticMeshes);
 	const TArray<FRTSBuildingPart> Beacons = Parts.FilterByPredicate([](const FRTSBuildingPart& P)

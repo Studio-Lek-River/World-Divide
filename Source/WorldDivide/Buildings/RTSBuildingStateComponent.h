@@ -42,6 +42,26 @@ struct FRTSBuildingLook
 	bool operator==(const FRTSBuildingLook& Other) const = default;
 };
 
+/**
+ * How a mounted kit piece's lens and real light look in a state (BUILDING_KIT.md, States), as RTSKitLensData writes it: the
+ * light shines at Level times its candelas and goes out with its lens's fault and flash phases (RTSKit::IsLensLit).
+ */
+struct FRTSKitLook
+{
+	/** 0 off, 1 full, EmergencyLevel on battery. */
+	float Level = 1.f;
+	/** Flicker phase, 0 for none. */
+	float Fault = 0.f;
+	/** Flash phase, 0 for steady. */
+	float Flash = 0.f;
+	/** On battery: a cooler, dimmer glow. */
+	bool bBattery = false;
+
+	bool operator==(const FRTSKitLook& Other) const = default;
+};
+
+struct FRTSKitPart;
+
 namespace RTSBuildingState
 {
 	/**
@@ -57,6 +77,27 @@ namespace RTSBuildingState
 	 * fixtures too; Destroyed stops and puts out everything.
 	 */
 	WORLDDIVIDE_API FRTSBuildingLook GetLook(const FRTSBuildingStateInputs& Inputs);
+
+	/** An Emergency light's level on battery. */
+	constexpr float EmergencyLevel = 0.3f;
+
+	/** What battery power does to a light's colour: cooler (BUILDING_KIT.md, States). */
+	inline const FLinearColor BatteryTint(0.72f, 0.85f, 1.f);
+
+	/** How many of a building's Flicker mounts flicker when it is damaged, the first in mount order. */
+	constexpr int32 MaxFlickering = 2;
+
+	/**
+	 * Part's look, the most restrictive of every condition that holds as GetLook's: destroyed, everything is out. Low power
+	 * (or Critical) puts the normal lights out but for a group still on, keeps Emergency ones at EmergencyLevel and LEDs
+	 * (emergency pieces without a real light: the mast beacons) at full on battery, and flashes the warning lights, which are
+	 * off otherwise. Damage flickers the first MaxFlickering Flicker mounts (FlickerRank, its place among them) and puts out
+	 * the Off ones; Critical puts every Flicker mount out. A normal light follows its group (Windows, Fixtures, Accents).
+	 */
+	WORLDDIVIDE_API FRTSKitLook GetKitLook(const FRTSBuildingStateInputs& Inputs, const FRTSKitPart& Part, int32 FlickerRank);
+
+	/** Inputs changed to show State, for rts.Debug.BuildingState. */
+	WORLDDIVIDE_API FRTSBuildingStateInputs ForceState(FRTSBuildingStateInputs Inputs, ERTSBuildingState State);
 }
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FRTSBuildingStateChanged, ERTSBuildingState /*Old*/, ERTSBuildingState /*New*/);
@@ -65,7 +106,7 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FRTSBuildingStateChanged, ERTSBuildingState
  * A building's presentation state (#196): worked out on every machine that draws from the replicated health, the owner's
  * power (ARTSBuilding::IsOwnerLowPower) and the production queue, and shown through the building's hooks: the equipment
  * motion scale (#351), the lamps (CPD LampOn: beacons and lit windows) and the lighting groups Windows, Fixtures and Accents
- * (#195). It only reads; gameplay stays with the building's components. The garage keeps its door, beacons and GarageLamps.
+ * (#195), and each mounted kit piece's lens and light (FRTSKitLook, #391). It only reads; gameplay stays with the building's components. The garage keeps its door, beacons and GarageLamps.
  * No tick of its own: the building's tick drives it. A destroyed building leaves an ARTSBuildingRuin.
  */
 UCLASS(ClassGroup = (RTS))
@@ -99,8 +140,13 @@ private:
 
 	void ApplyLook() const;
 
+	/** The kit pieces' looks for Inputs, in the building's GetKitParts order. */
+	void GetKitLooks(const FRTSBuildingStateInputs& Inputs, TArray<FRTSKitLook>& OutLooks) const;
+
 	ERTSBuildingState State = ERTSBuildingState::Idle;
 	FRTSBuildingLook Look;
+	/** The kit pieces' looks of the last refresh; kept so a refresh does not allocate. */
+	TArray<FRTSKitLook> KitLooks;
 	bool bApplied = false;
 	float SinceUpdate = 0.f;
 };

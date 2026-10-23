@@ -82,8 +82,8 @@ FLAG_WPO_INPUTS = {"WaveAmplitude": "FlagWaveAmplitude", "WaveNumber": "FlagWave
                    "FadeStart": "FlagFadeStart", "FadeEnd": "FlagFadeEnd"}
 
 # The shared mast beacon (M_Beacon_Obstruction, #351): its lens (UV0.U >= 0.5) a red emissive flash BeaconRate times a
-# second, on for BeaconDuty of it and fading over its last BeaconFade, times Operational (custom primitive data
-# LAMP_ON_INDEX, as M_Bld_Operational); every beacon runs up to BeaconRateJitter faster or slower and at its own
+# second, on for BeaconDuty of it and fading over its last BeaconFade, times its kit lens level (per-instance custom data
+# LENS_LEVEL, which URTSBuildingStateComponent keeps up on battery, #391); every beacon runs up to BeaconRateJitter faster or slower and at its own
 # phase, from where it stands. The housing (U < 0.5) is dark and never glows; between flashes the lens is dark red glass
 # (LensOffColor), so the flash reads against it from the default zoom (#379).
 BEACON_PARAMETERS = {
@@ -118,13 +118,15 @@ LIGHT_NIGHT_INDEX = 12
 
 # M_Kit_Lens's per-instance custom data (RTSKitLensData, #387, docs/art/BUILDING_KIT.md "Per-instance and LOD"), written
 # with SetCustomData: on/level, group mask (1 = gated by the building's Fixtures group), fault phase (0 = no fault), flash
-# seed (0 = steady) and the colour, RGB.
+# seed (0 = steady) and the colour, RGB. The level carries the building's state (URTSBuildingStateComponent, #391), power
+# included, so a battery lens stays lit on low power: the lens no longer reads Operational. RTSKit::IsLensLit repeats the
+# fault and flash sums for the real lights; change both together.
 LENS_LEVEL, LENS_GROUP, LENS_FAULT, LENS_FLASH, LENS_COLOR = 0, 1, 2, 3, 4
 LENS_HLSL = """
 float gate = lerp(1.0, Fixtures, saturate(Group));
 float fault = Fault > 0.0 ? step(0.35, frac(Time * 2.3 + Fault + 0.5 * sin(Time * 17.0 + Fault * 40.0))) : 1.0;
 float flash = Flash > 0.0 ? step(0.5, frac(Time + Flash)) : 1.0;
-return Color * Level * Operational * gate * fault * flash * lerp(DayGain, 1.0, Night) * Intensity;
+return Color * Level * gate * fault * flash * lerp(DayGain, 1.0, Night) * Intensity;
 """
 # The engine's flat normal: a lens without a baked finish normal draws as if it had none.
 FLAT_NORMAL = "/Engine/EngineMaterials/FlatNormal"
@@ -423,9 +425,9 @@ def build_flag_instance(directory, name, parent, texture):
 
 def build_beacon_material(directory, name):
     """M_Beacon_Obstruction, the shared mast beacon (#351) on the kit's SM_Kit_MastBeaconSingle: the housing (UV0.U < 0.5)
-    HousingColor, the lens LensOffColor and flashing LensColor as BEACON_HLSL works it out from BEACON_PARAMETERS, times Operational
-    (custom primitive data LAMP_ON_INDEX), so it is dark while the building is not operational. No light, no shadow: the
-    glow alone."""
+    HousingColor, the lens LensOffColor and flashing LensColor as BEACON_HLSL works it out from BEACON_PARAMETERS, times its
+    instance's lens level (LENS_LEVEL), so it follows the building's state: on battery on low power, dark once destroyed. No
+    light, no shadow: the glow alone."""
     material = _material(directory, name)
     parameters = {key: _scalar(material, -1500, 120 * index, key, value)
                   for index, (key, value) in enumerate(sorted(BEACON_PARAMETERS.items()))}
@@ -452,8 +454,9 @@ def build_beacon_material(directory, name):
     _connect(_seed(material, -1900, 1000), "", flash, "Seed")
     for pin in ("Rate", "RateJitter", "Duty", "Fade"):
         _connect(parameters[f"Beacon{pin}"], "", flash, pin)
-    operational = _scalar(material, -900, 600, "Operational", 1.0, vehicle_art.LAMP_ON_INDEX)
-    on = _multiply(material, -600, 300, flash, "", operational, "")
+    level = _node(material, unreal.MaterialExpressionPerInstanceCustomData, -900, 600, data_index=LENS_LEVEL,
+                  const_default_value=1.0)
+    on = _multiply(material, -600, 300, flash, "", level, "")
     lit = _multiply(material, -400, 300, on, "", lens, "")
     strength = _multiply(material, -200, 300, lit, "", parameters["BeaconIntensity"], "")
     glow = _multiply(material, 0, 300, colors["LensColor"], "RGB", strength, "")
@@ -468,8 +471,7 @@ def build_beacon_material(directory, name):
 def build_lens_material(directory, name):
     """M_Kit_Lens, every kit piece's lit glass (#388): metal, glass or LED from its instance's SurfaceColor, Roughness and
     Metallic, with the finish normal baked on UV1 (FinishNormal, the tangent basis on UV0, BUILDING_KIT.md). It glows as
-    LENS_HLSL works out from its instance's custom data (LENS_LEVEL..LENS_COLOR), the building's Fixtures group and
-    Operational, and the dark (LIGHT_NIGHT_INDEX), which lifts it from DayGain to full Intensity. No light of its own."""
+    LENS_HLSL works out from its instance's custom data (LENS_LEVEL..LENS_COLOR), the building's Fixtures group and the dark (LIGHT_NIGHT_INDEX), which lifts it from DayGain to full Intensity. No light of its own."""
     material = _material(directory, name)
     color = _vector(material, -450, -500, "SurfaceColor", (0.8, 0.8, 0.8, 1.0))
     roughness = _scalar(material, -450, -340, "Roughness", 0.4)
@@ -488,7 +490,6 @@ def build_lens_material(directory, name):
                                          ("Flash", LENS_FLASH))):
         pins[pin] = _node(material, unreal.MaterialExpressionPerInstanceCustomData, -900, 120 * index, data_index=data)
     pins["Color"] = _node(material, unreal.MaterialExpressionPerInstanceCustomData3Vector, -900, 500, data_index=LENS_COLOR)
-    pins["Operational"] = _scalar(material, -900, 620, "Operational", 1.0, vehicle_art.LAMP_ON_INDEX)
     pins["Fixtures"] = _scalar(material, -900, 720, "FixturesOn", 1.0, LIGHT_GROUP_INDICES["Fixtures"])
     pins["Night"] = _scalar(material, -900, 820, "Night", 0.0, LIGHT_NIGHT_INDEX)
     pins["DayGain"] = _scalar(material, -900, 920, "DayGain", 0.1)

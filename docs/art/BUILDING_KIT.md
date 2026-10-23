@@ -187,8 +187,9 @@ The building's recipe JSON has **one line per mount**, and setup fills `Mounts` 
 ]
 ```
 
-The HQ mounts its two mast beacons and its flag this way since M7.00-05 (#390); `emergency`, `fault`, `group` and
-`color` are read by setup when the first piece that needs them is mounted. A piece that waves (the flag) carries its
+The HQ mounts its two mast beacons and its flag this way since M7.00-05 (#390); setup reads `emergency` (true or false),
+`fault` (`None`, `Flicker` or `Off`), `group` and `color` (RGB) since M7.00-06 (#391), and a mount that leaves one out keeps
+its piece's. A piece that waves (the flag) carries its
 `wpo_disable_distance` in the catalogue.
 
 `RTSKit::Expand(BuildingData)` turns the mounts into parts, lights and per-instance data, a pure function: building ×
@@ -202,8 +203,9 @@ Lens appearance per instance (on/level, group, fault phase, flash phase, indicat
 read by `M_Kit_Lens`, written with `SetCustomData` and one `MarkRenderInstancesDirty`; the night state stays component
 custom primitive data 12 (proven in the spike, see [Per-instance and LOD](#per-instance-and-lod)). The layout is
 `RTSKitLensData` (`RTSPrimitiveData.h`): 0 level, 1 group mask (Fixtures, CPD 10), 2 fault phase, 3 flash phase, 4–6
-colour, 7 floats. The lens also goes dark with the building's Operational (CPD 8), as every other glow does, and samples
-an optional baked finish normal on UV1 (`FinishNormal`, flat by default).
+colour, 7 floats. The level carries the building's state, power included (see [States](#states)), so the lens does not
+read Operational (CPD 8): a battery lens stays lit on low power. The mast beacon's `M_Beacon_Obstruction` reads the same
+level. The lens samples an optional baked finish normal on UV1 (`FinishNormal`, flat by default).
 
 ## Light rule
 
@@ -241,6 +243,25 @@ The building's presentation state (#196) drives the kit's groups:
 - The garage keeps its door, beacons and `GarageLamps` (#192) until the HQ integration (M7.00-09) brings its beacons
   under the `Warning` behaviour, with no change in what the player sees.
 
+How it runs (#391):
+
+- `RTSBuildingState::GetKitLook` is the table, a pure function of the state inputs and the mount (`FRTSKitPart`, which
+  `RTSKit::Expand` resolves from mount and piece). Each column takes the most restrictive condition that holds, as the
+  building's own look does: a damaged building low on power is as dark as one only low on power. A mount in the `Warning`
+  group, or one that flashes or turns, is a warning light; one with `Emergency` (or in the `Emergency` group) is an
+  emergency light; an emergency piece without a real light is an LED (the mast beacons). A construction site is on battery,
+  as it is LowPower.
+- `URTSBuildingStateComponent` writes every mount's lens with `ARTSBuilding::SetKitLooks` only when a look changes: one
+  `SetCustomData` per instance and one `MarkRenderInstancesDirty` per component. The same call sets each real light's
+  intensity (level × candela) and its colour (battery tint), so lens and light cannot disagree.
+- Kit lights do not follow the group tags (`SetLightGroupOn`); their look switches them. The light subsystem's tick
+  (`ARTSBuilding::UpdateKitLights`) runs only for the buildings whose lights are shown, nearest first, and switches each
+  light with its lens's flash and fault phase (`RTSKit::IsLensLit`, the same sums as `LENS_HLSL`) and turns the `Rotate` ones
+  at 1.5 Hz.
+- The flicker and flash phases come from the mount's place among the mounts; the first two `Flicker` mounts flicker.
+- `rts.Debug.BuildingState <0..5>` shows every building in one state on this machine (Idle, Producing, LowPower, Damaged,
+  Critical, Destroyed; -1 off), for building shots: `ue.ps1 -Task buildingshots -Cvars "rts.Light.ForceDark=1,rts.Debug.BuildingState=2"`.
+
 ## Light budgets
 
 Only **real** lights count. Emissive-only pieces (09, 12, 13, 14, and every lens glow) are free.
@@ -251,7 +272,10 @@ Only **real** lights count. Emissive-only pieces (09, 12, 13, 14, and every lens
 | Medium | 5 | 2 |
 | Small | 3 | 1 |
 
-- The HQ is Large and has 7 + 2 today.
+- `URTSBuildingData::Size` is the class (`RTSKit::GetLightBudget`); setup takes it from the recipe's `"size"`, Medium when it
+  does not say. `RTSKit::CountLights` counts the building's own lights and its mounts' (the garage beacons and kit warning
+  lights as warning); `WorldDivide.Buildings.KitMount.LightBudget` checks every building against its class.
+- The HQ is Large and has 5 + 0 today (its garage beacons flash from the garage, not from `Lights`).
 - `rts.Fx.BuildingLightMax` caps the real kit lights in view at **24**, on top of the existing
   `rts.Fx.BuildingLightMaxBuildings` (nearest buildings), `Priority=Secondary` only at High scalability and above, and
   `MaxDrawDistance` per light.
