@@ -30,8 +30,9 @@ No kit piece adds an actor or a ticking component.
   its budgets.
 - `Tools/Art/kit_blender.py` reads the catalogue, builds each piece with its module `Tools/Art/kit/<piece>.py`, and
   writes the FBX, the `_LOD1.fbx` and the **derived** manifest `Art/Shared/kit/build/kit_manifest.json`: triangles per
-  LOD, bounds, material slots and the measured bounds of the `Lens` island. Nobody edits the manifest. Run it with
-  Blender (`blender -b --python Tools/Art/kit_blender.py`) after a catalogue or module change, and commit its output.
+  LOD, bounds, material slots, the measured bounds of the `Lens` island and each LOD's geometry digest: an LOD whose
+  digest is unchanged keeps its FBX, so a rerun leaves the kit's files as they are (#425). Nobody edits the manifest.
+  Run it with Blender (`blender -b --python Tools/Art/kit_blender.py`) after a catalogue or module change, and commit its output.
 - A module is the piece's name in snake case (`FlagCloth` → `flag_cloth.py`). Its `build(piece)` gets the catalogue
   entry and returns the LOD0 object and the LOD1 object, or `None` for a piece that keeps LOD0 alone (class S). Its slots
   are its Blender materials' names, in the catalogue's order; the lit glass is the material `Lens`.

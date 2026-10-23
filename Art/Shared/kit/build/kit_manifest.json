@@ -24,7 +24,11 @@
      0.0
     ]
    ],
-   "lens_bounds": null
+   "lens_bounds": null,
+   "digest": [
+    "37b9955e0d7379660f71b8a3c2ebb0aeebfa52a2",
+    "d526a753b9363b9f7e50b5ba5b1620559a951925"
+   ]
   },
   "lighting/12_MastBeaconSingle": {
    "mesh": "SM_Kit_MastBeaconSingle",
@@ -48,7 +52,10 @@
      56.0
     ]
    ],
-   "lens_bounds": null
+   "lens_bounds": null,
+   "digest": [
+    "da9db671beca1fa82a3bce897a857231978407b6"
+   ]
   }
  }
 }
