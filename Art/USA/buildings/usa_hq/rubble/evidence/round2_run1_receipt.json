@@ -1,0 +1,17 @@
+{
+  "source/HQ_Rubble.blend": "5740888ff9a246e763dbc4a19bcefaeb97699ba1fa421956dfcd0b24b0c21316",
+  "SM_HQ_Rubble.fbx": "d33486b072fd865f550574a94e3e1f7622ed31449048181c38329ca449b3130e",
+  "SM_HQ_Rubble_LOD1.fbx": "e267b7a1382917583c79690e83913227578eac2351bce8db1fd4003ba9e08e72",
+  "material_recipe.json": "e4ae7346f3747b4eb71fc6d35fff780cbe6ea1e03a8eb568491298310b39d183",
+  "textures/T_HQ_Rubble_Debris_BaseColor.png": "a94ee214a250e5d7e1aa67493ac026e3ce1011771f78475d009ea57c08512d3a",
+  "textures/T_HQ_Rubble_Debris_DetailColor.png": "3e62e4c2ded78bc4b5dfa5662f5fba9dcb85469fb6a5df211b2109c590712a99",
+  "textures/T_HQ_Rubble_Debris_Normal.png": "7d0fe0e0bae6eae6bc6b422bffa52cefa775c477f6da620ad040d64f92c7ffcb",
+  "textures/T_HQ_Rubble_Debris_ORM.png": "27ebd86dae007156c64fa72d083e9384c1694c65ad36ed9cb356bc723e1a43b8",
+  "textures/T_HQ_Rubble_Embers_BaseColor.png": "d6d173dc81dc8221307a6f6fb9e5405cde4e346321086108926d0250b03c7f81",
+  "textures/T_HQ_Rubble_Embers_Emissive.png": "e6342302deb0e4e2c5f8e15c4877948806bf0a6f7abb396aae910303652c28af",
+  "textures/T_HQ_Rubble_Embers_Normal.png": "8d12a39da1398b7171745937321ec8b955fef2d2b67d2c48a906a22178d7cb8b",
+  "textures/T_HQ_Rubble_Embers_ORM.png": "bbbdbb1d97f9b3a7de465c302dd0e567f6573300c7c94780d55ba19433596b8e",
+  "textures/T_HQ_Rubble_Scorch_BaseColor.png": "c4385e61456a97f662fe70ee93822c3c9eb5b96f88608e03723d78e6e58bae60",
+  "textures/T_HQ_Rubble_Scorch_Normal.png": "d7f2ca35d32fe1a8582a8db3e00bc254430a2e4c3670d79fc0f4db947c4239eb",
+  "textures/T_HQ_Rubble_Scorch_ORM.png": "2bc9a2953220ff8993702a663281c7171df7591cf09fe22d444db574171f7e91"
+}

@@ -1,0 +1,262 @@
+{
+  "method": "Fresh Blender process; source opened only for coordinate/material comparison; each FBX imported into factory-empty scene. Independent SAT UV intersection and bmesh normal recalculation. No generator/evidence imports.",
+  "meshes": {
+    "SM_HQ_Rubble": {
+      "triangles": 41862,
+      "slots": [
+        "Debris",
+        "Scorch",
+        "Embers"
+      ],
+      "triangles_per_slot": {
+        "Debris": 41094,
+        "Scorch": 384,
+        "Embers": 384
+      },
+      "bounds_blender_cm": [
+        [
+          -1890.0003662109375,
+          -2790.000244140625,
+          -10.000001907348633
+        ],
+        [
+          1890.0003662109375,
+          2790.000244140625,
+          646.4960327148438
+        ]
+      ],
+      "origin": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.009999999776482582,
+        0.009999999776482582,
+        0.009999999776482582
+      ],
+      "max_all_vertex_round_trip_error_cm": 0.00057220458984375,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_edges": 0,
+      "faces_changed_by_outward_normal_recalculation": 0,
+      "UV_channels": {
+        "UV0": {
+          "degenerate_triangles": 0,
+          "invalid_tangent_frames": 0
+        },
+        "SurfaceDetail": {
+          "degenerate_triangles": 0,
+          "invalid_tangent_frames": 0
+        }
+      },
+      "UV0_overlapping_triangle_pairs_per_slot": {
+        "Debris": 0,
+        "Scorch": 0,
+        "Embers": 0
+      },
+      "UV0_out_of_range_loops": 0,
+      "FinishBake": "Absent; no finish bake. SurfaceDetail intentionally tiles as declared.",
+      "fbx_unit_scale_factor": 1.0,
+      "fbx_contains_tangents": true,
+      "sha256": "d0e0f7c3fe7425e23d99197b77fbe285e812bd7eeaedd0ddb809ec5e8c3faf64"
+    },
+    "SM_HQ_Rubble_LOD1": {
+      "triangles": 14234,
+      "slots": [
+        "Debris",
+        "Scorch",
+        "Embers"
+      ],
+      "triangles_per_slot": {
+        "Debris": 13466,
+        "Scorch": 384,
+        "Embers": 384
+      },
+      "bounds_blender_cm": [
+        [
+          -1890.0003662109375,
+          -2790.000244140625,
+          -10.000001907348633
+        ],
+        [
+          1890.0003662109375,
+          2790.000244140625,
+          645.6257934570312
+        ]
+      ],
+      "origin": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.009999999776482582,
+        0.009999999776482582,
+        0.009999999776482582
+      ],
+      "max_all_vertex_round_trip_error_cm": 0.00057220458984375,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "inconsistent_edges": 0,
+      "faces_changed_by_outward_normal_recalculation": 0,
+      "UV_channels": {
+        "UV0": {
+          "degenerate_triangles": 0,
+          "invalid_tangent_frames": 0
+        },
+        "SurfaceDetail": {
+          "degenerate_triangles": 0,
+          "invalid_tangent_frames": 0
+        }
+      },
+      "UV0_overlapping_triangle_pairs_per_slot": {
+        "Debris": 0,
+        "Scorch": 0,
+        "Embers": 0
+      },
+      "UV0_out_of_range_loops": 0,
+      "FinishBake": "Absent; no finish bake. SurfaceDetail intentionally tiles as declared.",
+      "fbx_unit_scale_factor": 1.0,
+      "fbx_contains_tangents": true,
+      "sha256": "95b52865f98a0ac261e5ce473068b2be5747528fce8bb6a8f87ca5182b33a7a1"
+    }
+  },
+  "materials": {
+    "Debris": {
+      "BaseColor": {
+        "file": "T_HQ_Rubble_Debris_BaseColor.png",
+        "size": [
+          2048,
+          2048
+        ],
+        "source_color_space": "sRGB",
+        "sha256": "b991153e91fa4591d644ca0d69e70fc1d01c7a26a6025d95ac6373d1a2a0036f"
+      },
+      "Normal": {
+        "file": "T_HQ_Rubble_Debris_Normal.png",
+        "size": [
+          2048,
+          2048
+        ],
+        "source_color_space": "Non-Color",
+        "sha256": "94d611e6229d708be9605746b625f5cbb4b96af74ea3033d63f5209b3e36c8dc"
+      },
+      "ORM": {
+        "file": "T_HQ_Rubble_Debris_ORM.png",
+        "size": [
+          2048,
+          2048
+        ],
+        "source_color_space": "Non-Color",
+        "sha256": "53b52e91ccd4bce73208ac46029d29de595c17a622b4672eb3e1963a0cda49f4"
+      },
+      "DetailColor": {
+        "file": "T_HQ_Rubble_Debris_DetailColor.png",
+        "size": [
+          2048,
+          2048
+        ],
+        "source_color_space": "Non-Color",
+        "sha256": "411d8de4bd1a73a6bcc578ec5ffb16d7a42ad37a29b1223ba2e2c75ab1784da6"
+      },
+      "normal_convention": "DX delivered, green inverted once in Blender preview, no UE green flip"
+    },
+    "Scorch": {
+      "BaseColor": {
+        "file": "T_HQ_Rubble_Scorch_BaseColor.png",
+        "size": [
+          1024,
+          1024
+        ],
+        "source_color_space": "sRGB",
+        "sha256": "b0a81f5971918094707f738743352018fda634fc3530b2820b27cb79eae77ef3"
+      },
+      "Normal": {
+        "file": "T_HQ_Rubble_Scorch_Normal.png",
+        "size": [
+          1024,
+          1024
+        ],
+        "source_color_space": "Non-Color",
+        "sha256": "7c9dfc2f1eb35014fdd355e20e8d3f6a134b819fa0af68e05d58a936754c0efa"
+      },
+      "ORM": {
+        "file": "T_HQ_Rubble_Scorch_ORM.png",
+        "size": [
+          1024,
+          1024
+        ],
+        "source_color_space": "Non-Color",
+        "sha256": "21c66f5ffa049a6e3d8a5edaa27b482d1ee24e5592c41e4b84c5f05c5efe6374"
+      },
+      "normal_convention": "DX delivered, green inverted once in Blender preview, no UE green flip"
+    },
+    "Embers": {
+      "BaseColor": {
+        "file": "T_HQ_Rubble_Embers_BaseColor.png",
+        "size": [
+          512,
+          512
+        ],
+        "source_color_space": "sRGB",
+        "sha256": "79ebe472d4023688da940caf3c0262b0aa84bcdbd9dfbd78c6fdb4ca9147e2e8"
+      },
+      "Normal": {
+        "file": "T_HQ_Rubble_Embers_Normal.png",
+        "size": [
+          512,
+          512
+        ],
+        "source_color_space": "Non-Color",
+        "sha256": "3733100e5fedea9e3363a9001f20f34ab120f70f605a63a6d92b9342ca1bf7b1"
+      },
+      "ORM": {
+        "file": "T_HQ_Rubble_Embers_ORM.png",
+        "size": [
+          512,
+          512
+        ],
+        "source_color_space": "Non-Color",
+        "sha256": "a95c3fc39611d90ddeabbbfac3c333f64b88978898ebbfd647414a8aedd05090"
+      },
+      "Emissive": {
+        "file": "T_HQ_Rubble_Embers_Emissive.png",
+        "size": [
+          512,
+          512
+        ],
+        "source_color_space": "Non-Color",
+        "sha256": "ee93fd5cd863e7ff94051ab2e65cfd79a52c3e608271820e35f48fb9c4460253"
+      },
+      "normal_convention": "DX delivered, green inverted once in Blender preview, no UE green flip",
+      "emission": {
+        "linear_color": [
+          1,
+          0.105,
+          0.008
+        ],
+        "intensity": 7,
+        "constant": true
+      }
+    }
+  },
+  "handoff_hashes": {
+    "source/HQ_Rubble.blend": true,
+    "SM_HQ_Rubble.fbx": true,
+    "SM_HQ_Rubble_LOD1.fbx": true,
+    "material_recipe.json": true,
+    "textures/T_HQ_Rubble_Debris_BaseColor.png": true,
+    "textures/T_HQ_Rubble_Debris_DetailColor.png": true,
+    "textures/T_HQ_Rubble_Debris_Normal.png": true,
+    "textures/T_HQ_Rubble_Debris_ORM.png": true,
+    "textures/T_HQ_Rubble_Embers_BaseColor.png": true,
+    "textures/T_HQ_Rubble_Embers_Emissive.png": true,
+    "textures/T_HQ_Rubble_Embers_Normal.png": true,
+    "textures/T_HQ_Rubble_Embers_ORM.png": true,
+    "textures/T_HQ_Rubble_Scorch_BaseColor.png": true,
+    "textures/T_HQ_Rubble_Scorch_Normal.png": true,
+    "textures/T_HQ_Rubble_Scorch_ORM.png": true
+  },
+  "all_checks_passed": true
+}

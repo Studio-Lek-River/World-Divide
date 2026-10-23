@@ -106,6 +106,22 @@ M20_DIR = "/Game/Art/USA/Vehicles/M20Guardian"
 # The USA HQ as delivered (#187-#191): its layout usa_hq.json (Tools/Art/usa_hq_recipe.py), and where its assets go.
 USA_HQ_SOURCE_DIR = os.path.join(PROJECT_DIR, "Art", "USA", "buildings", "usa_hq")
 USA_HQ_DIR = "/Game/Art/USA/Buildings/USAHQ"
+# Its rubble once destroyed (#403): the delivery, where it goes, how each map imports (its material_recipe.json's
+# texture_import) and how each slot draws its normal and detail (its "materials").
+USA_HQ_RUBBLE_SOURCE_DIR = os.path.join(USA_HQ_SOURCE_DIR, "rubble")
+USA_HQ_RUBBLE_DIR = f"{USA_HQ_DIR}/Rubble"
+USA_HQ_RUBBLE_TEXTURES = {
+    "BaseColor": {"compression": "TC_Default", "srgb": True, "lod_group": "TEXTUREGROUP_World"},
+    "DetailColor": {"compression": "TC_Default", "srgb": False, "lod_group": "TEXTUREGROUP_World"},
+    "Normal": {"compression": "TC_Normalmap", "srgb": False, "lod_group": "TEXTUREGROUP_WorldNormalMap"},
+    "ORM": {"compression": "TC_Masks", "srgb": False, "lod_group": "TEXTUREGROUP_World"},
+    "Emissive": {"compression": "TC_Masks", "srgb": False, "lod_group": "TEXTUREGROUP_World"},
+}
+USA_HQ_RUBBLE_SLOTS = {
+    "Debris": {"Normal_UV": 1, "NormalStrength": 0.85, "DetailColorAmount": 0.65},
+    "Scorch": {"Normal_UV": 0, "NormalStrength": 0.4},
+    "Embers": {"Normal_UV": 0, "NormalStrength": 0.4},
+}
 # What every building may use: the flags of Art/Shared/flags/flags.json with their shared masters and DA_FlagTypes (#351),
 # and the shared building kit (docs/art/BUILDING_KIT.md, #389), built from Art/Shared/kit/kit_catalogue.json and the
 # manifest Tools/Art/kit_blender.py derives from it.
@@ -946,7 +962,50 @@ def make_usa_hq():
         "flag_types": flag_types,
         "flag_type": layout["flag"],
         "flag_part": layout["flag_part"],
+        "ruin_mesh": make_usa_hq_rubble(layout["switch_distance"]),
     }
+
+
+def make_usa_hq_rubble(switch_distance):
+    """The destroyed HQ's rubble (#403, Art/USA/buildings/usa_hq/rubble): SM_HQ_Rubble with its hand-made LOD1 in the
+    shell's frame, switching at the HQ's switch distance, its three slots drawn by masters built from material_recipe.json
+    (building_art.build_rubble_material), in USA_HQ_RUBBLE_DIR. ARTSBuildingRuin shows it once the HQ has collapsed."""
+    recipe = building_art.read_layout(os.path.join(USA_HQ_RUBBLE_SOURCE_DIR, "material_recipe.json"))
+    record = building_art.read_layout(os.path.join(USA_HQ_RUBBLE_SOURCE_DIR, "evidence", "verification.json"))["source"]
+    materials = {}
+    for slot in recipe["slots"]:
+        maps = recipe["maps"][slot]["maps"]
+        textures = {}
+        for key, name in sorted(maps.items()):
+            source = os.path.join(USA_HQ_RUBBLE_SOURCE_DIR, "textures", name)
+            settings = dict(USA_HQ_RUBBLE_TEXTURES[key], resize=None)
+            asset = os.path.splitext(name)[0]
+            textures[key] = plan_now(
+                f"{USA_HQ_RUBBLE_DIR}/{asset}",
+                lambda s=source, a=asset, t=settings: building_art.import_texture(s, USA_HQ_RUBBLE_DIR, a, t),
+                spec_hash([building_art.import_texture], USA_HQ_RUBBLE_DIR, asset, sorted(settings.items()),
+                          file_hash(source)))
+        settings = dict(USA_HQ_RUBBLE_SLOTS[slot], **{k: v for k, v in recipe["materials"][slot].items()
+                                                      if k.startswith("emissive_")})
+        materials[slot] = plan_now(
+            f"{USA_HQ_RUBBLE_DIR}/M_HQ_Rubble_{slot}",
+            lambda n=f"M_HQ_Rubble_{slot}", t=textures, r=settings: building_art.build_rubble_material(
+                USA_HQ_RUBBLE_DIR, n, t, r),
+            spec_hash([building_art.build_rubble_material, building_art._material], USA_HQ_RUBBLE_DIR, slot,
+                      sorted(settings.items()), sorted((k, object_path(t)) for k, t in textures.items())))
+
+    source = os.path.join(USA_HQ_RUBBLE_SOURCE_DIR, "SM_HQ_Rubble.fbx")
+    lod1 = os.path.join(USA_HQ_RUBBLE_SOURCE_DIR, "SM_HQ_Rubble_LOD1.fbx")
+    lod0_record, lod1_record = record["SM_HQ_Rubble"], record["SM_HQ_Rubble_LOD1"]
+    bounds = lod0_record["bounds_unreal_cm"]
+    return plan_now(
+        f"{USA_HQ_RUBBLE_DIR}/SM_HQ_Rubble",
+        lambda: building_art.import_mesh(
+            source, USA_HQ_RUBBLE_DIR, "SM_HQ_Rubble", materials, bounds, lod0_record["triangles"],
+            (lod0_record["triangles"], lod1_record["triangles"]), bounds, [unreal.Transform()], switch_distance, lod1),
+        spec_hash([building_art.import_mesh, building_art._reset_lods, building_art.cover_building,
+                   vehicle_art.import_part, vehicle_art.lod_radius], USA_HQ_RUBBLE_DIR, file_hash(source),
+                  file_hash(lod1), switch_distance, sorted((s, object_path(m)) for s, m in materials.items())))
 
 
 def make_village():

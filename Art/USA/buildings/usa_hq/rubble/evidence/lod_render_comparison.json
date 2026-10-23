@@ -1,0 +1,5 @@
+{
+  "mean_absolute_linear_rgb": 0.0006424207240343094,
+  "fraction_pixels_max_channel_diff_gt_0p02": 0.007924262152777778,
+  "scope": "Full 1280x720 image, identical camera/light/sample seed, Cycles denoised; human review still required."
+}

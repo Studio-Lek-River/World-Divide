@@ -1,0 +1,157 @@
+{
+  "round": 4,
+  "asset_receipts": {
+    "source/HQ_Rubble.blend": true,
+    "SM_HQ_Rubble.fbx": true,
+    "SM_HQ_Rubble_LOD1.fbx": true,
+    "material_recipe.json": true,
+    "textures/T_HQ_Rubble_Debris_BaseColor.png": true,
+    "textures/T_HQ_Rubble_Debris_DetailColor.png": true,
+    "textures/T_HQ_Rubble_Debris_Normal.png": true,
+    "textures/T_HQ_Rubble_Debris_ORM.png": true,
+    "textures/T_HQ_Rubble_Embers_BaseColor.png": true,
+    "textures/T_HQ_Rubble_Embers_Emissive.png": true,
+    "textures/T_HQ_Rubble_Embers_Normal.png": true,
+    "textures/T_HQ_Rubble_Embers_ORM.png": true,
+    "textures/T_HQ_Rubble_Scorch_BaseColor.png": true,
+    "textures/T_HQ_Rubble_Scorch_Normal.png": true,
+    "textures/T_HQ_Rubble_Scorch_ORM.png": true
+  },
+  "reference_inputs_unchanged": {
+    "Art/USA/buildings/usa_hq/usa_hq.json": true,
+    "Art/USA/buildings/usa_hq/game/SM_HQ_Shell.fbx": true,
+    "Art/USA/buildings/usa_hq/reference/candidate11_Reference1.png": true,
+    "Art/USA/buildings/usa_hq/reference/candidate11_Reference2.png": true,
+    "Art/USA/buildings/usa_hq/renders/final_neutral_rts.png": true,
+    "Art/USA/buildings/usa_hq/renders/final_neutral_garage.png": true,
+    "Art/USA/buildings/usa_hq/textures/T_HQ17_Coating_2m_BaseColor.png": true,
+    "Art/USA/buildings/usa_hq/textures/T_HQ21_Paving_BaseColor.png": true,
+    "docs/art/usa_hq/USA_HQ_SPEC.md": true,
+    "Art/USA/buildings/usa_hq/rubble/BRIEF.md": true
+  },
+  "separate_independent_audit_matches_current_fbx": true,
+  "geometry_identical_across_two_clean_runs": {
+    "SM_HQ_Rubble": true,
+    "SM_HQ_Rubble_LOD1": true
+  },
+  "maps_and_recipe_identical_across_two_clean_runs": {
+    "material_recipe.json": true,
+    "textures/T_HQ_Rubble_Debris_BaseColor.png": true,
+    "textures/T_HQ_Rubble_Debris_DetailColor.png": true,
+    "textures/T_HQ_Rubble_Debris_Normal.png": true,
+    "textures/T_HQ_Rubble_Debris_ORM.png": true,
+    "textures/T_HQ_Rubble_Embers_BaseColor.png": true,
+    "textures/T_HQ_Rubble_Embers_Emissive.png": true,
+    "textures/T_HQ_Rubble_Embers_Normal.png": true,
+    "textures/T_HQ_Rubble_Embers_ORM.png": true,
+    "textures/T_HQ_Rubble_Scorch_BaseColor.png": true,
+    "textures/T_HQ_Rubble_Scorch_Normal.png": true,
+    "textures/T_HQ_Rubble_Scorch_ORM.png": true
+  },
+  "generator_sha256": "4de2cd2fceb448f4a5b1c7baf3ab5a27b9b56d55e54716160b2ff3bbaf89d2be",
+  "review_images": {
+    "final_neutral_rts.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "19cb8d692c7836f5e48b34204c892ccbbfd148efe626006a002635a3f8c3940a"
+    },
+    "final_neutral_reference.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "615adabca0b2e35409120eca0337983527db56dade06f8e7ddf892d9b6a5ffeb"
+    },
+    "night_rts.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "85f398b33222189d3bbed5c8a199c109dd88f2dd555f716301ea9194163056e9"
+    },
+    "night_reference.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "973b3aede37ae316e80af22ed8d64b65cd33f3483dc3c6ef3e9c0338bb29155a"
+    },
+    "rts_12m.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "0546ef3c954a7d7da708bd5c4231e701c0194cc9fd1fe12b82acb85741a3ac36"
+    },
+    "rts_150m.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "8d152e6d771f6650f8f2b9ec51e59092eef2aaebe0f01c8cef375961fd2ac135"
+    },
+    "rts_150m_night.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "7e171936eab594b7f0a3420fa0a3597e0eae180279ee342d7a9fa7e5bce3d109"
+    },
+    "rts_450m.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "d2fce430d4ab61fe7dadd62898aa0a2c8f38715f958b59cd135e5404a6936739"
+    },
+    "lod0_260m.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "784ee163753ec25b87a59e0d159b644465abcf6e74ff6d85c0c51c259493d46d"
+    },
+    "lod1_260m.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "af035422a4c77ae4757bbd410b85bb68ef0c161bd9656bc8fe85dba2f74d34cc"
+    },
+    "lod0_249p6m.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "841006e8e4b0f7b283eb1eb07e66d0091a7206fa1939a9b70799aaec7f455f9e"
+    },
+    "lod1_270p4m.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "fa0506a4d5597752347c2355657d3bb9ef4c960204697eff43c123cdaaccefa2"
+    },
+    "top_footprint.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "5eef495458bab02749b49c43bea40f45b0a5b510568914c3b1abf268c1632380"
+    },
+    "intact_vs_rubble.png": {
+      "size": [
+        1280,
+        720
+      ],
+      "sha256": "6b7069cbd496c87915c4e384c185217eb36903ce1d32f4832efa1bef2c982b22"
+    }
+  },
+  "review_scope": "Blender Cycles, no Unreal operations; producer acceptance pending; independent Round 4 model check complete.",
+  "logs": [
+    "round4_clean_run_1.log",
+    "round4_clean_run_2.log"
+  ]
+}

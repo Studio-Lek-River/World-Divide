@@ -503,6 +503,50 @@ def build_lens_material(directory, name):
     material.set_editor_property("used_with_instanced_static_meshes", True)
     return _finish(material)
 
+def build_rubble_material(directory, name, textures, recipe):
+    """One slot of a building's rubble (#403, as its material_recipe.json describes it): BaseColor and ORM (occlusion,
+    roughness, metallic) on UV0, the DirectX Normal on recipe's Normal_UV eased toward flat by its NormalStrength; with a
+    DetailColor (Debris) the base colour times lerp(1, DetailColor on UV1, DetailColorAmount), with an Emissive mask
+    (Embers) a constant glow, the mask's red times emissive_linear_color and emissive_intensity. Nothing reads custom
+    primitive data: the ruin turns every light off and the embers stay lit. textures: {map: texture} by the recipe's map
+    names (BaseColor, Normal, ORM, DetailColor, Emissive)."""
+    material = _material(directory, name)
+    uvs = {index: _node(material, unreal.MaterialExpressionTextureCoordinate, -1300, 300 * index, coordinate_index=index)
+           for index in (0, 1)}
+
+    def sample(key, x, y, sampler, uv=0):
+        node = _node(material, unreal.MaterialExpressionTextureSample, x, y, texture=textures[key], sampler_type=sampler)
+        _connect(uvs[uv], "", node, "UVs")
+        return node
+
+    color = sample("BaseColor", -900, 0, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
+    base = color
+    if "DetailColor" in textures:
+        detail = sample("DetailColor", -900, 300, unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR, 1)
+        mix = _node(material, unreal.MaterialExpressionLinearInterpolate, -600, 300, const_a=1.0,
+                    const_alpha=recipe["DetailColorAmount"])
+        _connect(detail, "RGB", mix, "B")
+        base = _multiply(material, -300, 0, color, "RGB", mix, "")
+    orm = sample("ORM", -900, 600, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+    normal = sample("Normal", -900, 900, unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, recipe["Normal_UV"])
+    flat = _node(material, unreal.MaterialExpressionConstant3Vector, -900, 1200, constant=unreal.LinearColor(0, 0, 1, 1))
+    eased = _node(material, unreal.MaterialExpressionLinearInterpolate, -600, 900, const_alpha=recipe["NormalStrength"])
+    _connect(flat, "", eased, "A")
+    _connect(normal, "RGB", eased, "B")
+    _output(material, base, "RGB" if base is color else "", unreal.MaterialProperty.MP_BASE_COLOR)
+    _output(material, orm, "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
+    _output(material, orm, "G", unreal.MaterialProperty.MP_ROUGHNESS)
+    _output(material, orm, "B", unreal.MaterialProperty.MP_METALLIC)
+    _output(material, eased, "", unreal.MaterialProperty.MP_NORMAL)
+    if "Emissive" in textures:
+        mask = sample("Emissive", -900, 1500, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+        glow = _vector(material, -900, 1800, "EmberColor",
+                       [c * recipe["emissive_intensity"] for c in recipe["emissive_linear_color"]] + [1.0])
+        _output(material, _multiply(material, -300, 1500, mask, "R", glow, "RGB"), "",
+                unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    return _finish(material)
+
+
 def build_material_instance(directory, name, parent, scalars, vectors):
     """An instance of parent with the delivery's values. The parent is set first and the instance updated after, so the
     saved instance keeps it (the delivery lost a parent set without an update: audit/ownership_persistence_repair)."""

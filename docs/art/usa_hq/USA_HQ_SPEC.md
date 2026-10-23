@@ -90,7 +90,9 @@ Priority: Destroyed > Critical > Damaged > LowPower > Producing > Idle. Each cha
 
 The garage keeps its door, beacons and `GarageLamps` (#192): it never closes on a unit, and on low power it opens only once a vehicle completed. `OnStateChanged` is the hook for the VFX and audio (#197).
 
-Destroyed: the HQ goes at once, so placement, power and the rebuild (#38) are free immediately, and an `ARTSBuildingRuin` takes its place: no collision, not selectable, not a building. Every machine that draws collapses the HQ's meshes to 12 % of their height, leaning 3°, dark, every lamp out, over `RuinCollapseSeconds` (3 s); the rubble lies `RuinSeconds` (60 s) and sinks into the ground over `RuinFadeSeconds` (5 s). `URTSBuildingData::RuinMesh` replaces the collapsed meshes with real rubble once the collapse is done; the HQ has none yet.
+Destroyed: the HQ goes at once, so placement, power and the rebuild (#38) are free immediately, and an `ARTSBuildingRuin` takes its place: no collision, not selectable, not a building. Every machine that draws collapses the HQ's meshes to 12 % of their height, leaning 3°, dark, every lamp out, over `RuinCollapseSeconds` (3 s); the rubble lies `RuinSeconds` (60 s) and sinks into the ground over `RuinFadeSeconds` (5 s). `URTSBuildingData::RuinMesh` replaces the collapsed meshes with real rubble once the collapse is done.
+
+The HQ's rubble (#403) is `SM_HQ_Rubble` in `/Game/Art/USA/Buildings/USAHQ/Rubble`, from `Art/USA/buildings/usa_hq/rubble/` (BRIEF.md, CLAUDE_HANDOFF.md, review renders; generator `Tools/Art/usa_hq_rubble.py`). It lies in the shell's frame within the 38 × 56 m footprint, at most 6.5 m high: debris mounds over the blocks' plan, broken wall stubs, the octagonal core partly standing, the mast fallen across it. LOD0 41,862 and LOD1 14,234 triangles (hand-made), switching at the HQ's 260 m; three slots, Debris, Scorch and Embers, drawn by `M_HQ_Rubble_<slot>` (`building_art.build_rubble_material`): the embers glow at a constant level, since the ruin turns every lamp and light group off. No collision, so units cross it and a new HQ can be placed on it.
 
 ## Night lighting (#195)
 

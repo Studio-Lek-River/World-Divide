@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "slots": [
+    "Debris",
+    "Scorch",
+    "Embers"
+  ],
+  "shading": "Opaque Default Lit, one-sided; no Nanite, no collision, no vertex colors, no CPD dependencies",
+  "UV0": {
+    "tiling": false,
+    "overlap": false,
+    "mapping": "Unique planar face islands with 3px gutters at each slot resolution. LOD1 reuses existing islands."
+  },
+  "UV1": {
+    "name": "SurfaceDetail",
+    "purpose": "Tiled Debris normal and DetailColor, 0.5 metre repeat; not a FinishBake or lightmap",
+    "tiling": true,
+    "overlap": true
+  },
+  "normal": "DirectX tangent-space; UE normal map compression; sRGB false; do not flip green in Unreal",
+  "maps": {
+    "Debris": {
+      "resolution": [
+        2048,
+        2048
+      ],
+      "atlas_faces": 22906,
+      "nominal_texels_per_m": 7.421878957416909,
+      "maps": {
+        "BaseColor": "T_HQ_Rubble_Debris_BaseColor.png",
+        "Normal": "T_HQ_Rubble_Debris_Normal.png",
+        "ORM": "T_HQ_Rubble_Debris_ORM.png",
+        "DetailColor": "T_HQ_Rubble_Debris_DetailColor.png"
+      },
+      "UV0": "Unique planar polygon islands, 3 pixel gutters; no tiling or overlaps.",
+      "DetailColor": "Linear tiled aggregate multiplier on UV1; lerp(1, DetailColor.rgb, 0.65) * UV0 BaseColor",
+      "Normal_UV_channel": 1
+    },
+    "Scorch": {
+      "resolution": [
+        1024,
+        1024
+      ],
+      "atlas_faces": 192,
+      "nominal_texels_per_m": 53.429094220113576,
+      "maps": {
+        "BaseColor": "T_HQ_Rubble_Scorch_BaseColor.png",
+        "Normal": "T_HQ_Rubble_Scorch_Normal.png",
+        "ORM": "T_HQ_Rubble_Scorch_ORM.png"
+      },
+      "UV0": "Unique planar polygon islands, 3 pixel gutters; no tiling or overlaps."
+    },
+    "Embers": {
+      "resolution": [
+        512,
+        512
+      ],
+      "atlas_faces": 192,
+      "nominal_texels_per_m": 99.49999990734268,
+      "maps": {
+        "BaseColor": "T_HQ_Rubble_Embers_BaseColor.png",
+        "Normal": "T_HQ_Rubble_Embers_Normal.png",
+        "ORM": "T_HQ_Rubble_Embers_ORM.png",
+        "Emissive": "T_HQ_Rubble_Embers_Emissive.png"
+      },
+      "UV0": "Unique planar polygon islands, 3 pixel gutters; no tiling or overlaps."
+    }
+  },
+  "texture_import": {
+    "BaseColor": {
+      "sRGB": true,
+      "compression": "Default"
+    },
+    "Normal": {
+      "sRGB": false,
+      "compression": "Normalmap",
+      "flip_green": false
+    },
+    "ORM": {
+      "sRGB": false,
+      "compression": "Masks",
+      "channels": {
+        "R": "Ambient Occlusion",
+        "G": "Roughness",
+        "B": "Metallic"
+      }
+    },
+    "Emissive": {
+      "sRGB": false,
+      "compression": "Masks",
+      "channel": "R"
+    },
+    "DetailColor": {
+      "sRGB": false,
+      "compression": "Default",
+      "UV_channel": 1,
+      "expression": "BaseColorUV0 * lerp(1, DetailColorUV1.rgb, 0.65)"
+    }
+  },
+  "mipmaps": "Keep generated mipmaps; at most 2048 per slot. NeverStream=true, following project building texture residency policy.",
+  "materials": {
+    "Debris": {
+      "BaseColor": "BaseColor texture RGB on UV0 * lerp(1, DetailColor RGB on UV1, 0.65)",
+      "Normal": "texture RGB sampled with TexCoord index 1, strength 0.85",
+      "ORM": "texture RGB"
+    },
+    "Scorch": {
+      "BaseColor": "texture RGB",
+      "Normal": "texture RGB, strength 0.4",
+      "ORM": "texture RGB"
+    },
+    "Embers": {
+      "BaseColor": "texture RGB",
+      "ORM": "texture RGB",
+      "emissive_linear_color": [
+        1,
+        0.105,
+        0.008
+      ],
+      "emissive_intensity": 7,
+      "emissive_expression": "Texture Emissive.R * float3(1,0.105,0.008) * 7",
+      "constant": true,
+      "operational_or_lamp_multiplier": false
+    }
+  },
+  "LOD": {
+    "LOD0": "SM_HQ_Rubble.fbx",
+    "LOD1": "SM_HQ_Rubble_LOD1.fbx",
+    "switch_distance_cm": 26000,
+    "no_parts_removed": true,
+    "simplification": "Fracture face relief and small corner chips simplified; small tubes 3-sided instead of 4-sided. All pieces retained. Mound shells and wall profiles exact; compare switch renders."
+  }
+}

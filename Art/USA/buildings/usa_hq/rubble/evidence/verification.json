@@ -1,0 +1,771 @@
+{
+  "issue": 403,
+  "round": 4,
+  "blender": "5.1.2",
+  "source": {
+    "SM_HQ_Rubble": {
+      "vertices": 22877,
+      "triangles": 41862,
+      "slots": [
+        "Debris",
+        "Scorch",
+        "Embers"
+      ],
+      "triangles_per_slot": {
+        "Debris": 41094,
+        "Scorch": 384,
+        "Embers": 384
+      },
+      "bounds_blender_cm": [
+        [
+          -1889.99996,
+          -2789.99996,
+          -10.0
+        ],
+        [
+          1889.99996,
+          2789.99996,
+          646.49611
+        ]
+      ],
+      "bounds_unreal_cm": [
+        [
+          -1889.99996,
+          -2789.99996,
+          -10.0
+        ],
+        [
+          1889.99996,
+          2789.99996,
+          646.49611
+        ]
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "geometry_sha256": "cf5f59fedeb871898b5086c09c6f3491eeea977d06042135c9645a66f4c548c4",
+      "degenerate_triangles": 0,
+      "zero_tangent_loops": 0,
+      "zero_bitangent_loops": 0,
+      "uv1_degenerate_triangles": 0,
+      "uv_channels": [
+        "UV0",
+        "SurfaceDetail"
+      ],
+      "degenerate_uv_triangles": 0,
+      "uv0_bounds": [
+        [
+          0.00146484375,
+          0.00146484375
+        ],
+        [
+          0.99853515625,
+          0.994140625
+        ]
+      ],
+      "uv0_out_of_range_loops": 0
+    },
+    "SM_HQ_Rubble_LOD1": {
+      "vertices": 9063,
+      "triangles": 14234,
+      "slots": [
+        "Debris",
+        "Scorch",
+        "Embers"
+      ],
+      "triangles_per_slot": {
+        "Debris": 13466,
+        "Scorch": 384,
+        "Embers": 384
+      },
+      "bounds_blender_cm": [
+        [
+          -1889.99996,
+          -2789.99996,
+          -10.0
+        ],
+        [
+          1889.99996,
+          2789.99996,
+          645.62578
+        ]
+      ],
+      "bounds_unreal_cm": [
+        [
+          -1889.99996,
+          -2789.99996,
+          -10.0
+        ],
+        [
+          1889.99996,
+          2789.99996,
+          645.62578
+        ]
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "geometry_sha256": "6369da19f62891e9ceb1cc00dde9ead73ef97848cbe467ec15f4afd470fca10d",
+      "degenerate_triangles": 0,
+      "zero_tangent_loops": 0,
+      "zero_bitangent_loops": 0,
+      "uv1_degenerate_triangles": 0,
+      "uv_channels": [
+        "UV0",
+        "SurfaceDetail"
+      ],
+      "degenerate_uv_triangles": 0,
+      "uv0_bounds": [
+        [
+          0.00146484375,
+          0.00146484375
+        ],
+        [
+          0.99853515625,
+          0.994140625
+        ]
+      ],
+      "uv0_out_of_range_loops": 0
+    }
+  },
+  "fbx_reimport": {
+    "SM_HQ_Rubble": {
+      "vertices": 22877,
+      "triangles": 41862,
+      "slots": [
+        "Debris",
+        "Scorch",
+        "Embers"
+      ],
+      "triangles_per_slot": {
+        "Debris": 41094,
+        "Scorch": 384,
+        "Embers": 384
+      },
+      "bounds_blender_cm": [
+        [
+          -1890.00034,
+          -2790.00034,
+          -10.0
+        ],
+        [
+          1890.00034,
+          2790.00034,
+          646.49606
+        ]
+      ],
+      "bounds_unreal_cm": [
+        [
+          -1890.00034,
+          -2790.00034,
+          -10.0
+        ],
+        [
+          1890.00034,
+          2790.00034,
+          646.49606
+        ]
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.009999999776482582,
+        0.009999999776482582,
+        0.009999999776482582
+      ],
+      "geometry_sha256": "54b7ce5e4548264a9a5c13c496b4c297d32ac9a29ea88d7e7bbad96cba580854",
+      "degenerate_triangles": 0,
+      "zero_tangent_loops": 0,
+      "zero_bitangent_loops": 0,
+      "uv1_degenerate_triangles": 0,
+      "uv_channels": [
+        "UV0",
+        "SurfaceDetail"
+      ],
+      "degenerate_uv_triangles": 0,
+      "uv0_bounds": [
+        [
+          0.00146484375,
+          0.00146484375
+        ],
+        [
+          0.99853515625,
+          0.994140625
+        ]
+      ],
+      "uv0_out_of_range_loops": 0,
+      "flipped_faces": 0,
+      "inconsistent_winding_faces": 0,
+      "fbx_global_settings": {
+        "UpAxis": 2,
+        "UpAxisSign": 1,
+        "FrontAxis": 0,
+        "FrontAxisSign": -1,
+        "CoordAxis": 1,
+        "CoordAxisSign": -1,
+        "OriginalUpAxis": -1,
+        "OriginalUpAxisSign": 1,
+        "UnitScaleFactor": 1.0,
+        "OriginalUnitScaleFactor": 1.0,
+        "AmbientColor": 0.0,
+        "DefaultCamera": "Producer Perspective",
+        "TimeMode": 11,
+        "TimeSpanStart": 0,
+        "TimeSpanStop": 46186158000,
+        "CustomFrameRate": 24.0
+      },
+      "fbx_raw_vertex_bounds_cm": [
+        [
+          -1890.0,
+          -2790.0,
+          -10.000001907348633
+        ],
+        [
+          1890.0,
+          2790.0,
+          646.49609375
+        ]
+      ],
+      "nonmanifold_edges": 0,
+      "closed_components": 973,
+      "uv0_overlapping_triangle_pairs": 0,
+      "max_cm_round_trip_error": 0.00037999999995008693,
+      "single_static_mesh": true,
+      "skeletons": 0
+    },
+    "SM_HQ_Rubble_LOD1": {
+      "vertices": 9063,
+      "triangles": 14234,
+      "slots": [
+        "Debris",
+        "Scorch",
+        "Embers"
+      ],
+      "triangles_per_slot": {
+        "Debris": 13466,
+        "Scorch": 384,
+        "Embers": 384
+      },
+      "bounds_blender_cm": [
+        [
+          -1890.00034,
+          -2790.00034,
+          -10.0
+        ],
+        [
+          1890.00034,
+          2790.00034,
+          645.62578
+        ]
+      ],
+      "bounds_unreal_cm": [
+        [
+          -1890.00034,
+          -2790.00034,
+          -10.0
+        ],
+        [
+          1890.00034,
+          2790.00034,
+          645.62578
+        ]
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.009999999776482582,
+        0.009999999776482582,
+        0.009999999776482582
+      ],
+      "geometry_sha256": "a8b527db025b0715029ab74ef7ed586c669b2948ca2f7e2ebea29b2072de36a9",
+      "degenerate_triangles": 0,
+      "zero_tangent_loops": 0,
+      "zero_bitangent_loops": 0,
+      "uv1_degenerate_triangles": 0,
+      "uv_channels": [
+        "UV0",
+        "SurfaceDetail"
+      ],
+      "degenerate_uv_triangles": 0,
+      "uv0_bounds": [
+        [
+          0.00146484375,
+          0.00146484375
+        ],
+        [
+          0.99853515625,
+          0.994140625
+        ]
+      ],
+      "uv0_out_of_range_loops": 0,
+      "flipped_faces": 0,
+      "inconsistent_winding_faces": 0,
+      "fbx_global_settings": {
+        "UpAxis": 2,
+        "UpAxisSign": 1,
+        "FrontAxis": 0,
+        "FrontAxisSign": -1,
+        "CoordAxis": 1,
+        "CoordAxisSign": -1,
+        "OriginalUpAxis": -1,
+        "OriginalUpAxisSign": 1,
+        "UnitScaleFactor": 1.0,
+        "OriginalUnitScaleFactor": 1.0,
+        "AmbientColor": 0.0,
+        "DefaultCamera": "Producer Perspective",
+        "TimeMode": 11,
+        "TimeSpanStart": 0,
+        "TimeSpanStop": 46186158000,
+        "CustomFrameRate": 24.0
+      },
+      "fbx_raw_vertex_bounds_cm": [
+        [
+          -1890.0,
+          -2790.0,
+          -10.000001907348633
+        ],
+        [
+          1890.0,
+          2790.0,
+          645.6257934570312
+        ]
+      ],
+      "nonmanifold_edges": 0,
+      "closed_components": 973,
+      "uv0_overlapping_triangle_pairs": 0,
+      "max_cm_round_trip_error": 0.00037999999995008693,
+      "single_static_mesh": true,
+      "skeletons": 0
+    }
+  },
+  "round3_collapse": {
+    "continuous_fill_shells": [
+      {
+        "name": "crushed_fill_0",
+        "identical_LOD_vertices": true,
+        "bounds_m": [
+          [
+            -16.218650817871094,
+            -7.562262058258057,
+            0.07110777497291565
+          ],
+          [
+            -1.8280706405639648,
+            7.255940914154053,
+            4.5845255851745605
+          ]
+        ]
+      },
+      {
+        "name": "crushed_fill_1",
+        "identical_LOD_vertices": true,
+        "bounds_m": [
+          [
+            -17.671903610229492,
+            -26.587366104125977,
+            0.0695374608039856
+          ],
+          [
+            -2.370415210723877,
+            -13.374079704284668,
+            4.240212917327881
+          ]
+        ]
+      },
+      {
+        "name": "crushed_fill_2",
+        "identical_LOD_vertices": true,
+        "bounds_m": [
+          [
+            -17.03340721130371,
+            13.577828407287598,
+            0.06941793859004974
+          ],
+          [
+            -2.715304136276245,
+            26.469825744628906,
+            4.496630668640137
+          ]
+        ]
+      },
+      {
+        "name": "crushed_fill_3",
+        "identical_LOD_vertices": true,
+        "bounds_m": [
+          [
+            -3.328509569168091,
+            -26.422945022583008,
+            0.06917440891265869
+          ],
+          [
+            14.312573432922363,
+            -11.664331436157227,
+            3.1816389560699463
+          ]
+        ]
+      },
+      {
+        "name": "crushed_fill_4",
+        "identical_LOD_vertices": true,
+        "bounds_m": [
+          [
+            -2.5872137546539307,
+            10.789078712463379,
+            0.07197127491235733
+          ],
+          [
+            14.940682411193848,
+            25.268526077270508,
+            3.352147102355957
+          ]
+        ]
+      },
+      {
+        "name": "crushed_fill_5",
+        "identical_LOD_vertices": true,
+        "bounds_m": [
+          [
+            -7.332162380218506,
+            -14.294546127319336,
+            0.06889867037534714
+          ],
+          [
+            3.0887248516082764,
+            -5.671223163604736,
+            2.6311893463134766
+          ]
+        ]
+      },
+      {
+        "name": "crushed_fill_6",
+        "identical_LOD_vertices": true,
+        "bounds_m": [
+          [
+            -7.445906639099121,
+            5.702264308929443,
+            0.06891103833913803
+          ],
+          [
+            3.474026679992676,
+            14.464971542358398,
+            2.8519017696380615
+          ]
+        ]
+      }
+    ],
+    "stacked_primary_slabs": 220,
+    "small_bank_chunks": 36,
+    "minor_toe_scatter": 36,
+    "primary_slab_section_m": [
+      0.25,
+      0.4
+    ],
+    "wall_body_section_m": 0.38,
+    "core_standing_segments": 7,
+    "ember_seam_positions_identical_across_LODs": true,
+    "notes": "Fill shells stay identical in LOD1; individual slabs retain mass with simpler corners/face relief."
+  },
+  "textures": {
+    "Debris": {
+      "resolution": [
+        2048,
+        2048
+      ],
+      "atlas_faces": 22906,
+      "nominal_texels_per_m": 7.421878957416909,
+      "maps": {
+        "BaseColor": "T_HQ_Rubble_Debris_BaseColor.png",
+        "Normal": "T_HQ_Rubble_Debris_Normal.png",
+        "ORM": "T_HQ_Rubble_Debris_ORM.png",
+        "DetailColor": "T_HQ_Rubble_Debris_DetailColor.png"
+      },
+      "UV0": "Unique planar polygon islands, 3 pixel gutters; no tiling or overlaps.",
+      "DetailColor": "Linear tiled aggregate multiplier on UV1; lerp(1, DetailColor.rgb, 0.65) * UV0 BaseColor",
+      "Normal_UV_channel": 1
+    },
+    "Scorch": {
+      "resolution": [
+        1024,
+        1024
+      ],
+      "atlas_faces": 192,
+      "nominal_texels_per_m": 53.429094220113576,
+      "maps": {
+        "BaseColor": "T_HQ_Rubble_Scorch_BaseColor.png",
+        "Normal": "T_HQ_Rubble_Scorch_Normal.png",
+        "ORM": "T_HQ_Rubble_Scorch_ORM.png"
+      },
+      "UV0": "Unique planar polygon islands, 3 pixel gutters; no tiling or overlaps."
+    },
+    "Embers": {
+      "resolution": [
+        512,
+        512
+      ],
+      "atlas_faces": 192,
+      "nominal_texels_per_m": 99.49999990734268,
+      "maps": {
+        "BaseColor": "T_HQ_Rubble_Embers_BaseColor.png",
+        "Normal": "T_HQ_Rubble_Embers_Normal.png",
+        "ORM": "T_HQ_Rubble_Embers_ORM.png",
+        "Emissive": "T_HQ_Rubble_Embers_Emissive.png"
+      },
+      "UV0": "Unique planar polygon islands, 3 pixel gutters; no tiling or overlaps."
+    }
+  },
+  "frame": {
+    "blender": "metres, +X front, +Y garage side, Z up",
+    "fbx": "centimetres; X forward, Z up; UE garage -Y",
+    "origin": "HQ slab ground centre (0,0,0)",
+    "matching_shell_sha256": "2a34ea35bd412c7b6d6f72a51cad6d6be678d1a483075a3c120561fc72e23225"
+  },
+  "UV0_check": "Triangle clipping per slot after FBX reimport, shared edges excluded; zero positive-area intersections required.",
+  "UV1": "SurfaceDetail: UV1 tiled Debris normal and DetailColor, 0.5 metre repeat; no finish bake. UV0 remains unique per slot.",
+  "reproducibility": {
+    "seed": 40301,
+    "algorithm": "sha256 of ordered float32 positions, polygon indices, slot indices",
+    "previous_run_available": true,
+    "same_geometry_as_previous_run": {
+      "SM_HQ_Rubble": true,
+      "SM_HQ_Rubble_LOD1": true
+    }
+  },
+  "unreal_tested": false,
+  "collision": "None supplied; Claude must disable auto collision",
+  "generator_sha256": "4de2cd2fceb448f4a5b1c7baf3ab5a27b9b56d55e54716160b2ff3bbaf89d2be",
+  "texture_file_checks": {
+    "T_HQ_Rubble_Debris_BaseColor.png": {
+      "actual_png_size": [
+        2048,
+        2048
+      ],
+      "sha256": "b991153e91fa4591d644ca0d69e70fc1d01c7a26a6025d95ac6373d1a2a0036f"
+    },
+    "T_HQ_Rubble_Debris_DetailColor.png": {
+      "actual_png_size": [
+        2048,
+        2048
+      ],
+      "sha256": "411d8de4bd1a73a6bcc578ec5ffb16d7a42ad37a29b1223ba2e2c75ab1784da6"
+    },
+    "T_HQ_Rubble_Debris_Normal.png": {
+      "actual_png_size": [
+        2048,
+        2048
+      ],
+      "sha256": "94d611e6229d708be9605746b625f5cbb4b96af74ea3033d63f5209b3e36c8dc"
+    },
+    "T_HQ_Rubble_Debris_ORM.png": {
+      "actual_png_size": [
+        2048,
+        2048
+      ],
+      "sha256": "53b52e91ccd4bce73208ac46029d29de595c17a622b4672eb3e1963a0cda49f4"
+    },
+    "T_HQ_Rubble_Embers_BaseColor.png": {
+      "actual_png_size": [
+        512,
+        512
+      ],
+      "sha256": "79ebe472d4023688da940caf3c0262b0aa84bcdbd9dfbd78c6fdb4ca9147e2e8"
+    },
+    "T_HQ_Rubble_Embers_Emissive.png": {
+      "actual_png_size": [
+        512,
+        512
+      ],
+      "sha256": "ee93fd5cd863e7ff94051ab2e65cfd79a52c3e608271820e35f48fb9c4460253"
+    },
+    "T_HQ_Rubble_Embers_Normal.png": {
+      "actual_png_size": [
+        512,
+        512
+      ],
+      "sha256": "3733100e5fedea9e3363a9001f20f34ab120f70f605a63a6d92b9342ca1bf7b1"
+    },
+    "T_HQ_Rubble_Embers_ORM.png": {
+      "actual_png_size": [
+        512,
+        512
+      ],
+      "sha256": "a95c3fc39611d90ddeabbbfac3c333f64b88978898ebbfd647414a8aedd05090"
+    },
+    "T_HQ_Rubble_Scorch_BaseColor.png": {
+      "actual_png_size": [
+        1024,
+        1024
+      ],
+      "sha256": "b0a81f5971918094707f738743352018fda634fc3530b2820b27cb79eae77ef3"
+    },
+    "T_HQ_Rubble_Scorch_Normal.png": {
+      "actual_png_size": [
+        1024,
+        1024
+      ],
+      "sha256": "7c9dfc2f1eb35014fdd355e20e8d3f6a134b819fa0af68e05d58a936754c0efa"
+    },
+    "T_HQ_Rubble_Scorch_ORM.png": {
+      "actual_png_size": [
+        1024,
+        1024
+      ],
+      "sha256": "21c66f5ffa049a6e3d8a5edaa27b482d1ee24e5592c41e4b84c5f05c5efe6374"
+    }
+  },
+  "reference_inputs_sha256": {
+    "Art/USA/buildings/usa_hq/usa_hq.json": "40325f0b60f78ccad1a0bb501888034c6ab68aca47ff01b25cac4a8dc6ff0119",
+    "Art/USA/buildings/usa_hq/game/SM_HQ_Shell.fbx": "2a34ea35bd412c7b6d6f72a51cad6d6be678d1a483075a3c120561fc72e23225",
+    "Art/USA/buildings/usa_hq/reference/candidate11_Reference1.png": "88457bcdfd6d0b165db034c56a1cd03fe47c37b0555c169592febf17b0d758c8",
+    "Art/USA/buildings/usa_hq/reference/candidate11_Reference2.png": "49a575f6506e54827c938c284e88035acee562d5e64be54d459590c8ffdb81f1",
+    "Art/USA/buildings/usa_hq/renders/final_neutral_rts.png": "d27d4c0f1e525265169e66e654c47860f5e1fd558e87eed5cfe6c729922944b9",
+    "Art/USA/buildings/usa_hq/renders/final_neutral_garage.png": "12bb0629996ddffa2695b33aaba4499836a291df8b6fdadfbef60c901c7023e8",
+    "Art/USA/buildings/usa_hq/textures/T_HQ17_Coating_2m_BaseColor.png": "238eb423e4b485cf81c8f10929d79633ec7aca1529bda05ef87a6957d42d09b0",
+    "Art/USA/buildings/usa_hq/textures/T_HQ21_Paving_BaseColor.png": "1d87ee44d5b2a9e5da9266785707d4f27996f82fe2952551f1ae95e16c1d0364",
+    "docs/art/usa_hq/USA_HQ_SPEC.md": "ebe1da7d61c340258a314f58b21fd77353303a97f4ede2975c8227b8dcf6d4f7",
+    "Art/USA/buildings/usa_hq/rubble/BRIEF.md": "d73da43f789487002a597a1180512e220722f916f977e35083030dff2f55c1bd"
+  },
+  "source_reopen": {
+    "mesh_objects": 2,
+    "textures": [
+      {
+        "image": "T_HQ_Rubble_Debris_BaseColor",
+        "relative_path": "//..\\textures\\T_HQ_Rubble_Debris_BaseColor.png",
+        "packed": false,
+        "size": [
+          2048,
+          2048
+        ],
+        "exists": true
+      },
+      {
+        "image": "T_HQ_Rubble_Debris_DetailColor",
+        "relative_path": "//..\\textures\\T_HQ_Rubble_Debris_DetailColor.png",
+        "packed": false,
+        "size": [
+          2048,
+          2048
+        ],
+        "exists": true
+      },
+      {
+        "image": "T_HQ_Rubble_Debris_Normal",
+        "relative_path": "//..\\textures\\T_HQ_Rubble_Debris_Normal.png",
+        "packed": false,
+        "size": [
+          2048,
+          2048
+        ],
+        "exists": true
+      },
+      {
+        "image": "T_HQ_Rubble_Debris_ORM",
+        "relative_path": "//..\\textures\\T_HQ_Rubble_Debris_ORM.png",
+        "packed": false,
+        "size": [
+          2048,
+          2048
+        ],
+        "exists": true
+      },
+      {
+        "image": "T_HQ_Rubble_Embers_BaseColor",
+        "relative_path": "//..\\textures\\T_HQ_Rubble_Embers_BaseColor.png",
+        "packed": false,
+        "size": [
+          512,
+          512
+        ],
+        "exists": true
+      },
+      {
+        "image": "T_HQ_Rubble_Embers_Emissive",
+        "relative_path": "//..\\textures\\T_HQ_Rubble_Embers_Emissive.png",
+        "packed": false,
+        "size": [
+          512,
+          512
+        ],
+        "exists": true
+      },
+      {
+        "image": "T_HQ_Rubble_Embers_Normal",
+        "relative_path": "//..\\textures\\T_HQ_Rubble_Embers_Normal.png",
+        "packed": false,
+        "size": [
+          512,
+          512
+        ],
+        "exists": true
+      },
+      {
+        "image": "T_HQ_Rubble_Embers_ORM",
+        "relative_path": "//..\\textures\\T_HQ_Rubble_Embers_ORM.png",
+        "packed": false,
+        "size": [
+          512,
+          512
+        ],
+        "exists": true
+      },
+      {
+        "image": "T_HQ_Rubble_Scorch_BaseColor",
+        "relative_path": "//..\\textures\\T_HQ_Rubble_Scorch_BaseColor.png",
+        "packed": false,
+        "size": [
+          1024,
+          1024
+        ],
+        "exists": true
+      },
+      {
+        "image": "T_HQ_Rubble_Scorch_Normal",
+        "relative_path": "//..\\textures\\T_HQ_Rubble_Scorch_Normal.png",
+        "packed": false,
+        "size": [
+          1024,
+          1024
+        ],
+        "exists": true
+      },
+      {
+        "image": "T_HQ_Rubble_Scorch_ORM",
+        "relative_path": "//..\\textures\\T_HQ_Rubble_Scorch_ORM.png",
+        "packed": false,
+        "size": [
+          1024,
+          1024
+        ],
+        "exists": true
+      }
+    ],
+    "scope": "Saved source reopened from disk before render; no external project dependencies."
+  },
+  "review": {
+    "cycles_renders": 14,
+    "lod_comparison": {
+      "mean_absolute_linear_rgb": 0.0006424207240343094,
+      "fraction_pixels_max_channel_diff_gt_0p02": 0.007924262152777778,
+      "scope": "Full 1280x720 image, identical camera/light/sample seed, Cycles denoised; human review still required."
+    }
+  }
+}
