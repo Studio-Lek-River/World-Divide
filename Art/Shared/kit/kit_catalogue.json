@@ -8,6 +8,7 @@
    "faction": "neutral",
    "slots": ["Flag"],
    "materials": {"Flag": "MI_Flag_USA"},
+   "wpo_disable_distance": 12500,
    "emergency_default": false,
    "fault_response": "None",
    "mount_points": {"Hoist": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},

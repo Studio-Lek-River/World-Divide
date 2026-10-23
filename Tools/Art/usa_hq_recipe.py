@@ -74,34 +74,33 @@ MOTION = {
                            "pivot_socket": "WingDishElevationPivot", "follow": "WingDish_Azimuth"},
 }
 
-# The shared kit (docs/art/BUILDING_KIT.md, Tools/Art/kit_blender.py): the pieces the HQ draws, by mesh, and the flags.
+# The shared kit (docs/art/BUILDING_KIT.md, Tools/Art/kit_blender.py): the pieces the HQ mounts, by catalogue id, and the
+# flags.
 SHARED = os.path.join(ROOT, "..", "..", "..", "Shared")
 KIT_CATALOGUE = os.path.join(SHARED, "kit", "kit_catalogue.json")
-KIT_MANIFEST = os.path.join(SHARED, "kit", "build", "kit_manifest.json")
 FLAGS = os.path.join(SHARED, "flags", "flags.json")
-BEACON_MESH = "SM_Kit_MastBeaconSingle"
-FLAG_MESH = "SM_Kit_FlagCloth"
+BEACON_PIECE = "lighting/12_MastBeaconSingle"
+FLAG_PIECE = "identity/01_FlagCloth"
 
 # The communication masts (#379): the core tower's to 28 m and the east wing's roof mast to 24 m, out of the shell as parts
 # of their own with a hand-made LOD1, the producer's choice of the delivery's three heights (HANDOFF_379.md). Each stands at
 # its foot (the mesh's pivot) unturned, its tip socket (the top of its antenna rod) above the foot. Each tip carries a red
-# obstruction beacon, the kit's SM_Kit_MastBeaconSingle, standing on it at BEACON_SCALE, grown with the masts.
+# obstruction beacon, the kit's BEACON_PIECE, mounted on it at BEACON_SCALE, grown with the masts.
 MAST_MANIFEST = os.path.join(ROOT, "issue379", "mast_manifest.json")
 MAST_HEIGHT = "28"
 MASTS = {"MastCore": "MastTipCore", "MastEast": "MastTipEast"}
 BEACONS = {"Beacon_MastTipCore": "MastTipCore", "Beacon_MastTipEast": "MastTipEast"}
 BEACON_SCALE = 1.75
 
-# The flag (#351): the HQ flies FLAG_TYPE (flags.json) on the kit's SM_Kit_FlagCloth at the courtyard pole, the top of its hoist at
+# The flag (#351): the HQ flies FLAG_TYPE (flags.json) on the kit's FLAG_PIECE at the courtyard pole, the top of its hoist at
 # FLAG_HOIST. The pole (13 cm across, 20 cm deep at its fittings, its top at 7.1 m) stands at X 1150, Y 0; the cloth
 # flies along +Y (yaw 90) from just outside it, so it never passes through the pole, its top 20 cm under the pole's.
-# FLAG_HEIGHT cm of hoist; the width is that times the flag's aspect, 4.18 m for the USA's 10:19. Its wind stops past
-# FLAG_WPO_DISABLE_DISTANCE cm, beyond M_Flag_Cloth's fade (building_art.FLAG_FADE).
+# FLAG_HEIGHT cm of hoist; the width is that times the flag's aspect, 4.18 m for the USA's 10:19. Its wind stops where the
+# kit's catalogue says (wpo_disable_distance).
 FLAG_TYPE = "USA"
 FLAG_PART = "NationalFlag"
 FLAG_HOIST = [1150.0, 10.5, 690.0]
 FLAG_HEIGHT = 220.0
-FLAG_WPO_DISABLE_DISTANCE = 12500.0
 # The delivered flag and the master of its colour instances, which the shared cloth replaces.
 DELIVERED_FLAG = "SM_HQ21_NationalFlag_Wind"
 DELIVERED_FLAG_MASTER = "M_HQ21_FlagWind"
@@ -386,19 +385,21 @@ def sockets(mast_tips):
     return result
 
 
-def shared_parts(helpers, flag):
-    """The HQ's parts on the kit's pieces: a beacon on each mast tip, and the flag's cloth at the pole, as wide as its
-    height times flag's aspect."""
+def mounts(flag):
+    """The kit's pieces the HQ mounts (docs/art/BUILDING_KIT.md, Mounts; ARTSBuilding draws them through RTSKit::Expand):
+    a beacon on each mast tip socket, and the flag's cloth at the pole, as wide as its height times flag's aspect."""
+    catalogue = {piece["id"] for piece in read(KIT_CATALOGUE)["pieces"]}
+    missing = {BEACON_PIECE, FLAG_PIECE} - catalogue
+    if missing:
+        raise SystemExit(f"The kit catalogue has no {sorted(missing)}")
     result = []
     for name, socket in sorted(BEACONS.items()):
-        result.append({"name": name, "mesh": BEACON_MESH, "location": helpers[socket],
-                       "rotation": [0.0, 0.0, 0.0], "scale": [BEACON_SCALE] * 3, "movable": False, "cast_shadow": False,
-                       "bounds_scale": 1.0, "max_draw_distance": 0.0, "wpo_disable_distance": 0.0})
+        result.append({"name": name, "piece": BEACON_PIECE, "socket": socket,
+                       "transform": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [BEACON_SCALE] * 3]})
     aspect = flag["ratio"][1] / flag["ratio"][0]
-    result.append({"name": FLAG_PART, "mesh": FLAG_MESH, "location": FLAG_HOIST, "rotation": [0.0, 90.0, 0.0],
-                   "scale": rounded([FLAG_HEIGHT * aspect / 100.0, 1.0, FLAG_HEIGHT / 100.0], 6), "movable": False,
-                   "cast_shadow": True, "bounds_scale": 1.0, "max_draw_distance": 0.0,
-                   "wpo_disable_distance": FLAG_WPO_DISABLE_DISTANCE})
+    result.append({"name": FLAG_PART, "piece": FLAG_PIECE,
+                   "transform": [FLAG_HOIST, [0.0, 90.0, 0.0],
+                                 rounded([FLAG_HEIGHT * aspect / 100.0, 1.0, FLAG_HEIGHT / 100.0], 6)]})
     return result
 
 
@@ -434,30 +435,6 @@ def lights():
     return result
 
 
-def kit_meshes():
-    """The kit pieces' mesh records (BEACON_MESH, FLAG_MESH), from the catalogue and its manifest: setup takes the kit's
-    mesh for them (make_kit) instead of importing one of the HQ's own."""
-    manifest = read(KIT_MANIFEST)["pieces"]
-    records = {}
-    for piece in read(KIT_CATALOGUE)["pieces"]:
-        if piece["mesh"] not in (BEACON_MESH, FLAG_MESH):
-            continue
-        if piece["id"] not in manifest:
-            raise SystemExit(f"kit_manifest.json has no {piece['id']}: rerun Tools/Art/kit_blender.py")
-        built = manifest[piece["id"]]
-        records[piece["mesh"]] = {
-            "kit": piece["id"],
-            "triangles": built["triangles"][0],
-            "bounds": built["bounds"],
-            # A piece that keeps LOD0 alone (class S) has no budgets here, as a small HQ mesh.
-            "lods": built["triangles"] if len(built["triangles"]) > 1 else [],
-        }
-    missing = {BEACON_MESH, FLAG_MESH} - set(records)
-    if missing:
-        raise SystemExit(f"The kit catalogue has no {sorted(missing)}")
-    return records
-
-
 def main():
     delivered = meshes()
     shell_records, sources = shell()
@@ -466,7 +443,6 @@ def main():
     mesh_records.update(shell_records)
     mast_records, mast_parts, mast_tips = masts()
     mesh_records.update(mast_records)
-    mesh_records.update(kit_meshes())
     flags = read(FLAGS)["flags"]
     if FLAG_TYPE not in flags:
         raise SystemExit(f"flags.json has no flag {FLAG_TYPE}")
@@ -482,7 +458,6 @@ def main():
             game_parts.append(part)
     game_parts.extend(mast_parts)
     helpers = sockets(mast_tips)
-    game_parts.extend(shared_parts(helpers, flags[FLAG_TYPE]))
     order = {"Shell": 0, "ShellDetail": 0}
     game_parts.sort(key=lambda p: (order.get(p["name"], 1), p["name"]))
     for part in game_parts:
@@ -506,6 +481,7 @@ def main():
         "flag": FLAG_TYPE,
         "flag_part": FLAG_PART,
         "parts": game_parts,
+        "mounts": mounts(flags[FLAG_TYPE]),
         "meshes": mesh_records,
         "delivery_shell": {
             "meshes": {name: delivered[name] for name in sources},
@@ -521,7 +497,7 @@ def main():
             for name, low, high, garage in COLLISION_BOXES_M
         ],
     }
-    used = {material for mesh in mesh_records.values() if "kit" not in mesh for material in mesh["slots"].values()}
+    used = {material for mesh in mesh_records.values() for material in mesh["slots"].values()}
     missing = used - set(layout["material_instances"])
     if missing:
         raise SystemExit(f"Slots name instances the delivery does not have: {sorted(missing)}")
@@ -529,7 +505,7 @@ def main():
     with open(path, "w", encoding="utf-8", newline="\n") as file:
         json.dump(layout, file, indent=1)
         file.write("\n")
-    print(f"Wrote {path}: {len(layout['parts'])} parts, {len(mesh_records)} meshes, "
+    print(f"Wrote {path}: {len(layout['parts'])} parts, {len(layout['mounts'])} mounts, {len(mesh_records)} meshes, "
           f"{len(layout['material_instances'])} instances, {len(layout['textures'])} textures")
 
 

@@ -21,7 +21,8 @@ struct FRTSBuildingLightTickFunction : public FTickFunction
  * Every machine that draws: the night look of the buildings (#195). In the dark (URTSDayNightSubsystem::IsDark) every
  * registered building's lit windows and lamps glow at their night strength (ARTSBuilding::SetLightsNight), and of the
  * constructed ones with real lights at their lamps, the rts.Fx.BuildingLightMaxBuildings nearest a camera show them
- * (ARTSBuilding::ShowLights). By day every light is off and costs nothing. A dedicated server keeps none.
+ * (ARTSBuilding::ShowLights). By day every light is off and costs nothing. A dedicated server keeps none. It also makes
+ * each building's one LOD decision for its LODSwitchDistance (ARTSBuilding::SetForcedLOD, BUILDING_KIT.md option C2).
  */
 UCLASS()
 class WORLDDIVIDE_API URTSBuildingLightSubsystem : public UWorldSubsystem

@@ -7,6 +7,7 @@
 class UCurveTable;
 class UStaticMesh;
 class URTSFlagTypes;
+class URTSKitPieceData;
 class URTSUnitData;
 class URTSUpgradeData;
 
@@ -129,6 +130,24 @@ enum class ERTSBuildingLightType : uint8
 	Rect,
 };
 
+/** How a light of the shared building kit shines (docs/art/BUILDING_KIT.md, States). */
+UENUM(BlueprintType)
+enum class ERTSKitLightBehaviour : uint8
+{
+	Steady,
+	Flash,
+	Rotate,
+};
+
+/** What damage does to a kit piece's light (the state table of BUILDING_KIT.md). */
+UENUM(BlueprintType)
+enum class ERTSKitFaultResponse : uint8
+{
+	None,
+	Flicker,
+	Off,
+};
+
 /**
  * A real light of a building (#195), at one of its lamps: it only ever shines from a lamp or window the model has, never
  * from a point in the air. Non-shadow-casting and cosmetic; URTSBuildingLightSubsystem shows the steady ones in the dark,
@@ -195,6 +214,10 @@ struct FRTSBuildingLight
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
 	float BarnDoorLength = 20.f;
+
+	/** Steady for the building's own lights; a kit piece's light takes its piece's (RTSKit::Expand). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
+	ERTSKitLightBehaviour Behaviour = ERTSKitLightBehaviour::Steady;
 };
 
 /** A named point of a building's layout in its own frame, such as the garage's spawn and exit. */
@@ -208,6 +231,67 @@ struct FRTSBuildingSocket
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Socket")
 	FVector Location = FVector::ZeroVector;
+};
+
+/** A mount's yes or no that falls back to its piece's default when it does not say. */
+UENUM(BlueprintType)
+enum class ERTSKitOverride : uint8
+{
+	Default,
+	On,
+	Off,
+};
+
+/**
+ * A piece of the shared building kit mounted on a building (docs/art/BUILDING_KIT.md, Mounts): RTSKit::Expand turns it into
+ * a part, its light and its lens's per-instance data. Setup fills it from the building recipe's "mounts".
+ */
+USTRUCT(BlueprintType)
+struct FRTSKitMount
+{
+	GENERATED_BODY()
+
+	/** The part's name in the building, as Parts names theirs (FlagPart, FindPart); also its light's Fixture. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount")
+	FName Name;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount")
+	TObjectPtr<URTSKitPieceData> Piece;
+
+	/** A socket of the building (Sockets) the piece stands at; none to place it by Transform alone. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount")
+	FName Socket;
+
+	/** In the socket's frame, or the building's own without one, before MeshScale; its scale scales the piece. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount")
+	FTransform Transform;
+
+	/** The piece's mount point (URTSKitPieceData::MountPoints) that meets the building; none for its first. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount")
+	FName MountPoint;
+
+	/** The faction variant of the piece's materials; none for the building's faction. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount")
+	FName Variant;
+
+	/** Battery-backed: stays on, dimmed, on low power. Default takes the piece's bEmergencyDefault. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount")
+	ERTSKitOverride Emergency = ERTSKitOverride::Default;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount")
+	bool bOverrideFaultResponse = false;
+
+	/** What damage does to it, when bOverrideFaultResponse; else the piece's. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount", meta = (EditCondition = "bOverrideFaultResponse"))
+	ERTSKitFaultResponse FaultResponse = ERTSKitFaultResponse::None;
+
+	/** The lighting group of its light and lens; none for the piece's. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount")
+	FName Group;
+
+	/** The colour of an indicator's glow (09, 14); white for every other piece. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount")
+	FLinearColor IndicatorColor = FLinearColor::White;
 };
 
 /**
@@ -242,6 +326,17 @@ public:
 	/** The real lights at the building's lamps (#195). Empty for a building that only glows. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
 	TArray<FRTSBuildingLight> Lights;
+
+	/** The shared kit's pieces on the building (RTSKit::Expand makes their parts and lights). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
+	TArray<FRTSKitMount> Mounts;
+
+	/**
+	 * Beyond this many cm from the nearest camera the whole building draws its LOD1, shell, parts and kit pieces on the same
+	 * frame (BUILDING_KIT.md, option C2, URTSBuildingLightSubsystem); 0 leaves each mesh's LOD to the renderer.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual", meta = (ClampMin = "0"))
+	float LODSwitchDistance = 0.f;
 
 	/** The group of Lights the garage flashes while its door is not closed (URTSGarageComponent). */
 	static inline const FName GarageBeaconsGroup = TEXT("GarageBeacons");

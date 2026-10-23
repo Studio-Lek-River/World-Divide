@@ -4,6 +4,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Components/StaticMeshComponent.h"
 #include "Data/RTSBuildingData.h"
+#include "Data/RTSKitPieceData.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
@@ -90,8 +91,10 @@ void ARTSBuildingRuin::BuildMeshes()
 	MeshScale = BuildingData->MeshScale * FVector(1.f, 1.f, FMath::Max(ConstructionFraction, 0.05f));
 	Mesh->SetStaticMesh(BuildingData->Mesh);
 
-	// Each part on its own, without its motion or the flag: the ruin only lives a minute.
-	for (const FRTSBuildingPart& Data : BuildingData->Parts)
+	// Each part on its own, its mounted kit pieces too, without its motion or the flag: the ruin only lives a minute.
+	TArray<FRTSBuildingPart> Parts = BuildingData->Parts;
+	Parts.Append(RTSKit::Expand(*BuildingData).Parts);
+	for (const FRTSBuildingPart& Data : Parts)
 	{
 		if (!Data.Mesh || Data.Name == BuildingData->FlagPart)
 		{

@@ -500,18 +500,18 @@ USA_HQ_MASTERS = {
 }
 
 
-def log_building_budget(label, meshes, layout):
-    """Logs a building's triangles at LOD0 and LOD1 over every part that draws (each placement counts), its material
-    sections over the components it draws with (one per mesh several parts share, which draw instanced) and its switch
-    distance (#358)."""
+def log_building_budget(label, meshes, layout, mounted=()):
+    """Logs a building's triangles at LOD0 and LOD1 over every part that draws (each placement counts) and every mounted
+    kit piece (mounted, a mesh per mount), its material sections over the components it draws with (one per mesh several
+    parts share, which draw instanced) and its switch distance (#358)."""
     totals = [0, 0]
     sections = 0
-    for name, records in sorted(
-            {mesh: [p for p in layout["parts"] if p["mesh"] == mesh] for mesh in meshes}.items()):
-        mesh = meshes[name]
+    placements = [(meshes[name], len([p for p in layout["parts"] if p["mesh"] == name])) for name in sorted(meshes)]
+    placements += [(mesh, sum(1 for m in mounted if m == mesh)) for mesh in dict.fromkeys(mounted)]
+    for mesh, count in placements:
         for lod in (0, 1):
-            totals[lod] += len(records) * mesh.get_num_triangles(min(lod, mesh.get_num_lods() - 1))
-        sections += mesh.get_num_sections(0) if records else 0
+            totals[lod] += count * mesh.get_num_triangles(min(lod, mesh.get_num_lods() - 1))
+        sections += mesh.get_num_sections(0) if count else 0
     unreal.log(f"setup_testmap: {label} LOD0 {totals[0]} and LOD1 {totals[1]} triangles, {sections} material sections, "
                f"LOD1 from {layout['switch_distance'] / 100:.0f} m")
 
@@ -627,8 +627,8 @@ def make_kit(masters):
     kit_catalogue.json as SM_Kit_<Piece> (building_art.import_kit_mesh) and the generated DA_Kit_<Piece>
     (URTSKitPieceData) in KIT_DIR/<Category>, from the catalogue and the manifest kit_blender.py derived from it, its slots
     on the instances the catalogue names or its faction's variant set; the neutral set is built here on masters (by name,
-    make_building_masters). A piece the catalogue no longer has is deleted. Returns the meshes by catalogue id and
-    DA_FlagTypes."""
+    make_building_masters). A piece the catalogue no longer has is deleted. Returns the meshes and the data assets by
+    catalogue id, and DA_FlagTypes."""
     instances, flag_types = make_flags()
     for name, parent in sorted(KIT_NEUTRAL_VARIANTS.items()):
         instances[name] = plan_now(
@@ -641,7 +641,7 @@ def make_kit(masters):
     if sorted(p["id"] for p in catalogue) != sorted(manifest):
         raise RuntimeError(f"kit_manifest.json has {sorted(manifest)}, the catalogue {sorted(p['id'] for p in catalogue)}: "
                            "rerun Tools/Art/kit_blender.py")
-    meshes, kept = {}, set()
+    meshes, pieces, kept = {}, {}, set()
     for piece in catalogue:
         built = manifest[piece["id"]]
         if built["mesh"] != piece["mesh"] or built["slots"] != piece["slots"]:
@@ -662,6 +662,9 @@ def make_kit(masters):
                       file_hash(lod1) if lod1 else None, sorted((slot, object_path(m)) for slot, m in slots.items()),
                       built["bounds"], built["triangles"], KIT_SWITCH_DISTANCE, vehicle_art.SCREEN_MULTIPLE))
         meshes[piece["id"]] = mesh
+        # A waving piece (the flag) keeps waving until it has faded out (#351).
+        if "Flag" in piece["slots"] and piece.get("wpo_disable_distance", 0.0) < building_art.FLAG_PARAMETERS["FlagFadeEnd"]:
+            raise RuntimeError(f"kit_catalogue.json: {piece['id']}'s wpo_disable_distance is inside M_Flag_Cloth's fade")
 
         lens = built["lens_bounds"]
         mount_points = {}
@@ -673,7 +676,7 @@ def make_kit(masters):
         lens_bounds = unreal.Box(unreal.Vector(*lens[0]), unreal.Vector(*lens[1])) if lens else unreal.Box()
         lens_bounds.set_editor_property("is_valid", bool(lens))
         data = f"DA_Kit_{piece['mesh'][len('SM_Kit_'):]}"
-        plan_data_asset(data, directory, unreal.RTSKitPieceData, {
+        pieces[piece["id"]] = plan_data_asset(data, directory, unreal.RTSKitPieceData, {
             "id": piece["id"],
             "mesh": mesh,
             "class_": getattr(unreal.RTSKitClass, piece["class"]),
@@ -686,6 +689,7 @@ def make_kit(masters):
             "mount_points": mount_points,
             "budget_lod0": piece["budgets"]["lod0"],
             "budget_lod1": piece["budgets"]["lod1"],
+            "wpo_disable_distance": float(piece.get("wpo_disable_distance", 0.0)),
         })
         kept |= {f"{directory}/{piece['mesh']}", f"{directory}/{data}"}
 
@@ -697,7 +701,7 @@ def make_kit(masters):
                 continue
             stale.add(path)
             pending.append((path, ".uasset", True, lambda path=path: delete_asset(path)))
-    return meshes, flag_types
+    return meshes, pieces, flag_types
 
 
 def make_building_masters():
@@ -742,10 +746,12 @@ def make_usa_hq():
     building data properties: the architecture is Mesh at real size, every other mesh a part where the delivery placed
     it with the garage door closed, the collision boxes go around its blocks with the garage bay a box of its own, and
     the sockets give the garage's spawn and exit. The flag cloth and mast beacons (#351) are the shared kit's pieces
-    (make_kit, #389), which switch LODs by their own bounds until the building forces its LOD on them (#390); the flag flies the layout's flag from DA_FlagTypes, and the parts that turn have their motion."""
+    (make_kit, #389), mounted from the layout's "mounts" (#390), and the whole building switches to LOD1 at its switch
+    distance as one (LODSwitchDistance); the flag flies the layout's flag from DA_FlagTypes, and the parts that turn have
+    their motion."""
     layout = building_art.read_layout(os.path.join(USA_HQ_SOURCE_DIR, "usa_hq.json"))
     shared_masters = make_building_masters()
-    kit_meshes, flag_types = make_kit(shared_masters)
+    kit_meshes, kit_pieces, flag_types = make_kit(shared_masters)
     texture_dir, material_dir, mesh_dir = (f"{USA_HQ_DIR}/{folder}" for folder in ("Textures", "Materials", "Meshes"))
 
     # The coating is the shared masters' since #388.
@@ -792,11 +798,8 @@ def make_usa_hq():
     for record in layout["parts"]:
         placements.setdefault(record["mesh"], []).append(record)
 
-    # The kit's pieces (#389) are the kit's meshes, shared with every building.
-    meshes = {name: kit_meshes[record["kit"]] for name, record in layout["meshes"].items() if "kit" in record}
+    meshes = {}
     for name, record in sorted(layout["meshes"].items()):
-        if "kit" in record:
-            continue
         source = os.path.join(USA_HQ_SOURCE_DIR, *record["fbx"].split("/"))
         lod1 = os.path.join(USA_HQ_SOURCE_DIR, *record["lod1_fbx"].split("/")) if record.get("lod1_fbx") else None
         slots = {slot: instances[instance] for slot, instance in record["slots"].items()}
@@ -813,9 +816,12 @@ def make_usa_hq():
                       record["triangles"], record["lods"], building_box, [(p["location"], p["rotation"], p["scale"])
                                                                           for p in where],
                       layout["switch_distance"], vehicle_art.SCREEN_MULTIPLE))
-    log_building_budget("USA HQ", meshes, layout)
+    unknown = {m["piece"] for m in layout["mounts"]} - set(kit_pieces)
+    if unknown:
+        raise RuntimeError(f"usa_hq.json mounts pieces the kit catalogue does not have: {sorted(unknown)}")
+    log_building_budget("USA HQ", meshes, layout, [kit_meshes[m["piece"]] for m in layout["mounts"]])
     # Its own meshes only: the flag cloth and beacons it imported before the kit (#389) go too.
-    delete_stale_assets(mesh_dir, {name for name, record in layout["meshes"].items() if "kit" not in record})
+    delete_stale_assets(mesh_dir, set(layout["meshes"]))
     # The delivered flag's master and colour instances, which the shared cloth replaced (#351), and the generic masters and
     # their coating, which are shared since #388.
     delete_stale_assets(material_dir, set(masters) | set(instances))
@@ -848,10 +854,16 @@ def make_usa_hq():
         value.set_editor_property("motion", motion)
         return value
 
-    # The flag's wind fades out before its part stops moving it at all.
-    flag_part = next(p for p in layout["parts"] if p["name"] == layout["flag_part"])
-    if flag_part["wpo_disable_distance"] < building_art.FLAG_PARAMETERS["FlagFadeEnd"]:
-        raise RuntimeError("usa_hq.json: the flag's WPO disable distance is inside M_Flag_Cloth's fade")
+    def mount(record):
+        # A kit piece on the building (docs/art/BUILDING_KIT.md, Mounts): at its socket, if any, times its transform.
+        value = unreal.RTSKitMount()
+        value.set_editor_property("name", record["name"])
+        value.set_editor_property("piece", kit_pieces[record["piece"]])
+        value.set_editor_property("socket", record.get("socket") or "None")
+        location, (pitch, yaw, roll), scale = record.get("transform", [[0.0] * 3, [0.0] * 3, [1.0] * 3])
+        value.set_editor_property("transform", unreal.Transform(
+            unreal.Vector(*location), unreal.Rotator(roll=roll, pitch=pitch, yaw=yaw), unreal.Vector(*scale)))
+        return value
 
     def collision_box(record):
         value = unreal.RTSBuildingCollisionBox()
@@ -895,6 +907,8 @@ def make_usa_hq():
         "collision_boxes": [collision_box(b) for b in layout["collision_boxes"]],
         "sockets": [socket(name, location) for name, location in sorted(layout["sockets"].items())],
         "lights": [light(l) for l in layout["lights"]],
+        "mounts": [mount(m) for m in layout["mounts"]],
+        "lod_switch_distance": float(layout["switch_distance"]),
         # The delivered 24 s door cycle opens from 2 to 10 s; the game plays that in GarageDoorSeconds (#192).
         "garage_door_motion": door_motion,
         "garage_door_open_start": 2.0,

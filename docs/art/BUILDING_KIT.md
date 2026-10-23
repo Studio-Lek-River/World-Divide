@@ -164,27 +164,38 @@ A building mounts pieces with `FRTSKitMount` entries in `URTSBuildingData::Mount
 
 | Field | Meaning |
 |---|---|
+| `Name` | the part's name in the building (`FlagPart`, `FindPart`), and its light's `Fixture` |
 | `Piece` | the `DA_Kit_<Piece>` |
-| `Socket` *or* `Transform` | a building socket by name, or a transform in the building's frame |
+| `Socket` | a building socket by name; none to place the piece by `Transform` alone |
+| `Transform` | in the socket's frame, or the building's without one; its scale scales the piece |
+| `MountPoint` | the piece's mount point that meets that frame; none for its first |
 | `Variant` | faction variant; defaults to the building's faction |
-| `Emergency` | battery-backed: stays on, dimmed, on low power |
-| `FaultResponse` | overrides the piece's default |
+| `Emergency` | battery-backed: stays on, dimmed, on low power; `Default` takes the piece's `emergency_default` |
+| `FaultResponse` | overrides the piece's default (`bOverrideFaultResponse`) |
+| `Group` | overrides the piece's light group, for its light and its lens |
 | `IndicatorColor` | the colour of 09 and 14 |
 
-The building's recipe JSON has **one line per mount**, and setup fills `Mounts` in:
+The building's recipe JSON has **one line per mount**, and setup fills `Mounts` in. `transform` is location, rotation
+(pitch, yaw, roll) and scale:
 
 ```json
 "mounts": [
-  {"piece": "lighting/03_EntranceLight", "socket": "EntranceDoor", "emergency": true},
-  {"piece": "lighting/02_CageWallLamp", "transform": [[1210, -640, 420], [0, 0, 90]], "fault": "Flicker"},
-  {"piece": "lighting/12_MastBeaconSingle", "socket": "MastTipCore"}
+  {"name": "EntranceLight", "piece": "lighting/03_EntranceLight", "socket": "EntranceDoor", "emergency": true},
+  {"name": "BayWall", "piece": "lighting/02_CageWallLamp", "transform": [[1210, -640, 420], [0, 90, 0], [1, 1, 1]], "fault": "Flicker"},
+  {"name": "Beacon_MastTipCore", "piece": "lighting/12_MastBeaconSingle", "socket": "MastTipCore", "transform": [[0, 0, 0], [0, 0, 0], [1.75, 1.75, 1.75]]}
 ]
 ```
 
+The HQ mounts its two mast beacons and its flag this way since M7.00-05 (#390); `emergency`, `fault`, `group` and
+`color` are read by setup when the first piece that needs them is mounted. A piece that waves (the flag) carries its
+`wpo_disable_distance` in the catalogue.
+
 `RTSKit::Expand(BuildingData)` turns the mounts into parts, lights and per-instance data, a pure function: building ×
 mount × the light's transform in the fixture frame, with `Fixture` filled in and group and behaviour assigned.
-`ApplyParts` and the light creation use the result through their existing route. **Mounting sets the mesh, its glow,
-the light's position, direction, intensity, radius and behaviour with no manual step.**
+`ApplyParts` and the light creation use the result through their existing route; every mounted piece draws through an
+instanced component, even alone, and identical pieces share one. A mount that cannot be placed (no piece, an unknown socket
+or mount point) is logged and left out. **Mounting sets the mesh, its glow, the light's position, direction, intensity,
+radius and behaviour with no manual step.** `WorldDivide.Buildings.KitMount` tests it.
 
 Lens appearance per instance (on/level, group, fault phase, flash phase, indicator colour) is per-instance custom data
 read by `M_Kit_Lens`, written with `SetCustomData` and one `MarkRenderInstancesDirty`; the night state stays component
@@ -411,7 +422,9 @@ What the renderer does, measured with `r.StaticMeshLODDistanceScale` 1.25, 1.5 a
   shows the same; the `far_450m` shot of the production HQ has them too.
 
 **Chosen: C2.** The building decides its LOD once on the game thread (the light subsystem's tick already visits every
-building) and forces it on all its meshes, shell, parts and kit ISMs, with `SetForcedLodModel`, only when it changes. All
+building) and forces it on all its meshes, shell, parts and kit ISMs, with `SetForcedLodModel`, only when it changes.
+Built in M7.00-05 (#390): `URTSBuildingData::LODSwitchDistance` (the HQ's 260 m, from its layout's `switch_distance`; 0
+leaves the renderer to pick) against the nearest camera, `ARTSBuilding::SetForcedLOD`. All
 meshes switch on the same frame, at exactly the distance the spec names, and a kit mesh is shared by every building with
 no copy and no `cover_building`. Cost: a forced LOD rebuilds each component's scene proxy once per switch, per building,
 which happens only as the camera crosses 260 m; per-instance data survives it.

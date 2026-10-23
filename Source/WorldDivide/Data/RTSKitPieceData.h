@@ -19,28 +19,11 @@ enum class ERTSKitClass : uint8
 };
 
 UENUM(BlueprintType)
-enum class ERTSKitLightBehaviour : uint8
-{
-	Steady,
-	Flash,
-	Rotate,
-};
-
-UENUM(BlueprintType)
 enum class ERTSKitLightPriority : uint8
 {
 	Primary,
 	/** Drawn only at High scalability and above. */
 	Secondary,
-};
-
-/** What damage does to a piece's light (the state table of BUILDING_KIT.md). */
-UENUM(BlueprintType)
-enum class ERTSKitFaultResponse : uint8
-{
-	None,
-	Flicker,
-	Off,
 };
 
 /**
@@ -154,11 +137,44 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit")
 	int32 BudgetLOD1 = 0;
+
+	/** Its material stops moving it (the flag's wind) farther than this from the camera, in cm; 0 never. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
+	float WPODisableDistance = 0.f;
+
+	/** Small pieces cast no shadow (BUILDING_KIT.md, Visual quality). */
+	bool CastsShadow() const { return Class != ERTSKitClass::S; }
 };
 
-/** The class limits of BUILDING_KIT.md, starting hypotheses that Gate A measures. */
+/** A building's mounts (URTSBuildingData::Mounts) as what the building draws: RTSKit::Expand. */
+struct FRTSKitExpansion
+{
+	/** One part per mount, in the mounts' order; ARTSBuilding always draws them instanced. */
+	TArray<FRTSBuildingPart> Parts;
+
+	/** The real lights of the mounted pieces that have one, at their lens, Fixture the mount's name. */
+	TArray<FRTSBuildingLight> Lights;
+
+	/** RTSKitLensData::Floats per part, in Parts' order: its lens's starting state. */
+	TArray<float> InstanceData;
+
+	/** A mount it could not place (no piece, an unknown socket or mount point), which it leaves out. */
+	TArray<FString> Errors;
+};
+
 namespace RTSKit
 {
+	/**
+	 * Turns Data's mounts into parts, lights and per-instance lens data, a pure function (BUILDING_KIT.md, Mounts): the piece
+	 * stands at its socket times the mount's transform, its mount point on that frame, and its light (FRTSKitLight, in the
+	 * piece's frame) at its lens, with the mount's group or the piece's.
+	 */
+	WORLDDIVIDE_API FRTSKitExpansion Expand(const URTSBuildingData& Data);
+
+	/** The building frame Mount puts its piece's origin in, or false with Error set when it cannot be placed. */
+	WORLDDIVIDE_API bool GetMountFrame(const URTSBuildingData& Data, const FRTSKitMount& Mount, FTransform& OutFrame, FString& OutError);
+
+	/** The class limits of BUILDING_KIT.md, starting hypotheses that Gate A measures. */
 	struct FClassLimits
 	{
 		int32 LOD0;

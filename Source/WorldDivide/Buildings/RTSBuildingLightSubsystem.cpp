@@ -4,6 +4,7 @@
 #include "Buildings/RTSBuilding.h"
 #include "Components/StaticMeshComponent.h"
 #include "Core/RTSDayNightSubsystem.h"
+#include "Data/RTSBuildingData.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
 #include "HAL/IConsoleManager.h"
@@ -82,6 +83,14 @@ void URTSBuildingLightSubsystem::UpdateAll(float DeltaSeconds)
 		{
 			Building.SetLightsNight(bDark);
 			Entry.bNight = bDark;
+		}
+		// One LOD decision for the whole building, shell, parts and kit pieces, so a kit mesh shared between buildings
+		// switches with each of them (BUILDING_KIT.md, option C2).
+		const URTSBuildingData* Data = Building.GetBuildingData();
+		if (Data && Data->LODSwitchDistance > 0.f)
+		{
+			const float Distance = RTSNearestToView::GetDistance(CameraLocations, ViewLocationOverride, Building.GetActorLocation());
+			Building.SetForcedLOD(Distance > Data->LODSwitchDistance ? 1 : 0);
 		}
 		if (bDark && Building.IsConstructed() && !Building.GetLightComponents().IsEmpty())
 		{

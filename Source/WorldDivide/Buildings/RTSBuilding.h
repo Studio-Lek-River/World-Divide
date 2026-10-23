@@ -19,6 +19,7 @@ class URTSUnitData;
 class URTSWeaponComponent;
 struct FRTSBuildingFootprint;
 struct FRTSBuildingLight;
+struct FRTSKitExpansion;
 struct FNavAgentProperties;
 
 /**
@@ -104,6 +105,20 @@ public:
 	bool FindPart(FName Name, UStaticMeshComponent*& OutComponent, int32& OutInstance) const;
 
 	/**
+	 * Writes the lens state (RTSKitLensData::Floats values) of the mounted kit piece Part to its instance alone, with one
+	 * update of its component's instances. False when Part is not a mounted piece.
+	 */
+	bool SetKitInstanceData(FName Part, TConstArrayView<float> Values);
+
+	/**
+	 * Draws every mesh of the building with LODs, shell, parts and kit pieces, at LOD, or lets the renderer pick again for
+	 * INDEX_NONE: one decision for the whole building (BUILDING_KIT.md, option C2), from URTSBuildingLightSubsystem.
+	 * Touches the components only when it changes.
+	 */
+	void SetForcedLOD(int32 LOD);
+	int32 GetForcedLOD() const { return ForcedLOD; }
+
+	/**
 	 * How fast the parts that turn on their own run (URTSBuildingMotionSubsystem, #351): 1 at their data's rates, 0 stopped
 	 * where they are, between them slower. Set by URTSBuildingStateComponent (#196), which stops the fans and radar on low power;
 	 * this machine only, it does not replicate.
@@ -145,9 +160,10 @@ public:
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
 
 	/**
-	 * The meshes drawn with Mesh for a building of several (URTSBuildingData::Parts), in the order of each mesh's first part:
-	 * one component per part, or one UInstancedStaticMeshComponent for the parts that share a mesh and how it draws (the
-	 * HQ's door sections), an instance per part in the data's order (#358).
+	 * The meshes drawn with Mesh for a building of several (URTSBuildingData::Parts, then its mounted kit pieces), in the
+	 * order of each mesh's first part: one component per part, or one UInstancedStaticMeshComponent for the parts that share
+	 * a mesh and how it draws (the HQ's door sections), an instance per part in the data's order (#358). Kit pieces always
+	 * draw instanced, even alone.
 	 */
 	const TArray<TObjectPtr<UStaticMeshComponent>>& GetPartComponents() const { return PartComponents; }
 
@@ -245,13 +261,17 @@ private:
 	void ApplyTeamColor();
 
 	/**
-	 * Makes the data's Parts, replacing any made before, attached to Mesh so they rise and scale with it; the flag part flies
-	 * the data's FlagType, and the parts that turn on their own go to URTSBuildingMotionSubsystem.
+	 * Makes the data's Parts and its mounted kit pieces (Kit), replacing any made before, attached to Mesh so they rise and
+	 * scale with it; the flag part flies the data's FlagType, and the parts that turn on their own go to
+	 * URTSBuildingMotionSubsystem.
 	 */
-	void ApplyParts();
+	void ApplyParts(const FRTSKitExpansion& Kit);
 
-	/** Makes the data's Lights but the garage's beacons, replacing any made before, and registers with URTSBuildingLightSubsystem. */
-	void ApplyLights();
+	/**
+	 * Makes the data's Lights and its kit pieces' (Kit) but the garage's beacons, replacing any made before, and registers
+	 * with URTSBuildingLightSubsystem.
+	 */
+	void ApplyLights(const FRTSKitExpansion& Kit);
 
 	/** Writes the lighting groups and the night (RTSPrimitiveData::LightWindows..LightNight) to Mesh and every part. */
 	void ApplyLightData();
@@ -353,4 +373,7 @@ private:
 	TArray<TWeakObjectPtr<ARTSUnit>> Pads;
 
 	float EquipmentMotionScale = 1.f;
+
+	/** The LOD SetForcedLOD forces on every mesh, INDEX_NONE while the renderer picks. */
+	int32 ForcedLOD = INDEX_NONE;
 };

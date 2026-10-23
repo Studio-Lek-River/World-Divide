@@ -142,6 +142,9 @@ bool FRTSKitArtTest::RunTest(const FString& Parameters)
 		TestEqual(*FString::Printf(TEXT("%s: its faction"), *Id), Data->Faction, FName(Piece->GetStringField(TEXT("faction"))));
 		TestEqual(*FString::Printf(TEXT("%s: its emergency default"), *Id), Data->bEmergencyDefault, Piece->GetBoolField(TEXT("emergency_default")));
 		TestEqual(*FString::Printf(TEXT("%s: its fault response"), *Id), EnumName(Data->FaultResponse), Piece->GetStringField(TEXT("fault_response")));
+		double WPODisableDistance = 0.0;
+		Piece->TryGetNumberField(TEXT("wpo_disable_distance"), WPODisableDistance);
+		TestEqual(*FString::Printf(TEXT("%s: its WPO disable distance"), *Id), Data->WPODisableDistance, static_cast<float>(WPODisableDistance));
 		const TSharedPtr<FJsonObject>& Budgets = Piece->GetObjectField(TEXT("budgets"));
 		TestEqual(*FString::Printf(TEXT("%s: its LOD0 budget"), *Id), Data->BudgetLOD0, static_cast<int32>(Budgets->GetNumberField(TEXT("lod0"))));
 		TestEqual(*FString::Printf(TEXT("%s: its LOD1 budget"), *Id), Data->BudgetLOD1, static_cast<int32>(Budgets->GetNumberField(TEXT("lod1"))));

@@ -6,6 +6,7 @@
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSFlagTypes.h"
+#include "Data/RTSKitPieceData.h"
 #include "Data/RTSUnitData.h"
 #include "Dom/JsonObject.h"
 #include "Engine/StaticMesh.h"
@@ -260,13 +261,20 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 	}
 	TestTrue(TEXT("It is at real size"), Data->MeshScale.Equals(FVector::OneVector));
 	TestEqual(TEXT("It stands on 38 x 56 cells"), Data->Footprint, FIntPoint(38, 56));
+	TestEqual(TEXT("It switches to LOD1 as one at 260 m (#390)"), static_cast<double>(Data->LODSwitchDistance), HeadquartersSwitchDistance);
 	TestTrue(*FString::Printf(TEXT("The architecture is %s cm"), *Data->Mesh->GetBoundingBox().GetSize().ToString()),
 		Data->Mesh->GetBoundingBox().GetSize().Equals(HeadquartersSize, 2.0));
 	TestEqual(TEXT("Every other mesh of the layout is a part"), Data->Parts.Num() + 1, Layout->GetArrayField(TEXT("parts")).Num());
+	// And every mount of the layout a mounted kit piece (#390), which the building draws as parts of its own.
+	const FRTSKitExpansion Kit = RTSKit::Expand(*Data);
+	TestEqual(TEXT("Every mount of the layout is mounted"), Data->Mounts.Num(), Layout->GetArrayField(TEXT("mounts")).Num());
+	TestTrue(*FString::Printf(TEXT("Every mount finds its place: %s"), *FString::Join(Kit.Errors, TEXT("; "))), Kit.Errors.IsEmpty());
+	TArray<FRTSBuildingPart> Parts = Data->Parts;
+	Parts.Append(Kit.Parts);
 
 	// Every mesh the HQ draws, once per time it is drawn.
 	TArray<const UStaticMesh*> Drawn = { Data->Mesh };
-	for (const FRTSBuildingPart& Part : Data->Parts)
+	for (const FRTSBuildingPart& Part : Parts)
 	{
 		TestNotNull(*FString::Printf(TEXT("Part %s has a mesh"), *Part.Name.ToString()), Part.Mesh.Get());
 		Drawn.Add(Part.Mesh);
@@ -274,7 +282,7 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 	// Where each mesh is drawn in the building's frame, the shell where the building stands.
 	TMultiMap<const UStaticMesh*, FTransform> Placements;
 	Placements.Add(Data->Mesh, FTransform::Identity);
-	for (const FRTSBuildingPart& Part : Data->Parts)
+	for (const FRTSBuildingPart& Part : Parts)
 	{
 		Placements.Add(Part.Mesh, Part.Transform);
 	}
@@ -300,6 +308,12 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		}
 		Checked.Add(Mesh);
 		Sections += RenderData->LODResources[0].Sections.Num();
+		// The kit's pieces are shared by every building and keep their own bounds and budgets (#389);
+		// WorldDivide.Art.Kit checks them.
+		if (Mesh->GetPathName().StartsWith(KitDir))
+		{
+			continue;
+		}
 
 		const TSharedPtr<FJsonObject>* Record = nullptr;
 		if (!TestTrue(*FString::Printf(TEXT("%s is in the layout"), *Mesh->GetName()), Meshes->TryGetObjectField(Mesh->GetName(), Record)))
@@ -328,19 +342,17 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 			Budgets.IsEmpty() ? 1 : 2);
 
 		// One switch for the whole building: the mesh's bounds cover the building's from every place it is drawn, so each
-		// part measures its LOD from about the building's middle, and LOD1 comes in at 260 m for those bounds. The kit's
-		// pieces are shared by every building and keep their own bounds (#389); WorldDivide.Art.Kit checks them.
-		const bool bKit = Mesh->GetPathName().StartsWith(KitDir);
+		// part measures its LOD from about the building's middle, and LOD1 comes in at 260 m for those bounds.
 		TArray<FTransform> Where;
 		Placements.MultiFind(Mesh, Where);
-		for (const FTransform& Transform : bKit ? TArray<FTransform>() : Where)
+		for (const FTransform& Transform : Where)
 		{
 			TestTrue(*FString::Printf(TEXT("%s's bounds cover the building's"), *Mesh->GetName()),
 				Mesh->GetBounds().GetBox().TransformBy(Transform).IsInside(Building.ExpandBy(-1.0)));
 		}
 		// A mesh several parts draw is instanced, which the GPU measures by its box's half diagonal.
 		const double Radius = Where.Num() > 1 ? Mesh->GetBounds().BoxExtent.Size() : Mesh->GetBounds().SphereRadius;
-		if (Mesh->GetNumLODs() > 1 && !bKit)
+		if (Mesh->GetNumLODs() > 1)
 		{
 			const float ScreenSize = RenderData->ScreenSize[1].GetValue();
 			const double Wanted = 2.0 * RTSLensScreenMultiple * Radius / HeadquartersSwitchDistance;
@@ -423,7 +435,7 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		ReadsPrimitiveData(Beacon, TEXT("Operational"), RTSPrimitiveData::LampOn) && Beacon->GetEditorOnlyData()->EmissiveColor.IsConnected());
 	// The beacons share one instanced component: without the usage a game draws them in the default material (#379).
 	TestTrue(TEXT("The beacon master can draw on instanced meshes"), Beacon && Beacon->bUsedWithInstancedStaticMeshes);
-	const TArray<FRTSBuildingPart> Beacons = Data->Parts.FilterByPredicate([](const FRTSBuildingPart& P)
+	const TArray<FRTSBuildingPart> Beacons = Parts.FilterByPredicate([](const FRTSBuildingPart& P)
 	{
 		return P.Name.ToString().StartsWith(HeadquartersBeaconPrefix);
 	});
@@ -454,7 +466,7 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		}
 		TestTrue(TEXT("The HQ flies a flag there is"), Data->FlagTypes == FlagTypes && FlagTypes->Find(Data->FlagType));
 	}
-	const FRTSBuildingPart* FlagPart = Data->Parts.FindByPredicate([Data](const FRTSBuildingPart& P) { return P.Name == Data->FlagPart; });
+	const FRTSBuildingPart* FlagPart = Parts.FindByPredicate([Data](const FRTSBuildingPart& P) { return P.Name == Data->FlagPart; });
 	if (TestNotNull(TEXT("The HQ has its flag part"), FlagPart))
 	{
 		TestTrue(TEXT("The flag stops waving past a distance"), FlagPart->WPODisableDistance > 0.f);

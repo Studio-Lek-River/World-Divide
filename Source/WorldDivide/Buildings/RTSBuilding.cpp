@@ -22,8 +22,10 @@
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSAircraftData.h"
 #include "Data/RTSFlagTypes.h"
+#include "Data/RTSKitPieceData.h"
 #include "Data/RTSUnitData.h"
 #include "Economy/RTSHarvesterComponent.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "NavAreas/NavArea_Null.h"
@@ -489,6 +491,40 @@ void ARTSBuilding::DeliverUnit(URTSUnitData& Data)
 	}
 }
 
+bool ARTSBuilding::SetKitInstanceData(FName Part, TConstArrayView<float> Values)
+{
+	UStaticMeshComponent* Component = nullptr;
+	int32 Instance = INDEX_NONE;
+	UInstancedStaticMeshComponent* Instanced = FindPart(Part, Component, Instance) ? Cast<UInstancedStaticMeshComponent>(Component) : nullptr;
+	if (!Instanced || Instance == INDEX_NONE || Instanced->NumCustomDataFloats != RTSKitLensData::Floats
+		|| Values.Num() != RTSKitLensData::Floats)
+	{
+		return false;
+	}
+	// Per instance, then one update of the instances: never a render state rebuild (BUILDING_KIT.md, #387).
+	Instanced->SetCustomData(Instance, Values);
+	Instanced->MarkRenderInstancesDirty();
+	return true;
+}
+
+void ARTSBuilding::SetForcedLOD(int32 LOD)
+{
+	if (ForcedLOD == LOD)
+	{
+		return;
+	}
+	ForcedLOD = LOD;
+	// ForcedLodModel counts from 1; 0 lets the renderer choose. A mesh of one LOD keeps it.
+	const int32 Model = LOD == INDEX_NONE ? 0 : LOD + 1;
+	for (UStaticMeshComponent* Component : TInlineComponentArray<UStaticMeshComponent*>(this))
+	{
+		if (Component->GetStaticMesh() && Component->GetStaticMesh()->GetNumLODs() > 1 && Component->ForcedLodModel != Model)
+		{
+			Component->SetForcedLodModel(Model);
+		}
+	}
+}
+
 bool ARTSBuilding::FindPart(FName Name, UStaticMeshComponent*& OutComponent, int32& OutInstance) const
 {
 	const TPair<int32, int32>* Found = PartIndex.Find(Name);
@@ -618,8 +654,14 @@ void ARTSBuilding::ApplyBuildingData()
 	float MeshHeight = 0.f;
 	RTSBuildPlacement::GetMeshPlacement(*BuildingData, MeshBaseOffset, MeshHeight);
 	Mesh->SetStaticMesh(BuildingData->Mesh);
-	ApplyParts();
-	ApplyLights();
+	ForcedLOD = INDEX_NONE;
+	const FRTSKitExpansion Kit = RTSKit::Expand(*BuildingData);
+	for (const FString& Error : Kit.Errors)
+	{
+		UE_LOG(LogWorldDivide, Warning, TEXT("%s: %s"), *GetName(), *Error);
+	}
+	ApplyParts(Kit);
+	ApplyLights(Kit);
 	ApplyCollision(MeshHeight > 0.f ? MeshHeight : DefaultHeight);
 	GarageComponent->ApplyBuildingData();
 
@@ -627,7 +669,7 @@ void ARTSBuilding::ApplyBuildingData()
 	ApplyTeamColor();
 }
 
-void ARTSBuilding::ApplyParts()
+void ARTSBuilding::ApplyParts(const FRTSKitExpansion& Kit)
 {
 	for (UStaticMeshComponent* Part : PartComponents)
 	{
@@ -644,19 +686,35 @@ void ARTSBuilding::ApplyParts()
 	const FRTSFlagType* Flag = BuildingData->FlagTypes && !BuildingData->FlagPart.IsNone()
 		? BuildingData->FlagTypes->Find(BuildingData->FlagType) : nullptr;
 
-	// Parts that share a mesh and how it draws (the HQ's sixteen door sections) draw as one instanced component, one
-	// instance per part in the data's order: one draw per material section instead of one per part (#358). A part that turns
-	// on its own and the flag draw on their own.
+	// The data's parts, then the mounted kit pieces (RTSKit::Expand), which always draw instanced with their lens's
+	// per-instance data (BUILDING_KIT.md), even alone.
+	const int32 OwnParts = BuildingData->Parts.Num();
+	TArray<const FRTSBuildingPart*> Parts;
+	Parts.Reserve(OwnParts + Kit.Parts.Num());
+	for (const FRTSBuildingPart& Part : BuildingData->Parts)
+	{
+		Parts.Add(&Part);
+	}
+	for (const FRTSBuildingPart& Part : Kit.Parts)
+	{
+		Parts.Add(&Part);
+	}
+
+	// Parts that share a mesh and how it draws (the HQ's sixteen door sections, its two mast beacons) draw as one instanced
+	// component, one instance per part in the data's order: one draw per material section instead of one per part (#358). A
+	// part that turns on its own and the flag draw on their own.
 	auto Shares = [this](const FRTSBuildingPart& Part)
 	{
 		return !Part.Motion.IsAnimated() && Part.Name != BuildingData->FlagPart;
 	};
-	auto SameDraw = [&Shares](const FRTSBuildingPart& A, const FRTSBuildingPart& B)
+	auto SameDraw = [&Shares, &Parts, OwnParts](int32 IndexA, int32 IndexB)
 	{
-		return Shares(A) && Shares(B) && A.Mesh == B.Mesh && A.bCastShadow == B.bCastShadow && A.BoundsScale == B.BoundsScale
-			&& A.MaxDrawDistance == B.MaxDrawDistance && A.WPODisableDistance == B.WPODisableDistance;
+		const FRTSBuildingPart& A = *Parts[IndexA];
+		const FRTSBuildingPart& B = *Parts[IndexB];
+		return (IndexA >= OwnParts) == (IndexB >= OwnParts) && Shares(A) && Shares(B) && A.Mesh == B.Mesh
+			&& A.bCastShadow == B.bCastShadow && A.BoundsScale == B.BoundsScale && A.MaxDrawDistance == B.MaxDrawDistance
+			&& A.WPODisableDistance == B.WPODisableDistance;
 	};
-	const TArray<FRTSBuildingPart>& Parts = BuildingData->Parts;
 	TArray<bool> Done;
 	Done.Init(false, Parts.Num());
 	for (int32 Index = 0; Index < Parts.Num(); ++Index)
@@ -665,16 +723,19 @@ void ARTSBuilding::ApplyParts()
 		{
 			continue;
 		}
-		const FRTSBuildingPart& Data = Parts[Index];
+		const FRTSBuildingPart& Data = *Parts[Index];
+		const bool bKit = Index >= OwnParts;
 		TArray<FTransform> Instances;
 		TArray<FName> Names;
+		TArray<int32> KitIndices;
 		for (int32 Other = Index; Other < Parts.Num(); ++Other)
 		{
-			if (!Done[Other] && (Other == Index || SameDraw(Data, Parts[Other])))
+			if (!Done[Other] && (Other == Index || SameDraw(Index, Other)))
 			{
 				Done[Other] = true;
-				Instances.Add(Parts[Other].Transform);
-				Names.Add(Parts[Other].Name);
+				Instances.Add(Parts[Other]->Transform);
+				Names.Add(Parts[Other]->Name);
+				KitIndices.Add(Other - OwnParts);
 			}
 		}
 		const bool bFlag = Flag && Data.Name == BuildingData->FlagPart && Instances.Num() == 1;
@@ -687,10 +748,24 @@ void ARTSBuilding::ApplyParts()
 
 		// Cosmetic, like Mesh: the collision boxes alone block and are picked.
 		UStaticMeshComponent* Part = nullptr;
-		if (Instances.Num() > 1)
+		const bool bInstanced = bKit || Instances.Num() > 1;
+		if (bInstanced)
 		{
 			UInstancedStaticMeshComponent* Instanced = NewObject<UInstancedStaticMeshComponent>(this, NAME_None, RF_Transient);
+			if (bKit)
+			{
+				// Before the instances: setting the count resets their data.
+				Instanced->SetNumCustomDataFloats(RTSKitLensData::Floats);
+			}
 			Instanced->AddInstances(Instances, /*bShouldReturnIndices*/ false);
+			if (bKit)
+			{
+				for (int32 Instance = 0; Instance < KitIndices.Num(); ++Instance)
+				{
+					Instanced->SetCustomData(Instance, MakeArrayView(Kit.InstanceData).Slice(
+						KitIndices[Instance] * RTSKitLensData::Floats, RTSKitLensData::Floats));
+				}
+			}
 			Part = Instanced;
 		}
 		else
@@ -715,7 +790,7 @@ void ARTSBuilding::ApplyParts()
 		Part->RegisterComponent();
 		for (int32 Instance = 0; Instance < Names.Num(); ++Instance)
 		{
-			PartIndex.Add(Names[Instance], { PartComponents.Num(), Instances.Num() > 1 ? Instance : INDEX_NONE });
+			PartIndex.Add(Names[Instance], { PartComponents.Num(), bInstanced ? Instance : INDEX_NONE });
 		}
 		PartComponents.Add(Part);
 	}
@@ -882,7 +957,7 @@ FName ARTSBuilding::GetLightGroupTag(FName Group)
 	return FName(*(TEXT("Light.") + Group.ToString()));
 }
 
-void ARTSBuilding::ApplyLights()
+void ARTSBuilding::ApplyLights(const FRTSKitExpansion& Kit)
 {
 	for (ULocalLightComponent* Light : LightComponents)
 	{
@@ -893,13 +968,17 @@ void ARTSBuilding::ApplyLights()
 	}
 	LightComponents.Reset();
 	bLightsShown = false;
-	for (const FRTSBuildingLight& Data : BuildingData->Lights)
+	const TArray<FRTSBuildingLight>* Sources[] = { &BuildingData->Lights, &Kit.Lights };
+	for (const TArray<FRTSBuildingLight>* Lights : Sources)
 	{
-		if (Data.Group != URTSBuildingData::GarageBeaconsGroup)
+		for (const FRTSBuildingLight& Data : *Lights)
 		{
-			if (ULocalLightComponent* Light = CreateLight(Data))
+			if (Data.Group != URTSBuildingData::GarageBeaconsGroup)
 			{
-				LightComponents.Add(Light);
+				if (ULocalLightComponent* Light = CreateLight(Data))
+				{
+					LightComponents.Add(Light);
+				}
 			}
 		}
 	}

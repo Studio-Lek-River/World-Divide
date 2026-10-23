@@ -65,56 +65,6 @@
    "motion": null
   },
   {
-   "name": "Beacon_MastTipCore",
-   "mesh": "SM_Kit_MastBeaconSingle",
-   "location": [
-    -898.7123,
-    0.0,
-    2800.0
-   ],
-   "rotation": [
-    0.0,
-    0.0,
-    0.0
-   ],
-   "scale": [
-    1.75,
-    1.75,
-    1.75
-   ],
-   "movable": false,
-   "cast_shadow": false,
-   "bounds_scale": 1.0,
-   "max_draw_distance": 0.0,
-   "wpo_disable_distance": 0.0,
-   "motion": null
-  },
-  {
-   "name": "Beacon_MastTipEast",
-   "mesh": "SM_Kit_MastBeaconSingle",
-   "location": [
-    -1090.0,
-    -1995.0001,
-    2400.0
-   ],
-   "rotation": [
-    0.0,
-    0.0,
-    0.0
-   ],
-   "scale": [
-    1.75,
-    1.75,
-    1.75
-   ],
-   "movable": false,
-   "cast_shadow": false,
-   "bounds_scale": 1.0,
-   "max_draw_distance": 0.0,
-   "wpo_disable_distance": 0.0,
-   "motion": null
-  },
-  {
    "name": "DoorBottomSeal",
    "mesh": "SM_HQ20_DoorBottomSeal",
    "location": [
@@ -734,31 +684,6 @@
    "motion": null
   },
   {
-   "name": "NationalFlag",
-   "mesh": "SM_Kit_FlagCloth",
-   "location": [
-    1150.0,
-    10.5,
-    690.0
-   ],
-   "rotation": [
-    0.0,
-    90.0,
-    0.0
-   ],
-   "scale": [
-    4.18,
-    1.0,
-    2.2
-   ],
-   "movable": false,
-   "cast_shadow": true,
-   "bounds_scale": 1.0,
-   "max_draw_distance": 0.0,
-   "wpo_disable_distance": 12500.0,
-   "motion": null
-  },
-  {
    "name": "Radar_Azimuth",
    "mesh": "SM_HQ19_Radar_Azimuth",
    "location": [
@@ -1021,6 +946,73 @@
     "follow_part": "WingDish_Azimuth",
     "rate_jitter": 0.1
    }
+  }
+ ],
+ "mounts": [
+  {
+   "name": "Beacon_MastTipCore",
+   "piece": "lighting/12_MastBeaconSingle",
+   "socket": "MastTipCore",
+   "transform": [
+    [
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     1.75,
+     1.75,
+     1.75
+    ]
+   ]
+  },
+  {
+   "name": "Beacon_MastTipEast",
+   "piece": "lighting/12_MastBeaconSingle",
+   "socket": "MastTipEast",
+   "transform": [
+    [
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     1.75,
+     1.75,
+     1.75
+    ]
+   ]
+  },
+  {
+   "name": "NationalFlag",
+   "piece": "identity/01_FlagCloth",
+   "transform": [
+    [
+     1150.0,
+     10.5,
+     690.0
+    ],
+    [
+     0.0,
+     90.0,
+     0.0
+    ],
+    [
+     4.18,
+     1.0,
+     2.2
+    ]
+   ]
   }
  ],
  "meshes": {
@@ -1433,43 +1425,6 @@
     5780,
     2700
    ]
-  },
-  "SM_Kit_FlagCloth": {
-   "kit": "identity/01_FlagCloth",
-   "triangles": 1920,
-   "bounds": [
-    [
-     0.0,
-     0.0,
-     -100.0
-    ],
-    [
-     100.0,
-     0.0,
-     0.0
-    ]
-   ],
-   "lods": [
-    1920,
-    120
-   ]
-  },
-  "SM_Kit_MastBeaconSingle": {
-   "kit": "lighting/12_MastBeaconSingle",
-   "triangles": 234,
-   "bounds": [
-    [
-     -22.0,
-     -22.0,
-     0.0
-    ],
-    [
-     22.0,
-     22.0,
-     56.0
-    ]
-   ],
-   "lods": []
   }
  },
  "delivery_shell": {
