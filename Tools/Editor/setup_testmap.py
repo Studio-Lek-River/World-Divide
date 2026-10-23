@@ -3262,8 +3262,10 @@ for entity, icon, hotkey, description in (
     (superweapon, "Icon.Superweapon", "K", "Charges a strike that lands anywhere on the map. One per team."),
 ):
     present(entity, USA_TAG, icon, hotkey, description)
-# The selection panel's hero art (Tools/Art/m20_hero_render.py, then unit_icon.py --art); the others show their icon large.
+# The selection panel's hero art (Tools/Art/m20_hero_render.py or hero_render.py, then unit_icon.py --art); the others show
+# their icon large.
 add_properties(m20, {"hero_art_sprite": unreal.Name("Art.M20Guardian"), "role_text": unreal.Text("Main battle tank")})
+add_properties(headquarters, {"hero_art_sprite": unreal.Name("Art.Headquarters")})
 make_ghost_material("M_PlacementGhost")
 make_shot_material("M_ShotFx")
 # The maps' ground is dirt and their water water, for the dust behind vehicles (#224); L_TestMap has a strip of every other

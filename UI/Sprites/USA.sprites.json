@@ -51,6 +51,7 @@
     "USA.SelectionEmpty": { "texture": "Textures/USA/T_UI_USA_SelectionPanel_Empty.png", "size": [920, 560] },
     "USA.Icon.M20Guardian": { "texture": "Textures/USA/Icons/T_Icon_USA_M20Guardian.png", "size": [256, 256] },
     "USA.Art.M20Guardian": { "texture": "Textures/USA/Art/T_Art_USA_M20Guardian.png", "size": [512, 256] },
-    "USA.Icon.Headquarters": { "texture": "Textures/USA/Icons/T_Icon_USA_Headquarters.png", "size": [256, 256] }
+    "USA.Icon.Headquarters": { "texture": "Textures/USA/Icons/T_Icon_USA_Headquarters.png", "size": [256, 256] },
+    "USA.Art.Headquarters": { "texture": "Textures/USA/Art/T_Art_USA_Headquarters.png", "size": [512, 256] }
   }
 }
