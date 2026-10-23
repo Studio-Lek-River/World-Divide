@@ -1,0 +1,41 @@
+{
+  "mesh": "SM_Kit_DirectionalSpot",
+  "fbx": "lighting/05_DirectionalSpot/SM_Kit_DirectionalSpot.fbx",
+  "lod1_fbx": "lighting/05_DirectionalSpot/SM_Kit_DirectionalSpot_LOD1.fbx",
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "triangles": [
+    2466,
+    718
+  ],
+  "bounds": [
+    [
+      0,
+      -10.2,
+      -15
+    ],
+    [
+      46.55,
+      10.2,
+      29.29
+    ]
+  ],
+  "lens_bounds": [
+    [
+      33.34,
+      -7.9,
+      1.41
+    ],
+    [
+      41.24,
+      7.9,
+      15.09
+    ]
+  ],
+  "digest": [
+    "a4e944ac805a5de9397c7b6ca1c737da792e4d3e",
+    "42b54dd6e07fe1491aa0263ff39f4c55f0b1856c"
+  ]
+}

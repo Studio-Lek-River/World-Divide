@@ -1,0 +1,20 @@
+{
+  "round": "4b",
+  "changes": [
+    "Continuous irregular edge wear",
+    "Neutral-white 4000 K display emission"
+  ],
+  "geometry_and_uv_unchanged_from_round4": true,
+  "triangles": [
+    2288,
+    800
+  ],
+  "shared_plate_charts": [],
+  "reference_unchanged": true,
+  "producer_approval": "pending",
+  "unchanged_lens_maps": {
+    "BaseColor": true,
+    "ORM": true,
+    "LightProfile": true
+  }
+}

@@ -1,0 +1,43 @@
+00:12.281  image.write      | ERROR OpenImageIO write failed: Could not open file "홀᝿Â\.thumbnails\large\blender_41836_c5136cdb3ecadd53cfeeba3eaf6e1faa.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "WallLamp.blend"
+PREPARED lighting/01_WallLamp 624 208
+00:24.453  image.write      | ERROR OpenImageIO write failed: Could not open file "홀᝿Â\.thumbnails\large\blender_41836_9a8ec0376dfd554139d520b2cb97bfeb.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "CageWallLamp.blend"
+PREPARED lighting/02_CageWallLamp 732 394
+00:38.625  image.write      | ERROR OpenImageIO write failed: Could not open file "홀᝿Â\.thumbnails\large\blender_41836_562ac4c79ebb35e84d7b1bdaa60e5a87.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "EntranceLight.blend"
+PREPARED lighting/03_EntranceLight 348 124
+00:52.235  image.write      | ERROR OpenImageIO write failed: Could not open file "홀᝿Â\.thumbnails\large\blender_41836_cc29c36eb546da7a9da35d65fdc62621.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "DirectionalSpot.blend"
+PREPARED lighting/05_DirectionalSpot 2466 718
+01:09.531  image.write      | ERROR OpenImageIO write failed: Could not open file "홀᝿Â\.thumbnails\large\blender_41836_4f966d8c87e3e2ed7a59a915f486661f.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "RoofFloodLight.blend"
+PREPARED lighting/06_RoofFloodLight 2288 800
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

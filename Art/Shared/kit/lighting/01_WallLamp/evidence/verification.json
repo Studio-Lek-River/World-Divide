@@ -1,0 +1,632 @@
+{
+  "lod0": {
+    "triangles": 624,
+    "vertices": 330,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        0,
+        -0.15600000321865082,
+        -0.07000000029802322
+      ],
+      [
+        0.1300000101327896,
+        0.15600000321865082,
+        0.07000000029802322
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        0.02799999713897705,
+        -0.125,
+        -0.0560000017285347
+      ],
+      [
+        0.11599999666213989,
+        0.125,
+        -0.052000001072883606
+      ]
+    ],
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 389.0226636348625,
+        "median": 512.0042372360888,
+        "max": 514.9066516212023
+      },
+      "Lens": {
+        "min": 1843.2000385322954,
+        "median": 1843.2001955589021,
+        "max": 1843.200309944076
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0
+  },
+  "lod1": {
+    "triangles": 208,
+    "vertices": 122,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        0,
+        -0.15600000321865082,
+        -0.07000000029802322
+      ],
+      [
+        0.1300000101327896,
+        0.15600000321865082,
+        0.07000000029802322
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        0.02799999713897705,
+        -0.125,
+        -0.0560000017285347
+      ],
+      [
+        0.11599999666213989,
+        0.125,
+        -0.052000001072883606
+      ]
+    ],
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 437.3143514808349,
+        "median": 512.002508814723,
+        "max": 538.9842813346846
+      },
+      "Lens": {
+        "min": 1843.2001348630304,
+        "median": 1843.2001955589021,
+        "max": 1843.200309944076
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0
+  },
+  "uv0_lod0": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv0_lod1": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv1_lod0": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv1_lod1": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "textures": [
+    {
+      "path": "textures\\T_WallLamp_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "c90e214f9610e032c4a0e252b3042eadeb11308521b95f2d19c7ef7ebed10a48",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures\\T_WallLamp_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "b7d2af46e1a1b80538f8eb7607dc9f25fba2086af712dfa874c41a5a6ff791f5",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures\\T_WallLamp_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "9f9785e57bf0d927f6581c4f67c5c7edfe44d4a668c19f7359c3315ed858e80f",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures\\T_WallLamp_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "82d37cd79313990d291462410739220b4f46b40beafb83aa64eb64e098ec8848",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures\\T_WallLamp_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "LightProfile",
+      "srgb": false,
+      "sha256": "d35225e48f6fc0be6974c8cacdd853abf5c04cf15b002b8d6c999f8b8d45edda",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_WallLamp_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "98eba0a39fca584663d02680f10f2749c6027d5996da9383610188bcd8db8074",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_WallLamp_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "b848ebfc15b5f645d2cdc60b6ac76a5d4bfe460b9eb966fc90d6f87ff2107ee2",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    }
+  ],
+  "bake": "Cycles normal bake of geometry-edge Bevel + generated finish into FinishBake UV1; converted to DirectX",
+  "scope": "Blender evidence only, export roundtrip follows run_pieces.py",
+  "fbx_reimport": {
+    "SM_Kit_WallLamp.fbx": {
+      "triangles": 624,
+      "vertices": 330,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -2.5171246420541138e-8,
+          -0.156000018119812,
+          -0.07000000029802322
+        ],
+        [
+          0.1300000250339508,
+          0.15600000321865082,
+          0.07000000029802322
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.02799997664988041,
+          -0.1250000149011612,
+          -0.0560000017285347
+        ],
+        [
+          0.11600001901388168,
+          0.1249999925494194,
+          -0.052000001072883606
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 389.0226636348625,
+          "median": 512.0042372360888,
+          "max": 514.9066516212023
+        },
+        "Lens": {
+          "min": 1843.2000385322954,
+          "median": 1843.2001955589021,
+          "max": 1843.200309944076
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "finish_uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "sha256": "ebfa74af9729a99d5490dc0a6d734672d22dab64aa141ac12135db94f966ef4b",
+      "normal_tangent_orthonormal_max_error": 1.1921141407356117e-7,
+      "imported_custom_normals": true,
+      "lens_normal_dot_light": {
+        "minimum": -1,
+        "maximum": 1
+      }
+    },
+    "SM_Kit_WallLamp_LOD1.fbx": {
+      "triangles": 208,
+      "vertices": 122,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -2.5415626936364788e-8,
+          -0.156000018119812,
+          -0.07000000029802322
+        ],
+        [
+          0.1300000250339508,
+          0.15600000321865082,
+          0.07000000029802322
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.02799997664988041,
+          -0.1250000149011612,
+          -0.0560000017285347
+        ],
+        [
+          0.11600001901388168,
+          0.1249999925494194,
+          -0.052000001072883606
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 437.3143514808349,
+          "median": 512.002508814723,
+          "max": 538.9842813346846
+        },
+        "Lens": {
+          "min": 1843.2001348630304,
+          "median": 1843.2001955589021,
+          "max": 1843.200309944076
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "finish_uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "sha256": "47dc179dc102a7b00214a782934cfe0bb95efa8fc843a1fc61502505789da4b5",
+      "normal_tangent_orthonormal_max_error": 8.940696716308594e-8,
+      "imported_custom_normals": true,
+      "lens_normal_dot_light": {
+        "minimum": -1,
+        "maximum": 1
+      }
+    }
+  },
+  "export_roundtrip": "passed: counts, slot order, UVs, origin and world bounds",
+  "source_inventory": [
+    {
+      "name": "SM_Kit_WallLamp",
+      "type": "MESH"
+    },
+    {
+      "name": "SM_Kit_WallLamp_LOD1",
+      "type": "MESH"
+    }
+  ],
+  "source_reload": {
+    "lod0": {
+      "triangles": 624,
+      "vertices": 330,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          0,
+          -0.15600000321865082,
+          -0.07000000029802322
+        ],
+        [
+          0.1300000101327896,
+          0.15600000321865082,
+          0.07000000029802322
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.02799999713897705,
+          -0.125,
+          -0.0560000017285347
+        ],
+        [
+          0.11599999666213989,
+          0.125,
+          -0.052000001072883606
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 389.0226636348625,
+          "median": 512.0042372360888,
+          "max": 514.9066516212023
+        },
+        "Lens": {
+          "min": 1843.2000385322954,
+          "median": 1843.2001955589021,
+          "max": 1843.200309944076
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0
+    },
+    "lod1": {
+      "triangles": 208,
+      "vertices": 122,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          0,
+          -0.15600000321865082,
+          -0.07000000029802322
+        ],
+        [
+          0.1300000101327896,
+          0.15600000321865082,
+          0.07000000029802322
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.02799999713897705,
+          -0.125,
+          -0.0560000017285347
+        ],
+        [
+          0.11599999666213989,
+          0.125,
+          -0.052000001072883606
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 437.3143514808349,
+          "median": 512.002508814723,
+          "max": 538.9842813346846
+        },
+        "Lens": {
+          "min": 1843.2001348630304,
+          "median": 1843.2001955589021,
+          "max": 1843.200309944076
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0
+    }
+  },
+  "packed_images": [
+    {
+      "name": "T_WallLamp_Housing_BaseColor.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_WallLamp_Housing_Finish_Normal.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_WallLamp_Housing_ORM.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_WallLamp_Lens_BaseColor.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_WallLamp_Lens_Finish_Normal.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_WallLamp_Lens_LightProfile.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_WallLamp_Lens_ORM.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    }
+  ],
+  "packed_pixels_match_files": [
+    {
+      "name": "T_WallLamp_Housing_BaseColor.png",
+      "sha256": "c90e214f9610e032c4a0e252b3042eadeb11308521b95f2d19c7ef7ebed10a48"
+    },
+    {
+      "name": "T_WallLamp_Housing_Finish_Normal.png",
+      "sha256": "98eba0a39fca584663d02680f10f2749c6027d5996da9383610188bcd8db8074"
+    },
+    {
+      "name": "T_WallLamp_Housing_ORM.png",
+      "sha256": "b7d2af46e1a1b80538f8eb7607dc9f25fba2086af712dfa874c41a5a6ff791f5"
+    },
+    {
+      "name": "T_WallLamp_Lens_BaseColor.png",
+      "sha256": "9f9785e57bf0d927f6581c4f67c5c7edfe44d4a668c19f7359c3315ed858e80f"
+    },
+    {
+      "name": "T_WallLamp_Lens_Finish_Normal.png",
+      "sha256": "b848ebfc15b5f645d2cdc60b6ac76a5d4bfe460b9eb966fc90d6f87ff2107ee2"
+    },
+    {
+      "name": "T_WallLamp_Lens_LightProfile.png",
+      "sha256": "d35225e48f6fc0be6974c8cacdd853abf5c04cf15b002b8d6c999f8b8d45edda"
+    },
+    {
+      "name": "T_WallLamp_Lens_ORM.png",
+      "sha256": "82d37cd79313990d291462410739220b4f46b40beafb83aa64eb64e098ec8848"
+    }
+  ],
+  "final_normal_binding": {
+    "Housing": {
+      "image": "T_WallLamp_Housing_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    },
+    "Lens": {
+      "image": "T_WallLamp_Lens_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    }
+  },
+  "independent_audit": "astra_technical.json",
+  "runner_repeat_digests": {
+    "first": [
+      "b2d1db3e2412ae4f45f42b33322135e17ab10b8c",
+      "8b24e32a4b3b798e03cf54523ed9fb9d25c5e122"
+    ],
+    "second": [
+      "b2d1db3e2412ae4f45f42b33322135e17ab10b8c",
+      "8b24e32a4b3b798e03cf54523ed9fb9d25c5e122"
+    ],
+    "match": true,
+    "receipts": [
+      "round04b_build_a.json",
+      "round04b_build_b.json"
+    ]
+  },
+  "distance_evidence": "astra_distance_comparison.json",
+  "review_status": "Round 4b targeted fix pass complete; producer approval pending",
+  "open_items": [],
+  "round4b_fix_scope": "round04b_fix_scope.json"
+}

@@ -1,0 +1,176 @@
+{
+  "shared_lod_plate_charts": [],
+  "cage_bar_visibility_rays": null,
+  "projected_convex_outline_hausdorff_px": {
+    "150": {
+      "fixture": 0.016365746169908914,
+      "lens": 0
+    },
+    "260": {
+      "fixture": 0.009443806036836788,
+      "lens": 0
+    }
+  },
+  "outline_method": "Projected convex hulls at 1920x1080 / horizontal FOV60 / fixed RTS view; image pairs additionally inspect internal detail",
+  "round": 4,
+  "scope": "Independent Blender source/generator inspection; not Unreal acceptance",
+  "factory_reset_repeat_digests": [
+    [
+      "1201c487ebe7abf3ccabcd72dd0867c27278ab75d3274b5915ca00c4cb170493",
+      "4e028f99ca01bfdc49b0a8b6e46ec605b27bafa15024a56e2026ed5f09b7b71a"
+    ],
+    [
+      "1201c487ebe7abf3ccabcd72dd0867c27278ab75d3274b5915ca00c4cb170493",
+      "4e028f99ca01bfdc49b0a8b6e46ec605b27bafa15024a56e2026ed5f09b7b71a"
+    ]
+  ],
+  "source_equals_generator": true,
+  "lods": [
+    {
+      "closed_components": 9,
+      "intentionally_open_components": 0,
+      "negative_closed_volumes": [],
+      "digest": "1201c487ebe7abf3ccabcd72dd0867c27278ab75d3274b5915ca00c4cb170493",
+      "triangles": 624,
+      "unit_normal_max_error": 1.192092966562086e-07,
+      "orthonormal_tangent_max_error": 1.1921141407356117e-07,
+      "uv0_uv1_physical_chart_max_error_m": 2.609901700220524e-07,
+      "charts": 149,
+      "smooth_triangles": 288,
+      "hard_triangles": 336
+    },
+    {
+      "closed_components": 9,
+      "intentionally_open_components": 0,
+      "negative_closed_volumes": [],
+      "digest": "4e028f99ca01bfdc49b0a8b6e46ec605b27bafa15024a56e2026ed5f09b7b71a",
+      "triangles": 208,
+      "unit_normal_max_error": 7.454396899753135e-08,
+      "orthonormal_tangent_max_error": 8.940696716308594e-08,
+      "uv0_uv1_physical_chart_max_error_m": 2.1493383523075273e-07,
+      "charts": 49,
+      "smooth_triangles": 96,
+      "hard_triangles": 112
+    }
+  ],
+  "material_bindings": {
+    "Housing": [
+      {
+        "image": "T_WallLamp_Housing_BaseColor.png",
+        "colorspace": "sRGB",
+        "uv": "UVMap",
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "image": "T_WallLamp_Housing_ORM.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "image": "T_WallLamp_Housing_Finish_Normal.png",
+        "colorspace": "Non-Color",
+        "uv": "FinishBake",
+        "size": [
+          2048,
+          2048
+        ]
+      }
+    ],
+    "Lens": [
+      {
+        "image": "T_WallLamp_Lens_BaseColor.png",
+        "colorspace": "sRGB",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_WallLamp_Lens_ORM.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_WallLamp_Lens_Finish_Normal.png",
+        "colorspace": "Non-Color",
+        "uv": "FinishBake",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_WallLamp_Lens_LightProfile.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      }
+    ]
+  },
+  "final_normal_bake_coverage": {
+    "Housing": [
+      {
+        "lod": "SM_Kit_WallLamp",
+        "triangle_centres_sampled": 612,
+        "minimum_blue": 0.8862745761871338
+      },
+      {
+        "lod": "SM_Kit_WallLamp_LOD1",
+        "triangle_centres_sampled": 196,
+        "minimum_blue": 0.9019608497619629
+      }
+    ],
+    "Lens": [
+      {
+        "lod": "SM_Kit_WallLamp",
+        "triangle_centres_sampled": 12,
+        "minimum_blue": 0.9568628072738647
+      },
+      {
+        "lod": "SM_Kit_WallLamp_LOD1",
+        "triangle_centres_sampled": 12,
+        "minimum_blue": 0.9843137860298157
+      }
+    ]
+  },
+  "shared_two_lod_atlas_overlap": [
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  ],
+  "emission_tint_linear": [
+    1.0,
+    0.4399999976158142,
+    0.1599999964237213
+  ],
+  "kelvin": 3000,
+  "lens_normal_dot_light_direction": 1.0,
+  "light_direction": [
+    6.123234262925839e-17,
+    0.0,
+    -1.0
+  ],
+  "approval": "Producer approval pending"
+}

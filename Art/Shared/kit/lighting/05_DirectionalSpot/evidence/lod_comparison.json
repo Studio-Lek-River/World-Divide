@@ -1,0 +1,8 @@
+{
+  "scope": "Blender-only 60deg horizontal FOV, 1920x1080, fixture-centre camera distance 260m, same 392 sample seed; not a gameplay validation",
+  "changed_pixels_gt_1_of_255": 4,
+  "max_display_rgb_delta": 0.03529411554336548,
+  "mean_display_rgb_delta": 7.281075227183464e-07,
+  "crop": "48x48 centre pixels, nearest-neighbour enlargement 8x, LOD0 left / LOD1 right",
+  "rts_pair": "enlarged orthographic inspection, LOD0 left / LOD1 right; see cameras.json"
+}

@@ -1,0 +1,41 @@
+{
+  "mesh": "SM_Kit_RoofFloodLight",
+  "fbx": "lighting/06_RoofFloodLight/SM_Kit_RoofFloodLight.fbx",
+  "lod1_fbx": "lighting/06_RoofFloodLight/SM_Kit_RoofFloodLight_LOD1.fbx",
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "triangles": [
+    2288,
+    800
+  ],
+  "bounds": [
+    [
+      -15.42,
+      -41.2,
+      0
+    ],
+    [
+      12.5,
+      41.2,
+      70.87
+    ]
+  ],
+  "lens_bounds": [
+    [
+      -0.19,
+      -32.3,
+      34.07
+    ],
+    [
+      8.3,
+      32.3,
+      65.75
+    ]
+  ],
+  "digest": [
+    "e15345af9127c0bbdc1022b0d7cebe163f1ce6b5",
+    "808569497a6f0ddf0cf002267d0bc95c45fd7446"
+  ]
+}

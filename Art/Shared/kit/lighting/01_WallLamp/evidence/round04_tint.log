@@ -1,0 +1,18 @@
+00:00.359  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\01_WallLamp\source\WallLamp.blend"
+00:00.437  image.write      | ERROR OpenImageIO write failed: Could not open file "터\.thumbnails\large\blender_63536_c5136cdb3ecadd53cfeeba3eaf6e1faa.png.png"
+00:00.437  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\02_CageWallLamp\source\CageWallLamp.blend"
+00:00.484  image.write      | ERROR OpenImageIO write failed: Could not open file "터\.thumbnails\large\blender_63536_9a8ec0376dfd554139d520b2cb97bfeb.png.png"
+00:00.484  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\03_EntranceLight\source\EntranceLight.blend"
+00:00.531  image.write      | ERROR OpenImageIO write failed: Could not open file "터\.thumbnails\large\blender_63536_562ac4c79ebb35e84d7b1bdaa60e5a87.png.png"
+00:00.531  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\05_DirectionalSpot\source\DirectionalSpot.blend"
+00:00.578  image.write      | ERROR OpenImageIO write failed: Could not open file "터\.thumbnails\large\blender_63536_cc29c36eb546da7a9da35d65fdc62621.png.png"
+00:00.578  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\source\RoofFloodLight.blend"
+00:00.625  image.write      | ERROR OpenImageIO write failed: Could not open file "터\.thumbnails\large\blender_63536_4f966d8c87e3e2ed7a59a915f486661f.png.png"
+Info: Saved as "WallLamp.blend"
+Info: Saved as "CageWallLamp.blend"
+Info: Saved as "EntranceLight.blend"
+Info: Saved as "DirectionalSpot.blend"
+Info: Saved as "RoofFloodLight.blend"
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

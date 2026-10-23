@@ -1,0 +1,595 @@
+{
+  "piece": "lighting/01_WallLamp",
+  "round": "4b",
+  "date": "2026-10-23",
+  "blender_version": "5.1.2",
+  "triangles": [
+    624,
+    208
+  ],
+  "budgets": {
+    "lod0": 1200,
+    "lod1": 400,
+    "slots": 2
+  },
+  "remaining_triangles": [
+    576,
+    192
+  ],
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "bounds_unreal_cm": [
+    [
+      0,
+      -15.6,
+      -7
+    ],
+    [
+      13,
+      15.6,
+      7
+    ]
+  ],
+  "lens_bounds_unreal_cm": [
+    [
+      2.8,
+      -12.5,
+      -5.6
+    ],
+    [
+      11.6,
+      12.5,
+      -5.2
+    ]
+  ],
+  "light_anchor_unreal_cm": [
+    7.199999999999999,
+    0,
+    -5.4
+  ],
+  "geometry_digests": [
+    "b2d1db3e2412ae4f45f42b33322135e17ab10b8c",
+    "8b24e32a4b3b798e03cf54523ed9fb9d25c5e122"
+  ],
+  "repeat_build_digests": [
+    "b2d1db3e2412ae4f45f42b33322135e17ab10b8c",
+    "8b24e32a4b3b798e03cf54523ed9fb9d25c5e122"
+  ],
+  "deterministic_repeat": true,
+  "factory_reset_repeat_digests": [
+    [
+      "1201c487ebe7abf3ccabcd72dd0867c27278ab75d3274b5915ca00c4cb170493",
+      "4e028f99ca01bfdc49b0a8b6e46ec605b27bafa15024a56e2026ed5f09b7b71a"
+    ],
+    [
+      "1201c487ebe7abf3ccabcd72dd0867c27278ab75d3274b5915ca00c4cb170493",
+      "4e028f99ca01bfdc49b0a8b6e46ec605b27bafa15024a56e2026ed5f09b7b71a"
+    ]
+  ],
+  "source_equals_generator": true,
+  "uv0_overlap_pairs": [
+    0,
+    0
+  ],
+  "uv1_overlap_pairs": [
+    0,
+    0
+  ],
+  "combined_lod_atlas_overlap": [
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  ],
+  "normal_binding": {
+    "Housing": {
+      "image": "T_WallLamp_Housing_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    },
+    "Lens": {
+      "image": "T_WallLamp_Lens_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    }
+  },
+  "packed_images_match_png": true,
+  "fbx_roundtrip": "passed: counts, slot order, UVs, origin and world bounds",
+  "generator_sha256": {
+    "Tools/Art/kit/wall_lamp.py": "91692691e46ed90d5513b3096f1c58c58be7e7549260f6672344dff3ab8e365f",
+    "Tools/Art/kit/wall_lamp_materials.py": "11f0cea41684f5932a3dd25b887bc3b338f32b860a5970c29f48cf5b8981fba1",
+    "Tools/Art/kit/wall_lamp_render.py": "a9682f95f16db8c5883f3570d79eef5ce09ba1c3e61d7b426552f997bab11afe",
+    "Tools/Art/kit/wall_lamp_astra_check.py": "227f6fff15b452412b74530f32d22facc51e002972d0f0eebd45f5700b39f38e"
+  },
+  "reference_sha256": "9e961cadb24fa809c5ed05d8edf009c9670bc216de2b5f824e0882b456d64339",
+  "review_status": "Round 4b targeted fix pass complete; producer approval pending",
+  "integration": "No Unreal/editor/runtime work; Claude owns integration after art acceptance",
+  "open_items": [],
+  "distance_comparison": {
+    "scope": "Blender fixture-centre distances; both LODs forced for comparison, no runtime or master approval claim",
+    "records": {
+      "12": {
+        "camera_distance_m": 12,
+        "source_prefix": "distance",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 3600,
+        "roi_radius_pixels": 30,
+        "changed_pixels_gt_1_of_255": 943,
+        "max_display_delta": 0.1882353127002716,
+        "mean_delta_over_comparison_roi": 0.008774510584771633
+      },
+      "150": {
+        "camera_distance_m": 150,
+        "source_prefix": "distance",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 196,
+        "roi_radius_pixels": 7,
+        "changed_pixels_gt_1_of_255": 7,
+        "max_display_delta": 0.0313725471496582,
+        "mean_delta_over_comparison_roi": 0.0012204882223159075
+      },
+      "260": {
+        "camera_distance_m": 260,
+        "source_prefix": "switch",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 144,
+        "roi_radius_pixels": 6,
+        "changed_pixels_gt_1_of_255": 1,
+        "max_display_delta": 0.00784313678741455,
+        "mean_delta_over_comparison_roi": 0.00032679756986908615
+      },
+      "450": {
+        "camera_distance_m": 450,
+        "source_prefix": "distance",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 100,
+        "roi_radius_pixels": 5,
+        "changed_pixels_gt_1_of_255": 2,
+        "max_display_delta": 0.011764705181121826,
+        "mean_delta_over_comparison_roi": 0.0005490195471793413
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "CLAUDE_HANDOFF.md",
+      "bytes": 5622,
+      "sha256": "e796a8e1eee89d2f7988178f172105f4c9594aabaa50193ec011083607b99f83"
+    },
+    {
+      "path": "SM_Kit_WallLamp.fbx",
+      "bytes": 75868,
+      "sha256": "ebfa74af9729a99d5490dc0a6d734672d22dab64aa141ac12135db94f966ef4b"
+    },
+    {
+      "path": "SM_Kit_WallLamp_LOD1.fbx",
+      "bytes": 39516,
+      "sha256": "47dc179dc102a7b00214a782934cfe0bb95efa8fc843a1fc61502505789da4b5"
+    },
+    {
+      "path": "STATE.md",
+      "bytes": 1300,
+      "sha256": "4de785387ef7c9a239d130cdd8ba5078d7fa6ffdd1dd0c53bf295fe328348915"
+    },
+    {
+      "path": "evidence/astra_check.md",
+      "bytes": 4479,
+      "sha256": "228e1c1a6ecc4d3f98cfe95e35c639a8167f9b0481e39c140462cbe0a6090f64"
+    },
+    {
+      "path": "evidence/astra_distance_comparison.json",
+      "bytes": 1763,
+      "sha256": "f6393d6735f04866857d2b5db7b91e57603a5170b7697a45409c30b388e28c48"
+    },
+    {
+      "path": "evidence/astra_technical.json",
+      "bytes": 4730,
+      "sha256": "d80c8c46443a3c1a343b3571313f251cbe9c7e9d5dc58cd40f0f4348079abc8c"
+    },
+    {
+      "path": "evidence/cameras.json",
+      "bytes": 507,
+      "sha256": "5b37a82b23905fe6f4f13ff487cfca4fd44bc53251b7fd7893b2cf996bfa8f67"
+    },
+    {
+      "path": "evidence/lod_comparison.json",
+      "bytes": 473,
+      "sha256": "4516ec760eeb91654f93672145ce10c99112ead588d8a216bff206b9ef3973ec"
+    },
+    {
+      "path": "evidence/normal_bake_repair.json",
+      "bytes": 489,
+      "sha256": "8a2c77bc9e0cc95d941359f895b5d410745bd194f000dc5ac03004ec5fdea91e"
+    },
+    {
+      "path": "evidence/reference_cameras.json",
+      "bytes": 835,
+      "sha256": "1ddf2a8fef0c0061fefd475f203378dc7f9e9dd58dda9d6ccd6159f74be1560a"
+    },
+    {
+      "path": "evidence/reference_comparison.json",
+      "bytes": 429,
+      "sha256": "6e9e0ce3ecd7133ffafabb9c2394893ae3c72c36f65b7328332e562954e7065e"
+    },
+    {
+      "path": "evidence/round04_build_a.json",
+      "bytes": 569,
+      "sha256": "f40ca7a49c5559e43b7e6b843f749f8508d2256118da637ccf59ea4cb2b219b6"
+    },
+    {
+      "path": "evidence/round04_build_b.json",
+      "bytes": 569,
+      "sha256": "f40ca7a49c5559e43b7e6b843f749f8508d2256118da637ccf59ea4cb2b219b6"
+    },
+    {
+      "path": "evidence/verification.json",
+      "bytes": 14539,
+      "sha256": "2652ec1b778101e1338191bb4c4c9d6b823d6401dbd852ec12636f0bb453d0c6"
+    },
+    {
+      "path": "material_recipe.json",
+      "bytes": 4479,
+      "sha256": "013a647eb1c42590c6d0608ac4c7a553d12ad98e79b35cb33da0a175644c05ad"
+    },
+    {
+      "path": "review/README.md",
+      "bytes": 1238,
+      "sha256": "97708736f5c7bb00843c3f1c8234230552b3093d010492672aaa7592c065c74b"
+    },
+    {
+      "path": "review/astra_12m_LOD0_left_LOD1_right.png",
+      "bytes": 171379,
+      "sha256": "05d981a05c81993640b001c8d52c1d6f0086d16cc6308ac20eda195521234e65",
+      "dimensions": [
+        1040,
+        512
+      ]
+    },
+    {
+      "path": "review/astra_150m_LOD0_left_LOD1_right.png",
+      "bytes": 14838,
+      "sha256": "1d2a2c47391ab5abb2acee68ce778d8d632ba2bd5b686c21552f320509eef9da",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/astra_260m_LOD0_left_LOD1_right.png",
+      "bytes": 14675,
+      "sha256": "2791ef0719b19f557b2c4a3009d281e25b8dff79248ec1f910e904c6bb49a002",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/astra_450m_LOD0_left_LOD1_right.png",
+      "bytes": 14524,
+      "sha256": "c8751a8a558efc9d89b24933301db4c0c0b153059da135f22efdcb88012828e8",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/distance_12m_lod0.png",
+      "bytes": 2045420,
+      "sha256": "0cafd8df1f47e5e23590bc9b8cfef528415f482384faadaf00aa628f73c9ae02",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_12m_lod1.png",
+      "bytes": 2045928,
+      "sha256": "dcab17125d6585c9ae5e48951c7684bdd0d98591cc9397a90fc5a02e06c8e249",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_150m_lod0.png",
+      "bytes": 2042963,
+      "sha256": "681b9a3accd6f87bcab23bcaaf1ea432fc8b10aad30b3f4c4d8d66cab648b37f",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_150m_lod1.png",
+      "bytes": 2043563,
+      "sha256": "ed22c68181a968fdf04f69fd736b74e4b5be8efdcc5d4ba46faa6bc9a89ad7b1",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_450m_lod0.png",
+      "bytes": 2042989,
+      "sha256": "dba6a5e3893621f0f0a2649d459e9b57c5c9e806bb63dde445a76fd7cce7f740",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_450m_lod1.png",
+      "bytes": 2043340,
+      "sha256": "ccc6369b01cac97b8483eeb7b61c8b0b0a2b5ee1e5f918982b4af10c2e8a43e8",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/pbr_day_off.png",
+      "bytes": 1707496,
+      "sha256": "2562ab1a2440c87e942a4f0fffd8e1f0bbb1b14100c4a6a4aa6c893a5aa86a59",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_day_on.png",
+      "bytes": 1733997,
+      "sha256": "5ea4e41db3f1e6460d495cf3157454a3d281bff41fdb2130f42f4e2650a7780c",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_night_off.png",
+      "bytes": 1759134,
+      "sha256": "a433a55478a905951e1df9fc9759d91c26d15e91b2d466f78af87c201637b1dd",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_night_on.png",
+      "bytes": 1812244,
+      "sha256": "c22acff05553ce64fbd5843524fe454fff77d3e2e573cc75adee2d72c3436cd4",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/ref_match_day.png",
+      "bytes": 1660857,
+      "sha256": "906800742f80730df20f5fae070a6fe4f7188f45f43d7f1115b6b31ed521af16",
+      "dimensions": [
+        1500,
+        1000
+      ]
+    },
+    {
+      "path": "review/ref_match_night.png",
+      "bytes": 1819237,
+      "sha256": "65581a0b9d42cc477dad71f864674596bdc385d96eb82fce75d8eb56d31cd8d5",
+      "dimensions": [
+        1500,
+        1000
+      ]
+    },
+    {
+      "path": "review/reference_left_round04_right_day.png",
+      "bytes": 1962889,
+      "sha256": "f3c41e7de825da1d14b8462a122cf300e4f99573ae679ad31b639e73e8547db7",
+      "dimensions": [
+        2029,
+        650
+      ]
+    },
+    {
+      "path": "review/reference_left_round04_right_night.png",
+      "bytes": 2016852,
+      "sha256": "d78e3e9fc92b860eb80ab3181e8ca971747641a1cd7e48ae7c3971064883551e",
+      "dimensions": [
+        2029,
+        650
+      ]
+    },
+    {
+      "path": "review/rts_LOD0_left_LOD1_right.png",
+      "bytes": 265771,
+      "sha256": "3c86bea2d75a57615da2c34a8ecb44e33f564d464daa848c66701d244c435f69",
+      "dimensions": [
+        736,
+        328
+      ]
+    },
+    {
+      "path": "review/rts_lod0.png",
+      "bytes": 138376,
+      "sha256": "d7b87fd696a3873f50b70359830993dd821ee921c0d2bfa56e063042343a986d",
+      "dimensions": [
+        360,
+        300
+      ]
+    },
+    {
+      "path": "review/rts_lod1.png",
+      "bytes": 137605,
+      "sha256": "e4134648b98c53df69004e0bada4b23f7d7aa74efb0a009e59f732a0eabc9012",
+      "dimensions": [
+        360,
+        300
+      ]
+    },
+    {
+      "path": "review/switch_260m_crop_8x_LOD0_left_LOD1_right.png",
+      "bytes": 15383,
+      "sha256": "6cb812da5ae66c01e192e19587fbd02ffeb1beb9de3c55d5b06caa9f9f09ac7b",
+      "dimensions": [
+        784,
+        412
+      ]
+    },
+    {
+      "path": "review/switch_260m_lod0.png",
+      "bytes": 2042767,
+      "sha256": "37d96f496069988a137d26e160c739ffb39113735a545ac54ffb127e94d5503e",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/switch_260m_lod1.png",
+      "bytes": 2042560,
+      "sha256": "0267e2362deaf7588b1632599dfc33c1b990a924ac290d510369a5664640f072",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "source/WallLamp.blend",
+      "bytes": 16727215,
+      "sha256": "84f3baa8db68208aed4e0f31d62bc5171ab7571b2ba09cd87a68441151329dc1"
+    },
+    {
+      "path": "source/WallLamp_Preview.blend",
+      "bytes": 16734150,
+      "sha256": "19eb892c32c3e24c37d4f93e3ddffc67ee8665511d219b92d237d11dc1a8ffa3"
+    },
+    {
+      "path": "source/WallLamp_ReferencePreview.blend",
+      "bytes": 16734141,
+      "sha256": "50bc3d073afc0b8d3062d3f55a27ede2bc63fb6388bc9624f28b7201d16a2100"
+    },
+    {
+      "path": "source/bake_inputs/T_WallLamp_Housing_Micro_Normal.png",
+      "bytes": 6492753,
+      "sha256": "444d5a2b9b8ceb5d621899981822ab3fef9508aaab345dcc83a2ebc6601dc657",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "source/bake_inputs/T_WallLamp_Lens_Micro_Normal.png",
+      "bytes": 2093521,
+      "sha256": "cd8b52adb29572e17ed471a7480e1455649ee409a0dfb1a260ec2281a15b0cc7",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_WallLamp_Housing_BaseColor.png",
+      "bytes": 5284293,
+      "sha256": "c90e214f9610e032c4a0e252b3042eadeb11308521b95f2d19c7ef7ebed10a48",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_WallLamp_Housing_Finish_Normal.png",
+      "bytes": 4661495,
+      "sha256": "98eba0a39fca584663d02680f10f2749c6027d5996da9383610188bcd8db8074",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_WallLamp_Housing_ORM.png",
+      "bytes": 3362502,
+      "sha256": "b7d2af46e1a1b80538f8eb7607dc9f25fba2086af712dfa874c41a5a6ff791f5",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_WallLamp_Lens_BaseColor.png",
+      "bytes": 1494428,
+      "sha256": "9f9785e57bf0d927f6581c4f67c5c7edfe44d4a668c19f7359c3315ed858e80f",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_WallLamp_Lens_Finish_Normal.png",
+      "bytes": 776321,
+      "sha256": "b848ebfc15b5f645d2cdc60b6ac76a5d4bfe460b9eb966fc90d6f87ff2107ee2",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_WallLamp_Lens_LightProfile.png",
+      "bytes": 113788,
+      "sha256": "d35225e48f6fc0be6974c8cacdd853abf5c04cf15b002b8d6c999f8b8d45edda",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_WallLamp_Lens_ORM.png",
+      "bytes": 985288,
+      "sha256": "82d37cd79313990d291462410739220b4f46b40beafb83aa64eb64e098ec8848",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "evidence/round04b_build_a.json",
+      "bytes": 569,
+      "sha256": "f40ca7a49c5559e43b7e6b843f749f8508d2256118da637ccf59ea4cb2b219b6"
+    },
+    {
+      "path": "evidence/round04b_build_b.json",
+      "bytes": 569,
+      "sha256": "f40ca7a49c5559e43b7e6b843f749f8508d2256118da637ccf59ea4cb2b219b6"
+    },
+    {
+      "path": "evidence/round04b_fix_scope.json",
+      "bytes": 356,
+      "sha256": "635a5fff182861ed567449c6b83ee9a914fd274d6a5f4850e77810084efa1802"
+    }
+  ],
+  "shared_lod_plate_charts": [],
+  "combined_lod_atlas_note": "Counts unique occupied charts; any shared plate aliases were first verified vertex-by-vertex in both UV channels. Individual LODs have no overlap."
+}

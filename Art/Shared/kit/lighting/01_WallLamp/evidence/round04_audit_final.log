@@ -1,0 +1,32 @@
+00:00.672  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\01_WallLamp\source\WallLamp.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA TECHNICAL PASS 01_WallLamp
+00:01.969  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\02_CageWallLamp\source\CageWallLamp.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA TECHNICAL PASS 02_CageWallLamp
+00:03.219  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\03_EntranceLight\source\EntranceLight.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA TECHNICAL PASS 03_EntranceLight
+00:04.562  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\05_DirectionalSpot\source\DirectionalSpot.blend"
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "<frozen runpy>", line 287, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "D:/Lek River Studio/World-Divide/Tools/Art/kit/wall_lamp_astra_check.py", line 125, in <module>
+    for piece in json.loads(r.SPEC.read_text())['pieces']:action(piece)
+                                                          ~~~~~~^^^^^^^
+  File "D:/Lek River Studio/World-Divide/Tools/Art/kit/wall_lamp_astra_check.py", line 86, in check
+    assert front.normal.dot(direction)>.999,('lens aim',name,list(front.normal))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('lens aim', '05_DirectionalSpot', [-0.866025447845459, 1.4192283792624494e-08, 0.49999988079071045])
+
+Error: script failed, expr: 'import sys,runpy;sys.dont_write_bytecode=True;sys.argv=["Tools/Art/kit/wall_lamp_astra_check.py","--"];runpy.run_path("D:/Lek River Studio/World-Divide/Tools/Art/kit/wall_lamp_astra_check.py",run_name="__main__")', exiting.
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

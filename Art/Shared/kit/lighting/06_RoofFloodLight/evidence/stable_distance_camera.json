@@ -1,0 +1,23 @@
+{
+  "samples": 512,
+  "denoising": false,
+  "adaptive_sampling": false,
+  "seed": 392,
+  "frame": [
+    1920,
+    1080
+  ],
+  "native_pixel_render_region": [
+    896,
+    476,
+    1024,
+    604
+  ],
+  "crop_to_border": false,
+  "horizontal_fov": 60,
+  "distances": [
+    150,
+    260
+  ],
+  "purpose": "Resolve potential subpixel shading differences without 32-sample denoiser instability; pixels outside the centre region are unrendered"
+}

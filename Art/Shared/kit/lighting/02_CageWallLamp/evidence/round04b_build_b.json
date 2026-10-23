@@ -1,0 +1,41 @@
+{
+  "mesh": "SM_Kit_CageWallLamp",
+  "fbx": "lighting/02_CageWallLamp/SM_Kit_CageWallLamp.fbx",
+  "lod1_fbx": "lighting/02_CageWallLamp/SM_Kit_CageWallLamp_LOD1.fbx",
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "triangles": [
+    924,
+    398
+  ],
+  "bounds": [
+    [
+      0,
+      -7,
+      -13
+    ],
+    [
+      12.22,
+      7,
+      13
+    ]
+  ],
+  "lens_bounds": [
+    [
+      3.8,
+      -4.9,
+      -10.89
+    ],
+    [
+      11.4,
+      4.9,
+      10.89
+    ]
+  ],
+  "digest": [
+    "e87a06829dc3f4bf3bc79304798fb9204c9afb5b",
+    "d456b00ad26958f24b9bf2059ce66e99b95237e5"
+  ]
+}

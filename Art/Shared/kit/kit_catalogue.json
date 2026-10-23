@@ -25,6 +25,76 @@
    "fault_response": "None",
    "mount_points": {"Base": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
    "budgets": {"lod0": 250, "lod1": 250, "slots": 1}
+  },
+  {
+   "id": "lighting/01_WallLamp",
+   "mesh": "SM_Kit_WallLamp",
+   "class": "M",
+   "faction": "neutral",
+   "slots": ["Housing", "Lens"],
+   "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "light": {"anchor": "Lens", "rotation": [-90, 0, 0], "type": "Spot", "candela": 150, "kelvin": 3000, "radius": 800, "cone": [20, 60], "group": "Fixtures", "behaviour": "Steady", "priority": "Primary", "max_draw_distance": 15000},
+   "emergency_default": false,
+   "fault_response": "None",
+   "mount_points": {"Wall": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 1200, "lod1": 400, "slots": 2},
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.44, 0.16], "Intensity": 3.0}}
+  },
+  {
+   "id": "lighting/02_CageWallLamp",
+   "mesh": "SM_Kit_CageWallLamp",
+   "class": "M",
+   "faction": "neutral",
+   "slots": ["Housing", "Lens"],
+   "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "light": {"anchor": "Lens", "type": "Point", "candela": 60, "kelvin": 3000, "radius": 600, "group": "Fixtures", "behaviour": "Steady", "priority": "Primary", "max_draw_distance": 15000},
+   "emergency_default": false,
+   "fault_response": "Flicker",
+   "mount_points": {"Wall": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 1200, "lod1": 400, "slots": 2},
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.44, 0.16], "Intensity": 4.2}}
+  },
+  {
+   "id": "lighting/03_EntranceLight",
+   "mesh": "SM_Kit_EntranceLight",
+   "class": "M",
+   "faction": "neutral",
+   "slots": ["Housing", "Lens"],
+   "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "light": {"anchor": "Lens", "rotation": [-90, 0, 0], "type": "Spot", "candela": 200, "kelvin": 3500, "radius": 700, "cone": [25, 55], "group": "Fixtures", "behaviour": "Steady", "priority": "Primary", "max_draw_distance": 15000},
+   "emergency_default": true,
+   "fault_response": "None",
+   "mount_points": {"Wall": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 1200, "lod1": 400, "slots": 2},
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.54, 0.27], "Intensity": 3.0}}
+  },
+  {
+   "id": "lighting/05_DirectionalSpot",
+   "mesh": "SM_Kit_DirectionalSpot",
+   "class": "L",
+   "faction": "neutral",
+   "slots": ["Housing", "Lens"],
+   "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "light": {"anchor": "Lens", "rotation": [-30, 0, 0], "type": "Spot", "candela": 600, "kelvin": 3000, "radius": 2000, "cone": [10, 30], "group": "Accents", "behaviour": "Steady", "priority": "Secondary", "max_draw_distance": 20000},
+   "emergency_default": false,
+   "fault_response": "None",
+   "mount_points": {"Wall": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 2500, "lod1": 800, "slots": 2},
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.44, 0.16], "Intensity": 3.6}}
+  },
+  {
+   "id": "lighting/06_RoofFloodLight",
+   "mesh": "SM_Kit_RoofFloodLight",
+   "class": "L",
+   "faction": "neutral",
+   "slots": ["Housing", "Lens"],
+   "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "light": {"anchor": "Lens", "rotation": [-15, 0, 0], "type": "Spot", "candela": 500, "kelvin": 4000, "radius": 2000, "cone": [25, 55], "group": "Fixtures", "behaviour": "Steady", "priority": "Primary", "max_draw_distance": 20000},
+   "emergency_default": false,
+   "fault_response": "None",
+   "mount_points": {"Roof": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "budgets": {"lod0": 2500, "lod1": 800, "slots": 2},
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [0.89, 0.94, 1], "Intensity": 3.0}}
   }
  ]
 }

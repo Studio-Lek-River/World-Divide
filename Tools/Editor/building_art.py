@@ -468,22 +468,73 @@ def build_beacon_material(directory, name):
 
 
 
-def build_lens_material(directory, name):
-    """M_Kit_Lens, every kit piece's lit glass (#388): metal, glass or LED from its instance's SurfaceColor, Roughness and
-    Metallic, with the finish normal baked on UV1 (FinishNormal, the tangent basis on UV0, BUILDING_KIT.md). It glows as
-    LENS_HLSL works out from its instance's custom data (LENS_LEVEL..LENS_COLOR), the building's Fixtures group and the dark (LIGHT_NIGHT_INDEX), which lifts it from DayGain to full Intensity. No light of its own."""
-    material = _material(directory, name)
-    color = _vector(material, -450, -500, "SurfaceColor", (0.8, 0.8, 0.8, 1.0))
-    roughness = _scalar(material, -450, -340, "Roughness", 0.4)
-    metallic = _scalar(material, -450, -180, "Metallic", 0.0)
-    uv1 = _node(material, unreal.MaterialExpressionTextureCoordinate, -750, -100, coordinate_index=1)
+def _kit_surface(material, white, white_masks):
+    """The textured surface the kit's masters share (#392): BaseColor times SurfaceColor, the ORM map (occlusion,
+    roughness, metallic) times Roughness and Metallic, all on UV0, and the finish normal baked on UV1 (FinishNormal, the
+    tangent basis on UV0, BUILDING_KIT.md). The maps default to white and flat, so an instance without them draws from
+    its values alone."""
+    uv1 = _node(material, unreal.MaterialExpressionTextureCoordinate, -1050, -100, coordinate_index=1)
+    base = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, -750, -700, parameter_name="BaseColor",
+                 texture=white, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
+    orm = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, -750, -400, parameter_name="ORM",
+                texture=white_masks, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
     finish = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, -450, -100, parameter_name="FinishNormal",
                    texture=unreal.load_asset(FLAT_NORMAL), sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
     _connect(uv1, "", finish, "UVs")
-    _output(material, color, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
-    _output(material, roughness, "", unreal.MaterialProperty.MP_ROUGHNESS)
-    _output(material, metallic, "", unreal.MaterialProperty.MP_METALLIC)
+    color = _vector(material, -750, -900, "SurfaceColor", (1.0, 1.0, 1.0, 1.0))
+    roughness = _scalar(material, -450, -340, "Roughness", 1.0)
+    metallic = _scalar(material, -450, -180, "Metallic", 1.0)
+    _output(material, _multiply(material, -250, -700, base, "RGB", color, "RGB"), "", unreal.MaterialProperty.MP_BASE_COLOR)
+    _output(material, orm, "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
+    _output(material, _multiply(material, -250, -340, orm, "G", roughness, ""), "", unreal.MaterialProperty.MP_ROUGHNESS)
+    _output(material, _multiply(material, -250, -180, orm, "B", metallic, ""), "", unreal.MaterialProperty.MP_METALLIC)
     _output(material, finish, "RGB", unreal.MaterialProperty.MP_NORMAL)
+    return roughness, metallic, color
+
+
+def build_kit_housing_material(directory, name, white, white_masks):
+    """M_Kit_Housing, a kit piece's textured housing (#392): its delivered BaseColor, ORM and finish normal (_kit_surface),
+    which the piece's MI_Kit_<Piece>_Housing sets. No glow; it draws on instanced meshes like every kit master."""
+    material = _material(directory, name)
+    _kit_surface(material, white, white_masks)
+    material.set_editor_property("used_with_instanced_static_meshes", True)
+    return _finish(material)
+
+
+def build_kit_finish_instance(directory, name, parent, textures, scalars, vectors):
+    """MI_Kit_<Piece>_<Slot>: a piece's own finish on a kit master (#392), its delivered maps as texture parameters
+    ({parameter: texture}) and its values. Parent first and the instance updated after, as build_material_instance does."""
+    path = f"{directory}/{name}"
+    if assets.does_asset_exist(path):
+        instance = assets.load_asset(path)
+        editing.clear_all_material_instance_parameters(instance)
+    else:
+        instance = asset_tools.create_asset(name, directory, unreal.MaterialInstanceConstant,
+                                            unreal.MaterialInstanceConstantFactoryNew())
+    editing.set_material_instance_parent(instance, parent)
+    for parameter, texture in sorted(textures.items()):
+        editing.set_material_instance_texture_parameter_value(instance, parameter, texture)
+    for parameter, value in sorted(scalars.items()):
+        editing.set_material_instance_scalar_parameter_value(instance, parameter, value)
+    for parameter, value in sorted(vectors.items()):
+        editing.set_material_instance_vector_parameter_value(instance, parameter, unreal.LinearColor(*value))
+    editing.update_material_instance(instance)
+    if instance.get_editor_property("parent") != parent:
+        raise RuntimeError(f"{name} did not keep its parent {parent.get_name()}")
+    return instance
+
+
+def build_lens_material(directory, name, white, white_masks):
+    """M_Kit_Lens, every kit piece's lit glass (#388): metal, glass or LED from its instance's SurfaceColor, Roughness and
+    Metallic, times a piece's own maps where it has them (_kit_surface, #392), with the finish normal baked on UV1. It
+    glows as LENS_HLSL works out from its instance's custom data (LENS_LEVEL..LENS_COLOR), the building's Fixtures group
+    and the dark (LIGHT_NIGHT_INDEX), which lifts it from DayGain to full Intensity, times the piece's LightProfile (red,
+    UV0) and EmissionTint, white by default. No light of its own."""
+    material = _material(directory, name)
+    roughness, metallic, color = _kit_surface(material, white, white_masks)
+    color.set_editor_property("default_value", unreal.LinearColor(0.8, 0.8, 0.8, 1.0))
+    roughness.set_editor_property("default_value", 0.4)
+    metallic.set_editor_property("default_value", 0.0)
 
     pins = {}
     for index, (pin, data) in enumerate((("Level", LENS_LEVEL), ("Group", LENS_GROUP), ("Fault", LENS_FAULT),
@@ -498,7 +549,11 @@ def build_lens_material(directory, name):
     glow = vehicle_art._custom(material, -400, 400, LENS_HLSL, list(pins))
     for pin, node in pins.items():
         _connect(node, "", glow, pin)
-    _output(material, glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    profile = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, -400, 700, parameter_name="LightProfile",
+                    texture=white_masks, sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+    tint = _vector(material, -400, 950, "EmissionTint", (1.0, 1.0, 1.0, 1.0))
+    shaped = _multiply(material, -150, 700, profile, "R", tint, "RGB")
+    _output(material, _multiply(material, 0, 400, glow, "", shaped, ""), "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     # The kit's pieces are drawn instanced, one component per mesh per building.
     material.set_editor_property("used_with_instanced_static_meshes", True)
     return _finish(material)

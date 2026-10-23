@@ -1,0 +1,176 @@
+{
+  "shared_lod_plate_charts": [],
+  "cage_bar_visibility_rays": null,
+  "projected_convex_outline_hausdorff_px": {
+    "150": {
+      "fixture": 0.022521104253138628,
+      "lens": 0
+    },
+    "260": {
+      "fixture": 0.012971709008693655,
+      "lens": 0
+    }
+  },
+  "outline_method": "Projected convex hulls at 1920x1080 / horizontal FOV60 / fixed RTS view; image pairs additionally inspect internal detail",
+  "round": 4,
+  "scope": "Independent Blender source/generator inspection; not Unreal acceptance",
+  "factory_reset_repeat_digests": [
+    [
+      "9750c96b3f4de48d4e1d08aef87833943d8f8fece72d75439c1fdd1852d55d2c",
+      "ede41c39cb8592af725b758ede0bc520d2215821163bf9af5ae94c81dc432fea"
+    ],
+    [
+      "9750c96b3f4de48d4e1d08aef87833943d8f8fece72d75439c1fdd1852d55d2c",
+      "ede41c39cb8592af725b758ede0bc520d2215821163bf9af5ae94c81dc432fea"
+    ]
+  ],
+  "source_equals_generator": true,
+  "lods": [
+    {
+      "closed_components": 53,
+      "intentionally_open_components": 34,
+      "negative_closed_volumes": [],
+      "digest": "9750c96b3f4de48d4e1d08aef87833943d8f8fece72d75439c1fdd1852d55d2c",
+      "triangles": 2288,
+      "unit_normal_max_error": 1.3224779693565836e-07,
+      "orthonormal_tangent_max_error": 1.9371509552001953e-07,
+      "uv0_uv1_physical_chart_max_error_m": 4.16896709785485e-07,
+      "charts": 678,
+      "smooth_triangles": 848,
+      "hard_triangles": 1440
+    },
+    {
+      "closed_components": 17,
+      "intentionally_open_components": 56,
+      "negative_closed_volumes": [],
+      "digest": "ede41c39cb8592af725b758ede0bc520d2215821163bf9af5ae94c81dc432fea",
+      "triangles": 800,
+      "unit_normal_max_error": 1.0989605780942213e-07,
+      "orthonormal_tangent_max_error": 4.209578037261963e-07,
+      "uv0_uv1_physical_chart_max_error_m": 3.688037395477295e-07,
+      "charts": 298,
+      "smooth_triangles": 236,
+      "hard_triangles": 564
+    }
+  ],
+  "material_bindings": {
+    "Housing": [
+      {
+        "image": "T_RoofFloodLight_Housing_BaseColor.png",
+        "colorspace": "sRGB",
+        "uv": "UVMap",
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "image": "T_RoofFloodLight_Housing_ORM.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          2048,
+          2048
+        ]
+      },
+      {
+        "image": "T_RoofFloodLight_Housing_Finish_Normal.png",
+        "colorspace": "Non-Color",
+        "uv": "FinishBake",
+        "size": [
+          2048,
+          2048
+        ]
+      }
+    ],
+    "Lens": [
+      {
+        "image": "T_RoofFloodLight_Lens_BaseColor.png",
+        "colorspace": "sRGB",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_RoofFloodLight_Lens_ORM.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_RoofFloodLight_Lens_Finish_Normal.png",
+        "colorspace": "Non-Color",
+        "uv": "FinishBake",
+        "size": [
+          1024,
+          1024
+        ]
+      },
+      {
+        "image": "T_RoofFloodLight_Lens_LightProfile.png",
+        "colorspace": "Non-Color",
+        "uv": "UVMap",
+        "size": [
+          1024,
+          1024
+        ]
+      }
+    ]
+  },
+  "final_normal_bake_coverage": {
+    "Housing": [
+      {
+        "lod": "SM_Kit_RoofFloodLight",
+        "triangle_centres_sampled": 2284,
+        "minimum_blue": 0.658823549747467
+      },
+      {
+        "lod": "SM_Kit_RoofFloodLight_LOD1",
+        "triangle_centres_sampled": 796,
+        "minimum_blue": 0.8666667342185974
+      }
+    ],
+    "Lens": [
+      {
+        "lod": "SM_Kit_RoofFloodLight",
+        "triangle_centres_sampled": 4,
+        "minimum_blue": 1.0
+      },
+      {
+        "lod": "SM_Kit_RoofFloodLight_LOD1",
+        "triangle_centres_sampled": 4,
+        "minimum_blue": 1.0
+      }
+    ]
+  },
+  "shared_two_lod_atlas_overlap": [
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  ],
+  "emission_tint_linear": [
+    0.8899999856948853,
+    0.9399999976158142,
+    1.0
+  ],
+  "kelvin": 4000,
+  "lens_normal_dot_light_direction": 0.9999999552965164,
+  "light_direction": [
+    0.9659258127212524,
+    0.0,
+    -0.258819043636322
+  ],
+  "approval": "Producer approval pending"
+}

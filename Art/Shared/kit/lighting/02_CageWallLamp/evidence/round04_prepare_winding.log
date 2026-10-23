@@ -1,0 +1,27 @@
+00:21.078  image.write      | ERROR OpenImageIO write failed: Could not open file "횠禟H\.thumbnails\large\blender_48652_9a8ec0376dfd554139d520b2cb97bfeb.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "CageWallLamp.blend"
+PREPARED lighting/02_CageWallLamp 732 394
+00:45.688  image.write      | ERROR OpenImageIO write failed: Could not open file "횠禟H\.thumbnails\large\blender_48652_cc29c36eb546da7a9da35d65fdc62621.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "DirectionalSpot.blend"
+PREPARED lighting/05_DirectionalSpot 2466 718
+01:14.797  image.write      | ERROR OpenImageIO write failed: Could not open file "횠禟H\.thumbnails\large\blender_48652_4f966d8c87e3e2ed7a59a915f486661f.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "RoofFloodLight.blend"
+PREPARED lighting/06_RoofFloodLight 2288 800
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

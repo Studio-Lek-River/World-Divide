@@ -1,0 +1,41 @@
+{
+  "mesh": "SM_Kit_EntranceLight",
+  "fbx": "lighting/03_EntranceLight/SM_Kit_EntranceLight.fbx",
+  "lod1_fbx": "lighting/03_EntranceLight/SM_Kit_EntranceLight_LOD1.fbx",
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "triangles": [
+    348,
+    124
+  ],
+  "bounds": [
+    [
+      0,
+      -10,
+      -12.5
+    ],
+    [
+      36.8,
+      10,
+      12.8
+    ]
+  ],
+  "lens_bounds": [
+    [
+      4.3,
+      -7.9,
+      2.2
+    ],
+    [
+      33.7,
+      7.9,
+      2.6
+    ]
+  ],
+  "digest": [
+    "78166bef986a7f2f736127891ae60126d2d9ec84",
+    "2db2b7e01cb6126715f5b787aa00122db7e8d4ed"
+  ]
+}

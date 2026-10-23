@@ -1,0 +1,11 @@
+{
+  "kelvin": 4000,
+  "display_tint": [
+    0.89,
+    0.94,
+    1
+  ],
+  "LightProfile_max_RGB_channel_difference": 0.0,
+  "LightProfile_role": "achromatic intensity only",
+  "BaseColor": "unchanged neutral optical base, not an emission tint"
+}

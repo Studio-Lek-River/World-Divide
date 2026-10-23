@@ -1,0 +1,652 @@
+{
+  "piece": "lighting/06_RoofFloodLight",
+  "round": "4b",
+  "date": "2026-10-23",
+  "blender_version": "5.1.2",
+  "triangles": [
+    2288,
+    800
+  ],
+  "budgets": {
+    "lod0": 2500,
+    "lod1": 800,
+    "slots": 2
+  },
+  "remaining_triangles": [
+    212,
+    0
+  ],
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "bounds_unreal_cm": [
+    [
+      -15.4175,
+      -41.2,
+      0
+    ],
+    [
+      12.5,
+      41.2,
+      70.8667
+    ]
+  ],
+  "lens_bounds_unreal_cm": [
+    [
+      -0.1877,
+      -32.3,
+      34.0718
+    ],
+    [
+      8.3015,
+      32.3,
+      65.7541
+    ]
+  ],
+  "light_anchor_unreal_cm": [
+    4.056900000000001,
+    0,
+    49.912949999999995
+  ],
+  "geometry_digests": [
+    "e15345af9127c0bbdc1022b0d7cebe163f1ce6b5",
+    "808569497a6f0ddf0cf002267d0bc95c45fd7446"
+  ],
+  "repeat_build_digests": [
+    "e15345af9127c0bbdc1022b0d7cebe163f1ce6b5",
+    "808569497a6f0ddf0cf002267d0bc95c45fd7446"
+  ],
+  "deterministic_repeat": true,
+  "factory_reset_repeat_digests": [
+    [
+      "9750c96b3f4de48d4e1d08aef87833943d8f8fece72d75439c1fdd1852d55d2c",
+      "ede41c39cb8592af725b758ede0bc520d2215821163bf9af5ae94c81dc432fea"
+    ],
+    [
+      "9750c96b3f4de48d4e1d08aef87833943d8f8fece72d75439c1fdd1852d55d2c",
+      "ede41c39cb8592af725b758ede0bc520d2215821163bf9af5ae94c81dc432fea"
+    ]
+  ],
+  "source_equals_generator": true,
+  "uv0_overlap_pairs": [
+    0,
+    0
+  ],
+  "uv1_overlap_pairs": [
+    0,
+    0
+  ],
+  "combined_lod_atlas_overlap": [
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  ],
+  "normal_binding": {
+    "Housing": {
+      "image": "T_RoofFloodLight_Housing_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    },
+    "Lens": {
+      "image": "T_RoofFloodLight_Lens_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    }
+  },
+  "packed_images_match_png": true,
+  "fbx_roundtrip": "passed: counts, slot order, UVs, origin and world bounds",
+  "generator_sha256": {
+    "Tools/Art/kit/roof_flood_light.py": "94dbac1a50e189c2cef4318626d129b23bcac257280ca7f3fd9aa734f9d4fd4e",
+    "Tools/Art/kit/wall_lamp_materials.py": "11f0cea41684f5932a3dd25b887bc3b338f32b860a5970c29f48cf5b8981fba1",
+    "Tools/Art/kit/wall_lamp_render.py": "a9682f95f16db8c5883f3570d79eef5ce09ba1c3e61d7b426552f997bab11afe",
+    "Tools/Art/kit/wall_lamp_astra_check.py": "227f6fff15b452412b74530f32d22facc51e002972d0f0eebd45f5700b39f38e"
+  },
+  "reference_sha256": "d02cc11fc0e7fec40e5d6b9807107e1380f01f19a246e4c120274a4242a5edfa",
+  "review_status": "Round 4b targeted fix pass complete; producer approval pending",
+  "integration": "No Unreal/editor/runtime work; Claude owns integration after art acceptance",
+  "open_items": [
+    "OPEN: dimensional authority for 06. The appearance table’s approximate 80 × 40 × 75 cm envelope conflicts with the detailed head/base dimensions. This delivery retains the detailed brief and measures 82.4 × 27.9 × 70.9 cm (width/depth/height). A producer clarification was requested; no answer or approval is assumed. Do not stretch the export silently."
+  ],
+  "distance_comparison": {
+    "scope": "Blender fixture-centre distances; both LODs forced for comparison, no runtime or master approval claim",
+    "records": {
+      "12": {
+        "camera_distance_m": 12,
+        "source_prefix": "distance",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 26896,
+        "roi_radius_pixels": 82,
+        "changed_pixels_gt_1_of_255": 4793,
+        "max_display_delta": 0.32156863808631897,
+        "mean_delta_over_comparison_roi": 0.005638713017106056
+      },
+      "150": {
+        "camera_distance_m": 150,
+        "source_prefix": "stable",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 484,
+        "roi_radius_pixels": 11,
+        "changed_pixels_gt_1_of_255": 23,
+        "max_display_delta": 0.0313725620508194,
+        "mean_delta_over_comparison_roi": 0.0009884947212412953
+      },
+      "260": {
+        "camera_distance_m": 260,
+        "source_prefix": "stable",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 256,
+        "roi_radius_pixels": 8,
+        "changed_pixels_gt_1_of_255": 14,
+        "max_display_delta": 0.023529410362243652,
+        "mean_delta_over_comparison_roi": 0.0009037989657372236
+      },
+      "450": {
+        "camera_distance_m": 450,
+        "source_prefix": "distance",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 196,
+        "roi_radius_pixels": 7,
+        "changed_pixels_gt_1_of_255": 8,
+        "max_display_delta": 0.039215683937072754,
+        "mean_delta_over_comparison_roi": 0.0018407366005703807
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "CLAUDE_HANDOFF.md",
+      "bytes": 7027,
+      "sha256": "3a72d3786da0375a372f4370c74eae6e8460457685647e71cd8c4f7db7b33bcc"
+    },
+    {
+      "path": "SM_Kit_RoofFloodLight.fbx",
+      "bytes": 245996,
+      "sha256": "1749940b09536bc43443ed3d58c528e41fb5a48fa11b6021d3d87fbcdcd3cefb"
+    },
+    {
+      "path": "SM_Kit_RoofFloodLight_LOD1.fbx",
+      "bytes": 90364,
+      "sha256": "e2c0eefb6a3c99c3acdec4aaaeaec3a82081db62452e424e93639982843c2bc8"
+    },
+    {
+      "path": "STATE.md",
+      "bytes": 1992,
+      "sha256": "33fad61b2d712f65f44b0a2319aca89e980dd778c3ec6dc1ffa69cfd13a92146"
+    },
+    {
+      "path": "evidence/astra_check.md",
+      "bytes": 5672,
+      "sha256": "e0daae371db31134ef8211b4761dc0e497fb436a09225194c748e481faaf85b5"
+    },
+    {
+      "path": "evidence/astra_distance_comparison.json",
+      "bytes": 1767,
+      "sha256": "0c2b43ad2368aabb51ebdb5fa0a1b79d41f10952a903b8c4612aec5fd24487bd"
+    },
+    {
+      "path": "evidence/astra_technical.json",
+      "bytes": 4798,
+      "sha256": "10390748f5b3fdd589474ea1c029f26915b239bbbc98e8f8ac9e0de6ab6c8cdc"
+    },
+    {
+      "path": "evidence/cameras.json",
+      "bytes": 500,
+      "sha256": "72caebc42b5fccafb5ac95ebb450ee8764f493f6d396b18942328f499bfe79b7"
+    },
+    {
+      "path": "evidence/lod_comparison.json",
+      "bytes": 475,
+      "sha256": "43e33d709b321db5d380efaf1ad17ce6623c76807a1b3c2b13c332612e26647d"
+    },
+    {
+      "path": "evidence/normal_bake_repair.json",
+      "bytes": 486,
+      "sha256": "07e910ce2e7e80d359a77a3e762b25dd5ab6eefc9c628b22d4f29fbfc6449e79"
+    },
+    {
+      "path": "evidence/reference_cameras.json",
+      "bytes": 831,
+      "sha256": "b888ff686b15863ad2176a2f75c5131ba7df9664494b10ca349ff331b893e13a"
+    },
+    {
+      "path": "evidence/reference_comparison.json",
+      "bytes": 428,
+      "sha256": "35d41e589deadceb9d0e3dc84e7360ac9bf027d01ebcfdd6e3a275e5dc3fc560"
+    },
+    {
+      "path": "evidence/round04_build_a.json",
+      "bytes": 613,
+      "sha256": "660b78d67f0a857faee698b4d461320df064f8d01bbfe633df8aeb61a1cb993b"
+    },
+    {
+      "path": "evidence/round04_build_b.json",
+      "bytes": 613,
+      "sha256": "660b78d67f0a857faee698b4d461320df064f8d01bbfe633df8aeb61a1cb993b"
+    },
+    {
+      "path": "evidence/stable_distance_camera.json",
+      "bytes": 464,
+      "sha256": "62ac430fdf421e0514f5984316236670c7b10f5ca1dff9808b8d32d21e2ce1e5"
+    },
+    {
+      "path": "evidence/verification.json",
+      "bytes": 15152,
+      "sha256": "a773435164b95fe4c689795765ff15c9848c534dc3403bd71afe762e66a2035f"
+    },
+    {
+      "path": "material_recipe.json",
+      "bytes": 4564,
+      "sha256": "35c9143be9f7cd99d1977630f6c9071472c504e1db2c95892eb5c33abd8a2d93"
+    },
+    {
+      "path": "review/README.md",
+      "bytes": 1493,
+      "sha256": "cce71a9dbe32604fa8a1e3e2a3be101913f965e25fdd37d66d1d4ba501d49275"
+    },
+    {
+      "path": "review/astra_12m_LOD0_left_LOD1_right.png",
+      "bytes": 193726,
+      "sha256": "894d3f4d836f4503ce2936c3d04198830cee852450dee4d3f65de7bcf740f4f5",
+      "dimensions": [
+        1040,
+        512
+      ]
+    },
+    {
+      "path": "review/astra_150m_LOD0_left_LOD1_right.png",
+      "bytes": 15125,
+      "sha256": "509875be98b108a077cbae65f9c8961018dce481d48eb7c0b4146cc745df4cef",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/astra_260m_LOD0_left_LOD1_right.png",
+      "bytes": 14830,
+      "sha256": "61acd966b04c547ef832af98326615be1b9431962a5ed878445de88944931723",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/astra_450m_LOD0_left_LOD1_right.png",
+      "bytes": 15078,
+      "sha256": "1db9ded916e91d921b5dad6f89a8d47a234670876a90591110de1afbe150e143",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/distance_12m_lod0.png",
+      "bytes": 2059510,
+      "sha256": "2fc3e443d7700a1271c3653422a2f9c220f29592cc7fc4543da15d9d1d45f628",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_12m_lod1.png",
+      "bytes": 2058130,
+      "sha256": "dceb0b23db83a55cece44fecc5cfc81f42b600961548b3324689724a16614b3f",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_150m_lod0.png",
+      "bytes": 2043001,
+      "sha256": "d9be73b3f38a665283d2d161cdca6378c9a4a85d51bedaec032d7d63eed13751",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_150m_lod1.png",
+      "bytes": 2043772,
+      "sha256": "f945a8f9821aa7e6dd6de4dd693c2f5e2f33bfc37e15ab1d28147cb7dfea561d",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_450m_lod0.png",
+      "bytes": 2043428,
+      "sha256": "86a415e9a8b121e59839130822ebfc7df64ea34298aae34a77be83dcd5fb88fb",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_450m_lod1.png",
+      "bytes": 2042844,
+      "sha256": "0db608c4df565265648a051c4ab32a96efe85154134ee2d4736ecf20b3480062",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/pbr_day_off.png",
+      "bytes": 1944809,
+      "sha256": "1b9d684e571a0afd7dde7e05d0061776c1d01815496edfdb2a9904615be3e2c3",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_day_on.png",
+      "bytes": 1942354,
+      "sha256": "7634b080f51aa90fd43656d9ac1d40d36e7e447cc9e1fb53a5cacbdb39eacf10",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_night_off.png",
+      "bytes": 1854952,
+      "sha256": "fc60dd9a65a3819609c22f92fcb5464b1cc6801a91d300878771b2c7ceb095c9",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_night_on.png",
+      "bytes": 1827860,
+      "sha256": "ea9639c3f08c7077820ed43b7ea221980b4c20e2d4155056789eca6b8187806b",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/rear_fins.png",
+      "bytes": 1665068,
+      "sha256": "4c11ef3304de00a45dac6a667186f6cd8c0df992fae47f419de8201f6cf8b9a9",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "path": "review/ref_match_day.png",
+      "bytes": 1888083,
+      "sha256": "a73127fb03f38d0765f83e7387dc0596f5b811e8fce021eb911472e7a314f0a8",
+      "dimensions": [
+        1200,
+        1300
+      ]
+    },
+    {
+      "path": "review/ref_match_night.png",
+      "bytes": 1890677,
+      "sha256": "4ea0d1b99e8057c1083833e825335e392a0aad74fba80656696b85035a6a38f1",
+      "dimensions": [
+        1200,
+        1300
+      ]
+    },
+    {
+      "path": "review/reference_left_round04_right_day.png",
+      "bytes": 1411198,
+      "sha256": "73875ab51147ee8d19b5bcd50c09d33840b71d486bb5cf34dff7ba8c43d9c308",
+      "dimensions": [
+        1320,
+        650
+      ]
+    },
+    {
+      "path": "review/reference_left_round04_right_night.png",
+      "bytes": 1408238,
+      "sha256": "658f7eb78f6ca2c47b90eee154684be7760733c891720dfdd55250aba7d280c4",
+      "dimensions": [
+        1320,
+        650
+      ]
+    },
+    {
+      "path": "review/rts_LOD0_left_LOD1_right.png",
+      "bytes": 298132,
+      "sha256": "ac507a9fa97b2ab0dc4be8c93d4c918217c4385542f5de8f8a3668c8136bcf95",
+      "dimensions": [
+        736,
+        328
+      ]
+    },
+    {
+      "path": "review/rts_lod0.png",
+      "bytes": 155811,
+      "sha256": "28a30d9c0228bce44f94b3deed16b78aecdb58844b5f5cb85ef5a5f1ab855179",
+      "dimensions": [
+        360,
+        300
+      ]
+    },
+    {
+      "path": "review/rts_lod1.png",
+      "bytes": 151726,
+      "sha256": "473cd6acb92abdd339dc419c23290f09bd620e9ad453feb0b959bada683fa54e",
+      "dimensions": [
+        360,
+        300
+      ]
+    },
+    {
+      "path": "review/stable_150m_lod0.png",
+      "bytes": 489387,
+      "sha256": "3b4bacf905845b7ad8e2325ac52813fef2a086c870f3a04cf8d189f871911ec1",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/stable_150m_lod1.png",
+      "bytes": 489386,
+      "sha256": "68cf40526f5af6b7082c47ab5a06a5ed6a1b11ac825b0891a144844d87b65a19",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/stable_260m_lod0.png",
+      "bytes": 489117,
+      "sha256": "5f6d2047ccb49a4f9f50afb3b4aff2f2ff182e55a82c203d8f40dd864c2412e3",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/stable_260m_lod1.png",
+      "bytes": 489140,
+      "sha256": "6be01b51da0610b7babf5e933b982d322dbefbe46db45992eaeaddbce2610cb3",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/switch_260m_crop_8x_LOD0_left_LOD1_right.png",
+      "bytes": 15890,
+      "sha256": "6728fdbd22c7b682a33c0ce6f9fe60b891769df39a28cd50dd465ff28080e8cd",
+      "dimensions": [
+        784,
+        412
+      ]
+    },
+    {
+      "path": "review/switch_260m_lod0.png",
+      "bytes": 2043361,
+      "sha256": "0d872d0566bb9384e5fab818c616cb8dfab11adf82ecb93b9f98d3e177dbc242",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/switch_260m_lod1.png",
+      "bytes": 2043060,
+      "sha256": "2ec6f23b1bf5864c82308508da38a485d33aa82de25b4836a113badb67280b57",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "source/RoofFloodLight.blend",
+      "bytes": 15606200,
+      "sha256": "6f234d980bd6d01b9b1e7b7efe9bd5887b76ae0c539ab9b5947c7047538ac99a"
+    },
+    {
+      "path": "source/RoofFloodLight_Preview.blend",
+      "bytes": 15613317,
+      "sha256": "a546dc10dea19719e10e6f1a7c1d81ad3a593aaa9eb98a20a9dc7b29b67b71af"
+    },
+    {
+      "path": "source/RoofFloodLight_ReferencePreview.blend",
+      "bytes": 15613313,
+      "sha256": "63b0ad3864f2c9637568df99d0f623e8a0bc4b8892235d3487a0f7780d5d5ddd"
+    },
+    {
+      "path": "source/bake_inputs/T_RoofFloodLight_Housing_Micro_Normal.png",
+      "bytes": 5558130,
+      "sha256": "2c53a7ac464a59506ec55d1c22b7489c5522b75c8f8944f4a84c69cfa991f71a",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "source/bake_inputs/T_RoofFloodLight_Lens_Micro_Normal.png",
+      "bytes": 1420791,
+      "sha256": "8a9998c46c2dae8494f862244d849e8e2494ecdb98dca0af057343593250d15f",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_RoofFloodLight_Housing_BaseColor.png",
+      "bytes": 5438001,
+      "sha256": "8d8a56f9990c1df37a784e9f9e7a77b46fda318fc9373431bc4aedf9b00b5347",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_RoofFloodLight_Housing_Finish_Normal.png",
+      "bytes": 3210842,
+      "sha256": "5a447d7a55c5935f1c31db4d6724c2eaadf52410755f7e3a762d50b575cd6119",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_RoofFloodLight_Housing_ORM.png",
+      "bytes": 3960398,
+      "sha256": "c0a2f2fdf779dbd98481456f701ea2528e90bbfa8447e888fd7fa24b24904f35",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_RoofFloodLight_Lens_BaseColor.png",
+      "bytes": 1472380,
+      "sha256": "2d364c73ee2e2a387b93ced2bc64eefb9b70b9c71ff0aece320b1b009c3ab509",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_RoofFloodLight_Lens_Finish_Normal.png",
+      "bytes": 738025,
+      "sha256": "3e4f9cb1ed7e36fa3c21967084e00efb205509ff6444a887b55b22335a1c3f3b",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_RoofFloodLight_Lens_LightProfile.png",
+      "bytes": 160159,
+      "sha256": "f24d043b7c6e00c8fd7a7c6b0d00f07749f8c13f6c7af621a11db04a68919b79",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_RoofFloodLight_Lens_ORM.png",
+      "bytes": 431736,
+      "sha256": "34fc13d210576186bc81540a0cc424a25d0bb929446aa40006dd467129c503d6",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "evidence/round04b_build_a.json",
+      "bytes": 613,
+      "sha256": "660b78d67f0a857faee698b4d461320df064f8d01bbfe633df8aeb61a1cb993b"
+    },
+    {
+      "path": "evidence/round04b_build_b.json",
+      "bytes": 613,
+      "sha256": "660b78d67f0a857faee698b4d461320df064f8d01bbfe633df8aeb61a1cb993b"
+    },
+    {
+      "path": "evidence/round04b_fix_scope.json",
+      "bytes": 402,
+      "sha256": "0ff4a0d92834550cfa603b5f2d84e7fd742fdb97ca9429ce62da693e575e6269"
+    },
+    {
+      "path": "evidence/round04b_optics.json",
+      "bytes": 256,
+      "sha256": "3c14b659dd45d6f6c86c8992f89d3518819eb8380b5adaefa0aa9a2eff7689ce"
+    }
+  ],
+  "shared_lod_plate_charts": [],
+  "combined_lod_atlas_note": "Counts unique occupied charts; any shared plate aliases were first verified vertex-by-vertex in both UV channels. Individual LODs have no overlap."
+}

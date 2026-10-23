@@ -31,7 +31,8 @@
  * close_12m looks at its front from outside at the closest zoom; default_150m, far_450m and the pair either side of
  * the bench's LOD1 switch at 260 m (lod_before_249.6m, lod_after_270.4m, 4 % each way) look at the middle of its root mesh's
  * bounds from that far. Each shot logs the LOD the renderer picks for every part (RTSUnitLOD). The data asset is looked
- * for under RTSBenchScene::BenchHQDir, then /Game/Data/Buildings, then the kit spike's /Game/Developers/KitSpike (#387). ue.ps1 passes a Folder for a run with other console
+ * for under RTSBenchScene::BenchHQDir, then /Game/Data/Buildings, then the kit spike's /Game/Developers/KitSpike (#387), then
+ * the kit showcases' /Game/Data/Showcase (DA_TestKitLighting, #392). ue.ps1 passes a Folder for a run with other console
  * variables, such as NaniteOff for r.Nanite 0. With -RTSBuildingShotsQuit the game quits when done, exit code 1 on failure.
  */
 namespace RTSBuildingShotsCommand
@@ -40,6 +41,8 @@ namespace RTSBuildingShotsCommand
 	const TCHAR* BuildingDataPath = TEXT("/Game/Data/Buildings");
 	/** The shared building kit's spike buildings (Tools/Editor/kit_spike.py, #387). */
 	const TCHAR* KitSpikePath = TEXT("/Game/Developers/KitSpike");
+	/** Test buildings that only show kit pieces for building shots (setup_testmap.py, #392); nothing produces them. */
+	const TCHAR* ShowcasePath = TEXT("/Game/Data/Showcase");
 
 	/** Where the building stands; L_Bench's middle, clear of its teams' headquarters in the corners. */
 	const FVector BuildingLocation(0.f, 0.f, 0.f);
@@ -184,7 +187,7 @@ namespace RTSBuildingShotsCommand
 				return FPlatformTime::Seconds() - StepStart > ReadyTimeout ? Finish(TEXT("no player in time")) : true;
 			}
 			URTSBuildingData* Data = nullptr;
-			for (const TCHAR* Directory : { RTSBenchScene::BenchHQDir, BuildingDataPath, KitSpikePath })
+			for (const TCHAR* Directory : { RTSBenchScene::BenchHQDir, BuildingDataPath, KitSpikePath, ShowcasePath })
 			{
 				Data = Data ? Data : LoadObject<URTSBuildingData>(nullptr, *FString::Printf(TEXT("%s/%s.%s"), Directory, *DataName, *DataName));
 			}

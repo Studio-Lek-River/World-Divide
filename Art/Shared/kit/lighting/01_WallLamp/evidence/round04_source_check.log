@@ -1,0 +1,23 @@
+00:00.703  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\01_WallLamp\source\WallLamp.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA TECHNICAL PASS 01_WallLamp
+00:02.000  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\02_CageWallLamp\source\CageWallLamp.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA TECHNICAL PASS 02_CageWallLamp
+00:03.422  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\03_EntranceLight\source\EntranceLight.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA TECHNICAL PASS 03_EntranceLight
+00:04.875  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\05_DirectionalSpot\source\DirectionalSpot.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA TECHNICAL PASS 05_DirectionalSpot
+00:08.750  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\source\RoofFloodLight.blend"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+ASTRA TECHNICAL PASS 06_RoofFloodLight
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

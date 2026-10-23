@@ -1,0 +1,17 @@
+00:00.390  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\source\RoofFloodLight_ReferencePreview.blend"
+00:10.812  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\review\rear_fins.png'
+00:10.812  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\source\RoofFloodLight_Preview.blend"
+CYCLES DEVICES [('NVIDIA GeForce RTX 4090', True), ('AMD Ryzen 7 7800X3D 8-Core Processor', False), ('NVIDIA GeForce RTX 4090', True), ('AMD Radeon(TM) Graphics', True)]
+00:14.281  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:15.875  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\review\stable_150m_lod0.png'
+00:19.062  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:21.328  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\review\stable_150m_lod1.png'
+00:24.359  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:25.796  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\review\stable_260m_lod0.png'
+00:28.812  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:30.125  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\review\stable_260m_lod1.png'
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)

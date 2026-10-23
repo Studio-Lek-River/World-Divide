@@ -1,0 +1,13 @@
+{
+  "reference": "reference/producer_reference.png",
+  "reference_crop_xyxy": [
+    60,
+    100,
+    1070,
+    725
+  ],
+  "order": "producer reference crop on left, Round 4b reference-angle render on right",
+  "day": "review/reference_left_round04_right_day.png",
+  "night": "review/reference_left_round04_right_night.png",
+  "note": "Only the main product image is cropped for comparison; the producer original is untouched."
+}

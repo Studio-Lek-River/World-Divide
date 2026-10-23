@@ -47,6 +47,8 @@ import vehicle_art  # noqa: E402
 UNIT_DIR = "/Game/Data/Units"
 WEAPON_DIR = "/Game/Data/Weapons"
 BUILDING_DIR = "/Game/Data/Buildings"
+# Test buildings that only show kit pieces for building shots (#392), outside BUILDING_DIR so no game list picks them up.
+SHOWCASE_DIR = "/Game/Data/Showcase"
 UPGRADE_DIR = "/Game/Data/Upgrades"
 FACTION_DIR = "/Game/Data/Factions"
 AI_DIR = "/Game/Data/AI"
@@ -132,6 +134,23 @@ KIT_DIR = f"{SHARED_DIR}/Kit"
 # The generic building masters every building draws with (#388), and the kit's masters (docs/art/BUILDING_KIT.md).
 BUILDING_MATERIAL_DIR = f"{SHARED_DIR}/Materials/Building"
 KIT_MATERIAL_DIR = f"{KIT_DIR}/Materials"
+KIT_TEXTURE_DIR = f"{KIT_DIR}/Textures"
+# The kit masters' default maps (#392): one white source, as colour and as linear masks.
+KIT_WHITE_TEXTURES = {
+    "T_Kit_White": {"compression": "TC_Default", "srgb": True, "lod_group": "TEXTUREGROUP_World", "resize": None},
+    "T_Kit_WhiteMasks": {"compression": "TC_Masks", "srgb": False, "lod_group": "TEXTUREGROUP_World", "resize": None},
+}
+# A piece's finish (#392): the delivered maps in its folder's textures/, T_<Piece>_<Slot>_<Map>.png, by the master's
+# parameter, with their import settings. The Lens slot also has its LightProfile.
+KIT_FINISH_MAPS = {
+    "BaseColor": ("BaseColor", {"compression": "TC_Default", "srgb": True, "lod_group": "TEXTUREGROUP_World", "resize": None}),
+    "ORM": ("ORM", {"compression": "TC_Masks", "srgb": False, "lod_group": "TEXTUREGROUP_World", "resize": None}),
+    "FinishNormal": ("Finish_Normal", {"compression": "TC_Normalmap", "srgb": False,
+                                       "lod_group": "TEXTUREGROUP_WorldNormalMap", "resize": None}),
+    "LightProfile": ("LightProfile", {"compression": "TC_Masks", "srgb": False, "lod_group": "TEXTUREGROUP_World",
+                                      "resize": None}),
+}
+KIT_FINISH_MASTERS = {"Housing": "M_Kit_Housing", "Lens": "M_Kit_Lens"}
 # The kit's neutral variant set: MI_Kit_Neutral_<slot> on the master its surface draws with. A piece's slot takes its
 # faction's MI_Kit_<faction>_<slot> unless the catalogue names a shared instance for it (materials).
 KIT_FACTIONS = {"neutral": "Neutral", "usa": "USA"}
@@ -655,6 +674,49 @@ def kit_light(light, lens):
     return value
 
 
+def make_kit_finish(piece, masters, kept):
+    """A piece's own finish (#392, kit_catalogue.json's "finish"): per slot it names, the delivered maps of its folder's
+    textures/ (KIT_FINISH_MAPS) as T_Kit_<Piece>_<Slot>_<Map> in KIT_TEXTURE_DIR and MI_Kit_<Piece>_<Slot> in
+    KIT_MATERIAL_DIR on the slot's kit master (KIT_FINISH_MASTERS), white, Roughness and Metallic 1 so the maps rule, and
+    the slot's values from the catalogue (a number a scalar, a list a colour). Adds what it makes to kept and returns the
+    instances by slot; {} for a piece without a finish."""
+    short = piece["mesh"][len("SM_Kit_"):]
+    folder = os.path.join(KIT_SOURCE_DIR, *piece["id"].split("/"), "textures")
+    slots = {}
+    for slot, values in sorted(piece.get("finish", {}).items()):
+        textures = {}
+        for parameter, (suffix, settings) in sorted(KIT_FINISH_MAPS.items()):
+            source = os.path.join(folder, f"T_{short}_{slot}_{suffix}.png")
+            if not os.path.exists(source):
+                if parameter != "LightProfile" or slot == "Lens":
+                    raise RuntimeError(f"kit_catalogue.json: {piece['id']}'s {slot} finish has no {source}")
+                continue
+            name = f"T_Kit_{short}_{slot}_{suffix.replace('_', '')}"
+            textures[parameter] = plan_now(
+                f"{KIT_TEXTURE_DIR}/{name}",
+                lambda s=source, n=name, t=settings: building_art.import_texture(s, KIT_TEXTURE_DIR, n, t),
+                spec_hash([building_art.import_texture], KIT_TEXTURE_DIR, name, sorted(settings.items()), file_hash(source)))
+            kept.add(f"{KIT_TEXTURE_DIR}/{name}")
+        scalars = {"Roughness": 1.0, "Metallic": 1.0}
+        vectors = {"SurfaceColor": (1.0, 1.0, 1.0, 1.0)}
+        for key, value in values.items():
+            if isinstance(value, list):
+                vectors[key] = tuple(value) + (1.0,) * (4 - len(value))
+            else:
+                scalars[key] = float(value)
+        name = f"MI_Kit_{short}_{slot}"
+        parent = masters[KIT_FINISH_MASTERS[slot]]
+        slots[slot] = plan_now(
+            f"{KIT_MATERIAL_DIR}/{name}",
+            lambda n=name, p=parent, t=textures, s=scalars, v=vectors: building_art.build_kit_finish_instance(
+                KIT_MATERIAL_DIR, n, p, t, s, v),
+            spec_hash([building_art.build_kit_finish_instance], KIT_MATERIAL_DIR, name, object_path(parent),
+                      sorted((k, object_path(t)) for k, t in textures.items()), sorted(scalars.items()),
+                      sorted(vectors.items())))
+        kept.add(f"{KIT_MATERIAL_DIR}/{name}")
+    return slots
+
+
 def make_kit(masters):
     """The shared building kit (docs/art/BUILDING_KIT.md, #389) and the flags (make_flags): every piece of
     kit_catalogue.json as SM_Kit_<Piece> (building_art.import_kit_mesh) and the generated DA_Kit_<Piece>
@@ -684,6 +746,7 @@ def make_kit(masters):
         variant = KIT_FACTIONS[piece["faction"]]
         slots = {slot: instances[piece.get("materials", {}).get(slot, f"MI_Kit_{variant}_{slot}")]
                  for slot in piece["slots"]}
+        slots.update(make_kit_finish(piece, masters, kept))
         source = os.path.join(KIT_SOURCE_DIR, *built["fbx"].split("/"))
         lod1 = os.path.join(KIT_SOURCE_DIR, *built["lod1_fbx"].split("/")) if built["lod1_fbx"] else None
         mesh = plan_now(
@@ -726,10 +789,15 @@ def make_kit(masters):
         })
         kept |= {f"{directory}/{piece['mesh']}", f"{directory}/{data}"}
 
-    # A piece the catalogue dropped: its mesh and data go, wherever its category was.
+    # A piece the catalogue dropped: its mesh, data and finish go, wherever its category was.
+    kept |= {f"{KIT_TEXTURE_DIR}/{name}" for name in KIT_WHITE_TEXTURES}
     for object_path_name in assets.list_assets(KIT_DIR, recursive=True, include_folder=False):
         path = object_path_name.split(".", 1)[0]
-        if path.rsplit("/", 1)[-1].startswith(("SM_Kit_", "DA_Kit_")) and path not in kept:
+        name = path.rsplit("/", 1)[-1]
+        finish = (path.startswith(f"{KIT_TEXTURE_DIR}/T_Kit_")
+                  or (path.startswith(f"{KIT_MATERIAL_DIR}/MI_Kit_") and name.rsplit("_", 1)[-1] in KIT_FINISH_MASTERS
+                      and name not in instances))
+        if (name.startswith(("SM_Kit_", "DA_Kit_")) or finish) and path not in kept:
             if blocked_by(path, ".uasset") or read_only:
                 continue
             stale.add(path)
@@ -739,8 +807,8 @@ def make_kit(masters):
 
 def make_building_masters():
     """The generic building masters every building draws with (#388): BUILDING_MASTERS in BUILDING_MATERIAL_DIR with the
-    2 m coating they sample (BUILDING_TEXTURES) in its Textures folder, and the kit's M_Kit_Lens in KIT_MATERIAL_DIR.
-    Returns the masters by name."""
+    2 m coating they sample (BUILDING_TEXTURES) in its Textures folder, and the kit's M_Kit_Lens and M_Kit_Housing (#392)
+    in KIT_MATERIAL_DIR, their default maps (KIT_WHITE_TEXTURES) in KIT_TEXTURE_DIR. Returns the masters by name."""
     hq_textures = building_art.read_layout(os.path.join(USA_HQ_SOURCE_DIR, "usa_hq.json"))["textures"]
     texture_dir = f"{BUILDING_MATERIAL_DIR}/Textures"
     textures = {}
@@ -752,6 +820,15 @@ def make_building_masters():
             lambda s=source, n=name, t=settings: building_art.import_texture(s, texture_dir, n, t),
             spec_hash([building_art.import_texture], texture_dir, name, sorted(settings.items()), file_hash(source)))
 
+    # The kit's masters draw a piece's own maps where its catalogue entry has a finish (#392), white and flat without.
+    white_source = os.path.join(KIT_SOURCE_DIR, "atlases", "T_Kit_White.png")
+    white = {}
+    for name, settings in sorted(KIT_WHITE_TEXTURES.items()):
+        white[name] = plan_now(
+            f"{KIT_TEXTURE_DIR}/{name}",
+            lambda n=name, t=settings: building_art.import_texture(white_source, KIT_TEXTURE_DIR, n, t),
+            spec_hash([building_art.import_texture], KIT_TEXTURE_DIR, name, sorted(settings.items()),
+                      file_hash(white_source)))
     builders = [building_art.build_surface_material, building_art.build_coating_material, building_art._material,
                 building_art._vector, building_art._scalar, building_art._multiply, building_art._add]
     constants = (vehicle_art.TEAM_COLOR_INDEX, vehicle_art.LAMP_ON_INDEX, building_art.COATING_ROUGHNESS_MEAN,
@@ -763,12 +840,20 @@ def make_building_masters():
             f"{BUILDING_MATERIAL_DIR}/{name}", lambda b=build, n=name: b(BUILDING_MATERIAL_DIR, n, textures),
             spec_hash(builders + [build], BUILDING_MATERIAL_DIR, name, constants,
                       sorted(map(object_path, textures.values()))))
+    kit_builders = [building_art._kit_surface, building_art._material, building_art._vector, building_art._scalar,
+                    building_art._multiply]
+    defaults = (white["T_Kit_White"], white["T_Kit_WhiteMasks"])
     masters["M_Kit_Lens"] = plan_now(
-        f"{KIT_MATERIAL_DIR}/M_Kit_Lens", lambda: building_art.build_lens_material(KIT_MATERIAL_DIR, "M_Kit_Lens"),
-        spec_hash([building_art.build_lens_material, building_art._material, building_art._vector, building_art._scalar,
-                   vehicle_art._custom], KIT_MATERIAL_DIR, constants, building_art.LENS_HLSL, building_art.FLAT_NORMAL,
+        f"{KIT_MATERIAL_DIR}/M_Kit_Lens", lambda: building_art.build_lens_material(KIT_MATERIAL_DIR, "M_Kit_Lens", *defaults),
+        spec_hash(kit_builders + [building_art.build_lens_material, vehicle_art._custom], KIT_MATERIAL_DIR, constants,
+                  building_art.LENS_HLSL, building_art.FLAT_NORMAL, sorted(map(object_path, defaults)),
                   (building_art.LENS_LEVEL, building_art.LENS_GROUP, building_art.LENS_FAULT, building_art.LENS_FLASH,
                    building_art.LENS_COLOR)))
+    masters["M_Kit_Housing"] = plan_now(
+        f"{KIT_MATERIAL_DIR}/M_Kit_Housing",
+        lambda: building_art.build_kit_housing_material(KIT_MATERIAL_DIR, "M_Kit_Housing", *defaults),
+        spec_hash(kit_builders + [building_art.build_kit_housing_material], KIT_MATERIAL_DIR, building_art.FLAT_NORMAL,
+                  sorted(map(object_path, defaults))))
     delete_stale_assets(texture_dir, set(textures))
     delete_stale_assets(BUILDING_MATERIAL_DIR, set(BUILDING_MASTERS))
     return masters
@@ -3232,6 +3317,42 @@ if tuple(headquarters_footprint) != HEADQUARTERS_FOOTPRINT:
 headquarters = make_building("DA_TestHeadquarters", "Test Headquarters", headquarters_mesh, (1.0, 1.0, 1.0),
                              headquarters_footprint, 3000.0, None, 2500, 12.0, 0, 0, units=[builder], max_count=1)
 add_properties(headquarters, headquarters_layout)
+
+
+def make_kit_lighting_showcase(mesh, footprint, height):
+    """DA_TestKitLighting (#392): the kit's wall, entrance and directional fixtures (01, 02, 03, 05) mounted on the front of
+    a plain block, footprint cells and height cm, and the roof flood light (06) on its roof, for ue.ps1 -Task
+    buildingshots -Building DA_TestKitLighting. Test content only: nothing produces it. Its five steady lights are a
+    Medium building's budget (BUILDING_KIT.md, Light budgets)."""
+    scale = building_fit(mesh, footprint, height)
+    bounds = mesh.get_bounds()
+    front = (bounds.origin.x + bounds.box_extent.x) * scale[0]
+    base = (bounds.origin.z - bounds.box_extent.z) * scale[2]
+    top = (bounds.origin.z + bounds.box_extent.z) * scale[2]
+    placements = [("WallLamp", "lighting/01_WallLamp", (front, -300.0, base + 350.0)),
+                  ("CageWallLamp", "lighting/02_CageWallLamp", (front, -150.0, base + 250.0)),
+                  ("EntranceLight", "lighting/03_EntranceLight", (front, 0.0, base + 300.0)),
+                  ("DirectionalSpot", "lighting/05_DirectionalSpot", (front, 150.0, base + 350.0)),
+                  ("RoofFloodLight", "lighting/06_RoofFloodLight", (front - 60.0, 300.0, top))]
+    # Mounted parts and their lights hang under the building's mesh, so they take its MeshScale: each mount undoes it, to
+    # stand at its place at real size.
+    mounts = []
+    for name, piece, location in placements:
+        short = piece.split("_", 1)[1]
+        mount = unreal.RTSKitMount()
+        mount.set_editor_property("name", name)
+        mount.set_editor_property("piece", unreal.load_asset(f"{KIT_DIR}/Lighting/DA_Kit_{short}"))
+        mount.set_editor_property("transform", unreal.Transform(
+            unreal.Vector(*(value / axis for value, axis in zip(location, scale))), unreal.Rotator(),
+            unreal.Vector(*(1.0 / axis for axis in scale))))
+        mounts.append(mount)
+    showcase = make_building("DA_TestKitLighting", "Test Kit Lighting", mesh, scale, footprint, 1000.0, None, 0, 1.0, 0, 0,
+                             directory=SHOWCASE_DIR)
+    add_properties(showcase, {"mounts": mounts, "size": unreal.RTSBuildingSize.MEDIUM})
+    return showcase
+
+
+kit_lighting = make_kit_lighting_showcase(crate_mesh, (6, 10), 600.0)
 if BENCH_HQ:
     make_bench_hq(headquarters_footprint, headquarters_layout)
 # The tower's spire scaled up. Two minutes to charge; three seconds after launch the strike lands, 80 m across at full

@@ -1,0 +1,634 @@
+{
+  "lod0": {
+    "triangles": 2288,
+    "vertices": 1352,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        -0.1541748344898224,
+        -0.41200000047683716,
+        0
+      ],
+      [
+        0.125,
+        0.41200000047683716,
+        0.7086668014526367
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        -0.0018774308264255524,
+        -0.3230000138282776,
+        0.34071776270866394
+      ],
+      [
+        0.08301520347595215,
+        0.3230000138282776,
+        0.6575413942337036
+      ]
+    ],
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 389.00712534854006,
+        "median": 512.0000173269295,
+        "max": 561.1038501264031
+      },
+      "Lens": {
+        "min": 1504.6237993543978,
+        "median": 1504.6238302728866,
+        "max": 1504.6238611913755
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0
+  },
+  "lod1": {
+    "triangles": 800,
+    "vertices": 602,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        -0.1541748344898224,
+        -0.41499999165534973,
+        0
+      ],
+      [
+        0.125,
+        0.41499999165534973,
+        0.709184467792511
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        -0.0018774308264255524,
+        -0.3230000138282776,
+        0.34071776270866394
+      ],
+      [
+        0.08301520347595215,
+        0.3230000138282776,
+        0.6575413942337036
+      ]
+    ],
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 503.1962550638841,
+        "median": 511.9999540569181,
+        "max": 594.434973883472
+      },
+      "Lens": {
+        "min": 1504.6237993543978,
+        "median": 1504.6238302728866,
+        "max": 1504.6238611913755
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0
+  },
+  "uv0_lod0": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv0_lod1": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv1_lod0": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv1_lod1": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "textures": [
+    {
+      "path": "textures\\T_RoofFloodLight_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "8d8a56f9990c1df37a784e9f9e7a77b46fda318fc9373431bc4aedf9b00b5347",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures\\T_RoofFloodLight_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "c0a2f2fdf779dbd98481456f701ea2528e90bbfa8447e888fd7fa24b24904f35",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures\\T_RoofFloodLight_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "2d364c73ee2e2a387b93ced2bc64eefb9b70b9c71ff0aece320b1b009c3ab509",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures\\T_RoofFloodLight_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "34fc13d210576186bc81540a0cc424a25d0bb929446aa40006dd467129c503d6",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures\\T_RoofFloodLight_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "LightProfile",
+      "srgb": false,
+      "sha256": "f24d043b7c6e00c8fd7a7c6b0d00f07749f8c13f6c7af621a11db04a68919b79",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_RoofFloodLight_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "5a447d7a55c5935f1c31db4d6724c2eaadf52410755f7e3a762d50b575cd6119",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_RoofFloodLight_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "3e4f9cb1ed7e36fa3c21967084e00efb205509ff6444a887b55b22335a1c3f3b",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    }
+  ],
+  "bake": "Cycles normal bake of geometry-edge Bevel + generated finish into FinishBake UV1; converted to DirectX",
+  "scope": "Blender evidence only, export roundtrip follows run_pieces.py",
+  "fbx_reimport": {
+    "SM_Kit_RoofFloodLight.fbx": {
+      "triangles": 2288,
+      "vertices": 1352,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -0.15417489409446716,
+          -0.41200000047683716,
+          0
+        ],
+        [
+          0.1250000298023224,
+          0.41200000047683716,
+          0.7086668014526367
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          -0.0018774834461510181,
+          -0.3230000138282776,
+          0.34071776270866394
+        ],
+        [
+          0.08301525563001633,
+          0.3230000138282776,
+          0.6575413942337036
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 389.00712534854006,
+          "median": 512.0000173269295,
+          "max": 561.1038501264031
+        },
+        "Lens": {
+          "min": 1504.6237993543978,
+          "median": 1504.6238302728866,
+          "max": 1504.6238611913755
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "finish_uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "sha256": "1749940b09536bc43443ed3d58c528e41fb5a48fa11b6021d3d87fbcdcd3cefb",
+      "normal_tangent_orthonormal_max_error": 1.9371509552001953e-7,
+      "imported_custom_normals": true,
+      "lens_normal_dot_light": {
+        "minimum": 0.9999999552965164,
+        "maximum": 0.9999999552965164
+      }
+    },
+    "SM_Kit_RoofFloodLight_LOD1.fbx": {
+      "triangles": 800,
+      "vertices": 602,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -0.15417489409446716,
+          -0.41499999165534973,
+          0
+        ],
+        [
+          0.1250000298023224,
+          0.41499999165534973,
+          0.709184467792511
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          -0.0018774834461510181,
+          -0.3230000138282776,
+          0.34071776270866394
+        ],
+        [
+          0.08301525563001633,
+          0.3230000138282776,
+          0.6575413942337036
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 503.1962550638841,
+          "median": 511.9999540569181,
+          "max": 594.434973883472
+        },
+        "Lens": {
+          "min": 1504.6237993543978,
+          "median": 1504.6238302728866,
+          "max": 1504.6238611913755
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "finish_uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "sha256": "e2c0eefb6a3c99c3acdec4aaaeaec3a82081db62452e424e93639982843c2bc8",
+      "normal_tangent_orthonormal_max_error": 4.209578037261963e-7,
+      "imported_custom_normals": true,
+      "lens_normal_dot_light": {
+        "minimum": 0.9999999552965164,
+        "maximum": 0.9999999552965164
+      }
+    }
+  },
+  "export_roundtrip": "passed: counts, slot order, UVs, origin and world bounds",
+  "source_inventory": [
+    {
+      "name": "SM_Kit_RoofFloodLight",
+      "type": "MESH"
+    },
+    {
+      "name": "SM_Kit_RoofFloodLight_LOD1",
+      "type": "MESH"
+    }
+  ],
+  "source_reload": {
+    "lod0": {
+      "triangles": 2288,
+      "vertices": 1352,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -0.1541748344898224,
+          -0.41200000047683716,
+          0
+        ],
+        [
+          0.125,
+          0.41200000047683716,
+          0.7086668014526367
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          -0.0018774308264255524,
+          -0.3230000138282776,
+          0.34071776270866394
+        ],
+        [
+          0.08301520347595215,
+          0.3230000138282776,
+          0.6575413942337036
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 389.00712534854006,
+          "median": 512.0000173269295,
+          "max": 561.1038501264031
+        },
+        "Lens": {
+          "min": 1504.6237993543978,
+          "median": 1504.6238302728866,
+          "max": 1504.6238611913755
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0
+    },
+    "lod1": {
+      "triangles": 800,
+      "vertices": 602,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -0.1541748344898224,
+          -0.41499999165534973,
+          0
+        ],
+        [
+          0.125,
+          0.41499999165534973,
+          0.709184467792511
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          -0.0018774308264255524,
+          -0.3230000138282776,
+          0.34071776270866394
+        ],
+        [
+          0.08301520347595215,
+          0.3230000138282776,
+          0.6575413942337036
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 503.1962550638841,
+          "median": 511.9999540569181,
+          "max": 594.434973883472
+        },
+        "Lens": {
+          "min": 1504.6237993543978,
+          "median": 1504.6238302728866,
+          "max": 1504.6238611913755
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0
+    }
+  },
+  "packed_images": [
+    {
+      "name": "T_RoofFloodLight_Housing_BaseColor.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_RoofFloodLight_Housing_Finish_Normal.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_RoofFloodLight_Housing_ORM.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_RoofFloodLight_Lens_BaseColor.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_RoofFloodLight_Lens_Finish_Normal.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_RoofFloodLight_Lens_LightProfile.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_RoofFloodLight_Lens_ORM.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    }
+  ],
+  "packed_pixels_match_files": [
+    {
+      "name": "T_RoofFloodLight_Housing_BaseColor.png",
+      "sha256": "8d8a56f9990c1df37a784e9f9e7a77b46fda318fc9373431bc4aedf9b00b5347"
+    },
+    {
+      "name": "T_RoofFloodLight_Housing_Finish_Normal.png",
+      "sha256": "5a447d7a55c5935f1c31db4d6724c2eaadf52410755f7e3a762d50b575cd6119"
+    },
+    {
+      "name": "T_RoofFloodLight_Housing_ORM.png",
+      "sha256": "c0a2f2fdf779dbd98481456f701ea2528e90bbfa8447e888fd7fa24b24904f35"
+    },
+    {
+      "name": "T_RoofFloodLight_Lens_BaseColor.png",
+      "sha256": "2d364c73ee2e2a387b93ced2bc64eefb9b70b9c71ff0aece320b1b009c3ab509"
+    },
+    {
+      "name": "T_RoofFloodLight_Lens_Finish_Normal.png",
+      "sha256": "3e4f9cb1ed7e36fa3c21967084e00efb205509ff6444a887b55b22335a1c3f3b"
+    },
+    {
+      "name": "T_RoofFloodLight_Lens_LightProfile.png",
+      "sha256": "f24d043b7c6e00c8fd7a7c6b0d00f07749f8c13f6c7af621a11db04a68919b79"
+    },
+    {
+      "name": "T_RoofFloodLight_Lens_ORM.png",
+      "sha256": "34fc13d210576186bc81540a0cc424a25d0bb929446aa40006dd467129c503d6"
+    }
+  ],
+  "final_normal_binding": {
+    "Housing": {
+      "image": "T_RoofFloodLight_Housing_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    },
+    "Lens": {
+      "image": "T_RoofFloodLight_Lens_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    }
+  },
+  "independent_audit": "astra_technical.json",
+  "runner_repeat_digests": {
+    "first": [
+      "e15345af9127c0bbdc1022b0d7cebe163f1ce6b5",
+      "808569497a6f0ddf0cf002267d0bc95c45fd7446"
+    ],
+    "second": [
+      "e15345af9127c0bbdc1022b0d7cebe163f1ce6b5",
+      "808569497a6f0ddf0cf002267d0bc95c45fd7446"
+    ],
+    "match": true,
+    "receipts": [
+      "round04b_build_a.json",
+      "round04b_build_b.json"
+    ]
+  },
+  "distance_evidence": "astra_distance_comparison.json",
+  "review_status": "Round 4b targeted fix pass complete; producer approval pending",
+  "open_items": [
+    "OPEN: dimensional authority for 06. The appearance table’s approximate 80 × 40 × 75 cm envelope conflicts with the detailed head/base dimensions. This delivery retains the detailed brief and measures 82.4 × 27.9 × 70.9 cm (width/depth/height). A producer clarification was requested; no answer or approval is assumed. Do not stretch the export silently."
+  ],
+  "round4b_fix_scope": "round04b_fix_scope.json"
+}

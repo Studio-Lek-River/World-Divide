@@ -56,6 +56,211 @@
    "digest": [
     "da9db671beca1fa82a3bce897a857231978407b6"
    ]
+  },
+  "lighting/01_WallLamp": {
+   "mesh": "SM_Kit_WallLamp",
+   "fbx": "lighting/01_WallLamp/SM_Kit_WallLamp.fbx",
+   "lod1_fbx": "lighting/01_WallLamp/SM_Kit_WallLamp_LOD1.fbx",
+   "slots": [
+    "Housing",
+    "Lens"
+   ],
+   "triangles": [
+    624,
+    208
+   ],
+   "bounds": [
+    [
+     0.0,
+     -15.6,
+     -7.0
+    ],
+    [
+     13.0,
+     15.6,
+     7.0
+    ]
+   ],
+   "lens_bounds": [
+    [
+     2.8,
+     -12.5,
+     -5.6
+    ],
+    [
+     11.6,
+     12.5,
+     -5.2
+    ]
+   ],
+   "digest": [
+    "b2d1db3e2412ae4f45f42b33322135e17ab10b8c",
+    "8b24e32a4b3b798e03cf54523ed9fb9d25c5e122"
+   ]
+  },
+  "lighting/02_CageWallLamp": {
+   "mesh": "SM_Kit_CageWallLamp",
+   "fbx": "lighting/02_CageWallLamp/SM_Kit_CageWallLamp.fbx",
+   "lod1_fbx": "lighting/02_CageWallLamp/SM_Kit_CageWallLamp_LOD1.fbx",
+   "slots": [
+    "Housing",
+    "Lens"
+   ],
+   "triangles": [
+    924,
+    398
+   ],
+   "bounds": [
+    [
+     0.0,
+     -7.0,
+     -13.0
+    ],
+    [
+     12.22,
+     7.0,
+     13.0
+    ]
+   ],
+   "lens_bounds": [
+    [
+     3.8,
+     -4.9,
+     -10.89
+    ],
+    [
+     11.4,
+     4.9,
+     10.89
+    ]
+   ],
+   "digest": [
+    "e87a06829dc3f4bf3bc79304798fb9204c9afb5b",
+    "d456b00ad26958f24b9bf2059ce66e99b95237e5"
+   ]
+  },
+  "lighting/03_EntranceLight": {
+   "mesh": "SM_Kit_EntranceLight",
+   "fbx": "lighting/03_EntranceLight/SM_Kit_EntranceLight.fbx",
+   "lod1_fbx": "lighting/03_EntranceLight/SM_Kit_EntranceLight_LOD1.fbx",
+   "slots": [
+    "Housing",
+    "Lens"
+   ],
+   "triangles": [
+    348,
+    124
+   ],
+   "bounds": [
+    [
+     0.0,
+     -10.0,
+     -12.5
+    ],
+    [
+     36.8,
+     10.0,
+     12.8
+    ]
+   ],
+   "lens_bounds": [
+    [
+     4.3,
+     -7.9,
+     2.2
+    ],
+    [
+     33.7,
+     7.9,
+     2.6
+    ]
+   ],
+   "digest": [
+    "78166bef986a7f2f736127891ae60126d2d9ec84",
+    "2db2b7e01cb6126715f5b787aa00122db7e8d4ed"
+   ]
+  },
+  "lighting/05_DirectionalSpot": {
+   "mesh": "SM_Kit_DirectionalSpot",
+   "fbx": "lighting/05_DirectionalSpot/SM_Kit_DirectionalSpot.fbx",
+   "lod1_fbx": "lighting/05_DirectionalSpot/SM_Kit_DirectionalSpot_LOD1.fbx",
+   "slots": [
+    "Housing",
+    "Lens"
+   ],
+   "triangles": [
+    2466,
+    718
+   ],
+   "bounds": [
+    [
+     0.0,
+     -10.2,
+     -15.0
+    ],
+    [
+     46.55,
+     10.2,
+     29.29
+    ]
+   ],
+   "lens_bounds": [
+    [
+     33.34,
+     -7.9,
+     1.41
+    ],
+    [
+     41.24,
+     7.9,
+     15.09
+    ]
+   ],
+   "digest": [
+    "a4e944ac805a5de9397c7b6ca1c737da792e4d3e",
+    "42b54dd6e07fe1491aa0263ff39f4c55f0b1856c"
+   ]
+  },
+  "lighting/06_RoofFloodLight": {
+   "mesh": "SM_Kit_RoofFloodLight",
+   "fbx": "lighting/06_RoofFloodLight/SM_Kit_RoofFloodLight.fbx",
+   "lod1_fbx": "lighting/06_RoofFloodLight/SM_Kit_RoofFloodLight_LOD1.fbx",
+   "slots": [
+    "Housing",
+    "Lens"
+   ],
+   "triangles": [
+    2288,
+    800
+   ],
+   "bounds": [
+    [
+     -15.42,
+     -41.2,
+     0.0
+    ],
+    [
+     12.5,
+     41.2,
+     70.87
+    ]
+   ],
+   "lens_bounds": [
+    [
+     -0.19,
+     -32.3,
+     34.07
+    ],
+    [
+     8.3,
+     32.3,
+     65.75
+    ]
+   ],
+   "digest": [
+    "e15345af9127c0bbdc1022b0d7cebe163f1ce6b5",
+    "808569497a6f0ddf0cf002267d0bc95c45fd7446"
+   ]
   }
  }
 }

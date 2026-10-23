@@ -1,0 +1,19 @@
+00:00.469  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\02_CageWallLamp\source\CageWallLamp.blend"
+CYCLES DEVICES [('NVIDIA GeForce RTX 4090', True), ('AMD Ryzen 7 7800X3D 8-Core Processor', False), ('NVIDIA GeForce RTX 4090', True), ('AMD Radeon(TM) Graphics', True)]
+D:/Lek River Studio/World-Divide/Tools/Art/kit/wall_lamp_render.py:181: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  world=bpy.data.worlds.new('ReviewWorld');world.use_nodes=True;scene.world=world;bg=next(n for n in world.node_tree.nodes if n.type=='BACKGROUND');bg.inputs['Color'].default_value=(.24,.30,.42,1)
+D:/Lek River Studio/World-Divide/Tools/Art/kit/wall_lamp_render.py:187: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  concrete=bpy.data.materials.new('REVIEW concrete');concrete.use_nodes=True;nt=concrete.node_tree;p=next(n for n in nt.nodes if n.type=='BSDF_PRINCIPLED');p.inputs['Base Color'].default_value=(.12,.13,.14,1);p.inputs['Roughness'].default_value=.86
+RENDERED lighting/02_CageWallLamp pbr_day_on
+RENDERED lighting/02_CageWallLamp pbr_day_off
+RENDERED lighting/02_CageWallLamp pbr_night_on
+RENDERED lighting/02_CageWallLamp pbr_night_off
+00:03.625  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:06.656  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\02_CageWallLamp\review\rts_lod0.png'
+00:09.781  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:11.515  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\02_CageWallLamp\review\rts_lod1.png'
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

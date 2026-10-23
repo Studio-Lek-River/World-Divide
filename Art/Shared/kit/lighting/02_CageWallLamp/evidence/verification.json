@@ -1,0 +1,624 @@
+{
+  "lod0": {
+    "triangles": 924,
+    "vertices": 528,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        0,
+        -0.07000000029802322,
+        -0.12999999523162842
+      ],
+      [
+        0.12218562513589859,
+        0.07000000029802322,
+        0.12999999523162842
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        0.03799999877810478,
+        -0.04899999871850014,
+        -0.10888577252626419
+      ],
+      [
+        0.11400000005960464,
+        0.04899999871850014,
+        0.10888577252626419
+      ]
+    ],
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 443.64069083809756,
+        "median": 512.777566694294,
+        "max": 746.2906492577225
+      },
+      "Lens": {
+        "min": 1732.358031490308,
+        "median": 1732.7027112825863,
+        "max": 1734.2466182913556
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0
+  },
+  "lod1": {
+    "triangles": 398,
+    "vertices": 252,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        0,
+        -0.07000000029802322,
+        -0.12999999523162842
+      ],
+      [
+        0.12218562513589859,
+        0.07000000029802322,
+        0.12999999523162842
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        0.03799999877810478,
+        -0.04899999871850014,
+        -0.10825558006763458
+      ],
+      [
+        0.11400000005960464,
+        0.04899999871850014,
+        0.10825558006763458
+      ]
+    ],
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 444.98188718247883,
+        "median": 512.0000818543232,
+        "max": 766.6057155289251
+      },
+      "Lens": {
+        "min": 1732.6067615885345,
+        "median": 1735.96351912439,
+        "max": 1743.2209698366382
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0
+  },
+  "uv0_lod0": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv0_lod1": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv1_lod0": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv1_lod1": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "textures": [
+    {
+      "path": "textures\\T_CageWallLamp_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "65b920f0c49c7dfe33fa8a1115cf5a17cce5b1bccd221bbf9698c376a051da82",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures\\T_CageWallLamp_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "0f5f1add1dfb257b3aef1ab9a22eb5130d0d3b2a51a2742edd49febdfa4e15a1",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures\\T_CageWallLamp_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "33be747326e1ab04370bc6973f386fbebefabf5482017395dbe1bd40e0a4c2f9",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures\\T_CageWallLamp_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "cbbf134a63633c25963564c8afa4c4ebe45950af067a3d90046f0355dd1d364d",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures\\T_CageWallLamp_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "LightProfile",
+      "srgb": false,
+      "sha256": "849fc20a65210cbb0a098c4c3e24b8167782496fd59399a07bf1b2d83a90d587",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_CageWallLamp_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "fa0e23727e2feee5e7ecc6daf4127d68991477c12f11a9b547280bec02b73e20",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_CageWallLamp_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "45a36a05ed78d2f866ef1e8ca383547f16be6a087e0c1ff4e985a4683b4bffee",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    }
+  ],
+  "bake": "Cycles normal bake of geometry-edge Bevel + generated finish into FinishBake UV1; converted to DirectX",
+  "scope": "Blender evidence only, export roundtrip follows run_pieces.py",
+  "fbx_reimport": {
+    "SM_Kit_CageWallLamp.fbx": {
+      "triangles": 924,
+      "vertices": 528,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -1.1404448052587668e-8,
+          -0.07000000029802322,
+          -0.12999999523162842
+        ],
+        [
+          0.12218562513589859,
+          0.07000000029802322,
+          0.12999999523162842
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.037999991327524185,
+          -0.049000006169080734,
+          -0.10888577252626419
+        ],
+        [
+          0.11400000005960464,
+          0.04899999126791954,
+          0.10888577252626419
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 443.64069083809756,
+          "median": 512.777566694294,
+          "max": 746.2906492577225
+        },
+        "Lens": {
+          "min": 1732.358031490308,
+          "median": 1732.7027112825863,
+          "max": 1734.2466182913556
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "finish_uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "sha256": "3b4c90a7caaa28ee5fae20a8ed095637968a120365215dbbe6fca434fc6d34fd",
+      "normal_tangent_orthonormal_max_error": 2.39349901676178e-7,
+      "imported_custom_normals": true
+    },
+    "SM_Kit_CageWallLamp_LOD1.fbx": {
+      "triangles": 398,
+      "vertices": 252,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -1.1404448052587668e-8,
+          -0.07000000029802322,
+          -0.12999999523162842
+        ],
+        [
+          0.12218562513589859,
+          0.07000000029802322,
+          0.12999999523162842
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.037999991327524185,
+          -0.049000006169080734,
+          -0.10825558006763458
+        ],
+        [
+          0.11400000005960464,
+          0.04899999126791954,
+          0.10825558006763458
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 444.98188718247883,
+          "median": 512.0000818543232,
+          "max": 766.6057155289251
+        },
+        "Lens": {
+          "min": 1732.6067615885345,
+          "median": 1735.96351912439,
+          "max": 1743.2209698366382
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "finish_uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "sha256": "2930a1f34514fb30bbc832db7b522b549095fa3183ffe47011020d14526c567b",
+      "normal_tangent_orthonormal_max_error": 2.4726614356040955e-7,
+      "imported_custom_normals": true
+    }
+  },
+  "export_roundtrip": "passed: counts, slot order, UVs, origin and world bounds",
+  "source_inventory": [
+    {
+      "name": "SM_Kit_CageWallLamp",
+      "type": "MESH"
+    },
+    {
+      "name": "SM_Kit_CageWallLamp_LOD1",
+      "type": "MESH"
+    }
+  ],
+  "source_reload": {
+    "lod0": {
+      "triangles": 924,
+      "vertices": 528,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          0,
+          -0.07000000029802322,
+          -0.12999999523162842
+        ],
+        [
+          0.12218562513589859,
+          0.07000000029802322,
+          0.12999999523162842
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.03799999877810478,
+          -0.04899999871850014,
+          -0.10888577252626419
+        ],
+        [
+          0.11400000005960464,
+          0.04899999871850014,
+          0.10888577252626419
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 443.64069083809756,
+          "median": 512.777566694294,
+          "max": 746.2906492577225
+        },
+        "Lens": {
+          "min": 1732.358031490308,
+          "median": 1732.7027112825863,
+          "max": 1734.2466182913556
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0
+    },
+    "lod1": {
+      "triangles": 398,
+      "vertices": 252,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          0,
+          -0.07000000029802322,
+          -0.12999999523162842
+        ],
+        [
+          0.12218562513589859,
+          0.07000000029802322,
+          0.12999999523162842
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.03799999877810478,
+          -0.04899999871850014,
+          -0.10825558006763458
+        ],
+        [
+          0.11400000005960464,
+          0.04899999871850014,
+          0.10825558006763458
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 444.98188718247883,
+          "median": 512.0000818543232,
+          "max": 766.6057155289251
+        },
+        "Lens": {
+          "min": 1732.6067615885345,
+          "median": 1735.96351912439,
+          "max": 1743.2209698366382
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0
+    }
+  },
+  "packed_images": [
+    {
+      "name": "T_CageWallLamp_Housing_BaseColor.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_CageWallLamp_Housing_Finish_Normal.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_CageWallLamp_Housing_ORM.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_CageWallLamp_Lens_BaseColor.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_CageWallLamp_Lens_Finish_Normal.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_CageWallLamp_Lens_LightProfile.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_CageWallLamp_Lens_ORM.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    }
+  ],
+  "packed_pixels_match_files": [
+    {
+      "name": "T_CageWallLamp_Housing_BaseColor.png",
+      "sha256": "65b920f0c49c7dfe33fa8a1115cf5a17cce5b1bccd221bbf9698c376a051da82"
+    },
+    {
+      "name": "T_CageWallLamp_Housing_Finish_Normal.png",
+      "sha256": "fa0e23727e2feee5e7ecc6daf4127d68991477c12f11a9b547280bec02b73e20"
+    },
+    {
+      "name": "T_CageWallLamp_Housing_ORM.png",
+      "sha256": "0f5f1add1dfb257b3aef1ab9a22eb5130d0d3b2a51a2742edd49febdfa4e15a1"
+    },
+    {
+      "name": "T_CageWallLamp_Lens_BaseColor.png",
+      "sha256": "33be747326e1ab04370bc6973f386fbebefabf5482017395dbe1bd40e0a4c2f9"
+    },
+    {
+      "name": "T_CageWallLamp_Lens_Finish_Normal.png",
+      "sha256": "45a36a05ed78d2f866ef1e8ca383547f16be6a087e0c1ff4e985a4683b4bffee"
+    },
+    {
+      "name": "T_CageWallLamp_Lens_LightProfile.png",
+      "sha256": "849fc20a65210cbb0a098c4c3e24b8167782496fd59399a07bf1b2d83a90d587"
+    },
+    {
+      "name": "T_CageWallLamp_Lens_ORM.png",
+      "sha256": "cbbf134a63633c25963564c8afa4c4ebe45950af067a3d90046f0355dd1d364d"
+    }
+  ],
+  "final_normal_binding": {
+    "Housing": {
+      "image": "T_CageWallLamp_Housing_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    },
+    "Lens": {
+      "image": "T_CageWallLamp_Lens_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    }
+  },
+  "independent_audit": "astra_technical.json",
+  "runner_repeat_digests": {
+    "first": [
+      "e87a06829dc3f4bf3bc79304798fb9204c9afb5b",
+      "d456b00ad26958f24b9bf2059ce66e99b95237e5"
+    ],
+    "second": [
+      "e87a06829dc3f4bf3bc79304798fb9204c9afb5b",
+      "d456b00ad26958f24b9bf2059ce66e99b95237e5"
+    ],
+    "match": true,
+    "receipts": [
+      "round04b_build_a.json",
+      "round04b_build_b.json"
+    ]
+  },
+  "distance_evidence": "astra_distance_comparison.json",
+  "review_status": "Round 4b targeted fix pass complete; producer approval pending",
+  "open_items": [],
+  "round4b_fix_scope": "round04b_fix_scope.json"
+}

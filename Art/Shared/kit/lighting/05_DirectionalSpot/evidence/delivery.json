@@ -1,0 +1,595 @@
+{
+  "piece": "lighting/05_DirectionalSpot",
+  "round": "4b",
+  "date": "2026-10-23",
+  "blender_version": "5.1.2",
+  "triangles": [
+    2466,
+    718
+  ],
+  "budgets": {
+    "lod0": 2500,
+    "lod1": 800,
+    "slots": 2
+  },
+  "remaining_triangles": [
+    34,
+    82
+  ],
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "bounds_unreal_cm": [
+    [
+      0,
+      -10.2,
+      -15
+    ],
+    [
+      46.5542,
+      10.2,
+      29.2922
+    ]
+  ],
+  "lens_bounds_unreal_cm": [
+    [
+      33.3375,
+      -7.9,
+      1.4084
+    ],
+    [
+      41.2375,
+      7.9,
+      15.0916
+    ]
+  ],
+  "light_anchor_unreal_cm": [
+    37.287499999999994,
+    0,
+    8.25
+  ],
+  "geometry_digests": [
+    "a4e944ac805a5de9397c7b6ca1c737da792e4d3e",
+    "42b54dd6e07fe1491aa0263ff39f4c55f0b1856c"
+  ],
+  "repeat_build_digests": [
+    "a4e944ac805a5de9397c7b6ca1c737da792e4d3e",
+    "42b54dd6e07fe1491aa0263ff39f4c55f0b1856c"
+  ],
+  "deterministic_repeat": true,
+  "factory_reset_repeat_digests": [
+    [
+      "61ea8a5ed5928fd7238cb613147fe72486a817b172f84db6dec5df865ab11963",
+      "0db78b643d0d8fc8c3c90e60b707259b3a0e09c3e416907da6e2ad68f46c9cf3"
+    ],
+    [
+      "61ea8a5ed5928fd7238cb613147fe72486a817b172f84db6dec5df865ab11963",
+      "0db78b643d0d8fc8c3c90e60b707259b3a0e09c3e416907da6e2ad68f46c9cf3"
+    ]
+  ],
+  "source_equals_generator": true,
+  "uv0_overlap_pairs": [
+    0,
+    0
+  ],
+  "uv1_overlap_pairs": [
+    0,
+    0
+  ],
+  "combined_lod_atlas_overlap": [
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  ],
+  "normal_binding": {
+    "Housing": {
+      "image": "T_DirectionalSpot_Housing_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    },
+    "Lens": {
+      "image": "T_DirectionalSpot_Lens_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    }
+  },
+  "packed_images_match_png": true,
+  "fbx_roundtrip": "passed: counts, slot order, UVs, origin and world bounds",
+  "generator_sha256": {
+    "Tools/Art/kit/directional_spot.py": "04e57bc1e5e01a3b98b6f35f2e13e6b410ce90521563a33c34a5045a0b1acbdc",
+    "Tools/Art/kit/wall_lamp_materials.py": "11f0cea41684f5932a3dd25b887bc3b338f32b860a5970c29f48cf5b8981fba1",
+    "Tools/Art/kit/wall_lamp_render.py": "a9682f95f16db8c5883f3570d79eef5ce09ba1c3e61d7b426552f997bab11afe",
+    "Tools/Art/kit/wall_lamp_astra_check.py": "227f6fff15b452412b74530f32d22facc51e002972d0f0eebd45f5700b39f38e"
+  },
+  "reference_sha256": "00a283d941413ed894a3ab9ae20c852965d4614a51d453c1442a981686fe9bd6",
+  "review_status": "Round 4b targeted fix pass complete; producer approval pending",
+  "integration": "No Unreal/editor/runtime work; Claude owns integration after art acceptance",
+  "open_items": [],
+  "distance_comparison": {
+    "scope": "Blender fixture-centre distances; both LODs forced for comparison, no runtime or master approval claim",
+    "records": {
+      "12": {
+        "camera_distance_m": 12,
+        "source_prefix": "distance",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 10404,
+        "roi_radius_pixels": 51,
+        "changed_pixels_gt_1_of_255": 1370,
+        "max_display_delta": 0.2352941334247589,
+        "mean_delta_over_comparison_roi": 0.004888768773525953
+      },
+      "150": {
+        "camera_distance_m": 150,
+        "source_prefix": "distance",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 256,
+        "roi_radius_pixels": 8,
+        "changed_pixels_gt_1_of_255": 14,
+        "max_display_delta": 0.13725492358207703,
+        "mean_delta_over_comparison_roi": 0.0023131128400564194
+      },
+      "260": {
+        "camera_distance_m": 260,
+        "source_prefix": "switch",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 196,
+        "roi_radius_pixels": 7,
+        "changed_pixels_gt_1_of_255": 4,
+        "max_display_delta": 0.03529411554336548,
+        "mean_delta_over_comparison_roi": 0.0005602242308668792
+      },
+      "450": {
+        "camera_distance_m": 450,
+        "source_prefix": "distance",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 144,
+        "roi_radius_pixels": 6,
+        "changed_pixels_gt_1_of_255": 2,
+        "max_display_delta": 0.04705885052680969,
+        "mean_delta_over_comparison_roi": 0.0008442267426289618
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "CLAUDE_HANDOFF.md",
+      "bytes": 5839,
+      "sha256": "cede16941c09bbeaef32870ee4ea79a7b28efe1e46ab2edfda8b1ba480e6cbbb"
+    },
+    {
+      "path": "SM_Kit_DirectionalSpot.fbx",
+      "bytes": 285644,
+      "sha256": "ffefacfc629dd906065acadb145342a823f620b74022c752c893984848532d5d"
+    },
+    {
+      "path": "SM_Kit_DirectionalSpot_LOD1.fbx",
+      "bytes": 93244,
+      "sha256": "568d52cf5ac653da28a69c5fb388d4c57258e337a12cdd44d1b9f82b546d3076"
+    },
+    {
+      "path": "STATE.md",
+      "bytes": 1359,
+      "sha256": "0c8c1d4fcc5bf961965998792019240955fd54734ce6969f3d1d62bb217c0782"
+    },
+    {
+      "path": "evidence/astra_check.md",
+      "bytes": 4606,
+      "sha256": "53ed1b379a352189c43e84afeeba4c911b32be6dcbc274419e93d673cffa411d"
+    },
+    {
+      "path": "evidence/astra_distance_comparison.json",
+      "bytes": 1765,
+      "sha256": "3532c72cd7f5dd3cfc57e710dd0664bddc1036437c9bba6f00111fa46a6b24fb"
+    },
+    {
+      "path": "evidence/astra_technical.json",
+      "bytes": 4862,
+      "sha256": "f3d4d3f49a16afe356d9d41e5cd13facd386e44f8ff12549be8ff1f6469b3eef"
+    },
+    {
+      "path": "evidence/cameras.json",
+      "bytes": 503,
+      "sha256": "5b666c46707eb3ae29b5755ef596d85c13964ab1c8c0d8051a87116891ac31da"
+    },
+    {
+      "path": "evidence/lod_comparison.json",
+      "bytes": 473,
+      "sha256": "67a7565b74cca49ecfd0c6126a96d03e2d626870e31818ce1c807aee68e4623a"
+    },
+    {
+      "path": "evidence/normal_bake_repair.json",
+      "bytes": 486,
+      "sha256": "136882a821ebcde2c5e4fe41e6d53ee54d472703b35104a822af0b393cc251de"
+    },
+    {
+      "path": "evidence/reference_cameras.json",
+      "bytes": 851,
+      "sha256": "cdc86260d7e3dd8233ff8b6ccf40d55185e735112522accbade2150d11ef565e"
+    },
+    {
+      "path": "evidence/reference_comparison.json",
+      "bytes": 428,
+      "sha256": "15f1cf6ec63166de71556a16a02324f4dee8b93cd2823c3d8d0c9bdebdb1850d"
+    },
+    {
+      "path": "evidence/round04_build_a.json",
+      "bytes": 615,
+      "sha256": "648b9da04b7d87031b1c855dc9e061f46b18bf19c1ea0ce905f18933e2d56fd7"
+    },
+    {
+      "path": "evidence/round04_build_b.json",
+      "bytes": 615,
+      "sha256": "648b9da04b7d87031b1c855dc9e061f46b18bf19c1ea0ce905f18933e2d56fd7"
+    },
+    {
+      "path": "evidence/verification.json",
+      "bytes": 14895,
+      "sha256": "dbee7764831867e03bec220a50f3f6a9ced906bcd17f0f11f09e3295d9316b03"
+    },
+    {
+      "path": "material_recipe.json",
+      "bytes": 4534,
+      "sha256": "0e966a0ef248b281f57e08eb3c16bd47411d4d14b9f22d631c97667ec6fc283e"
+    },
+    {
+      "path": "review/README.md",
+      "bytes": 1245,
+      "sha256": "1150543d03dc706c9708a81f1a6449feae6e2229cf41987d7ca3b8d2c6033c70"
+    },
+    {
+      "path": "review/astra_12m_LOD0_left_LOD1_right.png",
+      "bytes": 173840,
+      "sha256": "acd34ae59b75d10933e56873b9991ad8b48da11ffbd69d846f80494f58a4af38",
+      "dimensions": [
+        1040,
+        512
+      ]
+    },
+    {
+      "path": "review/astra_150m_LOD0_left_LOD1_right.png",
+      "bytes": 15385,
+      "sha256": "2abe02f1e203c57787f2e55471bffd5a9ef16356f9c7bf2433c69aae1380fb51",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/astra_260m_LOD0_left_LOD1_right.png",
+      "bytes": 14876,
+      "sha256": "3bf8403c7c393a007c848af24a6655e266f0d3f018e75eecb88e126b66b53a81",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/astra_450m_LOD0_left_LOD1_right.png",
+      "bytes": 14764,
+      "sha256": "64415785204942ab38dcb21dc33c3e7f3eba692f6f9a4aff86da98050736ac4a",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/distance_12m_lod0.png",
+      "bytes": 2047858,
+      "sha256": "419de7f62ad6f775087045ae37bca00e3a68a74e2920efff04cac74ef154a606",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_12m_lod1.png",
+      "bytes": 2047944,
+      "sha256": "0ee0b70380e5aabed9507cfa730ddbd87124fec4b7ae16210f7529f546e889b2",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_150m_lod0.png",
+      "bytes": 2043022,
+      "sha256": "a483e4b5702b36e066091eaa1ab295ae8f94ef123f89ed66f5cb0ac61bf4fddc",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_150m_lod1.png",
+      "bytes": 2043325,
+      "sha256": "35b50547faf02ec0ea973721cc14c3e1170453f128af728de4c04c5f3c942d0d",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_450m_lod0.png",
+      "bytes": 2043306,
+      "sha256": "5c96e4a1147fd2837c8f5f9631e8310b7c1f86910c96c6080d764740a287c103",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_450m_lod1.png",
+      "bytes": 2042977,
+      "sha256": "90a739e3b0e55d113b56863baf9f204e1fb3a7e4d62c840abc21e7143512e183",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/pbr_day_off.png",
+      "bytes": 1783379,
+      "sha256": "9cdfaa4af28beafffb4aaeef510f7f23f25cccdd31cebd495889908eb8672219",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_day_on.png",
+      "bytes": 1789553,
+      "sha256": "d4ecfe8d18fa65f1db77d5cfe95240c646b8428b2f2970ab44b2e2e7dd1ff21f",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_night_off.png",
+      "bytes": 1707848,
+      "sha256": "0d75efea3339765e38464be170cede82a5d913aaf5cd54c05070b315f4eac0bd",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_night_on.png",
+      "bytes": 1815468,
+      "sha256": "dce170c42c5d2e47b0fbb6bfa67aacf40f5b312e49d92a1d1ec7f16928304ec7",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/ref_match_day.png",
+      "bytes": 1636218,
+      "sha256": "5d645155e4f5efa2c769e095cb9e47890364e6999d90fef16aec23ad225e0a3b",
+      "dimensions": [
+        1300,
+        1100
+      ]
+    },
+    {
+      "path": "review/ref_match_night.png",
+      "bytes": 1675316,
+      "sha256": "6df59ebc313aa5d42bba5a914b127fa8b58db5e74c23577ea43c9d479dc124ca",
+      "dimensions": [
+        1300,
+        1100
+      ]
+    },
+    {
+      "path": "review/reference_left_round04_right_day.png",
+      "bytes": 1579443,
+      "sha256": "472ac03d7e5fb0084e5913652ec1b667211d35a278cccdb79ae20c285801aa5c",
+      "dimensions": [
+        1620,
+        650
+      ]
+    },
+    {
+      "path": "review/reference_left_round04_right_night.png",
+      "bytes": 1593730,
+      "sha256": "e41ed21843c92a16668d2bce7974cc2a270565bb9a6bd65986b844ff797616e1",
+      "dimensions": [
+        1620,
+        650
+      ]
+    },
+    {
+      "path": "review/rts_LOD0_left_LOD1_right.png",
+      "bytes": 277099,
+      "sha256": "da4874ab3c3aab0ba2c6fce926e5eda883a4e5687122ade3cc915423e8d59c44",
+      "dimensions": [
+        736,
+        328
+      ]
+    },
+    {
+      "path": "review/rts_lod0.png",
+      "bytes": 142570,
+      "sha256": "1f4a3ac03118bf78392fb807fac3b532931bf89f7597a6d67ef16ba78410f8fb",
+      "dimensions": [
+        360,
+        300
+      ]
+    },
+    {
+      "path": "review/rts_lod1.png",
+      "bytes": 141537,
+      "sha256": "d68275a26a1063fd5eed89b5430647f5c04b413b19c0c64a513628102ba98f8a",
+      "dimensions": [
+        360,
+        300
+      ]
+    },
+    {
+      "path": "review/switch_260m_crop_8x_LOD0_left_LOD1_right.png",
+      "bytes": 15568,
+      "sha256": "d705b53b07325f718c4106dd34aa95474cf2c0013e0331995d377c5ede008d58",
+      "dimensions": [
+        784,
+        412
+      ]
+    },
+    {
+      "path": "review/switch_260m_lod0.png",
+      "bytes": 2042961,
+      "sha256": "3b321296a24ee95a58c94844549afecd74c6b00fad2215a7a8ff5468affc7917",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/switch_260m_lod1.png",
+      "bytes": 2042711,
+      "sha256": "16243a9a8b97ae07bf83b73f1bca31aecd7aad05e97b2974f3d28fd879dac72a",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "source/DirectionalSpot.blend",
+      "bytes": 14756729,
+      "sha256": "9ff019882ee76549bc2f1ce7791f92ecf1f3d33adb74ebdd8430178ff9bbeadf"
+    },
+    {
+      "path": "source/DirectionalSpot_Preview.blend",
+      "bytes": 14763802,
+      "sha256": "e9019b602102b3914bb9dc92aa714f82acee3795c2ccc15398d33732dff2e308"
+    },
+    {
+      "path": "source/DirectionalSpot_ReferencePreview.blend",
+      "bytes": 14763883,
+      "sha256": "6bde8018143cb1b9daf1b01b851e8f23cd249b9db7cf87f214dcee9a06dfb58f"
+    },
+    {
+      "path": "source/bake_inputs/T_DirectionalSpot_Housing_Micro_Normal.png",
+      "bytes": 6123199,
+      "sha256": "d52053a76b40ed9705597a4bf8e4f678e8c5e08e182e6a4b1f881e296a06c48a",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "source/bake_inputs/T_DirectionalSpot_Lens_Micro_Normal.png",
+      "bytes": 2054347,
+      "sha256": "a3e33598e4d55d993adfbcf5573bc4ee723619c559a57e84edc25b64a2eb8587",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_DirectionalSpot_Housing_BaseColor.png",
+      "bytes": 5296490,
+      "sha256": "c3e03fe48c43de732b24121f30f0a20bc8b221ef3fec922d736c1bad0f7da8c2",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_DirectionalSpot_Housing_Finish_Normal.png",
+      "bytes": 2655874,
+      "sha256": "7f0eafa16da21492bcde2d8344b589cc3dc76a33d6accf53210a34c06c5d0e43",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_DirectionalSpot_Housing_ORM.png",
+      "bytes": 3426387,
+      "sha256": "1e19f033a9c1724516eda610aff37f8f337b751ca650dfc43162bb4d51636002",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_DirectionalSpot_Lens_BaseColor.png",
+      "bytes": 1553756,
+      "sha256": "375c69f512addbf11d5738be55977d6afbb5476c44c5daf204d4b5f151bbf81b",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_DirectionalSpot_Lens_Finish_Normal.png",
+      "bytes": 367432,
+      "sha256": "10b65c344b2765f6734f483dd857514523d37af2c34a562351c5c9b1c79d8583",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_DirectionalSpot_Lens_LightProfile.png",
+      "bytes": 133558,
+      "sha256": "f4a9c94fd55a1456b3f9b69a281786b58e803a5cd77b46123a13161373f4eb00",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_DirectionalSpot_Lens_ORM.png",
+      "bytes": 1207750,
+      "sha256": "964df96e8474201e1f9e56f3d14052a9e6f88cf87bd760029b4daa8f652efbe6",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "evidence/round04b_build_a.json",
+      "bytes": 615,
+      "sha256": "648b9da04b7d87031b1c855dc9e061f46b18bf19c1ea0ce905f18933e2d56fd7"
+    },
+    {
+      "path": "evidence/round04b_build_b.json",
+      "bytes": 615,
+      "sha256": "648b9da04b7d87031b1c855dc9e061f46b18bf19c1ea0ce905f18933e2d56fd7"
+    },
+    {
+      "path": "evidence/round04b_fix_scope.json",
+      "bytes": 357,
+      "sha256": "76f56fc3fd42d8245eaef6a8153567a8fbf8b5c8ca3e6ea0f511074a7959b595"
+    }
+  ],
+  "shared_lod_plate_charts": [],
+  "combined_lod_atlas_note": "Counts unique occupied charts; any shared plate aliases were first verified vertex-by-vertex in both UV channels. Individual LODs have no overlap."
+}

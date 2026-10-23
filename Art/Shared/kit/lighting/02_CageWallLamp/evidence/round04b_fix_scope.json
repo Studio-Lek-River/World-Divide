@@ -1,0 +1,82 @@
+{
+  "round": "4b",
+  "changes": [
+    "Matching plate UV0/UV1",
+    "Rounded LOD1 frame/globe",
+    "Rear frame/globe occlusion matching"
+  ],
+  "geometry_and_uv_unchanged_from_round4": false,
+  "triangles": [
+    924,
+    398
+  ],
+  "shared_plate_charts": [
+    {
+      "key": "cage_plate_1",
+      "triangles": 10,
+      "max_uv0_uv1_error": 7.450580596923828e-9
+    },
+    {
+      "key": "cage_plate_2",
+      "triangles": 2,
+      "max_uv0_uv1_error": 5.960464477539063e-8
+    },
+    {
+      "key": "cage_plate_3",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_4",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_5",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_6",
+      "triangles": 2,
+      "max_uv0_uv1_error": 5.960464477539063e-8
+    },
+    {
+      "key": "cage_plate_7",
+      "triangles": 2,
+      "max_uv0_uv1_error": 5.960464477539063e-8
+    },
+    {
+      "key": "cage_plate_8",
+      "triangles": 2,
+      "max_uv0_uv1_error": 0
+    },
+    {
+      "key": "cage_plate_9",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_10",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_11",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_12",
+      "triangles": 2,
+      "max_uv0_uv1_error": 5.960464477539063e-8
+    },
+    {
+      "key": "cage_plate_13",
+      "triangles": 2,
+      "max_uv0_uv1_error": 5.960464477539063e-8
+    }
+  ],
+  "reference_unchanged": true,
+  "producer_approval": "pending"
+}

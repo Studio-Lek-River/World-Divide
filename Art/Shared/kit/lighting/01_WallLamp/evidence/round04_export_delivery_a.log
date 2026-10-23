@@ -1,0 +1,43 @@
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\01_WallLamp\\SM_Kit_WallLamp.fbx'
+export finished in 0.0615 sec.
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\01_WallLamp\\SM_Kit_WallLamp_LOD1.fbx'
+export finished in 0.0630 sec.
+kit_blender: lighting/01_WallLamp [624, 208] triangles, bounds [[0.0, -15.6, -7.0], [13.0, 15.6, 7.0]], lens [[2.8, -12.5, -5.6], [11.6, 12.5, -5.2]], wrote LOD [0, 1]
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\02_CageWallLamp\\SM_Kit_CageWallLamp.fbx'
+export finished in 0.0773 sec.
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\02_CageWallLamp\\SM_Kit_CageWallLamp_LOD1.fbx'
+export finished in 0.1434 sec.
+kit_blender: lighting/02_CageWallLamp [924, 394] triangles, bounds [[0.0, -7.0, -13.0], [12.55, 7.0, 13.0]], lens [[3.8, -4.9, -10.89], [11.4, 4.9, 10.89]], wrote LOD [0, 1]
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\03_EntranceLight\\SM_Kit_EntranceLight.fbx'
+export finished in 0.0560 sec.
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\03_EntranceLight\\SM_Kit_EntranceLight_LOD1.fbx'
+export finished in 0.0764 sec.
+kit_blender: lighting/03_EntranceLight [348, 124] triangles, bounds [[0.0, -10.0, -12.5], [36.8, 10.0, 12.8]], lens [[4.3, -7.9, 2.2], [33.7, 7.9, 2.6]], wrote LOD [0, 1]
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\05_DirectionalSpot\\SM_Kit_DirectionalSpot.fbx'
+export finished in 0.1475 sec.
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\05_DirectionalSpot\\SM_Kit_DirectionalSpot_LOD1.fbx'
+export finished in 0.3329 sec.
+kit_blender: lighting/05_DirectionalSpot [2466, 718] triangles, bounds [[0.0, -10.2, -15.0], [46.55, 10.2, 29.29]], lens [[33.34, -7.9, 1.41], [41.24, 7.9, 15.09]], wrote LOD [0, 1]
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\06_RoofFloodLight\\SM_Kit_RoofFloodLight.fbx'
+export finished in 0.0832 sec.
+
+FBX export starting... 'D:\\Lek River Studio\\World-Divide\\Art\\Shared\\kit\\lighting\\06_RoofFloodLight\\SM_Kit_RoofFloodLight_LOD1.fbx'
+export finished in 0.1311 sec.
+kit_blender: lighting/06_RoofFloodLight [2288, 800] triangles, bounds [[-15.42, -41.2, 0.0], [12.5, 41.2, 70.87]], lens [[-0.19, -32.3, 34.07], [8.3, 32.3, 65.75]], wrote LOD [0, 1]
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

@@ -1,0 +1,10 @@
+{
+  "Housing": {
+    "invalid_or_uncovered_atlas_pixels": 16306,
+    "method": "Invalid negative/grazing bevel normals and unused atlas background replaced by authored DirectX micro-normal on the same UV1; valid bevel samples preserved"
+  },
+  "Lens": {
+    "invalid_or_uncovered_atlas_pixels": 7512,
+    "method": "Invalid negative/grazing bevel normals and unused atlas background replaced by authored DirectX micro-normal on the same UV1; valid bevel samples preserved"
+  }
+}

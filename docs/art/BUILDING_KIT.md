@@ -58,10 +58,10 @@ Tools/Art/kit_blender.py                the generator
 Tools/Art/kit/<piece>.py                one module per piece
 
 /Game/Art/Shared/Kit/                   engine side, mirrors the sources
-  Materials/                            M_Kit_Lens, M_Kit_Housing, MI_Kit_Neutral_*
+  Materials/                            M_Kit_Lens, M_Kit_Housing, MI_Kit_Neutral_*, MI_Kit_<Piece>_<Slot>
 /Game/Art/Shared/Materials/Building/    the generic building masters every building draws with (#388): M_Bld_Surface,
                                         M_Bld_Glass, M_Bld_Operational, M_Bld_Ownership, M_Bld_Coating (+ Textures/)
-  Textures/                             T_Kit_* atlases
+  Textures/                             T_Kit_* atlases, T_Kit_<Piece>_<Slot>_<Map>, T_Kit_White(Masks)
   Lighting/                             SM_Kit_*, DA_Kit_* of the lighting kit
   Identity/  Utilities/  Comms/  Structure/
 /Game/Art/<Faction>/Kit/                MI_Kit_<Faction>_*, the faction's identity pieces
@@ -80,8 +80,8 @@ Tools/Art/kit/<piece>.py                one module per piece
 |---|---|---|
 | Mesh | `SM_Kit_<Piece>` (+ `_LOD1.fbx` in source) | `SM_Kit_WallLamp` |
 | Data asset | `DA_Kit_<Piece>` | `DA_Kit_WallLamp` |
-| Material instance | `MI_Kit_<Faction>_<Surface>` | `MI_Kit_Neutral_Lens`, `MI_Kit_USA_Housing` |
-| Texture | `T_Kit_<Atlas>_<Map>` | `T_Kit_Trim_BaseColor`, `T_Kit_Trim_ORM` |
+| Material instance | `MI_Kit_<Faction>_<Surface>`; a piece's own finish `MI_Kit_<Piece>_<Slot>` | `MI_Kit_Neutral_Lens`, `MI_Kit_USA_Housing`, `MI_Kit_WallLamp_Housing` |
+| Texture | `T_Kit_<Atlas>_<Map>`; a piece's own map `T_Kit_<Piece>_<Slot>_<Map>` | `T_Kit_Trim_BaseColor`, `T_Kit_WallLamp_Lens_LightProfile` |
 | Catalogue id | `<NN>_<Piece>` in its category | `lighting/01_WallLamp` |
 
 `<Piece>` is PascalCase English and names the object, not the building it sits on.
@@ -155,6 +155,7 @@ The catalogue file is `{"pieces": [ ... ]}`.
 | `fault_response` | `None`, `Flicker` or `Off`: what damage does to it, see the state table |
 | `mount_points` | named frames on the piece where it meets the building |
 | `budgets` | LOD0 and LOD1 triangles and slots, within its class |
+| `finish` | optional (#392): slot → the slot's values, for a piece delivered with its own maps. Setup imports `textures/T_<Piece>_<Slot>_<Map>.png` from the piece's folder (BaseColor, ORM, Finish_Normal; the Lens also LightProfile) and builds `MI_Kit_<Piece>_<Slot>` on `M_Kit_Housing` or `M_Kit_Lens`; a number is a scalar (`Intensity`), a list a colour (`EmissionTint`). It overrides `materials` and the faction variant for that slot |
 
 `DA_Kit_<Piece>` (`URTSKitPieceData`, `Source/WorldDivide/Data/RTSKitPieceData.h`) holds the same values plus the
 measured `LensBounds` and the light's position (`FRTSKitLight`). The class limits below are `RTSKit::GetClassLimits`.
@@ -291,6 +292,11 @@ Only **real** lights count. Emissive-only pieces (09, 12, 13, 14, and every lens
   - A piece may carry a baked **finish normal on UV1** (micro-bevel and surface detail). The masters sample it with
     TexCoord 1 and keep the tangent basis on UV0; it replaces the atlas micro-normal for that piece instead of
     stacking on it. 04 StripLight is the first (`Art/Shared/kit/lighting/04_StripLight/CLAUDE_HANDOFF.md`).
+  - Until the shared atlases exist, a piece may bring its own maps at the atlas sizes (2K housing, 1K lens) through
+    its catalogue `finish` (#392: 01, 02, 03, 05, 06). `M_Kit_Housing` and `M_Kit_Lens` take BaseColor times
+    SurfaceColor and ORM times Roughness and Metallic on UV0, FinishNormal on UV1; the lens's glow is also times its
+    LightProfile (red) and EmissionTint. Every map defaults to white or flat, so an instance without maps draws as
+    before. Moving these pieces onto the shared atlases is the atlas issue's work.
 - **Real dimensions** (see each piece's reference). Mounting plates, brackets, gaskets, cable glands and screws are
   geometry on L and XL pieces and normal-map detail on S and M ones (detail under 10 cm lives in the maps,
   `MODEL_PERFORMANCE.md`).
@@ -306,8 +312,8 @@ Only **real** lights count. Emissive-only pieces (09, 12, 13, 14, and every lens
 | Class | Pieces | LOD0 | LOD1 |
 |---|---|---:|---:|
 | S (LED) | 09, 12, 13, 14 | ≤ 250 | = LOD0 (nothing disappears) |
-| M | 01, 02, 03, 04, 06, 07 | ≤ 1,200 | ≤ 400 |
-| L | 05, 08, 10 | ≤ 2,500 | ≤ 800 |
+| M | 01, 02, 03, 04, 07 | ≤ 1,200 | ≤ 400 |
+| L | 05, 06, 08, 10 | ≤ 2,500 | ≤ 800 |
 | XL | 11 | ≤ 4,000 | ≤ 1,200 |
 
 - At most **2 material slots** per piece.
@@ -328,8 +334,8 @@ approved.
 | 02 | Industrial cage wall lamp | `SM_Kit_CageWallLamp` | M | Point | Fixtures | Flicker | — |
 | 03 | Entrance light | `SM_Kit_EntranceLight` | M | Spot down | Fixtures, Emergency by default | None | — |
 | 04 | Ceiling strip light | `SM_Kit_StripLight` | M | Rect | Fixtures | Flicker | — |
-| 05 | Adjustable directional spotlight | `SM_Kit_DirectionalSpot` | L | Spot, aimed per mount | Accents, Secondary | None | `SM_HQ195_Flood` |
-| 06 | Shielded stairwell light | `SM_Kit_StairwellLight` | M | Point / Spot | Emergency by default | None | — |
+| 05 | Adjustable directional spotlight | `SM_Kit_DirectionalSpot` | L | Spot, aimed per mount | Accents, Secondary | None | — |
+| 06 | Roof flood light (twin head) | `SM_Kit_RoofFloodLight` | L | Spot, tilted down | Fixtures | None | — |
 | 07 | Recessed service-bay light | `SM_Kit_ServiceBayLight` | M | Rect / Spot | GarageLamps | None | — |
 | 08 | Amber rotating/flashing warning beacon | `SM_Kit_WarningBeacon` | L | Point, Flash or Rotate | Warning | None | `SM_HQ195_Beacon` |
 | 09 | Small configurable indicator LED | `SM_Kit_IndicatorLED` | S | none (emissive) | colour per mount | None | — |
@@ -346,12 +352,12 @@ Present-day military and industrial fixtures, no brand look. Light values are th
 
 | # | Real-world archetype | Size (cm) | Housing | Lens | Light |
 |---|---|---|---|---|---|
-| 01 | Cast-aluminium LED wall pack, sloped top, four screws on the face plate | 30 × 20 × 13 | dark grey powder coat, light dust in the fins | frosted polycarbonate, facing down | 3000 K, 150 cd, 20/60°, 8 m |
-| 02 | Vapour-tight "jelly jar" bulkhead: round cast base, glass globe, steel wire cage | Ø 14 × 26 | olive-grey cast aluminium, galvanised cage, rust at the cage feet | clear ribbed glass globe, warm filament-look LED | 3000 K, 60 cd, point, 6 m |
-| 03 | Over-door canopy light: hooded box above a door, angled downward | 35 × 20 × 12 | matt black or grey sheet steel, drip edge | flat opal diffuser on the underside | 3500 K, 200 cd, 25/55°, 7 m |
+| 01 | Cast LED wall pack with a chamfered top on a back plate, screwed bezel | 30 × 13 × 12 | dark weathered cast metal | ribbed frosted diffuser on the underside | 3000 K, 150 cd, 20/60°, 8 m |
+| 02 | Oval cast bulkhead with a cast cage on a rectangular back plate | 14 × 26 × 12 | dark cast metal, rust and wear on the cage and plate edges | frosted glass globe | 3000 K, 60 cd, point, 6 m |
+| 03 | Over-door box light cantilevered from a wall bracket plate | 35 × 20 × 10 | matt dark sheet steel, drip edge | flat opal diffuser on the underside | 3500 K, 200 cd, 25/55°, 7 m |
 | 04 | IP65 linear LED batten on a ceiling or soffit (approved 2026-10-22) | 120 × 18.2 × 12.4 | graphite powder-coated housing, satin | neutral opal polycarbonate diffuser along the length | 3500 K, 180 cd, rect 108 × 13 cm, 6 m |
-| 05 | Compact LED floodlight head on a U-yoke bracket with a tilt knuckle | head 25 × 22 × 10, bracket 15 | dark grey die-cast with rear cooling fins | flat clear glass over a reflector grid | 4000 K, 600 cd, 10/30°, 20 m |
-| 06 | Vandal-resistant round bulkhead with an eyelid shield over the top half | Ø 25 × 10 | grey cast aluminium, four tamper screws | prismatic polycarbonate, lower half | 4000 K, 100 cd, 30/70°, 6 m |
+| 05 | Cylindrical spot can on a slotted swivel arm and a two-bolt wall plate, braided cable | can Ø 18 × 24, arm 25, plate 10 × 30 | dark weathered die-cast | clear glass over a honeycomb reflector | 3000 K, 600 cd, 10/30°, 20 m |
+| 06 | Two rectangular LED flood heads on a U-yoke, square post and four-bolt roof base plate | 82 × 28 × 71 | dark weathered steel, rear cooling fins | three LED panels per head behind glass | 4000 K, 500 cd, 25/55°, 20 m |
 | 07 | Recessed high-bay panel set flush in a bay ceiling, trim frame | 60 × 30 × 10 | white enamel frame, steel trim | prismatic acrylic panel | 4000 K, 300 cd, rect 56 × 26 cm, 12 m |
 | 08 | Rotating warning beacon on a flat base, amber Fresnel dome | Ø 14 × 18 | black polycarbonate base, three bolts | amber Fresnel dome with an inner mirror (rotates in the material) | amber (2200 K), 80 cd, point, 8 m; Rotate 1.5 Hz or Flash 1 Hz |
 | 09 | Panel-mount pilot light with a chrome bezel | Ø 3 × 2 | bezel only | domed LED cap | emissive, colour per mount |
@@ -362,7 +368,10 @@ Present-day military and industrial fixtures, no brand look. Light values are th
 | 14 | Stack light: three or four LED segments on a short pole, or a cluster of four pilot lights on a plate | Ø 6 × 25 | black base, grey cap | segment lenses red, amber, green, blue/white | emissive, colour and pattern per mount |
 
 Appearance approval is per piece: Codex delivers a candidate with close-up and RTS-camera shots, the producer approves
-it, and only then does Claude add its catalogue entry.
+it, and only then does Claude add its catalogue entry. 01, 02, 03, 05 and 06 were approved on 2026-10-23 (#392; each
+piece's `STATE.md`). The game-side shots of a piece come from `DA_TestKitLighting` in `/Game/Data/Showcase`, a plain block
+with 01, 02, 03 and 05 on its front and 06 on its roof: `ue.ps1 -Task buildingshots -Building DA_TestKitLighting`, and
+with `-Cvars rts.Light.ForceDark=1` for the night.
 
 ## Other kits (outline)
 
@@ -469,6 +478,13 @@ which happens only as the camera crosses 260 m; per-instance data survives it.
 |---|---|
 | How does a shared kit mesh switch LOD with its building? | **C2**: one LOD decision per building on the game thread, forced on all its meshes. Kit meshes are shared; `cover_building` and per-building duplicate meshes are not used for kit pieces. Built in M7.00-05. |
 | The HQ's LOD1 roof holes, which C2 shows from 260 m instead of about 390 m | Fixed in a follow-up issue, not by switching later. |
+
+## Producer decisions (#392)
+
+| Question | Decision |
+|---|---|
+| The producer's reference images (issue comments, now `lighting/<NN>_<Piece>/reference/`) differ from the archetype text | The images win (2026-10-23). 05 is a cylindrical spot on a swivel arm, not a U-yoke flood, and the Phase B flood is not its source. |
+| 06's image is a twin roof flood light, not the shielded stairwell light | 06 becomes the roof flood light `SM_Kit_RoofFloodLight`, class L, in the Fixtures group. |
 
 ## Approval
 

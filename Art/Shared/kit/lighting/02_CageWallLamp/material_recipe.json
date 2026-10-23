@@ -1,0 +1,135 @@
+{
+  "piece": "lighting/02_CageWallLamp",
+  "round": "4b",
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "textures": [
+    {
+      "path": "textures\\T_CageWallLamp_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "BaseColor",
+      "srgb": true
+    },
+    {
+      "path": "textures\\T_CageWallLamp_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "ORM",
+      "srgb": false
+    },
+    {
+      "path": "textures\\T_CageWallLamp_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "BaseColor",
+      "srgb": true
+    },
+    {
+      "path": "textures\\T_CageWallLamp_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "ORM",
+      "srgb": false
+    },
+    {
+      "path": "textures\\T_CageWallLamp_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "LightProfile",
+      "srgb": false
+    },
+    {
+      "path": "textures/T_CageWallLamp_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "Finish_Normal",
+      "srgb": false
+    },
+    {
+      "path": "textures/T_CageWallLamp_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "Finish_Normal",
+      "srgb": false
+    }
+  ],
+  "orm": "R=occlusion, G=roughness, B=metallic",
+  "normal_format": "DirectX",
+  "normal_uv": "FinishBake (UV1), dense per-face finish charts; same axis orientation as UV0; baked in UV0 tangent basis",
+  "normal_binding": "ONE final Finish_Normal per slot on FinishBake UV1, using UV0 tangents. Cast grain, pits, Torx/ribs/optics microdetail and bevel normals are combined by baking. No stacking.",
+  "housing": {
+    "base": "weathered graphite powder coat",
+    "roughness_mid": 0.48,
+    "metallic": "0 painted; up to .90 on worn fasteners and .86 on exposed chips",
+    "bevel_radius_m": 0.001,
+    "weathering": "Mostly bright silver exposed metal on edges/fasteners; localized oxidation at fasteners, lower edges and gravity-directed drips. Cage has the strongest local bloom."
+  },
+  "lens": {
+    "emission_strength": 7,
+    "emission_kelvin": 3000,
+    "profile": "LightProfile times LampLevel times emission_strength",
+    "roughness": ".18-.45 effective ORM roughness (generator clamps to .18); flood clear coat roughness .025",
+    "coat_weight": 0.32,
+    "coat_roughness": 0.15,
+    "ior": 1.49,
+    "subsurface_weight": 0.08,
+    "subsurface_scale_m": 0.0015,
+    "tint_basis": "Normalized linear RGB approximation at the prescribed Kelvin value.",
+    "display_tint": [
+      1,
+      0.44,
+      0.16
+    ]
+  },
+  "frame": "metres; origin at mount back (roof: underside); +X forward; Z up",
+  "light": {
+    "anchor": "Lens",
+    "type": "Point",
+    "candela": 60,
+    "kelvin": 3000,
+    "radius": 600,
+    "group": "Fixtures",
+    "behaviour": "Steady",
+    "priority": "Primary",
+    "max_draw_distance": 15000
+  },
+  "source": "deterministic, locally authored geometry and procedural PBR; producer reference controls design",
+  "approval": "not approved; round 4 independent check; producer approval pending",
+  "lod_textures": "Identical back-plate surfaces share exact LOD0 UV0/UV1 coordinates. Other LOD charts remain disjoint; each LOD normal-baked.",
+  "review_day": "Neutral sky plus SUN, concrete wall/roof support; LampLevel .05 (dim on) or 0 (off). Night LampLevel 1.",
+  "normal_authoring_inputs": "source/bake_inputs/*_Micro_Normal.png are generator intermediates, not runtime maps. Cage lens frost uses a 3D position-noise bake to avoid UV stretching.",
+  "normal_bake_repairs": {
+    "Housing": {
+      "invalid_or_uncovered_atlas_pixels": 2,
+      "method": "Invalid negative/grazing bevel normals and unused atlas background replaced by authored DirectX micro-normal on the same UV1; valid bevel samples preserved"
+    },
+    "Lens": {
+      "invalid_or_uncovered_atlas_pixels": 0,
+      "method": "Invalid negative/grazing bevel normals and unused atlas background replaced by authored DirectX micro-normal on the same UV1; valid bevel samples preserved"
+    }
+  }
+}

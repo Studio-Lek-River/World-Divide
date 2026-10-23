@@ -1,0 +1,661 @@
+{
+  "piece": "lighting/02_CageWallLamp",
+  "round": "4b",
+  "date": "2026-10-23",
+  "blender_version": "5.1.2",
+  "triangles": [
+    924,
+    398
+  ],
+  "budgets": {
+    "lod0": 1200,
+    "lod1": 400,
+    "slots": 2
+  },
+  "remaining_triangles": [
+    276,
+    2
+  ],
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "bounds_unreal_cm": [
+    [
+      0,
+      -7,
+      -13
+    ],
+    [
+      12.2186,
+      7,
+      13
+    ]
+  ],
+  "lens_bounds_unreal_cm": [
+    [
+      3.8,
+      -4.9,
+      -10.8886
+    ],
+    [
+      11.4,
+      4.9,
+      10.8886
+    ]
+  ],
+  "light_anchor_unreal_cm": [
+    7.6,
+    0,
+    0
+  ],
+  "geometry_digests": [
+    "e87a06829dc3f4bf3bc79304798fb9204c9afb5b",
+    "d456b00ad26958f24b9bf2059ce66e99b95237e5"
+  ],
+  "repeat_build_digests": [
+    "e87a06829dc3f4bf3bc79304798fb9204c9afb5b",
+    "d456b00ad26958f24b9bf2059ce66e99b95237e5"
+  ],
+  "deterministic_repeat": true,
+  "factory_reset_repeat_digests": [
+    [
+      "964176b1bf122e0cbda1079ce2de32124037077cbd99bac93c053d2f9a50e0b8",
+      "a391b5b3f42cf3324dd6c7f09585a1fc26193382dc7da9fcc3a377b07ab8a5ab"
+    ],
+    [
+      "964176b1bf122e0cbda1079ce2de32124037077cbd99bac93c053d2f9a50e0b8",
+      "a391b5b3f42cf3324dd6c7f09585a1fc26193382dc7da9fcc3a377b07ab8a5ab"
+    ]
+  ],
+  "source_equals_generator": true,
+  "uv0_overlap_pairs": [
+    0,
+    0
+  ],
+  "uv1_overlap_pairs": [
+    0,
+    0
+  ],
+  "combined_lod_atlas_overlap": [
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    },
+    {
+      "overlapping_triangle_pairs": 0,
+      "examples": [],
+      "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+    }
+  ],
+  "normal_binding": {
+    "Housing": {
+      "image": "T_CageWallLamp_Housing_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    },
+    "Lens": {
+      "image": "T_CageWallLamp_Lens_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    }
+  },
+  "packed_images_match_png": true,
+  "fbx_roundtrip": "passed: counts, slot order, UVs, origin and world bounds",
+  "generator_sha256": {
+    "Tools/Art/kit/cage_wall_lamp.py": "2b8bfca7b0a9e452b5f290c9479371843b04f8797cdcc42c19df2887bcf3ab9f",
+    "Tools/Art/kit/wall_lamp_materials.py": "11f0cea41684f5932a3dd25b887bc3b338f32b860a5970c29f48cf5b8981fba1",
+    "Tools/Art/kit/wall_lamp_render.py": "a9682f95f16db8c5883f3570d79eef5ce09ba1c3e61d7b426552f997bab11afe",
+    "Tools/Art/kit/wall_lamp_astra_check.py": "227f6fff15b452412b74530f32d22facc51e002972d0f0eebd45f5700b39f38e"
+  },
+  "reference_sha256": "dfbd3ee13205db52892927c39f9b1307ff6fc22e104a829efb56ec4ffa08e9b6",
+  "review_status": "Round 4b targeted fix pass complete; producer approval pending",
+  "integration": "No Unreal/editor/runtime work; Claude owns integration after art acceptance",
+  "open_items": [],
+  "distance_comparison": {
+    "scope": "Blender fixture-centre distances; both LODs forced for comparison, no runtime or master approval claim",
+    "records": {
+      "12": {
+        "camera_distance_m": 12,
+        "source_prefix": "distance",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 2916,
+        "roi_radius_pixels": 27,
+        "changed_pixels_gt_1_of_255": 423,
+        "max_display_delta": 0.26274511218070984,
+        "mean_delta_over_comparison_roi": 0.006097528617829084
+      },
+      "150": {
+        "camera_distance_m": 150,
+        "source_prefix": "distance",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 144,
+        "roi_radius_pixels": 6,
+        "changed_pixels_gt_1_of_255": 5,
+        "max_display_delta": 0.07843136787414551,
+        "mean_delta_over_comparison_roi": 0.0014433549949899316
+      },
+      "260": {
+        "camera_distance_m": 260,
+        "source_prefix": "switch",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 144,
+        "roi_radius_pixels": 6,
+        "changed_pixels_gt_1_of_255": 3,
+        "max_display_delta": 0.023529410362243652,
+        "mean_delta_over_comparison_roi": 0.00038126358413137496
+      },
+      "450": {
+        "camera_distance_m": 450,
+        "source_prefix": "distance",
+        "frame": [
+          1920,
+          1080
+        ],
+        "horizontal_fov_degrees": 60,
+        "comparison_roi_pixels": 100,
+        "roi_radius_pixels": 5,
+        "changed_pixels_gt_1_of_255": 9,
+        "max_display_delta": 0.039215683937072754,
+        "mean_delta_over_comparison_roi": 0.003764705965295434
+      }
+    }
+  },
+  "files": [
+    {
+      "path": "CLAUDE_HANDOFF.md",
+      "bytes": 5876,
+      "sha256": "64d9513306e48853cec6cdf13a8ba37d83e478b101be03525b4b07b82e4f790c"
+    },
+    {
+      "path": "SM_Kit_CageWallLamp.fbx",
+      "bytes": 112764,
+      "sha256": "3b4c90a7caaa28ee5fae20a8ed095637968a120365215dbbe6fca434fc6d34fd"
+    },
+    {
+      "path": "SM_Kit_CageWallLamp_LOD1.fbx",
+      "bytes": 60940,
+      "sha256": "2930a1f34514fb30bbc832db7b522b549095fa3183ffe47011020d14526c567b"
+    },
+    {
+      "path": "STATE.md",
+      "bytes": 1454,
+      "sha256": "dab85c92330e05f37978a89f1617f32b337af5489530b580f4e1b88a1796756a"
+    },
+    {
+      "path": "evidence/astra_check.md",
+      "bytes": 4786,
+      "sha256": "c73d398a058242b6e2ace74158a2a391f93e13f042ac7862a3ffedb7c6ea53e9"
+    },
+    {
+      "path": "evidence/astra_distance_comparison.json",
+      "bytes": 1765,
+      "sha256": "b78e30db7d1ec59c910b9721f9b837f0f83fa28cbb10b6f60de47090c70bb9ae"
+    },
+    {
+      "path": "evidence/astra_technical.json",
+      "bytes": 8750,
+      "sha256": "c5bad20b3a7019db2bf87797b23569adeb551c2e3a9ebaea867c68fb4faa64ef"
+    },
+    {
+      "path": "evidence/cameras.json",
+      "bytes": 501,
+      "sha256": "0ae4c36a84157b1bcffa8afffdc9071fd4ff79c1e2fc0ed3b5d365e3ac7b02a3"
+    },
+    {
+      "path": "evidence/lod_comparison.json",
+      "bytes": 474,
+      "sha256": "1a871bbce73c7ffe36fd921940f82b7f9d5de3d8b5424a4edde38cbe5f1e2395"
+    },
+    {
+      "path": "evidence/normal_bake_repair.json",
+      "bytes": 482,
+      "sha256": "852dbdde7e2fd0598fc0118f020e48a6ac08275af0e548256b0ac4086d77c0cc"
+    },
+    {
+      "path": "evidence/reference_cameras.json",
+      "bytes": 833,
+      "sha256": "b4cd8f974b1a24a795357dba4bc0b6db8e497af4e984ad645237111f42dff97c"
+    },
+    {
+      "path": "evidence/reference_comparison.json",
+      "bytes": 428,
+      "sha256": "99739c64d7a51037d2ec5a03baf600c2f1a373936b1f3cbce7b9406c25473166"
+    },
+    {
+      "path": "evidence/round04_build_a.json",
+      "bytes": 589,
+      "sha256": "47a96a15f873e4d5df73869156d4fc5a90f56ba69588f9f7377bd25bc6a952aa"
+    },
+    {
+      "path": "evidence/round04_build_b.json",
+      "bytes": 589,
+      "sha256": "47a96a15f873e4d5df73869156d4fc5a90f56ba69588f9f7377bd25bc6a952aa"
+    },
+    {
+      "path": "evidence/verification.json",
+      "bytes": 14601,
+      "sha256": "0d158bf3a656ce6c9b9aa9447741ceeaa6a9f869d49513c373a05f5661285beb"
+    },
+    {
+      "path": "material_recipe.json",
+      "bytes": 4297,
+      "sha256": "a43f8a6297a563493472f8e0a2da56cf557dc40a8edcc0fe1cfeaa9ab3b6992f"
+    },
+    {
+      "path": "review/README.md",
+      "bytes": 1242,
+      "sha256": "a0c034d04d57358069697b10320547927adee798a4feebe86b65b2ab2b83e328"
+    },
+    {
+      "path": "review/astra_12m_LOD0_left_LOD1_right.png",
+      "bytes": 168604,
+      "sha256": "f71513d5982eea3790863aa5925ca830a7eb40d78d96069f62d6d99b9aa48c2e",
+      "dimensions": [
+        1040,
+        512
+      ]
+    },
+    {
+      "path": "review/astra_150m_LOD0_left_LOD1_right.png",
+      "bytes": 14943,
+      "sha256": "ec0198e9a728abcd1140a035856676846a4d65a4c373be6d83e73b16fe9062a2",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/astra_260m_LOD0_left_LOD1_right.png",
+      "bytes": 14717,
+      "sha256": "de0436edd2ec10bdab4e64d8828c7351ddab5a28ef7ced13a1907e0042d3ba56",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/astra_450m_LOD0_left_LOD1_right.png",
+      "bytes": 15340,
+      "sha256": "de60093a363c0b070e902da911d6911eb124ef8f9824352d7ff3e9b082819193",
+      "dimensions": [
+        784,
+        384
+      ]
+    },
+    {
+      "path": "review/distance_12m_lod0.png",
+      "bytes": 2045785,
+      "sha256": "64aa9762f9d0ad664e9dcda45c596480b4f5b5893d5d4c262c181dd2d46c930a",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_12m_lod1.png",
+      "bytes": 2045422,
+      "sha256": "661e0aebf4e67c3b2c6d3ff853aeca3ea803b003ea9228c451ccf0e3935f3934",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_150m_lod0.png",
+      "bytes": 2043381,
+      "sha256": "c08c3ca58acfd54ee80f370ebd6b701636a9ca7720752bc16b2ca47c2875ce15",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_150m_lod1.png",
+      "bytes": 2042894,
+      "sha256": "6ba4bef402f83f52879d284623ce6e075d5ed0eeb1a99cb82229b7d67f8adae7",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_450m_lod0.png",
+      "bytes": 2042768,
+      "sha256": "3eb5fe86e2bbc21b65363df4a0b95158bc2d8350119d9a173152920662a64aeb",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/distance_450m_lod1.png",
+      "bytes": 2042777,
+      "sha256": "14c09432a1e42c5079a77f4985ea7cc37a4fa5da58485b6d118901c979a46424",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/pbr_day_off.png",
+      "bytes": 1784528,
+      "sha256": "c1d84b662f28997997648b5812af463edea8627cbcb6b246fc91256c73676627",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_day_on.png",
+      "bytes": 1795767,
+      "sha256": "6bae7dff9bb0e537fd9c9cf9418164cc7f85e54883224b5c0559e408a069fd65",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_night_off.png",
+      "bytes": 1730088,
+      "sha256": "138b51cfbb94cd16a7820d47e790f2a22d6e6846aa36f1113cc553e902bd97bb",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/pbr_night_on.png",
+      "bytes": 1773257,
+      "sha256": "1955a0369e172dfd31b7c0bccfc1284730b38b4fdfae57deb114be6af373fabb",
+      "dimensions": [
+        1400,
+        1200
+      ]
+    },
+    {
+      "path": "review/ref_match_day.png",
+      "bytes": 1577134,
+      "sha256": "9bb07fc8035be5df08518c35114183c915558958b4f4f24f59b27f43269c6e89",
+      "dimensions": [
+        1000,
+        1400
+      ]
+    },
+    {
+      "path": "review/ref_match_night.png",
+      "bytes": 1558843,
+      "sha256": "9ed1f99c41d38069fc37ad64ff25c76a41d157ea35583eaac9665f94729c434f",
+      "dimensions": [
+        1000,
+        1400
+      ]
+    },
+    {
+      "path": "review/reference_left_round04_right_day.png",
+      "bytes": 1020161,
+      "sha256": "6be0148668fde4cdc2104293a4e6fbb8d9c342e0504bcc3452f63365a8628e7c",
+      "dimensions": [
+        913,
+        650
+      ]
+    },
+    {
+      "path": "review/reference_left_round04_right_night.png",
+      "bytes": 1011012,
+      "sha256": "1eebb75402ac9bc1eacad83b00f066ebc589c99dad57f10bfcc2b2a1fbc2110b",
+      "dimensions": [
+        913,
+        650
+      ]
+    },
+    {
+      "path": "review/rts_LOD0_left_LOD1_right.png",
+      "bytes": 248796,
+      "sha256": "0c741940e29efee7cee49ded50b447f4a5b7bf7994fee6003f5bfe13925fd533",
+      "dimensions": [
+        736,
+        328
+      ]
+    },
+    {
+      "path": "review/rts_lod0.png",
+      "bytes": 131603,
+      "sha256": "b9017fa7069ad94ba12cd8947b2808f28ee2c53dcf2ebd1a07de050f3203bba8",
+      "dimensions": [
+        360,
+        300
+      ]
+    },
+    {
+      "path": "review/rts_lod1.png",
+      "bytes": 131724,
+      "sha256": "0ece20ef40797df552f713a8b6daae9dfa9aee1f28843ca8f023aa229a058b6c",
+      "dimensions": [
+        360,
+        300
+      ]
+    },
+    {
+      "path": "review/switch_260m_crop_8x_LOD0_left_LOD1_right.png",
+      "bytes": 15423,
+      "sha256": "5357e992cf60a770f8614582ba499fd43795448951ef285c6bfb486945bb052a",
+      "dimensions": [
+        784,
+        412
+      ]
+    },
+    {
+      "path": "review/switch_260m_lod0.png",
+      "bytes": 2043087,
+      "sha256": "888d1279b754dff63b619082ff8aff026fb72cbb0e396aae47196e21ef77e64c",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "review/switch_260m_lod1.png",
+      "bytes": 2042490,
+      "sha256": "34259769ecd42606b8bce277f1ef240df5b8a1cca1659a77d885f31065826bdc",
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "path": "source/CageWallLamp.blend",
+      "bytes": 15234943,
+      "sha256": "26a8517300a71a121140f1be6c4beec3dd563df231add33e1a150725f5660b6d"
+    },
+    {
+      "path": "source/CageWallLamp_Preview.blend",
+      "bytes": 15241734,
+      "sha256": "a122724f9d5fc80b4e2accd593d7d1f1e71e384ae99386417d8cbe7c73de24d9"
+    },
+    {
+      "path": "source/CageWallLamp_ReferencePreview.blend",
+      "bytes": 15241807,
+      "sha256": "334b980a06501d0c79d86f474e4adc1d183acbf335a2f6a67190f8cb186d0012"
+    },
+    {
+      "path": "source/bake_inputs/T_CageWallLamp_Housing_Micro_Normal.png",
+      "bytes": 6688819,
+      "sha256": "3fe18343d10c2c0e3a2f5d8c7acd26705bb6dd106d03cba81ab2c4333306655b",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "source/bake_inputs/T_CageWallLamp_Lens_Micro_Normal.png",
+      "bytes": 2260258,
+      "sha256": "a728645aae47ff7869d529aeaf9e504e0bc77f6185e102aeac5a7ea1c73acc65",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_CageWallLamp_Housing_BaseColor.png",
+      "bytes": 5295045,
+      "sha256": "65b920f0c49c7dfe33fa8a1115cf5a17cce5b1bccd221bbf9698c376a051da82",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_CageWallLamp_Housing_Finish_Normal.png",
+      "bytes": 3188495,
+      "sha256": "fa0e23727e2feee5e7ecc6daf4127d68991477c12f11a9b547280bec02b73e20",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_CageWallLamp_Housing_ORM.png",
+      "bytes": 3338109,
+      "sha256": "0f5f1add1dfb257b3aef1ab9a22eb5130d0d3b2a51a2742edd49febdfa4e15a1",
+      "dimensions": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_CageWallLamp_Lens_BaseColor.png",
+      "bytes": 999582,
+      "sha256": "33be747326e1ab04370bc6973f386fbebefabf5482017395dbe1bd40e0a4c2f9",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_CageWallLamp_Lens_Finish_Normal.png",
+      "bytes": 639479,
+      "sha256": "45a36a05ed78d2f866ef1e8ca383547f16be6a087e0c1ff4e985a4683b4bffee",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_CageWallLamp_Lens_LightProfile.png",
+      "bytes": 381668,
+      "sha256": "849fc20a65210cbb0a098c4c3e24b8167782496fd59399a07bf1b2d83a90d587",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_CageWallLamp_Lens_ORM.png",
+      "bytes": 1374418,
+      "sha256": "cbbf134a63633c25963564c8afa4c4ebe45950af067a3d90046f0355dd1d364d",
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "evidence/round04b_build_a.json",
+      "bytes": 589,
+      "sha256": "ebfe6352d41f1c3916278732c1dbf727630528fe34505da4207c204559d00aff"
+    },
+    {
+      "path": "evidence/round04b_build_b.json",
+      "bytes": 589,
+      "sha256": "ebfe6352d41f1c3916278732c1dbf727630528fe34505da4207c204559d00aff"
+    },
+    {
+      "path": "evidence/round04b_fix_scope.json",
+      "bytes": 1777,
+      "sha256": "b5a7faac576485c6eff6bbfb0069f0ec745053a50cc7ac0e379a1e9e78dd83c1"
+    }
+  ],
+  "shared_lod_plate_charts": [
+    {
+      "key": "cage_plate_1",
+      "triangles": 10,
+      "max_uv0_uv1_error": 7.450580596923828e-9
+    },
+    {
+      "key": "cage_plate_2",
+      "triangles": 2,
+      "max_uv0_uv1_error": 5.960464477539063e-8
+    },
+    {
+      "key": "cage_plate_3",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_4",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_5",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_6",
+      "triangles": 2,
+      "max_uv0_uv1_error": 5.960464477539063e-8
+    },
+    {
+      "key": "cage_plate_7",
+      "triangles": 2,
+      "max_uv0_uv1_error": 5.960464477539063e-8
+    },
+    {
+      "key": "cage_plate_8",
+      "triangles": 2,
+      "max_uv0_uv1_error": 0
+    },
+    {
+      "key": "cage_plate_9",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_10",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_11",
+      "triangles": 2,
+      "max_uv0_uv1_error": 2.9802322387695312e-8
+    },
+    {
+      "key": "cage_plate_12",
+      "triangles": 2,
+      "max_uv0_uv1_error": 5.960464477539063e-8
+    },
+    {
+      "key": "cage_plate_13",
+      "triangles": 2,
+      "max_uv0_uv1_error": 5.960464477539063e-8
+    }
+  ],
+  "combined_lod_atlas_note": "Counts unique occupied charts; any shared plate aliases were first verified vertex-by-vertex in both UV channels. Individual LODs have no overlap."
+}

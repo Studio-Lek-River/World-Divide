@@ -1,0 +1,53 @@
+00:01.140  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\02_CageWallLamp\source\CageWallLamp.blend"
+CYCLES DEVICES [('NVIDIA GeForce RTX 4090', True), ('AMD Ryzen 7 7800X3D 8-Core Processor', False), ('NVIDIA GeForce RTX 4090', True), ('AMD Radeon(TM) Graphics', True)]
+D:/Lek River Studio/World-Divide/Tools/Art/kit/wall_lamp_render.py:181: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  world=bpy.data.worlds.new('ReviewWorld');world.use_nodes=True;scene.world=world;bg=next(n for n in world.node_tree.nodes if n.type=='BACKGROUND');bg.inputs['Color'].default_value=(.24,.30,.42,1)
+D:/Lek River Studio/World-Divide/Tools/Art/kit/wall_lamp_render.py:187: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  concrete=bpy.data.materials.new('REVIEW concrete');concrete.use_nodes=True;nt=concrete.node_tree;p=next(n for n in nt.nodes if n.type=='BSDF_PRINCIPLED');p.inputs['Base Color'].default_value=(.12,.13,.14,1);p.inputs['Roughness'].default_value=.86
+00:04.328  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:12.468  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\02_CageWallLamp\review\ref_match_day.png'
+RENDERED lighting/02_CageWallLamp ref_match_day
+00:15.578  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:22.937  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\02_CageWallLamp\review\ref_match_night.png'
+RENDERED lighting/02_CageWallLamp ref_match_night
+00:23.437  image.write      | ERROR OpenImageIO write failed: Could not open file "퓀饟\.thumbnails\large\blender_72228_bd94c5f03cda24eca3888cd0c117e9fd.png.png"
+00:23.437  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\03_EntranceLight\source\EntranceLight.blend"
+Info: Saved as "CageWallLamp_ReferencePreview.blend"
+CYCLES DEVICES [('NVIDIA GeForce RTX 4090', True), ('AMD Ryzen 7 7800X3D 8-Core Processor', False), ('NVIDIA GeForce RTX 4090', True), ('AMD Radeon(TM) Graphics', True)]
+00:26.672  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:35.281  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\03_EntranceLight\review\ref_match_day.png'
+RENDERED lighting/03_EntranceLight ref_match_day
+00:38.500  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:45.797  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\03_EntranceLight\review\ref_match_night.png'
+RENDERED lighting/03_EntranceLight ref_match_night
+00:46.000  image.write      | ERROR OpenImageIO write failed: Could not open file "퓀饟\.thumbnails\large\blender_72228_a23a43c0c9b0469a253f86db53a36313.png.png"
+00:46.000  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\05_DirectionalSpot\source\DirectionalSpot.blend"
+Info: Saved as "EntranceLight_ReferencePreview.blend"
+CYCLES DEVICES [('NVIDIA GeForce RTX 4090', True), ('AMD Ryzen 7 7800X3D 8-Core Processor', False), ('NVIDIA GeForce RTX 4090', True), ('AMD Radeon(TM) Graphics', True)]
+00:49.453  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+00:55.500  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\05_DirectionalSpot\review\ref_match_day.png'
+RENDERED lighting/05_DirectionalSpot ref_match_day
+00:58.765  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:04.234  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\05_DirectionalSpot\review\ref_match_night.png'
+RENDERED lighting/05_DirectionalSpot ref_match_night
+01:04.250  image.write      | ERROR OpenImageIO write failed: Could not open file "퓀饟\.thumbnails\large\blender_72228_b0f99d6eb0e92fc637384c56406e60f0.png.png"
+01:04.250  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\source\RoofFloodLight.blend"
+Info: Saved as "DirectionalSpot_ReferencePreview.blend"
+CYCLES DEVICES [('NVIDIA GeForce RTX 4090', True), ('AMD Ryzen 7 7800X3D 8-Core Processor', False), ('NVIDIA GeForce RTX 4090', True), ('AMD Radeon(TM) Graphics', True)]
+01:07.500  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:13.125  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\review\ref_match_day.png'
+RENDERED lighting/06_RoofFloodLight ref_match_day
+01:16.265  cycles           | WARNING Could not open database file: C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db
+                            | Unable to initialize the OptiX cache database at path C:\Users\basvh\AppData\Local/NVIDIA/OptixCache/optix7cache.db. Delete or rename the file if this problem persists.
+01:23.531  render           | Saved: 'D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\06_RoofFloodLight\review\ref_match_night.png'
+RENDERED lighting/06_RoofFloodLight ref_match_night
+01:23.562  image.write      | ERROR OpenImageIO write failed: Could not open file "˘蹧Ƨ\.thumbnails\large\blender_72228_02cf3499550f2470957eec0efe944823.png.png"
+Info: Saved as "RoofFloodLight_ReferencePreview.blend"
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)

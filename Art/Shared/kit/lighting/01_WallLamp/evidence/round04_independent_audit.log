@@ -1,0 +1,20 @@
+00:00.688  blend            | Read blend: "D:\Lek River Studio\World-Divide\Art\Shared\kit\lighting\01_WallLamp\source\WallLamp.blend"
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "<frozen runpy>", line 287, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "D:/Lek River Studio/World-Divide/Tools/Art/kit/wall_lamp_astra_check.py", line 101, in <module>
+    for piece in json.loads(r.SPEC.read_text())['pieces']:check(piece)
+                                                          ~~~~~^^^^^^^
+  File "D:/Lek River Studio/World-Divide/Tools/Art/kit/wall_lamp_astra_check.py", line 75, in check
+    assert all(p[2]>.48 for p in values),('unbaked normals',name,surface,obj.name,min(p[2] for p in values))
+           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('unbaked normals', '01_WallLamp', 'Housing', 'SM_Kit_WallLamp', 0.0)
+
+Error: script failed, expr: 'import sys,runpy;sys.dont_write_bytecode=True;sys.argv=["Tools/Art/kit/wall_lamp_astra_check.py","--"];runpy.run_path("D:/Lek River Studio/World-Divide/Tools/Art/kit/wall_lamp_astra_check.py",run_name="__main__")', exiting.
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit

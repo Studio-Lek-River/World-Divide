@@ -1,0 +1,42 @@
+{
+  "location_m": [
+    0.5929619669914246,
+    -0.47368550300598145,
+    -0.22697430849075317
+  ],
+  "target_m": [
+    0.06499999761581421,
+    0.0,
+    0.0
+  ],
+  "lens_mm": 70,
+  "engine": "Cycles",
+  "samples": 32,
+  "resolution": [
+    1500,
+    1000
+  ],
+  "context": "Reference main-product angle: daylight wall/roof support, neutral sky and sun, lens 5%; night isolated studio, lens 100%; no branding",
+  "round": 4,
+  "day": {
+    "world_color_linear": [
+      0.65,
+      0.72,
+      0.85
+    ],
+    "world_strength": 0.65,
+    "sun_energy": 2,
+    "sun_angle_degrees": 8,
+    "sun_rotation_degrees": [
+      25,
+      55,
+      20
+    ],
+    "lamp_level": 0.05,
+    "context": "concrete wall"
+  },
+  "night": {
+    "lamp_level": 1,
+    "background": "isolated product studio"
+  }
+}

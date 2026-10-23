@@ -1,0 +1,632 @@
+{
+  "lod0": {
+    "triangles": 2466,
+    "vertices": 1368,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        0,
+        -0.10199999809265137,
+        -0.15000000596046448
+      ],
+      [
+        0.4655422568321228,
+        0.10199999809265137,
+        0.29292187094688416
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        0.333374947309494,
+        -0.07900000363588333,
+        0.014084003865718842
+      ],
+      [
+        0.41237494349479675,
+        0.07900000363588333,
+        0.15091601014137268
+      ]
+    ],
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 389.0245079009325,
+        "median": 512.2964242280412,
+        "max": 584.9779680056416
+      },
+      "Lens": {
+        "min": 1843.1678145077844,
+        "median": 1843.1999216524289,
+        "max": 1843.2073538628579
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0
+  },
+  "lod1": {
+    "triangles": 718,
+    "vertices": 416,
+    "slots": [
+      "Housing",
+      "Lens"
+    ],
+    "bounds_m": [
+      [
+        0,
+        -0.10199999809265137,
+        -0.15000000596046448
+      ],
+      [
+        0.4655422568321228,
+        0.10199999809265137,
+        0.2927387058734894
+      ]
+    ],
+    "lens_bounds_m": [
+      [
+        0.333374947309494,
+        -0.07900000363588333,
+        0.014084003865718842
+      ],
+      [
+        0.41237494349479675,
+        0.07900000363588333,
+        0.15091601014137268
+      ]
+    ],
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "texel_density_px_per_m": {
+      "Housing": {
+        "min": 432.5150723319233,
+        "median": 515.4151576506404,
+        "max": 609.3371123989825
+      },
+      "Lens": {
+        "min": 1843.1994114956474,
+        "median": 1843.20005315366,
+        "max": 1843.2003894913396
+      }
+    },
+    "uv_channels": [
+      "UVMap",
+      "FinishBake"
+    ],
+    "degenerate_geometry": 0,
+    "degenerate_uv": 0
+  },
+  "uv0_lod0": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv0_lod1": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv1_lod0": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "uv1_lod1": {
+    "overlapping_triangle_pairs": 0,
+    "examples": [],
+    "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+  },
+  "textures": [
+    {
+      "path": "textures\\T_DirectionalSpot_Housing_BaseColor.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "c3e03fe48c43de732b24121f30f0a20bc8b221ef3fec922d736c1bad0f7da8c2",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures\\T_DirectionalSpot_Housing_ORM.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "1e19f033a9c1724516eda610aff37f8f337b751ca650dfc43162bb4d51636002",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures\\T_DirectionalSpot_Lens_BaseColor.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "BaseColor",
+      "srgb": true,
+      "sha256": "375c69f512addbf11d5738be55977d6afbb5476c44c5daf204d4b5f151bbf81b",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures\\T_DirectionalSpot_Lens_ORM.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "ORM",
+      "srgb": false,
+      "sha256": "964df96e8474201e1f9e56f3d14052a9e6f88cf87bd760029b4daa8f652efbe6",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures\\T_DirectionalSpot_Lens_LightProfile.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "LightProfile",
+      "srgb": false,
+      "sha256": "f4a9c94fd55a1456b3f9b69a281786b58e803a5cd77b46123a13161373f4eb00",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "path": "textures/T_DirectionalSpot_Housing_Finish_Normal.png",
+      "size": [
+        2048,
+        2048
+      ],
+      "slot": "Housing",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "7f0eafa16da21492bcde2d8344b589cc3dc76a33d6accf53210a34c06c5d0e43",
+      "actual_size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "path": "textures/T_DirectionalSpot_Lens_Finish_Normal.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "slot": "Lens",
+      "map": "Finish_Normal",
+      "srgb": false,
+      "sha256": "10b65c344b2765f6734f483dd857514523d37af2c34a562351c5c9b1c79d8583",
+      "actual_size": [
+        1024,
+        1024
+      ]
+    }
+  ],
+  "bake": "Cycles normal bake of geometry-edge Bevel + generated finish into FinishBake UV1; converted to DirectX",
+  "scope": "Blender evidence only, export roundtrip follows run_pieces.py",
+  "fbx_reimport": {
+    "SM_Kit_DirectionalSpot.fbx": {
+      "triangles": 2466,
+      "vertices": 1368,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -7.820193381746776e-9,
+          -0.10200006514787674,
+          -0.15000000596046448
+        ],
+        [
+          0.4655422568321228,
+          0.101999931037426,
+          0.29292187094688416
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.333374947309494,
+          -0.0790000632405281,
+          0.014084003865718842
+        ],
+        [
+          0.41237494349479675,
+          0.07899994403123856,
+          0.15091601014137268
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 389.0245079009325,
+          "median": 512.2964242280412,
+          "max": 584.9779680056416
+        },
+        "Lens": {
+          "min": 1843.1678145077844,
+          "median": 1843.1999216524289,
+          "max": 1843.2073538628579
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "finish_uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "sha256": "ffefacfc629dd906065acadb145342a823f620b74022c752c893984848532d5d",
+      "normal_tangent_orthonormal_max_error": 2.2153835743665695e-7,
+      "imported_custom_normals": true,
+      "lens_normal_dot_light": {
+        "minimum": 0.9999999105930328,
+        "maximum": 1.0000000894069672
+      }
+    },
+    "SM_Kit_DirectionalSpot_LOD1.fbx": {
+      "triangles": 718,
+      "vertices": 416,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          -8.146034069511643e-9,
+          -0.10200006514787674,
+          -0.15000000596046448
+        ],
+        [
+          0.4655422568321228,
+          0.101999931037426,
+          0.2927387058734894
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.333374947309494,
+          -0.0790000632405281,
+          0.014084003865718842
+        ],
+        [
+          0.41237494349479675,
+          0.07899994403123856,
+          0.15091601014137268
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 432.5150723319233,
+          "median": 515.4151576506404,
+          "max": 609.3371123989825
+        },
+        "Lens": {
+          "min": 1843.1994114956474,
+          "median": 1843.20005315366,
+          "max": 1843.2003894913396
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0,
+      "uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV0 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "finish_uv_overlap": {
+        "overlapping_triangle_pairs": 0,
+        "examples": [],
+        "method": "UV1 exact triangle clipping per material atlas; positive-area threshold 1e-10"
+      },
+      "sha256": "568d52cf5ac653da28a69c5fb388d4c57258e337a12cdd44d1b9f82b546d3076",
+      "normal_tangent_orthonormal_max_error": 3.0105002224445343e-7,
+      "imported_custom_normals": true,
+      "lens_normal_dot_light": {
+        "minimum": 0.9999999403953552,
+        "maximum": 1.0000000298023224
+      }
+    }
+  },
+  "export_roundtrip": "passed: counts, slot order, UVs, origin and world bounds",
+  "source_inventory": [
+    {
+      "name": "SM_Kit_DirectionalSpot",
+      "type": "MESH"
+    },
+    {
+      "name": "SM_Kit_DirectionalSpot_LOD1",
+      "type": "MESH"
+    }
+  ],
+  "source_reload": {
+    "lod0": {
+      "triangles": 2466,
+      "vertices": 1368,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          0,
+          -0.10199999809265137,
+          -0.15000000596046448
+        ],
+        [
+          0.4655422568321228,
+          0.10199999809265137,
+          0.29292187094688416
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.333374947309494,
+          -0.07900000363588333,
+          0.014084003865718842
+        ],
+        [
+          0.41237494349479675,
+          0.07900000363588333,
+          0.15091601014137268
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 389.0245079009325,
+          "median": 512.2964242280412,
+          "max": 584.9779680056416
+        },
+        "Lens": {
+          "min": 1843.1678145077844,
+          "median": 1843.1999216524289,
+          "max": 1843.2073538628579
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0
+    },
+    "lod1": {
+      "triangles": 718,
+      "vertices": 416,
+      "slots": [
+        "Housing",
+        "Lens"
+      ],
+      "bounds_m": [
+        [
+          0,
+          -0.10199999809265137,
+          -0.15000000596046448
+        ],
+        [
+          0.4655422568321228,
+          0.10199999809265137,
+          0.2927387058734894
+        ]
+      ],
+      "lens_bounds_m": [
+        [
+          0.333374947309494,
+          -0.07900000363588333,
+          0.014084003865718842
+        ],
+        [
+          0.41237494349479675,
+          0.07900000363588333,
+          0.15091601014137268
+        ]
+      ],
+      "origin_m": [
+        0,
+        0,
+        0
+      ],
+      "texel_density_px_per_m": {
+        "Housing": {
+          "min": 432.5150723319233,
+          "median": 515.4151576506404,
+          "max": 609.3371123989825
+        },
+        "Lens": {
+          "min": 1843.1994114956474,
+          "median": 1843.20005315366,
+          "max": 1843.2003894913396
+        }
+      },
+      "uv_channels": [
+        "UVMap",
+        "FinishBake"
+      ],
+      "degenerate_geometry": 0,
+      "degenerate_uv": 0
+    }
+  },
+  "packed_images": [
+    {
+      "name": "T_DirectionalSpot_Housing_BaseColor.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_DirectionalSpot_Housing_Finish_Normal.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_DirectionalSpot_Housing_ORM.png",
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_DirectionalSpot_Lens_BaseColor.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_DirectionalSpot_Lens_Finish_Normal.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_DirectionalSpot_Lens_LightProfile.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    },
+    {
+      "name": "T_DirectionalSpot_Lens_ORM.png",
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "packed": true
+    }
+  ],
+  "packed_pixels_match_files": [
+    {
+      "name": "T_DirectionalSpot_Housing_BaseColor.png",
+      "sha256": "c3e03fe48c43de732b24121f30f0a20bc8b221ef3fec922d736c1bad0f7da8c2"
+    },
+    {
+      "name": "T_DirectionalSpot_Housing_Finish_Normal.png",
+      "sha256": "7f0eafa16da21492bcde2d8344b589cc3dc76a33d6accf53210a34c06c5d0e43"
+    },
+    {
+      "name": "T_DirectionalSpot_Housing_ORM.png",
+      "sha256": "1e19f033a9c1724516eda610aff37f8f337b751ca650dfc43162bb4d51636002"
+    },
+    {
+      "name": "T_DirectionalSpot_Lens_BaseColor.png",
+      "sha256": "375c69f512addbf11d5738be55977d6afbb5476c44c5daf204d4b5f151bbf81b"
+    },
+    {
+      "name": "T_DirectionalSpot_Lens_Finish_Normal.png",
+      "sha256": "10b65c344b2765f6734f483dd857514523d37af2c34a562351c5c9b1c79d8583"
+    },
+    {
+      "name": "T_DirectionalSpot_Lens_LightProfile.png",
+      "sha256": "f4a9c94fd55a1456b3f9b69a281786b58e803a5cd77b46123a13161373f4eb00"
+    },
+    {
+      "name": "T_DirectionalSpot_Lens_ORM.png",
+      "sha256": "964df96e8474201e1f9e56f3d14052a9e6f88cf87bd760029b4daa8f652efbe6"
+    }
+  ],
+  "final_normal_binding": {
+    "Housing": {
+      "image": "T_DirectionalSpot_Housing_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    },
+    "Lens": {
+      "image": "T_DirectionalSpot_Lens_Finish_Normal.png",
+      "sample_uv": "FinishBake",
+      "tangent_uv": "UVMap",
+      "microstructure_combined": true
+    }
+  },
+  "independent_audit": "astra_technical.json",
+  "runner_repeat_digests": {
+    "first": [
+      "a4e944ac805a5de9397c7b6ca1c737da792e4d3e",
+      "42b54dd6e07fe1491aa0263ff39f4c55f0b1856c"
+    ],
+    "second": [
+      "a4e944ac805a5de9397c7b6ca1c737da792e4d3e",
+      "42b54dd6e07fe1491aa0263ff39f4c55f0b1856c"
+    ],
+    "match": true,
+    "receipts": [
+      "round04b_build_a.json",
+      "round04b_build_b.json"
+    ]
+  },
+  "distance_evidence": "astra_distance_comparison.json",
+  "review_status": "Round 4b targeted fix pass complete; producer approval pending",
+  "open_items": [],
+  "round4b_fix_scope": "round04b_fix_scope.json"
+}

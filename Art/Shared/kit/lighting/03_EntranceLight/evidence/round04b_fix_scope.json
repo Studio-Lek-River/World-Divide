@@ -1,0 +1,19 @@
+{
+  "round": "4b",
+  "changes": [
+    "Continuous irregular edge wear"
+  ],
+  "geometry_and_uv_unchanged_from_round4": true,
+  "triangles": [
+    348,
+    124
+  ],
+  "shared_plate_charts": [],
+  "reference_unchanged": true,
+  "producer_approval": "pending",
+  "unchanged_lens_maps": {
+    "BaseColor": true,
+    "ORM": true,
+    "LightProfile": true
+  }
+}

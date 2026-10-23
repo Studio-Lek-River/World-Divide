@@ -1,0 +1,41 @@
+{
+  "mesh": "SM_Kit_WallLamp",
+  "fbx": "lighting/01_WallLamp/SM_Kit_WallLamp.fbx",
+  "lod1_fbx": "lighting/01_WallLamp/SM_Kit_WallLamp_LOD1.fbx",
+  "slots": [
+    "Housing",
+    "Lens"
+  ],
+  "triangles": [
+    624,
+    208
+  ],
+  "bounds": [
+    [
+      0,
+      -15.6,
+      -7
+    ],
+    [
+      13,
+      15.6,
+      7
+    ]
+  ],
+  "lens_bounds": [
+    [
+      2.8,
+      -12.5,
+      -5.6
+    ],
+    [
+      11.6,
+      12.5,
+      -5.2
+    ]
+  ],
+  "digest": [
+    "b2d1db3e2412ae4f45f42b33322135e17ab10b8c",
+    "8b24e32a4b3b798e03cf54523ed9fb9d25c5e122"
+  ]
+}

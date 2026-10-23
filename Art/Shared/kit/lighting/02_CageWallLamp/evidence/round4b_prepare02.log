@@ -1,0 +1,11 @@
+00:11.657  image.write      | ERROR OpenImageIO write failed: Could not open file "퓀ꔟ¶\.thumbnails\large\blender_71624_9a8ec0376dfd554139d520b2cb97bfeb.png.png"
+Extensions: writing cache failed ([Errno 13] Permission denied: 'C:\\Users\\basvh\\AppData\\Roaming\\Blender Foundation\\Blender\\5.1\\extensions\\.cache\\compat.dat').
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Baking map saved to internal image, save it externally or pack it
+Info: Saved as "CageWallLamp.blend"
+PREPARED lighting/02_CageWallLamp 924 400
+Blender 5.1.2 (hash ec6e62d40fa9 built 2026-05-19 01:37:34)
+
+Blender quit
