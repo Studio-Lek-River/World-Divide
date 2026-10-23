@@ -9,11 +9,50 @@ class URTSBuildingData;
 class URTSEntityData;
 class URTSUnitData;
 
+/**
+ * A building's ground footprint in world space: a rectangle about Center, turned with the building. Placed buildings turn
+ * in quarter turns, the starting headquarters on a diagonal (#426), so nothing may assume it is axis aligned.
+ */
+struct WORLDDIVIDE_API FRTSBuildingFootprint
+{
+	FVector Center = FVector::ZeroVector;
+
+	/** Unit vector along the building's own X, its exit side, in the ground plane. */
+	FVector Axis = FVector::ForwardVector;
+
+	/** Half the footprint along the building's own X and Y, in cm. */
+	FVector2D Extent = FVector2D::ZeroVector;
+
+	/** Unit vector along the building's own Y, as AActor::GetActorRightVector. */
+	FVector GetSide() const { return FVector(-Axis.Y, Axis.X, 0.f); }
+
+	/** World to the building's own frame, in the ground plane. */
+	FVector2D ToLocal(const FVector& World) const;
+
+	/** The building's own frame to world, at Center's height. */
+	FVector ToWorld(const FVector2D& Local) const;
+
+	/** From clamped to the rectangle, at Center's height. */
+	FVector GetClosestPoint(const FVector& From) const;
+
+	/** The four ground corners, at Center's height. */
+	void GetCorners(FVector (&OutCorners)[4]) const;
+
+	/** The axis-aligned box round the rectangle. */
+	FBox2D GetBounds() const;
+
+	/** The two rectangles are at least Gap apart along one of their sides' directions. */
+	bool IsApart(const FRTSBuildingFootprint& Other, float Gap) const;
+};
+
 /** Grid and validity rules for placing a building. The client's ghost and the server's re-check share them. */
 namespace RTSBuildPlacement
 {
 	/** Edge length of one build grid cell in cm. */
 	constexpr float GridSize = 100.f;
+
+	/** Yaw in degrees every starting headquarters stands at: its garage faces southwest, on a true diagonal (#426). */
+	constexpr float HeadquartersYaw = 225.f;
 
 	/** Gap between the footprint's exit edge and a unit spawned at the exit, beyond the unit's longer half. */
 	constexpr float ExitClearance = 200.f;
@@ -56,8 +95,8 @@ namespace RTSBuildPlacement
 	WORLDDIVIDE_API FVector GetFootprintExtent(const FIntPoint& Footprint);
 
 	/**
-	 * The footprint a building covers in the world after QuarterTurns 90-degree turns: X and Y swap on odd turns. Buildings
-	 * only turn in quarter turns, so a turned footprint stays axis aligned.
+	 * The footprint a building covers in the world after QuarterTurns 90-degree turns: X and Y swap on odd turns. Placed
+	 * buildings only turn in quarter turns, so a turned footprint stays axis aligned; MakeFootprint takes any yaw.
 	 */
 	WORLDDIVIDE_API FIntPoint GetRotatedFootprint(const FIntPoint& Footprint, int32 QuarterTurns);
 
@@ -66,6 +105,9 @@ namespace RTSBuildPlacement
 
 	/** QuarterTurns of an actor's yaw, 0 to 3. */
 	WORLDDIVIDE_API int32 GetQuarterTurns(float Yaw);
+
+	/** The ground footprint of a building of the data's Footprint, unturned, standing at Location turned to Yaw degrees. */
+	WORLDDIVIDE_API FRTSBuildingFootprint MakeFootprint(const FIntPoint& Footprint, const FVector& Location, float Yaw);
 
 	/**
 	 * Snaps RequestedLocation, puts it on the ground and checks the spot: the footprint must not overlap a unit, building or

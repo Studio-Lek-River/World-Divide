@@ -2,6 +2,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Buildings/RTSBuildPlacement.h"
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -372,6 +373,45 @@ namespace RTSFootprintTests
 				TraceClick(*TestWorld.World, FVector(0.f, HalfWidth + BesideHull, 0.f), 0.f));
 			Unit->Destroy();
 		}
+		return true;
+	}
+
+	IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSTurnedBuildingFootprintTest, "WorldDivide.Buildings.TurnedFootprint", TestFlags)
+
+	/** A building footprint on the headquarters' diagonal (#426): closest point, corners, bounds and the gap to a neighbour. */
+	bool FRTSTurnedBuildingFootprintTest::RunTest(const FString& Parameters)
+	{
+		// The USA HQ's 38 x 56 m.
+		const FIntPoint Cells(38, 56);
+		const FRTSBuildingFootprint Unturned = RTSBuildPlacement::MakeFootprint(Cells, FVector::ZeroVector, 0.f);
+		TestTrue(TEXT("Unturned, the bounds are the footprint"),
+			Unturned.GetBounds().Max.Equals(FVector2D(1900.f, 2800.f), Tolerance));
+
+		const FRTSBuildingFootprint Ground = RTSBuildPlacement::MakeFootprint(Cells, FVector::ZeroVector, RTSBuildPlacement::HeadquartersYaw);
+		const float Half = (1900.f + 2800.f) * UE_INV_SQRT_2;
+		TestTrue(TEXT("On the diagonal, the bounds reach both halves' projections"),
+			Ground.GetBounds().Max.Equals(FVector2D(Half, Half), Tolerance));
+		TestTrue(TEXT("The exit side faces southwest"), Ground.Axis.Equals(FVector(-UE_INV_SQRT_2, -UE_INV_SQRT_2, 0.f), 0.001f));
+		TestTrue(TEXT("The closest point straight out of the exit lies on the exit edge"),
+			Ground.GetClosestPoint(Ground.Axis * 5000.f).Equals(Ground.Axis * 1900.f, Tolerance));
+		TestTrue(TEXT("A point inside stays where it is"),
+			Ground.GetClosestPoint(FVector(500.f, 0.f, 0.f)).Equals(FVector(500.f, 0.f, 0.f), Tolerance));
+
+		FVector Corners[4];
+		Ground.GetCorners(Corners);
+		for (const FVector& Corner : Corners)
+		{
+			const FVector2D Local = Ground.ToLocal(Corner);
+			TestTrue(TEXT("Each corner lies on both half extents"),
+				FMath::IsNearlyEqual(FMath::Abs(Local.X), 1900.f, Tolerance) && FMath::IsNearlyEqual(FMath::Abs(Local.Y), 2800.f, Tolerance));
+		}
+
+		// A 2 x 2 m box inside the bounds but 3 m off the long side: 1.59 m apart, since its own corner points at the wall.
+		const FRTSBuildingFootprint Beside = RTSBuildPlacement::MakeFootprint(FIntPoint(2, 2), Ground.ToWorld(FVector2D(0.f, 3100.f)), 0.f);
+		TestTrue(TEXT("Beside the long side, within the bounds, it is apart"), Ground.IsApart(Beside, 100.f) && Beside.IsApart(Ground, 100.f));
+		TestFalse(TEXT("but not by 2 m"), Ground.IsApart(Beside, 200.f));
+		const FRTSBuildingFootprint Inside = RTSBuildPlacement::MakeFootprint(FIntPoint(2, 2), Ground.ToWorld(FVector2D(0.f, 2700.f)), 0.f);
+		TestFalse(TEXT("Across the wall it overlaps"), Ground.IsApart(Inside, 0.f));
 		return true;
 	}
 }

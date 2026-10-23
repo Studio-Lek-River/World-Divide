@@ -257,14 +257,14 @@ void ARTSHUD::DrawBuildingMarker(const ARTSPlayerController& Controller, const A
 		return;
 	}
 
-	// Brackets around the screen bounds of the footprint's ground corners.
-	const FVector Center = Building.GetActorLocation();
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Building.GetFootprint());
+	// Brackets around the screen bounds of the footprint's ground corners, turned with the building.
+	FVector Corners[4];
+	Building.GetGroundFootprint().GetCorners(Corners);
 	FBox2D Bounds(ForceInit);
-	for (const FVector2D Corner : { FVector2D(-1.f, -1.f), FVector2D(-1.f, 1.f), FVector2D(1.f, -1.f), FVector2D(1.f, 1.f) })
+	for (const FVector& Corner : Corners)
 	{
 		FVector2D Screen;
-		if (!Controller.ProjectWorldLocationToScreen(Center + FVector(Corner.X * Extent.X, Corner.Y * Extent.Y, 0.f), Screen))
+		if (!Controller.ProjectWorldLocationToScreen(Corner, Screen))
 		{
 			return;
 		}

@@ -285,7 +285,7 @@ namespace RTSNavigationTests
 		TArray<FString> MaxBarrelObstacles;
 
 		/** The obstacles' boxes seen from above: the map's walls and blocks and every building; and as solids, roof included. */
-		TArray<FBox2D> Obstacles;
+		TArray<FRTSBuildingFootprint> Obstacles;
 		TArray<FBox> ObstacleSolids;
 		TArray<FString> ObstacleNames;
 
@@ -348,16 +348,17 @@ namespace RTSNavigationTests
 			if (Label.StartsWith(TEXT("Wall_")) || Label.StartsWith(TEXT("Block_")))
 			{
 				const FBox Box = It->GetComponentsBoundingBox();
-				State.Obstacles.Add(FBox2D(FVector2D(Box.Min), FVector2D(Box.Max)));
+				FRTSBuildingFootprint Obstacle;
+				Obstacle.Center = Box.GetCenter();
+				Obstacle.Extent = FVector2D(Box.GetExtent());
+				State.Obstacles.Add(Obstacle);
 				State.ObstacleSolids.Add(Box);
 				State.ObstacleNames.Add(Label);
 			}
 		}
 		for (TActorIterator<ARTSBuilding> It(&World); It; ++It)
 		{
-			const FVector Extent = RTSBuildPlacement::GetFootprintExtent(It->GetFootprint());
-			const FVector2D Center(It->GetActorLocation());
-			State.Obstacles.Add(FBox2D(Center - FVector2D(Extent), Center + FVector2D(Extent)));
+			State.Obstacles.Add(It->GetGroundFootprint());
 			// Its collision box: the footprint up to the roof.
 			State.ObstacleSolids.Add(It->GetComponentsBoundingBox(/*bNonColliding*/ false));
 			State.ObstacleNames.Add(It->GetName());
@@ -744,7 +745,7 @@ bool FRTSNavMeasureClearance::Update()
 			{
 				continue;
 			}
-			const FBox2D& Box = State->Obstacles[ObstacleIndex];
+			const FBox2D Box = State->Obstacles[ObstacleIndex].GetBounds();
 			for (float Around = 0.f; Around < 360.f; Around += 15.f)
 			{
 				const FVector2D Direction(FMath::Cos(FMath::DegreesToRadians(Around)), FMath::Sin(FMath::DegreesToRadians(Around)));
@@ -841,7 +842,13 @@ bool FRTSNavMeasureEdgeOffsets::Update()
 			{
 				continue;
 			}
-			const FBox2D& Box = State->Obstacles[ObstacleIndex];
+			// Only faces along the grid: the headquarters' diagonal ones (#426) step across the cells.
+			const FRTSBuildingFootprint& Obstacle = State->Obstacles[ObstacleIndex];
+			if (!FMath::IsNearlyZero(Obstacle.Axis.X * Obstacle.Axis.Y, 0.001f))
+			{
+				continue;
+			}
+			const FBox2D Box = Obstacle.GetBounds();
 			for (int32 FaceIndex = 0; FaceIndex < UE_ARRAY_COUNT(Faces); ++FaceIndex)
 			{
 				++Expected;

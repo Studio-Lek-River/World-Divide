@@ -318,7 +318,10 @@ private:
 	/** The own headquarters, else the PlayerStart, else any own building, else the world origin. */
 	FVector GetBaseLocation() const;
 
-	/** Half the footprint of the faction's headquarters, which stands at the base location; zero without one. */
+	/**
+	 * Half the box round the faction's headquarters, which stands at the base location turned to
+	 * RTSBuildPlacement::HeadquartersYaw; zero without one.
+	 */
 	FVector GetBaseExtent() const;
 
 	/** The standing enemy building nearest From, or null. */

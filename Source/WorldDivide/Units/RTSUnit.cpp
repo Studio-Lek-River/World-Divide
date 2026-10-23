@@ -1,6 +1,7 @@
 #include "Units/RTSUnit.h"
 
 #include "AI/RTSAIPlayer.h"
+#include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
 #include "Camera/PlayerCameraManager.h"
@@ -1804,7 +1805,7 @@ void ARTSUnit::StepAside(const FVector& Location)
 	StartNextCommand();
 }
 
-bool ARTSUnit::HoldShortOf(const FBox& Footprint)
+bool ARTSUnit::HoldShortOf(const FRTSBuildingFootprint& Footprint)
 {
 	check(HasAuthority());
 	if (AircraftComponent->CanFly())
@@ -1820,9 +1821,10 @@ bool ARTSUnit::HoldShortOf(const FBox& Footprint)
 		return false;
 	}
 
-	// Footprint and path compared flat: the unit's whole circle has to stay out.
-	const FBox Flat(FVector(Footprint.Min.X, Footprint.Min.Y, -WORLD_MAX), FVector(Footprint.Max.X, Footprint.Max.Y, WORLD_MAX));
+	// Footprint and path compared flat, in the building's own frame: the unit's whole circle has to stay out.
+	const FBox Flat(FVector(-Footprint.Extent.X, -Footprint.Extent.Y, -WORLD_MAX), FVector(Footprint.Extent.X, Footprint.Extent.Y, WORLD_MAX));
 	const FBox Area = Flat.ExpandBy(FVector(GetSelectionRadius(), GetSelectionRadius(), 0.f));
+	auto ToLocal = [&Footprint](const FVector& Location) { return FVector(Footprint.ToLocal(Location), 0.f); };
 
 	const TArray<FNavPathPoint>& Points = Path->GetPathPoints();
 	// A vehicle looks as far ahead as it needs to brake.
@@ -1843,9 +1845,12 @@ bool ARTSUnit::HoldShortOf(const FBox& Footprint)
 			End = Start + (End - Start) * (Remaining / Length);
 		}
 		// A unit brushing the footprint, such as one still stepping off the site, may leave it.
-		const bool bLeaving = Area.IsInsideXY(Start)
-			&& Flat.ComputeSquaredDistanceToPoint(End) >= Flat.ComputeSquaredDistanceToPoint(Start);
-		bEnters = Length > UE_KINDA_SMALL_NUMBER && !bLeaving && FMath::LineBoxIntersection(Area, Start, End, End - Start);
+		const FVector LocalStart = ToLocal(Start);
+		const FVector LocalEnd = ToLocal(End);
+		const bool bLeaving = Area.IsInsideXY(LocalStart)
+			&& Flat.ComputeSquaredDistanceToPoint(LocalEnd) >= Flat.ComputeSquaredDistanceToPoint(LocalStart);
+		bEnters = Length > UE_KINDA_SMALL_NUMBER && !bLeaving
+			&& FMath::LineBoxIntersection(Area, LocalStart, LocalEnd, LocalEnd - LocalStart);
 		Remaining -= Length;
 		Start = End;
 	}
@@ -2162,7 +2167,7 @@ void ARTSUnit::UpdateAttackOrder()
 			// facing side first. With no reachable spot in range, or a move that cannot start, the order is over.
 			FVector Spot;
 			const bool bFound = Building->GetBuildingData()
-				&& RTSApproach::FindReachableSpot(*this, Building->GetActorLocation(), Building->GetFootprint(),
+				&& RTSApproach::FindReachableSpot(*this, Building->GetGroundFootprint(),
 					Range * BuildingApproachFraction, Range - MoveAcceptanceRadius, Spot);
 			const EPathFollowingRequestResult::Type Result = bFound
 				? AI->MoveToLocation(Spot, MoveAcceptanceRadius,

@@ -9,6 +9,7 @@ class ARTSPlayerState;
 class ARTSUnit;
 class URTSBuilderData;
 class URTSBuildingData;
+struct FRTSBuildingFootprint;
 struct FRTSCommand;
 
 /** A building a builder has been ordered to place but has not placed yet: the current order's or a Shift-queued one. */
@@ -121,10 +122,10 @@ private:
 	bool ClearSite(float DeltaSeconds);
 
 	/**
-	 * Pathfinds to a reachable spot just outside the footprint at Center, unless a move is running or a retry is on hold.
-	 * False when no such spot exists.
+	 * Pathfinds to a reachable spot just outside Footprint, unless a move is running or a retry is on hold. False when no
+	 * such spot exists.
 	 */
-	bool ApproachSite(const FVector& Center, const FIntPoint& Footprint);
+	bool ApproachSite(const FRTSBuildingFootprint& Footprint);
 
 	/** Ends the order, logging why. Always false. */
 	bool EndBuild(const TCHAR* Reason);

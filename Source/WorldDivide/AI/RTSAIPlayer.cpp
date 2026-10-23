@@ -25,6 +25,7 @@
 #include "TimerManager.h"
 #include "Units/RTSAircraftComponent.h"
 #include "Units/RTSUnit.h"
+#include "Units/RTSUnitShape.h"
 #include "WorldDivide.h"
 
 namespace
@@ -59,12 +60,14 @@ namespace
 		return Targetable && IsStanding(Actor, Targetable->GetHealthComponent());
 	}
 
-	/** Two footprints, given by centre and half size, are at least Gap apart along X or along Y. */
-	bool AreApart(const FVector& A, const FVector& ExtentA, const FVector& B, const FVector& ExtentB, float Gap)
+	/**
+	 * How far a building of Data keeps from a supply source: Gap, and for a depot also the length of the harvester it sends
+	 * out, so a harvester docked at either still has a lane past the other instead of stalling between them.
+	 */
+	float GetSourceGap(const URTSBuildingData& Data, float Gap)
 	{
-		const float GapX = FMath::Abs(A.X - B.X) - ExtentA.X - ExtentB.X;
-		const float GapY = FMath::Abs(A.Y - B.Y) - ExtentA.Y - ExtentB.Y;
-		return FMath::Max(GapX, GapY) >= Gap;
+		const URTSUnitData* Harvester = Data.bAcceptsSupply ? RTSBuildPlacement::GetWidestExitUnit(Data) : nullptr;
+		return Gap + (Harvester ? 2.f * RTSUnitShape::FromData(*Harvester).GetHalfLength() : 0.f);
 	}
 
 	FVector GetCentroid(TConstArrayView<ARTSUnit*> Units)
@@ -1332,7 +1335,7 @@ bool ARTSAIPlayer::FindBuildSpot(const URTSBuildingData& Data, FVector& OutLocat
 		if (const ARTSSupplySource* Source = ARTSSupplySource::FindNearest(*World, Base, BaseExtent.GetMax() + DepotSourceDistance))
 		{
 			Center = Source->GetActorLocation();
-			StartRadius = (RTSBuildPlacement::GetFootprintExtent(Source->Footprint) + Extent).GetMax() + Gap;
+			StartRadius = (RTSBuildPlacement::GetFootprintExtent(Source->Footprint) + Extent).GetMax() + GetSourceGap(Data, Gap);
 		}
 	}
 
@@ -1362,7 +1365,8 @@ bool ARTSAIPlayer::HasRoom(const URTSBuildingData& Data, const FVector& Location
 {
 	const UWorld* World = GetWorld();
 	const int32 TeamId = GetRTSPlayerState()->GetTeamId();
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Data.Footprint);
+	// The AI places its buildings unturned.
+	const FRTSBuildingFootprint Footprint = RTSBuildPlacement::MakeFootprint(Data.Footprint, Location, 0.f);
 	const float BuildingGap = GetBuildingGap();
 
 	for (TActorIterator<ARTSBuilding> It(World); It; ++It)
@@ -1372,25 +1376,27 @@ bool ARTSAIPlayer::HasRoom(const URTSBuildingData& Data, const FVector& Location
 		{
 			continue;
 		}
-		const FVector OtherExtent = RTSBuildPlacement::GetFootprintExtent(It->GetFootprint());
-		if (!AreApart(Location, Extent, It->GetActorLocation(), OtherExtent, BuildingGap))
+		const FRTSBuildingFootprint OtherFootprint = It->GetGroundFootprint();
+		if (!Footprint.IsApart(OtherFootprint, BuildingGap))
 		{
 			return false;
 		}
-		// Units come out of the +X edge; nothing may stand in their way until they have driven clear of it.
+		// Units come out of the building's own +X edge; nothing may stand in their way until they have driven clear of it.
 		if (It->GetTeamId() == TeamId && !Other->Units.IsEmpty())
 		{
-			const FVector LaneExtent(RTSBuildPlacement::GetExitLaneLength(*Other) * 0.5f, OtherExtent.Y, 0.f);
-			const FVector Lane = It->GetActorLocation() + FVector(OtherExtent.X + LaneExtent.X, 0.f, 0.f);
-			if (!AreApart(Location, Extent, Lane, LaneExtent, 0.f))
+			FRTSBuildingFootprint Lane = OtherFootprint;
+			Lane.Extent.X = RTSBuildPlacement::GetExitLaneLength(*Other) * 0.5f;
+			Lane.Center = OtherFootprint.ToWorld(FVector2D(OtherFootprint.Extent.X + Lane.Extent.X, 0.f));
+			if (!Footprint.IsApart(Lane, 0.f))
 			{
 				return false;
 			}
 		}
 	}
+	const float SourceGap = GetSourceGap(Data, BuildingGap);
 	for (TActorIterator<ARTSSupplySource> It(World); It; ++It)
 	{
-		if (!AreApart(Location, Extent, It->GetActorLocation(), RTSBuildPlacement::GetFootprintExtent(It->Footprint), BuildingGap))
+		if (!Footprint.IsApart(It->GetGroundFootprint(), SourceGap))
 		{
 			return false;
 		}
@@ -1399,7 +1405,7 @@ bool ARTSAIPlayer::HasRoom(const URTSBuildingData& Data, const FVector& Location
 	{
 		const URTSBuildingData* Other = Pending.Data.Get();
 		if (Other && !Pending.Site.IsValid()
-			&& !AreApart(Location, Extent, Pending.Location, RTSBuildPlacement::GetFootprintExtent(Other->Footprint), BuildingGap))
+			&& !Footprint.IsApart(RTSBuildPlacement::MakeFootprint(Other->Footprint, Pending.Location, 0.f), BuildingGap))
 		{
 			return false;
 		}
@@ -1417,7 +1423,14 @@ FVector ARTSAIPlayer::GetBaseExtent() const
 {
 	const ARTSPlayerState* Player = GetRTSPlayerState();
 	const URTSBuildingData* Headquarters = Player && Player->GetFaction() ? Player->GetFaction()->Headquarters.Get() : nullptr;
-	return Headquarters ? RTSBuildPlacement::GetFootprintExtent(Headquarters->Footprint) : FVector::ZeroVector;
+	if (!Headquarters)
+	{
+		return FVector::ZeroVector;
+	}
+	// The box round the headquarters as it stands, on its diagonal.
+	const FBox2D Bounds = RTSBuildPlacement::MakeFootprint(Headquarters->Footprint, FVector::ZeroVector, RTSBuildPlacement::HeadquartersYaw)
+		.GetBounds();
+	return FVector(Bounds.GetExtent(), 0.f);
 }
 
 FVector ARTSAIPlayer::GetBaseLocation() const

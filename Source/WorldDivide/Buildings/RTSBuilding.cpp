@@ -326,9 +326,7 @@ void ARTSBuilding::UpdateNavCut(float DeltaSeconds)
 		return;
 	}
 
-	const FVector Center = GetActorLocation();
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(GetFootprint());
-	const FBox Footprint(Center - FVector(Extent.X, Extent.Y, 0.f), Center + FVector(Extent.X, Extent.Y, 0.f));
+	const FRTSBuildingFootprint Footprint = GetGroundFootprint();
 	for (TActorIterator<ARTSUnit> It(GetWorld()); It; ++It)
 	{
 		if (!It->IsMoveHeld() && It->HoldShortOf(Footprint))
@@ -579,12 +577,13 @@ FVector ARTSBuilding::GetClosestFootprintPoint(const FVector& From) const
 	{
 		return Center;
 	}
-	// Buildings only turn in quarter turns, so the footprint stays axis aligned.
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(GetFootprint());
-	return FVector(
-		FMath::Clamp(From.X, Center.X - Extent.X, Center.X + Extent.X),
-		FMath::Clamp(From.Y, Center.Y - Extent.Y, Center.Y + Extent.Y),
-		Center.Z);
+	return GetGroundFootprint().GetClosestPoint(From);
+}
+
+FRTSBuildingFootprint ARTSBuilding::GetGroundFootprint() const
+{
+	return RTSBuildPlacement::MakeFootprint(BuildingData ? BuildingData->Footprint : FIntPoint::ZeroValue, GetActorLocation(),
+		GetActorRotation().Yaw);
 }
 
 FIntPoint ARTSBuilding::GetFootprint() const

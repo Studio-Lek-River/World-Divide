@@ -10,19 +10,11 @@ namespace
 {
 	/** How far a candidate may be nudged onto the navmesh: the agent's default query extent. */
 	const FVector ProjectExtent(50.f, 50.f, 250.f);
-
-	FVector ClosestFootprintPoint(const FVector& Center, const FVector& Extent, const FVector& From)
-	{
-		return FVector(
-			FMath::Clamp(From.X, Center.X - Extent.X, Center.X + Extent.X),
-			FMath::Clamp(From.Y, Center.Y - Extent.Y, Center.Y + Extent.Y),
-			Center.Z);
-	}
 }
 
 namespace RTSApproach
 {
-	bool FindReachableSpot(const APawn& Agent, const FVector& Center, const FIntPoint& Footprint, float StandOff,
+	bool FindReachableSpot(const APawn& Agent, const FRTSBuildingFootprint& Footprint, float StandOff,
 		float MaxDistance, FVector& OutSpot)
 	{
 		UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(Agent.GetWorld());
@@ -33,28 +25,29 @@ namespace RTSApproach
 			return false;
 		}
 
-		// The spot facing the agent, then a ring around the footprint: one per grid cell along each side, one off each corner.
-		const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Footprint);
-		const FVector Facing = ClosestFootprintPoint(Center, Extent, From);
+		// The spot facing the agent, then a ring around the footprint: one per grid cell along each side, one off each corner,
+		// laid out in the footprint's own frame.
+		const FVector2D Extent = Footprint.Extent;
+		const FVector Facing = Footprint.GetClosestPoint(From);
 		TArray<FVector, TInlineAllocator<32>> Candidates;
 		// A builder may stand inside the footprint of a building it has yet to place; then no side faces it.
 		if (FVector::DistSquared2D(Facing, From) > KINDA_SMALL_NUMBER)
 		{
 			Candidates.Add(Facing + (From - Facing).GetSafeNormal2D() * StandOff);
 		}
-		for (const FVector Normal : { FVector(1.f, 0.f, 0.f), FVector(-1.f, 0.f, 0.f), FVector(0.f, 1.f, 0.f), FVector(0.f, -1.f, 0.f) })
+		for (const FVector2D Normal : { FVector2D(1.f, 0.f), FVector2D(-1.f, 0.f), FVector2D(0.f, 1.f), FVector2D(0.f, -1.f) })
 		{
-			const FVector Along(FMath::Abs(Normal.Y), FMath::Abs(Normal.X), 0.f);
+			const FVector2D Along(FMath::Abs(Normal.Y), FMath::Abs(Normal.X));
 			const float Depth = FMath::Abs(Normal.X) * Extent.X + FMath::Abs(Normal.Y) * Extent.Y;
-			const float HalfLength = FVector::DotProduct(Along, Extent);
+			const float HalfLength = FVector2D::DotProduct(Along, Extent);
 			for (float Offset = -HalfLength; Offset <= HalfLength + KINDA_SMALL_NUMBER; Offset += RTSBuildPlacement::GridSize)
 			{
-				Candidates.Add(Center + Normal * (Depth + StandOff) + Along * Offset);
+				Candidates.Add(Footprint.ToWorld(Normal * (Depth + StandOff) + Along * Offset));
 			}
 		}
-		for (const FVector Corner : { FVector(1.f, 1.f, 0.f), FVector(1.f, -1.f, 0.f), FVector(-1.f, 1.f, 0.f), FVector(-1.f, -1.f, 0.f) })
+		for (const FVector2D Corner : { FVector2D(1.f, 1.f), FVector2D(1.f, -1.f), FVector2D(-1.f, 1.f), FVector2D(-1.f, -1.f) })
 		{
-			Candidates.Add(Center + Corner * Extent + Corner.GetSafeNormal2D() * StandOff);
+			Candidates.Add(Footprint.ToWorld(Corner * Extent + Corner.GetSafeNormal() * StandOff));
 		}
 		// From outside the ring the facing spot is the nearest of them all, so it stays first.
 		Candidates.Sort([&From](const FVector& A, const FVector& B) { return FVector::DistSquared2D(A, From) < FVector::DistSquared2D(B, From); });
@@ -64,7 +57,7 @@ namespace RTSApproach
 			// Inside a wall, a building or off the map there is no navmesh to stand on.
 			FNavLocation NavPoint;
 			if (!NavSystem->ProjectPointToNavigation(Candidate, NavPoint, ProjectExtent, NavData)
-				|| FVector::Dist2D(NavPoint.Location, ClosestFootprintPoint(Center, Extent, NavPoint.Location)) > MaxDistance)
+				|| FVector::Dist2D(NavPoint.Location, Footprint.GetClosestPoint(NavPoint.Location)) > MaxDistance)
 			{
 				continue;
 			}

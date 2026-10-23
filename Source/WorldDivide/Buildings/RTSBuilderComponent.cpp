@@ -230,18 +230,13 @@ bool URTSBuilderComponent::UpdateBuild(float DeltaSeconds)
 		return EndBuild(TEXT("has nothing to build"));
 	}
 	const FVector Center = Building ? Building->GetActorLocation() : PlannedLocation;
-	const FIntPoint Footprint = Building
-		? Building->GetFootprint() : RTSBuildPlacement::GetRotatedFootprint(Data->Footprint, PlannedQuarterTurns);
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Footprint);
-	const FVector Location = GetOwner()->GetActorLocation();
-	const FVector Edge(
-		FMath::Clamp(Location.X, Center.X - Extent.X, Center.X + Extent.X),
-		FMath::Clamp(Location.Y, Center.Y - Extent.Y, Center.Y + Extent.Y),
-		Center.Z);
-	if (!IsDocked(Edge))
+	const FRTSBuildingFootprint Footprint = Building
+		? Building->GetGroundFootprint()
+		: RTSBuildPlacement::MakeFootprint(Data->Footprint, Center, RTSBuildPlacement::GetYaw(PlannedQuarterTurns));
+	if (!IsDocked(Footprint.GetClosestPoint(GetOwner()->GetActorLocation())))
 	{
 		State = ERTSBuildState::ToSite;
-		return ApproachSite(Center, Footprint) || EndBuild(TEXT("cannot reach its site"));
+		return ApproachSite(Footprint) || EndBuild(TEXT("cannot reach its site"));
 	}
 
 	if (State == ERTSBuildState::ToSite)
@@ -342,7 +337,8 @@ bool URTSBuilderComponent::ClearSite(float DeltaSeconds)
 	}
 
 	// Each unit is sent once; one that finds no spot or wanders back runs out the timeout.
-	const FIntPoint Footprint = RTSBuildPlacement::GetRotatedFootprint(PlannedData->Footprint, PlannedQuarterTurns);
+	const FRTSBuildingFootprint Footprint =
+		RTSBuildPlacement::MakeFootprint(PlannedData->Footprint, Center, RTSBuildPlacement::GetYaw(PlannedQuarterTurns));
 	for (ARTSUnit* Other : OwnUnits)
 	{
 		if (ClearedUnits.Contains(Other))
@@ -354,7 +350,7 @@ bool URTSBuilderComponent::ClearSite(float DeltaSeconds)
 		const FRTSFootprint Ground = Other->GetFootprint();
 		const float Radius = Ground.HalfSegment + Ground.Radius;
 		FVector Spot;
-		if (RTSApproach::FindReachableSpot(*Other, Center, Footprint, Radius + ClearOffset, Radius + SiteReach, Spot))
+		if (RTSApproach::FindReachableSpot(*Other, Footprint, Radius + ClearOffset, Radius + SiteReach, Spot))
 		{
 			Other->StepAside(Spot);
 		}
@@ -362,7 +358,7 @@ bool URTSBuilderComponent::ClearSite(float DeltaSeconds)
 	return true;
 }
 
-bool URTSBuilderComponent::ApproachSite(const FVector& Center, const FIntPoint& Footprint)
+bool URTSBuilderComponent::ApproachSite(const FRTSBuildingFootprint& Footprint)
 {
 	const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner());
 	AAIController* AI = Unit ? Unit->GetController<AAIController>() : nullptr;
@@ -374,7 +370,7 @@ bool URTSBuilderComponent::ApproachSite(const FVector& Center, const FIntPoint& 
 	// Next to the footprint, facing side first: inside it the builder would block its own building.
 	const float Radius = Unit->GetStandOffRadius();
 	FVector Goal;
-	if (!RTSApproach::FindReachableSpot(*Unit, Center, Footprint, Radius + SiteOffset,
+	if (!RTSApproach::FindReachableSpot(*Unit, Footprint, Radius + SiteOffset,
 		Radius + SiteReach - SiteAcceptanceRadius, Goal))
 	{
 		return false;

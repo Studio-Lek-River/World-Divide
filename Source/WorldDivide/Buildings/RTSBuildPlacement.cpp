@@ -28,6 +28,55 @@ namespace
 	constexpr float OverlapHeight = 200.f;
 }
 
+FVector2D FRTSBuildingFootprint::ToLocal(const FVector& World) const
+{
+	const FVector Offset = World - Center;
+	return FVector2D(FVector::DotProduct(Offset, Axis), FVector::DotProduct(Offset, GetSide()));
+}
+
+FVector FRTSBuildingFootprint::ToWorld(const FVector2D& Local) const
+{
+	return Center + Axis * Local.X + GetSide() * Local.Y;
+}
+
+FVector FRTSBuildingFootprint::GetClosestPoint(const FVector& From) const
+{
+	const FVector2D Local = ToLocal(From);
+	return ToWorld(FVector2D(FMath::Clamp(Local.X, -Extent.X, Extent.X), FMath::Clamp(Local.Y, -Extent.Y, Extent.Y)));
+}
+
+void FRTSBuildingFootprint::GetCorners(FVector (&OutCorners)[4]) const
+{
+	OutCorners[0] = ToWorld(FVector2D(-Extent.X, -Extent.Y));
+	OutCorners[1] = ToWorld(FVector2D(Extent.X, -Extent.Y));
+	OutCorners[2] = ToWorld(FVector2D(Extent.X, Extent.Y));
+	OutCorners[3] = ToWorld(FVector2D(-Extent.X, Extent.Y));
+}
+
+FBox2D FRTSBuildingFootprint::GetBounds() const
+{
+	const FVector2D Half(FMath::Abs(Axis.X) * Extent.X + FMath::Abs(Axis.Y) * Extent.Y,
+		FMath::Abs(Axis.Y) * Extent.X + FMath::Abs(Axis.X) * Extent.Y);
+	return FBox2D(FVector2D(Center) - Half, FVector2D(Center) + Half);
+}
+
+bool FRTSBuildingFootprint::IsApart(const FRTSBuildingFootprint& Other, float Gap) const
+{
+	// Separating axes: two rectangles that do not overlap leave a gap across one of their four sides' directions.
+	const FVector Delta = Other.Center - Center;
+	float Widest = -UE_BIG_NUMBER;
+	for (const FVector& Direction : { Axis, GetSide(), Other.Axis, Other.GetSide() })
+	{
+		auto Reach = [&Direction](const FRTSBuildingFootprint& Footprint)
+		{
+			return FMath::Abs(FVector::DotProduct(Direction, Footprint.Axis)) * Footprint.Extent.X
+				+ FMath::Abs(FVector::DotProduct(Direction, Footprint.GetSide())) * Footprint.Extent.Y;
+		};
+		Widest = FMath::Max(Widest, FMath::Abs(FVector::DotProduct(Delta, Direction)) - Reach(*this) - Reach(Other));
+	}
+	return Widest >= Gap;
+}
+
 namespace RTSBuildPlacement
 {
 	FVector SnapToGrid(const FVector& Location, const FIntPoint& Footprint)
@@ -59,6 +108,15 @@ namespace RTSBuildPlacement
 	int32 GetQuarterTurns(float Yaw)
 	{
 		return ((FMath::RoundToInt(Yaw / 90.f) % 4) + 4) % 4;
+	}
+
+	FRTSBuildingFootprint MakeFootprint(const FIntPoint& Footprint, const FVector& Location, float Yaw)
+	{
+		FRTSBuildingFootprint Ground;
+		Ground.Center = Location;
+		Ground.Axis = FRotator(0.f, Yaw, 0.f).Vector();
+		Ground.Extent = FVector2D(GetFootprintExtent(Footprint));
+		return Ground;
 	}
 
 	const URTSUnitData* GetWidestExitUnit(const URTSBuildingData& Data)

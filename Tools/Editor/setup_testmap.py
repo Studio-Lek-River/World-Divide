@@ -2161,12 +2161,18 @@ def build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, st
         spawn_start_spot(team_id, (x, 0.0, 100.0), yaw)
         forward = 1.0 if yaw == 0.0 else -1.0
         # The army in front of the headquarters, tanks to its right and infantry to its left, and the builders behind it.
-        spawn_units(tank, 6, team_id, (x + BASE_ARMY_AHEAD * forward, -BASE_ARMY_SIDE, 0.0), yaw)
-        spawn_units(infantry, 10, team_id, (x + BASE_ARMY_AHEAD * forward, BASE_ARMY_SIDE, 0.0), yaw)
-        spawn_units(builder, 2, team_id, (x - BASE_BUILDERS_BEHIND * forward, 0.0, 0.0), yaw)
-        if team_id == 0:
-            # The real-size test tank, beside the base and clear of the army's paths.
-            spawn_units(m20, 2, team_id, (x + 2400.0, -7800.0, 0.0), yaw)
+        tanks = (x + BASE_ARMY_AHEAD * forward, -BASE_ARMY_SIDE)
+        riflemen = (x + BASE_ARMY_AHEAD * forward, BASE_ARMY_SIDE)
+        builders = base_builders(x, 0.0)
+        # The real-size test tank, beside the base and clear of the army's paths.
+        m20s = (x + 2400.0, -7800.0) if team_id == 0 else None
+        check_base_layout(path, x, 0.0, [("tanks", *tanks), ("infantry", *riflemen), ("builders", *builders)]
+                          + ([("M20s", *m20s)] if m20s else []))
+        spawn_units(tank, 6, team_id, (*tanks, 0.0), yaw)
+        spawn_units(infantry, 10, team_id, (*riflemen, 0.0), yaw)
+        spawn_units(builder, 2, team_id, (*builders, 0.0), yaw)
+        if m20s:
+            spawn_units(m20, 2, team_id, (*m20s, 0.0), yaw)
         # Beside each base, clear of the units' paths and of the empty strip at y = 21000 the tests build in.
         spawn_supply_source((*base_source(x, 0.0, yaw), 0.0), 5000, crate)
 
@@ -2181,7 +2187,8 @@ def make_map(path, night, tank, infantry, builder, m20, wall, crate, ground, str
     lighting = spawn_night_lighting if night else spawn_lighting
     night_look = (NIGHT_MOON_LUX, NIGHT_MOON_COLOR, NIGHT_MOON_PITCH, NIGHT_SKY_INTENSITY, NIGHT_EXPOSURE_BIAS) if night else None
     plan_rebuild(path, ".umap", lambda digest: build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, strips, digest),
-                 spec_hash([build_map, build_navigation, check_map_lanes, base_source, spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall,
+                 spec_hash([build_map, build_navigation, check_map_lanes, check_base_layout, headquarters_local, base_builders, base_source,
+                            spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall,
                             spawn_units, spawn_supply_source, spawn_ground, spawn_ground_strips, lighting], path, night_look, TEST_MAP,
                            TEST_HILL, TEST_GROUND_STRIPS, TEST_GROUND_STRIP_SPAN, BASE_LAYOUT, MAP_LANE_RULES, CUBE, tank, infantry,
                            builder, m20, wall, crate, ground, material_hashes[ground], sorted(strips.items()),
@@ -2353,22 +2360,59 @@ SkirmishMap = collections.namedtuple("SkirmishMap", "path half_size spots obstac
 # A supply source's footprint in 1 m cells and its height, in cm.
 SUPPLY_FOOTPRINT = (12, 12)
 SUPPLY_HEIGHT = 300.0
-# What stands by each start spot, in cm along the spot's facing and to its left: the army (L_TestMap only) ahead of the
-# headquarters, the builders behind it and the base's own supply source beside it. The headquarters stands unturned, 38 m
-# along x and 56 m along y (#191), so the builders keep clear of its 28 m half length whichever way the spot faces.
-BASE_ARMY_AHEAD = 3000.0
+# The headquarters every start spot gets (#191): 38 m along its own x, its garage side, and 56 m along its own y. Whichever
+# way the spot faces, it stands at the game's HeadquartersYaw (RTSBuildPlacement.h, #426), its garage to the southwest on
+# a true diagonal, so it reaches sqrt(19^2 + 28^2) = 33.8 m from its centre and 33.2 m along x and y.
+HEADQUARTERS_FOOTPRINT = (38, 56)
+HEADQUARTERS_YAW = 225.0
+# How far past its garage side the headquarters' exit lane runs, rounded up from RTSBuildPlacement::GetExitLaneLength for
+# its widest unit, and how far the units of a spawner spread round its spot.
+HEADQUARTERS_EXIT_LANE = 2000.0
+BASE_UNIT_REACH = 1200.0
+# What stands by each start spot, in cm: the army (L_TestMap only) ahead of the headquarters along the spot's facing and
+# to its sides, the builders behind the headquarters, away from its garage, and the base's own supply source to the
+# spot's left. check_base_layout keeps them all off the turned headquarters and its exit lane.
+BASE_ARMY_AHEAD = 5000.0
 BASE_ARMY_SIDE = 2700.0
 BASE_BUILDERS_BEHIND = 3600.0
 BASE_SOURCE_BEHIND = 150.0
 BASE_SOURCE_SIDE = 7650.0
-BASE_LAYOUT = (BASE_ARMY_AHEAD, BASE_ARMY_SIDE, BASE_BUILDERS_BEHIND, BASE_SOURCE_BEHIND, BASE_SOURCE_SIDE, SUPPLY_FOOTPRINT,
-               SUPPLY_HEIGHT)
+BASE_LAYOUT = (HEADQUARTERS_FOOTPRINT, HEADQUARTERS_YAW, HEADQUARTERS_EXIT_LANE, BASE_UNIT_REACH, BASE_ARMY_AHEAD,
+               BASE_ARMY_SIDE, BASE_BUILDERS_BEHIND, BASE_SOURCE_BEHIND, BASE_SOURCE_SIDE, SUPPLY_FOOTPRINT, SUPPLY_HEIGHT)
 # check_map_lanes: a gap between two obstacles, or between an obstacle and the ground's edge, is closed or at least
 # VEHICLE_LANE wide (standard rule 4: 8 m carriageways), and every base keeps BASE_CLEARANCE around its spot free: the
-# headquarters' half length (28 m), its exit and the builders behind it.
+# turned headquarters' 33.2 m along x and y, its exit and the builders round it.
 VEHICLE_LANE = 800.0
 BASE_CLEARANCE = 4000.0
 MAP_LANE_RULES = (VEHICLE_LANE, BASE_CLEARANCE)
+
+
+def headquarters_local(x, y, spot_x, spot_y):
+    """(x, y) in the frame of the headquarters at (spot_x, spot_y): along its garage side and along its own y."""
+    axis = (math.cos(math.radians(HEADQUARTERS_YAW)), math.sin(math.radians(HEADQUARTERS_YAW)))
+    dx, dy = x - spot_x, y - spot_y
+    return dx * axis[0] + dy * axis[1], -dx * axis[1] + dy * axis[0]
+
+
+def base_builders(x, y):
+    """Where the builders of the base at (x, y) stand: behind the headquarters, away from its garage."""
+    axis = (math.cos(math.radians(HEADQUARTERS_YAW)), math.sin(math.radians(HEADQUARTERS_YAW)))
+    return x - BASE_BUILDERS_BEHIND * axis[0], y - BASE_BUILDERS_BEHIND * axis[1]
+
+
+def check_base_layout(path, x, y, units):
+    """Raises unless each of units, (label, x, y), stands BASE_UNIT_REACH clear of the headquarters at (x, y) and of its
+    exit lane, and the turned headquarters fits in BASE_CLEARANCE."""
+    half_x, half_y = HEADQUARTERS_FOOTPRINT[0] * 50.0, HEADQUARTERS_FOOTPRINT[1] * 50.0
+    cos, sin = abs(math.cos(math.radians(HEADQUARTERS_YAW))), abs(math.sin(math.radians(HEADQUARTERS_YAW)))
+    if max(half_x * cos + half_y * sin, half_x * sin + half_y * cos) > BASE_CLEARANCE:
+        raise RuntimeError(f"{path}: the turned headquarters reaches past BASE_CLEARANCE")
+    for label, unit_x, unit_y in units:
+        local_x, local_y = headquarters_local(unit_x, unit_y, x, y)
+        # The footprint, run on along the garage side by the exit lane, and grown by the units' spread.
+        if (-half_x - BASE_UNIT_REACH < local_x < half_x + HEADQUARTERS_EXIT_LANE + BASE_UNIT_REACH
+                and abs(local_y) < half_y + BASE_UNIT_REACH):
+            raise RuntimeError(f"{path}: {label} of the base at ({x:.0f}, {y:.0f}) stand on its headquarters or exit lane")
 
 
 def check_map_lanes(spec):
@@ -2495,9 +2539,10 @@ def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
 
     for spot, x, y, yaw in spec.spots:
         spawn_start_spot(spot, (x, y, 100.0), yaw)
-        forward = (math.cos(math.radians(yaw)), math.sin(math.radians(yaw)))
+        builders = base_builders(x, y)
+        check_base_layout(spec.path, x, y, [("builders", *builders)])
         # The units of a spot carry its number; the game mode hands them to the team playing from it.
-        spawn_units(builder, 2, spot, (x - BASE_BUILDERS_BEHIND * forward[0], y - BASE_BUILDERS_BEHIND * forward[1], 0.0), yaw)
+        spawn_units(builder, 2, spot, (*builders, 0.0), yaw)
         spawn_supply_source((*base_source(x, y, yaw), 0.0), 5000, crate)
     for x, y, amount in spec.sources:
         spawn_supply_source((x, y, 0.0), amount, crate)
@@ -2512,7 +2557,8 @@ def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
 
 def make_skirmish_map(spec, builder, wall, crate, ground, water):
     """Queues the level and then its preview."""
-    digest = spec_hash([build_skirmish_map, build_navigation, check_map_lanes, base_source, spawn, spawn_block, spawn_obstacle,
+    digest = spec_hash([build_skirmish_map, build_navigation, check_map_lanes, check_base_layout, headquarters_local,
+                        base_builders, base_source, spawn, spawn_block, spawn_obstacle,
                         spawn_wall, spawn_units, spawn_supply_source, spawn_ground, spawn_water, spawn_lighting], spec, BASE_LAYOUT,
                        MAP_LANE_RULES, CUBE, builder, wall, crate, ground, water, material_hashes[ground], material_hashes[water],
                        ENGINE_VERSION, NAV_CONFIG)
@@ -3029,6 +3075,8 @@ airfield = make_building("DA_TestAirfield", "Test Airfield", airfield_mesh, buil
 # Every team starts with one at its PlayerStart and may own only one; a team that lost it builds it again. The USA HQ
 # at real size (#191): 38 x 56 m, its meshes as parts, its blocks as collision boxes.
 headquarters_mesh, headquarters_footprint, headquarters_layout = make_usa_hq()
+if tuple(headquarters_footprint) != HEADQUARTERS_FOOTPRINT:
+    raise RuntimeError(f"The USA HQ's footprint {headquarters_footprint} is not HEADQUARTERS_FOOTPRINT: lay the bases out again")
 headquarters = make_building("DA_TestHeadquarters", "Test Headquarters", headquarters_mesh, (1.0, 1.0, 1.0),
                              headquarters_footprint, 3000.0, None, 2500, 12.0, 0, 0, units=[builder], max_count=1)
 add_properties(headquarters, headquarters_layout)

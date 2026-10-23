@@ -50,11 +50,12 @@ namespace RTSTests
 			float Clear = 0.f;
 			for (TActorIterator<ARTSBuilding> Building(&World); Building; ++Building)
 			{
-				const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Building->GetFootprint());
-				const FVector Offset = It->GetActorLocation() - Building->GetActorLocation();
-				if (FMath::Abs(Offset.X) <= Extent.X && FMath::Abs(Offset.Y) <= Extent.Y)
+				// The box round the footprint: the headquarters stands on a diagonal.
+				const FBox2D Bounds = Building->GetGroundFootprint().GetBounds();
+				const FVector2D Start(It->GetActorLocation());
+				if (Bounds.IsInside(Start))
 				{
-					Clear = FMath::Max(Clear, static_cast<float>(Extent.Y - Offset.Y));
+					Clear = FMath::Max(Clear, static_cast<float>(Bounds.Max.Y - Start.Y));
 				}
 			}
 			FNavLocation NavPoint;

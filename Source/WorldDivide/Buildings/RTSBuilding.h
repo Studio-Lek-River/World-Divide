@@ -17,6 +17,7 @@ class URTSProductionComponent;
 class URTSSuperweaponComponent;
 class URTSUnitData;
 class URTSWeaponComponent;
+struct FRTSBuildingFootprint;
 struct FRTSBuildingLight;
 struct FNavAgentProperties;
 
@@ -131,10 +132,16 @@ public:
 	/** Server only. Frees Aircraft's pad here, if it has one. */
 	void ReleasePad(const ARTSUnit& Aircraft);
 
-	/** The data's footprint in world cells, turned with the building (RTSBuildPlacement::GetRotatedFootprint). */
+	/**
+	 * The data's footprint in world cells, turned with the building (RTSBuildPlacement::GetRotatedFootprint): only for a
+	 * building turned in quarter turns. Anything that looks at the ground it covers takes GetGroundFootprint.
+	 */
 	FIntPoint GetFootprint() const;
 
-	/** From clamped to the footprint rectangle. Under construction or not, the building can be shot. */
+	/** The footprint on the ground, turned with the building whatever its yaw. */
+	FRTSBuildingFootprint GetGroundFootprint() const;
+
+	/** From clamped to the turned footprint rectangle. Under construction or not, the building can be shot. */
 	virtual FVector GetClosestFootprintPoint(const FVector& From) const override;
 
 	/**

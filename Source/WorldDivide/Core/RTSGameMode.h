@@ -74,7 +74,7 @@ private:
 
 	/**
 	 * Spawns the completed URTSFactionData::Headquarters of each team's faction, or of the default faction for a team
-	 * without a player yet, on the grid spot of the team's PlayerStart.
+	 * without a player yet, on the grid spot of the team's PlayerStart, turned to RTSBuildPlacement::HeadquartersYaw.
 	 */
 	void SpawnHeadquarters();
 

@@ -65,12 +65,12 @@ int32 ARTSSupplySource::Take(int32 Wanted)
 
 FVector ARTSSupplySource::GetClosestFootprintPoint(const FVector& From) const
 {
-	const FVector Center = GetActorLocation();
-	const FVector Extent = RTSBuildPlacement::GetFootprintExtent(Footprint);
-	return FVector(
-		FMath::Clamp(From.X, Center.X - Extent.X, Center.X + Extent.X),
-		FMath::Clamp(From.Y, Center.Y - Extent.Y, Center.Y + Extent.Y),
-		Center.Z);
+	return GetGroundFootprint().GetClosestPoint(From);
+}
+
+FRTSBuildingFootprint ARTSSupplySource::GetGroundFootprint() const
+{
+	return RTSBuildPlacement::MakeFootprint(Footprint, GetActorLocation(), GetActorRotation().Yaw);
 }
 
 ARTSSupplySource* ARTSSupplySource::FindNearest(const UWorld& World, const FVector& From, float MaxDistance,

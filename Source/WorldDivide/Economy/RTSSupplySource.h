@@ -5,6 +5,7 @@
 #include "RTSSupplySource.generated.h"
 
 class UBoxComponent;
+struct FRTSBuildingFootprint;
 class UStaticMesh;
 class UStaticMeshComponent;
 
@@ -28,6 +29,9 @@ public:
 
 	/** From clamped to the footprint rectangle. */
 	FVector GetClosestFootprintPoint(const FVector& From) const;
+
+	/** The footprint on the ground, turned with the source. */
+	FRTSBuildingFootprint GetGroundFootprint() const;
 
 	/** The source with supplies left, not in Exclude, whose footprint edge is nearest From and within MaxDistance, or null. */
 	static ARTSSupplySource* FindNearest(const UWorld& World, const FVector& From, float MaxDistance,

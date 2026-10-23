@@ -1498,7 +1498,6 @@ bool FRTSCheckWallApproach::Update()
 		return true;
 	}
 	UWorld* World = Building->GetWorld();
-	const FIntPoint Footprint = Building->GetBuildingData()->Footprint;
 
 	for (const TWeakObjectPtr<ARTSUnit>& Attacker : State->Attackers)
 	{
@@ -1514,7 +1513,7 @@ bool FRTSCheckWallApproach::Update()
 			IsOnNavMesh(*World, Facing));
 
 		FVector Spot;
-		const bool bFound = RTSApproach::FindReachableSpot(*Attacker, Building->GetActorLocation(), Footprint, Range * 0.5f, Range, Spot);
+		const bool bFound = RTSApproach::FindReachableSpot(*Attacker, Building->GetGroundFootprint(), Range * 0.5f, Range, Spot);
 		Test->TestTrue(FString::Printf(TEXT("A reachable spot on another side (%s)"), *Spot.ToCompactString()),
 			bFound && FVector::Dist2D(Spot, Facing) > 200.f);
 		// Only around the wall's end, on the building's side of it.
@@ -1898,15 +1897,15 @@ bool FRTSIssueUnreachableDocksHarvest::Update()
 
 	// The ring must really cut the walled ones off, with the stand-off and reach the harvester uses.
 	const float Radius = Harvester->GetStandOffRadius();
-	const auto IsReachable = [Harvester, Radius](const AActor& Dock, const FIntPoint& Footprint)
+	const auto IsReachable = [Harvester, Radius](const FRTSBuildingFootprint& Footprint)
 	{
 		FVector Spot;
-		return RTSApproach::FindReachableSpot(*Harvester, Dock.GetActorLocation(), Footprint, Radius + 60.f, Radius + 125.f, Spot);
+		return RTSApproach::FindReachableSpot(*Harvester, Footprint, Radius + 60.f, Radius + 125.f, Spot);
 	};
-	Test->TestFalse(TEXT("The walled source cannot be reached"), IsReachable(*State->WalledSource, State->WalledSource->Footprint));
-	Test->TestFalse(TEXT("The walled depot cannot be reached"), IsReachable(*State->Building, State->Building->GetBuildingData()->Footprint));
-	Test->TestTrue(TEXT("The open source can be reached"), IsReachable(*State->Source, State->Source->Footprint));
-	Test->TestTrue(TEXT("The open depot can be reached"), IsReachable(*State->OpenDepot, State->OpenDepot->GetBuildingData()->Footprint));
+	Test->TestFalse(TEXT("The walled source cannot be reached"), IsReachable(State->WalledSource->GetGroundFootprint()));
+	Test->TestFalse(TEXT("The walled depot cannot be reached"), IsReachable(State->Building->GetGroundFootprint()));
+	Test->TestTrue(TEXT("The open source can be reached"), IsReachable(State->Source->GetGroundFootprint()));
+	Test->TestTrue(TEXT("The open depot can be reached"), IsReachable(State->OpenDepot->GetGroundFootprint()));
 
 	// No source named: the harvester picks its own.
 	FRTSCommand Harvest;

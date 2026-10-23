@@ -7,6 +7,7 @@
 class ARTSBuilding;
 class ARTSSupplySource;
 class URTSHarvesterData;
+struct FRTSBuildingFootprint;
 
 UENUM()
 enum class ERTSHarvestState : uint8
@@ -66,10 +67,10 @@ private:
 	void StopOwnerMovement() const;
 
 	/**
-	 * Pathfinds to a reachable spot just outside the footprint at Center, unless a move is running or a retry is on hold.
+	 * Pathfinds to a reachable spot just outside Footprint, unless a move is running or a retry is on hold.
 	 * False when no such spot exists.
 	 */
-	bool ApproachDock(const FVector& Center, const FIntPoint& Footprint);
+	bool ApproachDock(const FRTSBuildingFootprint& Footprint);
 
 	/** Ends the run because Dock cannot be reached; any load stays on board. Always false. */
 	bool EndUnreachable(const AActor& Dock);

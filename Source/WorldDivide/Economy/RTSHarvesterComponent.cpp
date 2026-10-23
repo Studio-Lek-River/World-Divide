@@ -1,6 +1,7 @@
 #include "Economy/RTSHarvesterComponent.h"
 
 #include "AIController.h"
+#include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Core/RTSPlayerState.h"
 #include "Data/RTSBuildingData.h"
@@ -124,7 +125,7 @@ bool URTSHarvesterComponent::UpdateHarvest(float DeltaSeconds)
 		{
 			if (!IsDocked(Target->GetClosestFootprintPoint(Location)))
 			{
-				return ApproachDock(Target->GetActorLocation(), Target->Footprint)
+				return ApproachDock(Target->GetGroundFootprint())
 					|| (bSourceOrdered ? EndUnreachable(*Target) : SkipUnreachableSource());
 			}
 			StopOwnerMovement();
@@ -166,7 +167,7 @@ bool URTSHarvesterComponent::UpdateHarvest(float DeltaSeconds)
 	}
 	if (!IsDocked(Depot->GetClosestFootprintPoint(Location)))
 	{
-		return ApproachDock(Depot->GetActorLocation(), Depot->GetFootprint()) || SkipUnreachableDepot();
+		return ApproachDock(Depot->GetGroundFootprint()) || SkipUnreachableDepot();
 	}
 
 	StopOwnerMovement();
@@ -199,7 +200,7 @@ void URTSHarvesterComponent::StopOwnerMovement() const
 	}
 }
 
-bool URTSHarvesterComponent::ApproachDock(const FVector& Center, const FIntPoint& Footprint)
+bool URTSHarvesterComponent::ApproachDock(const FRTSBuildingFootprint& Footprint)
 {
 	const ARTSUnit* Unit = Cast<ARTSUnit>(GetOwner());
 	AAIController* AI = Unit ? Unit->GetController<AAIController>() : nullptr;
@@ -211,7 +212,7 @@ bool URTSHarvesterComponent::ApproachDock(const FVector& Center, const FIntPoint
 	// The dock's centre lies in its own navmesh hole; stand just outside the footprint, facing side first.
 	const float Radius = Unit->GetStandOffRadius();
 	FVector Goal;
-	if (!RTSApproach::FindReachableSpot(*Unit, Center, Footprint, Radius + DockOffset,
+	if (!RTSApproach::FindReachableSpot(*Unit, Footprint, Radius + DockOffset,
 		Radius + DockReach - ApproachAcceptanceRadius, Goal))
 	{
 		return false;

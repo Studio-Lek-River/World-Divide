@@ -4,6 +4,7 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+#include "Buildings/RTSBuildPlacement.h"
 #include "Units/RTSUnitShape.h"
 
 namespace RTSTests
@@ -59,6 +60,15 @@ namespace RTSTests
 			}
 		}
 		return Gap;
+	}
+
+	/** GetHullGap against a building's footprint, turned however it stands: measured in the building's own frame. */
+	inline float GetHullGap(const FRTSFootprint& Footprint, const FRTSBuildingFootprint& Building)
+	{
+		FRTSFootprint Local = Footprint;
+		Local.Center = FVector(Building.ToLocal(Footprint.Center), 0.f);
+		Local.Axis = FVector(FVector::DotProduct(Footprint.Axis, Building.Axis), FVector::DotProduct(Footprint.Axis, Building.GetSide()), 0.f);
+		return GetHullGap(Local, FBox2D(-Building.Extent, Building.Extent));
 	}
 }
 

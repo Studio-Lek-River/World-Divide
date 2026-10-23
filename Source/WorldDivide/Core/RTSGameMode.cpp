@@ -288,7 +288,8 @@ void ARTSGameMode::SpawnHeadquarters()
 			Location.Z = GroundHit.Location.Z;
 		}
 
-		const FTransform Transform(Location);
+		// Every headquarters faces the same way, its garage to the southwest.
+		const FTransform Transform(FRotator(0.f, RTSBuildPlacement::HeadquartersYaw, 0.f), Location);
 		ARTSBuilding* Building = World->SpawnActorDeferred<ARTSBuilding>(
 			ARTSBuilding::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		if (!Building)

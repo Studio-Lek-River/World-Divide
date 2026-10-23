@@ -57,6 +57,7 @@ class URTSWeaponComponent;
 class URTSUnitData;
 class URTSUnitMovement;
 struct FPathFollowingResult;
+struct FRTSBuildingFootprint;
 
 /** How ARTSUnit::RequestMove went. */
 enum class ERTSMoveRequest : uint8
@@ -112,7 +113,7 @@ public:
 	 * Server only. Pauses the current move when the next stretch of its path leads into Footprint, a new building whose
 	 * navmesh hole is not built yet, so the unit waits at its edge. Returns true when it paused. Aircraft never pause.
 	 */
-	bool HoldShortOf(const FBox& Footprint);
+	bool HoldShortOf(const FRTSBuildingFootprint& Footprint);
 
 	/** Server only. True while HoldShortOf keeps the move paused; any new move ends the hold. */
 	bool IsMoveHeld() const;

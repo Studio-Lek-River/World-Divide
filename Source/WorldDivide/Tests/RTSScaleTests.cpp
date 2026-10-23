@@ -177,12 +177,10 @@ namespace RTSScaleTests
 		return Units;
 	}
 
-	/** A building's footprint seen from above, as it stands. */
+	/** The box round a building's footprint seen from above, as it stands. */
 	FBox2D GetFootprintBox(const ARTSBuilding& Building)
 	{
-		const FVector2D Center(Building.GetActorLocation());
-		const FVector2D Extent(RTSBuildPlacement::GetFootprintExtent(Building.GetFootprint()));
-		return FBox2D(Center - Extent, Center + Extent);
+		return Building.GetGroundFootprint().GetBounds();
 	}
 
 	FBox2D GetFootprintBox(const ARTSSupplySource& Source)
@@ -502,7 +500,7 @@ namespace RTSScaleTests
 		if (const ARTSUnit* Harvester = State->Harvester.Get())
 		{
 			const FRTSFootprint Footprint = Harvester->GetFootprint();
-			State->WorstDepotGap = FMath::Min(State->WorstDepotGap, RTSTests::GetHullGap(Footprint, GetFootprintBox(*Depot)));
+			State->WorstDepotGap = FMath::Min(State->WorstDepotGap, RTSTests::GetHullGap(Footprint, Depot->GetGroundFootprint()));
 			State->WorstSourceGap = FMath::Min(State->WorstSourceGap, RTSTests::GetHullGap(Footprint, GetFootprintBox(*Source)));
 		}
 		if (Player->GetCredits() > State->LastCredits)
@@ -875,7 +873,7 @@ namespace RTSScaleTests
 				{
 					if (Building->GetTeamId() == Team && !Building->GetBuildingData()->Units.IsEmpty()
 						&& FVector::Dist2D(It->GetActorLocation(), Building->GetActorLocation())
-							> RTSBuildPlacement::GetFootprintExtent(Building->GetFootprint()).X + RTSBuildPlacement::GetExitLaneLength(*Building->GetBuildingData()))
+							> Building->GetGroundFootprint().Extent.X + RTSBuildPlacement::GetExitLaneLength(*Building->GetBuildingData()))
 					{
 						State->bVehicleLeft[Team] = true;
 					}
