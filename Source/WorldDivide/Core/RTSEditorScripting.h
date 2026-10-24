@@ -24,9 +24,13 @@ struct FRTSVegetationEntry
 {
 	GENERATED_BODY()
 
-	/** A skeletal mesh: the Megaplant trees and shrubs are skeletal Nanite assemblies. */
+	/** A skeletal mesh: the Megaplant trees and shrubs are skeletal Nanite assemblies. None when StaticMesh is set. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
 	TObjectPtr<USkinnedAsset> Mesh;
+
+	/** A static mesh instead of Mesh (hedgerow shrubs, clutter and ground cover, #463): never a tree, so never a trunk. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	TObjectPtr<UStaticMesh> StaticMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
 	float Weight = 1.f;
@@ -34,9 +38,13 @@ struct FRTSVegetationEntry
 	/** A tree, whose trunk infantry walks around (when its graph has bTrunks); a shrub has none. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
 	bool bTrunk = true;
+
+	/** This entry's points scaled by it on top of the graph's scale range: a 5 m rock face as a 1 m boulder, a shrub to a hedge's height. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	float ScaleFactor = 1.f;
 };
 
-/** What one vegetation graph (forest, copse, riverbank, border ring) scatters, in BuildVegetationGraph. */
+/** What one vegetation graph (forest, copse, riverbank, border ring, hedgerow, clutter, wood floor) scatters, in BuildVegetationGraph. */
 USTRUCT(BlueprintType)
 struct FRTSVegetationGraphSpec
 {
@@ -330,8 +338,8 @@ public:
 	 * Writes the PCG graph AssetPath (#158) that scatters Spec over the landscape inside the volume of the component running
 	 * it, with that component's seed, so any map can reuse it with its own volume and seed (#322): the sampled points minus
 	 * Spec's exclusion actors, the lane bands' points from Spec.LaneEntries, the rest from Spec.Entries, each picked by
-	 * weight, as instanced skinned meshes (no collision, no navigation), and with Spec.bTrunks a hidden point at every
-	 * tree's trunk; with Spec.IncludeTag only inside the actors tagged so. An existing graph is emptied and rebuilt, so the
+	 * weight, as instanced skinned meshes or, for entries with a StaticMesh, instanced static meshes (no collision, no
+	 * navigation), and with Spec.bTrunks a hidden point at every skinned tree's trunk; with Spec.IncludeTag only inside the actors tagged so. An existing graph is emptied and rebuilt, so the
 	 * volumes using it keep it. Returns null and logs why when it fails.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")

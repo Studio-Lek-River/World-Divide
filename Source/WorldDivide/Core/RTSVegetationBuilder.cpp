@@ -26,6 +26,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "HAL/PlatformProcess.h"
+#include "MeshSelectors/PCGMeshSelectorByAttribute.h"
 #include "MeshSelectors/PCGMeshSelectorWeighted.h"
 #include "MeshSelectors/PCGSkinnedMeshSelector.h"
 #include "Misc/PackageName.h"
@@ -42,7 +43,7 @@ namespace RTSVegetationBuilder
 {
 	/** The tag of every tree component, for line of sight (M6) and crushing to find them. */
 	const FName TreeTag(TEXT("WD_Tree"));
-	/** The point attribute holding the skinned mesh each point spawns. */
+	/** The point attribute holding the skinned or static mesh each point spawns. */
 	const FName MeshAttribute(TEXT("Mesh"));
 	/** Seconds GeneratePCG waits for one component. */
 	constexpr double GenerateTimeout = 900.0;
@@ -190,11 +191,11 @@ namespace RTSVegetationBuilder
 
 	/**
 	 * Splits In's points by weight over Entries, each share tagged with its mesh (MeshAttribute): a chain of random choices,
-	 * each taking its entry's part of what the ones before it left. Adds the tagged shares to Meshes, and those of trees to
-	 * Trunks as well.
+	 * each taking its entry's part of what the ones before it left. Adds the tagged shares of skinned meshes to Meshes, those
+	 * of trees to Trunks as well, and those of static meshes to Statics.
 	 */
 	void AddMeshChoice(FGraphWriter& Writer, UPCGNode* In, FName InPin, const TArray<FRTSVegetationEntry>& Entries, UPCGNode* Meshes,
-		UPCGNode* Trunks)
+		UPCGNode* Trunks, UPCGNode* Statics)
 	{
 		float Remaining = 0.f;
 		for (const FRTSVegetationEntry& Entry : Entries)
@@ -221,12 +222,30 @@ namespace RTSVegetationBuilder
 			}
 			Remaining -= Entry.Weight;
 
+			if (!FMath::IsNearlyEqual(Entry.ScaleFactor, 1.f))
+			{
+				UPCGNode* Scaled = nullptr;
+				UPCGTransformPointsSettings* Scale = Writer.Add<UPCGTransformPointsSettings>(Scaled);
+				Scale->ScaleMin = FVector(Entry.ScaleFactor);
+				Scale->ScaleMax = FVector(Entry.ScaleFactor);
+				Scale->bUniformScale = true;
+				Writer.Connect(Chosen, ChosenPin, Scaled, PCGPinConstants::DefaultInputLabel);
+				Chosen = Scaled;
+				ChosenPin = PCGPinConstants::DefaultOutputLabel;
+			}
+
 			UPCGNode* Tag = nullptr;
 			UPCGAddAttributeSettings* Settings = Writer.Add<UPCGAddAttributeSettings>(Tag);
 			Settings->OutputTarget.SetAttributeName(MeshAttribute);
 			Settings->AttributeTypes.Type = EPCGMetadataTypes::SoftObjectPath;
-			Settings->AttributeTypes.SoftObjectPathValue = FSoftObjectPath(Entry.Mesh);
 			Writer.Connect(Chosen, ChosenPin, Tag, PCGPinConstants::DefaultInputLabel);
+			if (Entry.StaticMesh)
+			{
+				Settings->AttributeTypes.SoftObjectPathValue = FSoftObjectPath(Entry.StaticMesh);
+				Writer.Connect(Tag, PCGPinConstants::DefaultOutputLabel, Statics, PCGPinConstants::DefaultInputLabel);
+				continue;
+			}
+			Settings->AttributeTypes.SoftObjectPathValue = FSoftObjectPath(Entry.Mesh);
 			Writer.Connect(Tag, PCGPinConstants::DefaultOutputLabel, Meshes, PCGPinConstants::DefaultInputLabel);
 			if (Entry.bTrunk && Trunks)
 			{
@@ -348,13 +367,18 @@ AActor* URTSEditorScripting::SpawnTreeInstances(UObject* WorldContextObject, con
 UPCGGraph* URTSEditorScripting::BuildVegetationGraph(const FString& AssetPath, const FRTSVegetationGraphSpec& Spec)
 {
 	using namespace RTSVegetationBuilder;
-	if (!FPackageName::IsValidLongPackageName(AssetPath) || Spec.Entries.IsEmpty() || Spec.Entries.ContainsByPredicate(
-		[](const FRTSVegetationEntry& Entry) { return !Entry.Mesh; }) || Spec.LaneEntries.ContainsByPredicate(
-		[](const FRTSVegetationEntry& Entry) { return !Entry.Mesh; }))
+	// Each entry exactly one mesh, skinned or static.
+	const auto BadEntry = [](const FRTSVegetationEntry& Entry) { return !Entry.Mesh == !Entry.StaticMesh; };
+	if (!FPackageName::IsValidLongPackageName(AssetPath) || Spec.Entries.IsEmpty() || Spec.Entries.ContainsByPredicate(BadEntry)
+		|| Spec.LaneEntries.ContainsByPredicate(BadEntry))
 	{
-		UE_LOG(LogWorldDivide, Error, TEXT("BuildVegetationGraph %s: a bad path, no entries or an entry without a mesh"), *AssetPath);
+		UE_LOG(LogWorldDivide, Error, TEXT("BuildVegetationGraph %s: a bad path, no entries or an entry without one mesh"), *AssetPath);
 		return nullptr;
 	}
+	const auto IsSkinned = [](const FRTSVegetationEntry& Entry) { return Entry.Mesh != nullptr; };
+	const auto IsStatic = [](const FRTSVegetationEntry& Entry) { return Entry.StaticMesh != nullptr; };
+	const bool bSkinned = Spec.Entries.ContainsByPredicate(IsSkinned) || Spec.LaneEntries.ContainsByPredicate(IsSkinned);
+	const bool bStatic = Spec.Entries.ContainsByPredicate(IsStatic) || Spec.LaneEntries.ContainsByPredicate(IsStatic);
 	bool bIsNew = false;
 	UPCGGraph* Graph = MakeAsset<UPCGGraph>(AssetPath, bIsNew);
 	if (!bIsNew)
@@ -403,14 +427,22 @@ UPCGGraph* URTSEditorScripting::BuildVegetationGraph(const FString& AssetPath, c
 	Writer.Connect(Lanes, PCGPinConstants::DefaultOutputLabel, Open, PCGDifferenceConstants::DifferencesLabel);
 
 	UPCGNode* Meshes = nullptr;
-	Writer.Add<UPCGMergeSettings>(Meshes);
+	if (bSkinned)
+	{
+		Writer.Add<UPCGMergeSettings>(Meshes);
+	}
+	UPCGNode* Statics = nullptr;
+	if (bStatic)
+	{
+		Writer.Add<UPCGMergeSettings>(Statics);
+	}
 	UPCGNode* Trunks = nullptr;
-	if (Spec.bTrunks)
+	if (Spec.bTrunks && bSkinned)
 	{
 		Writer.Add<UPCGMergeSettings>(Trunks);
 	}
 	AddMeshChoice(Writer, AddPlacement(Writer, Open, PCGPinConstants::DefaultOutputLabel, Spec.Scale), PCGPinConstants::DefaultOutputLabel,
-		Spec.Entries, Meshes, Trunks);
+		Spec.Entries, Meshes, Trunks, Statics);
 	if (!Spec.LaneEntries.IsEmpty())
 	{
 		UPCGNode* Lane = nullptr;
@@ -418,29 +450,56 @@ UPCGGraph* URTSEditorScripting::BuildVegetationGraph(const FString& AssetPath, c
 		Writer.Connect(Excluded, PCGPinConstants::DefaultOutputLabel, Lane, PCGPinConstants::DefaultInputLabel);
 		Writer.Connect(Lanes, PCGPinConstants::DefaultOutputLabel, Lane, PCGPinConstants::DefaultInputLabel);
 		AddMeshChoice(Writer, AddPlacement(Writer, Lane, PCGPinConstants::DefaultOutputLabel, Spec.LaneScale),
-			PCGPinConstants::DefaultOutputLabel, Spec.LaneEntries, Meshes, Trunks);
+			PCGPinConstants::DefaultOutputLabel, Spec.LaneEntries, Meshes, Trunks, Statics);
 	}
 
 	// The trees: one instanced skinned mesh component per mesh.
-	UPCGNode* Spawner = nullptr;
-	UPCGSkinnedMeshSpawnerSettings* SpawnerSettings = Writer.Add<UPCGSkinnedMeshSpawnerSettings>(Spawner);
-	UPCGSkinnedMeshSelector* Selector = SpawnerSettings->MeshSelectorParameters;
-	if (!Selector)
+	if (Meshes)
 	{
-		UE_LOG(LogWorldDivide, Error, TEXT("BuildVegetationGraph %s: the skinned mesh spawner has no mesh selector"), *AssetPath);
-		return nullptr;
+		UPCGNode* Spawner = nullptr;
+		UPCGSkinnedMeshSpawnerSettings* SpawnerSettings = Writer.Add<UPCGSkinnedMeshSpawnerSettings>(Spawner);
+		UPCGSkinnedMeshSelector* Selector = SpawnerSettings->MeshSelectorParameters;
+		if (!Selector)
+		{
+			UE_LOG(LogWorldDivide, Error, TEXT("BuildVegetationGraph %s: the skinned mesh spawner has no mesh selector"), *AssetPath);
+			return nullptr;
+		}
+		Selector->MeshAttribute.SetAttributeName(MeshAttribute);
+		FPCGSoftSkinnedMeshComponentDescriptor& Tree = Selector->TemplateDescriptor;
+		Tree.Mobility = EComponentMobility::Static;
+		Tree.BodyInstance.SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+		Tree.bCastShadow = Spec.bCastShadow;
+		Tree.bCastDynamicShadow = Spec.bCastShadow;
+		Tree.InstanceEndCullDistance = Spec.CullDistance;
+		Tree.ComponentTags.AddUnique(TreeTag);
+		SpawnerSettings->bSynchronousLoad = true;
+		Writer.Connect(Meshes, PCGPinConstants::DefaultOutputLabel, Spawner, PCGPinConstants::DefaultInputLabel);
 	}
-	Selector->MeshAttribute.SetAttributeName(MeshAttribute);
-	FPCGSoftSkinnedMeshComponentDescriptor& Tree = Selector->TemplateDescriptor;
-	Tree.Mobility = EComponentMobility::Static;
-	Tree.BodyInstance.SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
-	Tree.bCastShadow = Spec.bCastShadow;
-	Tree.bCastDynamicShadow = Spec.bCastShadow;
-	Tree.InstanceEndCullDistance = Spec.CullDistance;
-	Tree.ComponentTags.AddUnique(TreeTag);
-	SpawnerSettings->bSynchronousLoad = true;
-	Writer.Connect(Meshes, PCGPinConstants::DefaultOutputLabel, Spawner, PCGPinConstants::DefaultInputLabel);
 
+	// The static meshes: one instanced static mesh component per mesh, drawn only, as the trees.
+	if (Statics)
+	{
+		UPCGNode* StaticSpawner = nullptr;
+		UPCGStaticMeshSpawnerSettings* StaticSettings = Writer.Add<UPCGStaticMeshSpawnerSettings>(StaticSpawner);
+		StaticSettings->SetMeshSelectorType(UPCGMeshSelectorByAttribute::StaticClass());
+		UPCGMeshSelectorByAttribute* ByAttribute = Cast<UPCGMeshSelectorByAttribute>(StaticSettings->MeshSelectorParameters);
+		if (!ByAttribute)
+		{
+			UE_LOG(LogWorldDivide, Error, TEXT("BuildVegetationGraph %s: the static mesh spawner has no by-attribute selector"), *AssetPath);
+			return nullptr;
+		}
+		ByAttribute->AttributeName = MeshAttribute;
+		FPCGSoftISMComponentDescriptor& Static = ByAttribute->TemplateDescriptor;
+		Static.Mobility = EComponentMobility::Static;
+		Static.BodyInstance.SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+		Static.bCanEverAffectNavigation = false;
+		Static.bGenerateOverlapEvents = false;
+		Static.bCastShadow = Spec.bCastShadow;
+		Static.bCastDynamicShadow = Spec.bCastShadow;
+		Static.InstanceEndCullDistance = Spec.CullDistance;
+		StaticSettings->bSynchronousLoad = true;
+		Writer.Connect(Statics, PCGPinConstants::DefaultOutputLabel, StaticSpawner, PCGPinConstants::DefaultInputLabel);
+	}
 	// The trunks: a hidden point at every tree, which GeneratePCG turns into a hole in the infantry navmesh.
 	if (Trunks)
 	{

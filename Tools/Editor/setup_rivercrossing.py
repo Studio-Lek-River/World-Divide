@@ -2,7 +2,8 @@
 (docs/world/maps/WD_RiverCrossing_01/03_TECHNICAL_PLAN.md sections 2 and 13). When the level does not exist yet it is
 first created as the scripted greybox of rivercrossing_greybox.py, with its river material and bridge meshes (#155) and
 its roads (#383); an existing level is only loaded, so its terrain and dressing stay as authored. Either way its trees
-(rivercrossing_vegetation.py, #158) are then rebuilt and generated in place. -Rebuild has ue.ps1
+(rivercrossing_vegetation.py, #158, with the hedgerows, clutter and wood floor of #463) and its landscape grass types are
+then rebuilt and generated in place. -Rebuild has ue.ps1
 delete the level and its actor files first, so the greybox is built anew. The river carves the landscape on the GPU,
 so building the greybox needs -Render. The map data asset and the preview come from the bake afterwards:
 
@@ -60,6 +61,8 @@ def main():
         if not levels.load_level(path):
             raise RuntimeError(f"Could not load {path}")
         unreal.log(f"setup_rivercrossing: {path} exists, keeping its terrain and actors")
+        # Its grass types are assets of their own, which the landscape material reads (#463): rebuilt on every run.
+        greybox.build_grass_types()
     else:
         if not unreal.RTSEditorScripting.can_render():
             raise RuntimeError(f"Building the greybox of {path} needs a renderer for the river's carving: run with -Render")

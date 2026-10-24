@@ -100,9 +100,10 @@ As built (#156, `Tools/Editor/rivercrossing_greybox.py`):
 
 | Purpose | Method | Collision |
 |---|---|---|
-| Ground cover (grass, flowers) | Landscape Grass Types | None |
+| Ground cover (grass, flowers) | Landscape Grass Types (`LGT_WD_Grass`, `LGT_WD_Meadow`) | None |
 | Forests, copses, riverbanks | A PCG graph per biome zone (`/Game/World/PCG/PCG_WD_Forest`, `_Copse`, `_Riverbank`), run by PCG volumes (#158) | None; each tree's trunk is a hole in the infantry navmesh |
-| Hedgerows, field edges, bushes and clutter near roads | PCG, with exclusion near splines (follow-up of #158) | None |
+| Hedgerows on the field edges | `PCG_WD_Hedgerow` in the `PCG_Hedgerow` strips, one volume a bank (#463) | None; visual only, no trunks |
+| Clutter in the woods and along the roads, wood floor | `PCG_WD_Clutter` and `PCG_WD_WoodFloor` in every playable wood, `PCG_WD_Roadside` in the lane bands (#463) | None; no shadows |
 | Village gardens, landmark trees | Hand-placed (`WEST_HEROES` in `rivercrossing_vegetation.py`, #158) | As the PCG trees |
 | Border ring forests | PCG at high density (`PCG_WD_BorderRing`), Nanite | None (outside the navmesh) |
 
@@ -128,6 +129,13 @@ As built (#156, `Tools/Editor/rivercrossing_greybox.py`):
 - An instanced skinned mesh ticks by default. With the woods' few hundred components that cost about 8 ms of game thread, so every tree component is saved with `bCanEverTick` off: the trees stand in their reference pose, and wind is not animated.
 - No cull distance: the Nanite trees stay visible to the 450 m maximum camera arm ([WORLD_SCALE_STANDARD.md](../../../tech/scale/WORLD_SCALE_STANDARD.md)).
 - `SM_HP_Tree` (564k triangles, licence unknown) is not used.
+
+**Ground layer** (#463)
+- Poly Haven static meshes (CC0, #409), copied with their textures into the committed `/Game/World/PCG/Meshes`; plants under the grass's two-sided foliage master `M_LandscapeGrass`, logs and rocks under the village props' masters. `BuildVegetationGraph` takes static meshes as entries (`FRTSVegetationEntry::StaticMesh`, with a per-entry `ScaleFactor`).
+- Hedgerows: `rivercrossing_vegetation.hedgerows` walks `field_kind`'s patchwork on the west bank, cuts every field edge into 40–100 m pieces with 8–18 m gaps, keeps about two thirds of them and drops those near a wood, the base pad, the village or the riverbank; the east bank's are turned about the centre. 226 pieces, 15 km, about 22,000 `shrub_02` bushes a bank raised to 1.5–2 m. Only `shrub_02` is a bush: `shrub_03` and `shrub_04` are 20–40 cm plants and go on the wood floor.
+- Clutter: logs, stumps, branches, bark, roots and the rock faces as 1 m boulders, one per 14 m cell in the woods and one per 18 m cell in the lane bands outside the exclusions; culled at 250 m. Wood floor: ferns, moss, nettle, periwinkle and low shrubs, one per 2.2 m cell, culled at 120 m.
+- Field grass: each grass type has a sparse far variety out to 150 m and a dense near variety of meadow tufts (`grass_medium_02`, 30–40 an m²) culled from 35 m, which fills the ground at the closest zoom where the bermuda blades alone read as sprigs; dandelion, celandine and weeds at their own size out to 80 m. Grass types are rebuilt on every `-Task rivercrossing` run.
+- **Budget** (until #160 sets the minimum-spec one): #158's numbers on the development PC plus at most 1 ms of GPU on average, and no frame over 7.5 ms. Measured 2026-10-24 with `-Task camerashots` (51 shots): frame 3.85 → 4.02 ms on average, 6.98 → 6.37 ms at worst; GPU 3.12 → 3.31 ms on average, 5.33 → 5.47 ms at worst; game thread 1.83 → 1.90 ms. The closest zoom over a pasture costs the most (GPU +0.56 ms), from the near grass.
 
 ## 7. Water
 

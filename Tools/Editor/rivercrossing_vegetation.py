@@ -18,6 +18,12 @@ Rules of 03_TECHNICAL_PLAN.md section 6, from the greybox's layout:
   check_lane_entries holds against the meshes' bounds;
 - the playable woods are point-symmetric: every volume west of the river has its copy turned about the centre.
 
+The ground layer (#463): hedgerows along the field edges (greybox.field_kind), 1.5-2 m and visual only, in pieces with gaps
+so they never close a field; clutter (logs, stumps, branches, bark, roots, small rocks) in the woods and along the roads;
+ferns, moss and weeds on the wood floor. All Poly Haven static meshes copied out of the never-cooked /Game/PolyHaven into
+MESH_DIR, without collision, navigation or trunks, and the clutter and the wood floor without shadows. The field grass and
+flowers are the landscape's (greybox.LANDSCAPE_GRASS).
+
 Every actor here is tagged VEG_TAG and found again by its label, so a rerun refills the same actor files (One File Per
 Actor); the graphs regenerate with the same seeds, and the log's "GeneratePCG ... hash" lines show the result is the same.
 """
@@ -35,7 +41,10 @@ GENERATE_TAG = "WD_VegGenerate"
 EXCLUDE_TAG = "PCG_Exclude"
 LANE_TAG = "PCG_LaneBand"
 RIVERBANK_TAG = "PCG_Riverbank"
+HEDGE_TAG = "PCG_Hedgerow"
 PCG_DIR = "/Game/World/PCG"
+# The Poly Haven meshes the ground layer uses, copied out of greybox.POLYHAVEN_DIR with their materials and textures.
+MESH_DIR = f"{PCG_DIR}/Meshes"
 MEGAPLANT = "/Game/Megaplant_Library"
 
 # 02_MAP_DESIGN.md "Readability": trees within 40 m of a lane no taller than 18 m.
@@ -64,6 +73,17 @@ SPINDLE = "Shrub_European_Spindle"
 CHERRY = "Tree_Yoshino_Cherry"
 
 
+def polyhaven(model, *suffixes):
+    """Poly Haven mesh names of model by suffix (SM_<model>_<suffix>); without suffixes the model's one mesh."""
+    return [f"SM_{model}_{suffix}" for suffix in suffixes] or [f"SM_{model}"]
+
+
+def static_entries(*weighted):
+    """(model, mesh names, weight, height) groups as (model, mesh name, weight, height), the weight shared by the meshes;
+    each mesh scaled to height metres (None: as it is)."""
+    return [(model, name, weight / len(names), tall) for model, names, weight, tall in weighted for name in names]
+
+
 def entries(*weighted):
     """(species, variants, weight, trunk) groups as (mesh path, weight, trunk), the weight shared by the variants."""
     return [(mesh(species, variant), weight / len(variants), trunk) for species, variants, weight, trunk in weighted
@@ -87,6 +107,59 @@ GRAPHS = {
     "BorderRing": {"spacing": 13.0, "scale": (0.9, 1.2), "trunks": False,
                    "entries": entries((SPRUCE, "ABC", 3.0, True), (ALDER, "AD", 1.0, True))},
 }
+
+# The ground layer's graphs (#463), of static meshes: the hedge shrubs of 1.0-1.4 m raised to HEDGE_HEIGHT (1.5-2 m at the
+# graph's scale), the clutter and the wood floor. Their lane entries are their entries: none tops the lanes' limit. Only
+# shrub_02 is a bush; shrub_03 and shrub_04 are plants of 20-40 cm, which go on the wood floor as they are.
+HEDGE_HEIGHT = 1.75
+HEDGE_ENTRIES = static_entries(("shrub_02", polyhaven("shrub_02", *"abcd"), 1.0, HEDGE_HEIGHT))
+LOGS = (("dead_tree_trunk", polyhaven("dead_tree_trunk"), 1.0, None),
+        ("dead_tree_trunk_02", polyhaven("dead_tree_trunk_02"), 1.0, None),
+        ("tree_stump_01", polyhaven("tree_stump_01"), 1.5, None),
+        ("tree_stump_02", polyhaven("tree_stump_02"), 1.5, None))
+# The 5 m rock faces as boulders of about a metre.
+ROCKS = (("rock_face_01", polyhaven("rock_face_01"), 1.0, 1.1), ("rock_face_02", polyhaven("rock_face_02"), 1.0, 0.9))
+BRANCHES = ("dry_branches_medium_01", polyhaven("dry_branches_medium_01", *"abc"), 3.0, None)
+CLUTTER_ENTRIES = static_entries(*LOGS, *ROCKS, BRANCHES,
+                                 ("bark_debris_01", polyhaven("bark_debris_01", *"abcd"), 2.0, None),
+                                 ("root_cluster_01", polyhaven("root_cluster_01"), 1.0, None))
+ROADSIDE_ENTRIES = static_entries(*LOGS[2:], *ROCKS, BRANCHES,
+                                  ("nettle_plant", polyhaven("nettle_plant", "medium_a", "medium_b", "tall_a"), 2.0, None),
+                                  ("weed_plant_02", polyhaven("weed_plant_02", *"abcde"), 2.0, None))
+FLOOR_ENTRIES = static_entries(("fern_02", polyhaven("fern_02", *"abcd"), 4.0, None),
+                               ("moss_01", polyhaven("moss_01", *"abcdef"), 2.0, None),
+                               ("nettle_plant", polyhaven("nettle_plant", "small_a", "small_b"), 1.0, None),
+                               ("periwinkle_plant", polyhaven("periwinkle_plant", "01", "02", "03"), 1.0, None),
+                               ("shrub_03", polyhaven("shrub_03", *"abcd"), 1.0, None),
+                               ("shrub_04", polyhaven("shrub_04", *"abcd"), 1.0, None),
+                               ("shrub_02", polyhaven("shrub_02", "a", "b"), 0.5, 0.8))
+# Each: points per m² as for the trees, its entries, scale range, shadows, the distance (m) its instances are culled at
+# (0 never) and the markers it fills (none: its whole volume).
+GROUND_GRAPHS = {
+    "Hedgerow": {"spacing": 1.1, "scale": (0.85, 1.15), "entries": HEDGE_ENTRIES, "shadow": True, "cull": 0.0,
+                 "include": HEDGE_TAG},
+    "Clutter": {"spacing": 14.0, "scale": (0.8, 1.2), "entries": CLUTTER_ENTRIES, "shadow": False, "cull": 250.0},
+    "Roadside": {"spacing": 18.0, "scale": (0.8, 1.2), "entries": ROADSIDE_ENTRIES, "shadow": False, "cull": 250.0,
+                 "include": LANE_TAG},
+    "WoodFloor": {"spacing": 2.2, "scale": (0.8, 1.25), "entries": FLOOR_ENTRIES, "shadow": False, "cull": 120.0},
+}
+# The graphs that fill every playable wood (WEST_WOODS and their copies).
+GROUND_WOODS = ("Clutter", "WoodFloor")
+# The hedgerow and roadside volumes, one a bank: the west half of the playable square (and its copy).
+BANK_VOLUME = ((-greybox.PLAYABLE_HALF / 2.0, 0.0), (greybox.PLAYABLE_HALF, 2.0 * greybox.PLAYABLE_HALF))
+
+# The hedgerows on the field edges, west side, metres: a strip HEDGE_WIDTH wide on an edge, in pieces of HEDGE_PIECE[0]
+# plus up to HEDGE_PIECE[1] metres with gaps of HEDGE_GAP[0] plus up to HEDGE_GAP[1] between them, of which HEDGE_KEEP's
+# share stands, so no field is closed in. None within HEDGE_CLEARANCE of a wood or the base pad, in the village, within
+# HEDGE_RIVER of the water's edge or within HEDGE_BORDER of the playable square's edge.
+HEDGE_WIDTH = 2.4
+HEDGE_PIECE = (40.0, 60.0)
+HEDGE_GAP = (8.0, 10.0)
+HEDGE_SHORTEST = 15.0
+HEDGE_KEEP = 0.65
+HEDGE_CLEARANCE = 10.0
+HEDGE_RIVER = 35.0
+HEDGE_BORDER = 15.0
 
 # The playable woods, west of the river, metres: (name, graph, centre, size, yaw). Each has its copy turned about the
 # centre (greybox.rotate). The corner forests stand behind the base (02 "Forests"), the copses (30-80 m) on the hill and
@@ -287,6 +360,79 @@ def border_woods():
     ]
 
 
+def in_box(point, centre, size, yaw, margin):
+    """Whether point lies in the box of size (x, y) around centre turned yaw, grown by margin each side."""
+    turn = math.radians(yaw)
+    dx, dy = point[0] - centre[0], point[1] - centre[1]
+    along = dx * math.cos(turn) + dy * math.sin(turn)
+    across = -dx * math.sin(turn) + dy * math.cos(turn)
+    return abs(along) <= size[0] / 2.0 + margin and abs(across) <= size[1] / 2.0 + margin
+
+
+def hedge_clear(point):
+    """Whether a hedge may stand at point (west side): on the west fields, clear of the woods, the base pad, the village
+    and the riverbanks. Keeping the roads, streets and supply sources clear is the exclusions' job."""
+    x, y = point
+    edge = greybox.PLAYABLE_HALF - HEDGE_BORDER
+    if x > -HEDGE_BORDER or x < -edge or abs(y) > edge:
+        return False
+    for _, _, centre, size, yaw in WEST_WOODS:
+        if in_box(point, centre, size, yaw, HEDGE_CLEARANCE):
+            return False
+    pad = 2.0 * greybox.PAD_HALF
+    if in_box(point, greybox.WEST_BASE, (pad, pad), 0.0, HEDGE_CLEARANCE):
+        return False
+    if (x / greybox.VILLAGE_RADII[0]) ** 2 + (y / greybox.VILLAGE_RADII[1]) ** 2 < 1.1:
+        return False
+    distance, half_width = greybox.river_distance(x, y)
+    return distance > half_width + HEDGE_RIVER
+
+
+def hedge_pieces(start, end, salt):
+    """The hedge pieces on the field edge from start to end (metres, west side) as (centre, size, yaw) boxes: pieces and gaps
+    of lengths hashed from salt, HEDGE_KEEP of them kept, each only where hedge_clear holds along its whole length."""
+    length = math.dist(start, end)
+    direction = ((end[0] - start[0]) / length, (end[1] - start[1]) / length)
+    yaw = math.degrees(math.atan2(direction[1], direction[0]))
+    pieces = []
+    index = 0
+    at = HEDGE_GAP[0] * greybox.cell_hash(salt[0], salt[1], 11)
+    while at < length:
+        key = (salt[0] * 64 + index, salt[1])
+        stop = min(at + HEDGE_PIECE[0] + HEDGE_PIECE[1] * greybox.cell_hash(*key, 12), length)
+        if stop - at >= HEDGE_SHORTEST and greybox.cell_hash(*key, 13) < HEDGE_KEEP:
+            points = [(start[0] + direction[0] * (at + (stop - at) * step / 4.0),
+                       start[1] + direction[1] * (at + (stop - at) * step / 4.0)) for step in range(5)]
+            if all(hedge_clear(point) for point in points):
+                pieces.append((points[2], (stop - at, HEDGE_WIDTH), yaw))
+        at = stop + HEDGE_GAP[0] + HEDGE_GAP[1] * greybox.cell_hash(*key, 14)
+        index += 1
+    return pieces
+
+
+def hedgerows():
+    """The west side's hedge pieces on greybox.field_kind's patchwork: along every row's edge and between the fields of each
+    row, worked out in the patchwork's turned frame (s along the rows, t across them)."""
+    yaw = math.radians(greybox.FIELD_YAW)
+
+    def world(s, t):
+        return (s * math.cos(yaw) - t * math.sin(yaw), s * math.sin(yaw) + t * math.cos(yaw))
+
+    depth = greybox.FIELD_SIZE[1]
+    reach = greybox.PLAYABLE_HALF * math.sqrt(2.0)
+    pieces = []
+    for row in range(math.floor(-reach / depth), math.ceil(reach / depth) + 1):
+        # The edge between this row and the one before it.
+        pieces += hedge_pieces(world(-reach, row * depth), world(reach, row * depth), (row + 512, 0))
+        # The edges between this row's fields, at every whole u = s / width + shift (greybox.field_kind).
+        width = greybox.FIELD_SIZE[0] * (0.6 + 0.9 * greybox.cell_hash(row, 0, 1))
+        shift = greybox.cell_hash(row, 0, 2)
+        for column in range(math.floor(-reach / width), math.ceil(reach / width) + 2):
+            s = (column - shift) * width
+            pieces += hedge_pieces(world(s, row * depth), world(s, (row + 1) * depth), (row + 512, column + 512))
+    return pieces
+
+
 def load_mesh(path):
     asset = unreal.load_asset(path)
     if not asset:
@@ -316,6 +462,103 @@ def vegetation_entries(weighted, trunks):
         entry.trunk = trunk and trunks
         result.append(entry)
     return result
+
+
+def load_master(path):
+    material = unreal.load_asset(path)
+    if not material:
+        raise RuntimeError(f"{path} is missing: rebuild River Crossing's greybox (ue.ps1 -Task rivercrossing -Rebuild -Render)")
+    return material
+
+
+def polyhaven_textures(source):
+    """The textures of source, a Poly Haven material instance, by parameter, copied into MESH_DIR."""
+    textures = {}
+    for parameter in ("BaseColor", "Normal", "ARM", "Alpha"):
+        found = unreal.MaterialEditingLibrary.get_material_instance_texture_parameter_value(source, parameter)
+        if found and not found.get_path_name().startswith(MESH_DIR):
+            found = greybox.copy_asset(found.get_path_name().split(".")[0], f"{MESH_DIR}/{found.get_name()}")
+        textures[parameter] = found
+    return textures
+
+
+def copy_meshes():
+    """The ground layer's Poly Haven meshes copied into MESH_DIR, by name, with each slot's instance remade there: the plants
+    (an alpha map under /Game/PolyHaven's foliage master) under the landscape grass's two-sided foliage master, the rest
+    under the village props' masters, so nothing of the level points into the never-cooked folder. Does not save."""
+    editing = unreal.MaterialEditingLibrary
+    masters = {"foliage": load_master(f"{greybox.LANDSCAPE_GRASS_DIR}/{greybox.GRASS_MASTER}"),
+               True: load_master(f"{greybox.PROPS_DIR}/{greybox.PROP_MASTERS[True]}"),
+               False: load_master(f"{greybox.PROPS_DIR}/{greybox.PROP_MASTERS[False]}")}
+    wanted = {name: model for graph in GROUND_GRAPHS.values() for model, name, _, _ in graph["entries"]}
+    made, meshes = {}, {}
+    for name, model in sorted(wanted.items()):
+        source_path = f"{greybox.POLYHAVEN_DIR}/{model}/{name}"
+        mesh = greybox.copy_asset(source_path, f"{MESH_DIR}/{name}")
+        meshes[name] = mesh
+        # A checkout without the pack keeps the copies as they are.
+        if not unreal.EditorAssetLibrary.does_asset_exist(source_path):
+            continue
+        for index, slot in enumerate(unreal.load_asset(source_path).static_materials):
+            interface = slot.material_interface
+            if not interface:
+                continue
+            if interface.get_name() not in made:
+                textures = polyhaven_textures(interface)
+                parent = interface.get_editor_property("parent")
+                masked = textures["Alpha"] is not None
+                foliage = masked and parent is not None and "Foliage" in parent.get_name()
+                material = greybox.instance(MESH_DIR, interface.get_name(), masters["foliage" if foliage else masked])
+                for parameter, value in textures.items():
+                    if value:
+                        editing.set_material_instance_texture_parameter_value(material, parameter, value)
+                editing.update_material_instance(material)
+                made[interface.get_name()] = material
+            mesh.set_material(index, made[interface.get_name()])
+    return meshes
+
+
+def static_mesh_height(mesh):
+    """The mesh's height in metres, from its bounding box."""
+    box = mesh.get_bounding_box()
+    return max(box.max.z - box.min.z, 1.0) / 100.0
+
+
+def ground_entries(weighted, meshes):
+    result = []
+    for _, name, weight, tall in weighted:
+        entry = unreal.RTSVegetationEntry()
+        entry.static_mesh = meshes[name]
+        entry.weight = weight
+        entry.trunk = False
+        entry.scale_factor = tall / static_mesh_height(meshes[name]) if tall else 1.0
+        result.append(entry)
+    return result
+
+
+def build_ground_graphs(meshes):
+    """The ground layer's PCG graphs in PCG_DIR, rebuilt in place. Returns them by name."""
+    graphs = {}
+    for name, graph in GROUND_GRAPHS.items():
+        spec = unreal.RTSVegetationGraphSpec()
+        spec.points_per_squared_meter = 1.0 / graph["spacing"] ** 2
+        spec.looseness = 1.0
+        spec.scale = unreal.Vector2D(*graph["scale"])
+        spec.entries = ground_entries(graph["entries"], meshes)
+        spec.lane_entries = ground_entries(graph["entries"], meshes)
+        spec.lane_scale = unreal.Vector2D(*graph["scale"])
+        spec.exclude_tag = EXCLUDE_TAG
+        spec.include_tag = graph.get("include", "None")
+        spec.lane_tag = LANE_TAG
+        spec.trunks = False
+        spec.cast_shadow = graph["shadow"]
+        spec.cull_distance = int(graph["cull"] * 100.0)
+        path = f"{PCG_DIR}/PCG_WD_{name}"
+        built = unreal.RTSEditorScripting.build_vegetation_graph(path, spec)
+        if not built:
+            raise RuntimeError(f"Could not build {path} (BuildVegetationGraph in the log says why)")
+        graphs[name] = built
+    return graphs
 
 
 def build_graphs():
@@ -415,7 +658,15 @@ def build(world):
     for index, (centre, size, yaw) in enumerate(strips):
         marker(placer, f"PCG_Riverbank_{index:03d}", RIVERBANK_TAG, centre, size, yaw)
 
+    hedges = both_sides(hedgerows())
+    for index, (centre, size, yaw) in enumerate(hedges):
+        marker(placer, f"PCG_Hedgerow_{index:03d}", HEDGE_TAG, centre, size, yaw)
+    graphs.update(build_ground_graphs(copy_meshes()))
+
     woods = list(WEST_WOODS) + [("Riverbank", "Riverbank", RIVERBANK_VOLUME[0], RIVERBANK_VOLUME[1], 0.0)]
+    woods += [(f"{graph}_{name}", graph, centre, size, yaw) for graph in GROUND_WOODS
+              for name, _, centre, size, yaw in WEST_WOODS]
+    woods += [(graph, graph, BANK_VOLUME[0], BANK_VOLUME[1], 0.0) for graph in ("Hedgerow", "Roadside")]
     volumes = 0
     for name, graph, centre, size, yaw in woods:
         volume(placer, f"Veg_{name}_W", graphs[graph], centre, size, yaw)
@@ -433,5 +684,6 @@ def build(world):
     if instances < 0:
         raise RuntimeError("A vegetation volume did not generate (GeneratePCG in the log says why)")
     unreal.log(f"rivercrossing_vegetation: {volumes} volumes, {len(exclusions)} exclusions, {len(lanes)} lane bands, "
+               f"{len(hedges)} hedge pieces ({sum(size[0] for _, size, _ in hedges):.0f} m), "
                f"{instances} generated instances, {heroes} hero trees, {removed} stale actors removed")
     return (PCG_DIR + "/",)
