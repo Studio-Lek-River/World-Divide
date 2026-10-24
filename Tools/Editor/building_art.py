@@ -82,30 +82,6 @@ FLAG_WPO_INPUTS = {"WaveAmplitude": "FlagWaveAmplitude", "WaveNumber": "FlagWave
                    "GustStrength": "FlagGustStrength", "GustSpeed": "FlagGustSpeed", "GustPeriod": "FlagGustPeriod",
                    "FadeStart": "FlagFadeStart", "FadeEnd": "FlagFadeEnd"}
 
-# The shared mast beacon (M_Beacon_Obstruction, #351): its lens (UV0.U >= 0.5) a red emissive flash BeaconRate times a
-# second, on for BeaconDuty of it and fading over its last BeaconFade, times its kit lens level (per-instance custom data
-# LENS_LEVEL, which URTSBuildingStateComponent keeps up on battery, #391); every beacon runs up to BeaconRateJitter faster or slower and at its own
-# phase, from where it stands. The housing (U < 0.5) is dark and never glows; between flashes the lens is dark red glass
-# (LensOffColor), so the flash reads against it from the default zoom (#379).
-BEACON_PARAMETERS = {
-    "BeaconRate": 1.0,
-    "BeaconDuty": 0.18,
-    "BeaconFade": 0.06,
-    "BeaconRateJitter": 0.08,
-    "BeaconIntensity": 60.0,
-    "Roughness": 0.35,
-}
-BEACON_COLORS = {
-    "LensColor": (1.0, 0.03, 0.01, 1.0),
-    "LensOffColor": (0.06, 0.004, 0.002, 1.0),
-    "HousingColor": (0.03, 0.03, 0.03, 1.0),
-}
-BEACON_HLSL = """float3 S = frac(Seed * float3(0.1031, 0.1030, 0.0973));
-S += dot(S, S.yzx + 33.33);
-S = frac((S.xxy + S.yzz) * S.zyx);
-float Cycle = frac(Time * Rate * (1.0 + RateJitter * (2.0 * S.x - 1.0)) + S.y);
-return saturate((Duty - Cycle) / max(Fade, 0.001));"""
-
 # The ground masters' constant roughness.
 SOIL_ROUGHNESS = 0.94
 
@@ -123,8 +99,8 @@ LIGHT_NIGHT_INDEX = 12
 # included, so a battery lens stays lit on low power: the lens no longer reads Operational. RTSKit::IsLensLit repeats the
 # fault and flash sums for the real lights; change both together.
 LENS_LEVEL, LENS_GROUP, LENS_FAULT, LENS_FLASH, LENS_COLOR = 0, 1, 2, 3, 4
-# A lens with Blink 1 (the mast LEDs, #393) also blinks on its own, as the obstruction beacon did (BEACON_HLSL), its phase
-# from where it stands; with Alternate 1 its lens at U >= 0.5 (13's second dome) blinks half a cycle later. Only lenses
+# A lens with Blink 1 (the mast LEDs, #393) also blinks on its own, LENS_BLINK, its rate jittered and its phase from
+# where it stands; with Alternate 1 its lens at U >= 0.5 (13's second dome) blinks half a cycle later. Only lenses
 # without a real light blink, so RTSKit::IsLensLit has no blink to repeat.
 LENS_HLSL = """
 float gate = lerp(1.0, Fixtures, saturate(Group));
@@ -147,7 +123,8 @@ LENS_SHAPE_HLSL = """
 float hot = saturate((P - 0.55) / 0.35) * HotCore;
 return P * lerp(Tint, HotTint, hot);
 """
-# The lens's blink, as the obstruction beacon's (BEACON_PARAMETERS).
+# The lens's blink (the obstruction beacon's, #351): BlinkRate a second, on for BlinkDuty of it and fading over its last
+# BlinkFade, every lens up to BlinkJitter faster or slower.
 LENS_BLINK = {"BlinkRate": 1.0, "BlinkDuty": 0.18, "BlinkFade": 0.06, "BlinkJitter": 0.08}
 # Sweep (#393, 08's rotating beacon): a static switch, off by default, that turns the masked part of the piece about its
 # local Z axis at SweepRate turns a second, the turning light's 1.5 (ARTSBuilding::UpdateKitLights), by world position
@@ -501,51 +478,6 @@ def build_flag_instance(directory, name, parent, texture):
     if instance.get_editor_property("parent") != parent:
         raise RuntimeError(f"{name} did not keep its parent {parent.get_name()}")
     return instance
-
-
-def build_beacon_material(directory, name):
-    """M_Beacon_Obstruction, the shared mast beacon (#351) on the kit's SM_Kit_MastBeaconSingle: the housing (UV0.U < 0.5)
-    HousingColor, the lens LensOffColor and flashing LensColor as BEACON_HLSL works it out from BEACON_PARAMETERS, times its
-    instance's lens level (LENS_LEVEL), so it follows the building's state: on battery on low power, dark once destroyed. No
-    light, no shadow: the glow alone."""
-    material = _material(directory, name)
-    parameters = {key: _scalar(material, -1500, 120 * index, key, value)
-                  for index, (key, value) in enumerate(sorted(BEACON_PARAMETERS.items()))}
-    colors = {key: _vector(material, -900, -400 + 160 * index, key, value)
-              for index, (key, value) in enumerate(sorted(BEACON_COLORS.items()))}
-    uv = _node(material, unreal.MaterialExpressionTextureCoordinate, -1300, -600, coordinate_index=0)
-    u = _node(material, unreal.MaterialExpressionComponentMask, -1100, -600, r=True, g=False, b=False, a=False)
-    _connect(uv, "", u, "")
-    doubled = _multiply(material, -900, -600, u, "", _constant(material, -1100, -500, 2.0), "")
-    floor = _node(material, unreal.MaterialExpressionFloor, -700, -600)
-    _connect(doubled, "", floor, "")
-    lens = _node(material, unreal.MaterialExpressionSaturate, -500, -600)
-    _connect(floor, "", lens, "")
-    base = _node(material, unreal.MaterialExpressionLinearInterpolate, -300, -400)
-    _connect(colors["HousingColor"], "RGB", base, "A")
-    _connect(colors["LensOffColor"], "RGB", base, "B")
-    _connect(lens, "", base, "Alpha")
-    _output(material, base, "", unreal.MaterialProperty.MP_BASE_COLOR)
-    _output(material, parameters["Roughness"], "", unreal.MaterialProperty.MP_ROUGHNESS)
-
-    flash = vehicle_art._custom(material, -900, 300, BEACON_HLSL, ["Time", "Seed", "Rate", "RateJitter", "Duty", "Fade"],
-                                output=unreal.CustomMaterialOutputType.CMOT_FLOAT1)
-    _connect(_node(material, unreal.MaterialExpressionTime, -1300, 900), "", flash, "Time")
-    _connect(_seed(material, -1900, 1000), "", flash, "Seed")
-    for pin in ("Rate", "RateJitter", "Duty", "Fade"):
-        _connect(parameters[f"Beacon{pin}"], "", flash, pin)
-    level = _node(material, unreal.MaterialExpressionPerInstanceCustomData, -900, 600, data_index=LENS_LEVEL,
-                  const_default_value=1.0)
-    on = _multiply(material, -600, 300, flash, "", level, "")
-    lit = _multiply(material, -400, 300, on, "", lens, "")
-    strength = _multiply(material, -200, 300, lit, "", parameters["BeaconIntensity"], "")
-    glow = _multiply(material, 0, 300, colors["LensColor"], "RGB", strength, "")
-    _output(material, glow, "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
-    # The beacons of a building are drawn as one instanced component; without the usage a game draws them in the default
-    # material, grey and unlit (#379).
-    material.set_editor_property("used_with_instanced_static_meshes", True)
-    return _finish(material)
-
 
 
 def _kit_surface(material, white, white_masks):

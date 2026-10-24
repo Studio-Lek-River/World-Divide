@@ -72,8 +72,8 @@ Tools/Art/kit/<piece>.py                one module per piece
 - The shared flag and the obstruction beacon moved from `Art/Shared/props/` into the kit in M7.00-04 (#389), as
   `identity/01_FlagCloth` (`SM_Kit_FlagCloth`) and `lighting/12_MastBeaconSingle` (`SM_Kit_MastBeaconSingle`, cut to class
   S: 12 segments, 234 triangles, one LOD). M7.00-08 (#393) remodelled 12 from the producer's image as a class M piece
-  with `Housing` and `Lens` on the kit masters, its lens blinking as `M_Beacon_Obstruction` did (`Blink`), which no
-  piece uses any more; the flag keeps `M_Flag_Cloth`, its flag set per building from `DA_FlagTypes`.
+  with `Housing` and `Lens` on the kit masters, its lens blinking on `M_Kit_Lens` (`Blink`); the old
+  `M_Beacon_Obstruction` went in #438; the flag keeps `M_Flag_Cloth`, its flag set per building from `DA_FlagTypes`.
 
 ## Naming
 
@@ -139,7 +139,7 @@ The catalogue file is `{"pieces": [ ... ]}`.
 | `faction` | `neutral` or `usa` (later `china`, `insurgents`) |
 | `slots` | at most 2 material slots, named after the surface; the lit glass is always `Lens` |
 | `atlas` | which shared atlas each slot samples: `Trim` or `Lens` |
-| `materials` | optional: slot → a shared instance by name (`MI_Beacon_Obstruction`); a slot it leaves out takes its faction's `MI_Kit_<Faction>_<Slot>` (`MI_Kit_Neutral_Housing` on `M_Bld_Surface`, `MI_Kit_Neutral_Lens` on `M_Kit_Lens`) |
+| `materials` | optional: slot → a shared instance by name (`MI_Kit_Neutral_Lens`); a slot it leaves out takes its faction's `MI_Kit_<Faction>_<Slot>` (`MI_Kit_Neutral_Housing` on `M_Bld_Surface`, `MI_Kit_Neutral_Lens` on `M_Kit_Lens`) |
 | `light` | absent for emissive-only pieces (S class); otherwise one real light, see below |
 | `light.anchor` | the named island it shines from: always `Lens`. Setup puts the light in the middle of the lens face it shines through (manifest bounds); a Rect is as wide and high as that face |
 | `light.rotation` | optional: pitch, yaw, roll of the light in the fixture frame; `[0, 0, 0]` (default) shines along +X |
@@ -206,8 +206,7 @@ read by `M_Kit_Lens`, written with `SetCustomData` and one `MarkRenderInstancesD
 custom primitive data 12 (proven in the spike, see [Per-instance and LOD](#per-instance-and-lod)). The layout is
 `RTSKitLensData` (`RTSPrimitiveData.h`): 0 level, 1 group mask (Fixtures, CPD 10), 2 fault phase, 3 flash phase, 4–6
 colour, 7 floats. The level carries the building's state, power included (see [States](#states)), so the lens does not
-read Operational (CPD 8): a battery lens stays lit on low power. The mast beacon's `M_Beacon_Obstruction` reads the same
-level. The lens samples an optional baked finish normal on UV1 (`FinishNormal`, flat by default).
+read Operational (CPD 8): a battery lens stays lit on low power. The lens samples an optional baked finish normal on UV1 (`FinishNormal`, flat by default).
 
 ## Light rule
 

@@ -435,12 +435,7 @@ bool FRTSUSAHeadquartersArtTest::RunTest(const FString& Parameters)
 		}
 	}
 
-	// Red beacons on the mast tips, glowing at their kit lens level (on battery on low power, #391).
-	const UMaterial* Beacon = LoadMaster(TEXT("M_Beacon_Obstruction"), SharedMaterialDir);
-	TestTrue(TEXT("The beacon master glows at its lens level"),
-		ReadsLensLevel(Beacon) && Beacon->GetEditorOnlyData()->EmissiveColor.IsConnected());
-	// The beacons share one instanced component: without the usage a game draws them in the default material (#379).
-	TestTrue(TEXT("The beacon master can draw on instanced meshes"), Beacon && Beacon->bUsedWithInstancedStaticMeshes);
+	// Red beacons on the mast tips.
 	const TArray<FRTSBuildingPart> Beacons = Parts.FilterByPredicate([](const FRTSBuildingPart& P)
 	{
 		return P.Name.ToString().StartsWith(HeadquartersBeaconPrefix);

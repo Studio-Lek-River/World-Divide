@@ -593,9 +593,9 @@ def delete_asset(path):
 
 
 def make_flags():
-    """The shared flags and beacon materials (#351): T_Flag_<key> and MI_Flag_<key> in SHARED_DIR/Flags for every flag of
-    flags.json, on M_Flag_Cloth, M_Beacon_Obstruction and MI_Beacon_Obstruction in SHARED_DIR/Materials, and
-    DA_FlagTypes, which lists each flag's instance and aspect. Returns the instances by name and DA_FlagTypes."""
+    """The shared flags (#351): T_Flag_<key> and MI_Flag_<key> in SHARED_DIR/Flags for every flag of flags.json, on
+    M_Flag_Cloth in SHARED_DIR/Materials, and DA_FlagTypes, which lists each flag's instance and aspect. Returns the
+    instances by name and DA_FlagTypes."""
     flags_dir, material_dir = f"{SHARED_DIR}/Flags", f"{SHARED_DIR}/Materials"
     flags = building_art.read_layout(os.path.join(SHARED_SOURCE_DIR, "flags", "flags.json"))["flags"]
     textures = {}
@@ -615,17 +615,9 @@ def make_flags():
                    building_art._multiply, vehicle_art._custom, vehicle_art._transform], material_dir,
                   sorted(building_art.FLAG_PARAMETERS.items()), building_art.FLAG_WPO_HLSL,
                   sorted(building_art.FLAG_WPO_INPUTS.items()), default))
-    beacon = plan_now(
-        f"{material_dir}/M_Beacon_Obstruction",
-        lambda: building_art.build_beacon_material(material_dir, "M_Beacon_Obstruction"),
-        spec_hash([building_art.build_beacon_material, building_art._seed, building_art._material, building_art._scalar,
-                   building_art._vector, building_art._multiply, vehicle_art._custom], material_dir,
-                  sorted(building_art.BEACON_PARAMETERS.items()), sorted(building_art.BEACON_COLORS.items()),
-                  building_art.BEACON_HLSL, vehicle_art.LAMP_ON_INDEX))
-    instances = {"MI_Beacon_Obstruction": plan_now(
-        f"{material_dir}/MI_Beacon_Obstruction",
-        lambda: building_art.build_material_instance(material_dir, "MI_Beacon_Obstruction", beacon, {}, {}),
-        spec_hash([building_art.build_material_instance], material_dir, "MI_Beacon_Obstruction", beacon))}
+    # The mast beacon's master and instance, unused since it blinks on the kit lens (#393, #438).
+    delete_stale_assets(material_dir, {"M_Flag_Cloth"})
+    instances = {}
 
     types = {}
     for key, record in sorted(flags.items()):
