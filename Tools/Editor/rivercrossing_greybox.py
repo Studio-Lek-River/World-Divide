@@ -357,9 +357,11 @@ ROAD_SHOULDER = 1.0
 # Landscape Grass Types on Grass and Meadow (03 section 5): at most GRASS_HEIGHT tall, culled from GRASS_CULL metres, no
 # collision and no shadows. Per layer: its grass type and varieties, each (Poly Haven model copied from the never-cooked
 # /Game/PolyHaven, its meshes, its base colour, instances per 10 m by 10 m, the clumps' height range in metres or None for
-# their own size give or take FLOWER_SCALE, the cull range in metres). The sparse far varieties carry the colour out to
-# GRASS_CULL; a dense near one of meadow tufts, culled from GRASS_NEAR, fills the ground at the closest zoom, where the
-# bermuda blades alone read as sprigs (#463); the wildflowers, at their own 5-19 cm, sit between them.
+# their own size give or take FLOWER_SCALE, the cull range in metres, optionally a tint: its name and the colour that
+# multiplies the base colour). The sparse far varieties carry the colour out to GRASS_CULL; a dense near one of meadow
+# tufts, culled from GRASS_NEAR, fills the ground at the closest zoom, where the bermuda blades alone read as sprigs
+# (#463); the wildflowers, at their own 5-19 cm, sit between them. The near tufts are tinted green, so a pasture and a
+# meadow read as green fields rather than dry ones (#466); a quarter of the meadow's stay dry for late summer.
 # The copies and their master live in LANDSCAPE_GRASS_DIR.
 LANDSCAPE_GRASS_DIR = f"{LANDSCAPE_DIR}/Grass"
 POLYHAVEN_DIR = "/Game/PolyHaven"
@@ -369,15 +371,18 @@ GRASS_CULL = (120.0, 150.0)
 GRASS_NEAR = (35.0, 50.0)
 FLOWER_CULL = (60.0, 80.0)
 FLOWER_SCALE = (0.85, 1.15)
+PASTURE_GREEN = ("green", (0.6, 0.95, 0.35))
+MEADOW_GREEN = ("meadow", (0.62, 0.92, 0.36))
 LANDSCAPE_GRASS = {
     "Grass": ("LGT_WD_Grass", (
         ("grass_bermuda_01", ("medium_a", "medium_b", "medium_c"), "BC", 300.0, (0.15, 0.25), GRASS_CULL),
-        ("grass_medium_02", ("a", "b", "c", "d"), "BC", 4000.0, (0.2, 0.35), GRASS_NEAR),
+        ("grass_medium_02", ("a", "b", "c", "d"), "BC", 4000.0, (0.2, 0.35), GRASS_NEAR, PASTURE_GREEN),
         ("dandelion_01", ("a", "b", "c"), "BC", 20.0, None, FLOWER_CULL),
     )),
     "Meadow": ("LGT_WD_Meadow", (
         ("grass_medium_02", ("a", "b", "c"), "dry_BC", 500.0, (0.35, GRASS_HEIGHT), GRASS_CULL),
-        ("grass_medium_02", ("c", "d", "e"), "dry_BC", 3000.0, (0.35, GRASS_HEIGHT), GRASS_NEAR),
+        ("grass_medium_02", ("c", "d", "e"), "BC", 2250.0, (0.35, GRASS_HEIGHT), GRASS_NEAR, MEADOW_GREEN),
+        ("grass_medium_02", ("d", "e"), "dry_BC", 750.0, (0.35, GRASS_HEIGHT), GRASS_NEAR),
         ("celandine_01", ("a", "b", "c"), "BC", 30.0, None, FLOWER_CULL),
         ("dandelion_01", ("a", "b", "c"), "BC", 20.0, None, FLOWER_CULL),
         ("weed_plant_02", ("a", "b", "c"), "BC", 20.0, None, FLOWER_CULL),
@@ -1146,8 +1151,9 @@ def build_landscape_material(textures, virtual_texture):
 
 
 def build_grass_master(defaults):
-    """M_LandscapeGrass: masked, two-sided foliage (as /Game/PolyHaven's M_PolyHavenFoliage), base colour, normal, the
-    ARM's AO and roughness and the alpha map's red as the mask, for instanced grass. defaults are textures by kind."""
+    """M_LandscapeGrass: masked, two-sided foliage (as /Game/PolyHaven's M_PolyHavenFoliage), base colour times Tint
+    (white by default), normal, the ARM's AO and roughness and the alpha map's red as the mask, for instanced grass.
+    defaults are textures by kind."""
     path = f"{LANDSCAPE_GRASS_DIR}/{GRASS_MASTER}"
     if unreal.EditorAssetLibrary.does_asset_exist(path):
         material = unreal.load_asset(path)
@@ -1165,8 +1171,14 @@ def build_grass_master(defaults):
         sample.set_editor_property("texture", defaults[kind])
         sample.set_editor_property("sampler_type", sampler_type)
         samplers[kind] = sample
-    editing.connect_material_property(samplers["BC"], "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
-    editing.connect_material_property(samplers["BC"], "RGB", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
+    tint = material_node(material, unreal.MaterialExpressionVectorParameter, -600, -650)
+    tint.set_editor_property("parameter_name", "Tint")
+    tint.set_editor_property("default_value", unreal.LinearColor(1.0, 1.0, 1.0, 1.0))
+    tinted = material_node(material, unreal.MaterialExpressionMultiply, -300, -300)
+    editing.connect_material_expressions(samplers["BC"], "RGB", tinted, "A")
+    editing.connect_material_expressions(tint, "", tinted, "B")
+    editing.connect_material_property(tinted, "", unreal.MaterialProperty.MP_BASE_COLOR)
+    editing.connect_material_property(tinted, "", unreal.MaterialProperty.MP_SUBSURFACE_COLOR)
     editing.connect_material_property(samplers["N"], "RGB", unreal.MaterialProperty.MP_NORMAL)
     editing.connect_material_property(samplers["ARM"], "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
     editing.connect_material_property(samplers["ARM"], "G", unreal.MaterialProperty.MP_ROUGHNESS)
@@ -1191,8 +1203,8 @@ def per_platform(kind, value):
 
 def build_grass_types():
     """LANDSCAPE_GRASS's grass types, their meshes, textures and instances copied out of /Game/PolyHaven, each mesh
-    scaled to its variety's height range. One material instance per model and base colour, the first of each layer's
-    named after its grass type. Does not save."""
+    scaled to its variety's height range. One material instance per model, base colour and tint, the first of each
+    layer's named after its grass type. Does not save."""
     master = None
     materials = {}
     for layer, (grass_name, layer_varieties) in LANDSCAPE_GRASS.items():
@@ -1203,20 +1215,25 @@ def build_grass_types():
             grass = asset_tools.create_asset(grass_name, LANDSCAPE_GRASS_DIR, unreal.LandscapeGrassType,
                                              unreal.LandscapeGrassTypeFactory())
         varieties = []
-        for number, (model, meshes, color, density, heights, cull) in enumerate(layer_varieties):
+        for number, (model, meshes, color, density, heights, cull, *tint) in enumerate(layer_varieties):
             source = f"{POLYHAVEN_DIR}/{model}"
-            made = materials.get((model, color))
+            tint_name, tint_color = tint[0] if tint else (None, None)
+            made = materials.get((model, color, tint_name))
             if made is None:
                 textures = {kind: copy_asset(f"{source}/T_{model}_{suffix}", f"{LANDSCAPE_GRASS_DIR}/T_{model}_{suffix}")
                             for kind, suffix in (("BC", color), ("N", "N"), ("ARM", "ARM"), ("A", "A"))}
                 if master is None:
                     master = build_grass_master(textures)
                 name = f"MI_{grass_name}" if number == 0 else f"MI_LGT_{model}_{color}"
+                if tint_name:
+                    name = f"{name}_{tint_name}"
                 made = instance(LANDSCAPE_GRASS_DIR, name, master)
                 for parameter, kind in (("BaseColor", "BC"), ("Normal", "N"), ("ARM", "ARM"), ("Alpha", "A")):
                     editing.set_material_instance_texture_parameter_value(made, parameter, textures[kind])
+                if tint_color:
+                    editing.set_material_instance_vector_parameter_value(made, "Tint", unreal.LinearColor(*tint_color, 1.0))
                 editing.update_material_instance(made)
-                materials[(model, color)] = made
+                materials[(model, color, tint_name)] = made
             for suffix in meshes:
                 varieties.append(grass_variety(copy_asset(f"{source}/SM_{model}_{suffix}",
                                                           f"{LANDSCAPE_GRASS_DIR}/SM_{model}_{suffix}"),
@@ -1226,13 +1243,15 @@ def build_grass_types():
 
 def grass_variety(mesh, material, density, heights, cull):
     """One grass variety of mesh in material: density instances per 10 m by 10 m, heights metres tall (None: its own size
-    within FLOWER_SCALE), culled over cull metres, without shadows."""
+    within FLOWER_SCALE), culled over cull metres, without shadows. The material goes on the variety as an override too:
+    varieties share meshes in different materials (#466), and the mesh's own slot holds only the last one set."""
     for index in range(len(mesh.static_materials)):
         mesh.set_material(index, material)
     box = mesh.get_bounding_box()
     tall = max(box.max.z - box.min.z, 1.0)
     variety = unreal.GrassVariety()
     variety.set_editor_property("grass_mesh", mesh)
+    variety.set_editor_property("override_materials", [material] * len(mesh.static_materials))
     variety.set_editor_property("grass_density", per_platform(unreal.PerPlatformFloat, density))
     variety.set_editor_property("start_cull_distance", per_platform(unreal.PerPlatformInt, int(cull[0] * 100.0)))
     variety.set_editor_property("end_cull_distance", per_platform(unreal.PerPlatformInt, int(cull[1] * 100.0)))
