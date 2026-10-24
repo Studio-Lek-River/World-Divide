@@ -7,13 +7,16 @@
 #include "Buildings/RTSBuildingStateComponent.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
+#include "Components/LightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Containers/Ticker.h"
 #include "Core/RTSDayNightSubsystem.h"
 #include "Data/RTSBuildingData.h"
+#include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/WorldSettings.h"
 #include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
@@ -40,8 +43,10 @@
  * for under RTSBenchScene::BenchHQDir, then /Game/Data/Buildings, then the kit spike's /Game/Developers/KitSpike (#387), then
  * the kit showcases' /Game/Data/Showcase (DA_TestKitLighting, #392). ue.ps1 passes a Folder for a run with other console
  * variables, such as NaniteOff for r.Nanite 0. The parts that turn on their own stay at rest and the game clock is held at
- * ShotGameTime, so the flag, the plants and the lamps look the same every run. The building shows Idle (#442; L_Bench's
- * team is short of power, which would show LowPower) unless the run sets rts.Debug.BuildingState, -1 for the game's own state.
+ * ShotGameTime, so the flag, the plants and the lamps look the same every run. By day close_12m turns L_Bench's sun, which
+ * stands behind the front, half a turn in yaw so it lights the front from behind the camera (#443). The building shows Idle
+ * (#442; L_Bench's team is short of power, which would show LowPower) unless the run sets rts.Debug.BuildingState, -1 for the
+ * game's own state.
  * -Night pictures it at night (#424): the sun and the sky lit as the game's night (FRTSShotNight::GetGameMoon, L_TestMapNight's
  * moon, sky and exposure) and the world dark for its lamps and glow (URTSDayNightSubsystem, as rts.Light.ForceDark 1), to the
  * Folder Night unless one is given. With -RTSBuildingShotsQuit the game quits when done, exit code 1 on failure.
@@ -68,6 +73,8 @@ namespace RTSBuildingShotsCommand
 	constexpr float FrontHeight = 400.f;
 	const TCHAR* NightArg = TEXT("-Night");
 	const TCHAR* NightFolder = TEXT("Night");
+	/** How far the day close view turns the sun in yaw (#443): L_Bench's sun at yaw 35 lights the back, at 215 the front. */
+	constexpr float FrontSunYaw = 180.f;
 	/** The game time every shot is taken at (#424), so what moves on the game clock is the same in every run. */
 	constexpr double ShotGameTime = 60.0;
 
@@ -295,12 +302,40 @@ namespace RTSBuildingShotsCommand
 				LookAt = Footprint.ToWorld(FVector2D(Footprint.Extent.X - Inset, 0.f));
 				LookAt.Z = Building->GetActorLocation().Z + Height;
 			}
+			TurnSunToFront(Shot.bFront && !bNight);
 			// Looking along +X, towards the building's front for the close view (its front faces +X at yaw 0) and from behind
 			// the front for the rest, as the RTS camera looks north.
 			const FRotator Rotation(Pitch, Shot.bFront ? 180.f : 0.f, 0.f);
 			Camera->SetActorLocationAndRotation(LookAt - Rotation.Vector() * Shot.Distance, Rotation);
 			GoTo(EStep::Settle);
 			return true;
+		}
+
+		/** Turns every sun FrontSunYaw in yaw so the close view's front is lit, or back to where it stood. */
+		void TurnSunToFront(bool bTurn)
+		{
+			if (!bTurn)
+			{
+				for (const TPair<TWeakObjectPtr<ADirectionalLight>, FRotator>& Sun : SunRotations)
+				{
+					if (Sun.Key.IsValid())
+					{
+						Sun.Key->SetActorRotation(Sun.Value);
+					}
+				}
+				SunRotations.Reset();
+				return;
+			}
+			if (!SunRotations.IsEmpty())
+			{
+				return;
+			}
+			for (TActorIterator<ADirectionalLight> It(World.Get()); It; ++It)
+			{
+				It->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+				SunRotations.Emplace(*It, It->GetActorRotation());
+				It->SetActorRotation(It->GetActorRotation() + FRotator(0.f, FrontSunYaw, 0.f));
+			}
 		}
 
 		void RequestShot(ARTSPlayerController& Controller)
@@ -342,6 +377,7 @@ namespace RTSBuildingShotsCommand
 			{
 				Camera->Destroy();
 			}
+			TurnSunToFront(false);
 			if (TimeDilation && World.IsValid() && World->GetWorldSettings())
 			{
 				World->GetWorldSettings()->SetTimeDilation(*TimeDilation);
@@ -379,6 +415,8 @@ namespace RTSBuildingShotsCommand
 		FRTSShotNight Night;
 		/** The world's time dilation before the run held the clock. */
 		TOptional<float> TimeDilation;
+		/** The suns the close view turned, with the rotation each had. */
+		TArray<TPair<TWeakObjectPtr<ADirectionalLight>, FRotator>> SunRotations;
 		TWeakObjectPtr<ARTSBuilding> Building;
 		TWeakObjectPtr<ACameraActor> Camera;
 		EStep Step = EStep::WaitForPlayer;
