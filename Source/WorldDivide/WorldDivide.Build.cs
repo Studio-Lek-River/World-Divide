@@ -45,6 +45,10 @@ public class WorldDivide : ModuleRules
 		// A map without a NavMeshBoundsVolume takes its preview area from its Landscape (RTSMaps::FindMapArea, #289).
 		PrivateDependencyModuleNames.Add("Landscape");
 
+		// River Crossing's vegetation graphs (#158): URTSEditorScripting builds and generates them in the editor; the game
+		// only loads what they left in the level.
+		PrivateDependencyModuleNames.Add("PCG");
+
 		// The HUD reads its layout files at runtime (URTSLayoutWidget), so they ship with the game.
 		RuntimeDependencies.Add("$(ProjectDir)/UI/Layouts/...", StagedFileType.UFS);
 

@@ -9,7 +9,7 @@ What only the producer can do or decide, ordered by when it blocks work.
 | D1 | **Real-scale target values** for units, buildings, ranges and the camera. The direction is decided (2026-10-15); the numbers are not. | Phase 0 and every map number | Start from the planning envelope in [02_MAP_DESIGN.md](02_MAP_DESIGN.md) |
 | D2 | Minimum spec PC and fps target (for example, 60 fps at 1080p with 200 units) | Phases 6–8 | Name a GPU class |
 | D3 | Season and biome: summer or early autumn temperate | Phase 1 pack choice | **Decided 2026-10-20: late summer, temperate** (greens with dry field tones) |
-| D4 | Do playable woods slow or block vehicles, or are they cover only? | Phase 6 | Cover only for 01 |
+| D4 | Do playable woods slow or block vehicles, or are they cover only? | Phase 6 | **Decided 2026-10-24: trees limit visibility, heavy vehicles drive over them, infantry moves around them** (#158; crushing and line of sight are follow-ups) |
 | D5 | Are village buildings garrisonable at the map's launch, or only tagged for later? | Phase 5 | Tag now, garrison when the system exists |
 | D6 | Does `WD_RiverCrossing_01` join the lobby next to `L_RiverFord`, or replace it? | Phase 2 and 9 | **Decided 2026-10-20: join**; retire `L_RiverFord` once the rescale is done |
 | D7 | Is Lumen hardware ray tracing allowed on the minimum spec? | Phase 7 | Software Lumen |

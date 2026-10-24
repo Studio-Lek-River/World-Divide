@@ -13,12 +13,15 @@
 #include "Engine/World.h"
 #include "HAL/IConsoleManager.h"
 #include "ImageUtils.h"
+#include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
 #include "Player/RTSCameraPawn.h"
 #include "Player/RTSPlayerController.h"
+#include "RHI.h"
+#include "RenderTimer.h"
 #include "UnrealClient.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
@@ -32,7 +35,8 @@
  * with the horizontal field of view kept instead of the vertical. The pictures go to
  * Saved/CameraShots/<size>_<profile>_<scene>_<zoom>.png, without the HUD; metrics.csv beside them has, per picture, the
  * field of view, the arm, the pitch, the ground across the middle of the screen and from its top to its bottom, and how
- * wide an M20, a tank and a soldier standing broadside at the view's centre appear. With -RTSCameraShotsQuit on the
+ * wide an M20, a tank and a soldier standing broadside at the view's centre appear, and the frame, game thread and GPU time
+ * over the second before the picture (#158: River Crossing's vegetation against the frame budget). With -RTSCameraShotsQuit on the
  * command line the game quits when done, with exit code 1 on failure.
  *
  * On WD_RiverCrossing_01 (ue.ps1 -Task camerashots -Map /Game/Maps/WD_RiverCrossing_01, #295) it stages only an M20 by
@@ -51,6 +55,8 @@ namespace RTSCameraShots
 	/** Real seconds for the staged scene to settle, and for the camera's lag to catch up with a new view. */
 	constexpr double StageSeconds = 3.0;
 	constexpr double SettleSeconds = 2.0;
+	/** The settle's last part, over which the frame times are averaged once the view has stopped moving. */
+	constexpr double MeasureSeconds = 1.0;
 
 	const FIntPoint Screen1080(1920, 1080);
 	const FIntPoint Screen1440(2560, 1440);
@@ -249,6 +255,13 @@ namespace RTSCameraShots
 			case EStep::Resize:
 				return Resize();
 			case EStep::Settle:
+				if (FPlatformTime::Seconds() - StepStart >= SettleSeconds - MeasureSeconds)
+				{
+					++Timing.Frames;
+					Timing.FrameMs += FApp::GetDeltaTime() * 1000.0;
+					Timing.GameMs += FPlatformTime::ToMilliseconds(GGameThreadTime);
+					Timing.GPUMs += FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles(0));
+				}
 				if (FPlatformTime::Seconds() - StepStart >= SettleSeconds)
 				{
 					RequestShot();
@@ -262,6 +275,10 @@ namespace RTSCameraShots
 
 		void GoTo(EStep Next)
 		{
+			if (Next == EStep::Settle)
+			{
+				Timing = FTiming();
+			}
 			Step = Next;
 			StepFrames = 0;
 			StepStart = FPlatformTime::Seconds();
@@ -572,6 +589,8 @@ namespace RTSCameraShots
 				Profiles[Shot.Profile].Tuning.FieldOfView, Camera->GetCameraComponent()->FieldOfView, Camera->GetZoom(),
 				Camera->GetPitchForZoom(Camera->GetZoom()), Across, Deep,
 				Camera->GetTuning().PanSpeed * Camera->GetZoom() / Camera->GetDefaultZoom());
+			const double Frames = FMath::Max(1, Timing.Frames);
+			Row += FString::Printf(TEXT(",%.2f,%.2f,%.2f"), Timing.FrameMs / Frames, Timing.GameMs / Frames, Timing.GPUMs / Frames);
 			for (const TPair<FString, FBox>& Unit : Measured)
 			{
 				const float Width = GetBroadsideWidth(Unit.Value, Ground, Camera->GetActorRotation().Yaw);
@@ -617,7 +636,7 @@ namespace RTSCameraShots
 		/** Writes the metrics and gives the player their own camera back; false, so the ticker drops the run. */
 		bool Finish(const FString& Error)
 		{
-			FString Csv = TEXT("shot,screen,profile,scene,zoom,fov_h16x9,camera_fov,arm_cm,pitch,across_m,deep_m,pan_cm_s");
+			FString Csv = TEXT("shot,screen,profile,scene,zoom,fov_h16x9,camera_fov,arm_cm,pitch,across_m,deep_m,pan_cm_s,frame_ms,game_ms,gpu_ms");
 			for (const TPair<FString, FBox>& Unit : Measured)
 			{
 				Csv += FString::Printf(TEXT(",%s_px,%s_pct"), *Unit.Key, *Unit.Key);
@@ -674,6 +693,15 @@ namespace RTSCameraShots
 		/** River Crossing's border markers, removed when done. */
 		TArray<TWeakObjectPtr<AActor>> Markers;
 		TArray<FString> Rows;
+		/** The frame times summed over the current shot's measuring second. */
+		struct FTiming
+		{
+			int32 Frames = 0;
+			double FrameMs = 0.0;
+			double GameMs = 0.0;
+			double GPUMs = 0.0;
+		};
+		FTiming Timing;
 		int32 ShotIndex = 0;
 		EStep Step = EStep::WaitForGame;
 		int32 StepFrames = 0;

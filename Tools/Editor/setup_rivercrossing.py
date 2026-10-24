@@ -1,7 +1,8 @@
 """Builds and saves the navmesh of WD_RiverCrossing_01 (#154), a hand-authored level that setup_testmap.py never touches
 (docs/world/maps/WD_RiverCrossing_01/03_TECHNICAL_PLAN.md sections 2 and 13). When the level does not exist yet it is
 first created as the scripted greybox of rivercrossing_greybox.py, with its river material and bridge meshes (#155) and
-its roads (#383); an existing level is only loaded, so its terrain and dressing stay as authored. -Rebuild has ue.ps1
+its roads (#383); an existing level is only loaded, so its terrain and dressing stay as authored. Either way its trees
+(rivercrossing_vegetation.py, #158) are then rebuilt and generated in place. -Rebuild has ue.ps1
 delete the level and its actor files first, so the greybox is built anew. The river carves the landscape on the GPU,
 so building the greybox needs -Render. The map data asset and the preview come from the bake afterwards:
 
@@ -20,6 +21,7 @@ import unreal
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rivercrossing_greybox as greybox  # noqa: E402
+import rivercrossing_vegetation as vegetation  # noqa: E402
 
 PROJECT_DIR = unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir())
 READ_ONLY_REPORT = os.path.join(PROJECT_DIR, "Saved", "Setup", "ReadOnlyAssets.txt")
@@ -73,14 +75,17 @@ def main():
     world = editor_world()
     changed = greybox.apply_landscape_physics(world)
     unreal.log(f"setup_rivercrossing: set the default physical material of {changed} landscape actors")
+    # The trees (#158), on every run: their trunks cut the infantry navmesh, so before it is built.
+    vegetation_dirs = vegetation.build(world)
     tiles = unreal.RTSEditorScripting.build_navigation(world)
     if tiles == 0:
         raise RuntimeError(f"Could not build the navmesh of {path}")
 
-    # The level and every actor file the build changed: the navmesh actors, and on a new level all of them, with the
-    # river material, the bridge's assets, the road materials, the runtime virtual texture and the village's props.
+    # The level and every actor file the build changed: the navmesh and vegetation actors, and on a new level all of them,
+    # with the river material, the bridge's assets, the road materials, the runtime virtual texture, the village's props
+    # and the vegetation's graphs.
     owned = (greybox.BRIDGE_DIR + "/", greybox.RIVER_MATERIAL_DIR + "/", greybox.ROAD_MATERIAL_DIR + "/", greybox.RVT_DIR + "/",
-             greybox.PROPS_DIR + "/")
+             greybox.PROPS_DIR + "/") + vegetation_dirs
     dirty = list(saving.get_dirty_map_packages()) + [package for package in saving.get_dirty_content_packages()
                                                      if package.get_name().startswith(owned)]
     read_only = read_only_files(dirty)

@@ -51,7 +51,7 @@ namespace
 	constexpr float MinConstructionScale = 0.05f;
 
 	/** Collision height when the data has no mesh. */
-	constexpr float DefaultHeight = 200.f;
+	constexpr float DefaultCollisionHeight = 200.f;
 
 	/**
 	 * A producer's rally point starts at the end of its exit lane (RTSBuildPlacement::GetExitLaneLength), a hull length past
@@ -702,7 +702,7 @@ void ARTSBuilding::ApplyBuildingData()
 	}
 	ApplyParts(Kit);
 	ApplyLights(Kit);
-	ApplyCollision(MeshHeight > 0.f ? MeshHeight : DefaultHeight);
+	ApplyCollision(MeshHeight > 0.f ? MeshHeight : DefaultCollisionHeight);
 	GarageComponent->ApplyBuildingData();
 
 	ApplyConstructionVisual();

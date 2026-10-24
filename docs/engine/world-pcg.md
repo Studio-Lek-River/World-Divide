@@ -118,9 +118,16 @@ In 5.8 the `PCG` plugin is production quality. Many interop plugins (`PCGWaterIn
 
 ## In World Divide
 
-- The `PCG` plugin is enabled in `WorldDivide.uproject` (together with experimental `PCGMeshPartitionInterop`), but no graph, component or C++ use exists yet. [The RiverCrossing technical plan](../world/maps/WD_RiverCrossing_01/03_TECHNICAL_PLAN.md) §3 still lists it as "not enabled"; that row is out of date.
-- Planned use (plan §6): forests, copses, hedgerows and clutter per biome zone, generated in the editor. Exclusions cover the river, roads + 6 m, the 60 m bridge corridor, base pads, village streets and an 8 m radius around supply sources.
-- Trunk collision is WorldStatic with no navigation influence, and the canopy has no collision.
+- The `PCG` plugin is enabled in `WorldDivide.uproject`, together with experimental `PCGMeshPartitionInterop`.
+- River Crossing's trees (#158, [the technical plan](../world/maps/WD_RiverCrossing_01/03_TECHNICAL_PLAN.md) §6):
+  - `rivercrossing_vegetation.py` builds the graphs in C++ through `URTSEditorScripting::BuildVegetationGraph`.
+  - A graph made outside the editor's asset factory has no pins on its input and output nodes, so the graphs read the landscape (Get Landscape Data) and their own volume (Get Actor Data, Self) themselves.
+  - The Megaplant trees are skeletal, so the graphs place them with the Skinned Mesh Spawner, which picks its mesh from a point attribute (a chain of Random Choice and Add Attribute nodes).
+  - The Static and Skinned Mesh Spawners do not pass a descriptor's component tags on to their components; `GeneratePCG` tags them afterwards.
+  - Exclusions and lane bands are editor-only boxes, read with Get Actor Data (Get Single Point, by tag).
+  - The graphs are generated in the editor and saved (`URTSEditorScripting::GeneratePCG`, which cleans up first so stale spawner components go), on demand, with a fixed seed per volume.
+- The trees have no collision and no navigation influence. Each trunk is a modifier of a `URTSTrunkObstaclesComponent`: an instanced mesh exports one navigation modifier for the whole component, not one per instance.
+- Instanced skinned meshes tick by default. A tree component is saved with `bCanEverTick` off; otherwise the woods' components cost about 8 ms of game thread.
 - The match is multiplayer with client-side navigation (`bAllowClientSideNavigation`). Keep gameplay-relevant PCG output saved in the level, not runtime-generated.
 - Project docs win on conflict.
 

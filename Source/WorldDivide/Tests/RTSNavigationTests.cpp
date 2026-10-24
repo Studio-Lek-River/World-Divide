@@ -8,6 +8,7 @@
 #include "AIController.h"
 #include "Commands/RTSCommand.h"
 #include "Commands/RTSCommandDispatch.h"
+#include "Core/RTSEditorScripting.h"
 #include "Data/RTSBuildingData.h"
 #include "Data/RTSUnitData.h"
 #include "Editor.h"
@@ -3122,6 +3123,131 @@ bool FRTSNavThinWallsDriveTest::RunTest(const FString& Parameters)
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavForgetInsideSign());
 	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavRunDrives(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
+	return true;
+}
+
+/**
+ * Trunks (#158) on the south strip, a wall across the gate: at a 40 cm pitch their 50 cm footprints overlap, since Recast
+ * does not widen an area modifier by the agent's radius.
+ */
+namespace RTSNavigationTests
+{
+	constexpr float TrunkWallHalf = 2000.f;
+	constexpr float TrunkPitch = 40.f;
+
+	struct FTrunkState
+	{
+		TArray<FVector> Trunks;
+		FVector Start = FVector::ZeroVector;
+		FVector End = FVector::ZeroVector;
+		double PhaseStart = 0.0;
+	};
+
+	/** The length of the path Agent's navmesh gives from State's start to its end, or a negative value without one. */
+	double GetPathLength(UWorld& World, const FNavDataConfig& Agent, const FTrunkState& State)
+	{
+		UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(&World);
+		const ARecastNavMesh* NavMesh = RTSNavAgents::GetNavMesh(World, Agent);
+		FNavLocation Start;
+		FNavLocation End;
+		const FVector Extent(200.f, 200.f, 2000.f);
+		if (!NavSystem || !NavMesh || !NavMesh->ProjectPoint(State.Start, Start, Extent) || !NavMesh->ProjectPoint(State.End, End, Extent))
+		{
+			return -1.0;
+		}
+		FPathFindingQuery Query(nullptr, *NavMesh, Start.Location, End.Location);
+		Query.SetAllowPartialPaths(false);
+		const FPathFindingResult Result = NavSystem->FindPathSync(Query);
+		return Result.IsSuccessful() && Result.Path.IsValid() ? Result.Path->GetLength() : -1.0;
+	}
+}
+
+/** Spawns State's trunks as River Crossing's hero trees do, without their tree mesh. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavSpawnTrunks, FAutomationTestBase*, Test, TSharedRef<RTSNavigationTests::FTrunkState>, State);
+bool FRTSNavSpawnTrunks::Update()
+{
+	UWorld* World = AutomationCommon::GetAnyGameWorld();
+	if (!World)
+	{
+		Test->AddError(TEXT("No PIE world"));
+		return true;
+	}
+	TArray<FTransform> Transforms;
+	for (const FVector& Trunk : State->Trunks)
+	{
+		FHitResult Hit;
+		const bool bGround = World->LineTraceSingleByChannel(Hit, Trunk + FVector(0.f, 0.f, 5000.f), Trunk - FVector(0.f, 0.f, 5000.f), ECC_WorldStatic);
+		Transforms.Add(FTransform(bGround ? Hit.ImpactPoint : Trunk));
+	}
+	Test->TestNotNull(TEXT("The trunks"), URTSEditorScripting::SpawnTreeInstances(World, TEXT("TestTrunks"), nullptr, Transforms, 0, true));
+	State->PhaseStart = FPlatformTime::Seconds();
+	return true;
+}
+
+/** Once the infantry navmesh has its holes: infantry walks round the wall's end, vehicles straight through it. */
+DEFINE_LATENT_AUTOMATION_COMMAND_TWO_PARAMETER(FRTSNavCheckTrunks, FAutomationTestBase*, Test, TSharedRef<RTSNavigationTests::FTrunkState>, State);
+bool FRTSNavCheckTrunks::Update()
+{
+	using namespace RTSNavigationTests;
+	UWorld* World = AutomationCommon::GetAnyGameWorld();
+	UNavigationSystemV1* NavSystem = World ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World) : nullptr;
+	if (!NavSystem)
+	{
+		Test->AddError(TEXT("No navigation system"));
+		return true;
+	}
+	const FNavDataConfig& Infantry = RTSNavAgents::GetNarrowestAgent();
+	const FNavDataConfig& Vehicle = RTSNavAgents::GetAgents().Last();
+	const double Straight = FVector::Dist2D(State->Start, State->End);
+	const double InfantryLength = GetPathLength(*World, Infantry, *State);
+	// Round the wall's end and back: at least the two legs to its end.
+	const double Detour = 2.0 * FMath::Sqrt(FMath::Square(0.5 * Straight) + FMath::Square(double(TrunkWallHalf)));
+	const bool bBuilt = !NavSystem->IsNavigationBuildInProgress() && InfantryLength > 0.98 * Detour;
+	if (!bBuilt && FPlatformTime::Seconds() - State->PhaseStart < NavTimeout)
+	{
+		return false;
+	}
+	const double VehicleLength = GetPathLength(*World, Vehicle, *State);
+	Test->AddInfo(FString::Printf(TEXT("Across the trunks (%.0f m): infantry %.0f m, vehicles %.0f m, round the end at least %.0f m"),
+		Straight / 100.0, InfantryLength / 100.0, VehicleLength / 100.0, Detour / 100.0));
+	Test->TestTrue(TEXT("Infantry walks round the trunk wall"), InfantryLength > 0.98 * Detour);
+	Test->TestTrue(TEXT("Vehicles drive straight through the trunk wall"), VehicleLength > 0.0 && VehicleLength < 1.05 * Straight);
+	return true;
+}
+
+/**
+ * River Crossing's trees (#158, D4): a trunk is a hole in the infantry navmesh alone (URTSTrunkObstaclesComponent), so
+ * infantry paths round a row of trunks too tight to pass and vehicles straight through it.
+ */
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSNavTrunksTest, "WorldDivide.Navigation.Trunks", RTSTests::TestFlags)
+
+bool FRTSNavTrunksTest::RunTest(const FString& Parameters)
+{
+	using namespace RTSNavigationTests;
+	if (!AutomationOpenMap(TestMap))
+	{
+		AddError(FString::Printf(TEXT("Could not open %s"), TestMap));
+		return false;
+	}
+	if (!InitLayoutFromEditor(*this))
+	{
+		return false;
+	}
+	const TSharedRef<FNavState> Nav = MakeShared<FNavState>();
+	const TSharedRef<FTrunkState> State = MakeShared<FTrunkState>();
+	const float Y = 0.5f * (WideGapMinY + WideGapMaxY);
+	for (float Offset = -TrunkWallHalf; Offset <= TrunkWallHalf; Offset += TrunkPitch)
+	{
+		State->Trunks.Add(FVector(0.f, Y + Offset, 0.f));
+	}
+	State->Start = FVector(GateStartX, Y, 0.f);
+	State->End = FVector(GateTargetX, Y, 0.f);
+
+	ADD_LATENT_AUTOMATION_COMMAND(RTSTests::FRTSStartStandalonePIE());
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavWaitForNavigation(this, Nav));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavSpawnTrunks(this, State));
+	ADD_LATENT_AUTOMATION_COMMAND(FRTSNavCheckTrunks(this, State));
 	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
 	return true;
 }

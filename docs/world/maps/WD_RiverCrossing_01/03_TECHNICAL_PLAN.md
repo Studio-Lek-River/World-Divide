@@ -7,8 +7,8 @@ Each item is tagged **Verified** (checked in the project or the engine install),
 | Area | State | Source |
 |---|---|---|
 | Engine | UE 5.8, DX12, SM6 | `WorldDivide.uproject`, `Config/DefaultEngine.ini` |
-| Project plugins enabled | ModelingToolsEditorMode, EnhancedInput, CommonUI, PythonScriptPlugin, EditorScriptingUtilities, ModelContextProtocol, EditorToolset, SlateInspectorToolset, WorldDivideMCP | `WorldDivide.uproject` |
-| Installed in the engine but **not enabled** | PCG (plus PCGGeometryScriptInterop, PCGWaterInterop (experimental), PCGPythonInterop), WaterAdvanced, WaterExtras, Landmass, LandscapePatch, GeometryScripting, ProceduralVegetationEditor, Fab, Bridge. Water is enabled and used since #155 (§7). | `D:\Program Files\Epic Games\UE_5.8\Engine\Plugins\` |
+| Project plugins enabled | ModelingToolsEditorMode, EnhancedInput, Niagara, Water (#155, §7), PCG (#154, §6), CommonUI, PythonScriptPlugin, EditorScriptingUtilities, ModelContextProtocol, EditorToolset, SlateInspectorToolset, WorldDivideMCP, MetaHuman, ProceduralVegetationEditor (#158, experimental: the Megaplant trees' foliage material and its DynamicWind). Experimental and not used in code: MeshTerrainMode, MeshPartition, MeshPartitionWater, PCGMeshPartitionInterop, kept on by producer decision (2026-10-24) | `WorldDivide.uproject` |
+| Installed in the engine but **not enabled** | PCGGeometryScriptInterop, PCGWaterInterop (experimental), PCGPythonInterop, WaterAdvanced, WaterExtras, Landmass, LandscapePatch, Fab, Bridge (GeometryScripting is on as a dependency of ProceduralVegetationEditor) | `D:\Program Files\Epic Games\UE_5.8\Engine\Plugins\` |
 | Not installed | Cesium, Houdini Engine | same |
 | Lighting | `r.AllowStaticLighting=False`; Lumen, VSM and Nanite at engine defaults | `DefaultEngine.ini` |
 | Navigation | `NavigationSystemV1` with `bAllowClientSideNavigation=True`; `RecastNavMesh` with `RuntimeGeneration=Dynamic`; one default agent (radius 34, height 144, step 35, slope 44°, cell 19, tile 1000) | `DefaultEngine.ini`, engine `BaseEngine.ini` |
@@ -101,30 +101,33 @@ As built (#156, `Tools/Editor/rivercrossing_greybox.py`):
 | Purpose | Method | Collision |
 |---|---|---|
 | Ground cover (grass, flowers) | Landscape Grass Types | None |
-| Forests, copses, hedgerows, field edges | PCG graph per biome zone, driven by painted or spline volumes | Trunks only, as WorldStatic; canopy none |
-| Bushes and clutter near roads | PCG, with exclusion near splines | None |
-| Village gardens, landmark trees | Hand-placed | Trunks only |
-| Border ring forests | PCG at high density with low-cost LODs or impostors | None (outside the navmesh) |
+| Forests, copses, riverbanks | A PCG graph per biome zone (`/Game/World/PCG/PCG_WD_Forest`, `_Copse`, `_Riverbank`), run by PCG volumes (#158) | None; each tree's trunk is a hole in the infantry navmesh |
+| Hedgerows, field edges, bushes and clutter near roads | PCG, with exclusion near splines (follow-up of #158) | None |
+| Village gardens, landmark trees | Hand-placed (`WEST_HEROES` in `rivercrossing_vegetation.py`, #158) | As the PCG trees |
+| Border ring forests | PCG at high density (`PCG_WD_BorderRing`), Nanite | None (outside the navmesh) |
 
-**PCG exclusions** (hard rules in every graph):
-- the river (Water spline)
+**PCG exclusions** (hard rules in every graph; editor-only boxes tagged `PCG_Exclude`, from the greybox's layout):
+- the river, 4 m past each edge
 - road splines plus 6 m
-- the bridge corridor (60 m)
+- the bridge corridor (60 m), with 60 m of clear road beyond each ramp
 - base pads
-- village street volumes
+- village street volumes, and each building's footprint plus a 5 m garden
 - an 8 m radius around supply sources
 
-**Readability rules** (from [02_MAP_DESIGN.md](02_MAP_DESIGN.md)): trees ≤ 18 m within 40 m of lanes, grass ≤ 0.6 m, no dense undergrowth inside playable woods.
+**Readability rules** (from [02_MAP_DESIGN.md](02_MAP_DESIGN.md)): trees ≤ 18 m within 40 m of lanes, grass ≤ 0.6 m, no dense undergrowth inside playable woods. The lane bands are editor-only boxes tagged `PCG_LaneBand`. Inside them a graph places only its lane entries (alders, the young spruce, hazel, spindle) at no more than full scale, and `check_lane_entries` in `rivercrossing_vegetation.py` fails the setup when one of them could top 18 m.
 
-**Forest navigation**
-- **Recommendation:** trees in playable woods get no navmesh influence, so vehicles drive through and the woods are cover and visual only.
-- Trunk collision is set not to affect navigation, because hundreds of small holes would wreck path quality and navmesh cost.
-- **Producer decision:** whether woods should slow or block vehicles. If so, that becomes a `NavArea` cost volume, not individual tree collision.
+**Forest navigation** (D4, decided 2026-10-24)
+- Trees limit visibility (M6; every tree component is tagged `WD_Tree`), heavy vehicles drive over them and infantry moves around them.
+- The trees have no collision and no navmesh influence, so vehicles drive through the woods. Crushing trees under heavy vehicles is a follow-up.
+- Each tree's trunk is a 25 cm cylinder of `URTSNavArea_InfantryBlocked` in its volume's `URTSTrunkObstaclesComponent`: a hole in the infantry navmesh only (`WorldDivide.Navigation.Trunks`). Shrubs and hazels have none.
+- Generated in the editor by `ue.ps1 -Task rivercrossing` and saved, never at runtime. Regenerating gives the same result (the log's `GeneratePCG ... hash` lines).
 
-**Performance**
-- Nanite foliage for trees, if the imported pack supports it in 5.8. Otherwise use LODs plus impostor billboards.
-- Cull distances are tuned to the 300 m maximum camera arm.
-- `SM_HP_Tree` (564k triangles) is for hand-placed hero trees only.
+**Performance** (measured 2026-10-24 with `ue.ps1 -Task camerashots`, which now writes frame, game thread and GPU time per shot)
+- About 38,000 trees (13,000 of them with trunks): Nanite skinned Megaplant assemblies with Nanite Foliage (`r.Nanite.Foliage=1`).
+- The frame went from 3.2 to 3.8 ms on average, and 7.0 ms at worst (the closest zoom over the corner woods). The GPU went from 2.4 to 3.1 ms on average, 5.3 ms at worst. The game thread stayed at 1.8 ms. That is on the development PC, not the minimum spec, which #160 measures.
+- An instanced skinned mesh ticks by default. With the woods' few hundred components that cost about 8 ms of game thread, so every tree component is saved with `bCanEverTick` off: the trees stand in their reference pose, and wind is not animated.
+- No cull distance: the Nanite trees stay visible to the 450 m maximum camera arm ([WORLD_SCALE_STANDARD.md](../../../tech/scale/WORLD_SCALE_STANDARD.md)).
+- `SM_HP_Tree` (564k triangles, licence unknown) is not used.
 
 ## 7. Water
 

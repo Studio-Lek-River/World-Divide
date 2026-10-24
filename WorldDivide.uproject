@@ -100,6 +100,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "ProceduralVegetationEditor",
+			"Enabled": true
+		},
+		{
 			"Name": "MetaHuman",
 			"Enabled": true,
 			"SupportedTargetPlatforms": [

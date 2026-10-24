@@ -10,11 +10,82 @@ class UFont;
 class UFontFace;
 class UMaterialInterface;
 class UNiagaraSystem;
+class UPCGGraph;
 class UPhysicalMaterial;
 class URuntimeVirtualTexture;
+class USkinnedAsset;
 class USoundCue;
 class UStaticMesh;
 class USoundWave;
+
+/** One mesh a vegetation graph spawns (BuildVegetationGraph), Weight against the other entries of its list. */
+USTRUCT(BlueprintType)
+struct FRTSVegetationEntry
+{
+	GENERATED_BODY()
+
+	/** A skeletal mesh: the Megaplant trees and shrubs are skeletal Nanite assemblies. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	TObjectPtr<USkinnedAsset> Mesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	float Weight = 1.f;
+
+	/** A tree, whose trunk infantry walks around (when its graph has bTrunks); a shrub has none. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	bool bTrunk = true;
+};
+
+/** What one vegetation graph (forest, copse, riverbank, border ring) scatters, in BuildVegetationGraph. */
+USTRUCT(BlueprintType)
+struct FRTSVegetationGraphSpec
+{
+	GENERATED_BODY()
+
+	/** Points sampled on the landscape per m² of the volume, one per grid cell. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	float PointsPerSquaredMeter = 0.01f;
+
+	/** How far each point may stray from its cell's centre, 0 (a grid) to 1 (anywhere in the cell). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	float Looseness = 1.f;
+
+	/** Uniform scale range of the points outside the lane bands. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	FVector2D Scale = FVector2D(0.85, 1.15);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	TArray<FRTSVegetationEntry> Entries;
+
+	/** Inside the lane bands (actors tagged LaneTag): only these, at LaneScale, so no tree there tops the lanes' limit. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	TArray<FRTSVegetationEntry> LaneEntries;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	FVector2D LaneScale = FVector2D(0.85, 1.0);
+
+	/** Actors whose bounds nothing grows in: river, roads, bridge corridors, pads, streets, supply sources. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	FName ExcludeTag = TEXT("PCG_Exclude");
+
+	/** When set, only inside the bounds of actors tagged so (riverbank strips); none, the whole volume. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	FName IncludeTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	FName LaneTag = TEXT("PCG_LaneBand");
+
+	/** Whether its trees' trunks cut the infantry navmesh (URTSTrunkObstaclesComponent, made by GeneratePCG). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	bool bTrunks = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	bool bCastShadow = true;
+
+	/** Distance (cm) the instances fade out at; 0 never. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vegetation")
+	int32 CullDistance = 0;
+};
 
 /** Engine calls Tools/Editor scripts need that Unreal does not expose to Python. */
 UCLASS()
@@ -241,4 +312,38 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
 	static USoundCue* BuildLayeredShotSound(const FString& AssetPath, const TArray<USoundWave*>& Waves);
+
+	/**
+	 * Spawns the actor Label in WorldContextObject's world with one instanced skinned mesh component of Mesh, an instance at
+	 * every one of Transforms (world), for River Crossing's hand-placed hero trees (#158): the Megaplant trees are skeletal
+	 * Nanite assemblies, which Python cannot instance. The instances are trees (tag WD_Tree): no collision and no navigation,
+	 * so vehicles drive through them (D4), shadowed and culled at CullDistance (cm); with bTrunks their trunks in the infantry
+	 * navmesh (URTSTrunkObstaclesComponent). Without Mesh only the trunks, as the navigation test spawns them. An actor
+	 * labelled Label already there is emptied and refilled, so its actor file stays. Returns null and logs why without a
+	 * world, with neither a mesh nor trunks, or without a transform.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static AActor* SpawnTreeInstances(UObject* WorldContextObject, const FString& Label, USkinnedAsset* Mesh, const TArray<FTransform>& Transforms,
+		int32 CullDistance, bool bTrunks);
+
+	/**
+	 * Writes the PCG graph AssetPath (#158) that scatters Spec over the landscape inside the volume of the component running
+	 * it, with that component's seed, so any map can reuse it with its own volume and seed (#322): the sampled points minus
+	 * Spec's exclusion actors, the lane bands' points from Spec.LaneEntries, the rest from Spec.Entries, each picked by
+	 * weight, as instanced skinned meshes (no collision, no navigation), and with Spec.bTrunks a hidden point at every
+	 * tree's trunk; with Spec.IncludeTag only inside the actors tagged so. An existing graph is emptied and rebuilt, so the
+	 * volumes using it keep it. Returns null and logs why when it fails.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor")
+	static UPCGGraph* BuildVegetationGraph(const FString& AssetPath, const FRTSVegetationGraphSpec& Spec);
+
+	/**
+	 * Generates every PCG component of the actors tagged Tag in WorldContextObject's world, waiting for each, so a map saved
+	 * afterwards holds the result (generated in the editor, never at runtime: clients path on their own navmesh). Then
+	 * tags the trees WD_Tree, saves them never ticking and turns each actor's trunk points into its
+	 * URTSTrunkObstaclesComponent. Logs each actor's instance count, trunks and a hash of the instances' locations, so two
+	 * runs can be compared. Returns the instances spawned, or -1 when a component did not finish.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static int32 GeneratePCG(UObject* WorldContextObject, FName Tag);
 };

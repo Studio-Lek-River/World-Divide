@@ -70,7 +70,8 @@ Skeletal meshes have no size tag; the Megaplant trees' heights are checked by ey
 - All 148 skeletal and 159 static meshes are Nanite with 1 LOD, which is how Nanite foliage is meant to work in 5.8. Tree LOD0: 2–4 k triangles in the skeletal skin.
 - Textures: 4096² (37), 2048×4096 (11); one 4096×8192 displacement map.
 - The 10 `Decoration_Norway_Spruce_*` meshes (cones, twigs) have no simple collision, which is right for decoration.
-- Open for #158: cost of Nanite skeletal trees at RTS densities is not measured yet.
+- Measured in #158: about 38,000 trees on River Crossing add 0.7 ms of GPU time on average and 2.9 ms at worst on the development PC, with `r.Nanite.Foliage=1`. Their tick must be off, or it costs 8 ms of game thread. Heights: alder 12–17 m, spruce 8–29 m, hazel 1–5 m, spindle 2–6 m, cherry 4–8 m.
+- The materials' parent, `MA_Foliage_Trees`, is in the ProceduralVegetationEditor plugin's content, and the meshes need its DynamicWind: without the plugin the trees render grey. It is enabled since #158.
 
 **Real_Stones_Pack_01** (`/Game/Real_Stones_Pack_01/Meshes/SM_Stone_01`–`08`)
 
