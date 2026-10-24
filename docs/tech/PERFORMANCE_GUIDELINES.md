@@ -51,7 +51,7 @@ Tests: `WorldDivide.Perf.MenuMemory`, `WorldDivide.Upgrades.ByTag` (*planned*).
 
 19. **Small moving game meshes and building shells do not use Nanite**; buildings get LOD0 + LOD1 with one switch distance per building (#349). Environment meshes may, once the environment is real.
 20. **A game mesh above 2,000 triangles has LODs** with decreasing screen sizes.
-21. **Every game material is an instance of a master material.** Translucency only on the list in the test (the placement ghost, shot glows).
+21. **Every game material is an instance of a master material.** Translucency only on the list in the test (the placement ghost, shot glows, the kit lamps' beams and glare halos, `M_Kit_Glow`: additive, night only, #440).
 22. **Small parts cast no shadow.** Only the hull and the large parts of a unit do.
 23. **Repeated static pieces are instances** (one ISM per wall), not separate actors.
 

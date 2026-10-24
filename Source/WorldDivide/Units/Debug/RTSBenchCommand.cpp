@@ -129,7 +129,7 @@
  * dimmed as the night pictures dim them: every vehicle's lamps glow and the nearest light the ground. Every row also gives
  * the vehicle lights' pass and the real lights on at the sample's end.
  *
- * A set named with RTSBenchScene::NaniteHQSuffix or LodHQSuffix (DA_TestM20Guardian@NaniteHQ; #349) stands four of the
+ * A set named with RTSBenchScene::NaniteHQSuffix, LodHQSuffix or KitHQSuffix (DA_TestM20Guardian@NaniteHQ; #349) stands four of the
  * bench's HQs beside the grid (RTSBenchScene::BenchBuildings), built and finished before the warm-up, against the set
  * without the suffix; RTSBenchScene::VSMSuffix turns virtual shadow maps on while it runs. Every row of such a set also
  * gives the HQs' primitives, those drawn on screen, their distinct meshes, those with Nanite, one HQ's LOD0 triangles and
@@ -507,7 +507,8 @@ namespace RTSBenchCommand
 				: InUnitName.Contains(RTSBenchScene::FarSuffix) ? RTSBenchScene::FarCameraDistance : DefaultCameraDistance)
 		{
 			BuildingDataName = InUnitName.Contains(RTSBenchScene::NaniteHQSuffix) ? RTSBenchScene::NaniteHQData
-				: InUnitName.Contains(RTSBenchScene::LodHQSuffix) ? RTSBenchScene::LodHQData : nullptr;
+				: InUnitName.Contains(RTSBenchScene::LodHQSuffix) ? RTSBenchScene::LodHQData
+				: InUnitName.Contains(RTSBenchScene::KitHQSuffix) ? RTSBenchScene::KitHQData : nullptr;
 		}
 
 		static bool IsRunning() { return Active.IsValid(); }

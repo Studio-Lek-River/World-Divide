@@ -26,6 +26,10 @@ namespace
 		TEXT("rts.Debug.BuildingForceLOD"), -1,
 		TEXT("Forces every building with a LOD switch distance to this LOD at any distance, to picture LOD1 up close (#406); -1 decides by distance."));
 
+	TAutoConsoleVariable<int32> CVarKitBeams(
+		TEXT("rts.Fx.KitBeams"), 1,
+		TEXT("Whether the kit lamps throw their soft beams at night (#440)."));
+
 	/** Secondary kit lights shine only at this effects quality and above: High. */
 	constexpr int32 SecondaryLightQuality = 2;
 }
@@ -46,6 +50,11 @@ FString FRTSBuildingLightTickFunction::DiagnosticMessage()
 int32 URTSBuildingLightSubsystem::GetMaxKitLights()
 {
 	return FMath::Max(CVarBuildingLightMax.GetValueOnGameThread(), 0);
+}
+
+bool URTSBuildingLightSubsystem::AreKitBeamsOn()
+{
+	return CVarKitBeams.GetValueOnGameThread() != 0;
 }
 
 int32 URTSBuildingLightSubsystem::GetMaxBuildings()

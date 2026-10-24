@@ -13,8 +13,10 @@ lens (M_Kit_Lens) are every building's, in /Game/Art/Shared (#388).
 """
 
 import json
+import math
 import re
 import os
+import struct
 
 import unreal
 
@@ -656,6 +658,203 @@ def build_lens_material(directory, name, white, white_masks):
     # The kit's pieces are drawn instanced, one component per mesh per building.
     material.set_editor_property("used_with_instanced_static_meshes", True)
     return _finish(material)
+
+
+# M_Kit_Glow's per-instance custom data (RTSKitGlowData, #440): its part's level, fault and flash phases (as the lens's)
+# and its colour at full, RGB.
+GLOW_LEVEL, GLOW_FAULT, GLOW_FLASH, GLOW_COLOR = 0, 1, 2, 3
+# A kit beam or glare halo (#440): lit with its lens (LENS_HLSL's fault and flash), brightest where the surface faces the
+# camera (|N.V|^EdgePower, so its silhouette fades out), and a beam (Beam 1) fading along its length U from the lens, in
+# over StartFade and out as (1 - U)^AlongPower. A two-sided cone seen through its middle adds both walls: thick in the
+# middle, thin at the edge, as light in air.
+GLOW_HLSL = """
+float fault = Fault > 0.0 ? step(0.35, frac(Time * 2.3 + Fault + 0.5 * sin(Time * 17.0 + Fault * 40.0))) : 1.0;
+float flash = Flash > 0.0 ? step(0.5, frac(Time + Flash)) : 1.0;
+float edge = pow(saturate(abs(dot(normalize(N), normalize(V)))), EdgePower);
+float along = lerp(1.0, pow(saturate(1.0 - U), AlongPower) * saturate(U / max(StartFade, 0.001)), Beam);
+return Color * Level * fault * flash * edge * along * Intensity;
+"""
+# MI_Kit_Beam and MI_Kit_Glare, M_Kit_Glow's two instances: scalars by name.
+GLOW_INSTANCES = {
+    "MI_Kit_Beam": {"Beam": 1.0, "EdgePower": 1.5, "AlongPower": 1.6, "StartFade": 0.04, "Intensity": 0.025,
+                    "FadeDistance": 80.0},
+    "MI_Kit_Glare": {"Beam": 0.0, "EdgePower": 3.0, "AlongPower": 1.0, "StartFade": 0.0, "Intensity": 0.04,
+                     "FadeDistance": 25.0},
+}
+
+
+def build_glow_material(directory, name):
+    """M_Kit_Glow, the kit lamps' beams and glare halos (#440): unlit, additive and two-sided, drawn instanced, its glow
+    GLOW_HLSL works out from its instance's custom data (GLOW_LEVEL..GLOW_COLOR) and its parameters, softened where it
+    meets geometry by FadeDistance cm (depth fade). Its instances: GLOW_INSTANCES. Additive translucency: the exception to
+    PERFORMANCE_GUIDELINES rule 21 for #440."""
+    material = _material(directory, name)
+    material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_ADDITIVE)
+    material.set_editor_property("shading_model", unreal.MaterialShadingModel.MSM_UNLIT)
+    material.set_editor_property("two_sided", True)
+    pins = {}
+    for index, (pin, data) in enumerate((("Level", GLOW_LEVEL), ("Fault", GLOW_FAULT), ("Flash", GLOW_FLASH))):
+        pins[pin] = _node(material, unreal.MaterialExpressionPerInstanceCustomData, -900, 120 * index, data_index=data)
+    pins["Color"] = _node(material, unreal.MaterialExpressionPerInstanceCustomData3Vector, -900, 400, data_index=GLOW_COLOR)
+    pins["Time"] = _node(material, unreal.MaterialExpressionTime, -900, 520)
+    pins["N"] = _node(material, unreal.MaterialExpressionVertexNormalWS, -900, 620)
+    pins["V"] = _node(material, unreal.MaterialExpressionCameraVectorWS, -900, 720)
+    pins["U"] = vehicle_art._mask(material, -900, 820, _node(material, unreal.MaterialExpressionTextureCoordinate,
+                                                             -1100, 820, coordinate_index=0), "r")
+    defaults = GLOW_INSTANCES["MI_Kit_Beam"]
+    for index, key in enumerate(("Beam", "EdgePower", "AlongPower", "StartFade", "Intensity")):
+        pins[key] = _scalar(material, -900, 950 + 100 * index, key, defaults[key])
+    glow = vehicle_art._custom(material, -400, 400, GLOW_HLSL, list(pins))
+    for pin, node in pins.items():
+        _connect(node, "", glow, pin)
+    fade = _node(material, unreal.MaterialExpressionDepthFade, -400, 800)
+    _connect(_scalar(material, -650, 800, "FadeDistance", defaults["FadeDistance"]), "", fade, "FadeDistance")
+    _output(material, _multiply(material, -100, 500, glow, "", fade, ""), "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    material.set_editor_property("used_with_instanced_static_meshes", True)
+    return _finish(material)
+
+
+def _smooth_edge(angle, full, zero):
+    t = min(max((angle - full) / (zero - full), 0.0), 1.0)
+    return 1.0 - t * t * (3.0 - 2.0 * t)
+
+
+# The kit lamps' light distribution profiles (#440, the catalogue's "profile"): candela relative to the peak by angle in
+# degrees from the light's axis, a hot centre and a soft edge, written as IES files (write_ies) and imported as
+# TextureLightProfile. downlight: the wall and entrance lamps' wide pool; spot: 05's tight beam; flood: 06's broad, even
+# throw with a soft rim. A Rect light takes none: its area already softens it, and a profile turned with it puts it out.
+LIGHT_PROFILES = {
+    "downlight": lambda a: math.cos(math.radians(min(a, 90.0))) ** 1.2 * _smooth_edge(a, 35.0, 75.0),
+    "spot": lambda a: math.exp(-(a / 13.0) ** 2) * _smooth_edge(a, 20.0, 34.0),
+    "flood": lambda a: (0.75 + 0.25 * math.cos(math.radians(min(a, 90.0)) * 2.0)) * _smooth_edge(a, 28.0, 60.0),
+}
+LIGHT_PROFILE_STEP = 2.5
+
+
+def write_ies(path, profile):
+    """Writes LIGHT_PROFILES[profile] as an LM-63-2002 IES file, rotationally symmetric, 0 to 180 degrees."""
+    angles = [i * LIGHT_PROFILE_STEP for i in range(int(180.0 / LIGHT_PROFILE_STEP) + 1)]
+    shape = LIGHT_PROFILES[profile]
+    values = [1000.0 * max(shape(a), 0.0) if a <= 90.0 else 0.0 for a in angles]
+    lines = ["IESNA:LM-63-2002", f"[TEST] World Divide kit profile {profile} (#440)", "TILT=NONE",
+             f"1 -1 1 {len(angles)} 1 1 2 0 0 0", "1.0 1.0 0",
+             " ".join(f"{a:g}" for a in angles), "0", " ".join(f"{v:.2f}" for v in values)]
+    with open(path, "w", encoding="ascii", newline="\n") as file:
+        file.write("\n".join(lines) + "\n")
+
+
+def import_light_profile(source, directory, name):
+    """Imports an IES file as a TextureLightProfile."""
+    task = unreal.AssetImportTask()
+    task.filename = source
+    task.destination_path = directory
+    task.destination_name = name
+    task.automated = True
+    task.replace_existing = True
+    task.save = False
+    asset_tools.import_asset_tasks([task])
+    profile = unreal.load_asset(f"{directory}/{name}")
+    if not isinstance(profile, unreal.TextureLightProfile):
+        raise RuntimeError(f"Could not import {source} as a light profile")
+    return profile
+
+
+def _write_glb(path, positions, normals, uvs, triangles, slot):
+    """Writes one mesh as a binary glTF from Unreal's frame (cm, X forward, Z up): glTF is metres, Y up and right-handed,
+    so each point goes over as (x, z, y) / 100 and each triangle's winding turns with it. The material is slot."""
+    to_gltf = [(x / 100.0, z / 100.0, y / 100.0) for x, y, z in positions]
+    gl_normals = [(x, z, y) for x, y, z in normals]
+    indices = [i for a, b, c in triangles for i in (a, c, b)]
+    blob = b"".join(struct.pack("<3f", *p) for p in to_gltf)
+    normal_offset = len(blob)
+    blob += b"".join(struct.pack("<3f", *n) for n in gl_normals)
+    uv_offset = len(blob)
+    blob += b"".join(struct.pack("<2f", *uv) for uv in uvs)
+    index_offset = len(blob)
+    blob += b"".join(struct.pack("<I", i) for i in indices)
+    blob += b"\0" * (-len(blob) % 4)
+    count = len(positions)
+    low = [min(p[i] for p in to_gltf) for i in range(3)]
+    high = [max(p[i] for p in to_gltf) for i in range(3)]
+    gltf = {
+        "asset": {"version": "2.0", "generator": "World Divide building_art.py (#440)"},
+        "scene": 0, "scenes": [{"nodes": [0]}], "nodes": [{"mesh": 0, "name": slot}],
+        "materials": [{"name": slot}],
+        "meshes": [{"name": slot, "primitives": [{"attributes": {"POSITION": 0, "NORMAL": 1, "TEXCOORD_0": 2},
+                                                  "indices": 3, "material": 0}]}],
+        "buffers": [{"byteLength": len(blob)}],
+        "bufferViews": [{"buffer": 0, "byteOffset": 0, "byteLength": normal_offset},
+                        {"buffer": 0, "byteOffset": normal_offset, "byteLength": uv_offset - normal_offset},
+                        {"buffer": 0, "byteOffset": uv_offset, "byteLength": index_offset - uv_offset},
+                        {"buffer": 0, "byteOffset": index_offset, "byteLength": 4 * len(indices)}],
+        "accessors": [{"bufferView": 0, "componentType": 5126, "count": count, "type": "VEC3", "min": low, "max": high},
+                      {"bufferView": 1, "componentType": 5126, "count": count, "type": "VEC3"},
+                      {"bufferView": 2, "componentType": 5126, "count": count, "type": "VEC2"},
+                      {"bufferView": 3, "componentType": 5125, "count": len(indices), "type": "SCALAR"}],
+    }
+    text = json.dumps(gltf, separators=(",", ":")).encode("utf-8")
+    text += b" " * (-len(text) % 4)
+    with open(path, "wb") as file:
+        file.write(struct.pack("<III", 0x46546C67, 2, 12 + 8 + len(text) + 8 + len(blob)))
+        file.write(struct.pack("<II", len(text), 0x4E4F534A) + text)
+        file.write(struct.pack("<II", len(blob), 0x004E4942) + blob)
+
+
+BEAM_SIDES = 24
+
+
+def write_beam_glb(path, light_type, width, height, length, spread):
+    """A kit lamp's beam (#440) as a glb in its light's frame: open sides from the lens's face (width across Y, height
+    along Z, cm) at X 0 out to length cm, flaring by spread degrees either side. A Spot's is round, a circle as wide as the
+    lens's smaller side; a Rect's square-edged. U runs 0 at the lens to 1 at the end, V round it."""
+    grow = length * math.tan(math.radians(spread))
+    if light_type == "Rect":
+        near = [(-width / 2, -height / 2), (width / 2, -height / 2), (width / 2, height / 2), (-width / 2, height / 2)]
+        far = [(y + math.copysign(grow, y), z + math.copysign(grow, z)) for y, z in near]
+    else:
+        radius = min(width, height) / 2.0
+        ring = [(math.cos(2 * math.pi * i / BEAM_SIDES), math.sin(2 * math.pi * i / BEAM_SIDES)) for i in range(BEAM_SIDES)]
+        near = [(radius * c, radius * s) for c, s in ring]
+        far = [((radius + grow) * c, (radius + grow) * s) for c, s in ring]
+    lean, across = -math.sin(math.radians(spread)), math.cos(math.radians(spread))
+    positions, normals, uvs, triangles = [], [], [], []
+    sides = len(near)
+    for i in range(sides):
+        j = (i + 1) % sides
+        quad = [(0.0, *near[i]), (0.0, *near[j]), (length, *far[j]), (length, *far[i])]
+        for k, (x, y, z) in enumerate(quad):
+            # Out from the axis, leaning back with the flare: a Rect's side flat, a round beam's smooth.
+            if light_type == "Rect":
+                y0, z0 = (near[i][0] + near[j][0]) / 2, (near[i][1] + near[j][1]) / 2
+                mid = (math.copysign(1.0, y0) if abs(y0) > 1e-3 else 0.0, math.copysign(1.0, z0) if abs(z0) > 1e-3 else 0.0)
+            else:
+                mid = (y, z)
+            radial = math.hypot(*mid) or 1.0
+            positions.append((x, y, z))
+            normals.append((lean, across * mid[0] / radial, across * mid[1] / radial))
+            uvs.append((x / length, (i + (1 if k in (1, 2) else 0)) / sides))
+        base = 4 * i
+        triangles += [(base, base + 3, base + 2), (base, base + 2, base + 1)]
+    _write_glb(path, positions, normals, uvs, triangles, "Glow")
+
+
+def write_glare_glb(path, rings=8, segments=16):
+    """The glare halo (#440): a sphere of radius 1 cm, its normals out, scaled per lens."""
+    positions, normals, uvs, triangles = [], [], [], []
+    for r in range(rings + 1):
+        theta = math.pi * r / rings
+        for g in range(segments + 1):
+            phi = 2 * math.pi * g / segments
+            normal = (math.sin(theta) * math.cos(phi), math.sin(theta) * math.sin(phi), math.cos(theta))
+            positions.append(normal)
+            normals.append(normal)
+            uvs.append((g / segments, r / rings))
+    for r in range(rings):
+        for g in range(segments):
+            a = r * (segments + 1) + g
+            b = a + segments + 1
+            triangles += [(a, a + 1, b), (a + 1, b + 1, b)]
+    _write_glb(path, positions, normals, uvs, triangles, "Glow")
 
 
 def build_rubble_material(directory, name, textures, recipe):

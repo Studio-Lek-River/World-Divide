@@ -6,6 +6,7 @@
 
 class UCurveTable;
 class UStaticMesh;
+class UTextureLightProfile;
 class URTSFlagTypes;
 class URTSKitPieceData;
 class URTSUnitData;
@@ -223,6 +224,14 @@ struct FRTSBuildingLight
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
 	float BarnDoorLength = 20.f;
+
+	/** Its light distribution profile (IES, #440): a hot centre and a soft edge across its cone; none lights it evenly. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
+	TObjectPtr<UTextureLightProfile> Profile;
+
+	/** Point and Spot: the radius of the glowing source in cm, which softens its pool's edge (#440); 0 a point. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
+	float SourceRadius = 0.f;
 
 	/** Steady for the building's own lights; a kit piece's light takes its piece's (RTSKit::Expand). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")

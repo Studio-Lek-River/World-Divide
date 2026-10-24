@@ -9,6 +9,7 @@
 
 class ARTSUnit;
 class UBoxComponent;
+class UInstancedStaticMeshComponent;
 class ULocalLightComponent;
 class UStaticMeshComponent;
 class URTSBuildingData;
@@ -350,8 +351,30 @@ private:
 	TArray<FRTSKitPart> KitParts;
 	TArray<FRTSKitLook> KitLooks;
 
-	/** Shows KitLooks on the kit lights' intensity and colour. */
+	/** The kit pieces' beams and glare halos (FRTSKitExpansion::Glows), one instanced component per mesh, shown at night (#440). */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UInstancedStaticMeshComponent>> GlowComponents;
+
+	/** A beam or halo: its part (KitParts), its component and instance there, and its colour at full. */
+	struct FKitGlow
+	{
+		int32 Part = INDEX_NONE;
+		int32 Component = INDEX_NONE;
+		int32 Instance = INDEX_NONE;
+		FLinearColor Color = FLinearColor::White;
+	};
+	TArray<FKitGlow> KitGlows;
+	/** Which of GlowComponents draw beams, which rts.Fx.KitBeams can turn off; the rest draw halos. */
+	TBitArray<> GlowIsBeam;
+
+	/** Makes GlowComponents from Kit's glows; none on a dedicated server. */
+	void ApplyKitGlows(const FRTSKitExpansion& Kit);
+
+	/** Shows KitLooks on the kit lights' intensity and colour, and on their beams and halos. */
 	void ApplyKitLightLooks();
+
+	/** Shows the beams and halos in the dark only. */
+	void ShowKitGlows();
 
 	/** The lighting groups switched off (SetLightGroupOn); the rest are on. */
 	TSet<FName> LightGroupsOff;

@@ -33,3 +33,11 @@ Seen in game: every fixture of 01–08, 12 and 13 reads by day and lights at nig
 At 150 m by night each wall fixture is a lit point on the front wall, 09's blue among them; 07 sits behind the health
 bar, its pool lighting the wall around it. In LowPower 12 and 13 stay lit and 08 lights the roof amber; the other lamps but
 03 are out. A frame catches one moment of the blink, so a mast LED can show in its dark phase.
+
+## Beams and pools (#440)
+
+`beams_440.png`, taken 2026-10-24 with `-Turn -Night`, columns left to right: before (#392, the bare lights above), the
+softer pools alone (light profile, source size and glare halo; `-Cvars rts.Fx.KitBeams=0`), route A with the faked beams
+(the default) and route B, the volumetric fog trial since removed; rows 12 m and crops of 150 and 450 m round the
+building. The producer chose A (`docs/art/BUILDING_KIT.md`, Night look): 06's beam reads at 12 m, 05's at 12, 150 and
+450 m, and B shows only a faint glow round the lamps at 12 m.

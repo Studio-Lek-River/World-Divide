@@ -69,3 +69,19 @@ namespace RTSKitLensData
 	constexpr int32 Color = 4;
 	constexpr int32 Floats = 7;
 }
+
+/**
+ * M_Kit_Glow's per-instance custom data (#440): each kit beam and glare halo instance, lit with its part's look
+ * (ARTSBuilding::SetKitLooks). Tools/Editor/building_art.py builds it with the same numbers.
+ */
+namespace RTSKitGlowData
+{
+	/** How bright it glows, 0 off to 1 full: its part's look. */
+	constexpr int32 Level = 0;
+	/** Its part's fault and flash phases, as RTSKitLensData's, so it goes out with its lens. */
+	constexpr int32 Fault = 1;
+	constexpr int32 Flash = 2;
+	/** Its colour at full, strength included, RGB, from 3 to 5. */
+	constexpr int32 Color = 3;
+	constexpr int32 Floats = 6;
+}

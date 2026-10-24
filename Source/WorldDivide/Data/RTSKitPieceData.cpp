@@ -135,6 +135,20 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 			Light.SourceWidth = Kit.SourceWidth;
 			Light.SourceHeight = Kit.SourceHeight;
 			Light.Behaviour = Kit.Behaviour;
+			Light.Profile = Kit.Profile;
+			Light.SourceRadius = Kit.SourceRadius;
+			if (Piece.BeamMesh && Piece.BeamStrength > 0.f)
+			{
+				// In the mount's frame, its scale included (a mount may undo its building's MeshScale).
+				Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.BeamMesh, FTransform(Kit.Rotation, Kit.Location) * Frame,
+					Light.Color * Piece.BeamStrength, /*bBeam*/ true });
+			}
+		}
+		if (Piece.GlareMesh && Piece.GlareStrength > 0.f && Piece.LensBounds.IsValid)
+		{
+			Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.GlareMesh,
+				FTransform(FQuat::Identity, Piece.LensBounds.GetCenter(), FVector(Piece.GlareRadius)) * Frame,
+				(Piece.bHasLight ? FLinearColor::MakeFromColorTemperature(Piece.Light.Kelvin) : Mount.IndicatorColor) * Piece.GlareStrength, /*bBeam*/ false });
 		}
 
 		float Lens[RTSKitLensData::Floats] = {};

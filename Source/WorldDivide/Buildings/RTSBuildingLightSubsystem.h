@@ -50,6 +50,9 @@ public:
 	/** rts.Fx.BuildingLightMax: most real kit lights shown at once, the nearest buildings' first. */
 	static int32 GetMaxKitLights();
 
+	/** rts.Fx.KitBeams: whether the kit lamps throw their soft beams at night (#440). */
+	static bool AreKitBeamsOn();
+
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	virtual void Deinitialize() override;
 

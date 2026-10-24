@@ -7,6 +7,7 @@
 #include "Data/RTSKitPieceData.h"
 #include "Dom/JsonObject.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/TextureLightProfile.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstance.h"
 #include "Misc/FileHelper.h"
@@ -210,6 +211,26 @@ bool FRTSKitArtTest::RunTest(const FString& Parameters)
 		{
 			TestFalse(*FString::Printf(TEXT("%s is class S: no real light"), *Id), Data->bHasLight);
 		}
+		// Its night look (#440): a beam from a Spot or Rect light, a glare halo round a lens, a profile, as the catalogue has them.
+		const TSharedPtr<FJsonObject>* Beam = nullptr;
+		const bool bBeam = Piece->TryGetObjectField(TEXT("beam"), Beam);
+		TestEqual(*FString::Printf(TEXT("%s: a beam only where the catalogue has one"), *Id), Data->BeamMesh != nullptr, bBeam);
+		if (bBeam && Data->BeamMesh)
+		{
+			TestEqual(*FString::Printf(TEXT("%s: its beam's strength"), *Id), Data->BeamStrength, static_cast<float>((*Beam)->GetNumberField(TEXT("strength"))));
+			TestTrue(*FString::Printf(TEXT("%s: its beam comes from a Spot or Rect light"), *Id),
+				Data->bHasLight && Data->Light.Type != ERTSBuildingLightType::Point);
+			TestEqual(*FString::Printf(TEXT("%s: its beam is as long as the catalogue's"), *Id),
+				static_cast<float>(Data->BeamMesh->GetBoundingBox().Max.X), static_cast<float>((*Beam)->GetNumberField(TEXT("length"))), 2.f);
+		}
+		double Glare = 0.0;
+		const bool bGlare = Piece->TryGetNumberField(TEXT("glare"), Glare);
+		TestEqual(*FString::Printf(TEXT("%s: a glare halo only where the catalogue has one"), *Id), Data->GlareMesh != nullptr, bGlare);
+		if (bGlare)
+		{
+			TestEqual(*FString::Printf(TEXT("%s: its glare's strength"), *Id), Data->GlareStrength, static_cast<float>(Glare));
+			TestTrue(*FString::Printf(TEXT("%s: its glare stands at a lens"), *Id), Data->LensBounds.IsValid && Data->GlareRadius > 0.f);
+		}
 		if (!bLight || !Data->bHasLight)
 		{
 			continue;
@@ -229,6 +250,13 @@ bool FRTSKitArtTest::RunTest(const FString& Parameters)
 		{
 			TestEqual(*FString::Printf(TEXT("%s: its inner cone"), *Id), Real.InnerConeAngle, static_cast<float>((*Cone)[0]->AsNumber()));
 			TestEqual(*FString::Printf(TEXT("%s: its outer cone"), *Id), Real.OuterConeAngle, static_cast<float>((*Cone)[1]->AsNumber()));
+		}
+		FString Profile;
+		const bool bProfile = (*Light)->TryGetStringField(TEXT("profile"), Profile);
+		TestEqual(*FString::Printf(TEXT("%s: a light profile only where the catalogue has one"), *Id), Real.Profile != nullptr, bProfile);
+		if (bProfile && Real.Profile)
+		{
+			TestTrue(*FString::Printf(TEXT("%s: its profile is the catalogue's %s"), *Id, *Profile), Real.Profile->GetName().Equals(TEXT("LP_Kit_") + Profile, ESearchCase::IgnoreCase));
 		}
 
 		TestTrue(*FString::Printf(TEXT("%s: %.0f cd, within its class's %.0f"), *Id, Real.Candelas, Limits.MaxCandelas), Real.Candelas <= Limits.MaxCandelas);

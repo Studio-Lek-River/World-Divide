@@ -157,6 +157,17 @@ KIT_FACTIONS = {"neutral": "Neutral", "usa": "USA"}
 KIT_NEUTRAL_VARIANTS = {"MI_Kit_Neutral_Housing": "M_Bld_Surface", "MI_Kit_Neutral_Lens": "M_Kit_Lens"}
 # A kit mesh's LOD1 comes in at a building's switch (docs/art/MODEL_PERFORMANCE.md), cm from the camera.
 KIT_SWITCH_DISTANCE = 26000.0
+# The kit lamps' night look (#440): their light distribution profiles (building_art.LIGHT_PROFILES) as LP_Kit_<profile>
+# in KIT_PROFILE_DIR, their beams (SM_Kit_<Piece>_Beam) and the shared glare halo (SM_Kit_Glare) in KIT_GLOW_DIR on
+# M_Kit_Glow's instances, generated into KIT_GLOW_SOURCE_DIR first. A beam flares by its light's cone a quarter of the
+# way from inner to outer (KIT_BEAM_CONE: the soft edge stays the light's), a Rect's by KIT_RECT_BEAM_SPREAD; a halo is
+# KIT_GLARE_SCALE times its lens's half size.
+KIT_PROFILE_DIR = f"{KIT_DIR}/Profiles"
+KIT_GLOW_DIR = f"{KIT_DIR}/Glow"
+KIT_GLOW_SOURCE_DIR = os.path.join(PROJECT_DIR, "Saved", "Setup", "KitGlow")
+KIT_RECT_BEAM_SPREAD = 30.0
+KIT_BEAM_CONE = 0.25
+KIT_GLARE_SCALE = 1.3
 # River Crossing's village set and the bridge span's damage states (#408), in the #431 art (#432): village.json, merged
 # from Art/Shared/village/final/, gives every mesh its FBX and hand-made LOD1 beside it in VILLAGE_SOURCE_DIR and the
 # recipe of each of its slots. The meshes, the spans' too, go to VILLAGE_MESH_DIR, a DA_Civil_<Type>
@@ -643,14 +654,24 @@ def make_flags():
     return instances, flag_types
 
 
-def kit_light(light, lens):
-    """A kit piece's FRTSKitLight from its catalogue light and the manifest's lens bounds (min, max, cm): turned by its
-    rotation (+X by default), it stands on the face of the lens it shines through, in the middle of it; a Rect is as wide
-    and high as the lens across its Y and Z."""
+def lens_face(light, lens):
+    """The width and height (cm) of the lens a light shines through, across its Y and along its Z once turned."""
     pitch, yaw, roll = light.get("rotation", [0.0, 0.0, 0.0])
     rotation = unreal.Rotator(roll=roll, pitch=pitch, yaw=yaw)
-    forward, right, up = ([v.x, v.y, v.z] for v in (rotation.get_forward_vector(), rotation.get_right_vector(),
-                                                    rotation.get_up_vector()))
+    size = [high - low for low, high in zip(*lens)]
+    right, up = ([v.x, v.y, v.z] for v in (rotation.get_right_vector(), rotation.get_up_vector()))
+    return sum(s * abs(r) for s, r in zip(size, right)), sum(s * abs(u) for s, u in zip(size, up))
+
+
+def kit_light(light, lens, profile=None):
+    """A kit piece's FRTSKitLight from its catalogue light and the manifest's lens bounds (min, max, cm): turned by its
+    rotation (+X by default), it stands on the face of the lens it shines through, in the middle of it; a Rect is as wide
+    and high as the lens across its Y and Z, a Point or Spot's source half its smaller side (#440). profile: its light
+    distribution profile, if any."""
+    pitch, yaw, roll = light.get("rotation", [0.0, 0.0, 0.0])
+    rotation = unreal.Rotator(roll=roll, pitch=pitch, yaw=yaw)
+    forward = rotation.get_forward_vector()
+    forward = [forward.x, forward.y, forward.z]
     centre = [(low + high) / 2.0 for low, high in zip(*lens)]
     size = [high - low for low, high in zip(*lens)]
     axis = max(range(3), key=lambda i: abs(forward[i]))
@@ -666,13 +687,93 @@ def kit_light(light, lens):
                          ("inner_cone_angle", inner), ("outer_cone_angle", outer),
                          ("max_draw_distance", light["max_draw_distance"])):
         value.set_editor_property(key, float(setting))
+    width, height = lens_face(light, lens)
     if light["type"] == "Rect":
-        value.set_editor_property("source_width", sum(s * abs(r) for s, r in zip(size, right)))
-        value.set_editor_property("source_height", sum(s * abs(u) for s, u in zip(size, up)))
+        value.set_editor_property("source_width", width)
+        value.set_editor_property("source_height", height)
+    else:
+        value.set_editor_property("source_radius", min(width, height) / 2.0)
+    value.set_editor_property("profile", profile)
     value.set_editor_property("group", light["group"])
     value.set_editor_property("behaviour", getattr(unreal.RTSKitLightBehaviour, light["behaviour"].upper()))
     value.set_editor_property("priority", getattr(unreal.RTSKitLightPriority, light["priority"].upper()))
     return value
+
+
+def make_kit_glow_parts(masters, kept):
+    """What every kit lamp's night look shares (#440): M_Kit_Glow's instances (building_art.GLOW_INSTANCES), the glare
+    halo SM_Kit_Glare on MI_Kit_Glare, and each light profile as it is first asked for (glow_profile). Adds what it makes
+    to kept."""
+    os.makedirs(KIT_GLOW_SOURCE_DIR, exist_ok=True)
+    parts = {"profiles": {}}
+    for name, scalars in sorted(building_art.GLOW_INSTANCES.items()):
+        parts[name] = plan_now(
+            f"{KIT_MATERIAL_DIR}/{name}",
+            lambda n=name, v=scalars: building_art.build_material_instance(KIT_MATERIAL_DIR, n, masters["M_Kit_Glow"], v, {}),
+            spec_hash([building_art.build_material_instance], KIT_MATERIAL_DIR, name, sorted(scalars.items()),
+                      masters["M_Kit_Glow"]))
+        kept.add(f"{KIT_MATERIAL_DIR}/{name}")
+    source = os.path.join(KIT_GLOW_SOURCE_DIR, "SM_Kit_Glare.glb")
+    building_art.write_glare_glb(source)
+    parts["glare"] = plan_now(
+        f"{KIT_GLOW_DIR}/SM_Kit_Glare",
+        lambda: vehicle_art.import_part(source, KIT_GLOW_DIR, "SM_Kit_Glare", {"Glow": parts["MI_Kit_Glare"]}, 2.0),
+        spec_hash([building_art.write_glare_glb, building_art._write_glb, vehicle_art.import_part], KIT_GLOW_DIR,
+                  parts["MI_Kit_Glare"]))
+    kept.add(f"{KIT_GLOW_DIR}/SM_Kit_Glare")
+    return parts
+
+
+def glow_profile(parts, name, kept):
+    """LP_Kit_<Name>, building_art.LIGHT_PROFILES[name] as a light profile, imported once a run."""
+    if name not in parts["profiles"]:
+        asset = f"LP_Kit_{name.capitalize()}"
+        source = os.path.join(KIT_GLOW_SOURCE_DIR, f"{asset}.ies")
+        building_art.write_ies(source, name)
+        parts["profiles"][name] = plan_now(
+            f"{KIT_PROFILE_DIR}/{asset}",
+            lambda: building_art.import_light_profile(source, KIT_PROFILE_DIR, asset),
+            spec_hash([building_art.import_light_profile], KIT_PROFILE_DIR, asset, file_hash(source)))
+        kept.add(f"{KIT_PROFILE_DIR}/{asset}")
+    return parts["profiles"][name]
+
+
+def make_kit_glow(piece, lens, parts, kept):
+    """A piece's night look (#440) from its catalogue entry: its light's "profile", its "beam" ({"strength", "length"
+    cm}: SM_Kit_<Piece>_Beam, building_art.write_beam_glb, from its lens's face along its light) and its "glare" (the
+    halo's strength). Returns the URTSKitPieceData values; none for what it does not have."""
+    light = piece.get("light")
+    result = {"profile": None, "beam_mesh": None, "beam_strength": 0.0, "glare_mesh": None, "glare_radius": 0.0,
+              "glare_strength": 0.0}
+    if light and "profile" in light:
+        if light["type"] == "Rect":
+            raise RuntimeError(f"kit_catalogue.json: {piece['id']}'s Rect light takes no profile")
+        result["profile"] = glow_profile(parts, light["profile"], kept)
+    beam = piece.get("beam")
+    if beam:
+        if not light or light["type"] not in ("Spot", "Rect"):
+            raise RuntimeError(f"kit_catalogue.json: {piece['id']} has a beam but no Spot or Rect light")
+        width, height = lens_face(light, lens)
+        inner, outer = light.get("cone", [0.0, 0.0])
+        spread = KIT_RECT_BEAM_SPREAD if light["type"] == "Rect" else inner + KIT_BEAM_CONE * (outer - inner)
+        name = f"{piece['mesh']}_Beam"
+        source = os.path.join(KIT_GLOW_SOURCE_DIR, f"{name}.glb")
+        building_art.write_beam_glb(source, light["type"], width, height, beam["length"], spread)
+        result["beam_mesh"] = plan_now(
+            f"{KIT_GLOW_DIR}/{name}",
+            lambda: vehicle_art.import_part(source, KIT_GLOW_DIR, name, {"Glow": parts["MI_Kit_Beam"]}, beam["length"]),
+            spec_hash([building_art.write_beam_glb, building_art._write_glb, vehicle_art.import_part], KIT_GLOW_DIR,
+                      name, file_hash(source), parts["MI_Kit_Beam"]))
+        result["beam_strength"] = float(beam["strength"])
+        kept.add(f"{KIT_GLOW_DIR}/{name}")
+    if "glare" in piece:
+        if not lens:
+            raise RuntimeError(f"kit_catalogue.json: {piece['id']} has a glare but no lens")
+        size = [high - low for low, high in zip(*lens)]
+        result["glare_mesh"] = parts["glare"]
+        result["glare_radius"] = KIT_GLARE_SCALE * max(size) / 2.0
+        result["glare_strength"] = float(piece["glare"])
+    return result
 
 
 def make_kit_finish(piece, masters, kept):
@@ -742,6 +843,7 @@ def make_kit(masters):
         raise RuntimeError(f"kit_manifest.json has {sorted(manifest)}, the catalogue {sorted(p['id'] for p in catalogue)}: "
                            "rerun Tools/Art/kit_blender.py")
     meshes, pieces, kept = {}, {}, set()
+    glow_parts = make_kit_glow_parts(masters, kept)
     for piece in catalogue:
         built = manifest[piece["id"]]
         if built["mesh"] != piece["mesh"] or built["slots"] != piece["slots"]:
@@ -768,6 +870,7 @@ def make_kit(masters):
             raise RuntimeError(f"kit_catalogue.json: {piece['id']}'s wpo_disable_distance is inside M_Flag_Cloth's fade")
 
         lens = built["lens_bounds"]
+        glow = make_kit_glow(piece, lens, glow_parts, kept)
         mount_points = {}
         for name, point in piece["mount_points"].items():
             pitch, yaw, roll = point["rotation"]
@@ -783,7 +886,12 @@ def make_kit(masters):
             "class_": getattr(unreal.RTSKitClass, piece["class"]),
             "faction": piece["faction"],
             "has_light": "light" in piece,
-            "light": kit_light(piece["light"], lens) if "light" in piece else unreal.RTSKitLight(),
+            "light": kit_light(piece["light"], lens, glow["profile"]) if "light" in piece else unreal.RTSKitLight(),
+            "beam_mesh": glow["beam_mesh"],
+            "beam_strength": glow["beam_strength"],
+            "glare_mesh": glow["glare_mesh"],
+            "glare_radius": glow["glare_radius"],
+            "glare_strength": glow["glare_strength"],
             "lens_bounds": lens_bounds,
             "emergency_default": piece["emergency_default"],
             "fault_response": getattr(unreal.RTSKitFaultResponse, piece["fault_response"].upper()),
@@ -794,7 +902,7 @@ def make_kit(masters):
         })
         kept |= {f"{directory}/{piece['mesh']}", f"{directory}/{data}"}
 
-    # A piece the catalogue dropped: its mesh, data and finish go, wherever its category was.
+    # A piece the catalogue dropped: its mesh, data, finish, beam and unused profiles go, wherever its category was.
     kept |= {f"{KIT_TEXTURE_DIR}/{name}" for name in KIT_WHITE_TEXTURES}
     for object_path_name in assets.list_assets(KIT_DIR, recursive=True, include_folder=False):
         path = object_path_name.split(".", 1)[0]
@@ -802,7 +910,7 @@ def make_kit(masters):
         finish = (path.startswith(f"{KIT_TEXTURE_DIR}/T_Kit_")
                   or (path.startswith(f"{KIT_MATERIAL_DIR}/MI_Kit_") and name.rsplit("_", 1)[-1] in KIT_FINISH_MASTERS
                       and name not in instances))
-        if (name.startswith(("SM_Kit_", "DA_Kit_")) or finish) and path not in kept:
+        if (name.startswith(("SM_Kit_", "DA_Kit_", "LP_Kit_")) or finish) and path not in kept:
             if blocked_by(path, ".uasset") or read_only:
                 continue
             stale.add(path)
@@ -860,6 +968,12 @@ def make_building_masters():
                   building_art.FLAT_NORMAL, sorted(map(object_path, defaults)),
                   (building_art.LENS_LEVEL, building_art.LENS_GROUP, building_art.LENS_FAULT, building_art.LENS_FLASH,
                    building_art.LENS_COLOR)))
+    masters["M_Kit_Glow"] = plan_now(
+        f"{KIT_MATERIAL_DIR}/M_Kit_Glow", lambda: building_art.build_glow_material(KIT_MATERIAL_DIR, "M_Kit_Glow"),
+        spec_hash([building_art.build_glow_material, building_art._material, building_art._scalar,
+                   building_art._multiply, vehicle_art._custom, vehicle_art._mask], KIT_MATERIAL_DIR,
+                  building_art.GLOW_HLSL, sorted(building_art.GLOW_INSTANCES["MI_Kit_Beam"].items()),
+                  (building_art.GLOW_LEVEL, building_art.GLOW_FAULT, building_art.GLOW_FLASH, building_art.GLOW_COLOR)))
     masters["M_Kit_Housing"] = plan_now(
         f"{KIT_MATERIAL_DIR}/M_Kit_Housing",
         lambda: building_art.build_kit_housing_material(KIT_MATERIAL_DIR, "M_Kit_Housing", *defaults),

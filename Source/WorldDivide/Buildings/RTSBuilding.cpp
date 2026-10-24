@@ -26,6 +26,7 @@
 #include "Data/RTSUnitData.h"
 #include "Economy/RTSHarvesterComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/TextureLightProfile.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "NavAreas/NavArea_Null.h"
@@ -932,13 +933,20 @@ ULocalLightComponent* ARTSBuilding::CreateLight(const FRTSBuildingLight& Data)
 		break;
 	}
 	// It lights what it faces directly: no shadows, no GI, fog or translucency, as the vehicles' lights (#223). The lamp's
-	// own glow is its material's.
+	// own glow is its material's, its beam in the air M_Kit_Glow's (#440: faked, not volumetric fog).
 	Light->SetMobility(EComponentMobility::Movable);
 	Light->SetCastShadows(false);
 	Light->bAffectGlobalIllumination = false;
 	Light->bAffectTranslucentLighting = false;
 	Light->IndirectLightingIntensity = 0.f;
 	Light->VolumetricScatteringIntensity = 0.f;
+	// A hot centre and a soft edge (#440): its profile, normalised so its candelas stay its brightness, and a source of size.
+	Light->IESTexture = Data.Profile;
+	Light->bUseIESBrightness = false;
+	if (UPointLightComponent* Point = Cast<UPointLightComponent>(Light))
+	{
+		Point->SetSourceRadius(Data.SourceRadius);
+	}
 	Light->SetIntensityUnits(ELightUnits::Candelas);
 	Light->SetIntensity(Data.Candelas);
 	Light->SetLightColor(Data.Color);
@@ -953,6 +961,64 @@ ULocalLightComponent* ARTSBuilding::CreateLight(const FRTSBuildingLight& Data)
 	AddInstanceComponent(Light);
 	Light->RegisterComponent();
 	return Light;
+}
+
+void ARTSBuilding::ApplyKitGlows(const FRTSKitExpansion& Kit)
+{
+	for (UInstancedStaticMeshComponent* Glow : GlowComponents)
+	{
+		if (Glow)
+		{
+			Glow->DestroyComponent();
+		}
+	}
+	GlowComponents.Reset();
+	KitGlows.Reset();
+	GlowIsBeam.Reset();
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	// One component per mesh: every beam of a piece, and every halo, draw together.
+	for (const FRTSKitGlow& Glow : Kit.Glows)
+	{
+		if (!Glow.Mesh || !KitParts.IsValidIndex(Glow.Part))
+		{
+			continue;
+		}
+		int32 Component = GlowComponents.IndexOfByPredicate([&Glow](const UInstancedStaticMeshComponent* C) { return C && C->GetStaticMesh() == Glow.Mesh; });
+		if (Component == INDEX_NONE)
+		{
+			UInstancedStaticMeshComponent* Instanced = NewObject<UInstancedStaticMeshComponent>(this, NAME_None, RF_Transient);
+			Instanced->SetNumCustomDataFloats(RTSKitGlowData::Floats);
+			Instanced->SetStaticMesh(Glow.Mesh);
+			Instanced->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Instanced->SetGenerateOverlapEvents(false);
+			Instanced->SetCanEverAffectNavigation(false);
+			Instanced->SetCastShadow(false);
+			Instanced->SetupAttachment(Mesh);
+			Instanced->SetVisibility(false);
+			AddInstanceComponent(Instanced);
+			Instanced->RegisterComponent();
+			Component = GlowComponents.Add(Instanced);
+			GlowIsBeam.Add(Glow.bBeam);
+		}
+		const int32 Instance = GlowComponents[Component]->AddInstance(Glow.Transform);
+		KitGlows.Add({ Glow.Part, Component, Instance, Glow.Color });
+	}
+	ShowKitGlows();
+}
+
+void ARTSBuilding::ShowKitGlows()
+{
+	const bool bBeams = URTSBuildingLightSubsystem::AreKitBeamsOn();
+	for (int32 Index = 0; Index < GlowComponents.Num(); ++Index)
+	{
+		if (GlowComponents[Index])
+		{
+			GlowComponents[Index]->SetVisibility(bLightsNight && (bBeams || !GlowIsBeam[Index]));
+		}
+	}
 }
 
 FName ARTSBuilding::GetLightGroupTag(FName Group)
@@ -997,6 +1063,7 @@ void ARTSBuilding::ApplyLights(const FRTSKitExpansion& Kit)
 			KitLights.Add({ Part, LightComponents.Add(Light), Data.Candelas, Data.Color, Data.Rotation });
 		}
 	}
+	ApplyKitGlows(Kit);
 	ApplyKitLightLooks();
 	// Every building with parts or lights: the subsystem raises their glow in the dark and shows the nearest ones' lights.
 	if (URTSBuildingLightSubsystem* Lights = GetWorld() ? GetWorld()->GetSubsystem<URTSBuildingLightSubsystem>() : nullptr)
@@ -1062,6 +1129,7 @@ void ARTSBuilding::SetLightsNight(bool bNight)
 	{
 		bLightsNight = bNight;
 		ApplyLightData();
+		ShowKitGlows();
 	}
 }
 
@@ -1145,6 +1213,32 @@ void ARTSBuilding::ApplyKitLightLooks()
 		const FRTSKitLook& Look = KitLooks[Kit.Part];
 		Light->SetIntensity(Kit.Candelas * Look.Level);
 		Light->SetLightColor(Kit.Color * (Look.bBattery ? RTSBuildingState::BatteryTint : FLinearColor::White));
+	}
+	// The beams and halos glow with their part's look, flicker and flash included (M_Kit_Glow repeats the lens's sums).
+	for (const FKitGlow& Glow : KitGlows)
+	{
+		UInstancedStaticMeshComponent* Component = GlowComponents[Glow.Component];
+		if (!Component || !KitLooks.IsValidIndex(Glow.Part))
+		{
+			continue;
+		}
+		const FRTSKitLook& Look = KitLooks[Glow.Part];
+		const FLinearColor Color = Glow.Color * (Look.bBattery ? RTSBuildingState::BatteryTint : FLinearColor::White);
+		float Values[RTSKitGlowData::Floats] = {};
+		Values[RTSKitGlowData::Level] = Look.Level;
+		Values[RTSKitGlowData::Fault] = Look.Fault;
+		Values[RTSKitGlowData::Flash] = Look.Flash;
+		Values[RTSKitGlowData::Color + 0] = Color.R;
+		Values[RTSKitGlowData::Color + 1] = Color.G;
+		Values[RTSKitGlowData::Color + 2] = Color.B;
+		Component->SetCustomData(Glow.Instance, Values);
+	}
+	for (UInstancedStaticMeshComponent* Component : GlowComponents)
+	{
+		if (Component)
+		{
+			Component->MarkRenderInstancesDirty();
+		}
 	}
 }
 

@@ -6,6 +6,7 @@
 #include "RTSKitPieceData.generated.h"
 
 class UStaticMesh;
+class UTextureLightProfile;
 
 /** A kit piece's size class (docs/art/BUILDING_KIT.md): its triangle budget and the limits of its light. */
 UENUM(BlueprintType)
@@ -69,6 +70,14 @@ struct FRTSKitLight
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
 	float SourceHeight = 0.f;
 
+	/** Its light distribution profile (IES, #440), from the catalogue's "profile"; none lights evenly across its cone. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
+	TObjectPtr<UTextureLightProfile> Profile;
+
+	/** Point and Spot: the glowing source's radius in cm, half its lens's smaller side (#440). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
+	float SourceRadius = 0.f;
+
 	/** Windows, Fixtures, Accents, GarageLamps, Emergency or Warning. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
 	FName Group;
@@ -115,6 +124,26 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit")
 	FRTSKitLight Light;
+
+	/**
+	 * The soft beam its light throws through the air at night (#440, the catalogue's "beam"), in the light's frame (origin at
+	 * the light, X the way it shines), drawn additive by M_Kit_Glow; none for a piece without one. BeamStrength scales its glow.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit")
+	TObjectPtr<UStaticMesh> BeamMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
+	float BeamStrength = 0.f;
+
+	/** The glare halo round its lit lens at night (#440): a unit sphere scaled to GlareRadius cm at the lens's middle. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit")
+	TObjectPtr<UStaticMesh> GlareMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
+	float GlareRadius = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
+	float GlareStrength = 0.f;
 
 	/** The measured bounds of the Lens faces in the fixture frame; invalid for a piece without a lens. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit")
@@ -168,6 +197,20 @@ struct FRTSKitPart
 	bool IsWarning() const;
 };
 
+/** A mounted piece's beam or glare halo (#440), drawn instanced and additive, lit with its part's look. */
+struct FRTSKitGlow
+{
+	/** Its part, in FRTSKitExpansion::PartInfo. */
+	int32 Part = INDEX_NONE;
+	UStaticMesh* Mesh = nullptr;
+	/** In the building's frame. */
+	FTransform Transform;
+	/** Its glow at full: its light's colour times the strength. */
+	FLinearColor Color = FLinearColor::White;
+	/** A beam, which rts.Fx.KitBeams can turn off; a glare halo otherwise. */
+	bool bBeam = false;
+};
+
 /** A building's mounts (URTSBuildingData::Mounts) as what the building draws: RTSKit::Expand. */
 struct FRTSKitExpansion
 {
@@ -179,6 +222,9 @@ struct FRTSKitExpansion
 
 	/** The real lights of the mounted pieces that have one, at their lens, Fixture the mount's name. */
 	TArray<FRTSBuildingLight> Lights;
+
+	/** The pieces' beams and glare halos, in parts' order. */
+	TArray<FRTSKitGlow> Glows;
 
 	/** RTSKitLensData::Floats per part, in Parts' order: its lens's starting state. */
 	TArray<float> InstanceData;

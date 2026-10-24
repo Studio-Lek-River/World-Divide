@@ -111,7 +111,8 @@ animates every track at any distance, and every row counts the tracks' phase upd
 slots and materials. @ExactOcclusion, @NoOcclusion and @HZB (#214) change the occlusion queries, @Occluded roofs most of the
 grid and @Close takes the camera to the RTS close zoom, @Near (#149) to 60 m and @Far to its farthest, 450 m; -Map L_TestMap plays L_TestMap instead, for the sets with its viewpoints
 (@TestMapOpen, @TestMapBase, @TestMapWall; RTSBenchScene). @NaniteHQ and @LodHQ (#349) stand four HQs beside the grid
-(@NaniteHQ the DA_BenchHQ_Nanite setup -BenchHQ builds, @LodHQ the production DA_TestHeadquarters at LOD0 + LOD1, #358),
+(@NaniteHQ the DA_BenchHQ_Nanite setup -BenchHQ builds, @LodHQ the production DA_TestHeadquarters at LOD0 + LOD1, #358;
+@KitHQ the kit lighting showcase DA_TestKitLighting, its lamps' lights and beams, #440),
 against the same set without them, and add a table
 of their meshes, triangles and memory, and the meshes' disk size; @VSM turns virtual shadow maps on while the set runs (the
 project draws conventional shadow maps otherwise).
