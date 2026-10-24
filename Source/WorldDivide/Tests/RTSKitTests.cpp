@@ -272,8 +272,10 @@ bool FRTSKitArtTest::RunTest(const FString& Parameters)
 		(*Light)->TryGetNumberField(TEXT("offset"), Offset);
 		TestTrue(*FString::Printf(TEXT("%s: its light stands in its Lens"), *Id),
 			Data->LensBounds.IsValid && Data->LensBounds.ExpandBy(0.5).IsInside(Real.Location - Real.Rotation.Vector() * Offset));
+		// A turning beacon's light stands on its axis, which it turns about (#459).
 		TestTrue(*FString::Printf(TEXT("%s: its light shines out of its Lens"), *Id),
-			Data->LensBounds.IsValid && FVector::DotProduct(Real.Rotation.Vector(), Real.Location - Data->LensBounds.GetCenter()) > 0.0);
+			Data->LensBounds.IsValid && (Real.Behaviour == ERTSKitLightBehaviour::Rotate
+				|| FVector::DotProduct(Real.Rotation.Vector(), Real.Location - Data->LensBounds.GetCenter()) > 0.0));
 	}
 
 	for (const TPair<FString, TSharedPtr<FJsonValue>>& Entry : Built->Values)

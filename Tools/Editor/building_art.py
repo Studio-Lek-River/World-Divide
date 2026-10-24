@@ -101,6 +101,8 @@ LIGHT_NIGHT_INDEX = 12
 # included, so a battery lens stays lit on low power: the lens no longer reads Operational. RTSKit::IsLensLit repeats the
 # fault and flash sums for the real lights; change both together.
 LENS_LEVEL, LENS_GROUP, LENS_FAULT, LENS_FLASH, LENS_COLOR = 0, 1, 2, 3, 4
+# A turning beacon's switch times (#459, SPIN_HLSL), which its SWEEP reads.
+LENS_SPIN_ON, LENS_SPIN_OFF = 7, 8
 # A lens with Blink 1 (the mast LEDs, #393) also blinks on its own, LENS_BLINK, its rate jittered and its phase from
 # where it stands; with Alternate 1 its lens at U >= 0.5 (13's second dome) blinks half a cycle later. Only lenses
 # without a real light blink, so RTSKit::IsLensLit has no blink to repeat.
@@ -128,15 +130,34 @@ return P * lerp(Tint, HotTint, hot);
 # The lens's blink (the obstruction beacon's, #351): BlinkRate a second, on for BlinkDuty of it and fading over its last
 # BlinkFade, every lens up to BlinkJitter faster or slower.
 LENS_BLINK = {"BlinkRate": 1.0, "BlinkDuty": 0.18, "BlinkFade": 0.06, "BlinkJitter": 0.08}
+# A turning beacon's spin (#459, RTSKit::GetSpin, whose constants these are; change both together): from its switch times
+# SpinOn and SpinOff (game seconds, RTSKitLensData; off while SpinOff >= SpinOn) at Time, its whole turns since it came on
+# at Rate turns a second, spun up over SpinUp seconds and coasting to a stop over Coast once off, and its lamp, glowing up
+# over Warm and fading over Cool. Both 0, a beacon never switched on: still and dark.
+SPIN = {"SpinUp": 0.6, "Coast": 1.2, "Warm": 0.2, "Cool": 0.35}
+SPIN_HLSL = "".join(f"const float {key} = {value};\n" for key, value in SPIN.items()) + """
+bool spunDown = SpinOff >= SpinOn;
+float since = max((spunDown ? min(Time, SpinOff) : Time) - SpinOn, 0.0);
+float up = min(since, SpinUp);
+float turns = Rate * (0.5 * up * up / SpinUp + since - up);
+float lamp = saturate(since / Warm);
+if (spunDown)
+{
+    float coast = clamp(Time - SpinOff, 0.0, Coast);
+    turns += Rate * up / SpinUp * (coast - 0.5 * coast * coast / Coast);
+    lamp *= saturate(1.0 - (Time - SpinOff) / Cool);
+}
+"""
 # Sweep (#393, 08's rotating beacon): a static switch, off by default, that turns the masked part of the piece about its
-# local Z axis at SweepRate turns a second, the turning light's 1.5 (ARTSBuilding::UpdateKitLights), by world position
-# offset. P is the local position (cm), Mask 1 where it turns.
+# local Z axis with its spin (SPIN_HLSL, SweepRate turns a second, the turning light's RTSKit::RotateRate), by world
+# position offset, and fades its lens with the spin's lamp. P is the local position (cm), Mask 1 where it turns.
 SWEEP = "Sweep"
-SWEEP_HLSL = """
-float a = 6.2831853 * frac(Time * Rate) * Mask;
+SWEEP_HLSL = SPIN_HLSL + """
+float a = 6.2831853 * frac(turns) * Mask;
 float2 r = float2(P.x * cos(a) - P.y * sin(a), P.x * sin(a) + P.y * cos(a));
 return float3(r - P.xy, 0.0);
 """
+SWEEP_LAMP_HLSL = SPIN_HLSL + "return lamp;\n"
 # Glass (#393, 08's dome): a static switch, off by default, that lets a lens's thin shell (its LightProfile's green 1) show
 # what is behind it: dithered opacity 1 - Transmission x (1 - Fresnel), its base colour times GlassDarken. Its instance
 # draws masked and two-sided (build_kit_finish_instance).
@@ -509,13 +530,16 @@ def _kit_surface(material, white, white_masks):
 
 def _sweep(material, mask, mask_pin):
     """The SWEEP static switch (#393): on, world position offset turns the vertices where mask is 1 about the piece's
-    local Z axis (SWEEP_HLSL, SweepRate turns a second); off, no offset."""
+    local Z axis with the instance's spin (SWEEP_HLSL, SweepRate turns a second, #459); off, no offset."""
     position = _node(material, unreal.MaterialExpressionLocalPosition, -1900, 1500)
-    turn = vehicle_art._custom(material, -1500, 1500, SWEEP_HLSL, ["P", "Mask", "Time", "Rate"])
+    turn = vehicle_art._custom(material, -1500, 1500, SWEEP_HLSL, ["P", "Mask", "Time", "Rate", "SpinOn", "SpinOff"])
     _connect(position, "", turn, "P")
     _connect(mask, mask_pin, turn, "Mask")
     _connect(_node(material, unreal.MaterialExpressionTime, -1900, 1700), "", turn, "Time")
     _connect(_scalar(material, -1900, 1800, "SweepRate", 1.5), "", turn, "Rate")
+    for index, (pin, data) in enumerate((("SpinOn", LENS_SPIN_ON), ("SpinOff", LENS_SPIN_OFF))):
+        _connect(_node(material, unreal.MaterialExpressionPerInstanceCustomData, -1900, 1900 + 100 * index,
+                       data_index=data), "", turn, pin)
     world = vehicle_art._transform(material, -1200, 1500, unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL,
                                    unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
     _connect(turn, "", world, "")
@@ -620,7 +644,20 @@ def build_lens_material(directory, name, white, white_masks):
     _connect(_vector(material, -400, 950, "EmissionTint", (1.0, 1.0, 1.0, 1.0)), "RGB", shape, "Tint")
     _connect(_vector(material, -400, 1100, "HotCoreTint", (1.0, 1.0, 1.0, 1.0)), "RGB", shape, "HotTint")
     _connect(_scalar(material, -400, 1250, "HotCore", 0.0), "", shape, "HotCore")
-    _output(material, _multiply(material, 0, 400, glow, "", shape, ""), "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    # SWEEP: the lens glows up and fades with its spin's lamp (#459).
+    lamp = vehicle_art._custom(material, -150, 1400, SWEEP_LAMP_HLSL, ["Time", "Rate", "SpinOn", "SpinOff"],
+                               output=unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    _connect(pins["Time"], "", lamp, "Time")
+    _connect(_scalar(material, -400, 1400, "SweepRate", 1.5), "", lamp, "Rate")
+    for index, (pin, data) in enumerate((("SpinOn", LENS_SPIN_ON), ("SpinOff", LENS_SPIN_OFF))):
+        _connect(_node(material, unreal.MaterialExpressionPerInstanceCustomData, -400, 1500 + 100 * index,
+                       data_index=data), "", lamp, pin)
+    fade = _node(material, unreal.MaterialExpressionStaticSwitchParameter, 100, 1400, parameter_name=SWEEP,
+                 default_value=False)
+    _connect(lamp, "", fade, "True")
+    _connect(_constant(material, -150, 1600, 1.0), "", fade, "False")
+    emission = _multiply(material, 0, 400, glow, "", shape, "")
+    _output(material, _multiply(material, 250, 400, emission, "", fade, ""), "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)
 
     # GLASS: the shell darkened in base colour and dithered through, 1 - Transmission x (1 - Fresnel), where it is shell.
     fresnel = _node(material, unreal.MaterialExpressionFresnel, -1200, -1300, exponent=5.0, base_reflect_fraction=0.04)
@@ -663,6 +700,8 @@ def build_lens_material(directory, name, white, white_masks):
 # M_Kit_Glow's per-instance custom data (RTSKitGlowData, #440): its part's level, fault and flash phases (as the lens's)
 # and its colour at full, RGB.
 GLOW_LEVEL, GLOW_FAULT, GLOW_FLASH, GLOW_COLOR = 0, 1, 2, 3
+# A turning beacon's (#459): its turns a second (0 for every other glow) and its part's switch times, SPIN_HLSL's.
+GLOW_TURN, GLOW_SPIN_ON, GLOW_SPIN_OFF = 6, 7, 8
 # A kit beam or glare halo (#440): lit with its lens (LENS_HLSL's fault and flash). A halo (and a Rect's beam, Cone.x < 0)
 # is brightest where its surface faces the camera (|N.V|^EdgePower, so its silhouette fades out), a beam fading along its
 # length U from the lens, in over StartFade and out as (1 - U)^AlongPower. A round beam (#458) is one solid body of light
@@ -671,9 +710,23 @@ GLOW_LEVEL, GLOW_FAULT, GLOW_FLASH, GLOW_COLOR = 0, 1, 2, 3
 # samples), up to the far wall, the cone's ends or whatever stands in the way (SceneZ), each sample fading along the beam
 # as a halo's U and out from its axis as (1 - r^2)^EdgePower, over the cone's width there: thick through the middle,
 # nothing at the edge, so the mesh's facets never show. The far wall draws nothing; inside the cone the near one does.
-GLOW_HLSL = """
+# A turning beacon's glow (Turn > 0, #459) turns about its instance's Z axis with its spin (GLOW_TURN_HLSL moves the
+# mesh; Pos is its place before that, and the camera turns back into it) and fades with its lamp; its halo flares as the
+# beam's way round, its instance's +X turned, faces the camera across the ground: FaceFloor of its glow turned away,
+# FaceFloor + FaceGain facing, narrowing by FacePower.
+GLOW_HLSL = SPIN_HLSL.replace("Rate", "Turn") + """
 float fault = Fault > 0.0 ? step(0.35, frac(Time * 2.3 + Fault + 0.5 * sin(Time * 17.0 + Fault * 40.0))) : 1.0;
 float flash = Flash > 0.0 ? step(0.5, frac(Time + Flash)) : 1.0;
+float turn = 6.2831853 * frac(turns);
+float2 way = float2(cos(turn), sin(turn));
+if (Turn > 0.0)
+{
+	Cam = float3(way.x * Cam.x + way.y * Cam.y, way.x * Cam.y - way.y * Cam.x, Cam.z);
+}
+else
+{
+	lamp = 1.0;
+}
 float glow;
 if (Beam > 0.5 && Cone.x >= 0.0)
 {
@@ -720,15 +773,29 @@ else
 {
 	float edge = pow(saturate(abs(dot(normalize(N), normalize(V)))), EdgePower);
 	glow = edge * lerp(1.0, pow(saturate(1.0 - U), AlongPower) * saturate(U / max(StartFade, 0.001)), Beam) * Intensity;
+	if (Turn > 0.0 && Beam < 0.5)
+	{
+		// Cam is already turned back: the beam's way is +X there.
+		float facing = saturate(normalize(Cam.xy + float2(1e-4, 0.0)).x);
+		glow *= FaceFloor + FaceGain * pow(facing, FacePower);
+	}
 }
-return Color * Level * fault * flash * glow;
+return Color * Level * fault * flash * lamp * glow;
+"""
+# The turning beacon's beam turned about its instance's Z axis with its spin (#459), as SWEEP_HLSL turns its mirror; its
+# halo stays, round about that axis, and its normals with it.
+GLOW_TURN_HLSL = SPIN_HLSL.replace("Rate", "Turn") + """
+if (Turn <= 0.0 || Beam < 0.5) return float3(0.0, 0.0, 0.0);
+float a = 6.2831853 * frac(turns);
+float2 r = float2(P.x * cos(a) - P.y * sin(a), P.x * sin(a) + P.y * cos(a));
+return float3(r - P.xy, 0.0);
 """
 # MI_Kit_Beam and MI_Kit_Glare, M_Kit_Glow's two instances: scalars by name.
 GLOW_INSTANCES = {
     "MI_Kit_Beam": {"Beam": 1.0, "EdgePower": 1.5, "AlongPower": 1.6, "StartFade": 0.04, "Intensity": 0.08,
-                    "FadeDistance": 20.0},
+                    "FadeDistance": 20.0, "FaceFloor": 0.3, "FaceGain": 6.0, "FacePower": 8.0},
     "MI_Kit_Glare": {"Beam": 0.0, "EdgePower": 3.0, "AlongPower": 1.0, "StartFade": 0.0, "Intensity": 0.04,
-                     "FadeDistance": 25.0},
+                     "FadeDistance": 25.0, "FaceFloor": 0.3, "FaceGain": 6.0, "FacePower": 8.0},
 }
 
 
@@ -745,6 +812,8 @@ def build_glow_material(directory, name):
     for index, (pin, data) in enumerate((("Level", GLOW_LEVEL), ("Fault", GLOW_FAULT), ("Flash", GLOW_FLASH))):
         pins[pin] = _node(material, unreal.MaterialExpressionPerInstanceCustomData, -900, 120 * index, data_index=data)
     pins["Color"] = _node(material, unreal.MaterialExpressionPerInstanceCustomData3Vector, -900, 400, data_index=GLOW_COLOR)
+    for index, (pin, data) in enumerate((("Turn", GLOW_TURN), ("SpinOn", GLOW_SPIN_ON), ("SpinOff", GLOW_SPIN_OFF))):
+        pins[pin] = _node(material, unreal.MaterialExpressionPerInstanceCustomData, -1300, 120 * index, data_index=data)
     pins["Time"] = _node(material, unreal.MaterialExpressionTime, -900, 520)
     pins["N"] = _node(material, unreal.MaterialExpressionVertexNormalWS, -900, 620)
     pins["V"] = _node(material, unreal.MaterialExpressionCameraVectorWS, -900, 720)
@@ -757,18 +826,29 @@ def build_glow_material(directory, name):
                    transform_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_INSTANCE)
     _connect(_node(material, unreal.MaterialExpressionCameraPositionWS, -1100, 1500), "", camera, "")
     pins["Cam"] = camera
-    pins["Pos"] = _node(material, unreal.MaterialExpressionLocalPosition, -900, 1600)
+    # Before GLOW_TURN_HLSL's offset: a turning beam's cone stays where its mesh was made.
+    pins["Pos"] = _node(material, unreal.MaterialExpressionLocalPosition, -900, 1600,
+                        included_offsets=unreal.PositionIncludedOffsets.EXCLUDE_OFFSETS)
     pins["Cone"] = _node(material, unreal.MaterialExpressionTextureCoordinate, -900, 1700, coordinate_index=1)
     pins["Length"] = vehicle_art._mask(material, -900, 1800, _node(material, unreal.MaterialExpressionTextureCoordinate,
                                                                   -1100, 1800, coordinate_index=2), "r")
     pins["SceneZ"] = _node(material, unreal.MaterialExpressionSceneDepth, -900, 1900)
     pins["PixelZ"] = _node(material, unreal.MaterialExpressionPixelDepth, -900, 2000)
     defaults = GLOW_INSTANCES["MI_Kit_Beam"]
-    for index, key in enumerate(("Beam", "EdgePower", "AlongPower", "StartFade", "Intensity")):
-        pins[key] = _scalar(material, -900, 950 + 100 * index, key, defaults[key])
+    for index, key in enumerate(("Beam", "EdgePower", "AlongPower", "StartFade", "Intensity", "FaceFloor", "FaceGain",
+                                 "FacePower")):
+        pins[key] = _scalar(material, -1300, 950 + 100 * index, key, defaults[key])
     glow = vehicle_art._custom(material, -400, 400, GLOW_HLSL, list(pins))
     for pin, node in pins.items():
         _connect(node, "", glow, pin)
+    turn = vehicle_art._custom(material, -400, 2200, GLOW_TURN_HLSL, ["P", "Time", "Turn", "SpinOn", "SpinOff", "Beam"])
+    _connect(_node(material, unreal.MaterialExpressionLocalPosition, -900, 2200), "", turn, "P")
+    for pin in ("Time", "Turn", "SpinOn", "SpinOff", "Beam"):
+        _connect(pins[pin], "", turn, pin)
+    world = vehicle_art._transform(material, -150, 2200, unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL,
+                                   unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    _connect(turn, "", world, "")
+    _output(material, world, "", unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
     fade = _node(material, unreal.MaterialExpressionDepthFade, -400, 800)
     _connect(_scalar(material, -650, 800, "FadeDistance", defaults["FadeDistance"]), "", fade, "FadeDistance")
     _output(material, _multiply(material, -100, 500, glow, "", fade, ""), "", unreal.MaterialProperty.MP_EMISSIVE_COLOR)

@@ -45,6 +45,25 @@ bool RTSKit::IsLensLit(float Fault, float Flash, double Time)
 	return Flash <= 0.f || FMath::Frac(Time + Flash) >= 0.5;
 }
 
+RTSKit::FSpin RTSKit::GetSpin(float On, float Off, double Time)
+{
+	// SPIN_HLSL: spin-up at constant acceleration over SpinUpSeconds, then RotateRate; once off, the speed it had falls to
+	// nothing over CoastSeconds.
+	const bool bOff = Off >= On;
+	const double Since = FMath::Max((bOff ? FMath::Min(Time, static_cast<double>(Off)) : Time) - On, 0.0);
+	const double Up = FMath::Min(Since, static_cast<double>(SpinUpSeconds));
+	FSpin Spin;
+	Spin.Turns = RotateRate * (0.5 * Up * Up / SpinUpSeconds + Since - Up);
+	Spin.Lamp = FMath::Clamp(static_cast<float>(Since / WarmSeconds), 0.f, 1.f);
+	if (bOff)
+	{
+		const double Coast = FMath::Clamp(Time - Off, 0.0, static_cast<double>(CoastSeconds));
+		Spin.Turns += RotateRate * Up / SpinUpSeconds * (Coast - 0.5 * Coast * Coast / CoastSeconds);
+		Spin.Lamp *= FMath::Clamp(1.f - static_cast<float>((Time - Off) / CoolSeconds), 0.f, 1.f);
+	}
+	return Spin;
+}
+
 bool RTSKit::GetMountFrame(const URTSBuildingData& Data, const FRTSKitMount& Mount, FTransform& OutFrame, FString& OutError)
 {
 	if (!Mount.Piece || !Mount.Piece->Mesh)
@@ -160,8 +179,9 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 		if (Piece.GlareMesh && Piece.GlareStrength > 0.f && Piece.LensBounds.IsValid)
 		{
 			// A lamp that shines one way hangs its halo half out of its lens along its light, clear of the housing round the
-			// lens (#454); the others' halo stands in their lens's middle.
-			const bool bAimed = Piece.bHasLight && Piece.Light.Type != ERTSBuildingLightType::Point;
+			// lens (#454); the others' halo stands in their lens's middle, a turning beacon's too (#459): its beam turns round it.
+			const bool bAimed = Piece.bHasLight && Piece.Light.Type != ERTSBuildingLightType::Point
+				&& Piece.Light.Behaviour != ERTSKitLightBehaviour::Rotate;
 			const FVector Centre = bAimed ? Piece.Light.Location + Piece.Light.Rotation.Vector() * (0.5f * Piece.GlareRadius)
 				: Piece.LensBounds.GetCenter();
 			// A tube's halo stretches along its lens's longest side (#456).

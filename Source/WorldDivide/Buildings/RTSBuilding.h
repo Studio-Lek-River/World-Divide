@@ -123,7 +123,7 @@ public:
 
 	/**
 	 * URTSBuildingLightSubsystem, each frame this building's lights are shown: switches each kit light with its lens's flash and
-	 * fault phase at Time (game seconds), turns the Rotate ones, and keeps out those beyond their MaxDrawDistance from the
+	 * fault phase at Time (game seconds), turns and fades the Rotate ones with their spin (RTSKit::GetSpin, #459), and keeps out those beyond their MaxDrawDistance from the
 	 * nearest of Cameras (or Override), the Secondary ones unless bSecondary, and every one past Budget, which it counts down.
 	 */
 	void UpdateKitLights(double Time, TConstArrayView<FVector> Cameras, const TOptional<FVector>& Override, bool bSecondary, int32& Budget);
@@ -350,6 +350,21 @@ private:
 	TArray<FKitLight> KitLights;
 	TArray<FRTSKitPart> KitParts;
 	TArray<FRTSKitLook> KitLooks;
+
+	/**
+	 * A turning beacon's switch (#459), one per KitParts, 0 and 0 for the rest: the game seconds it last came on and went off
+	 * (RTSKit::GetSpin, RTSKitLensData::SpinOn) and its look's level when last on, which it keeps while it coasts down.
+	 */
+	struct FKitSpin
+	{
+		float On = 0.f;
+		float Off = 0.f;
+		float Level = 0.f;
+	};
+	TArray<FKitSpin> KitSpins;
+
+	/** Part's look's level; a turning beacon's level when last on, as its lamp fades by its spin (KitSpins). */
+	float GetKitLevel(int32 Part) const;
 
 	/** The kit pieces' beams and glare halos (FRTSKitExpansion::Glows), one instanced component per mesh, shown at night (#440). */
 	UPROPERTY(Transient)

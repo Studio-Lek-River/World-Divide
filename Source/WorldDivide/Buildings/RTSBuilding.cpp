@@ -722,6 +722,7 @@ void ARTSBuilding::ApplyParts(const FRTSKitExpansion& Kit)
 	PartIndex.Reset();
 	KitParts = Kit.PartInfo;
 	KitLooks.Init(FRTSKitLook(), KitParts.Num());
+	KitSpins.Init(FKitSpin(), KitParts.Num());
 
 	// The flag the building flies: its cloth part takes the flag's material and is as wide as its height times the flag's
 	// aspect (#351).
@@ -1219,6 +1220,28 @@ void ARTSBuilding::SetKitLooks(TConstArrayView<FRTSKitLook> Looks)
 		return;
 	}
 	KitLooks = Looks;
+	// A turning beacon switched on or off spins up or coasts down from now, its lamp glowing up or fading (#459).
+	const float Now = GetWorld() ? static_cast<float>(GetWorld()->GetTimeSeconds()) : 0.f;
+	for (int32 Index = 0; Index < KitParts.Num(); ++Index)
+	{
+		FKitSpin& Spin = KitSpins[Index];
+		const bool bOn = KitLooks[Index].Level > 0.f;
+		if (KitParts[Index].Behaviour != ERTSKitLightBehaviour::Rotate || bOn == (Spin.On > Spin.Off))
+		{
+			Spin.Level = bOn ? KitLooks[Index].Level : Spin.Level;
+			continue;
+		}
+		if (bOn)
+		{
+			Spin.On = Now;
+			Spin.Off = Now - 1.f;
+			Spin.Level = KitLooks[Index].Level;
+		}
+		else
+		{
+			Spin.Off = Now;
+		}
+	}
 	// Per instance, then one update of each component's instances: never a render state rebuild (BUILDING_KIT.md, #387).
 	TArray<UInstancedStaticMeshComponent*, TInlineAllocator<8>> Touched;
 	for (int32 Index = 0; Index < KitParts.Num(); ++Index)
@@ -1234,7 +1257,7 @@ void ARTSBuilding::SetKitLooks(TConstArrayView<FRTSKitLook> Looks)
 		}
 		const FLinearColor Color = Part.IndicatorColor * (Look.bBattery ? RTSBuildingState::BatteryTint : FLinearColor::White);
 		float Lens[RTSKitLensData::Floats] = {};
-		Lens[RTSKitLensData::Level] = Look.Level * Part.Brightness * GetDebugBrightness(Part);
+		Lens[RTSKitLensData::Level] = GetKitLevel(Index) * Part.Brightness * GetDebugBrightness(Part);
 		// The state already puts a normal lens out with its group; the Fixtures gate stays for the look between refreshes.
 		Lens[RTSKitLensData::Group] = Part.Group == TEXT("Fixtures") && !Look.bBattery && !Part.bEmergency ? 1.f : 0.f;
 		Lens[RTSKitLensData::Fault] = Look.Fault;
@@ -1242,6 +1265,8 @@ void ARTSBuilding::SetKitLooks(TConstArrayView<FRTSKitLook> Looks)
 		Lens[RTSKitLensData::Color + 0] = Color.R;
 		Lens[RTSKitLensData::Color + 1] = Color.G;
 		Lens[RTSKitLensData::Color + 2] = Color.B;
+		Lens[RTSKitLensData::SpinOn] = KitSpins[Index].On;
+		Lens[RTSKitLensData::SpinOff] = KitSpins[Index].Off;
 		Instanced->SetCustomData(Instance, Lens);
 		Touched.AddUnique(Instanced);
 	}
@@ -1263,7 +1288,7 @@ void ARTSBuilding::ApplyKitLightLooks()
 		}
 		const FRTSKitLook& Look = KitLooks[Kit.Part];
 		// The mount's Brightness is in its Candelas and glow colours already (RTSKit::Expand).
-		Light->SetIntensity(Kit.Candelas * Look.Level * GetDebugBrightness(KitParts[Kit.Part]));
+		Light->SetIntensity(Kit.Candelas * GetKitLevel(Kit.Part) * GetDebugBrightness(KitParts[Kit.Part]));
 		Light->SetLightColor(Kit.Color * (Look.bBattery ? RTSBuildingState::BatteryTint : FLinearColor::White));
 	}
 	// The beams and halos glow with their part's look, flicker and flash included (M_Kit_Glow repeats the lens's sums).
@@ -1277,12 +1302,19 @@ void ARTSBuilding::ApplyKitLightLooks()
 		const FRTSKitLook& Look = KitLooks[Glow.Part];
 		const FLinearColor Color = Glow.Color * (Look.bBattery ? RTSBuildingState::BatteryTint : FLinearColor::White);
 		float Values[RTSKitGlowData::Floats] = {};
-		Values[RTSKitGlowData::Level] = Look.Level * GetDebugBrightness(KitParts[Glow.Part]);
+		Values[RTSKitGlowData::Level] = GetKitLevel(Glow.Part) * GetDebugBrightness(KitParts[Glow.Part]);
 		Values[RTSKitGlowData::Fault] = Look.Fault;
 		Values[RTSKitGlowData::Flash] = Look.Flash;
 		Values[RTSKitGlowData::Color + 0] = Color.R;
 		Values[RTSKitGlowData::Color + 1] = Color.G;
 		Values[RTSKitGlowData::Color + 2] = Color.B;
+		if (KitParts[Glow.Part].Behaviour == ERTSKitLightBehaviour::Rotate)
+		{
+			// Its beam turns and its halo flashes as the beam faces the camera, in M_Kit_Glow (#459).
+			Values[RTSKitGlowData::Turn] = RTSKit::RotateRate;
+			Values[RTSKitGlowData::SpinOn] = KitSpins[Glow.Part].On;
+			Values[RTSKitGlowData::SpinOff] = KitSpins[Glow.Part].Off;
+		}
 		Component->SetCustomData(Glow.Instance, Values);
 	}
 	for (UInstancedStaticMeshComponent* Component : GlowComponents)
@@ -1294,10 +1326,13 @@ void ARTSBuilding::ApplyKitLightLooks()
 	}
 }
 
+float ARTSBuilding::GetKitLevel(int32 Part) const
+{
+	return KitParts[Part].Behaviour == ERTSKitLightBehaviour::Rotate ? KitSpins[Part].Level : KitLooks[Part].Level;
+}
+
 void ARTSBuilding::UpdateKitLights(double Time, TConstArrayView<FVector> Cameras, const TOptional<FVector>& Override, bool bSecondary, int32& Budget)
 {
-	// A beacon that turns sweeps round once in this many seconds (BUILDING_KIT.md, 08: Rotate 1.5 Hz).
-	constexpr double RotateSeconds = 1.0 / 1.5;
 	for (const FKitLight& Kit : KitLights)
 	{
 		ULocalLightComponent* Light = LightComponents[Kit.Component];
@@ -1307,7 +1342,10 @@ void ARTSBuilding::UpdateKitLights(double Time, TConstArrayView<FVector> Cameras
 		}
 		const FRTSKitPart& Part = KitParts[Kit.Part];
 		const FRTSKitLook& Look = KitLooks[Kit.Part];
-		bool bOn = bLightsShown && Look.Level > 0.f && Budget > 0
+		// A turning beacon shines while its lamp glows, coasting down included, and takes no budget once dark (#459).
+		const bool bTurning = Part.Behaviour == ERTSKitLightBehaviour::Rotate;
+		const RTSKit::FSpin Spin = bTurning ? RTSKit::GetSpin(KitSpins[Kit.Part].On, KitSpins[Kit.Part].Off, Time) : RTSKit::FSpin();
+		bool bOn = bLightsShown && GetKitLevel(Kit.Part) > 0.f && (!bTurning || Spin.Lamp > 0.f) && Budget > 0
 			&& (Part.Priority == ERTSKitLightPriority::Primary || bSecondary);
 		if (bOn && Part.MaxDrawDistance > 0.f)
 		{
@@ -1319,10 +1357,12 @@ void ARTSBuilding::UpdateKitLights(double Time, TConstArrayView<FVector> Cameras
 			--Budget;
 			bOn = RTSKit::IsLensLit(Look.Fault, Look.Flash, Time);
 		}
-		if (bOn && Part.Behaviour == ERTSKitLightBehaviour::Rotate)
+		if (bOn && bTurning)
 		{
-			const double Turn = FMath::Frac(Time / RotateSeconds) * 360.0;
+			// In step with its mirror's SWEEP, which faces the piece's +X at no turns, as the light does at its rest.
+			const double Turn = FMath::Frac(Spin.Turns) * 360.0;
 			Light->SetRelativeRotation(FRotator(Kit.Rotation.Pitch, Kit.Rotation.Yaw + Turn, Kit.Rotation.Roll));
+			Light->SetIntensity(Kit.Candelas * GetKitLevel(Kit.Part) * GetDebugBrightness(Part) * Spin.Lamp);
 		}
 		Light->SetVisibility(bOn);
 	}

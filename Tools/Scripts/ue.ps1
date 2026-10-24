@@ -37,6 +37,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task b
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task buildingshots -Building DA_BenchHQ_Nanite
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task buildingshots -Building DA_BenchHQ_Nanite -Cvars r.Nanite=0
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task buildingshots -Building DA_TestHeadquarters -Night
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task buildingshots -Building DA_TestKitLighting -Night -Clip 16 -Cvars "rts.Debug.KitMountOnly=WarningBeacon,rts.Debug.BuildingState=2"
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task packaudit
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task surfaces -Path D:\Downloads\textures
@@ -234,6 +235,9 @@ param(
 	[string]$Scope = 'auto',
 
 	[switch]$Frames,
+
+	[ValidateRange(0, 120)]
+	[int]$Clip = 0,
 
 	[double]$SampleSeconds = 0,
 
@@ -736,9 +740,12 @@ function Invoke-TrackShots {
 # One finished building pictured from the RTS camera at 12, 150 and 450 m and either side of the bench HQ's 260 m LOD switch
 # (#349; rts.Debug.BuildingShots), to Saved\BuildingShots\<Building>, or with -Cvars to a folder named after them; -Night
 # at night (#424), to Night or that folder with _Night; -Turn with the building turned half a turn (#450), _Turn before _Night.
+# -Clip N (#459) takes close_12m and default_150m only, as N frames each over one turn of a turning beacon
+# (close_12m_00.png ...), to a folder with _Clip before _Turn: a still cannot show a turn.
 function Invoke-BuildingShots {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$Folder = if ($Cvars) { $Cvars -replace '[^A-Za-z0-9]+', '_' } else { '' }
+	if ($Clip -gt 0) { $Folder = if ($Folder) { "${Folder}_Clip" } else { 'Clip' } }
 	if ($Turn) { $Folder = if ($Folder) { "${Folder}_Turn" } else { 'Turn' } }
 	if ($Night) { $Folder = if ($Folder) { "${Folder}_Night" } else { 'Night' } }
 	$ShotDir = Join-Path $RepoRoot "Saved\BuildingShots\$Building"
@@ -747,9 +754,10 @@ function Invoke-BuildingShots {
 	Clear-ShotDir $ShotDir
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
 		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
-		"`"-ExecCmds=rts.Debug.BuildingShots $Building $Folder$(if ($Night) { ' -Night' })$(if ($Turn) { ' -Turn' })`"", '-RTSBuildingShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		"`"-ExecCmds=rts.Debug.BuildingShots $Building $Folder$(if ($Night) { ' -Night' })$(if ($Turn) { ' -Turn' })$(if ($Clip -gt 0) { " -Clip=$Clip" })`"", '-RTSBuildingShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
 		'-unattended', '-nosplash', '-nosound') + @(if ($Cvars) { "-dpcvars=$Cvars" }))
 	$Names = @('close_12m', 'side_12m', 'default_150m', 'far_450m', 'lod_before_249.6m', 'lod_after_270.4m')
+	if ($Clip -gt 0) { $Names = @('close_12m', 'default_150m' | ForEach-Object { $Shot = $_; 0..($Clip - 1) | ForEach-Object { '{0}_{1:D2}' -f $Shot, $_ } }) }
 	$Problems = @($Names | Where-Object { -not (Test-Path (Join-Path $ShotDir "$_.png")) } | ForEach-Object { "missing $_.png" })
 	if (Test-Path $LogFile) {
 		Select-String -Path $LogFile -Pattern 'rts.Debug.BuildingShots: \S+ (from|at) ' | ForEach-Object { $_.Line -replace '^.*rts.Debug.BuildingShots: ', '  ' }

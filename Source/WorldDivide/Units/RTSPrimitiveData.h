@@ -67,7 +67,13 @@ namespace RTSKitLensData
 	constexpr int32 Flash = 3;
 	/** The glow's colour, RGB, from 4 to 6. */
 	constexpr int32 Color = 4;
-	constexpr int32 Floats = 7;
+	/**
+	 * A turning beacon's switch times in game seconds (#459, RTSKit::GetSpin): when it last came on and last went off, off
+	 * while SpinOff >= SpinOn. Its SWEEP turns and fades with them; 0 and 0 for every other lens.
+	 */
+	constexpr int32 SpinOn = 7;
+	constexpr int32 SpinOff = 8;
+	constexpr int32 Floats = 9;
 }
 
 /**
@@ -83,5 +89,9 @@ namespace RTSKitGlowData
 	constexpr int32 Flash = 2;
 	/** Its colour at full, strength included, RGB, from 3 to 5. */
 	constexpr int32 Color = 3;
-	constexpr int32 Floats = 6;
+	/** A turning beacon's (#459): its turns a second, 0 for every other glow, and its part's switch times (RTSKitLensData). */
+	constexpr int32 Turn = 6;
+	constexpr int32 SpinOn = 7;
+	constexpr int32 SpinOff = 8;
+	constexpr int32 Floats = 9;
 }

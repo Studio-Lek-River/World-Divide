@@ -291,6 +291,28 @@ namespace RTSKit
 	 */
 	WORLDDIVIDE_API bool IsLensLit(float Fault, float Flash, double Time);
 
+	/** A Rotate beacon's turns a second at full speed (BUILDING_KIT.md, 08), M_Kit_Lens's and M_Kit_Glow's SweepRate. */
+	constexpr float RotateRate = 1.5f;
+	/** Seconds its motor takes to reach RotateRate, and to coast to a stop once off; its lamp's to glow up and to fade. */
+	constexpr float SpinUpSeconds = 0.6f;
+	constexpr float CoastSeconds = 1.2f;
+	constexpr float WarmSeconds = 0.2f;
+	constexpr float CoolSeconds = 0.35f;
+
+	/** Where a turning beacon is at a moment: whole turns since it last came on, and its lamp, 0 dark to 1 full. */
+	struct FSpin
+	{
+		double Turns = 0.0;
+		float Lamp = 0.f;
+	};
+
+	/**
+	 * A turning beacon switched on at On and off at Off (game seconds; off while Off >= On, RTSKitLensData::SpinOn) at Time:
+	 * it spins up, turns at RotateRate and coasts down, its lamp glowing up and fading. The same sums the kit materials do
+	 * (building_art.py SPIN_HLSL), so the light turns and fades with its mirror and beam; change both together.
+	 */
+	WORLDDIVIDE_API FSpin GetSpin(float On, float Off, double Time);
+
 	/** The class limits of BUILDING_KIT.md, starting hypotheses that Gate A measures. */
 	struct FClassLimits
 	{

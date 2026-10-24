@@ -676,8 +676,10 @@ def kit_light(light, lens, profile=None):
     size = [high - low for low, high in zip(*lens)]
     axis = max(range(3), key=lambda i: abs(forward[i]))
     location = list(centre)
-    # A flat lens (07's panel, #393): a millimetre in front of it, so it still shines out of it.
-    location[axis] += math.copysign(max(size[axis] / 2.0, 0.1), forward[axis])
+    # A flat lens (07's panel, #393): a millimetre in front of it, so it still shines out of it. A turning beacon's light
+    # stays on its axis, which it and its beam turn about (#459).
+    if light["behaviour"] != "Rotate":
+        location[axis] += math.copysign(max(size[axis] / 2.0, 0.1), forward[axis])
     # An area light stands its "offset" cm out along its light (02, #455): a shadowless light at its lens burns the wall
     # behind it white.
     location = [l + f * light.get("offset", 0.0) for l, f in zip(location, forward)]
@@ -973,21 +975,25 @@ def make_building_masters():
     kit_builders = [building_art._kit_surface, building_art._sweep, building_art._seed, building_art._material,
                     building_art._vector, building_art._scalar, building_art._multiply, building_art._constant,
                     vehicle_art._custom, vehicle_art._transform, vehicle_art._mask]
-    kit_constants = (building_art.SWEEP, building_art.SWEEP_HLSL, building_art.GLASS, building_art.DITHER_FUNCTION)
+    kit_constants = (building_art.SWEEP, building_art.SWEEP_HLSL, building_art.GLASS, building_art.DITHER_FUNCTION,
+                     building_art.LENS_SPIN_ON, building_art.LENS_SPIN_OFF)
     defaults = (white["T_Kit_White"], white["T_Kit_WhiteMasks"])
     masters["M_Kit_Lens"] = plan_now(
         f"{KIT_MATERIAL_DIR}/M_Kit_Lens", lambda: building_art.build_lens_material(KIT_MATERIAL_DIR, "M_Kit_Lens", *defaults),
         spec_hash(kit_builders + [building_art.build_lens_material], KIT_MATERIAL_DIR, constants, kit_constants,
-                  building_art.LENS_HLSL, building_art.LENS_SHAPE_HLSL, sorted(building_art.LENS_BLINK.items()),
+                  building_art.LENS_HLSL, building_art.LENS_SHAPE_HLSL, building_art.SWEEP_LAMP_HLSL,
+                  sorted(building_art.LENS_BLINK.items()),
                   building_art.FLAT_NORMAL, sorted(map(object_path, defaults)),
                   (building_art.LENS_LEVEL, building_art.LENS_GROUP, building_art.LENS_FAULT, building_art.LENS_FLASH,
                    building_art.LENS_COLOR)))
     masters["M_Kit_Glow"] = plan_now(
         f"{KIT_MATERIAL_DIR}/M_Kit_Glow", lambda: building_art.build_glow_material(KIT_MATERIAL_DIR, "M_Kit_Glow"),
         spec_hash([building_art.build_glow_material, building_art._material, building_art._scalar,
-                   building_art._multiply, vehicle_art._custom, vehicle_art._mask], KIT_MATERIAL_DIR,
-                  building_art.GLOW_HLSL, sorted(building_art.GLOW_INSTANCES["MI_Kit_Beam"].items()),
-                  (building_art.GLOW_LEVEL, building_art.GLOW_FAULT, building_art.GLOW_FLASH, building_art.GLOW_COLOR)))
+                   building_art._multiply, vehicle_art._custom, vehicle_art._mask, vehicle_art._transform],
+                  KIT_MATERIAL_DIR, building_art.GLOW_HLSL, building_art.GLOW_TURN_HLSL,
+                  sorted(building_art.GLOW_INSTANCES["MI_Kit_Beam"].items()),
+                  (building_art.GLOW_LEVEL, building_art.GLOW_FAULT, building_art.GLOW_FLASH, building_art.GLOW_COLOR,
+                   building_art.GLOW_TURN, building_art.GLOW_SPIN_ON, building_art.GLOW_SPIN_OFF)))
     masters["M_Kit_Housing"] = plan_now(
         f"{KIT_MATERIAL_DIR}/M_Kit_Housing",
         lambda: building_art.build_kit_housing_material(KIT_MATERIAL_DIR, "M_Kit_Housing", *defaults),

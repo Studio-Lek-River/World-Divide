@@ -12,6 +12,7 @@
 #include "Containers/Ticker.h"
 #include "Core/RTSDayNightSubsystem.h"
 #include "Data/RTSBuildingData.h"
+#include "Data/RTSKitPieceData.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
@@ -33,7 +34,7 @@
 #include "WorldDivide.h"
 
 /**
- * rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn] (#349; ue.ps1 -Task buildingshots -Building <DA>): one
+ * rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn] [-Clip=N] (#349; ue.ps1 -Task buildingshots -Building <DA>): one
  * finished building of the data asset in the middle of the level (L_Bench), pictured by a camera at the RTS camera's pitch for each
  * arm length (ARTSCameraPawn::GetPitchForZoom) at 1920x1080, to Saved/BuildingShots/<BuildingData>[/<Folder>]/<shot>.png:
  * close_12m looks at its front from outside at the closest zoom, framed from its data (the footprint's front and the root
@@ -52,6 +53,8 @@
  * moon, sky and exposure) and the world dark for its lamps and glow (URTSDayNightSubsystem, as rts.Light.ForceDark 1), to the
  * Folder Night unless one is given. -Turn stands the building half a turn round (#450), as a player turns it at placement, so
  * its front faces the RTS camera at 150 and 450 m too; close_12m still looks at the front, which the sun then lights unturned.
+ * -Clip=<N> (#459) pictures close_12m and default_150m only, each as N frames over one turn of a turning beacon
+ * (RTSKit::RotateRate), the clock held a little further on for each, to <shot>_<NN>.png: a still cannot show a turn.
  * With -RTSBuildingShotsQuit the game quits when done, exit code 1 on failure.
  */
 namespace RTSBuildingShotsCommand
@@ -80,6 +83,9 @@ namespace RTSBuildingShotsCommand
 	const TCHAR* NightFolder = TEXT("Night");
 	const TCHAR* TurnArg = TEXT("-Turn");
 	const TCHAR* TurnFolder = TEXT("Turn");
+	const TCHAR* ClipArg = TEXT("-Clip=");
+	/** Real seconds each clip frame after a view's first settles: the camera stands, only the clock moved. */
+	constexpr double ClipSettleSeconds = 0.5;
 	/** How far the day close view turns the sun in yaw (#443): L_Bench's sun at yaw 35 lights the back, at 215 the front. */
 	constexpr float FrontSunYaw = 180.f;
 	/** The game time every shot is taken at (#424), so what moves on the game clock is the same in every run. */
@@ -102,6 +108,8 @@ namespace RTSBuildingShotsCommand
 		bool bFront;
 		/** A front view from the side: at the front's middle, from SideYaw and SidePitch. */
 		bool bSide = false;
+		/** Taken as a clip with -Clip. */
+		bool bClip = false;
 	};
 
 	/** side_12m's view (#454): its yaw from the building's (180 looks straight at the front) and its pitch. */
@@ -109,9 +117,9 @@ namespace RTSBuildingShotsCommand
 	constexpr float SidePitch = -15.f;
 
 	const FShot Shots[] = {
-		{ TEXT("close_12m"), 1200.f, true },
+		{ TEXT("close_12m"), 1200.f, true, false, true },
 		{ TEXT("side_12m"), 1200.f, true, true },
-		{ TEXT("default_150m"), 15000.f, false },
+		{ TEXT("default_150m"), 15000.f, false, false, true },
 		{ TEXT("far_450m"), 45000.f, false },
 		{ TEXT("lod_before_249.6m"), 24960.f, false },
 		{ TEXT("lod_after_270.4m"), 27040.f, false },
@@ -120,8 +128,8 @@ namespace RTSBuildingShotsCommand
 	class FBuildingShotsRun : public TSharedFromThis<FBuildingShotsRun>
 	{
 	public:
-		FBuildingShotsRun(UWorld& InWorld, const FString& InDataName, const FString& InFolder, bool bInNight, bool bInTurned)
-			: World(&InWorld), DataName(InDataName), Folder(InFolder), bNight(bInNight), bTurned(bInTurned)
+		FBuildingShotsRun(UWorld& InWorld, const FString& InDataName, const FString& InFolder, bool bInNight, bool bInTurned, int32 InClipFrames)
+			: World(&InWorld), DataName(InDataName), Folder(InFolder), bNight(bInNight), bTurned(bInTurned), ClipFrames(InClipFrames)
 		{
 		}
 
@@ -166,7 +174,7 @@ namespace RTSBuildingShotsCommand
 				// Before the world ticks, so the radar and the like stay at rest, and the flag's wind, the plants' sway and
 				// the lamps' flashes (all on the game clock) show the same moment whenever the shot lands.
 				Building->SetEquipmentMotionScale(0.f);
-				World->TimeSeconds = ShotGameTime;
+				World->TimeSeconds = ShotGameTime + (ClipFrames > 0 ? Frame / (RTSKit::RotateRate * ClipFrames) : 0.0);
 			}
 			switch (Step)
 			{
@@ -175,7 +183,7 @@ namespace RTSBuildingShotsCommand
 			case EStep::Resize:
 				return Resize(*Controller);
 			case EStep::Settle:
-				if (FPlatformTime::Seconds() - StepStart >= (ShotIndex == 0 ? FirstSettleSeconds : SettleSeconds))
+				if (FPlatformTime::Seconds() - StepStart >= (Frame > 0 ? ClipSettleSeconds : ShotIndex == FirstShot() ? FirstSettleSeconds : SettleSeconds))
 				{
 					RequestShot(*Controller);
 				}
@@ -184,7 +192,14 @@ namespace RTSBuildingShotsCommand
 				if (IFileManager::Get().FileSize(*ShotPath()) > 0)
 				{
 					UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.BuildingShots: %s"), *ShotPath());
-					++ShotIndex;
+					++ShotCount;
+					if (++Frame < ClipFrames)
+					{
+						GoTo(EStep::Settle);
+						return true;
+					}
+					Frame = 0;
+					ShotIndex = NextShot(ShotIndex + 1);
 					return ShotIndex < UE_ARRAY_COUNT(Shots) ? StartShot(*Controller) : Finish(FString());
 				}
 				return FPlatformTime::Seconds() - StepStart > CaptureTimeout ? Finish(TEXT("no screenshot arrived")) : true;
@@ -206,10 +221,23 @@ namespace RTSBuildingShotsCommand
 		}
 
 		/** The offscreen window starts at the desktop's idea of a size; the shots are ShotSize, as the bench's. */
+		/** The first shot from Index this run takes: with -Clip only the clip ones. */
+		int32 NextShot(int32 Index) const
+		{
+			while (ClipFrames > 0 && Index < UE_ARRAY_COUNT(Shots) && !Shots[Index].bClip)
+			{
+				++Index;
+			}
+			return Index;
+		}
+
+		int32 FirstShot() const { return NextShot(0); }
+
 		bool Resize(ARTSPlayerController& Controller)
 		{
 			if (World->WorldType == EWorldType::PIE || GetViewportSize() == ShotSize)
 			{
+				ShotIndex = FirstShot();
 				return StartShot(Controller);
 			}
 			if (!bResizeRequested)
@@ -225,7 +253,11 @@ namespace RTSBuildingShotsCommand
 			return true;
 		}
 
-		FString ShotPath() const { return FPaths::Combine(GetShotDir(), FString(Shots[ShotIndex].Name) + TEXT(".png")); }
+		FString ShotPath() const
+		{
+			const FString Name = ClipFrames > 0 ? FString::Printf(TEXT("%s_%02d"), Shots[ShotIndex].Name, Frame) : FString(Shots[ShotIndex].Name);
+			return FPaths::Combine(GetShotDir(), Name + TEXT(".png"));
+		}
 
 		bool WaitForPlayer(ARTSPlayerController* Controller)
 		{
@@ -408,7 +440,7 @@ namespace RTSBuildingShotsCommand
 			}
 			if (Error.IsEmpty())
 			{
-				UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.BuildingShots: %d shots to %s"), ShotIndex, *GetShotDir());
+				UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.BuildingShots: %d shots to %s"), ShotCount, *GetShotDir());
 			}
 			else
 			{
@@ -439,6 +471,10 @@ namespace RTSBuildingShotsCommand
 		EStep Step = EStep::WaitForPlayer;
 		double StepStart = 0.0;
 		int32 ShotIndex = 0;
+		/** -Clip's frames per clip shot, 0 for stills, and the frame being taken. */
+		int32 ClipFrames = 0;
+		int32 Frame = 0;
+		int32 ShotCount = 0;
 		bool bResizeRequested = false;
 	};
 
@@ -448,7 +484,7 @@ namespace RTSBuildingShotsCommand
 	{
 		if (!World || !World->IsGameWorld() || Args.IsEmpty())
 		{
-			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn] needs a running game"));
+			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn] [-Clip=N] needs a running game"));
 			return;
 		}
 		if (FBuildingShotsRun::IsRunning())
@@ -459,9 +495,16 @@ namespace RTSBuildingShotsCommand
 		TArray<FString> Rest(Args);
 		const bool bNight = Rest.RemoveAll([](const FString& Arg) { return Arg.Equals(NightArg, ESearchCase::IgnoreCase); }) > 0;
 		const bool bTurn = Rest.RemoveAll([](const FString& Arg) { return Arg.Equals(TurnArg, ESearchCase::IgnoreCase); }) > 0;
+		int32 ClipFrames = 0;
+		Rest.RemoveAll([&ClipFrames](const FString& Arg)
+		{
+			const bool bClip = Arg.StartsWith(ClipArg, ESearchCase::IgnoreCase);
+			ClipFrames = bClip ? FMath::Clamp(FCString::Atoi(*Arg.Mid(FCString::Strlen(ClipArg))), 1, 120) : ClipFrames;
+			return bClip;
+		});
 		if (Rest.IsEmpty())
 		{
-			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn] needs a building"));
+			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn] [-Clip=N] needs a building"));
 			return;
 		}
 		FString Folder = Rest.Num() > 1 ? Rest[1] : FString(bTurn ? TurnFolder : TEXT(""));
@@ -469,15 +512,15 @@ namespace RTSBuildingShotsCommand
 		{
 			Folder = Folder.IsEmpty() ? FString(NightFolder) : Folder + TEXT("_") + NightFolder;
 		}
-		const TSharedRef<FBuildingShotsRun> Run = MakeShared<FBuildingShotsRun>(*World, Rest[0], Folder, bNight, bTurn);
+		const TSharedRef<FBuildingShotsRun> Run = MakeShared<FBuildingShotsRun>(*World, Rest[0], Folder, bNight, bTurn, ClipFrames);
 		FBuildingShotsRun::Start(Run);
 		Output.Logf(TEXT("rts.Debug.BuildingShots: %s to %s"), *Rest[0], *Run->GetShotDir());
 	}
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice BuildingShotsCommand(
 		TEXT("rts.Debug.BuildingShots"),
-		TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn]: one finished building of the data asset pictured at the RTS camera's pitch from 12, 150 and 450 m ")
-		TEXT("and either side of 260 m, with the LOD of every part logged, to Saved/BuildingShots/<BuildingData>[/<Folder>] (#349); -Night at night, to Night by default (#424); -Turn turned half a turn, to Turn or Turn_Night by default (#450)."),
+		TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn] [-Clip=N]: one finished building of the data asset pictured at the RTS camera's pitch from 12, 150 and 450 m ")
+		TEXT("and either side of 260 m, with the LOD of every part logged, to Saved/BuildingShots/<BuildingData>[/<Folder>] (#349); -Night at night, to Night by default (#424); -Turn turned half a turn, to Turn or Turn_Night by default (#450); -Clip=N close_12m and default_150m as N frames over a beacon's turn (#459)."),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunBuildingShots));
 }
 

@@ -213,7 +213,7 @@ Lens appearance per instance (on/level, group, fault phase, flash phase, indicat
 read by `M_Kit_Lens`, written with `SetCustomData` and one `MarkRenderInstancesDirty`; the night state stays component
 custom primitive data 12 (proven in the spike, see [Per-instance and LOD](#per-instance-and-lod)). The layout is
 `RTSKitLensData` (`RTSPrimitiveData.h`): 0 level, 1 group mask (Fixtures, CPD 10), 2 fault phase, 3 flash phase, 4–6
-colour, 7 floats. The level carries the building's state, power included (see [States](#states)), so the lens does not
+colour, 7–8 a turning beacon's switch times (#459, see [States](#states)), 9 floats. The level carries the building's state, power included (see [States](#states)), so the lens does not
 read Operational (CPD 8): a battery lens stays lit on low power. The lens samples an optional baked finish normal on UV1 (`FinishNormal`, flat by default).
 
 ## Light rule
@@ -271,6 +271,13 @@ How it runs (#391):
   (`ARTSBuilding::UpdateKitLights`) runs only for the buildings whose lights are shown, nearest first, and switches each
   light with its lens's flash and fault phase (`RTSKit::IsLensLit`, the same sums as `LENS_HLSL`) and turns the `Rotate` ones
   at 1.5 Hz.
+- A `Rotate` beacon (08, #459) is switched by its state like every warning light (on battery or critical), but never with
+  a cut: `SetKitLooks` keeps the game time it came on and went off (`RTSKitLensData` 7 and 8, `RTSKitGlowData` 7 and 8),
+  and from those `RTSKit::GetSpin` and the materials' `SPIN_HLSL` (the same sums) spin its motor up over 0.6 s to 1.5 turns
+  a second and let it coast to a stop over 1.2 s, its lamp glowing up over 0.2 s and fading over 0.35 s. Its lens and
+  mirror (`Sweep`), beam and light turn together from that one phase; its look's level is held while it coasts down. All
+  of it runs in the shaders but the light's yaw and intensity, which the tick sets only while the beacon is lit; a dark
+  beacon takes no light budget.
 - The flicker and flash phases come from the mount's place among the mounts; the first two `Flicker` mounts flicker.
 - `rts.Debug.BuildingState <0..5>` shows every building in one state on this machine (Idle, Producing, LowPower, Damaged,
   Critical, Destroyed; -1 off), for building shots: `ue.ps1 -Task buildingshots -Cvars "rts.Light.ForceDark=1,rts.Debug.BuildingState=2"`. Without it
@@ -298,12 +305,15 @@ volumetric fog (route B) on `DA_TestKitLighting` and the USA HQ at 12, 150 and 4
   of light (#458): the material follows the view ray through the cone (UV1 its radius and growth, UV2 its length) and
   adds up the light inside, fading along the beam and out from its axis to nothing at the edge, cut off by whatever
   stands in it, so the mesh's facets never show (they read as stripes before). A Rect's beam keeps its glowing walls,
-  brightest where they face the camera. 05 and 06 have strength 1, 01 and 03 0.25; 07 has none since #457.
+  brightest where they face the camera. 05 and 06 have strength 1, 01 and 03 0.25, 08 0.35; 07 has none since #457.
+  08's beam (#459) turns with its spot about the beacon's axis by world position offset (`GLOW_TURN_HLSL`), the view ray
+  turned back into the beam's resting frame.
 - **Glare.** A piece with `glare` gets a halo, `SM_Kit_Glare` (a unit sphere) at its lens's middle, 1.3 × the lens's half
   size or `glare_radius`, on `MI_Kit_Glare`; a `tube` halo (04 and 07, #456, #457) is stretched along the lens's longest side
-  (`GlareLength`).
+  (`GlareLength`). A turning beacon's halo stays on its axis and flares as the beam's way round faces the camera across
+  the ground (#459): `FaceFloor` (0.3) of its glow turned away, `FaceFloor + FaceGain` (6.3) facing, `FacePower` 8.
 - Beams and halos draw only at night (`ARTSBuilding::ShowKitGlows`), one instanced component per mesh per building, and
-  glow with their part's look (`RTSKitGlowData`: level, fault, flash, colour), so they are out when the lamp is out (low
+  glow with their part's look (`RTSKitGlowData`: level, fault, flash, colour; a turning beacon's turn rate and switch times), so they are out when the lamp is out (low
   power, damage, destroyed), flicker and flash with it and turn cooler on battery. `rts.Fx.KitBeams 0` turns the beams off.
 - `M_Kit_Glow` is additive translucency: PERFORMANCE_GUIDELINES rule 21's exception for #440.
 
@@ -395,7 +405,7 @@ approved.
 | 05 | Adjustable directional spotlight | `SM_Kit_DirectionalSpot` | L | Spot, aimed per mount | Accents, Secondary | None | — |
 | 06 | Roof flood light (twin head) | `SM_Kit_RoofFloodLight` | L | Spot, tilted down | Fixtures | None | — |
 | 07 | Recessed service-bay light | `SM_Kit_ServiceBayLight` | M | Point tube | GarageLamps | None | — |
-| 08 | Amber rotating/flashing warning beacon | `SM_Kit_WarningBeacon` | L | Point, Flash or Rotate | Warning | None | `SM_HQ195_Beacon` |
+| 08 | Amber rotating/flashing warning beacon | `SM_Kit_WarningBeacon` | L | Spot, Rotate | Warning | None | `SM_HQ195_Beacon` |
 | 09 | Small configurable indicator LED | `SM_Kit_IndicatorLED` | S | none (emissive) | colour per mount | None | — |
 | 10 | Path/area lamp | `SM_Kit_PathLamp` | L | Spot down, Secondary | Fixtures | None | — |
 | 11 | Perimeter pole lamp | `SM_Kit_PoleLamp` | XL | Spot down | Fixtures | None | — |
@@ -417,7 +427,7 @@ Present-day military and industrial fixtures, no brand look. Light values are th
 | 05 | Cylindrical spot can on a slotted swivel arm and a two-bolt wall plate, braided cable | can Ø 18 × 24, arm 25, plate 10 × 30 | dark weathered die-cast | clear glass over a honeycomb reflector | 3000 K, 600 cd, 10/30°, 20 m |
 | 06 | Two rectangular LED flood heads on a U-yoke, square post and four-bolt roof base plate | 82 × 28 × 71 | dark weathered steel, rear cooling fins | three LED panels per head behind glass | 4000 K, 500 cd, 25/55°, 20 m |
 | 07 | Recessed high-bay panel set flush in a bay ceiling, trim frame | 60 × 30 × 10 | white enamel frame, steel trim | prismatic acrylic panel | 4000 K, 300 cd, rect 56 × 26 cm, 12 m |
-| 08 | Rotating warning beacon: amber Fresnel dome on a two-band cast collar, short stem, bolted square base plate (#393) | Ø 18 × 32 | blackened cast iron, four hex bolts | see-through amber dome over a real bulb, holder and mirror that turn (`Glass`, `Sweep`) | amber (2200 K), 80 cd, point, 8 m; Rotate 1.5 Hz or Flash 1 Hz |
+| 08 | Rotating warning beacon: amber Fresnel dome on a two-band cast collar, short stem, bolted square base plate (#393) | Ø 18 × 32 | blackened cast iron, four hex bolts | see-through amber dome over a real bulb, holder and mirror that turn (`Glass`, `Sweep`) | amber (2200 K), one 450 cd spot (cone 10/24°, `spot` profile, 18 m) on the dome's axis facing its mirror's +X, turning with it at 1.5 Hz (#459); beam 0.35 × 7 m |
 | 09 | Small chamfered wall box with a ribbed diffuser, slotted end plug, two Torx screws (#393); its `Wall` mount point turns it so the diffuser, modelled underneath, faces out from the wall and the screws up, where the RTS camera sees it (#441) | 24 × 9 × 9 | worn bare steel | ribbed neutral diffuser in a screwed bezel | emissive, colour per mount |
 | 10 | Bollard path light with a louvred head | Ø 20 × 100 | dark grey extruded aluminium, base plate with four anchor bolts | louvres throw light down only | 3000 K, 80 cd, 30/60°, 6 m |
 | 11 | Galvanised perimeter pole with a flat "shoebox" LED head on a short arm | pole 600 tall, head 60 × 30 × 10 | galvanised steel pole and base plate, grey head | flat glass underside | 4000 K, 800 cd, 30/55°, 22 m |
