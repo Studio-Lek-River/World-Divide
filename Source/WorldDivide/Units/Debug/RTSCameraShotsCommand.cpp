@@ -101,6 +101,10 @@ namespace RTSCameraShots
 		// the barn, each looking toward the river.
 		{ TEXT("village_west"), FVector2D(-15700.f, 0.f), 0.f },
 		{ TEXT("village_east"), FVector2D(15700.f, 0.f), 180.f },
+		// A power-line pole on each bank, the focus 7 m past its foot so the closest zoom frames its head and each cable end on
+		// its insulator (#445).
+		{ TEXT("powerline_west"), FVector2D(-15600.f, 1000.f), 0.f },
+		{ TEXT("powerline_east"), FVector2D(15600.f, -1000.f), 180.f },
 		{ TEXT("edge"), FVector2D(-100000.f, -100000.f), 0.f, true },
 		{ TEXT("edge_yaw45"), FVector2D(-100000.f, -100000.f), 45.f, true },
 		{ TEXT("past_west_yaw45"), FVector2D(-160000.f, 0.f), 45.f, true },

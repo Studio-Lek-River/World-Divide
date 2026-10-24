@@ -256,15 +256,17 @@ RAIL_BAY = 3.0
 WIRE_BAY = 3.0
 CHAINLINK_BAY = 1.91
 # Street lamps every VILLAGE_LAMP_SPACING along the main street's river side, VILLAGE_LAMP_SIDE off its centre line; the
-# power line along its far side, a pole every VILLAGE_POLE_SPACING, two cables from the ends of each pole's cross-arm
-# (POLE_ARM either side of the pole, POLE_WIRE_HEIGHT up) to the next pole's, sagging CABLE_SAG of the span.
+# power line along its far side, a pole every VILLAGE_POLE_SPACING, a cable per conductor from each pole's insulators to
+# the next pole's, sagging CABLE_SAG of the span. The preset-02 pole is a strain pole: each conductor ends on an insulator
+# string along the line, its clamp POLE_CLAMP either side of the pole, at POLE_CONDUCTORS' (across the line, up) metres,
+# measured off the FBX (#445): three on connection_large_01, two on connection_small_01.
 VILLAGE_STREET_SPAN = (-270.0, 270.0)
 VILLAGE_LAMP_SIDE = 5.0
 VILLAGE_LAMP_SPACING = 30.0
 VILLAGE_POLE_SIDE = -6.0
 VILLAGE_POLE_SPACING = 40.0
-POLE_ARM = 0.5
-POLE_WIRE_HEIGHT = 5.8
+POLE_CLAMP = 0.426
+POLE_CONDUCTORS = ((-0.45, 5.7), (0.0, 5.7), (0.45, 5.7), (-0.2, 4.6), (0.2, 4.6))
 CABLE_SAG = 0.02
 CABLE_MESH = f"{ROADSIDE_DIR}/SM_PowerLine_Cable"
 # The signs (roadside kit, face toward +X): (sign, x, y, yaw). Traffic keeps right. At each end of the main street a
@@ -1564,9 +1566,10 @@ def village_props(bank, buildings):
         poles.append(pole)
     cables = []
     for start, end in zip(poles, poles[1:]):
-        for side in (-POLE_ARM, POLE_ARM):
-            ends = [flip((point[0] + side, point[1])) for point in (start, end)]
-            cables.append(tuple((x, y, height(x, y) + POLE_WIRE_HEIGHT) for x, y in ends))
+        feet = (height(*flip(start)), height(*flip(end)))
+        for across, up in POLE_CONDUCTORS:
+            ends = [flip((start[0] + across, start[1] + POLE_CLAMP)), flip((end[0] + across, end[1] - POLE_CLAMP))]
+            cables.append(tuple((x, y, foot + up) for (x, y), foot in zip(ends, feet)))
     for sign, x, y, yaw in VILLAGE_SIGNS:
         add(f"Sign_{sign}", (x, y), yaw)
     for _, _, kind, centre, yaw, box, _ in [b for b in buildings if b[0] == bank and b[2] in GARDEN_TYPES]:
