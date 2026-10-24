@@ -387,7 +387,7 @@ namespace RTSFootprintTests
 		TestTrue(TEXT("Unturned, the bounds are the footprint"),
 			Unturned.GetBounds().Max.Equals(FVector2D(1900.f, 2800.f), Tolerance));
 
-		const FRTSBuildingFootprint Ground = RTSBuildPlacement::MakeFootprint(Cells, FVector::ZeroVector, RTSBuildPlacement::HeadquartersYaw);
+		const FRTSBuildingFootprint Ground = RTSBuildPlacement::MakeFootprint(Cells, FVector::ZeroVector, 225.f);
 		const float Half = (1900.f + 2800.f) * UE_INV_SQRT_2;
 		TestTrue(TEXT("On the diagonal, the bounds reach both halves' projections"),
 			Ground.GetBounds().Max.Equals(FVector2D(Half, Half), Tolerance));

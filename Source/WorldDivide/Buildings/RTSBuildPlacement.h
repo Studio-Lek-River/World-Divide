@@ -51,8 +51,8 @@ namespace RTSBuildPlacement
 	/** Edge length of one build grid cell in cm. */
 	constexpr float GridSize = 100.f;
 
-	/** Yaw in degrees every starting headquarters stands at: its garage faces southwest, on a true diagonal (#426). */
-	constexpr float HeadquartersYaw = 225.f;
+	/** Steps in degrees a starting headquarters' yaw snaps to, so it reads cleanly on screen (#427). */
+	constexpr float HeadquartersYawStep = 45.f;
 
 	/** Gap between the footprint's exit edge and a unit spawned at the exit, beyond the unit's longer half. */
 	constexpr float ExitClearance = 200.f;
@@ -105,6 +105,12 @@ namespace RTSBuildPlacement
 
 	/** QuarterTurns of an actor's yaw, 0 to 3. */
 	WORLDDIVIDE_API int32 GetQuarterTurns(float Yaw);
+
+	/**
+	 * Yaw in degrees, 0 to 315, of a starting headquarters on a start spot facing SpotYaw: its garage faces the way the
+	 * spot does, out of the base towards the map's middle, snapped to HeadquartersYawStep (#427).
+	 */
+	WORLDDIVIDE_API float GetHeadquartersYaw(float SpotYaw);
 
 	/** The ground footprint of a building of the data's Footprint, unturned, standing at Location turned to Yaw degrees. */
 	WORLDDIVIDE_API FRTSBuildingFootprint MakeFootprint(const FIntPoint& Footprint, const FVector& Location, float Yaw);

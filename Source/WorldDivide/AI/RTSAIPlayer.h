@@ -141,8 +141,8 @@ public:
 	void SetDifficulty(ERTSAIDifficulty InDifficulty) { Difficulty = InDifficulty; }
 	ERTSAIDifficulty GetDifficulty() const { return Difficulty; }
 
-	/** Where the AI's base is when it has no headquarters: its team's PlayerStart. */
-	void SetStartLocation(const FVector& Location) { StartLocation = Location; }
+	/** Where the AI's base is when it has no headquarters, and the way it faces: its team's PlayerStart. */
+	void SetStartLocation(const FVector& Location, float Yaw = 0.f) { StartLocation = Location; StartYaw = Yaw; }
 
 	ARTSPlayerState* GetRTSPlayerState() const;
 
@@ -319,8 +319,8 @@ private:
 	FVector GetBaseLocation() const;
 
 	/**
-	 * Half the box round the faction's headquarters, which stands at the base location turned to
-	 * RTSBuildPlacement::HeadquartersYaw; zero without one.
+	 * Half the box round the faction's headquarters at the base location: turned to its own yaw while it stands, else to
+	 * RTSBuildPlacement::GetHeadquartersYaw of the start spot's facing; zero without one.
 	 */
 	FVector GetBaseExtent() const;
 
@@ -333,6 +333,8 @@ private:
 	ERTSAIDifficulty Difficulty = ERTSAIDifficulty::Normal;
 
 	TOptional<FVector> StartLocation;
+
+	float StartYaw = 0.f;
 
 	TOptional<FRTSAIWaveSettings> WaveOverride;
 

@@ -801,7 +801,7 @@ namespace RTSScaleTests
 			Own->Destroy();
 		}
 		AI->SetDifficulty(Opponent->GetDifficulty());
-		AI->SetStartLocation(Start->GetActorLocation());
+		AI->SetStartLocation(Start->GetActorLocation(), Start->GetActorRotation().Yaw);
 		State->AIs[PlayerTeam] = AI;
 		State->AIs[AITeam] = Opponent;
 		for (int32 Team = 0; Team < 2; ++Team)

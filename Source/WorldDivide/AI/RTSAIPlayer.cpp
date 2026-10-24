@@ -1427,9 +1427,17 @@ FVector ARTSAIPlayer::GetBaseExtent() const
 	{
 		return FVector::ZeroVector;
 	}
-	// The box round the headquarters as it stands, on its diagonal.
-	const FBox2D Bounds = RTSBuildPlacement::MakeFootprint(Headquarters->Footprint, FVector::ZeroVector, RTSBuildPlacement::HeadquartersYaw)
-		.GetBounds();
+	// The box round the headquarters as it stands, or as it will stand on the start spot.
+	float Yaw = RTSBuildPlacement::GetHeadquartersYaw(StartYaw);
+	for (TActorIterator<ARTSBuilding> It(GetWorld()); It; ++It)
+	{
+		if (It->GetTeamId() == Player->GetTeamId() && IsStanding(*It) && It->GetBuildingData() == Headquarters)
+		{
+			Yaw = It->GetActorRotation().Yaw;
+			break;
+		}
+	}
+	const FBox2D Bounds = RTSBuildPlacement::MakeFootprint(Headquarters->Footprint, FVector::ZeroVector, Yaw).GetBounds();
 	return FVector(Bounds.GetExtent(), 0.f);
 }
 

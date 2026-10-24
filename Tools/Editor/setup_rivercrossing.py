@@ -77,6 +77,8 @@ def main():
         unreal.log(f"setup_rivercrossing: built the greybox of {path}")
 
     world = editor_world()
+    # The bases' facing (#427), on every run: a kept level gets it too.
+    unreal.log(f"setup_rivercrossing: placed {greybox.place_sides()} start spot and builder actors")
     changed = greybox.apply_landscape_physics(world)
     unreal.log(f"setup_rivercrossing: set the default physical material of {changed} landscape actors")
     # The trees (#158), on every run: their trunks cut the infantry navmesh, so before it is built.

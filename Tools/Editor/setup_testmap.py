@@ -2634,10 +2634,10 @@ def build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, st
         # The army in front of the headquarters, tanks to its right and infantry to its left, and the builders behind it.
         tanks = (x + BASE_ARMY_AHEAD * forward, -BASE_ARMY_SIDE)
         riflemen = (x + BASE_ARMY_AHEAD * forward, BASE_ARMY_SIDE)
-        builders = base_builders(x, 0.0)
+        builders = base_builders(x, 0.0, yaw)
         # The real-size test tank, beside the base and clear of the army's paths.
         m20s = (x + 2400.0, -7800.0) if team_id == 0 else None
-        check_base_layout(path, x, 0.0, [("tanks", *tanks), ("infantry", *riflemen), ("builders", *builders)]
+        check_base_layout(path, x, 0.0, yaw, [("tanks", *tanks), ("infantry", *riflemen), ("builders", *builders)]
                           + ([("M20s", *m20s)] if m20s else []))
         spawn_units(tank, 6, team_id, (*tanks, 0.0), yaw)
         spawn_units(infantry, 10, team_id, (*riflemen, 0.0), yaw)
@@ -2658,8 +2658,8 @@ def make_map(path, night, tank, infantry, builder, m20, wall, crate, ground, str
     lighting = spawn_night_lighting if night else spawn_lighting
     night_look = (NIGHT_MOON_LUX, NIGHT_MOON_COLOR, NIGHT_MOON_PITCH, NIGHT_SKY_INTENSITY, NIGHT_EXPOSURE_BIAS) if night else None
     plan_rebuild(path, ".umap", lambda digest: build_map(path, night, tank, infantry, builder, m20, wall, crate, ground, strips, digest),
-                 spec_hash([build_map, build_navigation, check_map_lanes, check_base_layout, headquarters_local, base_builders, base_source,
-                            spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall,
+                 spec_hash([build_map, build_navigation, check_map_lanes, check_base_layout, headquarters_yaw, headquarters_axis,
+                            headquarters_local, headquarters_exit_lane, base_builders, base_source, spawn, spawn_block, spawn_hill, spawn_obstacle, spawn_wall,
                             spawn_units, spawn_supply_source, spawn_ground, spawn_ground_strips, lighting], path, night_look, TEST_MAP,
                            TEST_HILL, TEST_GROUND_STRIPS, TEST_GROUND_STRIP_SPAN, BASE_LAYOUT, MAP_LANE_RULES, CUBE, tank, infantry,
                            builder, m20, wall, crate, ground, material_hashes[ground], sorted(strips.items()),
@@ -2831,55 +2831,76 @@ SkirmishMap = collections.namedtuple("SkirmishMap", "path half_size spots obstac
 # A supply source's footprint in 1 m cells and its height, in cm.
 SUPPLY_FOOTPRINT = (12, 12)
 SUPPLY_HEIGHT = 300.0
-# The headquarters every start spot gets (#191): 38 m along its own x, its garage side, and 56 m along its own y. Whichever
-# way the spot faces, it stands at the game's HeadquartersYaw (RTSBuildPlacement.h, #426), its garage to the southwest on
-# a true diagonal, so it reaches sqrt(19^2 + 28^2) = 33.8 m from its centre and 33.2 m along x and y.
+# The headquarters every start spot gets (#191): 38 m along its own x, its garage side, and 56 m along its own y. It turns
+# its garage the way the spot faces, snapped to HEADQUARTERS_YAW_STEP (RTSBuildPlacement::GetHeadquartersYaw, #427), so on a
+# diagonal it reaches sqrt(19^2 + 28^2) = 33.8 m from its centre and 33.2 m along x and y.
 HEADQUARTERS_FOOTPRINT = (38, 56)
-HEADQUARTERS_YAW = 225.0
+HEADQUARTERS_YAW_STEP = 45.0
 # How far past its garage side the headquarters' exit lane runs, rounded up from RTSBuildPlacement::GetExitLaneLength for
 # its widest unit, and how far the units of a spawner spread round its spot.
 HEADQUARTERS_EXIT_LANE = 2000.0
 BASE_UNIT_REACH = 1200.0
 # What stands by each start spot, in cm: the army (L_TestMap only) ahead of the headquarters along the spot's facing and
-# to its sides, the builders behind the headquarters, away from its garage, and the base's own supply source to the
-# spot's left. check_base_layout keeps them all off the turned headquarters and its exit lane.
-BASE_ARMY_AHEAD = 5000.0
-BASE_ARMY_SIDE = 2700.0
+# to either side of its exit lane, the builders behind the headquarters, away from its garage, and the base's own supply
+# source to the spot's left. check_base_layout keeps them all off the turned headquarters and its exit lane.
+BASE_ARMY_AHEAD = 3000.0
+BASE_ARMY_SIDE = 4100.0
 BASE_BUILDERS_BEHIND = 3600.0
 BASE_SOURCE_BEHIND = 150.0
 BASE_SOURCE_SIDE = 7650.0
-BASE_LAYOUT = (HEADQUARTERS_FOOTPRINT, HEADQUARTERS_YAW, HEADQUARTERS_EXIT_LANE, BASE_UNIT_REACH, BASE_ARMY_AHEAD,
+BASE_LAYOUT = (HEADQUARTERS_FOOTPRINT, HEADQUARTERS_YAW_STEP, HEADQUARTERS_EXIT_LANE, BASE_UNIT_REACH, BASE_ARMY_AHEAD,
                BASE_ARMY_SIDE, BASE_BUILDERS_BEHIND, BASE_SOURCE_BEHIND, BASE_SOURCE_SIDE, SUPPLY_FOOTPRINT, SUPPLY_HEIGHT)
 # check_map_lanes: a gap between two obstacles, or between an obstacle and the ground's edge, is closed or at least
-# VEHICLE_LANE wide (standard rule 4: 8 m carriageways), and every base keeps BASE_CLEARANCE around its spot free: the
-# turned headquarters' 33.2 m along x and y, its exit and the builders round it.
+# VEHICLE_LANE wide (standard rule 4: 8 m carriageways), every base keeps BASE_CLEARANCE around its spot free (the turned
+# headquarters' 33.2 m along x and y, its exit and the builders round it), and each garage's exit lane stays on the ground
+# and clear of every obstacle.
 VEHICLE_LANE = 800.0
 BASE_CLEARANCE = 4000.0
 MAP_LANE_RULES = (VEHICLE_LANE, BASE_CLEARANCE)
 
 
-def headquarters_local(x, y, spot_x, spot_y):
+def headquarters_yaw(spot_yaw):
+    """The yaw, 0 to 315, of the headquarters on a start spot facing spot_yaw (RTSBuildPlacement::GetHeadquartersYaw)."""
+    return math.floor((spot_yaw % 360.0) / HEADQUARTERS_YAW_STEP + 0.5) * HEADQUARTERS_YAW_STEP % 360.0
+
+
+def headquarters_axis(spot_yaw):
+    """The way the garage of the headquarters on a start spot facing spot_yaw faces, as (x, y)."""
+    yaw = math.radians(headquarters_yaw(spot_yaw))
+    return math.cos(yaw), math.sin(yaw)
+
+
+def headquarters_local(x, y, spot_x, spot_y, spot_yaw):
     """(x, y) in the frame of the headquarters at (spot_x, spot_y): along its garage side and along its own y."""
-    axis = (math.cos(math.radians(HEADQUARTERS_YAW)), math.sin(math.radians(HEADQUARTERS_YAW)))
+    axis = headquarters_axis(spot_yaw)
     dx, dy = x - spot_x, y - spot_y
     return dx * axis[0] + dy * axis[1], -dx * axis[1] + dy * axis[0]
 
 
-def base_builders(x, y):
+def base_builders(x, y, spot_yaw):
     """Where the builders of the base at (x, y) stand: behind the headquarters, away from its garage."""
-    axis = (math.cos(math.radians(HEADQUARTERS_YAW)), math.sin(math.radians(HEADQUARTERS_YAW)))
+    axis = headquarters_axis(spot_yaw)
     return x - BASE_BUILDERS_BEHIND * axis[0], y - BASE_BUILDERS_BEHIND * axis[1]
 
 
-def check_base_layout(path, x, y, units):
+def headquarters_exit_lane(x, y, spot_yaw):
+    """The corners of the ground the garage of the base at (x, y) sends its units over: as wide as the headquarters and
+    HEADQUARTERS_EXIT_LANE out from its garage side."""
+    axis = headquarters_axis(spot_yaw)
+    half_x, half_y = HEADQUARTERS_FOOTPRINT[0] * 50.0, HEADQUARTERS_FOOTPRINT[1] * 50.0
+    return [(x + along * axis[0] - side * axis[1], y + along * axis[1] + side * axis[0])
+            for along in (half_x, half_x + HEADQUARTERS_EXIT_LANE) for side in (-half_y, half_y)]
+
+
+def check_base_layout(path, x, y, spot_yaw, units):
     """Raises unless each of units, (label, x, y), stands BASE_UNIT_REACH clear of the headquarters at (x, y) and of its
     exit lane, and the turned headquarters fits in BASE_CLEARANCE."""
     half_x, half_y = HEADQUARTERS_FOOTPRINT[0] * 50.0, HEADQUARTERS_FOOTPRINT[1] * 50.0
-    cos, sin = abs(math.cos(math.radians(HEADQUARTERS_YAW))), abs(math.sin(math.radians(HEADQUARTERS_YAW)))
+    cos, sin = (abs(value) for value in headquarters_axis(spot_yaw))
     if max(half_x * cos + half_y * sin, half_x * sin + half_y * cos) > BASE_CLEARANCE:
         raise RuntimeError(f"{path}: the turned headquarters reaches past BASE_CLEARANCE")
     for label, unit_x, unit_y in units:
-        local_x, local_y = headquarters_local(unit_x, unit_y, x, y)
+        local_x, local_y = headquarters_local(unit_x, unit_y, x, y, spot_yaw)
         # The footprint, run on along the garage side by the exit lane, and grown by the units' spread.
         if (-half_x - BASE_UNIT_REACH < local_x < half_x + HEADQUARTERS_EXIT_LANE + BASE_UNIT_REACH
                 and abs(local_y) < half_y + BASE_UNIT_REACH):
@@ -2904,13 +2925,27 @@ def check_map_lanes(spec):
         to_edge = min(box[0] + edge, box[1] + edge, edge - box[2], edge - box[3])
         if 0.0 < to_edge < VEHICLE_LANE:
             raise RuntimeError(f"{spec.path}: {label} leaves a {to_edge:.0f} cm gap to the edge, under {VEHICLE_LANE:.0f}")
-    for spot, x, y, _ in spec.spots:
+    def project(points, axis):
+        return min(px * axis[0] + py * axis[1] for px, py in points), max(px * axis[0] + py * axis[1] for px, py in points)
+
+    for spot, x, y, yaw in spec.spots:
         base = (x - BASE_CLEARANCE, y - BASE_CLEARANCE, x + BASE_CLEARANCE, y + BASE_CLEARANCE)
         if max(abs(x), abs(y)) + BASE_CLEARANCE > edge:
             raise RuntimeError(f"{spec.path}: start spot {spot} has no room for its base inside the ground")
         for label, box in boxes:
             if gap(base, box) < 0.0:
                 raise RuntimeError(f"{spec.path}: {label} stands in the base of start spot {spot}")
+        # The garage's way out stays on the ground, and no obstacle overlaps it along the lane's sides or the world axes.
+        lane = headquarters_exit_lane(x, y, yaw)
+        if max(max(abs(corner_x), abs(corner_y)) for corner_x, corner_y in lane) > edge:
+            raise RuntimeError(f"{spec.path}: the exit lane of start spot {spot} runs off the ground")
+        forward = headquarters_axis(yaw)
+        axes = (forward, (-forward[1], forward[0]), (1.0, 0.0), (0.0, 1.0))
+        for label, box in boxes:
+            corners = ((box[0], box[1]), (box[0], box[3]), (box[2], box[1]), (box[2], box[3]))
+            if all(project(corners, axis)[0] < project(lane, axis)[1] and project(lane, axis)[0] < project(corners, axis)[1]
+                   for axis in axes):
+                raise RuntimeError(f"{spec.path}: {label} stands in the exit lane of start spot {spot}")
 
 
 def base_source(x, y, yaw):
@@ -3010,8 +3045,8 @@ def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
 
     for spot, x, y, yaw in spec.spots:
         spawn_start_spot(spot, (x, y, 100.0), yaw)
-        builders = base_builders(x, y)
-        check_base_layout(spec.path, x, y, [("builders", *builders)])
+        builders = base_builders(x, y, yaw)
+        check_base_layout(spec.path, x, y, yaw, [("builders", *builders)])
         # The units of a spot carry its number; the game mode hands them to the team playing from it.
         spawn_units(builder, 2, spot, (*builders, 0.0), yaw)
         spawn_supply_source((*base_source(x, y, yaw), 0.0), 5000, crate)
@@ -3028,8 +3063,8 @@ def build_skirmish_map(spec, builder, wall, crate, ground, water, digest):
 
 def make_skirmish_map(spec, builder, wall, crate, ground, water):
     """Queues the level and then its preview."""
-    digest = spec_hash([build_skirmish_map, build_navigation, check_map_lanes, check_base_layout, headquarters_local,
-                        base_builders, base_source, spawn, spawn_block, spawn_obstacle,
+    digest = spec_hash([build_skirmish_map, build_navigation, check_map_lanes, check_base_layout, headquarters_yaw, headquarters_axis,
+                        headquarters_local, headquarters_exit_lane, base_builders, base_source, spawn, spawn_block, spawn_obstacle,
                         spawn_wall, spawn_units, spawn_supply_source, spawn_ground, spawn_water, spawn_lighting], spec, BASE_LAYOUT,
                        MAP_LANE_RULES, CUBE, builder, wall, crate, ground, water, material_hashes[ground], material_hashes[water],
                        ENGINE_VERSION, NAV_CONFIG)

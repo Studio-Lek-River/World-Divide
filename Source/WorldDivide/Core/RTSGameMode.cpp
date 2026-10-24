@@ -256,7 +256,7 @@ void ARTSGameMode::SpawnAIOpponents()
 		PlayerState->SetIsABot(true);
 		PlayerState->SetAIDifficulty(Seats[TeamId].Difficulty);
 		AI->SetDifficulty(Seats[TeamId].Difficulty);
-		AI->SetStartLocation(Start->GetActorLocation());
+		AI->SetStartLocation(Start->GetActorLocation(), Start->GetActorRotation().Yaw);
 		UE_LOG(LogWorldDivide, Log, TEXT("AI opponent plays team %d from %s"), TeamId, *Start->PlayerStartTag.ToString());
 	}
 }
@@ -288,8 +288,8 @@ void ARTSGameMode::SpawnHeadquarters()
 			Location.Z = GroundHit.Location.Z;
 		}
 
-		// Every headquarters faces the same way, its garage to the southwest.
-		const FTransform Transform(FRotator(0.f, RTSBuildPlacement::HeadquartersYaw, 0.f), Location);
+		// Its garage faces the way the start spot does, out of the base.
+		const FTransform Transform(FRotator(0.f, RTSBuildPlacement::GetHeadquartersYaw(PlayerStart->GetActorRotation().Yaw), 0.f), Location);
 		ARTSBuilding* Building = World->SpawnActorDeferred<ARTSBuilding>(
 			ARTSBuilding::StaticClass(), Transform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		if (!Building)

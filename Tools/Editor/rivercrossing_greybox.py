@@ -38,8 +38,11 @@ HEIGHT_STEPS_PER_METRE = 128.0
 PLAYABLE_HALF = 1000.0
 BORDER_HEIGHT = 60.0
 
-# Bases (02 "Bases"): the west start spot and its 350 m flat pad, the east one mirrored.
+# Bases (02 "Bases"): the west start spot and its 350 m flat pad, the east one mirrored. The west spot faces east, at the
+# river and its home bridge along the main road, and the east one west: each headquarters turns its garage the way its
+# spot faces (RTSBuildPlacement::GetHeadquartersYaw, #427).
 WEST_BASE = (-720.0, -220.0)
+WEST_BASE_YAW = 0.0
 PAD_HALF = 175.0
 PAD_FALLOFF = 80.0
 # The west hill (15 to 25 m high, slopes under 20 degrees) overlooks the west side's home-bridge approach.
@@ -135,9 +138,10 @@ WEST_SOURCES = (
 )
 SUPPLY_FOOTPRINT = (12, 12)
 SUPPLY_HEIGHT = 300.0
-# Each spot starts with two builders this far behind it, as on the generated skirmish maps.
+# Each spot starts with two builders this far behind it, behind its headquarters' back wall, as on the generated skirmish
+# maps.
 BUILDERS = 2
-BUILDERS_BEHIND = 24.0
+BUILDERS_BEHIND = 36.0
 
 # The village (02 "Central village", #157): each bank's buildings of the in-house set (#408), ARTSCivilBuilding actors of
 # CIVIL_DIR's DA_Civil_<Type>, as (type, x, y, garrison) along both sides of the bank's main street (the ring road at
@@ -1678,11 +1682,44 @@ def spawn_props(world, props):
             raise RuntimeError("Could not string the village's power line (SpawnCables in the log says why)")
 
 
-def spawn_side(spot, base, yaw):
+def side_layout(spot):
+    """Spot's start spot (x, y) in metres, the yaw it faces and where its builders stand."""
+    base = WEST_BASE if spot == 0 else rotate(WEST_BASE)
+    yaw = WEST_BASE_YAW + 180.0 * spot
+    forward = (math.cos(math.radians(yaw)), math.sin(math.radians(yaw)))
+    return base, yaw, (base[0] - BUILDERS_BEHIND * forward[0], base[1] - BUILDERS_BEHIND * forward[1])
+
+
+def place_sides():
+    """Turns both sides' start spots and moves their builders to side_layout in the loaded level, which keeps its actors
+    (setup_rivercrossing.py). Returns how many actors it changed."""
+    wanted = {}
+    for spot in (0, 1):
+        base, yaw, behind = side_layout(spot)
+        wanted[f"StartSpot_{spot + 1}"] = (cm(base, height(*base) + 1.0), yaw)
+        wanted[f"Spawn_Team{spot}_Builders"] = (cm(behind, height(*behind)), yaw)
+    changed = 0
+    for actor in actors.get_all_level_actors():
+        place = wanted.pop(actor.get_actor_label(), None)
+        if not place:
+            continue
+        location, yaw = place
+        if (actor.get_actor_location().distance(location) > 1.0
+                or abs(unreal.MathLibrary.normalize_axis(actor.get_actor_rotation().yaw - yaw)) > 0.01):
+            # Through the root's properties, so the actor's package is marked to be saved; it has no parent.
+            root = actor.get_editor_property("root_component")
+            root.set_editor_property("relative_location", location)
+            root.set_editor_property("relative_rotation", unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw))
+            changed += 1
+    if wanted:
+        raise RuntimeError(f"{MAP_PATH} has no {', '.join(sorted(wanted))}")
+    return changed
+
+
+def spawn_side(spot):
+    base, yaw, behind = side_layout(spot)
     start = spawn(unreal.RTSStartSpot, cm(base, height(*base) + 1.0), yaw, f"StartSpot_{spot + 1}")
     start.set_editor_property("spot_index", spot)
-    forward = (math.cos(math.radians(yaw)), math.sin(math.radians(yaw)))
-    behind = (base[0] - BUILDERS_BEHIND * forward[0], base[1] - BUILDERS_BEHIND * forward[1])
     spawner = spawn(unreal.RTSUnitSpawner, cm(behind, height(*behind)), yaw, f"Spawn_Team{spot}_Builders")
     spawner.set_editor_property("unit_data", unreal.load_asset(BUILDER))
     spawner.set_editor_property("count", BUILDERS)
@@ -1738,9 +1775,8 @@ def build_greybox(world, heightmap_file, river_material, bridge_meshes, road_mat
     create_roads(world, road_materials, texture)
     spawn_village()
     spawn_props(world, props)
-    yaw = math.degrees(math.atan2(-WEST_BASE[1], -WEST_BASE[0]))
-    spawn_side(0, WEST_BASE, yaw)
-    spawn_side(1, rotate(WEST_BASE), yaw + 180.0)
+    spawn_side(0)
+    spawn_side(1)
     spawn_lighting()
 
     # The playable area: units path, the camera pans and the preview shows exactly the 2,000 m square.

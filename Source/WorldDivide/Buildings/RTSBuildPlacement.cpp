@@ -110,6 +110,11 @@ namespace RTSBuildPlacement
 		return ((FMath::RoundToInt(Yaw / 90.f) % 4) + 4) % 4;
 	}
 
+	float GetHeadquartersYaw(float SpotYaw)
+	{
+		return FMath::Fmod(FMath::RoundToFloat(FRotator::ClampAxis(SpotYaw) / HeadquartersYawStep) * HeadquartersYawStep, 360.f);
+	}
+
 	FRTSBuildingFootprint MakeFootprint(const FIntPoint& Footprint, const FVector& Location, float Yaw)
 	{
 		FRTSBuildingFootprint Ground;
