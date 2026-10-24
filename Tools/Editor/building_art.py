@@ -663,21 +663,70 @@ def build_lens_material(directory, name, white, white_masks):
 # M_Kit_Glow's per-instance custom data (RTSKitGlowData, #440): its part's level, fault and flash phases (as the lens's)
 # and its colour at full, RGB.
 GLOW_LEVEL, GLOW_FAULT, GLOW_FLASH, GLOW_COLOR = 0, 1, 2, 3
-# A kit beam or glare halo (#440): lit with its lens (LENS_HLSL's fault and flash), brightest where the surface faces the
-# camera (|N.V|^EdgePower, so its silhouette fades out), and a beam (Beam 1) fading along its length U from the lens, in
-# over StartFade and out as (1 - U)^AlongPower. A two-sided cone seen through its middle adds both walls: thick in the
-# middle, thin at the edge, as light in air.
+# A kit beam or glare halo (#440): lit with its lens (LENS_HLSL's fault and flash). A halo (and a Rect's beam, Cone.x < 0)
+# is brightest where its surface faces the camera (|N.V|^EdgePower, so its silhouette fades out), a beam fading along its
+# length U from the lens, in over StartFade and out as (1 - U)^AlongPower. A round beam (#458) is one solid body of light
+# in the air instead of its mesh's walls, whose facets read as stripes: on the wall the view ray enters its cone through
+# (in the instance's space, cm, the cone from Cone and Length), it adds up the light along the ray inside the cone (Steps
+# samples), up to the far wall, the cone's ends or whatever stands in the way (SceneZ), each sample fading along the beam
+# as a halo's U and out from its axis as (1 - r^2)^EdgePower, over the cone's width there: thick through the middle,
+# nothing at the edge, so the mesh's facets never show. The far wall draws nothing; inside the cone the near one does.
 GLOW_HLSL = """
 float fault = Fault > 0.0 ? step(0.35, frac(Time * 2.3 + Fault + 0.5 * sin(Time * 17.0 + Fault * 40.0))) : 1.0;
 float flash = Flash > 0.0 ? step(0.5, frac(Time + Flash)) : 1.0;
-float edge = pow(saturate(abs(dot(normalize(N), normalize(V)))), EdgePower);
-float along = lerp(1.0, pow(saturate(1.0 - U), AlongPower) * saturate(U / max(StartFade, 0.001)), Beam);
-return Color * Level * fault * flash * edge * along * Intensity;
+float glow;
+if (Beam > 0.5 && Cone.x >= 0.0)
+{
+	const int Steps = 8;
+	float3 d = Pos - Cam;
+	float a = Cone.x + Cone.y * Cam.x, b = Cone.y * d.x;
+	float A = dot(d.yz, d.yz) - b * b, B = 2.0 * (dot(Cam.yz, d.yz) - a * b), C = dot(Cam.yz, Cam.yz) - a * a;
+	float tIn = 1.0, tOut = 1e6;
+	if (A + 0.5 * B < 0.0)
+	{
+		// The ray enters the cone here (t 1); it leaves through the cone's other crossing, on its own side of the apex.
+		float disc = B * B - 4.0 * A * C;
+		if (abs(A) > 1e-6 && disc > 0.0)
+		{
+			float s = sqrt(disc), t1 = (-B - s) / (2.0 * A), t2 = (-B + s) / (2.0 * A);
+			float other = abs(t1 - 1.0) > abs(t2 - 1.0) ? t1 : t2;
+			if (other > 1.0 && a + b * other > 0.0) tOut = other;
+		}
+	}
+	else if (C < 0.0 && a > 0.0 && Cam.x > 0.0 && Cam.x < Length)
+	{
+		tIn = 0.0;
+		tOut = 1.0;
+	}
+	else
+	{
+		tOut = 0.0;
+	}
+	if (d.x > 1e-4) tOut = min(tOut, (Length - Cam.x) / d.x);
+	else if (d.x < -1e-4) tOut = min(tOut, -Cam.x / d.x);
+	tOut = min(tOut, SceneZ / max(PixelZ, 1e-4));
+	float span = max(tOut - tIn, 0.0), sum = 0.0;
+	[unroll] for (int i = 0; i < Steps; i++)
+	{
+		float3 q = Cam + d * (tIn + span * (i + 0.5) / Steps);
+		float u = saturate(q.x / Length);
+		float r = saturate(length(q.yz) / max(Cone.x + Cone.y * q.x, 0.001));
+		sum += pow(saturate(1.0 - u), AlongPower) * saturate(u / max(StartFade, 0.001)) * pow(1.0 - r * r, EdgePower);
+	}
+	float middle = clamp(Cam.x + d.x * (tIn + 0.5 * span), 0.0, Length);
+	glow = sum / Steps * span * length(d) / max(2.0 * (Cone.x + Cone.y * middle), 1.0) * Intensity;
+}
+else
+{
+	float edge = pow(saturate(abs(dot(normalize(N), normalize(V)))), EdgePower);
+	glow = edge * lerp(1.0, pow(saturate(1.0 - U), AlongPower) * saturate(U / max(StartFade, 0.001)), Beam) * Intensity;
+}
+return Color * Level * fault * flash * glow;
 """
 # MI_Kit_Beam and MI_Kit_Glare, M_Kit_Glow's two instances: scalars by name.
 GLOW_INSTANCES = {
-    "MI_Kit_Beam": {"Beam": 1.0, "EdgePower": 1.5, "AlongPower": 1.6, "StartFade": 0.04, "Intensity": 0.025,
-                    "FadeDistance": 80.0},
+    "MI_Kit_Beam": {"Beam": 1.0, "EdgePower": 1.5, "AlongPower": 1.6, "StartFade": 0.04, "Intensity": 0.08,
+                    "FadeDistance": 20.0},
     "MI_Kit_Glare": {"Beam": 0.0, "EdgePower": 3.0, "AlongPower": 1.0, "StartFade": 0.0, "Intensity": 0.04,
                      "FadeDistance": 25.0},
 }
@@ -701,6 +750,19 @@ def build_glow_material(directory, name):
     pins["V"] = _node(material, unreal.MaterialExpressionCameraVectorWS, -900, 720)
     pins["U"] = vehicle_art._mask(material, -900, 820, _node(material, unreal.MaterialExpressionTextureCoordinate,
                                                              -1100, 820, coordinate_index=0), "r")
+    # A round beam's light in the air (#458): the camera and this pixel in the instance's space, its cone, and the depth
+    # of the scene behind it against its own.
+    camera = _node(material, unreal.MaterialExpressionTransformPosition, -900, 1500,
+                   transform_source_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_WORLD,
+                   transform_type=unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_INSTANCE)
+    _connect(_node(material, unreal.MaterialExpressionCameraPositionWS, -1100, 1500), "", camera, "")
+    pins["Cam"] = camera
+    pins["Pos"] = _node(material, unreal.MaterialExpressionLocalPosition, -900, 1600)
+    pins["Cone"] = _node(material, unreal.MaterialExpressionTextureCoordinate, -900, 1700, coordinate_index=1)
+    pins["Length"] = vehicle_art._mask(material, -900, 1800, _node(material, unreal.MaterialExpressionTextureCoordinate,
+                                                                  -1100, 1800, coordinate_index=2), "r")
+    pins["SceneZ"] = _node(material, unreal.MaterialExpressionSceneDepth, -900, 1900)
+    pins["PixelZ"] = _node(material, unreal.MaterialExpressionPixelDepth, -900, 2000)
     defaults = GLOW_INSTANCES["MI_Kit_Beam"]
     for index, key in enumerate(("Beam", "EdgePower", "AlongPower", "StartFade", "Intensity")):
         pins[key] = _scalar(material, -900, 950 + 100 * index, key, defaults[key])
@@ -759,38 +821,45 @@ def import_light_profile(source, directory, name):
     return profile
 
 
-def _write_glb(path, positions, normals, uvs, triangles, slot):
+def _write_glb(path, positions, normals, uvs, triangles, slot, extra_uvs=()):
     """Writes one mesh as a binary glTF from Unreal's frame (cm, X forward, Z up): glTF is metres, Y up and right-handed,
-    so each point goes over as (x, z, y) / 100 and each triangle's winding turns with it. The material is slot."""
+    so each point goes over as (x, z, y) / 100 and each triangle's winding turns with it. The material is slot; extra_uvs
+    are further UV channels (TEXCOORD_1 on), one (u, v) per point each."""
     to_gltf = [(x / 100.0, z / 100.0, y / 100.0) for x, y, z in positions]
     gl_normals = [(x, z, y) for x, y, z in normals]
     indices = [i for a, b, c in triangles for i in (a, c, b)]
     blob = b"".join(struct.pack("<3f", *p) for p in to_gltf)
     normal_offset = len(blob)
     blob += b"".join(struct.pack("<3f", *n) for n in gl_normals)
-    uv_offset = len(blob)
-    blob += b"".join(struct.pack("<2f", *uv) for uv in uvs)
+    uv_offsets = []
+    for channel in [uvs, *extra_uvs]:
+        uv_offsets.append(len(blob))
+        blob += b"".join(struct.pack("<2f", *uv) for uv in channel)
     index_offset = len(blob)
     blob += b"".join(struct.pack("<I", i) for i in indices)
     blob += b"\0" * (-len(blob) % 4)
     count = len(positions)
+    channels = len(uv_offsets)
     low = [min(p[i] for p in to_gltf) for i in range(3)]
     high = [max(p[i] for p in to_gltf) for i in range(3)]
     gltf = {
         "asset": {"version": "2.0", "generator": "World Divide building_art.py (#440)"},
         "scene": 0, "scenes": [{"nodes": [0]}], "nodes": [{"mesh": 0, "name": slot}],
         "materials": [{"name": slot}],
-        "meshes": [{"name": slot, "primitives": [{"attributes": {"POSITION": 0, "NORMAL": 1, "TEXCOORD_0": 2},
-                                                  "indices": 3, "material": 0}]}],
+        "meshes": [{"name": slot, "primitives": [{"attributes": {"POSITION": 0, "NORMAL": 1,
+                                                                 **{f"TEXCOORD_{i}": 2 + i for i in range(channels)}},
+                                                  "indices": 2 + channels, "material": 0}]}],
         "buffers": [{"byteLength": len(blob)}],
         "bufferViews": [{"buffer": 0, "byteOffset": 0, "byteLength": normal_offset},
-                        {"buffer": 0, "byteOffset": normal_offset, "byteLength": uv_offset - normal_offset},
-                        {"buffer": 0, "byteOffset": uv_offset, "byteLength": index_offset - uv_offset},
+                        {"buffer": 0, "byteOffset": normal_offset, "byteLength": uv_offsets[0] - normal_offset},
+                        *({"buffer": 0, "byteOffset": start, "byteLength": end - start}
+                          for start, end in zip(uv_offsets, uv_offsets[1:] + [index_offset])),
                         {"buffer": 0, "byteOffset": index_offset, "byteLength": 4 * len(indices)}],
         "accessors": [{"bufferView": 0, "componentType": 5126, "count": count, "type": "VEC3", "min": low, "max": high},
                       {"bufferView": 1, "componentType": 5126, "count": count, "type": "VEC3"},
-                      {"bufferView": 2, "componentType": 5126, "count": count, "type": "VEC2"},
-                      {"bufferView": 3, "componentType": 5125, "count": len(indices), "type": "SCALAR"}],
+                      *({"bufferView": 2 + i, "componentType": 5126, "count": count, "type": "VEC2"}
+                        for i in range(channels)),
+                      {"bufferView": 2 + channels, "componentType": 5125, "count": len(indices), "type": "SCALAR"}],
     }
     text = json.dumps(gltf, separators=(",", ":")).encode("utf-8")
     text += b" " * (-len(text) % 4)
@@ -806,7 +875,9 @@ BEAM_SIDES = 24
 def write_beam_glb(path, light_type, width, height, length, spread):
     """A kit lamp's beam (#440) as a glb in its light's frame: open sides from the lens's face (width across Y, height
     along Z, cm) at X 0 out to length cm, flaring by spread degrees either side. A Spot's is round, a circle as wide as the
-    lens's smaller side; a Rect's square-edged. U runs 0 at the lens to 1 at the end, V round it."""
+    lens's smaller side; a Rect's square-edged. U runs 0 at the lens to 1 at the end, V round it. A round beam's UV1 holds
+    its cone for M_Kit_Glow's light in the air (#458): its radius at the lens and how much it grows per cm (tan spread),
+    UV2's U its length; a Rect's UV1 U is -1, so it keeps the glowing walls."""
     grow = length * math.tan(math.radians(spread))
     if light_type == "Rect":
         near = [(-width / 2, -height / 2), (width / 2, -height / 2), (width / 2, height / 2), (-width / 2, height / 2)]
@@ -835,7 +906,8 @@ def write_beam_glb(path, light_type, width, height, length, spread):
             uvs.append((x / length, (i + (1 if k in (1, 2) else 0)) / sides))
         base = 4 * i
         triangles += [(base, base + 3, base + 2), (base, base + 2, base + 1)]
-    _write_glb(path, positions, normals, uvs, triangles, "Glow")
+    cone = (-1.0, 0.0) if light_type == "Rect" else (min(width, height) / 2.0, math.tan(math.radians(spread)))
+    _write_glb(path, positions, normals, uvs, triangles, "Glow", ([cone] * len(positions), [(length, 0.0)] * len(positions)))
 
 
 def write_glare_glb(path, rings=8, segments=16):
