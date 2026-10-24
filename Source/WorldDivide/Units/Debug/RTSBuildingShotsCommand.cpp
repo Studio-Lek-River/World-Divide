@@ -4,6 +4,7 @@
 
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
+#include "Buildings/RTSBuildingStateComponent.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -39,7 +40,8 @@
  * for under RTSBenchScene::BenchHQDir, then /Game/Data/Buildings, then the kit spike's /Game/Developers/KitSpike (#387), then
  * the kit showcases' /Game/Data/Showcase (DA_TestKitLighting, #392). ue.ps1 passes a Folder for a run with other console
  * variables, such as NaniteOff for r.Nanite 0. The parts that turn on their own stay at rest and the game clock is held at
- * ShotGameTime, so the flag, the plants and the lamps look the same every run.
+ * ShotGameTime, so the flag, the plants and the lamps look the same every run. The building shows Idle (#442; L_Bench's
+ * team is short of power, which would show LowPower) unless the run sets rts.Debug.BuildingState, -1 for the game's own state.
  * -Night pictures it at night (#424): the sun and the sky lit as the game's night (FRTSShotNight::GetGameMoon, L_TestMapNight's
  * moon, sky and exposure) and the world dark for its lamps and glow (URTSDayNightSubsystem, as rts.Light.ForceDark 1), to the
  * Folder Night unless one is given. With -RTSBuildingShotsQuit the game quits when done, exit code 1 on failure.
@@ -234,6 +236,16 @@ namespace RTSBuildingShotsCommand
 				Building->UpdateConstruction(FMath::Max(Data->BuildTime, 1.f) * 10.f);
 			}
 			Building->SetEquipmentMotionScale(0.f);
+			URTSBuildingStateComponent* State = Building->GetStateComponent();
+			const IConsoleVariable* ForcedState = IConsoleManager::Get().FindConsoleVariable(TEXT("rts.Debug.BuildingState"));
+			if (State && ForcedState && (ForcedState->GetFlags() & ECVF_SetByMask) == ECVF_SetByConstructor)
+			{
+				State->SetDebugState(ERTSBuildingState::Idle);
+			}
+			if (State)
+			{
+				State->Refresh(/*bForce*/ true);
+			}
 			// The clock is held at ShotGameTime each frame and all but stopped in between (the lowest dilation there is).
 			if (AWorldSettings* Settings = World->GetWorldSettings())
 			{
@@ -254,8 +266,9 @@ namespace RTSBuildingShotsCommand
 			Camera->GetCameraComponent()->bConstrainAspectRatio = false;
 			Controller->SetViewTarget(Camera.Get());
 			IFileManager::Get().MakeDirectory(*GetShotDir(), /*Tree*/ true);
-			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.BuildingShots: %s at %s, r.Nanite %s, %s"), *Data->GetName(),
-				*BuildingLocation.ToString(), *GetCVar(TEXT("r.Nanite")), bNight ? TEXT("night") : TEXT("day"));
+			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.BuildingShots: %s at %s, r.Nanite %s, %s, %s"), *Data->GetName(),
+				*BuildingLocation.ToString(), *GetCVar(TEXT("r.Nanite")), bNight ? TEXT("night") : TEXT("day"),
+				State ? *UEnum::GetDisplayValueAsText(State->GetState()).ToString() : TEXT("no state"));
 			GoTo(EStep::Resize);
 			return true;
 		}

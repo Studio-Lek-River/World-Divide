@@ -3,13 +3,14 @@
 Taken 2026-10-24 at 2b5fd70b with the framing and night of #424:
 
 ```
-ue.ps1 -Task buildingshots -Building DA_TestKitLighting -Cvars rts.Debug.BuildingState=0
-ue.ps1 -Task buildingshots -Building DA_TestKitLighting -Cvars rts.Debug.BuildingState=0 -Night
+ue.ps1 -Task buildingshots -Building DA_TestKitLighting
+ue.ps1 -Task buildingshots -Building DA_TestKitLighting -Night
 ```
 
-`rts.Debug.BuildingState=0` (Idle) is needed: L_Bench's team is low on power, so without it the showcase shows its
-LowPower look: the emergency lamp 03 on battery, the warning beacon 08 flashing, the mast LEDs 12 and 13 at full on battery
-and every other lamp out.
+Buildingshots shows the building Idle unless the run sets `rts.Debug.BuildingState` (#442). These shots were taken before
+that with `-Cvars rts.Debug.BuildingState=0`, which gives the same picture. L_Bench's team is low on power, so with
+`rts.Debug.BuildingState=-1` (the game's own state) the showcase shows its LowPower look: the emergency lamp 03 on
+battery, the warning beacon 08 flashing, the mast LEDs 12 and 13 at full on battery and every other lamp out.
 
 The LowPower shots (#393) were taken the same way at 4a42426e with `rts.Debug.BuildingState=2`, by day and with `-Night`.
 

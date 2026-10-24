@@ -199,6 +199,10 @@ void URTSBuildingStateComponent::Refresh(bool bForce)
 	{
 		Inputs = RTSBuildingState::ForceState(Inputs, static_cast<ERTSBuildingState>(Forced));
 	}
+	else if (DebugState)
+	{
+		Inputs = RTSBuildingState::ForceState(Inputs, *DebugState);
+	}
 #endif
 	const ERTSBuildingState NewState = RTSBuildingState::Resolve(Inputs);
 	const FRTSBuildingLook NewLook = RTSBuildingState::GetLook(Inputs);

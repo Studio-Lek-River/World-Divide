@@ -138,7 +138,8 @@ asset -Building (rts.Debug.BuildingShots, #349; the bench HQs or any of Content/
 Saved/BuildingShots/<Building>. -Cvars runs it with console variables into a folder named after them (r.Nanite=0 into
 r_Nanite_0, what hardware without Nanite draws). The close view is framed from the building's data and its turning parts stay
 at rest, so two runs give the same pictures (#424). -Night pictures it at night (the sun and sky dimmed, its lamps and glow on
-as with rts.Light.ForceDark 1) into Night, or <cvars folder>_Night with -Cvars.
+as with rts.Light.ForceDark 1) into Night, or <cvars folder>_Night with -Cvars. The building shows Idle unless -Cvars sets
+rts.Debug.BuildingState (#442; 2 low power, -1 the game's own state: L_Bench's team is short of power).
 Kitspike builds the shared building kit's git-ignored spike content in /Game/Developers/KitSpike (Tools/Editor/kit_spike.py,
 #387), then plays L_Bench with a renderer and pictures the lens row (rts.Debug.KitSpikeLens) to Saved/KitSpike with the cost
 of updating its instances logged. Buildingshots then takes -Building DA_KitSpike_<Large|Small>_<A|B>.

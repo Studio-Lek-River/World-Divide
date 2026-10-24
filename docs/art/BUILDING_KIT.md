@@ -265,7 +265,8 @@ How it runs (#391):
   at 1.5 Hz.
 - The flicker and flash phases come from the mount's place among the mounts; the first two `Flicker` mounts flicker.
 - `rts.Debug.BuildingState <0..5>` shows every building in one state on this machine (Idle, Producing, LowPower, Damaged,
-  Critical, Destroyed; -1 off), for building shots: `ue.ps1 -Task buildingshots -Cvars "rts.Light.ForceDark=1,rts.Debug.BuildingState=2"`.
+  Critical, Destroyed; -1 off), for building shots: `ue.ps1 -Task buildingshots -Cvars "rts.Light.ForceDark=1,rts.Debug.BuildingState=2"`. Without it
+  buildingshots shows Idle (#442); `-1` shows the state the game has.
 
 ## Light budgets
 
@@ -385,9 +386,9 @@ Appearance approval is per piece: Codex delivers a candidate with close-up and R
 it, and only then does Claude add its catalogue entry. 01, 02, 03, 05 and 06 were approved on 2026-10-23 (#392), 04 on
 2026-10-22 and 07, 08, 09, 12 and 13 on 2026-10-23 (#393; each piece's `STATE.md`). The game-side shots of a piece come
 from `DA_TestKitLighting` in `/Game/Data/Showcase`, a plain Large block with 01, 02, 03, 05, 09 (blue), 04 and 07 on its
-front and 06, 08, 12 and 13 on its roof: `ue.ps1 -Task buildingshots -Building DA_TestKitLighting -Cvars
-rts.Debug.BuildingState=0`, with `-Night` for the night (#424) and `rts.Debug.BuildingState=2` for low power. Leave out
-the Idle state and it shows low power: L_Bench's team is short of power. The in-game shots of 01–09, 12 and 13 are in
+front and 06, 08, 12 and 13 on its roof: `ue.ps1 -Task buildingshots -Building DA_TestKitLighting`, with `-Night` for
+the night (#424) and `-Cvars rts.Debug.BuildingState=2` for low power. Buildingshots shows the building Idle unless the run
+sets `rts.Debug.BuildingState` (#442; L_Bench's team is short of power). The in-game shots of 01–09, 12 and 13 are in
 `Art/Shared/kit/lighting/ingame/` (#392).
 
 ## Other kits (outline)

@@ -129,6 +129,11 @@ public:
 	ERTSBuildingState GetState() const { return State; }
 	const FRTSBuildingLook& GetLook() const { return Look; }
 
+#if !UE_BUILD_SHIPPING
+	/** Shows this building in State whatever the game has (unset: as the game has it), for building shots (#442); rts.Debug.BuildingState outranks it. */
+	void SetDebugState(TOptional<ERTSBuildingState> InState) { DebugState = InState; }
+#endif
+
 	/** Every machine that draws, when the state changes; for the VFX and audio (#197). */
 	FRTSBuildingStateChanged OnStateChanged;
 
@@ -149,4 +154,7 @@ private:
 	TArray<FRTSKitLook> KitLooks;
 	bool bApplied = false;
 	float SinceUpdate = 0.f;
+#if !UE_BUILD_SHIPPING
+	TOptional<ERTSBuildingState> DebugState;
+#endif
 };
