@@ -591,6 +591,10 @@ def volume(placer, label, graph, centre, size, yaw):
     pcg = placer.place(unreal.PCGVolume, label, (centre[0], centre[1], VOLUME_CENTRE_Z), yaw, [GENERATE_TAG])
     # The default volume brush is a 2 m cube.
     pcg.set_actor_scale3d(unreal.Vector(size[0] / 2.0, size[1] / 2.0, MARKER_HEIGHT / 2.0))
+    # The graph reads only the bounds; a brush that blocks world-static queries lifts every unit inside it onto its top (#467).
+    brush = pcg.get_component_by_class(unreal.BrushComponent)
+    brush.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+    brush.set_editor_property("generate_overlap_events", False)
     component = pcg.get_component_by_class(unreal.PCGComponent)
     component.set_graph(graph)
     component.set_editor_property("seed", seed(label))

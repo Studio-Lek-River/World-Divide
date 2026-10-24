@@ -448,7 +448,7 @@ namespace RTSCameraShots
 				const FVector2D Location(FMath::Clamp(Scene.Focus.X, -Inside, Inside), FMath::Clamp(Scene.Focus.Y, -Inside, Inside));
 				if (ARTSUnit* Marker = SpawnUnit(Data, Location))
 				{
-					Markers.Add(Marker);
+					Markers.Add(Scene.Focus, Marker);
 				}
 				else
 				{
@@ -530,6 +530,14 @@ namespace RTSCameraShots
 			Camera->SetZoomNow(Zoom);
 			Camera->JumpTo(Shot.Focus);
 			GetController()->SetViewTarget(Camera);
+			// The clamp keeps a border focus's screen centre a zoom-dependent way inside the map: the marker goes to where the
+			// view actually centres (#467).
+			const TWeakObjectPtr<ARTSUnit>* Marker = Markers.Find(FVector2D(Shot.Focus));
+			if (Marker && Marker->IsValid())
+			{
+				const FVector2D Centre(Camera->GetActorLocation());
+				(*Marker)->SetActorLocation(FVector(Centre, GetGroundZ(Centre) + (*Marker)->GetGroundOffset()));
+			}
 		}
 
 		/** Where the screen point's view ray meets the ground plane at Z; unset when it looks above the horizon. */
@@ -655,11 +663,11 @@ namespace RTSCameraShots
 				GetCameraPawn()->ApplyTuning(*OwnTuning);
 			}
 			// The border markers were only for the pictures; a playtest goes on without them.
-			for (const TWeakObjectPtr<AActor>& Marker : Markers)
+			for (const TPair<FVector2D, TWeakObjectPtr<ARTSUnit>>& Marker : Markers)
 			{
-				if (Marker.IsValid())
+				if (Marker.Value.IsValid())
 				{
-					Marker->Destroy();
+					Marker.Value->Destroy();
 				}
 			}
 			Markers.Reset();
@@ -692,8 +700,8 @@ namespace RTSCameraShots
 		/** The units measured on each picture and their hulls. */
 		TArray<TPair<FString, FBox>> Measured;
 		FVector Vehicle = FVector::ZeroVector;
-		/** River Crossing's border markers, removed when done. */
-		TArray<TWeakObjectPtr<AActor>> Markers;
+		/** River Crossing's scene markers by their scene's focus, removed when done. */
+		TMap<FVector2D, TWeakObjectPtr<ARTSUnit>> Markers;
 		TArray<FString> Rows;
 		/** The frame times summed over the current shot's measuring second. */
 		struct FTiming
