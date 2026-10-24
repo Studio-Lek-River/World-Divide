@@ -5,8 +5,8 @@
       "sha256": "2c2a64904d9905f6425e636982b3d6d17f367f95952481c1a16027a635b1010a"
     },
     "source/Bridge_baked.blend": {
-      "bytes": 343790,
-      "sha256": "1a2a6c5daed23ed2252bd48a31410c47dcc58f282d25d41a9847765d40ea986e"
+      "bytes": 401596,
+      "sha256": "c074a020b33b4ed605fd47f6397f46ec235dee01cd99c373fca04a573e48e9b3"
     },
     "source/Church_baked.blend": {
       "bytes": 1583600,
@@ -33,8 +33,8 @@
       "sha256": "ed63bbcf66f4919e95854cf365cf941268455e40b282bdc4b418e7141077fb7c"
     },
     "source/SM_Bridge_Span_Destroyed_MASTER.fbx": {
-      "bytes": 368156,
-      "sha256": "9bbadcd59f3d0d68c4ca741eb5087a89ba45582e96ffcd1c3f2aee1bf112b9eb"
+      "bytes": 455564,
+      "sha256": "21b6c91a44b5a735b86cc3910be917daaf7672a082b701c8c6f37d8a3532bdec"
     },
     "source/SM_Village_Barn_Damaged_MASTER.fbx": {
       "bytes": 478972,
@@ -133,12 +133,12 @@
       "sha256": "f86b4edc1c244363202f707b6064c0f7f92d41919999f757dabb3e5e90ea0a7c"
     },
     "fbx/SM_Bridge_Span_Destroyed.fbx": {
-      "bytes": 150300,
-      "sha256": "ff463c79e95f5aedc406879807553caa95ff1d352ac29b6f31a1b4ea0b281382"
+      "bytes": 231692,
+      "sha256": "bc1ec3014dbf7a48045873096e2056f6d59bab215ed52a580eb44e7b0eff48eb"
     },
     "fbx/SM_Bridge_Span_Destroyed_LOD1.fbx": {
-      "bytes": 152572,
-      "sha256": "6babbaaa36ebb1c69b4ee6f8be800d51ae6f98f71975671ff0ef22b570bcc102"
+      "bytes": 237596,
+      "sha256": "5b755ea8a4e3e9d1cba10e1a73230591c1fe7be394a68b26e8d53fb73d15de83"
     },
     "fbx/SM_Village_Barn.fbx": {
       "bytes": 246956,
@@ -449,16 +449,16 @@
       "sha256": "8d26d51c9a7a650bcedc1831a0aba036aada24b31f5abc2399f806b40575452f"
     },
     "textures/SM_Bridge_Span_Destroyed_BakeAO.png": {
-      "bytes": 988899,
-      "sha256": "07c1844340aae72ddc0a4bb659b06259a5ee7eeedfc7728df643b20b73eeddbd"
+      "bytes": 591607,
+      "sha256": "83f6197ba01b6f59dec590b956771587c17319e78d598ecbee30e592a58b0f0d"
     },
     "textures/SM_Bridge_Span_Destroyed_BakeNormal.png": {
-      "bytes": 326726,
-      "sha256": "fe7ae49f69ee7eff28e2bd1200da5a665e113b7693c12cbf0eea2b18f9fb93f5"
+      "bytes": 430933,
+      "sha256": "a7518f208a127c5b7e9f7bc1a5b0b70b45625178b36f923b2740bdaf52e5f9a6"
     },
     "textures/SM_Bridge_Span_Destroyed_Tint.png": {
-      "bytes": 325718,
-      "sha256": "6e8d739b3032d1630e3f285d9f2481d111235090311e3fee95b2d0a7de9306fe"
+      "bytes": 517128,
+      "sha256": "598b11f6efc3808a44d3b9fbfce727f43dcfa3917784d0c8d09e3c6dca7c23be"
     },
     "textures/SM_Village_Barn_BakeAO.png": {
       "bytes": 1549323,

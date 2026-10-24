@@ -13855,20 +13855,20 @@
       "native_lod_count": 1
     },
     "SM_Bridge_Span_Destroyed": {
-      "asset": "/Game/Art/Candidates/Village/Final/Meshes02/SM_Bridge_Span_Destroyed",
-      "source_triangles": 984,
-      "fbx_triangles": 984,
-      "unreal_triangles": 984,
-      "budget_triangles": 984,
+      "asset": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Meshes/SM_Bridge_Span_Destroyed",
+      "source_triangles": 1564,
+      "fbx_triangles": 1564,
+      "unreal_triangles": 1564,
+      "budget_triangles": 1564,
       "bounds_cm": {
         "min": {
           "x": -1602.8624267578125,
-          "y": -705.000244140625,
+          "y": -858.6144409179688,
           "z": -944.4615478515625
         },
         "max": {
           "x": 1602.8624267578125,
-          "y": 826.2465209960938,
+          "y": 860.5657958984375,
           "z": 80.90169525146484
         },
         "isValid": true
@@ -13883,7 +13883,7 @@
         "staticMaterials": [
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Brick.MI_SM_Bridge_Span_Destroyed_Brick"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Brick.MI_SM_Bridge_Span_Destroyed_Brick"
             },
             "materialSlotName": "Brick",
             "importedMaterialSlotName": "Brick",
@@ -13892,8 +13892,8 @@
               "bOverrideDensities": false,
               "localUVDensities": [
                 106.88636779785156,
-                5277.52490234375,
-                13206.8603515625,
+                6426.22314453125,
+                43139.609375,
                 0
               ]
             },
@@ -13901,7 +13901,7 @@
           },
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Roof.MI_SM_Bridge_Span_Destroyed_Roof"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Roof.MI_SM_Bridge_Span_Destroyed_Roof"
             },
             "materialSlotName": "Roof",
             "importedMaterialSlotName": "Roof",
@@ -13910,8 +13910,8 @@
               "bOverrideDensities": false,
               "localUVDensities": [
                 221.3760223388672,
-                5244.38134765625,
-                13779.1064453125,
+                6371.5595703125,
+                45222.875,
                 0
               ]
             },
@@ -13919,7 +13919,7 @@
           },
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Trim.MI_SM_Bridge_Span_Destroyed_Trim"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Trim.MI_SM_Bridge_Span_Destroyed_Trim"
             },
             "materialSlotName": "Trim",
             "importedMaterialSlotName": "Trim",
@@ -13927,9 +13927,9 @@
               "bInitialized": true,
               "bOverrideDensities": false,
               "localUVDensities": [
-                208.18508911132812,
-                5484.8505859375,
-                13070.32421875,
+                63.55752182006836,
+                3316.50732421875,
+                28773.92578125,
                 0
               ]
             },
@@ -13937,7 +13937,7 @@
           },
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Rubble.MI_SM_Bridge_Span_Destroyed_Rubble"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Rubble.MI_SM_Bridge_Span_Destroyed_Rubble"
             },
             "materialSlotName": "Rubble",
             "importedMaterialSlotName": "Rubble",
@@ -13946,8 +13946,8 @@
               "bOverrideDensities": false,
               "localUVDensities": [
                 216.05767822265625,
-                5366.0849609375,
-                13690.60546875,
+                6544.4267578125,
+                44588.82421875,
                 0
               ]
             },
@@ -14212,20 +14212,20 @@
       }
     },
     "SM_Bridge_Span_Destroyed_LOD1": {
-      "asset": "/Game/Art/Candidates/Village/Final/Meshes02/SM_Bridge_Span_Destroyed_LOD1",
-      "source_triangles": 984,
-      "fbx_triangles": 984,
-      "unreal_triangles": 984,
-      "budget_triangles": 984,
+      "asset": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Meshes/SM_Bridge_Span_Destroyed_LOD1",
+      "source_triangles": 1564,
+      "fbx_triangles": 1564,
+      "unreal_triangles": 1564,
+      "budget_triangles": 1564,
       "bounds_cm": {
         "min": {
           "x": -1602.8624267578125,
-          "y": -705.000244140625,
+          "y": -858.6144409179688,
           "z": -944.4615478515625
         },
         "max": {
           "x": 1602.8624267578125,
-          "y": 826.2465209960938,
+          "y": 860.5657958984375,
           "z": 80.90169525146484
         },
         "isValid": true
@@ -14240,7 +14240,7 @@
         "staticMaterials": [
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Brick.MI_SM_Bridge_Span_Destroyed_Brick"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Brick.MI_SM_Bridge_Span_Destroyed_Brick"
             },
             "materialSlotName": "Brick",
             "importedMaterialSlotName": "Brick",
@@ -14249,8 +14249,8 @@
               "bOverrideDensities": false,
               "localUVDensities": [
                 106.8566665649414,
-                3410.1728515625,
-                12999.5126953125,
+                6424.00634765625,
+                42584.34765625,
                 0
               ]
             },
@@ -14258,7 +14258,7 @@
           },
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Roof.MI_SM_Bridge_Span_Destroyed_Roof"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Roof.MI_SM_Bridge_Span_Destroyed_Roof"
             },
             "materialSlotName": "Roof",
             "importedMaterialSlotName": "Roof",
@@ -14267,8 +14267,8 @@
               "bOverrideDensities": false,
               "localUVDensities": [
                 221.3760223388672,
-                22451.759765625,
-                13629.5908203125,
+                6371.5595703125,
+                44699.265625,
                 0
               ]
             },
@@ -14276,7 +14276,7 @@
           },
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Trim.MI_SM_Bridge_Span_Destroyed_Trim"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Trim.MI_SM_Bridge_Span_Destroyed_Trim"
             },
             "materialSlotName": "Trim",
             "importedMaterialSlotName": "Trim",
@@ -14284,9 +14284,9 @@
               "bInitialized": true,
               "bOverrideDensities": false,
               "localUVDensities": [
-                208.18283081054688,
-                1663.2940673828125,
-                12892.8125,
+                63.557498931884766,
+                3316.505126953125,
+                27969.072265625,
                 0
               ]
             },
@@ -14294,7 +14294,7 @@
           },
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Rubble.MI_SM_Bridge_Span_Destroyed_Rubble"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Rubble.MI_SM_Bridge_Span_Destroyed_Rubble"
             },
             "materialSlotName": "Rubble",
             "importedMaterialSlotName": "Rubble",
@@ -14303,8 +14303,8 @@
               "bOverrideDensities": false,
               "localUVDensities": [
                 216.05767822265625,
-                2402.041259765625,
-                13322.9677734375,
+                6540.12841796875,
+                43022.47265625,
                 0
               ]
             },
@@ -14316,20 +14316,20 @@
       "native_lod_count": 1
     },
     "SM_Bridge_Span_Destroyed_MASTER": {
-      "asset": "/Game/Art/Candidates/Village/Final/Masters02/SM_Bridge_Span_Destroyed_MASTER",
-      "source_triangles": 2760,
-      "fbx_triangles": 2760,
-      "unreal_triangles": 2760,
-      "budget_triangles": 2760,
+      "asset": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Meshes/SM_Bridge_Span_Destroyed_MASTER",
+      "source_triangles": 3340,
+      "fbx_triangles": 3340,
+      "unreal_triangles": 3340,
+      "budget_triangles": 3340,
       "bounds_cm": {
         "min": {
           "x": -1602.578857421875,
-          "y": -705.000244140625,
+          "y": -858.6144409179688,
           "z": -943.6842041015625
         },
         "max": {
           "x": 1602.578857421875,
-          "y": 825.060302734375,
+          "y": 860.5657958984375,
           "z": 80.90169525146484
         },
         "isValid": true
@@ -14344,7 +14344,7 @@
         "staticMaterials": [
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Brick_MASTER.MI_SM_Bridge_Span_Destroyed_Brick_MASTER"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Brick_MASTER.MI_SM_Bridge_Span_Destroyed_Brick_MASTER"
             },
             "materialSlotName": "Brick",
             "importedMaterialSlotName": "Brick",
@@ -14353,8 +14353,8 @@
               "bOverrideDensities": false,
               "localUVDensities": [
                 107.22740936279297,
-                5395.2900390625,
-                13184.7255859375,
+                6500.38916015625,
+                45820.6171875,
                 0
               ]
             },
@@ -14362,7 +14362,7 @@
           },
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Roof_MASTER.MI_SM_Bridge_Span_Destroyed_Roof_MASTER"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Roof_MASTER.MI_SM_Bridge_Span_Destroyed_Roof_MASTER"
             },
             "materialSlotName": "Roof",
             "importedMaterialSlotName": "Roof",
@@ -14371,8 +14371,8 @@
               "bOverrideDensities": false,
               "localUVDensities": [
                 221.3760223388672,
-                5244.38134765625,
-                13789.4677734375,
+                6370.76611328125,
+                46958.39453125,
                 0
               ]
             },
@@ -14380,7 +14380,7 @@
           },
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Trim_MASTER.MI_SM_Bridge_Span_Destroyed_Trim_MASTER"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Trim_MASTER.MI_SM_Bridge_Span_Destroyed_Trim_MASTER"
             },
             "materialSlotName": "Trim",
             "importedMaterialSlotName": "Trim",
@@ -14388,9 +14388,9 @@
               "bInitialized": true,
               "bOverrideDensities": false,
               "localUVDensities": [
-                208.18508911132812,
-                5484.8505859375,
-                13079.0576171875,
+                63.55752182006836,
+                3316.5078125,
+                29994.478515625,
                 0
               ]
             },
@@ -14398,7 +14398,7 @@
           },
           {
             "materialInterface": {
-              "refPath": "/Game/Art/Candidates/Village/Final/Materials/MI_SM_Bridge_Span_Destroyed_Rubble_MASTER.MI_SM_Bridge_Span_Destroyed_Rubble_MASTER"
+              "refPath": "/Game/Art/Candidates/Village/Rebar446/R4/Final/Materials/MI_SM_Bridge_Span_Destroyed_Rubble_MASTER.MI_SM_Bridge_Span_Destroyed_Rubble_MASTER"
             },
             "materialSlotName": "Rubble",
             "importedMaterialSlotName": "Rubble",
@@ -14407,8 +14407,8 @@
               "bOverrideDensities": false,
               "localUVDensities": [
                 215.26210021972656,
-                5494.5947265625,
-                13070.5361328125,
+                6623.03466796875,
+                45121.1328125,
                 0
               ]
             },
@@ -51911,13 +51911,11 @@
         }
       },
       "SM_Bridge_Span_Destroyed": {
-        "triangles": 984,
+        "triangles": 1564,
         "slots": [
           "SM_Bridge_Span_Destroyed_Brick",
           "SM_Bridge_Span_Destroyed_Roof",
           "SM_Bridge_Span_Destroyed_Trim",
-          "SM_Bridge_Span_Destroyed_Glass",
-          "SM_Bridge_Span_Destroyed_Wood",
           "SM_Bridge_Span_Destroyed_Rubble"
         ],
         "bad_geo": 0,
@@ -51927,15 +51925,14 @@
           "UVMap",
           "BakeUV"
         ],
-        "reimport_triangle_delta": 0,
+        "baseline_triangles": 984,
+        "added_triangles": 580,
         "reimport": {
-          "triangles": 984,
+          "triangles": 1564,
           "slots": [
             "Brick",
             "Roof",
             "Trim",
-            "Glass",
-            "Wood",
             "Rubble"
           ],
           "bad_geo": 0,
@@ -51945,16 +51942,15 @@
             "UVMap",
             "BakeUV"
           ]
-        }
+        },
+        "reimport_triangle_delta": 0
       },
       "SM_Bridge_Span_Destroyed_LOD1": {
-        "triangles": 984,
+        "triangles": 1564,
         "slots": [
           "SM_Bridge_Span_Destroyed_Brick",
           "SM_Bridge_Span_Destroyed_Roof",
           "SM_Bridge_Span_Destroyed_Trim",
-          "SM_Bridge_Span_Destroyed_Glass",
-          "SM_Bridge_Span_Destroyed_Wood",
           "SM_Bridge_Span_Destroyed_Rubble"
         ],
         "bad_geo": 0,
@@ -51964,15 +51960,14 @@
           "UVMap",
           "BakeUV"
         ],
-        "reimport_triangle_delta": 0,
+        "baseline_triangles": 984,
+        "added_triangles": 580,
         "reimport": {
-          "triangles": 984,
+          "triangles": 1564,
           "slots": [
             "Brick",
             "Roof",
             "Trim",
-            "Glass",
-            "Wood",
             "Rubble"
           ],
           "bad_geo": 0,
@@ -51982,16 +51977,15 @@
             "UVMap",
             "BakeUV"
           ]
-        }
+        },
+        "reimport_triangle_delta": 0
       },
       "SM_Bridge_Span_Destroyed_MASTER": {
-        "triangles": 2760,
+        "triangles": 3340,
         "slots": [
           "SM_Bridge_Span_Destroyed_Brick",
           "SM_Bridge_Span_Destroyed_Roof",
           "SM_Bridge_Span_Destroyed_Trim",
-          "SM_Bridge_Span_Destroyed_Glass",
-          "SM_Bridge_Span_Destroyed_Wood",
           "SM_Bridge_Span_Destroyed_Rubble"
         ],
         "bad_geo": 0,
@@ -52001,15 +51995,14 @@
           "UVMap",
           "BakeUV"
         ],
-        "reimport_triangle_delta": 0,
+        "baseline_triangles": 2760,
+        "added_triangles": 580,
         "reimport": {
-          "triangles": 2760,
+          "triangles": 3340,
           "slots": [
             "Brick",
             "Roof",
             "Trim",
-            "Glass",
-            "Wood",
             "Rubble"
           ],
           "bad_geo": 0,
@@ -52019,7 +52012,8 @@
             "UVMap",
             "BakeUV"
           ]
-        }
+        },
+        "reimport_triangle_delta": 0
       }
     },
     "apertures": {

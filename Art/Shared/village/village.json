@@ -1807,23 +1807,23 @@
     "Trim",
     "Rubble"
    ],
-   "triangles": 984,
+   "triangles": 1564,
    "collision_boxes": 2,
    "bounds": [
     [
      -1602.8624267578125,
-     -705.000244140625,
+     -858.6144409179688,
      -944.4615478515625
     ],
     [
      1602.8624267578125,
-     826.2465209960938,
+     860.5657958984375,
      80.90169525146484
     ]
    ],
    "lod1": {
     "fbx": "SM_Bridge_Span_Destroyed_LOD1.fbx",
-    "triangles": 984
+    "triangles": 1564
    },
    "materials": {
     "Brick": {
