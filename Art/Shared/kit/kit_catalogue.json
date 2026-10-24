@@ -50,13 +50,13 @@
    "faction": "neutral",
    "slots": ["Housing", "Lens"],
    "atlas": {"Housing": "Trim", "Lens": "Lens"},
-   "light": {"anchor": "Lens", "type": "Point", "candela": 60, "kelvin": 3000, "radius": 600, "group": "Fixtures", "behaviour": "Steady", "priority": "Primary", "max_draw_distance": 15000},
-   "glare": 0.8,
+   "light": {"anchor": "Lens", "offset": 30, "type": "Point", "candela": 1.2, "kelvin": 3000, "radius": 500, "group": "Fixtures", "behaviour": "Steady", "priority": "Primary", "max_draw_distance": 15000},
+   "glare": 0.4,
    "emergency_default": false,
    "fault_response": "Flicker",
    "mount_points": {"Wall": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
    "budgets": {"lod0": 1200, "lod1": 400, "slots": 2},
-   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.44, 0.16], "Intensity": 4.2}}
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.44, 0.16], "Intensity": 8.0}}
   },
   {
    "id": "lighting/03_EntranceLight",

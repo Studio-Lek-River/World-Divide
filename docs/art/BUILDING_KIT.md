@@ -143,6 +143,7 @@ The catalogue file is `{"pieces": [ ... ]}`.
 | `light` | absent for emissive-only pieces (S class); otherwise one real light, see below |
 | `light.anchor` | the named island it shines from: always `Lens`. Setup puts the light in the middle of the lens face it shines through (manifest bounds); a Rect is as wide and high as that face |
 | `light.rotation` | optional: pitch, yaw, roll of the light in the fixture frame; `[0, 0, 0]` (default) shines along +X |
+| `light.offset` | optional (#455): cm the light stands out from its lens along `rotation`, so a shadowless Point lighting the area round a wall lamp does not burn the wall behind it white |
 | `light.type` | `Point`, `Spot` or `Rect` (`ERTSBuildingLightType`) |
 | `light.candela` | intensity, within the class maximum |
 | `light.kelvin` | colour temperature of the real fixture class |

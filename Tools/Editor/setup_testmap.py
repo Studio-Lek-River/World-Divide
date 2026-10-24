@@ -678,6 +678,9 @@ def kit_light(light, lens, profile=None):
     location = list(centre)
     # A flat lens (07's panel, #393): a millimetre in front of it, so it still shines out of it.
     location[axis] += math.copysign(max(size[axis] / 2.0, 0.1), forward[axis])
+    # An area light stands its "offset" cm out along its light (02, #455): a shadowless light at its lens burns the wall
+    # behind it white.
+    location = [l + f * light.get("offset", 0.0) for l, f in zip(location, forward)]
     value = unreal.RTSKitLight()
     value.set_editor_property("type", getattr(unreal.RTSBuildingLightType, light["type"].upper()))
     value.set_editor_property("location", unreal.Vector(*location))
