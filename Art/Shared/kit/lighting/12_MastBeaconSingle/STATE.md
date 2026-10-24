@@ -1,6 +1,6 @@
 # 12_MastBeaconSingle — Round 4 state
 
-**Producer appearance approval:** approved on the Round 4 sheets (2026-10-23), with 12 and 13 as class M. Claude integrated it in #393 (catalogue, setup, `DA_TestKitLighting`); the in-game close-up and night shots are in [../ingame/](../ingame/README.md) (#392).
+**Producer appearance approval:** approved on the Round 4 sheets (2026-10-23), with 12 and 13 as class M. Claude integrated it in #393 (catalogue, setup, `DA_TestKitLighting`); the in-game close-up, night and LowPower shots are in [../ingame/](../ingame/README.md) (#392, #393).
 
 Independent art/technical pass, 2026-10-23. Producer approval pending.
 
