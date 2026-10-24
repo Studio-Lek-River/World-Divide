@@ -28,5 +28,5 @@
   {"id": "rock_face_02", "category": "F", "kind": "prop", "collision": "complex"},
   {"id": "mountainside", "category": "F", "kind": "prop", "collision": "complex"}
  ],
- "ambientcg": ["RoofingTiles006", "RoofingTiles013A", "Planks037A", "Planks023A"]
+ "ambientcg": ["RoofingTiles006", "RoofingTiles013A", "Planks037A", "Planks023A", "Bricks085", "Bricks097", "Plaster001", "Plaster006", "Concrete031", "Concrete036"]
 }

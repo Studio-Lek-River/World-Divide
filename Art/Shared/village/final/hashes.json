@@ -1,0 +1,1640 @@
+{
+  "files": {
+    "source/Barn_baked.blend": {
+      "bytes": 936743,
+      "sha256": "2c2a64904d9905f6425e636982b3d6d17f367f95952481c1a16027a635b1010a"
+    },
+    "source/Bridge_baked.blend": {
+      "bytes": 343790,
+      "sha256": "1a2a6c5daed23ed2252bd48a31410c47dcc58f282d25d41a9847765d40ea986e"
+    },
+    "source/Church_baked.blend": {
+      "bytes": 1583600,
+      "sha256": "590cf41348e906ca3f2a65422e0b40481f049e5637c9c01831538d4ee8c8097b"
+    },
+    "source/Farmhouse_baked.blend": {
+      "bytes": 1168429,
+      "sha256": "a085dcef5c09975e58563c398ac115d899893827f05eecae0961d0a4d2ab40fb"
+    },
+    "source/HouseA_baked.blend": {
+      "bytes": 1185524,
+      "sha256": "dd8c102895c63b669a6872530ae0faaf0569f7cea1dafdb5dae5952d5aa2b598"
+    },
+    "source/HouseB_baked.blend": {
+      "bytes": 1069499,
+      "sha256": "0ea1ef5b199bcc1906ff2bfab2d68f34c91ec58aeda49e08794fd5aca2fb0945"
+    },
+    "source/HouseC_baked.blend": {
+      "bytes": 946130,
+      "sha256": "a97b32b6358146903b830bd99b892c35e1022462c5d7afb2945751014a8d3713"
+    },
+    "source/SM_Bridge_Span_Damaged_MASTER.fbx": {
+      "bytes": 147340,
+      "sha256": "ed63bbcf66f4919e95854cf365cf941268455e40b282bdc4b418e7141077fb7c"
+    },
+    "source/SM_Bridge_Span_Destroyed_MASTER.fbx": {
+      "bytes": 368156,
+      "sha256": "9bbadcd59f3d0d68c4ca741eb5087a89ba45582e96ffcd1c3f2aee1bf112b9eb"
+    },
+    "source/SM_Village_Barn_Damaged_MASTER.fbx": {
+      "bytes": 478972,
+      "sha256": "74b54c22b61f15eef0fb008ec512e49a3891a54c7695394c8bbfd7e88e36bd47"
+    },
+    "source/SM_Village_Barn_MASTER.fbx": {
+      "bytes": 283148,
+      "sha256": "54e5b3668359437346f9d6ae5e77001cff890defab4ecbdbe1ba37036bd467d9"
+    },
+    "source/SM_Village_Barn_Rubble_MASTER.fbx": {
+      "bytes": 502620,
+      "sha256": "d2569208f718b0ef0bd872d9a6b03a34d47825821a16de48951d989b767c9388"
+    },
+    "source/SM_Village_Church_Damaged_MASTER.fbx": {
+      "bytes": 753372,
+      "sha256": "9ccdb7e8a3a59c5bab4388b127df9c7f7b16704760ac9e6be838b88cc56530cc"
+    },
+    "source/SM_Village_Church_MASTER.fbx": {
+      "bytes": 558172,
+      "sha256": "845d017be8977386124a0ff657a951fd066688060ea6589db4d72121abd1492a"
+    },
+    "source/SM_Village_Church_Rubble_MASTER.fbx": {
+      "bytes": 719676,
+      "sha256": "3a78dc6d50c9cf088e5be5163a3e08c237c5be50695ca877416200c89b6db564"
+    },
+    "source/SM_Village_Farmhouse_Damaged_MASTER.fbx": {
+      "bytes": 622940,
+      "sha256": "a70adbcbc22f6085ade61c2509cf0706c20300b649ebf1f6824f2d8ddd3567a5"
+    },
+    "source/SM_Village_Farmhouse_MASTER.fbx": {
+      "bytes": 466748,
+      "sha256": "3b91f8229ccc2507a208dba2b54420398c33667925b4dfb16ad678d56df83aa0"
+    },
+    "source/SM_Village_Farmhouse_Rubble_MASTER.fbx": {
+      "bytes": 487212,
+      "sha256": "5a0ea2768b14d8f61dcbbec5e55dac577772d8f7b30fdd4787147866f1e4cc47"
+    },
+    "source/SM_Village_HouseA_Damaged_MASTER.fbx": {
+      "bytes": 632796,
+      "sha256": "7911f875149827bd9718d4d36dc326b96c861bc9022b56a93a968800a52bbca8"
+    },
+    "source/SM_Village_HouseA_MASTER.fbx": {
+      "bytes": 426588,
+      "sha256": "a6a4432887acba67ef3e7f699aab660f1a7bafc35c39a82cbc2d4b230cf16845"
+    },
+    "source/SM_Village_HouseA_Rubble_MASTER.fbx": {
+      "bytes": 538588,
+      "sha256": "7a03b023178ea1f96e75585723fabe53e38ec9bc50eea00d26e1fe5222e82b30"
+    },
+    "source/SM_Village_HouseB_Damaged_MASTER.fbx": {
+      "bytes": 568860,
+      "sha256": "75ad4339c218c52a84f07a06bdc5f5591788eea31a37cb2063379885277effba"
+    },
+    "source/SM_Village_HouseB_MASTER.fbx": {
+      "bytes": 429692,
+      "sha256": "0dabe6a6a96aee8ff5870bdf85788b921a401a34de2084dfeb6f613c9935a3df"
+    },
+    "source/SM_Village_HouseB_Rubble_MASTER.fbx": {
+      "bytes": 452476,
+      "sha256": "7571afc3ec1b7a72b69dfd7c4d5638cf9556c264e4d3c1ef3db788148eef5bc8"
+    },
+    "source/SM_Village_HouseC_Damaged_MASTER.fbx": {
+      "bytes": 498444,
+      "sha256": "c5807fe87c5a4f680741b8835bfcf6c6a2d0ca40df5170adebcf2ce1e463f255"
+    },
+    "source/SM_Village_HouseC_MASTER.fbx": {
+      "bytes": 331756,
+      "sha256": "f21d842aa690c1949c3dbd8f9e428be6cec8dd2d99880ba798eef162b8825f97"
+    },
+    "source/SM_Village_HouseC_Rubble_MASTER.fbx": {
+      "bytes": 441916,
+      "sha256": "3443b266c7d0ff79bc7cefab1dcf5196c013d3a40f86a092804c56a5e5e4fb7b"
+    },
+    "source/SM_Village_Workshop_Damaged_MASTER.fbx": {
+      "bytes": 514108,
+      "sha256": "828748634ea020d15c657981bd2f97acc5b2f54c1e23152c9a50ce8f317b9da4"
+    },
+    "source/SM_Village_Workshop_MASTER.fbx": {
+      "bytes": 339436,
+      "sha256": "d939485e2873d49e3db2754f964bf6b7c524d9cef39afceedf96bdd17e256c36"
+    },
+    "source/SM_Village_Workshop_Rubble_MASTER.fbx": {
+      "bytes": 471900,
+      "sha256": "7ddf895b5146d0c1a8b33833d8d9993ac765a66d870aefa19dcf9ca5d27026fd"
+    },
+    "source/Workshop_baked.blend": {
+      "bytes": 994740,
+      "sha256": "0628abff6ab8d5d99d2f620f224b61507f4b00d8f50d2abdbd115aac41338db4"
+    },
+    "fbx/SM_Bridge_Span_Damaged.fbx": {
+      "bytes": 101740,
+      "sha256": "9517f62c9cd9d5e33a79d85bbf1c9aecb9940ec3a753218273996254521e67a9"
+    },
+    "fbx/SM_Bridge_Span_Damaged_LOD1.fbx": {
+      "bytes": 97644,
+      "sha256": "f86b4edc1c244363202f707b6064c0f7f92d41919999f757dabb3e5e90ea0a7c"
+    },
+    "fbx/SM_Bridge_Span_Destroyed.fbx": {
+      "bytes": 150300,
+      "sha256": "ff463c79e95f5aedc406879807553caa95ff1d352ac29b6f31a1b4ea0b281382"
+    },
+    "fbx/SM_Bridge_Span_Destroyed_LOD1.fbx": {
+      "bytes": 152572,
+      "sha256": "6babbaaa36ebb1c69b4ee6f8be800d51ae6f98f71975671ff0ef22b570bcc102"
+    },
+    "fbx/SM_Village_Barn.fbx": {
+      "bytes": 246956,
+      "sha256": "4279cf621fd45965cae4fdaff36d579e9ad3ab529280aa1ad4de02711ff82649"
+    },
+    "fbx/SM_Village_Barn_Damaged.fbx": {
+      "bytes": 408092,
+      "sha256": "bf069a2c293f17677323bd469a335abca28809d53b92f302dc87ffdf4c4ca897"
+    },
+    "fbx/SM_Village_Barn_Damaged_LOD1.fbx": {
+      "bytes": 301724,
+      "sha256": "ed765f847accd96b93c50c5d467f10560a752d8b0b639899955b5eccda8c2633"
+    },
+    "fbx/SM_Village_Barn_LOD1.fbx": {
+      "bytes": 210188,
+      "sha256": "033fdead0508d2ce2613358a9e28b47f2e5c77f76fd2fbed87f0b75c6c05d3dc"
+    },
+    "fbx/SM_Village_Barn_Rubble.fbx": {
+      "bytes": 199804,
+      "sha256": "fa7bc44157fe52d1de5803eaed24b91ff567e13b7b4cc48c3f97e2b3e70c384d"
+    },
+    "fbx/SM_Village_Barn_Rubble_LOD1.fbx": {
+      "bytes": 159468,
+      "sha256": "d32e2d3b60c1d926c84c8430bb85a62f14dc54a47e9e2a2b7d2ce6b63dbdca8c"
+    },
+    "fbx/SM_Village_Church.fbx": {
+      "bytes": 488396,
+      "sha256": "b2a404a35bfa1a52e009f69adf4803ab6b3a31a2c7a8db5db95b082f5c0c0a69"
+    },
+    "fbx/SM_Village_Church_Damaged.fbx": {
+      "bytes": 646332,
+      "sha256": "8d50672ef2fa6f867c9f00da006ae126ffab7b15e34158c08abb20ce18233870"
+    },
+    "fbx/SM_Village_Church_Damaged_LOD1.fbx": {
+      "bytes": 545292,
+      "sha256": "8d994b2701bf86caa674a37d0ac6eac2d908413515e8210befe70b652ae2acac"
+    },
+    "fbx/SM_Village_Church_LOD1.fbx": {
+      "bytes": 496940,
+      "sha256": "576f4ca4ce4ae26ed8b940244769607b5a6389eb2ada682d3e99887306edbe5c"
+    },
+    "fbx/SM_Village_Church_Rubble.fbx": {
+      "bytes": 295772,
+      "sha256": "d15dd25f5ff7071805500b63c76a3a0878f96964e37ff472edf203ffa6d6deb4"
+    },
+    "fbx/SM_Village_Church_Rubble_LOD1.fbx": {
+      "bytes": 244844,
+      "sha256": "e1bb56da69119a204156eec5ccdd7563e8f88fb51bb6b5e2f992b9f4cae3c1c5"
+    },
+    "fbx/SM_Village_Farmhouse.fbx": {
+      "bytes": 442796,
+      "sha256": "3888b2f34281572531188a6eb2352cded19164af7f4d00406cd0c0f57b401792"
+    },
+    "fbx/SM_Village_Farmhouse_Damaged.fbx": {
+      "bytes": 581948,
+      "sha256": "d0337b46c4e5a45266a511e298d9a98f3a004d6550ea38481e8743df626ed967"
+    },
+    "fbx/SM_Village_Farmhouse_Damaged_LOD1.fbx": {
+      "bytes": 339532,
+      "sha256": "9eccd16a34ffa91673baba409ff36e4e42f854b581ee504f9d141aa9ddfd7b79"
+    },
+    "fbx/SM_Village_Farmhouse_LOD1.fbx": {
+      "bytes": 250988,
+      "sha256": "1052fdceb229572ac79b8d5b24d96d491da5a74131d9b7acd1674064228e2d9a"
+    },
+    "fbx/SM_Village_Farmhouse_Rubble.fbx": {
+      "bytes": 198860,
+      "sha256": "8ec3d373e444aa2e474617431b2690574c9607d757f5d3f660f7121c1115a3da"
+    },
+    "fbx/SM_Village_Farmhouse_Rubble_LOD1.fbx": {
+      "bytes": 159692,
+      "sha256": "d194b5f1cf2d2630b0bb4dcdb113cd562eb5dfb5a864b238e5069aa8d7605782"
+    },
+    "fbx/SM_Village_HouseA.fbx": {
+      "bytes": 396332,
+      "sha256": "2c83194cc523d3372f5845edaa61bb5a5588f06f9595f29211946e21505a6795"
+    },
+    "fbx/SM_Village_HouseA_Damaged.fbx": {
+      "bytes": 573212,
+      "sha256": "cc06ac6413069f8f34e5cb355cbf7c7de57695fc1d65b89c09976aa594e124b5"
+    },
+    "fbx/SM_Village_HouseA_Damaged_LOD1.fbx": {
+      "bytes": 348844,
+      "sha256": "e1c7d008818c49d0dfb0f86dc8e590efca00bb1d483ac00f6abdef8274f6d323"
+    },
+    "fbx/SM_Village_HouseA_LOD1.fbx": {
+      "bytes": 236268,
+      "sha256": "7e3faaa0df2d0d9189ece4419f573720aa1ec62b07f0c76f4bca2a3e8d5b07ab"
+    },
+    "fbx/SM_Village_HouseA_Rubble.fbx": {
+      "bytes": 255404,
+      "sha256": "d75e62b1a9176aa4f9be73cc5ba6c849aa10262df3a0108b06c1c6b8033f661e"
+    },
+    "fbx/SM_Village_HouseA_Rubble_LOD1.fbx": {
+      "bytes": 230284,
+      "sha256": "1f3c66cca9ba08bea4bb0680592f6416e9d0d65c4263e407859ca831fc38f5f2"
+    },
+    "fbx/SM_Village_HouseB.fbx": {
+      "bytes": 388988,
+      "sha256": "77ffd651c64da18702cf63dc031a8adf4f8860ea65f2e95382ea2b31dfa05361"
+    },
+    "fbx/SM_Village_HouseB_Damaged.fbx": {
+      "bytes": 522220,
+      "sha256": "5acac5489820228e807a6c333fb841e2ff4e477ac4c8ee76ec6354eff1a7be0c"
+    },
+    "fbx/SM_Village_HouseB_Damaged_LOD1.fbx": {
+      "bytes": 325100,
+      "sha256": "f1fba65e574f0f45194fadf5b89ec6e981efe0e56fc8b4d4dd81c5d95b09edde"
+    },
+    "fbx/SM_Village_HouseB_LOD1.fbx": {
+      "bytes": 232508,
+      "sha256": "9fdf8c4bee7f435e0aae392b7b703b18ddd768fc20745d28592db54a018614d2"
+    },
+    "fbx/SM_Village_HouseB_Rubble.fbx": {
+      "bytes": 187100,
+      "sha256": "99c8713a0f60c573ac767540428bc85dc300faf8969ecec91468aaa8f9e1d7f9"
+    },
+    "fbx/SM_Village_HouseB_Rubble_LOD1.fbx": {
+      "bytes": 148268,
+      "sha256": "f7e5c6f8c902c360cc03fe80db3de6116b97e76b85301763ed5116b073bc0d2a"
+    },
+    "fbx/SM_Village_HouseC.fbx": {
+      "bytes": 292444,
+      "sha256": "6ef8a851727de7fdb3ffbfab9e96aa18173b39fc8ccb9b4de540a15d03465719"
+    },
+    "fbx/SM_Village_HouseC_Damaged.fbx": {
+      "bytes": 438908,
+      "sha256": "7c8cf84a86d4dc2587673cf50632ae25f5435111c54b571817deba5b79fef48e"
+    },
+    "fbx/SM_Village_HouseC_Damaged_LOD1.fbx": {
+      "bytes": 267404,
+      "sha256": "7748a9934de763d01ac12792c7a6c138ba00478bdd66c631b8c0f147b707f010"
+    },
+    "fbx/SM_Village_HouseC_LOD1.fbx": {
+      "bytes": 176588,
+      "sha256": "f106b6da63b28c5e0503fdf29af8b842eda937af9a63a11bf5a187846f10ac46"
+    },
+    "fbx/SM_Village_HouseC_Rubble.fbx": {
+      "bytes": 183004,
+      "sha256": "cbb33a0745aea113d51d55b12b41768c227bf65254f291788f7dd7ed08cc2906"
+    },
+    "fbx/SM_Village_HouseC_Rubble_LOD1.fbx": {
+      "bytes": 145196,
+      "sha256": "ebc368de0ae86d5f9985a7ba2a5e3176de23a665408445868d1a0f8d7b39ec51"
+    },
+    "fbx/SM_Village_Workshop.fbx": {
+      "bytes": 296412,
+      "sha256": "5c62a846b97c4090b2af2240225f7161a775762f19546d460879e26e9890b467"
+    },
+    "fbx/SM_Village_Workshop_Damaged.fbx": {
+      "bytes": 447916,
+      "sha256": "5e01105938e50108ee22c78e3f2247da47f5e3946f6970a6aa8ed7793c1a89ae"
+    },
+    "fbx/SM_Village_Workshop_Damaged_LOD1.fbx": {
+      "bytes": 307500,
+      "sha256": "8d40ba47800f5b33f11e0390afd2c26fb6837d8bab3f2abc4b6d315dcb5e4284"
+    },
+    "fbx/SM_Village_Workshop_LOD1.fbx": {
+      "bytes": 216220,
+      "sha256": "c30b442020477af2a36f2a569a6f910217cd083720059bcabe5941b7c161f705"
+    },
+    "fbx/SM_Village_Workshop_Rubble.fbx": {
+      "bytes": 191740,
+      "sha256": "7a6bda845ccd9700f2d057c949ac1d0096db377491d25da140e93ffbd5333b22"
+    },
+    "fbx/SM_Village_Workshop_Rubble_LOD1.fbx": {
+      "bytes": 153932,
+      "sha256": "24caa698bce69ff3aca1aabaddcd9f1f6684bad0b1689b731ab086e6b2a2f87b"
+    },
+    "textures/Bricks085_BaseColor.png": {
+      "bytes": 4898151,
+      "sha256": "c84541048c1c508367c0237ff83260dddadd19f53d18dd7c5fad8ad30b4f40f2"
+    },
+    "textures/Bricks085_Normal.png": {
+      "bytes": 4322706,
+      "sha256": "30fc37484d798475b8f7abe2f5a94574a8ec026cc5df4f0f1bb152895423845e"
+    },
+    "textures/Bricks085_ORM.png": {
+      "bytes": 3415394,
+      "sha256": "a039cae01d2a53607c57637f840c8206826dbf1e42c6440771a73b30cc8f8a1c"
+    },
+    "textures/Bricks097_BaseColor.png": {
+      "bytes": 5431688,
+      "sha256": "52695e10337e647b0b935ef29ff0982e5efddf22dfe8ca69b102f57649b09904"
+    },
+    "textures/Bricks097_Normal.png": {
+      "bytes": 4618654,
+      "sha256": "6c7387b1055ff23978ef91536df8c57bce960af763064b86bf77db8fa200c1e3"
+    },
+    "textures/Bricks097_ORM.png": {
+      "bytes": 3920757,
+      "sha256": "d016597ee88be9ec053867f9cc65cee4ae72b2ef26a33c527720240b8f6b0bc7"
+    },
+    "textures/Concrete031_BaseColor.png": {
+      "bytes": 6728599,
+      "sha256": "21c36ad4cd199482b33bce52ef4a8c6446eeb98fe70b39d128dc3185b913c606"
+    },
+    "textures/Concrete031_Normal.png": {
+      "bytes": 10643026,
+      "sha256": "0ecdf6f0543642d699b4174049b74bec2c88a9deef11dfe86f9c348d1ef2e44f"
+    },
+    "textures/Concrete031_ORM.png": {
+      "bytes": 7989391,
+      "sha256": "3e99023414c4c23220aa71b4ebf418b55cfc7255792ccc5740814ee955c48cd4"
+    },
+    "textures/Concrete036_BaseColor.png": {
+      "bytes": 8524499,
+      "sha256": "27a57e8661a34f7c307a31b5bff6877076af0ef2c8ff1edc7093dd2d974204e4"
+    },
+    "textures/Concrete036_Normal.png": {
+      "bytes": 7875131,
+      "sha256": "12b3f1fc7c0dac326ad38f2a3ee6da515b0ff306fd2091c6805ee384883e46c5"
+    },
+    "textures/Concrete036_ORM.png": {
+      "bytes": 3427616,
+      "sha256": "95d7f45388b9777eae071809e1cc662541a9b720449ce845cfa5bfe6452ffc22"
+    },
+    "textures/Planks023A_BaseColor.png": {
+      "bytes": 6160581,
+      "sha256": "ac3c440690cd5ab3b404fba25512cf157000cd5fbc8509f913b1254ba2ab577c"
+    },
+    "textures/Planks023A_Normal.png": {
+      "bytes": 8731637,
+      "sha256": "41420ba8e638e3522285e107b75023d4b1f2711741668b2729f48fa9bad1c496"
+    },
+    "textures/Planks023A_ORM.png": {
+      "bytes": 4798189,
+      "sha256": "636149a3e3b6edcfdd4c39e8278e46bbb08b1c2d7672a3d76628703175895e1e"
+    },
+    "textures/Planks037A_BaseColor.png": {
+      "bytes": 8506712,
+      "sha256": "91fbbe2ec993f024b4c775aa6f0220bda3f30e02cd603cae42c300d8d377ee6a"
+    },
+    "textures/Planks037A_Normal.png": {
+      "bytes": 6137870,
+      "sha256": "5e57698cd186880df1fff578e462383c552cad8818c93a7ddd98f67cbceabb9a"
+    },
+    "textures/Planks037A_ORM.png": {
+      "bytes": 5336259,
+      "sha256": "16802b9f5122efba0b8c1f06cef78de6516af737b6adefdfe6180ff7b0220d9f"
+    },
+    "textures/Plaster001_BaseColor.png": {
+      "bytes": 5837452,
+      "sha256": "48d33cbfb4a1e3b197c6cc384cb229024532c6078f6ce25b7f90814e747237d9"
+    },
+    "textures/Plaster001_Normal.png": {
+      "bytes": 11306355,
+      "sha256": "7e6c8a4532a0130b12a720fceef9af30876ce734a1fc5a32667990943c54b3f6"
+    },
+    "textures/Plaster001_ORM.png": {
+      "bytes": 2186409,
+      "sha256": "20720b8ebc7873c508e38bbd7dee51ad10e366647afeeb6f368adc295eab6a6f"
+    },
+    "textures/Plaster006_BaseColor.png": {
+      "bytes": 6191472,
+      "sha256": "9ddab66cfafe9a29342550524441e7ad0fd56d9625e0545b05e5d747fcdfb9e9"
+    },
+    "textures/Plaster006_Normal.png": {
+      "bytes": 11297229,
+      "sha256": "e2dc05d26105dd4a34aa7f04446bb3ff278a103b5bf636623ec19e67427ec475"
+    },
+    "textures/Plaster006_ORM.png": {
+      "bytes": 3361608,
+      "sha256": "1877fed09827037b6c9a5df8e5dd569edfd4b40a8cc802c39dd84185ca9c7566"
+    },
+    "textures/RoofingTiles006_BaseColor.png": {
+      "bytes": 4167822,
+      "sha256": "2d6fc53905d05379d84d75c68dd8ba23e76a0c7c8501f0bc02b00280cf31e259"
+    },
+    "textures/RoofingTiles006_Normal.png": {
+      "bytes": 11457687,
+      "sha256": "b2f1d50b06b5095e7e417a1e09443cc22f84d943b805e1f24ecb9d6d3aad0699"
+    },
+    "textures/RoofingTiles006_ORM.png": {
+      "bytes": 7558400,
+      "sha256": "bef9383571a84e51b7893c6fb8884a43118c89a86308fab313fabf769d2a2fa9"
+    },
+    "textures/RoofingTiles013A_BaseColor.png": {
+      "bytes": 3458162,
+      "sha256": "74553385400b7c804a8862bde6e9f89978be1ac9346fa55c4c13b98d7f293a28"
+    },
+    "textures/RoofingTiles013A_Normal.png": {
+      "bytes": 3826247,
+      "sha256": "8fac740ed23c02d56107b007a16fb36d41d8e5f8d105868994d105af16fad7ab"
+    },
+    "textures/RoofingTiles013A_ORM.png": {
+      "bytes": 6757039,
+      "sha256": "2eb8faf2cfd985cd8d5ae79d220dc57cf287c2299a295a692d6c972121711c25"
+    },
+    "textures/Round3_White.png": {
+      "bytes": 78,
+      "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145"
+    },
+    "textures/Round4_White.png": {
+      "bytes": 78,
+      "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145"
+    },
+    "textures/SM_Bridge_Span_Damaged_BakeAO.png": {
+      "bytes": 533438,
+      "sha256": "1d973ade4e9fffe7124bb488e67b27efcdaa858805518cdf2145e2df457b25a7"
+    },
+    "textures/SM_Bridge_Span_Damaged_BakeNormal.png": {
+      "bytes": 396414,
+      "sha256": "148624d5058c448d5c8616cc5bd75dac22b2f78bbb56f24fa333bb9717d71b97"
+    },
+    "textures/SM_Bridge_Span_Damaged_Tint.png": {
+      "bytes": 305802,
+      "sha256": "8d26d51c9a7a650bcedc1831a0aba036aada24b31f5abc2399f806b40575452f"
+    },
+    "textures/SM_Bridge_Span_Destroyed_BakeAO.png": {
+      "bytes": 988899,
+      "sha256": "07c1844340aae72ddc0a4bb659b06259a5ee7eeedfc7728df643b20b73eeddbd"
+    },
+    "textures/SM_Bridge_Span_Destroyed_BakeNormal.png": {
+      "bytes": 326726,
+      "sha256": "fe7ae49f69ee7eff28e2bd1200da5a665e113b7693c12cbf0eea2b18f9fb93f5"
+    },
+    "textures/SM_Bridge_Span_Destroyed_Tint.png": {
+      "bytes": 325718,
+      "sha256": "6e8d739b3032d1630e3f285d9f2481d111235090311e3fee95b2d0a7de9306fe"
+    },
+    "textures/SM_Village_Barn_BakeAO.png": {
+      "bytes": 1549323,
+      "sha256": "bed28e7e865458ec92490b88558e710dec38ce50b5b969c30d72614f55194ace"
+    },
+    "textures/SM_Village_Barn_BakeNormal.png": {
+      "bytes": 333992,
+      "sha256": "53c6ef3336bae82ed8ed27a2ee04b2d9d1955d4b0d67ec7c82fec36579a38b94"
+    },
+    "textures/SM_Village_Barn_Damaged_BakeAO.png": {
+      "bytes": 1513805,
+      "sha256": "23076717d86f752f15d8b564644fbd236271155036648ebc3a1b5865e46a5ad3"
+    },
+    "textures/SM_Village_Barn_Damaged_BakeNormal.png": {
+      "bytes": 463792,
+      "sha256": "361a777d94250a606332005390b24258a0ddc089e2960705831bd3f98ce3f885"
+    },
+    "textures/SM_Village_Barn_Damaged_Tint.png": {
+      "bytes": 420219,
+      "sha256": "3f29eca7ea28c8cd8cc2dfda4d8adcb42a1878b87afabc4f20aee525b646b7de"
+    },
+    "textures/SM_Village_Barn_Rubble_BakeAO.png": {
+      "bytes": 1652112,
+      "sha256": "430ba1d105dbbe3daed1a8cd47c54ef0cfa78e5850a8edb3938dc1da901a0dae"
+    },
+    "textures/SM_Village_Barn_Rubble_BakeNormal.png": {
+      "bytes": 421441,
+      "sha256": "38bffbdb6ed02b080a898433618fa426853f08fa8c024d25484655f93ccd924b"
+    },
+    "textures/SM_Village_Barn_Rubble_Tint.png": {
+      "bytes": 413656,
+      "sha256": "8a62c103e2d7466bcd683eeebb25f07ba2d9c5fd657ccb55da82b892d81fcd29"
+    },
+    "textures/SM_Village_Barn_Tint.png": {
+      "bytes": 326597,
+      "sha256": "4466e6d9fc6a03bf3826b98e73bac10e5a950f2c0956a40988340580f587dd7c"
+    },
+    "textures/SM_Village_Church_BakeAO.png": {
+      "bytes": 1346327,
+      "sha256": "dc3a1db3b5808f21ba80a111918882e2824ad95cf3907725eb6225ef310337ba"
+    },
+    "textures/SM_Village_Church_BakeNormal.png": {
+      "bytes": 580183,
+      "sha256": "42f7679822188b82f75d9555a49116a929d64ab1302a6b1a1c83311413dbc83e"
+    },
+    "textures/SM_Village_Church_Damaged_BakeAO.png": {
+      "bytes": 1451239,
+      "sha256": "2c51105e482d6b7f3923828340aa7280f591ef6e472d0ba1c778d2fad1adda2e"
+    },
+    "textures/SM_Village_Church_Damaged_BakeNormal.png": {
+      "bytes": 624591,
+      "sha256": "9a6978ec0e5999718fdabe69a277497ad3f1806837efe58cca407e1521843d0c"
+    },
+    "textures/SM_Village_Church_Damaged_Tint.png": {
+      "bytes": 379494,
+      "sha256": "8443114c0e2aaeb499457f813eefc4091f1266908827352f66e6379874ee9f5c"
+    },
+    "textures/SM_Village_Church_Rubble_BakeAO.png": {
+      "bytes": 1652889,
+      "sha256": "a960cba5426e7827d7b6390e94a40f1ec193229e73d3e27487ecf99c66147fcc"
+    },
+    "textures/SM_Village_Church_Rubble_BakeNormal.png": {
+      "bytes": 489451,
+      "sha256": "afe2776802996782dabc809e5467525acd51569bd56abe58a1cee4da03d2924f"
+    },
+    "textures/SM_Village_Church_Rubble_Tint.png": {
+      "bytes": 444632,
+      "sha256": "d626dfaa8cd6763e776915cf823d0bba907ddde2195e420903c89a40b8407976"
+    },
+    "textures/SM_Village_Church_Tint.png": {
+      "bytes": 313268,
+      "sha256": "6d10aab1db7e5f61140b0d03fc5fb1c87286fede38b5aa15046e49081943b986"
+    },
+    "textures/SM_Village_Farmhouse_BakeAO.png": {
+      "bytes": 1160906,
+      "sha256": "4af7fea1117641b8102302534e93ec6277372000e82b84263ef9379874aaea67"
+    },
+    "textures/SM_Village_Farmhouse_BakeNormal.png": {
+      "bytes": 478901,
+      "sha256": "85045c3960bc13fa6e15eefb502ea4d1f18a0d98d9be0fd89fc4ae53e4e33222"
+    },
+    "textures/SM_Village_Farmhouse_Damaged_BakeAO.png": {
+      "bytes": 1291911,
+      "sha256": "d973bad097a6c94bb0b1c2e9747dc9ad3a1eaf49d856912ddd2ceaaf626320d7"
+    },
+    "textures/SM_Village_Farmhouse_Damaged_BakeNormal.png": {
+      "bytes": 555799,
+      "sha256": "57fe44b6600a2b202b447e031abac2fc0859186fc91323c15fbab78c02dec6b2"
+    },
+    "textures/SM_Village_Farmhouse_Damaged_Tint.png": {
+      "bytes": 356820,
+      "sha256": "d2ac12fffc4343bfb10a77726ce63c7cb70d765df196cda64e1788baac045874"
+    },
+    "textures/SM_Village_Farmhouse_Rubble_BakeAO.png": {
+      "bytes": 1716182,
+      "sha256": "386717d83f3ce445c357e97c74343d9e00304a230684f3b83f84bc3f699eb058"
+    },
+    "textures/SM_Village_Farmhouse_Rubble_BakeNormal.png": {
+      "bytes": 442869,
+      "sha256": "54ebfb9e0689566ce5375ea77ac691a7a401dd5e4a511e02156cdac5c99e1cca"
+    },
+    "textures/SM_Village_Farmhouse_Rubble_Tint.png": {
+      "bytes": 398186,
+      "sha256": "d5ab44284e3c295c6b1c8d1bfaae14099fcc7874c89fadc57c79e3a6bca5ee53"
+    },
+    "textures/SM_Village_Farmhouse_Tint.png": {
+      "bytes": 264287,
+      "sha256": "29a5f34ac4fdb3d2eefaa5f3a749d37aaa42ba4472cdee46679fada21b0ce9c8"
+    },
+    "textures/SM_Village_HouseA_BakeAO.png": {
+      "bytes": 1169647,
+      "sha256": "c9ca90a013e941a04c23af5c199e8a4e75c7db4a5d46b23eb83c081767f6a6b8"
+    },
+    "textures/SM_Village_HouseA_BakeNormal.png": {
+      "bytes": 482448,
+      "sha256": "9192eeddfc8726c408f955c82dbf67195b54b8348cf15b4d2591fa9a2c29479a"
+    },
+    "textures/SM_Village_HouseA_Damaged_BakeAO.png": {
+      "bytes": 1299188,
+      "sha256": "60393718e2186def535970cd38d6b3a2d5b0a07b26cb3103918add9a64b9acef"
+    },
+    "textures/SM_Village_HouseA_Damaged_BakeNormal.png": {
+      "bytes": 556113,
+      "sha256": "f35f22cc4f620979f81f50779002ce9970b355a7e711ae27ec41cf934cd490e6"
+    },
+    "textures/SM_Village_HouseA_Damaged_Tint.png": {
+      "bytes": 369811,
+      "sha256": "696de7d217c3e044388dbde84729672207c477ce3a1bda44366e84489bdfbcc5"
+    },
+    "textures/SM_Village_HouseA_Rubble_BakeAO.png": {
+      "bytes": 1671030,
+      "sha256": "26374bec24cc86e352b43999c2e6307839e076338888ba2fefcd1f04b40e0bdc"
+    },
+    "textures/SM_Village_HouseA_Rubble_BakeNormal.png": {
+      "bytes": 543839,
+      "sha256": "7f8bbc8017b47e9f6281cc6bb1de68fa79bda1741bf86a4d627afaa265d25dc6"
+    },
+    "textures/SM_Village_HouseA_Rubble_Tint.png": {
+      "bytes": 417591,
+      "sha256": "699e1d898ec3d08da7ce8dc91afac4609dfbbf06ac5dc568c8521256873c28dd"
+    },
+    "textures/SM_Village_HouseA_Tint.png": {
+      "bytes": 227662,
+      "sha256": "d27dffa35093337dd7712b7ee5d6983b989115fb931c6507ccbb0e9b9c4b9b7a"
+    },
+    "textures/SM_Village_HouseB_BakeAO.png": {
+      "bytes": 1247305,
+      "sha256": "8247890f7a266514dc4e6fe065b6bd2bd5f40a6ef945fea712a7289380602cb9"
+    },
+    "textures/SM_Village_HouseB_BakeNormal.png": {
+      "bytes": 469649,
+      "sha256": "912a53dc07708f959c38486773733232dcb065f6fae41507679a8f25d47b477b"
+    },
+    "textures/SM_Village_HouseB_Damaged_BakeAO.png": {
+      "bytes": 1359490,
+      "sha256": "b66ca08ba2c5c239a85d25cde6fedaa3426b3f80545b5bea899b923049928cd9"
+    },
+    "textures/SM_Village_HouseB_Damaged_BakeNormal.png": {
+      "bytes": 567045,
+      "sha256": "eadc8da7f62c43ebb8a635929a6d57d5bc24bd4140a7aefefae5d87c82688dfa"
+    },
+    "textures/SM_Village_HouseB_Damaged_Tint.png": {
+      "bytes": 370265,
+      "sha256": "fca8e6ce294c894549366f15c7424e28025ee0903bb1c81c212399363386da98"
+    },
+    "textures/SM_Village_HouseB_Rubble_BakeAO.png": {
+      "bytes": 1738665,
+      "sha256": "26064eb993422c0692225b61b0be898c01d0ce7db8771988b8339f92717207fc"
+    },
+    "textures/SM_Village_HouseB_Rubble_BakeNormal.png": {
+      "bytes": 441691,
+      "sha256": "5249dba9892335e1adb406b4816797e80390ed26b84e3563ec80b38c5ec4b3f1"
+    },
+    "textures/SM_Village_HouseB_Rubble_Tint.png": {
+      "bytes": 348104,
+      "sha256": "b6a995e85403917b3f41b86ba377b344f9c2cf0588de4b4eba4d18d967ecc53b"
+    },
+    "textures/SM_Village_HouseB_Tint.png": {
+      "bytes": 248064,
+      "sha256": "b71690dadc18267664b178960978ce14bdef48838e18bcaa076b9317ba46ecb2"
+    },
+    "textures/SM_Village_HouseC_BakeAO.png": {
+      "bytes": 1123811,
+      "sha256": "b4cb2ce060ec3d9d390bc15d2a96fe237f78d2b8b2a5d5072f7298c0b8879a95"
+    },
+    "textures/SM_Village_HouseC_BakeNormal.png": {
+      "bytes": 448051,
+      "sha256": "25158a079cca5edaf84a4dee4518e5278802f441a8290f60b392efee3e23aaf0"
+    },
+    "textures/SM_Village_HouseC_Damaged_BakeAO.png": {
+      "bytes": 1287227,
+      "sha256": "dc084c4cd415a99d9807d3f6f043fee760411c13ff0babe4106c516b8e1aab46"
+    },
+    "textures/SM_Village_HouseC_Damaged_BakeNormal.png": {
+      "bytes": 576469,
+      "sha256": "2dc9f8aa46676ddb133f22a9a42cf523f930871fa29368d4e4ea922b66243ac4"
+    },
+    "textures/SM_Village_HouseC_Damaged_Tint.png": {
+      "bytes": 399023,
+      "sha256": "5f241fb3e7c635c0af948fa247595c2ae45ade06cfd4a5119c4897a5bfc908b1"
+    },
+    "textures/SM_Village_HouseC_Rubble_BakeAO.png": {
+      "bytes": 1696434,
+      "sha256": "3282b610f4e09e8142f45bda87e5972f68caf902029f1843a8423e4f5bb76b0f"
+    },
+    "textures/SM_Village_HouseC_Rubble_BakeNormal.png": {
+      "bytes": 517434,
+      "sha256": "811166a4fbb6d310b80b618dd501fd5e9001d5f1c3faa7b267f19de45b8aa8ac"
+    },
+    "textures/SM_Village_HouseC_Rubble_Tint.png": {
+      "bytes": 422543,
+      "sha256": "ea57f377d1b312d65a332b95e05cb5c46e1f2b1b5b9cf0b7d31cfd16d089c73e"
+    },
+    "textures/SM_Village_HouseC_Tint.png": {
+      "bytes": 233306,
+      "sha256": "31873df6f404b4b18a4673c9ca10f7167b32249bfac01437d3ce851528d7bee9"
+    },
+    "textures/SM_Village_Workshop_BakeAO.png": {
+      "bytes": 1094237,
+      "sha256": "3c19019c4820b2f5c62d57d2b9aa37c3cd3f30695c0c89dec3e9f901076fbc88"
+    },
+    "textures/SM_Village_Workshop_BakeNormal.png": {
+      "bytes": 422251,
+      "sha256": "227f0981b215d021daec9f34d3ab0957d6ad339f50919bfe2214547e34341807"
+    },
+    "textures/SM_Village_Workshop_Damaged_BakeAO.png": {
+      "bytes": 1194155,
+      "sha256": "b8efc155bc806676b33482890eb4b249a36a10f3acd6466acca7a0fccd78b23a"
+    },
+    "textures/SM_Village_Workshop_Damaged_BakeNormal.png": {
+      "bytes": 559423,
+      "sha256": "1048101071d4a7d323e8255bf8e23c09e9bacf0f87e584a6418c7cabd7fb2d6c"
+    },
+    "textures/SM_Village_Workshop_Damaged_Tint.png": {
+      "bytes": 378203,
+      "sha256": "950ec95610cff3a105a6d0717ffced09c0685d3a2c03011645a2808724852c62"
+    },
+    "textures/SM_Village_Workshop_Rubble_BakeAO.png": {
+      "bytes": 1700268,
+      "sha256": "975dfe9446a413b9fee1342cec6e1f65a938ec18b95f0ae151de8b3d1bde1282"
+    },
+    "textures/SM_Village_Workshop_Rubble_BakeNormal.png": {
+      "bytes": 437639,
+      "sha256": "5014cb505eddca41f3aa12d659063778f2103b932a6dbfeee8f16135a5dbf5bc"
+    },
+    "textures/SM_Village_Workshop_Rubble_Tint.png": {
+      "bytes": 381166,
+      "sha256": "90d60ac1fae97a92763a735cdd082cbd4ff7609a0a25914f05357a1d7f618a73"
+    },
+    "textures/SM_Village_Workshop_Tint.png": {
+      "bytes": 233731,
+      "sha256": "68d243566e1dc328f3cd3743b98d0bd109f1d2d21e8874584713eeb6ae90fe84"
+    }
+  },
+  "textures": {
+    "Bricks085_BaseColor.png": {
+      "dimensions": [
+        2048,
+        1024
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Bricks085",
+      "source": "Saved\\Surfaces\\Bricks085\\BaseColor.png",
+      "unchanged_source_sha256": "c84541048c1c508367c0237ff83260dddadd19f53d18dd7c5fad8ad30b4f40f2"
+    },
+    "Bricks085_Normal.png": {
+      "dimensions": [
+        2048,
+        1024
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Bricks085",
+      "source": "Saved\\Surfaces\\Bricks085\\Normal.png",
+      "unchanged_source_sha256": "30fc37484d798475b8f7abe2f5a94574a8ec026cc5df4f0f1bb152895423845e"
+    },
+    "Bricks085_ORM.png": {
+      "dimensions": [
+        2048,
+        1024
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Bricks085",
+      "source": "Saved\\Surfaces\\Bricks085\\ORM.png",
+      "unchanged_source_sha256": "a039cae01d2a53607c57637f840c8206826dbf1e42c6440771a73b30cc8f8a1c"
+    },
+    "Bricks097_BaseColor.png": {
+      "dimensions": [
+        2048,
+        1024
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Bricks097",
+      "source": "Saved\\Surfaces\\Bricks097\\BaseColor.png",
+      "unchanged_source_sha256": "52695e10337e647b0b935ef29ff0982e5efddf22dfe8ca69b102f57649b09904"
+    },
+    "Bricks097_Normal.png": {
+      "dimensions": [
+        2048,
+        1024
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Bricks097",
+      "source": "Saved\\Surfaces\\Bricks097\\Normal.png",
+      "unchanged_source_sha256": "6c7387b1055ff23978ef91536df8c57bce960af763064b86bf77db8fa200c1e3"
+    },
+    "Bricks097_ORM.png": {
+      "dimensions": [
+        2048,
+        1024
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Bricks097",
+      "source": "Saved\\Surfaces\\Bricks097\\ORM.png",
+      "unchanged_source_sha256": "d016597ee88be9ec053867f9cc65cee4ae72b2ef26a33c527720240b8f6b0bc7"
+    },
+    "Concrete031_BaseColor.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Concrete031",
+      "source": "Saved\\Surfaces\\Concrete031\\BaseColor.png",
+      "unchanged_source_sha256": "21c36ad4cd199482b33bce52ef4a8c6446eeb98fe70b39d128dc3185b913c606"
+    },
+    "Concrete031_Normal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Concrete031",
+      "source": "Saved\\Surfaces\\Concrete031\\Normal.png",
+      "unchanged_source_sha256": "0ecdf6f0543642d699b4174049b74bec2c88a9deef11dfe86f9c348d1ef2e44f"
+    },
+    "Concrete031_ORM.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Concrete031",
+      "source": "Saved\\Surfaces\\Concrete031\\ORM.png",
+      "unchanged_source_sha256": "3e99023414c4c23220aa71b4ebf418b55cfc7255792ccc5740814ee955c48cd4"
+    },
+    "Concrete036_BaseColor.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Concrete036",
+      "source": "Saved\\Surfaces\\Concrete036\\BaseColor.png",
+      "unchanged_source_sha256": "27a57e8661a34f7c307a31b5bff6877076af0ef2c8ff1edc7093dd2d974204e4"
+    },
+    "Concrete036_Normal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Concrete036",
+      "source": "Saved\\Surfaces\\Concrete036\\Normal.png",
+      "unchanged_source_sha256": "12b3f1fc7c0dac326ad38f2a3ee6da515b0ff306fd2091c6805ee384883e46c5"
+    },
+    "Concrete036_ORM.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Concrete036",
+      "source": "Saved\\Surfaces\\Concrete036\\ORM.png",
+      "unchanged_source_sha256": "95d7f45388b9777eae071809e1cc662541a9b720449ce845cfa5bfe6452ffc22"
+    },
+    "Planks023A_BaseColor.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Planks023A",
+      "source": "Saved\\Surfaces\\Planks023A\\BaseColor.png",
+      "unchanged_source_sha256": "ac3c440690cd5ab3b404fba25512cf157000cd5fbc8509f913b1254ba2ab577c"
+    },
+    "Planks023A_Normal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Planks023A",
+      "source": "Saved\\Surfaces\\Planks023A\\Normal.png",
+      "unchanged_source_sha256": "41420ba8e638e3522285e107b75023d4b1f2711741668b2729f48fa9bad1c496"
+    },
+    "Planks023A_ORM.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Planks023A",
+      "source": "Saved\\Surfaces\\Planks023A\\ORM.png",
+      "unchanged_source_sha256": "636149a3e3b6edcfdd4c39e8278e46bbb08b1c2d7672a3d76628703175895e1e"
+    },
+    "Planks037A_BaseColor.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Planks037A",
+      "source": "Saved\\Surfaces\\Planks037A\\BaseColor.png",
+      "unchanged_source_sha256": "91fbbe2ec993f024b4c775aa6f0220bda3f30e02cd603cae42c300d8d377ee6a"
+    },
+    "Planks037A_Normal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Planks037A",
+      "source": "Saved\\Surfaces\\Planks037A\\Normal.png",
+      "unchanged_source_sha256": "5e57698cd186880df1fff578e462383c552cad8818c93a7ddd98f67cbceabb9a"
+    },
+    "Planks037A_ORM.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Planks037A",
+      "source": "Saved\\Surfaces\\Planks037A\\ORM.png",
+      "unchanged_source_sha256": "16802b9f5122efba0b8c1f06cef78de6516af737b6adefdfe6180ff7b0220d9f"
+    },
+    "Plaster001_BaseColor.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Plaster001",
+      "source": "Saved\\Surfaces\\Plaster001\\BaseColor.png",
+      "unchanged_source_sha256": "48d33cbfb4a1e3b197c6cc384cb229024532c6078f6ce25b7f90814e747237d9"
+    },
+    "Plaster001_Normal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Plaster001",
+      "source": "Saved\\Surfaces\\Plaster001\\Normal.png",
+      "unchanged_source_sha256": "7e6c8a4532a0130b12a720fceef9af30876ce734a1fc5a32667990943c54b3f6"
+    },
+    "Plaster001_ORM.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Plaster001",
+      "source": "Saved\\Surfaces\\Plaster001\\ORM.png",
+      "unchanged_source_sha256": "20720b8ebc7873c508e38bbd7dee51ad10e366647afeeb6f368adc295eab6a6f"
+    },
+    "Plaster006_BaseColor.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Plaster006",
+      "source": "Saved\\Surfaces\\Plaster006\\BaseColor.png",
+      "unchanged_source_sha256": "9ddab66cfafe9a29342550524441e7ad0fd56d9625e0545b05e5d747fcdfb9e9"
+    },
+    "Plaster006_Normal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Plaster006",
+      "source": "Saved\\Surfaces\\Plaster006\\Normal.png",
+      "unchanged_source_sha256": "e2dc05d26105dd4a34aa7f04446bb3ff278a103b5bf636623ec19e67427ec475"
+    },
+    "Plaster006_ORM.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=Plaster006",
+      "source": "Saved\\Surfaces\\Plaster006\\ORM.png",
+      "unchanged_source_sha256": "1877fed09827037b6c9a5df8e5dd569edfd4b40a8cc802c39dd84185ca9c7566"
+    },
+    "RoofingTiles006_BaseColor.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=RoofingTiles006",
+      "source": "Saved\\Surfaces\\RoofingTiles006\\BaseColor.png",
+      "unchanged_source_sha256": "2d6fc53905d05379d84d75c68dd8ba23e76a0c7c8501f0bc02b00280cf31e259"
+    },
+    "RoofingTiles006_Normal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=RoofingTiles006",
+      "source": "Saved\\Surfaces\\RoofingTiles006\\Normal.png",
+      "unchanged_source_sha256": "b2f1d50b06b5095e7e417a1e09443cc22f84d943b805e1f24ecb9d6d3aad0699"
+    },
+    "RoofingTiles006_ORM.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=RoofingTiles006",
+      "source": "Saved\\Surfaces\\RoofingTiles006\\ORM.png",
+      "unchanged_source_sha256": "bef9383571a84e51b7893c6fb8884a43118c89a86308fab313fabf769d2a2fa9"
+    },
+    "RoofingTiles013A_BaseColor.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=RoofingTiles013A",
+      "source": "Saved\\Surfaces\\RoofingTiles013A\\BaseColor.png",
+      "unchanged_source_sha256": "74553385400b7c804a8862bde6e9f89978be1ac9346fa55c4c13b98d7f293a28"
+    },
+    "RoofingTiles013A_Normal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=RoofingTiles013A",
+      "source": "Saved\\Surfaces\\RoofingTiles013A\\Normal.png",
+      "unchanged_source_sha256": "8fac740ed23c02d56107b007a16fb36d41d8e5f8d105868994d105af16fad7ab"
+    },
+    "RoofingTiles013A_ORM.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "CC0",
+      "provider": "ambientCG",
+      "url": "https://ambientcg.com/view?id=RoofingTiles013A",
+      "source": "Saved\\Surfaces\\RoofingTiles013A\\ORM.png",
+      "unchanged_source_sha256": "2eb8faf2cfd985cd8d5ae79d220dc57cf287c2299a295a692d6c972121711c25"
+    },
+    "Round3_White.png": {
+      "dimensions": [
+        8,
+        8
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "Round4_White.png": {
+      "dimensions": [
+        8,
+        8
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Bridge_Span_Damaged_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Bridge_Span_Damaged_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Bridge_Span_Damaged_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Bridge_Span_Destroyed_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Bridge_Span_Destroyed_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Bridge_Span_Destroyed_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Barn_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Barn_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Barn_Damaged_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Barn_Damaged_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Barn_Damaged_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Barn_Rubble_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Barn_Rubble_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Barn_Rubble_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Barn_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Church_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Church_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Church_Damaged_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Church_Damaged_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Church_Damaged_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Church_Rubble_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Church_Rubble_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Church_Rubble_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Church_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Farmhouse_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Farmhouse_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Farmhouse_Damaged_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Farmhouse_Damaged_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Farmhouse_Damaged_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Farmhouse_Rubble_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Farmhouse_Rubble_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Farmhouse_Rubble_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Farmhouse_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseA_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseA_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseA_Damaged_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseA_Damaged_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseA_Damaged_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseA_Rubble_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseA_Rubble_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseA_Rubble_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseA_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseB_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseB_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseB_Damaged_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseB_Damaged_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseB_Damaged_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseB_Rubble_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseB_Rubble_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseB_Rubble_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseB_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseC_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseC_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseC_Damaged_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseC_Damaged_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseC_Damaged_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseC_Rubble_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseC_Rubble_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseC_Rubble_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_HouseC_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Workshop_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Workshop_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Workshop_Damaged_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Workshop_Damaged_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Workshop_Damaged_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Workshop_Rubble_BakeAO.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Workshop_Rubble_BakeNormal.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Workshop_Rubble_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    },
+    "SM_Village_Workshop_Tint.png": {
+      "dimensions": [
+        2048,
+        2048
+      ],
+      "license": "in-house bake/tint/data",
+      "source": "Round4 source and bake generator"
+    }
+  },
+  "scripts": {
+    "Tools\\Art\\village_431_round4.py": "7437c011ac9922ff649c3da780bb2e99a2f210f28f0c059db68b23ff4cd823a4",
+    "Tools\\Art\\village_431_round4_bake.py": "0ef55bcc57f112e9549dfff95728d3a1d1dd811a5acbf89643292f2079c4e222",
+    "Tools\\Art\\village_431_round4_common.py": "d54edff5ddf106833e6fa0391749956ba28b95a9f6253f41888bfd78221b742d",
+    "Tools\\Art\\village_431_round4_delivery.py": "a2e426edb6ccf59e00f557801d6fec46177e73381d550eb1cba555388e1d6af1",
+    "Tools\\Art\\village_431_round4_delivery_check.py": "d45142b41eb2291d75a6815b852493aa43fb07344a0f8f512289e26df85b30b6",
+    "Tools\\Art\\village_431_round4_details.py": "ff9beabef84373860b6e81518adc02d519a217b2bd65ddae05eba38217759175",
+    "Tools\\Art\\village_431_round4_preview.py": "f9a2e4c05a981b192e69e0ac97641dc9d6accdc7dd2584bae0431e7ee153a51c",
+    "Tools\\Art\\village_431_round4_qa.py": "8a56284d114fd67c4320d46b94718931a0d73dc5845dedf203dfbdf9e0c86c54",
+    "Tools\\Art\\village_431_round4_report.py": "be6e64534b5db8d2b26d406d5cde02489d25d5f056617c5ee783e8eaba621034",
+    "Tools\\Art\\village_431_round4_source_finish.py": "84b2e2842abc28f63537e7cd242d14a224ee2f402e62ef621439f7d6eaca01e8",
+    "Tools\\Art\\village_431_round4_tint_refine.py": "21c345c5d9e7cf32c6df3489a6dfc01bae6d2744cb26105efcf81460c2a253ae",
+    "Tools\\Art\\village_431_round4_verify.py": "43af693fe8c14d0d9fc019cb3686772645d0296938567daa768e112ece380512"
+  },
+  "protected_prior_rounds_and_greybox_match": true,
+  "protected_file_count": 942,
+  "generator_helper_hashes": {
+    "Tools\\Art\\village_431_housea.py": "a4087d3e326c63d4b36c09b66e4c950c2316d8d3a96137d9d820e10da0ff9f34",
+    "Tools\\Art\\village_431_round2.py": "a289765097fd29c18e311b4367f1fa7fe50b7ed57d8fe214ee03dbef70d39366",
+    "Tools\\Art\\village_blender.py": "294bf2c4abbef72e61227a633422f4fabed1d7c5c08ca6188258dc91f7e18430",
+    "Tools\\Art\\bridge_blender.py": "fc53c21326761d190f3e932a33f10acf5b31e195c5c723f14b93d2374821d243",
+    "Tools\\Art\\village_431_preview.py": "cfd4df8962bc3485378a8c914a5eb6c9fe249a319ddb55e7e1b2e90e92ab30d0",
+    "Tools\\Art\\kit\\strip_light_preview.py": "55b1df18900c363749e171d38a62e882a7938219690374793c5c694cf41c3194"
+  }
+}

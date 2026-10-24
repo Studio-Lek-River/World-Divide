@@ -1,0 +1,4940 @@
+{
+  "HouseA": {
+    "retained_openings": [
+      [
+        "+X",
+        0.0,
+        0.0,
+        1.1,
+        2.2,
+        "door",
+        0
+      ],
+      [
+        "+X",
+        -1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+X",
+        1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+X",
+        -1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+X",
+        1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-X",
+        -1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        -1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-X",
+        1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        -3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        0.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        -3.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        0.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        3.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        -3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        0.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        -3.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        0.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        3.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+X",
+        0.0,
+        6.0,
+        0.9,
+        1.8,
+        "window",
+        2
+      ],
+      [
+        "-X",
+        0.0,
+        6.0,
+        0.9,
+        1.8,
+        "window",
+        2
+      ]
+    ],
+    "named_firing_positions": [
+      {
+        "name": "DoorPX00",
+        "location": [
+          500.0,
+          0.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 60.0
+      },
+      {
+        "name": "WindowPX01",
+        "location": [
+          500.0,
+          150.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX02",
+        "location": [
+          500.0,
+          -150.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX03",
+        "location": [
+          500.0,
+          150.0,
+          450.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX04",
+        "location": [
+          500.0,
+          -150.0,
+          450.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX05",
+        "location": [
+          -500.0,
+          150.0,
+          150.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX06",
+        "location": [
+          -500.0,
+          -150.0,
+          150.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX07",
+        "location": [
+          -500.0,
+          150.0,
+          450.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX08",
+        "location": [
+          -500.0,
+          -150.0,
+          450.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY09",
+        "location": [
+          -300.0,
+          -400.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY10",
+        "location": [
+          0.0,
+          -400.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY11",
+        "location": [
+          300.0,
+          -400.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY12",
+        "location": [
+          -300.0,
+          -400.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY13",
+        "location": [
+          0.0,
+          -400.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY14",
+        "location": [
+          300.0,
+          -400.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY15",
+        "location": [
+          -300.0,
+          400.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY16",
+        "location": [
+          0.0,
+          400.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY17",
+        "location": [
+          300.0,
+          400.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY18",
+        "location": [
+          -300.0,
+          400.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY19",
+        "location": [
+          0.0,
+          400.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY20",
+        "location": [
+          300.0,
+          400.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX21",
+        "location": [
+          500.0,
+          0.0,
+          750.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX22",
+        "location": [
+          -500.0,
+          0.0,
+          750.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      }
+    ],
+    "changes_from_greybox": [],
+    "aperture_checks": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 9,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 11,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 14,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 15,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 17,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 18,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 19,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 20,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 21,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 6.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 22,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 6.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "capacity": 5,
+    "entry": [
+      850.0,
+      0.0,
+      0.0
+    ],
+    "firing_position_patch": []
+  },
+  "HouseB": {
+    "retained_openings": [
+      [
+        "+X",
+        0.0,
+        0.0,
+        1.1,
+        2.2,
+        "door",
+        0
+      ],
+      [
+        "+Y",
+        -3.5,
+        0.0,
+        1.1,
+        2.2,
+        "door",
+        0
+      ],
+      [
+        "+Y",
+        3.5,
+        0.0,
+        1.1,
+        2.2,
+        "door",
+        0
+      ],
+      [
+        "+X",
+        -1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+X",
+        1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+X",
+        -1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+X",
+        1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-X",
+        -1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        -1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-X",
+        1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        -1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        -4.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        -1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        4.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        -4.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        -1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        4.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        -4.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        -1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        4.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+X",
+        0.0,
+        6.2,
+        0.9,
+        1.5999999999999996,
+        "window",
+        2
+      ],
+      [
+        "-X",
+        0.0,
+        6.2,
+        0.9,
+        1.5999999999999996,
+        "window",
+        2
+      ]
+    ],
+    "named_firing_positions": [
+      {
+        "name": "DoorPX00",
+        "location": [
+          650.0,
+          0.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 60.0
+      },
+      {
+        "name": "DoorPY01",
+        "location": [
+          -350.0,
+          -400.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 60.0
+      },
+      {
+        "name": "DoorPY02",
+        "location": [
+          350.0,
+          -400.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 60.0
+      },
+      {
+        "name": "WindowPX03",
+        "location": [
+          650.0,
+          150.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX04",
+        "location": [
+          650.0,
+          -150.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX05",
+        "location": [
+          650.0,
+          150.0,
+          450.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX06",
+        "location": [
+          650.0,
+          -150.0,
+          450.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX07",
+        "location": [
+          -650.0,
+          150.0,
+          150.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX08",
+        "location": [
+          -650.0,
+          -150.0,
+          150.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX09",
+        "location": [
+          -650.0,
+          150.0,
+          450.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX10",
+        "location": [
+          -650.0,
+          -150.0,
+          450.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY11",
+        "location": [
+          -150.0,
+          -400.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY12",
+        "location": [
+          150.0,
+          -400.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY13",
+        "location": [
+          -450.0,
+          -400.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY14",
+        "location": [
+          -150.0,
+          -400.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY15",
+        "location": [
+          150.0,
+          -400.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY16",
+        "location": [
+          450.0,
+          -400.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY17",
+        "location": [
+          -450.0,
+          400.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY18",
+        "location": [
+          -150.0,
+          400.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY19",
+        "location": [
+          150.0,
+          400.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY20",
+        "location": [
+          450.0,
+          400.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY21",
+        "location": [
+          -450.0,
+          400.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY22",
+        "location": [
+          -150.0,
+          400.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY23",
+        "location": [
+          150.0,
+          400.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY24",
+        "location": [
+          450.0,
+          400.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX25",
+        "location": [
+          650.0,
+          0.0,
+          750.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX26",
+        "location": [
+          -650.0,
+          0.0,
+          750.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      }
+    ],
+    "changes_from_greybox": [
+      {
+        "index": 25,
+        "face": "+X",
+        "along_m": 0.0,
+        "old_sill_width_height_m": [
+          6.2,
+          0.9,
+          1.1
+        ],
+        "new_sill_width_height_m": [
+          6.2,
+          0.9,
+          1.5999999999999996
+        ]
+      },
+      {
+        "index": 26,
+        "face": "-X",
+        "along_m": 0.0,
+        "old_sill_width_height_m": [
+          6.2,
+          0.9,
+          1.1
+        ],
+        "new_sill_width_height_m": [
+          6.2,
+          0.9,
+          1.5999999999999996
+        ]
+      }
+    ],
+    "aperture_checks": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+Y",
+        "along_m": -3.5,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 2,
+        "face": "+Y",
+        "along_m": 3.5,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 9,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 11,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "+Y",
+        "along_m": -4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 14,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 15,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "+Y",
+        "along_m": 4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 17,
+        "face": "-Y",
+        "along_m": -4.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 18,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 19,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 20,
+        "face": "-Y",
+        "along_m": 4.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 21,
+        "face": "-Y",
+        "along_m": -4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 22,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 23,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 24,
+        "face": "-Y",
+        "along_m": 4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 25,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 6.2,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 26,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 6.2,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "capacity": 6,
+    "entry": [
+      1000.0,
+      0.0,
+      0.0
+    ],
+    "firing_position_patch": []
+  },
+  "HouseC": {
+    "retained_openings": [
+      [
+        "+X",
+        0.0,
+        0.0,
+        1.1,
+        2.2,
+        "door",
+        0
+      ],
+      [
+        "+X",
+        -1.5,
+        0.5,
+        1.65,
+        1.8,
+        "window",
+        0
+      ],
+      [
+        "+X",
+        1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+X",
+        -1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+X",
+        1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-X",
+        -1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        -1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-X",
+        1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        -1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        -1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        -1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        1.5,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        -1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        1.5,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+X",
+        0.0,
+        5.8,
+        0.9,
+        2.0,
+        "window",
+        2
+      ],
+      [
+        "-X",
+        0.0,
+        5.8,
+        0.9,
+        2.0,
+        "window",
+        2
+      ]
+    ],
+    "named_firing_positions": [
+      {
+        "name": "DoorPX00",
+        "location": [
+          425.0,
+          0.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 60.0
+      },
+      {
+        "name": "WindowPX01",
+        "location": [
+          425.0,
+          150.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX02",
+        "location": [
+          425.0,
+          -150.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX03",
+        "location": [
+          425.0,
+          150.0,
+          450.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX04",
+        "location": [
+          425.0,
+          -150.0,
+          450.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX05",
+        "location": [
+          -425.0,
+          150.0,
+          150.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX06",
+        "location": [
+          -425.0,
+          -150.0,
+          150.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX07",
+        "location": [
+          -425.0,
+          150.0,
+          450.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX08",
+        "location": [
+          -425.0,
+          -150.0,
+          450.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY09",
+        "location": [
+          -150.0,
+          -425.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY10",
+        "location": [
+          150.0,
+          -425.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY11",
+        "location": [
+          -150.0,
+          -425.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY12",
+        "location": [
+          150.0,
+          -425.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY13",
+        "location": [
+          -150.0,
+          425.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY14",
+        "location": [
+          150.0,
+          425.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY15",
+        "location": [
+          -150.0,
+          425.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY16",
+        "location": [
+          150.0,
+          425.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX17",
+        "location": [
+          425.0,
+          0.0,
+          750.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX18",
+        "location": [
+          -425.0,
+          0.0,
+          750.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      }
+    ],
+    "changes_from_greybox": [
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -1.5,
+        "old_sill_width_height_m": [
+          0.9,
+          1.2,
+          1.4
+        ],
+        "new_sill_width_height_m": [
+          0.5,
+          1.65,
+          1.8
+        ]
+      },
+      {
+        "index": 17,
+        "face": "+X",
+        "along_m": 0.0,
+        "old_sill_width_height_m": [
+          5.8,
+          0.9,
+          1.1
+        ],
+        "new_sill_width_height_m": [
+          5.8,
+          0.9,
+          2.0
+        ]
+      },
+      {
+        "index": 18,
+        "face": "-X",
+        "along_m": 0.0,
+        "old_sill_width_height_m": [
+          5.8,
+          0.9,
+          1.1
+        ],
+        "new_sill_width_height_m": [
+          5.8,
+          0.9,
+          2.0
+        ]
+      }
+    ],
+    "aperture_checks": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 0.5,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 9,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 11,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 14,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 15,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 17,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 5.8,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 18,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 5.8,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "capacity": 4,
+    "entry": [
+      775.0,
+      0.0,
+      0.0
+    ],
+    "firing_position_patch": []
+  },
+  "Farmhouse": {
+    "retained_openings": [
+      [
+        "+X",
+        0.0,
+        0.0,
+        1.1,
+        2.2,
+        "door",
+        0
+      ],
+      [
+        "+X",
+        -3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+X",
+        3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+X",
+        -3.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+X",
+        0.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+X",
+        3.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-X",
+        -3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        0.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        -3.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-X",
+        0.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "-X",
+        3.0,
+        3.9,
+        1.2,
+        1.4,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        -6.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        -3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        0.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        6.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        -6.0,
+        3.15,
+        1.2,
+        1.5,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        -3.0,
+        3.15,
+        1.2,
+        1.5,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        0.0,
+        3.15,
+        1.2,
+        1.5,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        3.0,
+        3.15,
+        1.2,
+        1.5,
+        "window",
+        1
+      ],
+      [
+        "+Y",
+        6.0,
+        3.15,
+        1.2,
+        1.5,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        -6.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        -3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        0.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        3.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        6.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        -6.0,
+        3.15,
+        1.2,
+        1.5,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        -3.0,
+        3.15,
+        1.2,
+        1.5,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        0.0,
+        3.15,
+        1.2,
+        1.5,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        3.0,
+        3.15,
+        1.2,
+        1.5,
+        "window",
+        1
+      ],
+      [
+        "-Y",
+        6.0,
+        3.15,
+        1.2,
+        1.5,
+        "window",
+        1
+      ],
+      [
+        "+X",
+        0.0,
+        5.0,
+        0.9,
+        2.8,
+        "window",
+        2
+      ],
+      [
+        "-X",
+        0.0,
+        5.0,
+        0.9,
+        2.8,
+        "window",
+        2
+      ]
+    ],
+    "named_firing_positions": [
+      {
+        "name": "DoorPX00",
+        "location": [
+          850.0,
+          0.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 60.0
+      },
+      {
+        "name": "WindowPX01",
+        "location": [
+          850.0,
+          300.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX02",
+        "location": [
+          850.0,
+          -300.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX03",
+        "location": [
+          850.0,
+          300.0,
+          450.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX04",
+        "location": [
+          850.0,
+          0.0,
+          450.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX05",
+        "location": [
+          850.0,
+          -300.0,
+          450.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX06",
+        "location": [
+          -850.0,
+          300.0,
+          150.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX07",
+        "location": [
+          -850.0,
+          0.0,
+          150.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX08",
+        "location": [
+          -850.0,
+          -300.0,
+          150.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX09",
+        "location": [
+          -850.0,
+          300.0,
+          450.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX10",
+        "location": [
+          -850.0,
+          0.0,
+          450.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX11",
+        "location": [
+          -850.0,
+          -300.0,
+          450.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY12",
+        "location": [
+          -600.0,
+          -500.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY13",
+        "location": [
+          -300.0,
+          -500.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY14",
+        "location": [
+          0.0,
+          -500.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY15",
+        "location": [
+          300.0,
+          -500.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY16",
+        "location": [
+          600.0,
+          -500.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY17",
+        "location": [
+          -600.0,
+          -500.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY18",
+        "location": [
+          -300.0,
+          -500.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY19",
+        "location": [
+          0.0,
+          -500.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY20",
+        "location": [
+          300.0,
+          -500.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY21",
+        "location": [
+          600.0,
+          -500.0,
+          450.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY22",
+        "location": [
+          -600.0,
+          500.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY23",
+        "location": [
+          -300.0,
+          500.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY24",
+        "location": [
+          0.0,
+          500.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY25",
+        "location": [
+          300.0,
+          500.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY26",
+        "location": [
+          600.0,
+          500.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY27",
+        "location": [
+          -600.0,
+          500.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY28",
+        "location": [
+          -300.0,
+          500.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY29",
+        "location": [
+          0.0,
+          500.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY30",
+        "location": [
+          300.0,
+          500.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY31",
+        "location": [
+          600.0,
+          500.0,
+          450.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX32",
+        "location": [
+          850.0,
+          0.0,
+          750.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX33",
+        "location": [
+          -850.0,
+          0.0,
+          750.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      }
+    ],
+    "changes_from_greybox": [
+      {
+        "index": 17,
+        "face": "+Y",
+        "along_m": -6.0,
+        "old_sill_width_height_m": [
+          3.9,
+          1.2,
+          1.4
+        ],
+        "new_sill_width_height_m": [
+          3.15,
+          1.2,
+          1.5
+        ]
+      },
+      {
+        "index": 18,
+        "face": "+Y",
+        "along_m": -3.0,
+        "old_sill_width_height_m": [
+          3.9,
+          1.2,
+          1.4
+        ],
+        "new_sill_width_height_m": [
+          3.15,
+          1.2,
+          1.5
+        ]
+      },
+      {
+        "index": 19,
+        "face": "+Y",
+        "along_m": 0.0,
+        "old_sill_width_height_m": [
+          3.9,
+          1.2,
+          1.4
+        ],
+        "new_sill_width_height_m": [
+          3.15,
+          1.2,
+          1.5
+        ]
+      },
+      {
+        "index": 20,
+        "face": "+Y",
+        "along_m": 3.0,
+        "old_sill_width_height_m": [
+          3.9,
+          1.2,
+          1.4
+        ],
+        "new_sill_width_height_m": [
+          3.15,
+          1.2,
+          1.5
+        ]
+      },
+      {
+        "index": 21,
+        "face": "+Y",
+        "along_m": 6.0,
+        "old_sill_width_height_m": [
+          3.9,
+          1.2,
+          1.4
+        ],
+        "new_sill_width_height_m": [
+          3.15,
+          1.2,
+          1.5
+        ]
+      },
+      {
+        "index": 27,
+        "face": "-Y",
+        "along_m": -6.0,
+        "old_sill_width_height_m": [
+          3.9,
+          1.2,
+          1.4
+        ],
+        "new_sill_width_height_m": [
+          3.15,
+          1.2,
+          1.5
+        ]
+      },
+      {
+        "index": 28,
+        "face": "-Y",
+        "along_m": -3.0,
+        "old_sill_width_height_m": [
+          3.9,
+          1.2,
+          1.4
+        ],
+        "new_sill_width_height_m": [
+          3.15,
+          1.2,
+          1.5
+        ]
+      },
+      {
+        "index": 29,
+        "face": "-Y",
+        "along_m": 0.0,
+        "old_sill_width_height_m": [
+          3.9,
+          1.2,
+          1.4
+        ],
+        "new_sill_width_height_m": [
+          3.15,
+          1.2,
+          1.5
+        ]
+      },
+      {
+        "index": 30,
+        "face": "-Y",
+        "along_m": 3.0,
+        "old_sill_width_height_m": [
+          3.9,
+          1.2,
+          1.4
+        ],
+        "new_sill_width_height_m": [
+          3.15,
+          1.2,
+          1.5
+        ]
+      },
+      {
+        "index": 31,
+        "face": "-Y",
+        "along_m": 6.0,
+        "old_sill_width_height_m": [
+          3.9,
+          1.2,
+          1.4
+        ],
+        "new_sill_width_height_m": [
+          3.15,
+          1.2,
+          1.5
+        ]
+      },
+      {
+        "index": 32,
+        "face": "+X",
+        "along_m": 0.0,
+        "old_sill_width_height_m": [
+          5.0,
+          0.9,
+          1.1
+        ],
+        "new_sill_width_height_m": [
+          5.0,
+          0.9,
+          2.8
+        ]
+      },
+      {
+        "index": 33,
+        "face": "-X",
+        "along_m": 0.0,
+        "old_sill_width_height_m": [
+          5.0,
+          0.9,
+          1.1
+        ],
+        "new_sill_width_height_m": [
+          5.0,
+          0.9,
+          2.8
+        ]
+      }
+    ],
+    "aperture_checks": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "+X",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "-X",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 9,
+        "face": "-X",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 11,
+        "face": "-X",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": -6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 14,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 15,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "+Y",
+        "along_m": 6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 17,
+        "face": "+Y",
+        "along_m": -6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 18,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 19,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 20,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 21,
+        "face": "+Y",
+        "along_m": 6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 22,
+        "face": "-Y",
+        "along_m": -6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 23,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 24,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 25,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 26,
+        "face": "-Y",
+        "along_m": 6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 27,
+        "face": "-Y",
+        "along_m": -6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 28,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 29,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 30,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 31,
+        "face": "-Y",
+        "along_m": 6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 32,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 5.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 33,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 5.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "capacity": 8,
+    "entry": [
+      1200.0,
+      0.0,
+      0.0
+    ],
+    "firing_position_patch": []
+  },
+  "Barn": {
+    "retained_openings": [
+      [
+        "+X",
+        0.0,
+        0.0,
+        4.0,
+        4.5,
+        "door",
+        0
+      ],
+      [
+        "-X",
+        0.0,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        -3.25,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        3.25,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        -3.25,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        3.25,
+        0.9,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+X",
+        0.0,
+        5.2,
+        0.9,
+        1.5,
+        "window",
+        1
+      ],
+      [
+        "-X",
+        0.0,
+        5.2,
+        0.9,
+        1.5,
+        "window",
+        1
+      ]
+    ],
+    "named_firing_positions": [
+      {
+        "name": "DoorPX00",
+        "location": [
+          950.0,
+          0.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 60.0
+      },
+      {
+        "name": "WindowNX01",
+        "location": [
+          -950.0,
+          0.0,
+          150.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY02",
+        "location": [
+          -325.0,
+          -600.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY03",
+        "location": [
+          325.0,
+          -600.0,
+          150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY04",
+        "location": [
+          -325.0,
+          600.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY05",
+        "location": [
+          325.0,
+          600.0,
+          150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX06",
+        "location": [
+          950.0,
+          0.0,
+          595.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX07",
+        "location": [
+          -950.0,
+          0.0,
+          595.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      }
+    ],
+    "changes_from_greybox": [
+      {
+        "index": 6,
+        "face": "+X",
+        "along_m": 0.0,
+        "old_sill_width_height_m": [
+          5.2,
+          0.9,
+          1.1
+        ],
+        "new_sill_width_height_m": [
+          5.2,
+          0.9,
+          1.5
+        ]
+      },
+      {
+        "index": 6,
+        "firing_eye_old_m": 5.7,
+        "firing_eye_proposed_m": 5.95,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": 0.0,
+        "old_sill_width_height_m": [
+          5.2,
+          0.9,
+          1.1
+        ],
+        "new_sill_width_height_m": [
+          5.2,
+          0.9,
+          1.5
+        ]
+      },
+      {
+        "index": 7,
+        "firing_eye_old_m": 5.7,
+        "firing_eye_proposed_m": 5.95,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      }
+    ],
+    "aperture_checks": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 4.5,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 2,
+        "face": "+Y",
+        "along_m": -3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "+Y",
+        "along_m": 3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "-Y",
+        "along_m": -3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "-Y",
+        "along_m": 3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 5.2,
+        "head_m": 6.7,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 5.95,
+        "first_hit_depth_m": -0.11999988555908203
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 5.2,
+        "head_m": 6.7,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 5.95,
+        "first_hit_depth_m": -0.11999988555908203
+      }
+    ],
+    "capacity": 8,
+    "entry": [
+      1300.0,
+      0.0,
+      0.0
+    ],
+    "firing_position_patch": [
+      {
+        "name": "WindowPX06",
+        "old_location_cm": [
+          950.0,
+          0.0,
+          570.0
+        ],
+        "new_location_cm": [
+          950.0,
+          0.0,
+          595.0
+        ]
+      },
+      {
+        "name": "WindowNX07",
+        "old_location_cm": [
+          -950.0,
+          0.0,
+          570.0
+        ],
+        "new_location_cm": [
+          -950.0,
+          0.0,
+          595.0
+        ]
+      }
+    ]
+  },
+  "Workshop": {
+    "retained_openings": [
+      [
+        "+X",
+        -3.0,
+        0.0,
+        3.5,
+        4.0,
+        "door",
+        0
+      ],
+      [
+        "+X",
+        3.0,
+        0.0,
+        3.5,
+        4.0,
+        "door",
+        0
+      ],
+      [
+        "+X",
+        0.0,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        -3.0,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        0.0,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-X",
+        3.0,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        -4.5,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        -1.5,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        1.5,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        4.5,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        -4.5,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        -1.5,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        1.5,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        4.5,
+        2.6,
+        1.2,
+        1.4,
+        "window",
+        0
+      ]
+    ],
+    "named_firing_positions": [
+      {
+        "name": "DoorPX00",
+        "location": [
+          750.0,
+          300.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 60.0
+      },
+      {
+        "name": "DoorPX01",
+        "location": [
+          750.0,
+          -300.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 60.0
+      },
+      {
+        "name": "WindowPX02",
+        "location": [
+          750.0,
+          0.0,
+          330.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX03",
+        "location": [
+          -750.0,
+          300.0,
+          330.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX04",
+        "location": [
+          -750.0,
+          0.0,
+          330.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNX05",
+        "location": [
+          -750.0,
+          -300.0,
+          330.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY06",
+        "location": [
+          -450.0,
+          -550.0,
+          330.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY07",
+        "location": [
+          -150.0,
+          -550.0,
+          330.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY08",
+        "location": [
+          150.0,
+          -550.0,
+          330.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY09",
+        "location": [
+          450.0,
+          -550.0,
+          330.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY10",
+        "location": [
+          -450.0,
+          550.0,
+          330.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY11",
+        "location": [
+          -150.0,
+          550.0,
+          330.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY12",
+        "location": [
+          150.0,
+          550.0,
+          330.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY13",
+        "location": [
+          450.0,
+          550.0,
+          330.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      }
+    ],
+    "changes_from_greybox": [
+      {
+        "index": 2,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 3,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 4,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 5,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 6,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 7,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 8,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 9,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 10,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 11,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 12,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 13,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 3.3,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      }
+    ],
+    "aperture_checks": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": -3.0,
+        "sill_m": 0.0,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.12000036239624023
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": 3.0,
+        "sill_m": 0.0,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.12000036239624023
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "-X",
+        "along_m": -3.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "-X",
+        "along_m": 3.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "+Y",
+        "along_m": -4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 8,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 9,
+        "face": "+Y",
+        "along_m": 4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "-Y",
+        "along_m": -4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 11,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 12,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "-Y",
+        "along_m": 4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "capacity": 6,
+    "entry": [
+      1100.0,
+      300.0,
+      0.0
+    ],
+    "firing_position_patch": [
+      {
+        "name": "WindowPX02",
+        "old_location_cm": [
+          750.0,
+          0.0,
+          310.0
+        ],
+        "new_location_cm": [
+          750.0,
+          0.0,
+          330.0
+        ]
+      },
+      {
+        "name": "WindowNX03",
+        "old_location_cm": [
+          -750.0,
+          300.0,
+          310.0
+        ],
+        "new_location_cm": [
+          -750.0,
+          300.0,
+          330.0
+        ]
+      },
+      {
+        "name": "WindowNX04",
+        "old_location_cm": [
+          -750.0,
+          0.0,
+          310.0
+        ],
+        "new_location_cm": [
+          -750.0,
+          0.0,
+          330.0
+        ]
+      },
+      {
+        "name": "WindowNX05",
+        "old_location_cm": [
+          -750.0,
+          -300.0,
+          310.0
+        ],
+        "new_location_cm": [
+          -750.0,
+          -300.0,
+          330.0
+        ]
+      },
+      {
+        "name": "WindowPY06",
+        "old_location_cm": [
+          -450.0,
+          -550.0,
+          310.0
+        ],
+        "new_location_cm": [
+          -450.0,
+          -550.0,
+          330.0
+        ]
+      },
+      {
+        "name": "WindowPY07",
+        "old_location_cm": [
+          -150.0,
+          -550.0,
+          310.0
+        ],
+        "new_location_cm": [
+          -150.0,
+          -550.0,
+          330.0
+        ]
+      },
+      {
+        "name": "WindowPY08",
+        "old_location_cm": [
+          150.0,
+          -550.0,
+          310.0
+        ],
+        "new_location_cm": [
+          150.0,
+          -550.0,
+          330.0
+        ]
+      },
+      {
+        "name": "WindowPY09",
+        "old_location_cm": [
+          450.0,
+          -550.0,
+          310.0
+        ],
+        "new_location_cm": [
+          450.0,
+          -550.0,
+          330.0
+        ]
+      },
+      {
+        "name": "WindowNY10",
+        "old_location_cm": [
+          -450.0,
+          550.0,
+          310.0
+        ],
+        "new_location_cm": [
+          -450.0,
+          550.0,
+          330.0
+        ]
+      },
+      {
+        "name": "WindowNY11",
+        "old_location_cm": [
+          -150.0,
+          550.0,
+          310.0
+        ],
+        "new_location_cm": [
+          -150.0,
+          550.0,
+          330.0
+        ]
+      },
+      {
+        "name": "WindowNY12",
+        "old_location_cm": [
+          150.0,
+          550.0,
+          310.0
+        ],
+        "new_location_cm": [
+          150.0,
+          550.0,
+          330.0
+        ]
+      },
+      {
+        "name": "WindowNY13",
+        "old_location_cm": [
+          450.0,
+          550.0,
+          310.0
+        ],
+        "new_location_cm": [
+          450.0,
+          550.0,
+          330.0
+        ]
+      }
+    ]
+  },
+  "Church": {
+    "retained_openings": [
+      [
+        "+X",
+        0.0,
+        0.0,
+        1.1,
+        2.2,
+        "door",
+        0
+      ],
+      [
+        "+X",
+        -2.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ],
+      [
+        "+X",
+        2.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        -8.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        -4.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        0.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        4.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ],
+      [
+        "+Y",
+        8.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        -8.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        -4.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        0.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        4.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ],
+      [
+        "-Y",
+        8.0,
+        2.6,
+        1.2,
+        3.6,
+        "window",
+        0
+      ]
+    ],
+    "named_firing_positions": [
+      {
+        "name": "DoorPX00",
+        "location": [
+          1050.0,
+          0.0,
+          150.0
+        ],
+        "yaw": 0.0,
+        "arc": 60.0
+      },
+      {
+        "name": "WindowPX01",
+        "location": [
+          1050.0,
+          200.0,
+          440.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPX02",
+        "location": [
+          1050.0,
+          -200.0,
+          440.0
+        ],
+        "yaw": 0.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY03",
+        "location": [
+          -800.0,
+          -500.0,
+          440.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY04",
+        "location": [
+          -400.0,
+          -500.0,
+          440.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY05",
+        "location": [
+          0.0,
+          -500.0,
+          440.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY06",
+        "location": [
+          400.0,
+          -500.0,
+          440.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowPY07",
+        "location": [
+          800.0,
+          -500.0,
+          440.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY08",
+        "location": [
+          -800.0,
+          500.0,
+          440.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY09",
+        "location": [
+          -400.0,
+          500.0,
+          440.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY10",
+        "location": [
+          0.0,
+          500.0,
+          440.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY11",
+        "location": [
+          400.0,
+          500.0,
+          440.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "WindowNY12",
+        "location": [
+          800.0,
+          500.0,
+          440.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "BelfryNX",
+        "location": [
+          -1700.0,
+          0.0,
+          2150.0
+        ],
+        "yaw": -180.0,
+        "arc": 90.0
+      },
+      {
+        "name": "BelfryPY",
+        "location": [
+          -1425.0,
+          -275.0,
+          2150.0
+        ],
+        "yaw": -90.0,
+        "arc": 90.0
+      },
+      {
+        "name": "BelfryNY",
+        "location": [
+          -1425.0,
+          275.0,
+          2150.0
+        ],
+        "yaw": 90.0,
+        "arc": 90.0
+      }
+    ],
+    "changes_from_greybox": [
+      {
+        "index": 1,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 2,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 3,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 4,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 5,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 6,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 7,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 8,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 9,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 10,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 11,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      },
+      {
+        "index": 12,
+        "firing_eye_old_m": 3.1,
+        "firing_eye_proposed_m": 4.4,
+        "reason": "Keep contracted high opening; raise firing eye inside it in integration"
+      }
+    ],
+    "aperture_checks": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -2.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 2.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 3,
+        "face": "+Y",
+        "along_m": -8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 4,
+        "face": "+Y",
+        "along_m": -4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 5,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 6,
+        "face": "+Y",
+        "along_m": 4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 7,
+        "face": "+Y",
+        "along_m": 8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 8,
+        "face": "-Y",
+        "along_m": -8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 9,
+        "face": "-Y",
+        "along_m": -4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 10,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 11,
+        "face": "-Y",
+        "along_m": 4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 12,
+        "face": "-Y",
+        "along_m": 8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      }
+    ],
+    "capacity": 10,
+    "entry": [
+      1400.0,
+      0.0,
+      0.0
+    ],
+    "firing_position_patch": [
+      {
+        "name": "WindowPX01",
+        "old_location_cm": [
+          1050.0,
+          200.0,
+          310.0
+        ],
+        "new_location_cm": [
+          1050.0,
+          200.0,
+          440.0
+        ]
+      },
+      {
+        "name": "WindowPX02",
+        "old_location_cm": [
+          1050.0,
+          -200.0,
+          310.0
+        ],
+        "new_location_cm": [
+          1050.0,
+          -200.0,
+          440.0
+        ]
+      },
+      {
+        "name": "WindowPY03",
+        "old_location_cm": [
+          -800.0,
+          -500.0,
+          310.0
+        ],
+        "new_location_cm": [
+          -800.0,
+          -500.0,
+          440.0
+        ]
+      },
+      {
+        "name": "WindowPY04",
+        "old_location_cm": [
+          -400.0,
+          -500.0,
+          310.0
+        ],
+        "new_location_cm": [
+          -400.0,
+          -500.0,
+          440.0
+        ]
+      },
+      {
+        "name": "WindowPY05",
+        "old_location_cm": [
+          0.0,
+          -500.0,
+          310.0
+        ],
+        "new_location_cm": [
+          0.0,
+          -500.0,
+          440.0
+        ]
+      },
+      {
+        "name": "WindowPY06",
+        "old_location_cm": [
+          400.0,
+          -500.0,
+          310.0
+        ],
+        "new_location_cm": [
+          400.0,
+          -500.0,
+          440.0
+        ]
+      },
+      {
+        "name": "WindowPY07",
+        "old_location_cm": [
+          800.0,
+          -500.0,
+          310.0
+        ],
+        "new_location_cm": [
+          800.0,
+          -500.0,
+          440.0
+        ]
+      },
+      {
+        "name": "WindowNY08",
+        "old_location_cm": [
+          -800.0,
+          500.0,
+          310.0
+        ],
+        "new_location_cm": [
+          -800.0,
+          500.0,
+          440.0
+        ]
+      },
+      {
+        "name": "WindowNY09",
+        "old_location_cm": [
+          -400.0,
+          500.0,
+          310.0
+        ],
+        "new_location_cm": [
+          -400.0,
+          500.0,
+          440.0
+        ]
+      },
+      {
+        "name": "WindowNY10",
+        "old_location_cm": [
+          0.0,
+          500.0,
+          310.0
+        ],
+        "new_location_cm": [
+          0.0,
+          500.0,
+          440.0
+        ]
+      },
+      {
+        "name": "WindowNY11",
+        "old_location_cm": [
+          400.0,
+          500.0,
+          310.0
+        ],
+        "new_location_cm": [
+          400.0,
+          500.0,
+          440.0
+        ]
+      },
+      {
+        "name": "WindowNY12",
+        "old_location_cm": [
+          800.0,
+          500.0,
+          310.0
+        ],
+        "new_location_cm": [
+          800.0,
+          500.0,
+          440.0
+        ]
+      }
+    ],
+    "belfry_note": "The three original BelfryNX/PY/NY helpers are retained unchanged at 2150 cm. They are outside the 276 nave/house aperture-ray checks. Tower apertures remain at 20-23 m; check gameplay state-dependent belfry firing during integration."
+  },
+  "visual_only": {
+    "Church": "Additional west tower entrance and belfry louvres; contracted +X garrison entry retained. Arched nave heads keep original sill, width, head and eye clearance.",
+    "Workshop": "Additional +Y personnel door is closed decorative geometry, not a new firing/entry helper.",
+    "HouseB": "Paired long-side doors remain visual entries; contracted +X service/garrison entry retained."
+  }
+}

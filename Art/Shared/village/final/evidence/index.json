@@ -1,0 +1,7565 @@
+{
+  "evidence/final/whole_set_150m.png": {
+    "sha256": "f4015108009f91029fe5eb7265e2f5e351401fec12c34ef7640b8456e7acfc5f",
+    "camera": {
+      "cameraLocation": {
+        "x": 11247.694655894313,
+        "y": -3034.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        4200,
+        1900,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay"
+    }
+  },
+  "evidence/final/SM_Village_HouseA_150m.png": {
+    "sha256": "e5fd6f900e7a5bb8c03722d2fed12b6b5896ca3f888571b2e032b7d94a0b5cd8",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseA_threequarter.png": {
+    "sha256": "c1ae30a719679c68c207031c8a65959efe8fb563fcc87daecbe24b80796087b2",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": -2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseA_Damaged_150m.png": {
+    "sha256": "f7c6907dad08e68adaa412bcfd4cae89ce62901f45c96b6eb1f1560cf27d0eea",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseA_Damaged_threequarter.png": {
+    "sha256": "6fe990404fc5d3eb2e0f0b2ad76ca721314e8478b7dbc629999297e5e5af8d25",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": -2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseA_Rubble_150m.png": {
+    "sha256": "952a7a7fcdd40c8016cf2d8f0e9ebfa3c141aa79af01e796305ec196e1277c93",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseA_Rubble_threequarter.png": {
+    "sha256": "ae332f495f48b1c836928fd493b29ed8d488aa4b8aabbf616964e59c402fa973",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": -2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseA_12m.png": {
+    "sha256": "b36010092dfeaed2b6101ea92f635cdaf40d9da21cde997fc44ed2fde75b72b2",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 688.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseA_12m.png": {
+    "sha256": "6eaee777236029936e07c8ffc23543ad774d9c7b2a6406d46314c346e11ab175",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 688.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseA_150m.png": {
+    "sha256": "cb915569792f2322390eb7dbc73ab4c7269c1a9ddd7f01f65f98462e28ff221d",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseA_450m.png": {
+    "sha256": "b1a6c2ed3785594b4a5b35e5e5c0edb6e19493abeeeeeacf53a3c015311304d3",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseA_450m.png": {
+    "sha256": "18931b9208062881d55c26f588dee6e5c6b793963c0b03281b9b549a6dda473b",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseA_249_6m.png": {
+    "sha256": "421abbd2b9ab55a5153b9b1abe34ba5085e823a1e0957041f39c0dc73445a1ce",
+    "camera": {
+      "cameraLocation": {
+        "x": 11751.863937925717,
+        "y": -8211.588611295652,
+        "z": 20945.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        24.500030517578125,
+        0.0,
+        499.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        24.500030517578125,
+        0.0,
+        499.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseA_270_4m.png": {
+    "sha256": "bf7f7f72b73cc068b8f1504aee36b8df1a1008376a9b390d104e5413722e85e4",
+    "camera": {
+      "cameraLocation": {
+        "x": 12729.144263543061,
+        "y": -8895.887662236955,
+        "z": 22648.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        24.500030517578125,
+        0.0,
+        499.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        24.500030517578125,
+        0.0,
+        499.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseA_Damaged_12m.png": {
+    "sha256": "5ed7a580ddf901361632fde182c7c9de66dc3206d7b297d8f64047ee67c24131",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 688.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseA_Damaged_12m.png": {
+    "sha256": "75e578671942755a3446329a0ea4e1a99d2b4fec9d7a8213bfc0c76e42e2eefc",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 688.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseA_Damaged_150m.png": {
+    "sha256": "bce14716d4e0c5a908388702da09b73afafe7dd222c153cc5d05b3a349f36c8f",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseA_Damaged_450m.png": {
+    "sha256": "9542116f5a98ddfe3b555dbefb2522ecf5cdf830f58651e7e4b02c891811a8ae",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseA_Damaged_450m.png": {
+    "sha256": "51475ad31a25cf93a4ffad56942fa078cb1a71896f9353f3085af5edea8ac296",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseA_Damaged_249_6m.png": {
+    "sha256": "2d982d66aa39cda557ccae9ad0761da48ba09acab1ed8690b27a9e9b781d5f9e",
+    "camera": {
+      "cameraLocation": {
+        "x": 11751.863937925717,
+        "y": -8277.148257902098,
+        "z": 20945.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        24.500030517578125,
+        -65.55964660644531,
+        499.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        24.500030517578125,
+        -65.55964660644531,
+        499.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseA_Damaged_270_4m.png": {
+    "sha256": "05b937edc0c2f08a1e012263dc09b60321dfc7324e62ced1f1eeb561ef92728a",
+    "camera": {
+      "cameraLocation": {
+        "x": 12729.144263543061,
+        "y": -8961.4473088434,
+        "z": 22648.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        24.500030517578125,
+        -65.55964660644531,
+        499.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        24.500030517578125,
+        -65.55964660644531,
+        499.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseA_Rubble_12m.png": {
+    "sha256": "8fe980064512e7ccde1d44f8d3b6c86d331dcd8926599c9940b5f31d6eb57a71",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 688.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseA_Rubble_12m.png": {
+    "sha256": "4e49d7625aaf134a149046aee6b92ad87d08d5e2741f68aeb226c8a9aed8be82",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 688.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseA_Rubble_150m.png": {
+    "sha256": "daccd4467329714386ba65ef504d81d6fe6688d5ca186c2138550d33fe9b086c",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseA_Rubble_450m.png": {
+    "sha256": "2bc9fb61b572d53c40131316f6599f0f20f0fc6360152453c870036da631a7e2",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseA_Rubble_450m.png": {
+    "sha256": "824c54b0527f4170ededfea562492543b3704cd7399a158b96665552c127d062",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseA_Rubble_249_6m.png": {
+    "sha256": "54aabd4ecf44aa3494efee9c58ef2bfff7311b6fe10cf7bf809aba90ac9506ec",
+    "camera": {
+      "cameraLocation": {
+        "x": 11723.021774839779,
+        "y": -8211.588611295652,
+        "z": 20568.83591351476
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -4.342132568359375,
+        0.0,
+        122.80088806152344
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        -4.342132568359375,
+        0.0,
+        122.80088806152344
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseA_Rubble_270_4m.png": {
+    "sha256": "6bb26cf03ded616cbc21ec3c571d0848dd9fa9a374bc1bc6069adc04042f6732",
+    "camera": {
+      "cameraLocation": {
+        "x": 12700.302100457124,
+        "y": -8895.887662236955,
+        "z": 22272.67216563586
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -4.342132568359375,
+        0.0,
+        122.80088806152344
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        -4.342132568359375,
+        0.0,
+        122.80088806152344
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_150m.png": {
+    "sha256": "d3ca9618088a034022bb411032a0ec24b2ec131ad4c3e8901643db8d9726c337",
+    "camera": {
+      "cameraLocation": {
+        "x": -7047.694655894312,
+        "y": -4934.848925057483,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_threequarter.png": {
+    "sha256": "b7693c6e4e9f52efb13b15afeb16239a77c1d1fee86cb017eb9decc8ddd807b5",
+    "camera": {
+      "cameraLocation": {
+        "x": -3142.997042551208,
+        "y": -2200.7502217651795,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.000000000000004,
+        "yaw": 35.00000000000001,
+        "roll": 1.7407752700511047e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_Damaged_150m.png": {
+    "sha256": "291ae574de72b29b0eec800cd63c429b812b49f5251cc4413c31f8c8f5522bdc",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": 4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_Damaged_threequarter.png": {
+    "sha256": "0789daa59a1c8f62349ad8ca429f6b4b00b8ea56012afc9a51c48040b43cc71e",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": 2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": -145.00000000000003,
+        "roll": 8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_Rubble_150m.png": {
+    "sha256": "454dcd7a59c5aac405dccbb7fd93c45b933dec482d424c7e66c16d35a124bbc6",
+    "camera": {
+      "cameraLocation": {
+        "x": -7047.694655894312,
+        "y": -4934.848925057483,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_Rubble_threequarter.png": {
+    "sha256": "513fb7dcffea11a27a2dc16ca3fa6f2bb70377edacd6f072a824dbba1e4fc009",
+    "camera": {
+      "cameraLocation": {
+        "x": -3142.997042551208,
+        "y": -2200.7502217651795,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.000000000000004,
+        "yaw": 35.00000000000001,
+        "roll": 1.7407752700511047e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseB_12m.png": {
+    "sha256": "c42314396a912187e2ff6deff5d0dceeba5f29fa6f287b69f75def882746cb53",
+    "camera": {
+      "cameraLocation": {
+        "x": -805.2120859954013,
+        "y": -1013.815572471545,
+        "z": 968.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35,
+        "yaw": 35,
+        "roll": 1.941370166648474e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -450,
+        280
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_12m.png": {
+    "sha256": "0f529af082938c1e1a9e13c8b348ff3ac1ccf999ab8f2730a35389e6279edc34",
+    "camera": {
+      "cameraLocation": {
+        "x": -805.2120859954013,
+        "y": -1013.815572471545,
+        "z": 968.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35,
+        "yaw": 35,
+        "roll": 1.941370166648474e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -450,
+        280
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseB_150m.png": {
+    "sha256": "af21bb4e882a052c7fb235ff0c67cacdedfa755e463fedb9de2808e416d0f4ac",
+    "camera": {
+      "cameraLocation": {
+        "x": -7047.694655894312,
+        "y": -4934.848925057483,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseB_450m.png": {
+    "sha256": "0903bd2206f1904c12dcf41285b7e7c014d5a1282d395072a2e6b8d99bcfbf27",
+    "camera": {
+      "cameraLocation": {
+        "x": -21143.08396768294,
+        "y": -14804.546775172452,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_450m.png": {
+    "sha256": "5f0c0be0358cb0c726f7171c332064bb7d70a6ce9d9fdbace49125063a33e920",
+    "camera": {
+      "cameraLocation": {
+        "x": -21143.08396768294,
+        "y": -14804.546775172452,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseB_249_6m.png": {
+    "sha256": "1eec9c765fbdeebf7f862579fda41adc57075467986d4f0ec4de4e5c85de385b",
+    "camera": {
+      "cameraLocation": {
+        "x": -11704.863907408137,
+        "y": -8231.588580778074,
+        "z": 20959.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.5,
+        -19.999969482421875,
+        513.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.5,
+        -19.999969482421875,
+        513.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseB_270_4m.png": {
+    "sha256": "61946d01da84dd9221c60f10537870a763acbb45c15938fcea506d9ac25dc53c",
+    "camera": {
+      "cameraLocation": {
+        "x": -12682.144233025481,
+        "y": -8915.887631719379,
+        "z": 22662.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.5,
+        -19.999969482421875,
+        513.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.5,
+        -19.999969482421875,
+        513.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseB_Damaged_12m.png": {
+    "sha256": "d64f354a439391a8d44c30c26246de6e7b00006cd0996daf2edd3f112b202144",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": 113.8155724715449,
+        "z": 968.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": -145.00000000000003,
+        "roll": 1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -450,
+        280
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_Damaged_12m.png": {
+    "sha256": "381d113dcd9e4727c86a4080e9de27de52a9d560dc4940ddf5b110b67437109e",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": 113.8155724715449,
+        "z": 968.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": -145.00000000000003,
+        "roll": 1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -450,
+        280
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseB_Damaged_150m.png": {
+    "sha256": "b7e460854337f37d93f88026b535a0d81caa8712116a4d1ea2686a60d006a6d0",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": 4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseB_Damaged_450m.png": {
+    "sha256": "dfb3d2cb5ef989784d17ff98692a82e73328b6d2a26af2fbbe911530ac12009e",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": 14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_Damaged_450m.png": {
+    "sha256": "819a2efb8a2a85ca7f1242f2bb95944600214a4ad79ff8b778af10341203419b",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": 14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseB_Damaged_249_6m.png": {
+    "sha256": "32be59f2984ace29b5a41db69f73cef76a3c7f3e91244da56cbe5aa9a7ac20ec",
+    "camera": {
+      "cameraLocation": {
+        "x": 11749.863907408138,
+        "y": 8249.145984342527,
+        "z": 20959.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.5,
+        37.557373046875,
+        513.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.5,
+        37.557373046875,
+        513.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseB_Damaged_270_4m.png": {
+    "sha256": "db0455d27b0abb619cf7f8c9d26e9f90deff8076093d5c44ecdd466ce58e2704",
+    "camera": {
+      "cameraLocation": {
+        "x": 12727.144233025483,
+        "y": 8933.44503528383,
+        "z": 22662.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.5,
+        37.557373046875,
+        513.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.5,
+        37.557373046875,
+        513.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseB_Rubble_12m.png": {
+    "sha256": "1fbfedd70ed7407c03fdd1d5df79c7395cbe692469bf8b35ccab6c400107048a",
+    "camera": {
+      "cameraLocation": {
+        "x": -805.2120859954013,
+        "y": -1013.815572471545,
+        "z": 968.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35,
+        "yaw": 35,
+        "roll": 1.941370166648474e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -450,
+        280
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_Rubble_12m.png": {
+    "sha256": "a8b826ca2c1bb17162fc05448cb233f16a91012f7992ab67b1bd2a5710f88ab8",
+    "camera": {
+      "cameraLocation": {
+        "x": -805.2120859954013,
+        "y": -1013.815572471545,
+        "z": 968.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35,
+        "yaw": 35,
+        "roll": 1.941370166648474e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -450,
+        280
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseB_Rubble_150m.png": {
+    "sha256": "5ed1ffe941eff9e683744a2828eb0c4e3272b4373c3a7e5abcebd2b94450c8d6",
+    "camera": {
+      "cameraLocation": {
+        "x": -7047.694655894312,
+        "y": -4934.848925057483,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseB_Rubble_450m.png": {
+    "sha256": "7fa18ba5dda9c59e3c458618d9ac8d53efec15544e6c6c13920ae5ec96420260",
+    "camera": {
+      "cameraLocation": {
+        "x": -21143.08396768294,
+        "y": -14804.546775172452,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseB_Rubble_450m.png": {
+    "sha256": "29ddcebcfd90c26a4621e04f67ad96cc4384ef931652b2cb320ebc2bf363315c",
+    "camera": {
+      "cameraLocation": {
+        "x": -21143.08396768294,
+        "y": -14804.546775172452,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseB_Rubble_249_6m.png": {
+    "sha256": "3e5c1d47bffee11e9a621c0757444061805a6dfc6b5e905f2d718681aa10ba12",
+    "camera": {
+      "cameraLocation": {
+        "x": -11727.363907408137,
+        "y": -8218.379611661863,
+        "z": 20558.037619447376
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        -6.7910003662109375,
+        112.00259399414062
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        -6.7910003662109375,
+        112.00259399414062
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseB_Rubble_270_4m.png": {
+    "sha256": "78c10c42c2f9736c3688a7d799b2294f2d0038e4d42dd63309ed3b981026953e",
+    "camera": {
+      "cameraLocation": {
+        "x": -12704.644233025481,
+        "y": -8902.678662603168,
+        "z": 22261.873871568478
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        -6.7910003662109375,
+        112.00259399414062
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        -6.7910003662109375,
+        112.00259399414062
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_150m.png": {
+    "sha256": "b2101d950134105ec65a64959bb76e3dce2ba026b6d701099fdbcdd687c52d1c",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_threequarter.png": {
+    "sha256": "67bd2418a109f2871b7259db03d177700bc5fd14cab373e62dd4f9b6030daa05",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": -2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_Damaged_150m.png": {
+    "sha256": "7044c4977e5df8a96afba70e9a2310ed9b033005cc2954bda3a571007dcfc7fc",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": 4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_Damaged_threequarter.png": {
+    "sha256": "924fa6ab5c0cd8d499063308d597f9279ee0ad9c95eb6511f2671659097e53a5",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": 2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": -145.00000000000003,
+        "roll": 8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_Rubble_150m.png": {
+    "sha256": "25a06242a3a19f7bc05524785fe78144ec534d2ed6910c4e9a32cbe39fa00dc3",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_Rubble_threequarter.png": {
+    "sha256": "29f01088ee418742171150ca92fa1babcd25ce25217f4f59a4d04b2f3862febb",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": -2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseC_12m.png": {
+    "sha256": "f33264a906bb9d13e51571899163a792950230f73358d7d65b65c2c39d37c1dc",
+    "camera": {
+      "cameraLocation": {
+        "x": 1280.2120859954014,
+        "y": -563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        475,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_12m.png": {
+    "sha256": "afc21f638c99fde7d8895d6d435bfa45c5ac586161593ffa39766b268ce75bf0",
+    "camera": {
+      "cameraLocation": {
+        "x": 1280.2120859954014,
+        "y": -563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        475,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseC_150m.png": {
+    "sha256": "470ae7abcd2ae269c3a4a2cd97b8e175b944009b0db9e4037bcab65f8123a833",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseC_450m.png": {
+    "sha256": "c569b3d35584fa60fd7d002fca838f465086ff57105370b188ce3d83a5832767",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_450m.png": {
+    "sha256": "5d45d76b9c7962871891ad5bbdc4ab47af71598da5a421a1008bcdcb4f8f5641",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseC_249_6m.png": {
+    "sha256": "7a0c2a480b0b6744149529249acd5f96ab0148d67cf9c94dfda3ed9f1de86be1",
+    "camera": {
+      "cameraLocation": {
+        "x": 11749.863907408138,
+        "y": -8211.588611295652,
+        "z": 20909.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.5,
+        0.0,
+        463.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.5,
+        0.0,
+        463.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseC_270_4m.png": {
+    "sha256": "ab0215a18cbedce8823991c8ab86e9f29fdfafa902b0e32789fc8b2c8f9ae327",
+    "camera": {
+      "cameraLocation": {
+        "x": 12727.144233025483,
+        "y": -8895.887662236955,
+        "z": 22612.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.5,
+        0.0,
+        463.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.5,
+        0.0,
+        463.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseC_Damaged_12m.png": {
+    "sha256": "e651a5e30a0ad37d243ccce2e43258ea6b30337049d9b7d73abbea9eca40634d",
+    "camera": {
+      "cameraLocation": {
+        "x": 1280.2120859954014,
+        "y": 563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": -145.00000000000003,
+        "roll": 1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        475,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_Damaged_12m.png": {
+    "sha256": "0fbec80f6a7e5a27dfce97deafb7fd609478ce0d595e591bd0d5af3ace2957bd",
+    "camera": {
+      "cameraLocation": {
+        "x": 1280.2120859954014,
+        "y": 563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": -145.00000000000003,
+        "roll": 1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        475,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseC_Damaged_150m.png": {
+    "sha256": "aaf0b8c830c49f54f36625fcad5af3ee0d54ff36639d6dc24b0b6e5dd267a580",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": 4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseC_Damaged_450m.png": {
+    "sha256": "e7d180fcb35527c5d3dc33ab8ea746cbf61863b7e3c08a2491b60ca92e0dfc22",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": 14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_Damaged_450m.png": {
+    "sha256": "9d4e7b4717c74c9488b41a31099fb83fe05d1ef7cb6ba4af7a4f308156412487",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": 14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseC_Damaged_249_6m.png": {
+    "sha256": "a7816fb667cd64aea2d1e7a1def736556caa2ef96ad0befa172aed590394827c",
+    "camera": {
+      "cameraLocation": {
+        "x": 11749.863907408138,
+        "y": 8276.695239713621,
+        "z": 20909.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.5,
+        65.10662841796875,
+        463.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.5,
+        65.10662841796875,
+        463.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseC_Damaged_270_4m.png": {
+    "sha256": "9cc368a8ef6f6d0df5b2a5af7eda38b8c43e1f7e025bb9aeca11b3f56bd4dbda",
+    "camera": {
+      "cameraLocation": {
+        "x": 12727.144233025483,
+        "y": 8960.994290654924,
+        "z": 22612.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.5,
+        65.10662841796875,
+        463.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.5,
+        65.10662841796875,
+        463.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseC_Rubble_12m.png": {
+    "sha256": "2469b85d870daa288513f89cd27fc82dcc3db55ed7a6a7a1e25dda968c1f62dc",
+    "camera": {
+      "cameraLocation": {
+        "x": 1280.2120859954014,
+        "y": -563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        475,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_Rubble_12m.png": {
+    "sha256": "fa4ae4b50e2d64079402fe2a722f3706fe8bc9843c055dfee7f66039b189673e",
+    "camera": {
+      "cameraLocation": {
+        "x": 1280.2120859954014,
+        "y": -563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        475,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseC_Rubble_150m.png": {
+    "sha256": "f445d5c5ee63a3fe28238b4815927b9fb265620bb925fb5e7cd76d4496c09bcb",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_HouseC_Rubble_450m.png": {
+    "sha256": "4d4330c0843c32809e28e95ee381f8cc369e8bf9e45ae87443bf5c46df1cdaf1",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_HouseC_Rubble_450m.png": {
+    "sha256": "4eed4cf15aee40e108288352cf4436b6f8813baba8b801906d3162cf57625fea",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseC_Rubble_249_6m.png": {
+    "sha256": "4298ad96d8841c02ca2217c1b16156b4ecb887c809a2041890600556db380ff7",
+    "camera": {
+      "cameraLocation": {
+        "x": 11730.829742979427,
+        "y": -8188.790973356199,
+        "z": 20561.31230816808
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        3.4658355712890625,
+        22.797637939453125,
+        115.27728271484375
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        3.4658355712890625,
+        22.797637939453125,
+        115.27728271484375
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_HouseC_Rubble_270_4m.png": {
+    "sha256": "2b9d201955b3b0ce956d70054d24bb2c8502c9448d2937681b9112e766735015",
+    "camera": {
+      "cameraLocation": {
+        "x": 12708.110068596772,
+        "y": -8873.090024297502,
+        "z": 22265.14856028918
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        3.4658355712890625,
+        22.797637939453125,
+        115.27728271484375
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        3.4658355712890625,
+        22.797637939453125,
+        115.27728271484375
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_150m.png": {
+    "sha256": "f3d3ae27f9255ad5a8afb418c4c1eea538703bb1a44201b3b58c92f617e9d230",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_threequarter.png": {
+    "sha256": "cb03884301433d9f2367320877a143a9de09bc20ecda7999ccb3d282e1d6e2ca",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": -2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_Damaged_150m.png": {
+    "sha256": "3430f37b6bace0636f756bed58eed1789d0ad5d1bc213fb77461c5f9c01ee503",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": 4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_Damaged_threequarter.png": {
+    "sha256": "815225e61c4549bea73cb3dc93f42217e0591ab97104c76c67d59a31dee21196",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": 2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": -145.00000000000003,
+        "roll": 8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_Rubble_150m.png": {
+    "sha256": "8769e73eb807f7f227e648b0abeeec6257355fa9c768034de53afa115e26cccd",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_Rubble_threequarter.png": {
+    "sha256": "6e976e6b7991fc6484b860243621cfa52a77c96b222bba870d91d7177c112158",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": -2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Farmhouse_12m.png": {
+    "sha256": "541f0cebd6f00527563211ec8b779bf60d95e6ccfdc67e364df1b8126d9fb27e",
+    "camera": {
+      "cameraLocation": {
+        "x": 1705.2120859954014,
+        "y": -563.8155724715449,
+        "z": 938.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        900,
+        0,
+        250
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_12m.png": {
+    "sha256": "484028f7862d57bda742bb238f4d8c4dc21ac8b81e015b05df524edb6ac00b11",
+    "camera": {
+      "cameraLocation": {
+        "x": 1705.2120859954014,
+        "y": -563.8155724715449,
+        "z": 938.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        900,
+        0,
+        250
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Farmhouse_150m.png": {
+    "sha256": "e68ae293abbbe344f7bd0dc188eab1d82b490a732abd5c5f8ef4d2f428d9c0af",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Farmhouse_450m.png": {
+    "sha256": "a4bf9a9fcb0e729b2f9d1d1ef32df9c3b688a3fcda13a32239899cb36639975c",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_450m.png": {
+    "sha256": "7cf7ff4ec6a0d8eed89855c9f15cb634c2c51724c1bec0cb6fd0045859c4b07d",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Farmhouse_249_6m.png": {
+    "sha256": "92df8457cb62cef9edc72faa608451e418b09d0a193253e9ed93a8682012b131",
+    "camera": {
+      "cameraLocation": {
+        "x": 11749.863815855404,
+        "y": -8211.588611295652,
+        "z": 20984.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.499908447265625,
+        0.0,
+        538.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.499908447265625,
+        0.0,
+        538.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Farmhouse_270_4m.png": {
+    "sha256": "28efe0976851c167ec44abcb9ab60f858df25ac0b7b5c30662186df5f432f80c",
+    "camera": {
+      "cameraLocation": {
+        "x": 12727.144141472749,
+        "y": -8895.887662236955,
+        "z": 22687.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.499908447265625,
+        0.0,
+        538.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.499908447265625,
+        0.0,
+        538.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Farmhouse_Damaged_12m.png": {
+    "sha256": "ead54afcb1a195a39133c54a7f272ae66ad286b505db284ed0a96afd257c0575",
+    "camera": {
+      "cameraLocation": {
+        "x": 1705.2120859954014,
+        "y": 563.8155724715449,
+        "z": 938.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": -145.00000000000003,
+        "roll": 1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        900,
+        0,
+        250
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_Damaged_12m.png": {
+    "sha256": "116a3e6d449829d0ebd1e171ca7beff31fdd49287033376443a342608a0ca17b",
+    "camera": {
+      "cameraLocation": {
+        "x": 1705.2120859954014,
+        "y": 563.8155724715449,
+        "z": 938.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": -145.00000000000003,
+        "roll": 1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        900,
+        0,
+        250
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Farmhouse_Damaged_150m.png": {
+    "sha256": "e07439c6df12e19ce47e5ebcd37a0de85c2f979dbd39beeb5c33dde1995fc537",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": 4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Farmhouse_Damaged_450m.png": {
+    "sha256": "4a23d9eee4aa453b67e519f90587df65f9e79a42d663abe5784a637cbf08d1b9",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": 14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_Damaged_450m.png": {
+    "sha256": "8eb7d78750ada7d33e6b3b7f0083b1d750bb79326ac066bbb070d3c04558a076",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": 14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Farmhouse_Damaged_249_6m.png": {
+    "sha256": "86092aa0d2537e5dc43cc0dc69093ef5c4f882b3a4f79498a8f31c7e1c8bf579",
+    "camera": {
+      "cameraLocation": {
+        "x": 11749.863815855404,
+        "y": 8294.658527067137,
+        "z": 20984.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.499908447265625,
+        83.06991577148438,
+        538.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.499908447265625,
+        83.06991577148438,
+        538.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Farmhouse_Damaged_270_4m.png": {
+    "sha256": "de3356fec1acd860c466c0be8ef33337c445d36b3825e696ca298298248e5ec9",
+    "camera": {
+      "cameraLocation": {
+        "x": 12727.144141472749,
+        "y": 8978.95757800844,
+        "z": 22687.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        22.499908447265625,
+        83.06991577148438,
+        538.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        22.499908447265625,
+        83.06991577148438,
+        538.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Farmhouse_Rubble_12m.png": {
+    "sha256": "463f41c9d45f9873fd72bf4cdda812d7ea82690cf675e9a0716e8b0e566d61a1",
+    "camera": {
+      "cameraLocation": {
+        "x": 1705.2120859954014,
+        "y": -563.8155724715449,
+        "z": 938.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        900,
+        0,
+        250
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_Rubble_12m.png": {
+    "sha256": "f47a90616cde7249ad528f50fa45f2fa69c34f76372cbb8e94278c4a5e3d7e36",
+    "camera": {
+      "cameraLocation": {
+        "x": 1705.2120859954014,
+        "y": -563.8155724715449,
+        "z": 938.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        900,
+        0,
+        250
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Farmhouse_Rubble_150m.png": {
+    "sha256": "0f1c852eff2ab9009d649a06af2a3e07ebdb7f022112231aaa8bdebd539dc0b3",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Farmhouse_Rubble_450m.png": {
+    "sha256": "29f7fd28403f9fe323a78052548acd993756434c8c7a2018855faaefbc0242ce",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Farmhouse_Rubble_450m.png": {
+    "sha256": "bc2535b69cacbc0689c60e60f4bd59e79fb0f6d41aa7b359119f2c855a234798",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Farmhouse_Rubble_249_6m.png": {
+    "sha256": "19c00b0e7c619aab349667497d9e9b2f11cdd7d93877f2b17b8e0e2bb28a641a",
+    "camera": {
+      "cameraLocation": {
+        "x": 11727.363907408138,
+        "y": -8185.264178922605,
+        "z": 20547.15481457677
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        26.324432373046875,
+        101.11978912353516
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        26.324432373046875,
+        101.11978912353516
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Farmhouse_Rubble_270_4m.png": {
+    "sha256": "f64c309bd6bdd91f01295f7d1ca3509c8881d96a8a12934ca292e7c5b26fbda3",
+    "camera": {
+      "cameraLocation": {
+        "x": 12704.644233025483,
+        "y": -8869.563229863908,
+        "z": 22250.991066697872
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        26.324432373046875,
+        101.11978912353516
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        26.324432373046875,
+        101.11978912353516
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_150m.png": {
+    "sha256": "8c0ce8607cf00171c18f142294081d9da196963085b7da1e6636f14254f51182",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_threequarter.png": {
+    "sha256": "85a29264626e43cd9afca1e2567b43c9cf5b9b9354340f52255b5514f7b16fe4",
+    "camera": {
+      "cameraLocation": {
+        "x": 3891.3296717300677,
+        "y": -2724.738369804508,
+        "z": 2465.0305439941612
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 5200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_Damaged_150m.png": {
+    "sha256": "52cccb709648d0d155d9e9524e0cadb84a2e0fe7e1d507969b5c8ec06ce26a7c",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": 4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_Damaged_threequarter.png": {
+    "sha256": "20469653c21869a760cad2b0a7fdaa21ee470882f221996e276615029a9a3c94",
+    "camera": {
+      "cameraLocation": {
+        "x": 3891.3296717300677,
+        "y": 2724.738369804508,
+        "z": 2465.0305439941612
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": -145.00000000000003,
+        "roll": 8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 5200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_Rubble_150m.png": {
+    "sha256": "0c75f363880561c27415016b6b84c2e65ccdb07484db9d9703daba3007f3d34c",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_Rubble_threequarter.png": {
+    "sha256": "3d209f2e31114e9a1213b52bfa4e48d07de50fdb126989896d97d5f5fe5a1a15",
+    "camera": {
+      "cameraLocation": {
+        "x": 3891.3296717300677,
+        "y": -2724.738369804508,
+        "z": 2465.0305439941612
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 5200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Barn_12m.png": {
+    "sha256": "c5f53defa591c34dc421b0d48600da495384c20236ed0769eb1cc53a84dc8789",
+    "camera": {
+      "cameraLocation": {
+        "x": 1805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 988.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        1000,
+        0,
+        300
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_12m.png": {
+    "sha256": "717224baf711612485cf2a6c9f712c5d1c4889948b4189a8a9dfba5316e346a5",
+    "camera": {
+      "cameraLocation": {
+        "x": 1805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 988.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        1000,
+        0,
+        300
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Barn_150m.png": {
+    "sha256": "50d63dc214dacd1a166d67d5d9e25622ead3bf8cc720d8610805351105af1df7",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Barn_450m.png": {
+    "sha256": "62a48c5f81ea4f1e3894b08bb8eeaf4b2998934ec1b600ec703aa28688e11dac",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_450m.png": {
+    "sha256": "0e66fefd46238378a86476c47f76b1415f2142ca56681bc0566904aef5c5fce5",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Barn_249_6m.png": {
+    "sha256": "0027f3ff1cc9039a1481681a9f21e67eafa8a2db35c2a0a85b0a77025018f854",
+    "camera": {
+      "cameraLocation": {
+        "x": 11727.363907408138,
+        "y": -8211.588611295652,
+        "z": 20987.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        0.0,
+        541.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        0.0,
+        541.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Barn_270_4m.png": {
+    "sha256": "01f86c4b6e6021d76d468ff11180ac090b8900905baddcd48db38034ca2d6bcd",
+    "camera": {
+      "cameraLocation": {
+        "x": 12704.644233025483,
+        "y": -8895.887662236955,
+        "z": 22690.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        0.0,
+        541.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        0.0,
+        541.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Barn_Damaged_12m.png": {
+    "sha256": "07ec04cd3f544c8d6542a805d7ed98d89cc0b1940981a36ae85006e57421b07f",
+    "camera": {
+      "cameraLocation": {
+        "x": 1805.2120859954014,
+        "y": 563.8155724715449,
+        "z": 988.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": -145.00000000000003,
+        "roll": 1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        1000,
+        0,
+        300
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_Damaged_12m.png": {
+    "sha256": "d32cf86d7551dbc9ec36bb2161bedc3bb43be48382a9b77c79b960d8a0580af8",
+    "camera": {
+      "cameraLocation": {
+        "x": 1805.2120859954014,
+        "y": 563.8155724715449,
+        "z": 988.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": -145.00000000000003,
+        "roll": 1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        1000,
+        0,
+        300
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Barn_Damaged_150m.png": {
+    "sha256": "a9aec33d3df426cccbc16a27f84bf45311b40d52b99653e596c31629e9900dbd",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": 4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Barn_Damaged_450m.png": {
+    "sha256": "7b9654c0a56836516101ea389c0f44adc4c893fa9ce5a9a01f9719971779c461",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": 14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_Damaged_450m.png": {
+    "sha256": "e97e59417f7c992cf89e79748eae7408e050fa4f37fc63c814d76249402524de",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": 14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Barn_Damaged_249_6m.png": {
+    "sha256": "deea35a1eb3bdaf44aef5d027f7f7293365bada52d665a869c116549fabf0702",
+    "camera": {
+      "cameraLocation": {
+        "x": 11727.363907408138,
+        "y": 8269.602039030027,
+        "z": 20987.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        58.013427734375,
+        541.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        58.013427734375,
+        541.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Barn_Damaged_270_4m.png": {
+    "sha256": "7f93bc11f325d908d949f80cda168e3c1f972ebcfb5399dda19929bb95e2d923",
+    "camera": {
+      "cameraLocation": {
+        "x": 12704.644233025483,
+        "y": 8953.90108997133,
+        "z": 22690.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        58.013427734375,
+        541.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        58.013427734375,
+        541.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Barn_Rubble_12m.png": {
+    "sha256": "d7a1c3ed3021c992f311e3d90b0dbef01be29036b03226baef80562b9ba5fd2e",
+    "camera": {
+      "cameraLocation": {
+        "x": 1805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 988.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        1000,
+        0,
+        300
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_Rubble_12m.png": {
+    "sha256": "7a63852619d7930324a92999fcc6e41d752ed9caf5a3ec077eb0c67ac932f4f3",
+    "camera": {
+      "cameraLocation": {
+        "x": 1805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 988.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        1000,
+        0,
+        300
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Barn_Rubble_150m.png": {
+    "sha256": "28886cd709cf0e1a49764ba49618ab2a8827e4fcde8983e4d781257af58d06f0",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Barn_Rubble_450m.png": {
+    "sha256": "ac0ec9b3efd449445fe5718f34e5a4d8102bc7e8963a1738ff01afc2fa102536",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Barn_Rubble_450m.png": {
+    "sha256": "a73907261c61a6bde606487ea8886aa3c07b0f4500229867d9ce814366c391dd",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Barn_Rubble_249_6m.png": {
+    "sha256": "67ce2769bdc9552e88f2697abd59cbc78dfb4b0005196a127f45ae6f8bf179fb",
+    "camera": {
+      "cameraLocation": {
+        "x": 11742.371231626888,
+        "y": -8229.86387985034,
+        "z": 20565.79370770421
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        15.00732421875,
+        -18.2752685546875,
+        119.75868225097656
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        15.00732421875,
+        -18.2752685546875,
+        119.75868225097656
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Barn_Rubble_270_4m.png": {
+    "sha256": "ecfee1caf0070ea9226c734b6978458673db2e91f68a299b558d89f955cce972",
+    "camera": {
+      "cameraLocation": {
+        "x": 12719.651557244233,
+        "y": -8914.162930791643,
+        "z": 22269.629959825314
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        15.00732421875,
+        -18.2752685546875,
+        119.75868225097656
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        15.00732421875,
+        -18.2752685546875,
+        119.75868225097656
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_150m.png": {
+    "sha256": "4126957d1f6437808678633d93011d304027eba1957ea199c7e2436a52aabd9d",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_threequarter.png": {
+    "sha256": "2784ab0a179094fb91b1c75ab5817888cbe4ed0d2d49de0cb172490a26b11725",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": -2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_Damaged_150m.png": {
+    "sha256": "6de7c5b524d6c5a368adce330a74bc447d5f93c0a0908cb786b2641f1399c2cb",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": 4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_Damaged_threequarter.png": {
+    "sha256": "42f72a7ec5d78a3d6ba525a9d3378ff08315f609ee44db54bb552f7d8e71e18d",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": 2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": -145.00000000000003,
+        "roll": 8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_Rubble_150m.png": {
+    "sha256": "2147eae3100072b7ddf9d5fb072356f695d42b237f901bf21925c94e21f0be2c",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_Rubble_threequarter.png": {
+    "sha256": "8aae266a4df495fae50882341f06683700938712a5cc2af45b256bef465d5a50",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": -2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Workshop_12m.png": {
+    "sha256": "4546d0ed38be5c0f8d559408f3e74b92571d89f786bd36d81ee26bfc666ab3e2",
+    "camera": {
+      "cameraLocation": {
+        "x": 1605.2120859954014,
+        "y": -563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        800,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_12m.png": {
+    "sha256": "41786dd0ccce3b2bd5848d77e0d281c94aff898bf1eda9106cc8d38c01d9bf77",
+    "camera": {
+      "cameraLocation": {
+        "x": 1605.2120859954014,
+        "y": -563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        800,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Workshop_150m.png": {
+    "sha256": "a1183d1838d80546fb1fd4ae33d7e2397d15f714a70973ca72a15a313ebb221f",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Workshop_450m.png": {
+    "sha256": "bcb04726eba6a7d6e4c9787467e977e3bf0e6ce63bba8c057bb4e8fc87de177c",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_450m.png": {
+    "sha256": "754a8adca6d0f95f24ce238c628d8d3e43fb68a9f13c16aa8e4c257ea8989e22",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Workshop_249_6m.png": {
+    "sha256": "367b1405bb1990e71b5db0d962a4a14348321439f17b1c5c67a76ef5b18b5b1a",
+    "camera": {
+      "cameraLocation": {
+        "x": 11727.363907408138,
+        "y": -8211.588611295652,
+        "z": 20767.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        0.0,
+        321.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        0.0,
+        321.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Workshop_270_4m.png": {
+    "sha256": "e87cb4f109231b44381b7b6e1b5ed78b6b00c030ffabb36ba8e69c9177009e4e",
+    "camera": {
+      "cameraLocation": {
+        "x": 12704.644233025483,
+        "y": -8895.887662236955,
+        "z": 22470.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        0.0,
+        321.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        0.0,
+        321.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Workshop_Damaged_12m.png": {
+    "sha256": "01cd3246b4e0d43d9199f53a9dad9f3ab245bbd95b65dd3c727364cada50a510",
+    "camera": {
+      "cameraLocation": {
+        "x": 1605.2120859954014,
+        "y": 563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": -145.00000000000003,
+        "roll": 1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        800,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_Damaged_12m.png": {
+    "sha256": "fefd6eefda074078ddd6d14a6537a117d01320c78d1201b8a7dc2fad71c5c973",
+    "camera": {
+      "cameraLocation": {
+        "x": 1605.2120859954014,
+        "y": 563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": -145.00000000000003,
+        "roll": 1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        800,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Workshop_Damaged_150m.png": {
+    "sha256": "3ad3b8be1af7644fb90a7038574d75adb73c2b244935383fc66c3f514d3992c1",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": 4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Workshop_Damaged_450m.png": {
+    "sha256": "7e8aeef4ddbfff48df3d21d1d299a2a5424cda5e37b2e7d3b44d73ab04ea98b1",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": 14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_Damaged_450m.png": {
+    "sha256": "f25c5c1f149f45a19f1263014ee4f68349f824be32586837301de007b9389832",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": 14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Workshop_Damaged_249_6m.png": {
+    "sha256": "1c917abf113061c18ea3d601ca6cfa03780d4ed147468f1752e8ec44f7155cbb",
+    "camera": {
+      "cameraLocation": {
+        "x": 11727.363907408138,
+        "y": 8277.091113737059,
+        "z": 20767.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        65.50250244140625,
+        321.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        65.50250244140625,
+        321.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Workshop_Damaged_270_4m.png": {
+    "sha256": "56683a39c71875ab159f72d4fb573d2711a53585bee87edd91a1f0fee0d02fb5",
+    "camera": {
+      "cameraLocation": {
+        "x": 12704.644233025483,
+        "y": 8961.390164678362,
+        "z": 22470.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        65.50250244140625,
+        321.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        65.50250244140625,
+        321.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Workshop_Rubble_12m.png": {
+    "sha256": "299fd1e7e52516d1dbd4abedcde2f37eb11fc5e75e797fc4b2f458ad51557bc3",
+    "camera": {
+      "cameraLocation": {
+        "x": 1605.2120859954014,
+        "y": -563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        800,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_Rubble_12m.png": {
+    "sha256": "40339766a8556c9b245fed41810ce4be29d3a73308f54fefe2cd46c7fc0ab7d1",
+    "camera": {
+      "cameraLocation": {
+        "x": 1605.2120859954014,
+        "y": -563.8155724715449,
+        "z": 928.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        800,
+        0,
+        240
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Workshop_Rubble_150m.png": {
+    "sha256": "fd01474c549c63612b2d0efcd84563c90c4f7af6c5a657c7dc24b3d2daa6d596",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Workshop_Rubble_450m.png": {
+    "sha256": "358bc6d0e0fdaeda9f06540b853f8566302da587fdf854a8dfad1a47b6e05f81",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Workshop_Rubble_450m.png": {
+    "sha256": "b1bf8f00b7f0d0fe7bfb81517e2c4f3a19ed7671bf49436e7b4c3fccd38b4bd3",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Workshop_Rubble_249_6m.png": {
+    "sha256": "edf734edfec339856e172fd6daea4d4e1b80e3b06bcaa3c8cc55d26fd413a209",
+    "camera": {
+      "cameraLocation": {
+        "x": 11727.363907408138,
+        "y": -8246.308337858152,
+        "z": 20564.628012513782
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        -34.7197265625,
+        118.59298706054688
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        -34.7197265625,
+        118.59298706054688
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Workshop_Rubble_270_4m.png": {
+    "sha256": "4de636dfac1f89daf22d1b26a32c537272baf7e12cf084d49610885c3c8d604d",
+    "camera": {
+      "cameraLocation": {
+        "x": 12704.644233025483,
+        "y": -8930.607388799455,
+        "z": 22268.464264634884
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        -34.7197265625,
+        118.59298706054688
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        -34.7197265625,
+        118.59298706054688
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_150m.png": {
+    "sha256": "cb47974e0c6baf0c3cae690577d87726d8d2b9682ef8c0719e840a561b682796",
+    "camera": {
+      "cameraLocation": {
+        "x": -7047.694655894312,
+        "y": -4934.848925057483,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_threequarter.png": {
+    "sha256": "2d8c416b794243cd4a543bf2776f2005fc32196b87448f1c33b239c85637658b",
+    "camera": {
+      "cameraLocation": {
+        "x": -6960.827348020302,
+        "y": -4453.899258334292,
+        "z": 5057.261466144302
+      },
+      "cameraRotation": {
+        "pitch": -24.000000000000004,
+        "yaw": 35.00000000000001,
+        "roll": 1.7407752700511047e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -600,
+        0,
+        1600
+      ],
+      "arm_length_cm": 8500,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_Damaged_150m.png": {
+    "sha256": "31066bf90ddf3c756953360e8c3a0b42d23db038100cd4bdc675567e82606e65",
+    "camera": {
+      "cameraLocation": {
+        "x": -7047.694655894312,
+        "y": 4934.848925057483,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": -34.99999999999999,
+        "roll": 2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        -135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_Damaged_threequarter.png": {
+    "sha256": "e33c90204aecbe836b0bc2bd276fa94ae2be24c333e4cfc1ed14af46186adeaf",
+    "camera": {
+      "cameraLocation": {
+        "x": -6960.827348020302,
+        "y": 4453.899258334292,
+        "z": 5057.261466144302
+      },
+      "cameraRotation": {
+        "pitch": -24.000000000000004,
+        "yaw": -35.00000000000001,
+        "roll": -1.7407752700511047e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -600,
+        0,
+        1600
+      ],
+      "arm_length_cm": 8500,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        -135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_Rubble_150m.png": {
+    "sha256": "5ded9508e610827895267b01f1b3fbc14664ca435244cd5a60b0f031aba9d180",
+    "camera": {
+      "cameraLocation": {
+        "x": -7047.694655894312,
+        "y": -4934.848925057483,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_Rubble_threequarter.png": {
+    "sha256": "fdd9ec328c33af29271f1f55b32cb9113ecf48612ea98bfe08a8751eb7015db8",
+    "camera": {
+      "cameraLocation": {
+        "x": -6960.827348020302,
+        "y": -4453.899258334292,
+        "z": 5057.261466144302
+      },
+      "cameraRotation": {
+        "pitch": -24.000000000000004,
+        "yaw": 35.00000000000001,
+        "roll": 1.7407752700511047e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -600,
+        0,
+        1600
+      ],
+      "arm_length_cm": 8500,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Church_12m.png": {
+    "sha256": "29214eba70985298c1282e4c9287875fb9055558753ef6ecb1cc372c0d47da6a",
+    "camera": {
+      "cameraLocation": {
+        "x": -805.2120859954013,
+        "y": -1113.815572471545,
+        "z": 1128.2917236212552
+      },
+      "cameraRotation": {
+        "pitch": -35,
+        "yaw": 35,
+        "roll": 1.941370166648474e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -550,
+        440
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_12m.png": {
+    "sha256": "951fd4e8e661c13528e999b5dbc71491ef2d2eb71ba1fdad83ed712841869b94",
+    "camera": {
+      "cameraLocation": {
+        "x": -805.2120859954013,
+        "y": -1113.815572471545,
+        "z": 1128.2917236212552
+      },
+      "cameraRotation": {
+        "pitch": -35,
+        "yaw": 35,
+        "roll": 1.941370166648474e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -550,
+        440
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Church_150m.png": {
+    "sha256": "ed1447d1f17cedba23d8afc2db9af13e72605b81712f42fecbfad7a69fac952f",
+    "camera": {
+      "cameraLocation": {
+        "x": -7047.694655894312,
+        "y": -4934.848925057483,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Church_450m.png": {
+    "sha256": "b81da4a354dd2c72fdcabbdce06b8786d819f555b395a930c1cf2081a8b63572",
+    "camera": {
+      "cameraLocation": {
+        "x": -21143.08396768294,
+        "y": -14804.546775172452,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_450m.png": {
+    "sha256": "3bf2f8f5cf99b9440fd5d0f1ac17c9e794fd4caa1cefb701e5339932489d02ab",
+    "camera": {
+      "cameraLocation": {
+        "x": -21143.08396768294,
+        "y": -14804.546775172452,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Church_249_6m.png": {
+    "sha256": "a39b3f0c78e9a466fddcef9fbbd1d1c350354509551658842c305657904fb2aa",
+    "camera": {
+      "cameraLocation": {
+        "x": -12044.863968443293,
+        "y": -8211.588611295652,
+        "z": 22221.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -317.50006103515625,
+        0.0,
+        1775.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        -317.50006103515625,
+        0.0,
+        1775.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Church_270_4m.png": {
+    "sha256": "bff6307a53a4be1fc84c6b7af5031e582829426999d542d59b8847efb9e3f2c1",
+    "camera": {
+      "cameraLocation": {
+        "x": -13022.144294060638,
+        "y": -8895.887662236957,
+        "z": 23924.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -317.50006103515625,
+        0.0,
+        1775.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        -317.50006103515625,
+        0.0,
+        1775.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Church_Damaged_12m.png": {
+    "sha256": "efa7d0362c9bfecc8aedef22b7ccae18d18eb8d0976d1cdb615978cd03423616",
+    "camera": {
+      "cameraLocation": {
+        "x": -805.2120859954013,
+        "y": 1113.815572471545,
+        "z": 1128.2917236212552
+      },
+      "cameraRotation": {
+        "pitch": -35,
+        "yaw": -35,
+        "roll": -1.941370166648474e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        550,
+        440
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        -135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_Damaged_12m.png": {
+    "sha256": "cb0915dd49c59681c667efd693376390dd292584ae82d59f16b9babb3591fc5e",
+    "camera": {
+      "cameraLocation": {
+        "x": -805.2120859954013,
+        "y": 1113.815572471545,
+        "z": 1128.2917236212552
+      },
+      "cameraRotation": {
+        "pitch": -35,
+        "yaw": -35,
+        "roll": -1.941370166648474e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        550,
+        440
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        -135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Church_Damaged_150m.png": {
+    "sha256": "5e5f4535a861f865aa70a30dcd8b6307e50cbc52004a87e1c5485990871cd066",
+    "camera": {
+      "cameraLocation": {
+        "x": -7047.694655894312,
+        "y": 4934.848925057483,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": -34.99999999999999,
+        "roll": 2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        -135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Church_Damaged_450m.png": {
+    "sha256": "1c93e197d680bf19e3da7701e94166e66c2332e7141675354015df55b1b61ae6",
+    "camera": {
+      "cameraLocation": {
+        "x": -21143.08396768294,
+        "y": 14804.546775172452,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": -34.99999999999999,
+        "roll": 2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        -135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_Damaged_450m.png": {
+    "sha256": "5db589f1d3019257f59e65eedb3f4e11c5d3fc8964e8fef64dc22396cb48210c",
+    "camera": {
+      "cameraLocation": {
+        "x": -21143.08396768294,
+        "y": 14804.546775172452,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": -34.99999999999999,
+        "roll": 2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        -135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Church_Damaged_249_6m.png": {
+    "sha256": "0803a4b0672396e219e6241469265a411d345d8098419c36affbfada9e3abee9",
+    "camera": {
+      "cameraLocation": {
+        "x": -12044.863968443293,
+        "y": 8264.293140104246,
+        "z": 21461.035025453235
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": -34.99999999999999,
+        "roll": 2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -317.50006103515625,
+        52.70452880859375,
+        1015.0
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        -317.50006103515625,
+        52.70452880859375,
+        1015.0
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        -135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Church_Damaged_270_4m.png": {
+    "sha256": "f3cdbbee7955e79487d0b1e217562d775b3950c14d38852394e81bac9d0b3c9a",
+    "camera": {
+      "cameraLocation": {
+        "x": -13022.144294060638,
+        "y": 8948.59219104555,
+        "z": 23164.871277574337
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": -34.99999999999999,
+        "roll": 2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -317.50006103515625,
+        52.70452880859375,
+        1015.0
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        -317.50006103515625,
+        52.70452880859375,
+        1015.0
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        -135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Church_Rubble_12m.png": {
+    "sha256": "c38b5f877c1e1bcc8575891a2d4e145b3aa679007e956168c98eefb97d927105",
+    "camera": {
+      "cameraLocation": {
+        "x": -805.2120859954013,
+        "y": -1113.815572471545,
+        "z": 788.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35,
+        "yaw": 35,
+        "roll": 1.941370166648474e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -550,
+        100
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_Rubble_12m.png": {
+    "sha256": "cf60ec6fbae3977644ff8963272e72b960d5eb80aa7639ae14a75d054a740226",
+    "camera": {
+      "cameraLocation": {
+        "x": -805.2120859954013,
+        "y": -1113.815572471545,
+        "z": 788.2917236212553
+      },
+      "cameraRotation": {
+        "pitch": -35,
+        "yaw": 35,
+        "roll": 1.941370166648474e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -550,
+        100
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Church_Rubble_150m.png": {
+    "sha256": "905c21536729a86d74b9325753ab120a2828228bb99629323639f619f8c570b5",
+    "camera": {
+      "cameraLocation": {
+        "x": -7047.694655894312,
+        "y": -4934.848925057483,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Village_Church_Rubble_450m.png": {
+    "sha256": "747cf8ff097533f2a4f386785f3ed16f1a34ebb0b41e0efe11c39b5f02728994",
+    "camera": {
+      "cameraLocation": {
+        "x": -21143.08396768294,
+        "y": -14804.546775172452,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Village_Church_Rubble_450m.png": {
+    "sha256": "32d0d566592386df0d8f8b1918a8eacaee0e9a8deb4799760150f63422733d68",
+    "camera": {
+      "cameraLocation": {
+        "x": -21143.08396768294,
+        "y": -14804.546775172452,
+        "z": 36861.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Church_Rubble_249_6m.png": {
+    "sha256": "4c736bb3a3bd75438389d95879917b5ed32b8f3e44d99f26cfefb2f2a490f0d4",
+    "camera": {
+      "cameraLocation": {
+        "x": -12081.243118833918,
+        "y": -8208.129230192137,
+        "z": 20894.368338441516
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -353.87921142578125,
+        3.459381103515625,
+        448.33331298828125
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        -353.87921142578125,
+        3.459381103515625,
+        448.33331298828125
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Village_Church_Rubble_270_4m.png": {
+    "sha256": "18c4f6a289448ca25b50e8ddad84285daff657dc4f626ca9b2cc5f22735dd180",
+    "camera": {
+      "cameraLocation": {
+        "x": -13058.523444451263,
+        "y": -8892.428281133441,
+        "z": 22598.20459056262
+      },
+      "cameraRotation": {
+        "pitch": -54.999999999999986,
+        "yaw": 34.99999999999999,
+        "roll": -2.7725639338476256e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -353.87921142578125,
+        3.459381103515625,
+        448.33331298828125
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        -353.87921142578125,
+        3.459381103515625,
+        448.33331298828125
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Bridge_Span_Damaged_150m.png": {
+    "sha256": "7950c2fb3ad2f28e69820a8c333033fdb469507a60eb7ae5c8bac481040eba29",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12887.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Bridge_Span_Damaged_threequarter.png": {
+    "sha256": "00843a9900a48a41e426601caff2aacbaed1e5d89400071b87538d1a6f0a158e",
+    "camera": {
+      "cameraLocation": {
+        "x": 4864.162089662585,
+        "y": -3805.9229622556345,
+        "z": 2993.7881799927013
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -400,
+        350
+      ],
+      "arm_length_cm": 6500,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Bridge_Span_Destroyed_150m.png": {
+    "sha256": "87e6e0bfdc873a65b749534b281085f8e439fffe53f27ace386a37becf2c1500",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12887.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Bridge_Span_Destroyed_threequarter.png": {
+    "sha256": "6b5134cf01ea32bcae8eb309530eddf22c0ac6ccadebf81b80a640ce24470e29",
+    "camera": {
+      "cameraLocation": {
+        "x": 4864.162089662585,
+        "y": -3805.9229622556345,
+        "z": 2993.7881799927013
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -400,
+        350
+      ],
+      "arm_length_cm": 6500,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Bridge_Span_Damaged_12m.png": {
+    "sha256": "ed1d9c79a57e98ca116802ac551335a99dd8f3eeb956b56ac843042500ef71ed",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 1288.2917236212552
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Bridge_Span_Damaged_12m.png": {
+    "sha256": "5f923dab876a2d33c99396ecb345ab4a9c3bc8a3bebe4ca746de8bc1ff699730",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 1288.2917236212552
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Bridge_Span_Damaged_150m.png": {
+    "sha256": "cffb6136d7df5b59f8b865e0d69684edfc8d38b4b1987aef926683672bab37ab",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12887.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Bridge_Span_Damaged_450m.png": {
+    "sha256": "f7c3f6596eb392246757bc6f26052f3da88d31fb2da687e587feb2fa4d519268",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 37461.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Bridge_Span_Damaged_450m.png": {
+    "sha256": "082e024759a2dc72b4aa1bc199d1a730714036db6d2466c17c079aecab696d54",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 37461.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Bridge_Span_Damaged_249_6m.png": {
+    "sha256": "7b09e3f50e9c55a38daf490a92318c21da22ddddbed5af579479f2b677c7ce4f",
+    "camera": {
+      "cameraLocation": {
+        "x": 11727.363907408138,
+        "y": -8211.588611295652,
+        "z": 21008.535025453235
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        0.0,
+        562.5
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        0.0,
+        562.5
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Bridge_Span_Damaged_270_4m.png": {
+    "sha256": "61adec9a5d090d015d77b3effd509b590e263c28fac5c250c11fb18f6ce4b091",
+    "camera": {
+      "cameraLocation": {
+        "x": 12704.644233025483,
+        "y": -8895.887662236955,
+        "z": 22712.371277574337
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        0.0,
+        562.5
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        0.0,
+        562.5
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Bridge_Span_Destroyed_12m.png": {
+    "sha256": "d47be1f738ae8025f37b734af003ce6324f61bcac7501fc1e37094b7e689187a",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 1288.2917236212552
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Bridge_Span_Destroyed_12m.png": {
+    "sha256": "535bc26855836235ab924ee26cbc09d31854a4feeb4157864bcdd02c9dd133b3",
+    "camera": {
+      "cameraLocation": {
+        "x": 805.2120859954014,
+        "y": -563.8155724715449,
+        "z": 1288.2917236212552
+      },
+      "cameraRotation": {
+        "pitch": -35.000000000000014,
+        "yaw": 145.00000000000003,
+        "roll": -1.9413701666484745e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 1200,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Bridge_Span_Destroyed_150m.png": {
+    "sha256": "e65bdcf70a80e7225d1fb0ce06ba8d5f3b66bf6716814f9d668e7807b64e7709",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": -4934.848925057482,
+        "z": 12887.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/master/SM_Bridge_Span_Destroyed_450m.png": {
+    "sha256": "73fc9a7dec484c5aefb5cec68b62a1e18dfa4f4d977b08abe4a4e81099b85c41",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 37461.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/final/SM_Bridge_Span_Destroyed_450m.png": {
+    "sha256": "ebaad81bcb9de1ca3ffe710785febb0ad9e0f297a584e6e562555a60f2109208",
+    "camera": {
+      "cameraLocation": {
+        "x": 21143.083967682942,
+        "y": -14804.546775172448,
+        "z": 37461.84199300463
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        600
+      ],
+      "arm_length_cm": 45000,
+      "label": "Unreal editor preview; not gameplay",
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Bridge_Span_Destroyed_249_6m.png": {
+    "sha256": "6a78c61e6c9fd03a8e3dc2ebf01833599f01ba7ecff116e78ef90e49d8ca5b0c",
+    "camera": {
+      "cameraLocation": {
+        "x": 11727.363907408138,
+        "y": -8150.965472867918,
+        "z": 20614.255099153186
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        60.623138427734375,
+        168.22007369995117
+      ],
+      "arm_length_cm": 24960,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        60.623138427734375,
+        168.22007369995117
+      ],
+      "camera_to_bounds_centre_cm": 24960.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/switch/SM_Bridge_Span_Destroyed_270_4m.png": {
+    "sha256": "2cf5d260c351ba4d6cd133827d457fbf930fc5d9b64e0f24337e0a92eb3f670b",
+    "camera": {
+      "cameraLocation": {
+        "x": 12704.644233025483,
+        "y": -8835.264523809221,
+        "z": 22318.091351274288
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": 145,
+        "roll": 5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0.0,
+        60.623138427734375,
+        168.22007369995117
+      ],
+      "arm_length_cm": 27040,
+      "label": "Unreal editor preview; not gameplay",
+      "bounds_centre_world_cm": [
+        0.0,
+        60.623138427734375,
+        168.22007369995117
+      ],
+      "camera_to_bounds_centre_cm": 27040.0,
+      "manual_separate_LOD_actor": true,
+      "sun_rotation_deg": [
+        -42,
+        135,
+        0
+      ]
+    }
+  },
+  "evidence/persisted_smoke/SM_Village_HouseA_Rubble_threequarter.png": {
+    "sha256": "12216d42a58aada5aa001dec852f9257e6b0238bba46149f92524a14315f9122",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": -2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay"
+    }
+  },
+  "evidence/persisted_smoke/SM_Village_Barn_threequarter.png": {
+    "sha256": "c69c1d04a7c1fe26ef9a6135b16afaccb02c7b5982c81d48f1ba39fabde862c9",
+    "camera": {
+      "cameraLocation": {
+        "x": 3891.3296717300677,
+        "y": -2724.738369804508,
+        "z": 2465.0305439941612
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 5200,
+      "label": "Unreal editor preview; not gameplay"
+    }
+  },
+  "evidence/persisted_smoke/SM_Village_Workshop_threequarter.png": {
+    "sha256": "06943038528cfd61ccea05b0840e034d455a1e35c7e70e2fc9d0e4a9feb5d233",
+    "camera": {
+      "cameraLocation": {
+        "x": 3142.9970425512083,
+        "y": -2200.750221765179,
+        "z": 2058.293900918361
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        350
+      ],
+      "arm_length_cm": 4200,
+      "label": "Unreal editor preview; not gameplay"
+    }
+  },
+  "evidence/persisted_smoke/SM_Village_Church_Damaged_threequarter.png": {
+    "sha256": "3a124958f1d5bba60d578613dc88381e251613c3952d5bdf1a2aa19a1d20e790",
+    "camera": {
+      "cameraLocation": {
+        "x": -6960.827348020302,
+        "y": 4453.899258334292,
+        "z": 5057.261466144302
+      },
+      "cameraRotation": {
+        "pitch": -24.000000000000004,
+        "yaw": -35.00000000000001,
+        "roll": -1.7407752700511047e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        -600,
+        0,
+        1600
+      ],
+      "arm_length_cm": 8500,
+      "label": "Unreal editor preview; not gameplay"
+    }
+  },
+  "evidence/persisted_smoke/SM_Bridge_Span_Destroyed_threequarter.png": {
+    "sha256": "104a824a2a04027805ae5cb1c4ef05425bb8b7d005e277e7ea3269d879d9abc8",
+    "camera": {
+      "cameraLocation": {
+        "x": 4864.162089662585,
+        "y": -3805.9229622556345,
+        "z": 2993.7881799927013
+      },
+      "cameraRotation": {
+        "pitch": -24.00000000000001,
+        "yaw": 145.00000000000003,
+        "roll": -8.7038763502555235e-16
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        -400,
+        350
+      ],
+      "arm_length_cm": 6500,
+      "label": "Unreal editor preview; not gameplay"
+    }
+  },
+  "evidence/final/Church_opposite_base.png": {
+    "sha256": "a3d151658fc101eecea97bbfaed0e6b81b4ea2c6bf9485d6e645fe77bfe8ee19",
+    "camera": {
+      "cameraLocation": {
+        "x": 7047.694655894313,
+        "y": 4934.848925057482,
+        "z": 12287.280664334878
+      },
+      "cameraRotation": {
+        "pitch": -55,
+        "yaw": -145,
+        "roll": -5.545127867695251e-15
+      },
+      "cameraFOV": 60,
+      "grid": {
+        "spacingCm": 0,
+        "extentCm": 0,
+        "height": 0
+      },
+      "labeledActors": [],
+      "target_cm": [
+        0,
+        0,
+        0
+      ],
+      "arm_length_cm": 15000,
+      "label": "Unreal editor preview; not gameplay"
+    }
+  }
+}

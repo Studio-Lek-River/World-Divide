@@ -1,0 +1,278 @@
+{
+  "SM_Village_HouseA": {
+    "game_triangles": 6120,
+    "master_triangles": 6392,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 110236,
+      "sampled_texels": 1234217,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_HouseA_Damaged": {
+    "game_triangles": 6158,
+    "master_triangles": 6650,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 101016,
+      "sampled_texels": 1155251,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_HouseA_Rubble": {
+    "game_triangles": 1760,
+    "master_triangles": 3812,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 76966,
+      "sampled_texels": 2288851,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_HouseB": {
+    "game_triangles": 6196,
+    "master_triangles": 6564,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 108949,
+      "sampled_texels": 1367529,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_HouseB_Damaged": {
+    "game_triangles": 6012,
+    "master_triangles": 6444,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 100785,
+      "sampled_texels": 1168935,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_HouseB_Rubble": {
+    "game_triangles": 1092,
+    "master_triangles": 2988,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 77517,
+      "sampled_texels": 2596623,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_HouseC": {
+    "game_triangles": 4412,
+    "master_triangles": 4780,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 146798,
+      "sampled_texels": 1709535,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_HouseC_Damaged": {
+    "game_triangles": 4676,
+    "master_triangles": 5200,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 133274,
+      "sampled_texels": 1429728,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_HouseC_Rubble": {
+    "game_triangles": 1060,
+    "master_triangles": 2916,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 80336,
+      "sampled_texels": 2591795,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Farmhouse": {
+    "game_triangles": 7400,
+    "master_triangles": 7624,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 98781,
+      "sampled_texels": 1287531,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Farmhouse_Damaged": {
+    "game_triangles": 6856,
+    "master_triangles": 7216,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 95758,
+      "sampled_texels": 1114019,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Farmhouse_Rubble": {
+    "game_triangles": 1220,
+    "master_triangles": 3276,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 61407,
+      "sampled_texels": 2561542,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Barn": {
+    "game_triangles": 3768,
+    "master_triangles": 4120,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 178274,
+      "sampled_texels": 2116798,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Barn_Damaged": {
+    "game_triangles": 4324,
+    "master_triangles": 4936,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 150081,
+      "sampled_texels": 1753875,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Barn_Rubble": {
+    "game_triangles": 1220,
+    "master_triangles": 3396,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 67013,
+      "sampled_texels": 2558658,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Workshop": {
+    "game_triangles": 4544,
+    "master_triangles": 4944,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 171540,
+      "sampled_texels": 1501034,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Workshop_Damaged": {
+    "game_triangles": 4844,
+    "master_triangles": 5412,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 159618,
+      "sampled_texels": 1340318,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Workshop_Rubble": {
+    "game_triangles": 1156,
+    "master_triangles": 3164,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 68648,
+      "sampled_texels": 2656136,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Church": {
+    "game_triangles": 7220,
+    "master_triangles": 7922,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 183723,
+      "sampled_texels": 1436011,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Church_Damaged": {
+    "game_triangles": 7000,
+    "master_triangles": 7984,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 168505,
+      "sampled_texels": 1382340,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Village_Church_Rubble": {
+    "game_triangles": 2260,
+    "master_triangles": 5344,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 263981,
+      "sampled_texels": 2338166,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Bridge_Span_Damaged": {
+    "game_triangles": 564,
+    "master_triangles": 1108,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 476108,
+      "sampled_texels": 2360329,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  },
+  "SM_Bridge_Span_Destroyed": {
+    "game_triangles": 984,
+    "master_triangles": 2760,
+    "bake": "Cycles selected-to-active geometric object normal + AO, UV1, 2048, 4 samples, 20mm master chamfers",
+    "cleanup_and_tint": {
+      "normal_outliers_repaired": 963893,
+      "sampled_texels": 3479194,
+      "roof_macro_amplitude": 0.035,
+      "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+      "floor_ao_bypass": true
+    }
+  }
+}

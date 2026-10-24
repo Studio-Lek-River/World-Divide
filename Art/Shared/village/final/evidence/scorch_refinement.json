@@ -1,0 +1,16 @@
+{
+  "SM_Village_Farmhouse_Damaged": {
+    "normal_outliers_repaired": 0,
+    "sampled_texels": 1114019,
+    "roof_macro_amplitude": 0.035,
+    "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+    "floor_ao_bypass": true
+  },
+  "SM_Village_Church_Damaged": {
+    "normal_outliers_repaired": 0,
+    "sampled_texels": 1382340,
+    "roof_macro_amplitude": 0.035,
+    "rubble_brick_dust": "standing tint \u00d70.82 in instance, UV1 dust .70\u2013.86 with brown dust colour",
+    "floor_ao_bypass": true
+  }
+}

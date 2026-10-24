@@ -1,0 +1,2107 @@
+{
+  "meshes": {
+    "SM_Village_HouseA": {
+      "fbx": "SM_Village_HouseA.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 6120,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -586,
+          -494.0000915527344,
+          -50
+        ],
+        [
+          635.0000610351562,
+          494.0000915527344,
+          1048
+        ]
+      ]
+    },
+    "SM_Village_HouseA_Damaged": {
+      "fbx": "SM_Village_HouseA_Damaged.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 6158,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -586,
+          -625.119384765625,
+          -50
+        ],
+        [
+          635.0000610351562,
+          494.0000915527344,
+          1048
+        ]
+      ]
+    },
+    "SM_Village_HouseA_Rubble": {
+      "fbx": "SM_Village_HouseA_Rubble.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 1760,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -558.684326171875,
+          -450.0000915527344,
+          -50
+        ],
+        [
+          550.0000610351562,
+          450.0000915527344,
+          295.6017761230469
+        ]
+      ]
+    },
+    "SM_Village_HouseB": {
+      "fbx": "SM_Village_HouseB.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 6196,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -735.0000610351562,
+          -530.0000610351562,
+          -50
+        ],
+        [
+          780.0000610351562,
+          490.0001220703125,
+          1076
+        ]
+      ]
+    },
+    "SM_Village_HouseB_Damaged": {
+      "fbx": "SM_Village_HouseB_Damaged.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 6012,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -735.0000610351562,
+          -530.0000610351562,
+          -50
+        ],
+        [
+          780.0000610351562,
+          605.1148071289062,
+          1076
+        ]
+      ]
+    },
+    "SM_Village_HouseB_Rubble": {
+      "fbx": "SM_Village_HouseB_Rubble.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 1092,
+      "collision_boxes": 1,
+      "bounds": [
+        [
+          -700.0000610351562,
+          -463.5821228027344,
+          -50
+        ],
+        [
+          700.0000610351562,
+          450.0001220703125,
+          274.00518798828125
+        ]
+      ]
+    },
+    "SM_Village_HouseC": {
+      "fbx": "SM_Village_HouseC.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 4412,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -510.00006103515625,
+          -515.0001220703125,
+          -50
+        ],
+        [
+          555.0000610351562,
+          515.0001220703125,
+          976
+        ]
+      ]
+    },
+    "SM_Village_HouseC_Damaged": {
+      "fbx": "SM_Village_HouseC_Damaged.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 4676,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -510.00006103515625,
+          -515.0001220703125,
+          -50
+        ],
+        [
+          555.0000610351562,
+          645.21337890625,
+          976
+        ]
+      ]
+    },
+    "SM_Village_HouseC_Rubble": {
+      "fbx": "SM_Village_HouseC_Rubble.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 1060,
+      "collision_boxes": 1,
+      "bounds": [
+        [
+          -475.0000915527344,
+          -485.71356201171875,
+          -50
+        ],
+        [
+          481.9317626953125,
+          531.308837890625,
+          280.5545654296875
+        ]
+      ]
+    },
+    "SM_Village_Farmhouse": {
+      "fbx": "SM_Village_Farmhouse.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 7400,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -935.0001220703125,
+          -573.0001831054688,
+          -50
+        ],
+        [
+          979.9999389648438,
+          573.0001831054688,
+          1126
+        ]
+      ]
+    },
+    "SM_Village_Farmhouse_Damaged": {
+      "fbx": "SM_Village_Farmhouse_Damaged.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 6856,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -935.0001220703125,
+          -573.0001831054688,
+          -50
+        ],
+        [
+          979.9999389648438,
+          739.1400146484375,
+          1126
+        ]
+      ]
+    },
+    "SM_Village_Farmhouse_Rubble": {
+      "fbx": "SM_Village_Farmhouse_Rubble.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 1220,
+      "collision_boxes": 1,
+      "bounds": [
+        [
+          -900.0000610351562,
+          -550.0001220703125,
+          -50
+        ],
+        [
+          900.0000610351562,
+          602.6489868164062,
+          252.2395782470703
+        ]
+      ]
+    },
+    "SM_Village_Barn": {
+      "fbx": "SM_Village_Barn.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 3768,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -1110,
+          -690.0001831054688,
+          -50
+        ],
+        [
+          1110,
+          690.0001831054688,
+          1132
+        ]
+      ]
+    },
+    "SM_Village_Barn_Damaged": {
+      "fbx": "SM_Village_Barn_Damaged.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 4324,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -1110,
+          -690.0001831054688,
+          -50
+        ],
+        [
+          1110,
+          806.0270385742188,
+          1132
+        ]
+      ]
+    },
+    "SM_Village_Barn_Rubble": {
+      "fbx": "SM_Village_Barn_Rubble.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 1220,
+      "collision_boxes": 1,
+      "bounds": [
+        [
+          -1037.2576904296875,
+          -716.0072631835938,
+          -50
+        ],
+        [
+          1067.2723388671875,
+          679.4567260742188,
+          289.5173645019531
+        ]
+      ]
+    },
+    "SM_Village_Workshop": {
+      "fbx": "SM_Village_Workshop.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 4544,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -835.0001220703125,
+          -640.0001220703125,
+          -50
+        ],
+        [
+          835.0001220703125,
+          640.0001220703125,
+          692
+        ]
+      ]
+    },
+    "SM_Village_Workshop_Damaged": {
+      "fbx": "SM_Village_Workshop_Damaged.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 4844,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -835.0001220703125,
+          -640.0001220703125,
+          -50
+        ],
+        [
+          835.0001220703125,
+          771.005126953125,
+          692
+        ]
+      ]
+    },
+    "SM_Village_Workshop_Rubble": {
+      "fbx": "SM_Village_Workshop_Rubble.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 1156,
+      "collision_boxes": 1,
+      "bounds": [
+        [
+          -800.0001220703125,
+          -670.907958984375,
+          -50
+        ],
+        [
+          800.0001220703125,
+          601.468505859375,
+          287.18597412109375
+        ]
+      ]
+    },
+    "SM_Village_Church": {
+      "fbx": "SM_Village_Church.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 7220,
+      "collision_boxes": 3,
+      "bounds": [
+        [
+          -1815,
+          -595.0001220703125,
+          -50
+        ],
+        [
+          1179.9998779296875,
+          595.0001220703125,
+          3600
+        ]
+      ]
+    },
+    "SM_Village_Church_Damaged": {
+      "fbx": "SM_Village_Church_Damaged.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Glass",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 7000,
+      "collision_boxes": 3,
+      "bounds": [
+        [
+          -1815,
+          -595.0001220703125,
+          -50
+        ],
+        [
+          1179.9998779296875,
+          700.4091796875,
+          2080
+        ]
+      ]
+    },
+    "SM_Village_Church_Rubble": {
+      "fbx": "SM_Village_Church_Rubble.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Wood",
+        "Rubble"
+      ],
+      "triangles": 2260,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -1807.758544921875,
+          -589.7546997070312,
+          -50
+        ],
+        [
+          1100.0001220703125,
+          596.6734619140625,
+          946.6666259765625
+        ]
+      ]
+    },
+    "SM_Bridge_Span_Damaged": {
+      "fbx": "SM_Bridge_Span_Damaged.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Rubble"
+      ],
+      "triangles": 564,
+      "collision_boxes": 4,
+      "bounds": [
+        [
+          -1500.0001220703125,
+          -705.000244140625,
+          -175
+        ],
+        [
+          1500.0001220703125,
+          705.000244140625,
+          100
+        ]
+      ]
+    },
+    "SM_Bridge_Span_Destroyed": {
+      "fbx": "SM_Bridge_Span_Destroyed.fbx",
+      "slots": [
+        "Brick",
+        "Roof",
+        "Trim",
+        "Rubble"
+      ],
+      "triangles": 984,
+      "collision_boxes": 2,
+      "bounds": [
+        [
+          -1602.8624267578125,
+          -705.000244140625,
+          -944.4615478515625
+        ],
+        [
+          1602.8624267578125,
+          826.2465209960938,
+          80.90169525146484
+        ]
+      ]
+    }
+  },
+  "buildings": {
+    "HouseA": {
+      "name": "Village House",
+      "health": 1500.0,
+      "states": [
+        "SM_Village_HouseA",
+        "SM_Village_HouseA_Damaged",
+        "SM_Village_HouseA_Rubble"
+      ],
+      "capacity": 5,
+      "entry": [
+        850.0,
+        0.0,
+        0.0
+      ],
+      "firing_positions": [
+        {
+          "name": "DoorPX00",
+          "location": [
+            500.0,
+            0.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 60.0
+        },
+        {
+          "name": "WindowPX01",
+          "location": [
+            500.0,
+            150.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX02",
+          "location": [
+            500.0,
+            -150.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX03",
+          "location": [
+            500.0,
+            150.0,
+            450.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX04",
+          "location": [
+            500.0,
+            -150.0,
+            450.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX05",
+          "location": [
+            -500.0,
+            150.0,
+            150.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX06",
+          "location": [
+            -500.0,
+            -150.0,
+            150.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX07",
+          "location": [
+            -500.0,
+            150.0,
+            450.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX08",
+          "location": [
+            -500.0,
+            -150.0,
+            450.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY09",
+          "location": [
+            -300.0,
+            -400.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY10",
+          "location": [
+            0.0,
+            -400.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY11",
+          "location": [
+            300.0,
+            -400.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY12",
+          "location": [
+            -300.0,
+            -400.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY13",
+          "location": [
+            0.0,
+            -400.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY14",
+          "location": [
+            300.0,
+            -400.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY15",
+          "location": [
+            -300.0,
+            400.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY16",
+          "location": [
+            0.0,
+            400.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY17",
+          "location": [
+            300.0,
+            400.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY18",
+          "location": [
+            -300.0,
+            400.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY19",
+          "location": [
+            0.0,
+            400.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY20",
+          "location": [
+            300.0,
+            400.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX21",
+          "location": [
+            500.0,
+            0.0,
+            750.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX22",
+          "location": [
+            -500.0,
+            0.0,
+            750.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        }
+      ]
+    },
+    "HouseB": {
+      "name": "Semi-Detached Houses",
+      "health": 1800.0,
+      "states": [
+        "SM_Village_HouseB",
+        "SM_Village_HouseB_Damaged",
+        "SM_Village_HouseB_Rubble"
+      ],
+      "capacity": 6,
+      "entry": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "firing_positions": [
+        {
+          "name": "DoorPX00",
+          "location": [
+            650.0,
+            0.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 60.0
+        },
+        {
+          "name": "DoorPY01",
+          "location": [
+            -350.0,
+            -400.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 60.0
+        },
+        {
+          "name": "DoorPY02",
+          "location": [
+            350.0,
+            -400.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 60.0
+        },
+        {
+          "name": "WindowPX03",
+          "location": [
+            650.0,
+            150.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX04",
+          "location": [
+            650.0,
+            -150.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX05",
+          "location": [
+            650.0,
+            150.0,
+            450.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX06",
+          "location": [
+            650.0,
+            -150.0,
+            450.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX07",
+          "location": [
+            -650.0,
+            150.0,
+            150.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX08",
+          "location": [
+            -650.0,
+            -150.0,
+            150.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX09",
+          "location": [
+            -650.0,
+            150.0,
+            450.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX10",
+          "location": [
+            -650.0,
+            -150.0,
+            450.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY11",
+          "location": [
+            -150.0,
+            -400.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY12",
+          "location": [
+            150.0,
+            -400.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY13",
+          "location": [
+            -450.0,
+            -400.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY14",
+          "location": [
+            -150.0,
+            -400.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY15",
+          "location": [
+            150.0,
+            -400.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY16",
+          "location": [
+            450.0,
+            -400.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY17",
+          "location": [
+            -450.0,
+            400.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY18",
+          "location": [
+            -150.0,
+            400.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY19",
+          "location": [
+            150.0,
+            400.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY20",
+          "location": [
+            450.0,
+            400.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY21",
+          "location": [
+            -450.0,
+            400.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY22",
+          "location": [
+            -150.0,
+            400.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY23",
+          "location": [
+            150.0,
+            400.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY24",
+          "location": [
+            450.0,
+            400.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX25",
+          "location": [
+            650.0,
+            0.0,
+            750.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX26",
+          "location": [
+            -650.0,
+            0.0,
+            750.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        }
+      ]
+    },
+    "HouseC": {
+      "name": "Corner House",
+      "health": 1300.0,
+      "states": [
+        "SM_Village_HouseC",
+        "SM_Village_HouseC_Damaged",
+        "SM_Village_HouseC_Rubble"
+      ],
+      "capacity": 4,
+      "entry": [
+        775.0,
+        0.0,
+        0.0
+      ],
+      "firing_positions": [
+        {
+          "name": "DoorPX00",
+          "location": [
+            425.0,
+            0.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 60.0
+        },
+        {
+          "name": "WindowPX01",
+          "location": [
+            425.0,
+            150.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX02",
+          "location": [
+            425.0,
+            -150.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX03",
+          "location": [
+            425.0,
+            150.0,
+            450.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX04",
+          "location": [
+            425.0,
+            -150.0,
+            450.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX05",
+          "location": [
+            -425.0,
+            150.0,
+            150.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX06",
+          "location": [
+            -425.0,
+            -150.0,
+            150.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX07",
+          "location": [
+            -425.0,
+            150.0,
+            450.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX08",
+          "location": [
+            -425.0,
+            -150.0,
+            450.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY09",
+          "location": [
+            -150.0,
+            -425.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY10",
+          "location": [
+            150.0,
+            -425.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY11",
+          "location": [
+            -150.0,
+            -425.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY12",
+          "location": [
+            150.0,
+            -425.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY13",
+          "location": [
+            -150.0,
+            425.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY14",
+          "location": [
+            150.0,
+            425.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY15",
+          "location": [
+            -150.0,
+            425.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY16",
+          "location": [
+            150.0,
+            425.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX17",
+          "location": [
+            425.0,
+            0.0,
+            750.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX18",
+          "location": [
+            -425.0,
+            0.0,
+            750.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        }
+      ]
+    },
+    "Farmhouse": {
+      "name": "Farmhouse",
+      "health": 2200.0,
+      "states": [
+        "SM_Village_Farmhouse",
+        "SM_Village_Farmhouse_Damaged",
+        "SM_Village_Farmhouse_Rubble"
+      ],
+      "capacity": 8,
+      "entry": [
+        1200.0,
+        0.0,
+        0.0
+      ],
+      "firing_positions": [
+        {
+          "name": "DoorPX00",
+          "location": [
+            850.0,
+            0.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 60.0
+        },
+        {
+          "name": "WindowPX01",
+          "location": [
+            850.0,
+            300.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX02",
+          "location": [
+            850.0,
+            -300.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX03",
+          "location": [
+            850.0,
+            300.0,
+            450.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX04",
+          "location": [
+            850.0,
+            0.0,
+            450.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX05",
+          "location": [
+            850.0,
+            -300.0,
+            450.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX06",
+          "location": [
+            -850.0,
+            300.0,
+            150.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX07",
+          "location": [
+            -850.0,
+            0.0,
+            150.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX08",
+          "location": [
+            -850.0,
+            -300.0,
+            150.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX09",
+          "location": [
+            -850.0,
+            300.0,
+            450.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX10",
+          "location": [
+            -850.0,
+            0.0,
+            450.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX11",
+          "location": [
+            -850.0,
+            -300.0,
+            450.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY12",
+          "location": [
+            -600.0,
+            -500.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY13",
+          "location": [
+            -300.0,
+            -500.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY14",
+          "location": [
+            0.0,
+            -500.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY15",
+          "location": [
+            300.0,
+            -500.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY16",
+          "location": [
+            600.0,
+            -500.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY17",
+          "location": [
+            -600.0,
+            -500.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY18",
+          "location": [
+            -300.0,
+            -500.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY19",
+          "location": [
+            0.0,
+            -500.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY20",
+          "location": [
+            300.0,
+            -500.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY21",
+          "location": [
+            600.0,
+            -500.0,
+            450.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY22",
+          "location": [
+            -600.0,
+            500.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY23",
+          "location": [
+            -300.0,
+            500.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY24",
+          "location": [
+            0.0,
+            500.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY25",
+          "location": [
+            300.0,
+            500.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY26",
+          "location": [
+            600.0,
+            500.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY27",
+          "location": [
+            -600.0,
+            500.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY28",
+          "location": [
+            -300.0,
+            500.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY29",
+          "location": [
+            0.0,
+            500.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY30",
+          "location": [
+            300.0,
+            500.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY31",
+          "location": [
+            600.0,
+            500.0,
+            450.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX32",
+          "location": [
+            850.0,
+            0.0,
+            750.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX33",
+          "location": [
+            -850.0,
+            0.0,
+            750.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        }
+      ]
+    },
+    "Barn": {
+      "name": "Barn",
+      "health": 2000.0,
+      "states": [
+        "SM_Village_Barn",
+        "SM_Village_Barn_Damaged",
+        "SM_Village_Barn_Rubble"
+      ],
+      "capacity": 8,
+      "entry": [
+        1300.0,
+        0.0,
+        0.0
+      ],
+      "firing_positions": [
+        {
+          "name": "DoorPX00",
+          "location": [
+            950.0,
+            0.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 60.0
+        },
+        {
+          "name": "WindowNX01",
+          "location": [
+            -950.0,
+            0.0,
+            150.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY02",
+          "location": [
+            -325.0,
+            -600.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY03",
+          "location": [
+            325.0,
+            -600.0,
+            150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY04",
+          "location": [
+            -325.0,
+            600.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY05",
+          "location": [
+            325.0,
+            600.0,
+            150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX06",
+          "location": [
+            950.0,
+            0.0,
+            595.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX07",
+          "location": [
+            -950.0,
+            0.0,
+            595.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        }
+      ]
+    },
+    "Workshop": {
+      "name": "Workshop",
+      "health": 2000.0,
+      "states": [
+        "SM_Village_Workshop",
+        "SM_Village_Workshop_Damaged",
+        "SM_Village_Workshop_Rubble"
+      ],
+      "capacity": 6,
+      "entry": [
+        1100.0,
+        300.0,
+        0.0
+      ],
+      "firing_positions": [
+        {
+          "name": "DoorPX00",
+          "location": [
+            750.0,
+            300.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 60.0
+        },
+        {
+          "name": "DoorPX01",
+          "location": [
+            750.0,
+            -300.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 60.0
+        },
+        {
+          "name": "WindowPX02",
+          "location": [
+            750.0,
+            0.0,
+            330.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX03",
+          "location": [
+            -750.0,
+            300.0,
+            330.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX04",
+          "location": [
+            -750.0,
+            0.0,
+            330.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNX05",
+          "location": [
+            -750.0,
+            -300.0,
+            330.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY06",
+          "location": [
+            -450.0,
+            -550.0,
+            330.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY07",
+          "location": [
+            -150.0,
+            -550.0,
+            330.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY08",
+          "location": [
+            150.0,
+            -550.0,
+            330.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY09",
+          "location": [
+            450.0,
+            -550.0,
+            330.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY10",
+          "location": [
+            -450.0,
+            550.0,
+            330.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY11",
+          "location": [
+            -150.0,
+            550.0,
+            330.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY12",
+          "location": [
+            150.0,
+            550.0,
+            330.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY13",
+          "location": [
+            450.0,
+            550.0,
+            330.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        }
+      ]
+    },
+    "Church": {
+      "name": "Church",
+      "health": 4000.0,
+      "states": [
+        "SM_Village_Church",
+        "SM_Village_Church_Damaged",
+        "SM_Village_Church_Rubble"
+      ],
+      "capacity": 10,
+      "entry": [
+        1400.0,
+        0.0,
+        0.0
+      ],
+      "firing_positions": [
+        {
+          "name": "DoorPX00",
+          "location": [
+            1050.0,
+            0.0,
+            150.0
+          ],
+          "yaw": 0.0,
+          "arc": 60.0
+        },
+        {
+          "name": "WindowPX01",
+          "location": [
+            1050.0,
+            200.0,
+            440.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPX02",
+          "location": [
+            1050.0,
+            -200.0,
+            440.0
+          ],
+          "yaw": 0.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY03",
+          "location": [
+            -800.0,
+            -500.0,
+            440.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY04",
+          "location": [
+            -400.0,
+            -500.0,
+            440.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY05",
+          "location": [
+            0.0,
+            -500.0,
+            440.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY06",
+          "location": [
+            400.0,
+            -500.0,
+            440.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowPY07",
+          "location": [
+            800.0,
+            -500.0,
+            440.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY08",
+          "location": [
+            -800.0,
+            500.0,
+            440.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY09",
+          "location": [
+            -400.0,
+            500.0,
+            440.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY10",
+          "location": [
+            0.0,
+            500.0,
+            440.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY11",
+          "location": [
+            400.0,
+            500.0,
+            440.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "WindowNY12",
+          "location": [
+            800.0,
+            500.0,
+            440.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "BelfryNX",
+          "location": [
+            -1700.0,
+            0.0,
+            2150.0
+          ],
+          "yaw": -180.0,
+          "arc": 90.0
+        },
+        {
+          "name": "BelfryPY",
+          "location": [
+            -1425.0,
+            -275.0,
+            2150.0
+          ],
+          "yaw": -90.0,
+          "arc": 90.0
+        },
+        {
+          "name": "BelfryNY",
+          "location": [
+            -1425.0,
+            275.0,
+            2150.0
+          ],
+          "yaw": 90.0,
+          "arc": 90.0
+        }
+      ]
+    },
+    "BridgeSpan": {
+      "name": "Road Bridge Span",
+      "health": 6000.0,
+      "states": [
+        "SM_Bridge_Span",
+        "SM_Bridge_Span_Damaged",
+        "SM_Bridge_Span_Destroyed"
+      ],
+      "capacity": 0,
+      "entry": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "firing_positions": []
+    }
+  }
+}

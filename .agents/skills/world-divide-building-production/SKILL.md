@@ -45,7 +45,7 @@ Do not substitute resolution, triangle counts or successful packaging for refere
 - Check meaningful risks: tangents/normals, degenerate export faces, UV suitability, route clearances, moving-part intersections, ownership isolation, motion bounds and visible LOD transitions. Keep expensive checks scoped to changed components and their affected neighbours; broaden when new evidence warrants it.
 - Preserve texture streaming and mipmaps unless there is a demonstrated reason to differ. Separate high-detail source geometry from an efficient assembly; track material sections/components as well as triangles before assembly cost becomes a final-stage surprise.
 
-Read [references/hq-lessons.md](references/hq-lessons.md) when handling generator reuse, export shading, motion, material persistence, performance measurement or cleanup. It records observed HQ failure modes and their targeted remedies.
+Read [references/hq-lessons.md](references/hq-lessons.md) when handling generator reuse, export shading, motion, material persistence, performance measurement or cleanup. It records observed HQ failure modes and their targeted remedies. Before every modelling round, read [references/modelling-lessons.md](references/modelling-lessons.md) and check the delivery against it; Claude appends the lessons of each reviewed round.
 
 ## Evidence and continuity
 

@@ -1,0 +1,23 @@
+{
+  "status": "Round4 delivered for producer approval; approval pending",
+  "portable_files_hashed": 178,
+  "native_meshes": 69,
+  "persisted_instances": 257,
+  "textures": 101,
+  "native_import_source_md5_matches_final_files": 170,
+  "images": 214,
+  "all_images_60_degree_FOV": true,
+  "all_23_states_have_required_views": true,
+  "prior_rounds_and_greybox_files_unchanged": 942,
+  "gallery_links_exist": true,
+  "round2_assets_present": {
+    "/Game/Art/Candidates/Village/Round2/Final02/SM_Village_HouseA": true,
+    "/Game/Art/Candidates/Village/Round2/Final02/SM_Village_HouseA_Damaged": true,
+    "/Game/Art/Candidates/Village/Round2/Final02/SM_Village_HouseA_Rubble": true
+  },
+  "editor_left_running": true,
+  "level": "/Game/Art/Candidates/Village/L_VillagePreview",
+  "level_dirty": false,
+  "pie": false,
+  "verification_limit": "Same editor process; no restart or historical asset deletion."
+}

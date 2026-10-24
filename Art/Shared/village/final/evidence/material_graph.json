@@ -1,0 +1,1303 @@
+{
+  "asset": "/Game/Art/Candidates/Village/Final/M_SetSurface",
+  "nodes": {
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureCoordinate_2": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionTextureCoordinate"
+      },
+      "properties": {
+        "coordinateIndex": 1,
+        "uTiling": 1,
+        "vTiling": 1,
+        "unMirrorU": false,
+        "unMirrorV": false,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_8": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionTextureSampleParameter2D"
+      },
+      "properties": {
+        "parameterName": "BaseColor",
+        "group": "None",
+        "sortPriority": 32,
+        "mipValueMode": "TMVM_None",
+        "samplerSource": "SSM_FromTextureAsset",
+        "gatherMode": "TGM_None",
+        "automaticViewMipBias": true,
+        "channelNames": {
+          "r": "",
+          "g": "",
+          "b": "",
+          "a": ""
+        },
+        "constCoordinate": 0,
+        "constMipValue": -1,
+        "texture": {
+          "refPath": "/Game/Art/Candidates/Village/Final/Textures/Scans/Bricks085_BaseColor.Bricks085_BaseColor"
+        },
+        "samplerType": "SAMPLERTYPE_Color",
+        "isDefaultMeshpaintTexture": false,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_0"
+          },
+          "input_name": "UVs"
+        },
+        {
+          "output_name": "",
+          "expression": "None",
+          "input_name": "Apply View MipBias"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_9": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionTextureSampleParameter2D"
+      },
+      "properties": {
+        "parameterName": "Normal",
+        "group": "None",
+        "sortPriority": 32,
+        "mipValueMode": "TMVM_None",
+        "samplerSource": "SSM_FromTextureAsset",
+        "gatherMode": "TGM_None",
+        "automaticViewMipBias": true,
+        "channelNames": {
+          "r": "",
+          "g": "",
+          "b": "",
+          "a": ""
+        },
+        "constCoordinate": 0,
+        "constMipValue": -1,
+        "texture": {
+          "refPath": "/Game/Art/Candidates/Village/Final/Textures/Scans/Bricks085_Normal.Bricks085_Normal"
+        },
+        "samplerType": "SAMPLERTYPE_Normal",
+        "isDefaultMeshpaintTexture": false,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_0"
+          },
+          "input_name": "UVs"
+        },
+        {
+          "output_name": "",
+          "expression": "None",
+          "input_name": "Apply View MipBias"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_10": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionTextureSampleParameter2D"
+      },
+      "properties": {
+        "parameterName": "ORM",
+        "group": "None",
+        "sortPriority": 32,
+        "mipValueMode": "TMVM_None",
+        "samplerSource": "SSM_FromTextureAsset",
+        "gatherMode": "TGM_None",
+        "automaticViewMipBias": true,
+        "channelNames": {
+          "r": "",
+          "g": "",
+          "b": "",
+          "a": ""
+        },
+        "constCoordinate": 0,
+        "constMipValue": -1,
+        "texture": {
+          "refPath": "/Game/Art/Candidates/Village/Final/Textures/Scans/Bricks085_ORM.Bricks085_ORM"
+        },
+        "samplerType": "SAMPLERTYPE_Masks",
+        "isDefaultMeshpaintTexture": false,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_0"
+          },
+          "input_name": "UVs"
+        },
+        {
+          "output_name": "",
+          "expression": "None",
+          "input_name": "Apply View MipBias"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_11": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionTextureSampleParameter2D"
+      },
+      "properties": {
+        "parameterName": "AtlasTint",
+        "group": "None",
+        "sortPriority": 32,
+        "mipValueMode": "TMVM_None",
+        "samplerSource": "SSM_FromTextureAsset",
+        "gatherMode": "TGM_None",
+        "automaticViewMipBias": true,
+        "channelNames": {
+          "r": "",
+          "g": "",
+          "b": "",
+          "a": ""
+        },
+        "constCoordinate": 0,
+        "constMipValue": -1,
+        "texture": {
+          "refPath": "/Game/Art/Candidates/Village/Final/Textures/Atlas/SM_Village_HouseA_Tint.SM_Village_HouseA_Tint"
+        },
+        "samplerType": "SAMPLERTYPE_Masks",
+        "isDefaultMeshpaintTexture": false,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureCoordinate_2"
+          },
+          "input_name": "UVs"
+        },
+        {
+          "output_name": "",
+          "expression": "None",
+          "input_name": "Apply View MipBias"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_12": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionTextureSampleParameter2D"
+      },
+      "properties": {
+        "parameterName": "BakeNormal",
+        "group": "None",
+        "sortPriority": 32,
+        "mipValueMode": "TMVM_None",
+        "samplerSource": "SSM_FromTextureAsset",
+        "gatherMode": "TGM_None",
+        "automaticViewMipBias": true,
+        "channelNames": {
+          "r": "",
+          "g": "",
+          "b": "",
+          "a": ""
+        },
+        "constCoordinate": 0,
+        "constMipValue": -1,
+        "texture": {
+          "refPath": "/Game/Art/Candidates/Village/Final/Textures/Atlas/SM_Village_HouseA_BakeNormal.SM_Village_HouseA_BakeNormal"
+        },
+        "samplerType": "SAMPLERTYPE_Masks",
+        "isDefaultMeshpaintTexture": false,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureCoordinate_2"
+          },
+          "input_name": "UVs"
+        },
+        {
+          "output_name": "",
+          "expression": "None",
+          "input_name": "Apply View MipBias"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_13": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionTextureSampleParameter2D"
+      },
+      "properties": {
+        "parameterName": "BakeAO",
+        "group": "None",
+        "sortPriority": 32,
+        "mipValueMode": "TMVM_None",
+        "samplerSource": "SSM_FromTextureAsset",
+        "gatherMode": "TGM_None",
+        "automaticViewMipBias": true,
+        "channelNames": {
+          "r": "",
+          "g": "",
+          "b": "",
+          "a": ""
+        },
+        "constCoordinate": 0,
+        "constMipValue": -1,
+        "texture": {
+          "refPath": "/Game/Art/Candidates/Village/Final/Textures/Atlas/SM_Village_HouseA_BakeAO.SM_Village_HouseA_BakeAO"
+        },
+        "samplerType": "SAMPLERTYPE_Masks",
+        "isDefaultMeshpaintTexture": false,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureCoordinate_2"
+          },
+          "input_name": "UVs"
+        },
+        {
+          "output_name": "",
+          "expression": "None",
+          "input_name": "Apply View MipBias"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_5": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+      },
+      "properties": {
+        "defaultValue": 1,
+        "controlType": "Numeric",
+        "sliderMin": 0,
+        "sliderMax": 0,
+        "enumeration": "None",
+        "enumerationIndex": 0,
+        "bUseCustomPrimitiveData": false,
+        "primitiveDataIndex": 0,
+        "parameterName": "UseScan",
+        "group": "None",
+        "sortPriority": 32,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_6": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+      },
+      "properties": {
+        "defaultValue": 1,
+        "controlType": "Numeric",
+        "sliderMin": 0,
+        "sliderMax": 0,
+        "enumeration": "None",
+        "enumerationIndex": 0,
+        "bUseCustomPrimitiveData": false,
+        "primitiveDataIndex": 0,
+        "parameterName": "BakeStrength",
+        "group": "None",
+        "sortPriority": 32,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionVectorParameter_4": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+      },
+      "properties": {
+        "defaultValue": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "bUseCustomPrimitiveData": false,
+        "primitiveDataIndex": 0,
+        "channelNames": {
+          "r": "",
+          "g": "",
+          "b": "",
+          "a": ""
+        },
+        "parameterName": "SurfaceTint",
+        "group": "None",
+        "sortPriority": 32,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant3Vector_2": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionConstant3Vector"
+      },
+      "properties": {
+        "constant": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionLinearInterpolate_1": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionLinearInterpolate"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "constAlpha": 0.5,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant3Vector_2"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "RGB",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_8"
+          },
+          "input_name": "B"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_5"
+          },
+          "input_name": "Alpha"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_3": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionMultiply"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionLinearInterpolate_1"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "RGB",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionVectorParameter_4"
+          },
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_4": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionMultiply"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_3"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "RGB",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_11"
+          },
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_5": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionMultiply"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 2,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "RGB",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_12"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": "None",
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionAdd_1": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionAdd"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": -1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_5"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": "None",
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTransform_1": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionTransform"
+      },
+      "properties": {
+        "transformSourceType": "TRANSFORMSOURCE_Local",
+        "transformType": "TRANSFORM_Tangent",
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionAdd_1"
+          },
+          "input_name": "None"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_6": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionMultiply"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "RGB",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_9"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_5"
+          },
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionSubtract_0": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionSubtract"
+      },
+      "properties": {
+        "constA": 1,
+        "constB": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_6"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_7"
+          },
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant3Vector_3": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionConstant3Vector"
+      },
+      "properties": {
+        "constant": {
+          "r": 0,
+          "g": 0,
+          "b": 1,
+          "a": 1
+        },
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_7": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionMultiply"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant3Vector_3"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_5"
+          },
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionAdd_2": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionAdd"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionLinearInterpolate_2"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionSubtract_0"
+          },
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant3Vector_4": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionConstant3Vector"
+      },
+      "properties": {
+        "constant": {
+          "r": 0,
+          "g": 0,
+          "b": 1,
+          "a": 1
+        },
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionLinearInterpolate_2": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionLinearInterpolate"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "constAlpha": 0.5,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant3Vector_4"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTransform_1"
+          },
+          "input_name": "B"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_10"
+          },
+          "input_name": "Alpha"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionNormalize_0": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionNormalize"
+      },
+      "properties": {
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionAdd_2"
+          },
+          "input_name": "VectorInput"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_7": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+      },
+      "properties": {
+        "defaultValue": 0.550000011920929,
+        "controlType": "Numeric",
+        "sliderMin": 0,
+        "sliderMax": 0,
+        "enumeration": "None",
+        "enumerationIndex": 0,
+        "bUseCustomPrimitiveData": false,
+        "primitiveDataIndex": 0,
+        "parameterName": "FlatRoughness",
+        "group": "None",
+        "sortPriority": 32,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionLinearInterpolate_3": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionLinearInterpolate"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "constAlpha": 0.5,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_7"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "G",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_10"
+          },
+          "input_name": "B"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_5"
+          },
+          "input_name": "Alpha"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionComponentMask_0": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionComponentMask"
+      },
+      "properties": {
+        "r": true,
+        "g": true,
+        "b": false,
+        "a": false,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "RGB",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_10"
+          },
+          "input_name": "None"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionComponentMask_1": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionComponentMask"
+      },
+      "properties": {
+        "r": true,
+        "g": true,
+        "b": false,
+        "a": false,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "RGB",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureSampleParameter2D_13"
+          },
+          "input_name": "None"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant_1": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionConstant"
+      },
+      "properties": {
+        "r": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionLinearInterpolate_4": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionLinearInterpolate"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "constAlpha": 0.5,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant_1"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionComponentMask_0"
+          },
+          "input_name": "B"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_5"
+          },
+          "input_name": "Alpha"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant_2": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionConstant"
+      },
+      "properties": {
+        "r": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionLinearInterpolate_5": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionLinearInterpolate"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "constAlpha": 0.5,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant_2"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionComponentMask_1"
+          },
+          "input_name": "B"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_10"
+          },
+          "input_name": "Alpha"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_8": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionMultiply"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionLinearInterpolate_4"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionLinearInterpolate_5"
+          },
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant_3": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionConstant"
+      },
+      "properties": {
+        "r": 0,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionCameraPositionWS_0": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionCameraPositionWS"
+      },
+      "properties": {
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionObjectPositionWS_0": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionObjectPositionWS"
+      },
+      "properties": {
+        "originType": "Absolute",
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionDistance_0": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionDistance"
+      },
+      "properties": {
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionCameraPositionWS_0"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionObjectPositionWS_0"
+          },
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_8": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionScalarParameter"
+      },
+      "properties": {
+        "defaultValue": 18000,
+        "controlType": "Numeric",
+        "sliderMin": 0,
+        "sliderMax": 0,
+        "enumeration": "None",
+        "enumerationIndex": 0,
+        "bUseCustomPrimitiveData": false,
+        "primitiveDataIndex": 0,
+        "parameterName": "DetailFadeStartCm",
+        "group": "None",
+        "sortPriority": 32,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionSubtract_1": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionSubtract"
+      },
+      "properties": {
+        "constA": 1,
+        "constB": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionDistance_0"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_8"
+          },
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_9": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionMultiply"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 0.00019999999494757503,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionSubtract_1"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": "None",
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionSaturate_0": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionSaturate"
+      },
+      "properties": {
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_9"
+          },
+          "input_name": "None"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionOneMinus_0": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionOneMinus"
+      },
+      "properties": {
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionSaturate_0"
+          },
+          "input_name": "None"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_10": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionMultiply"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionOneMinus_0"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionScalarParameter_6"
+          },
+          "input_name": "B"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureCoordinate_0": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionTextureCoordinate"
+      },
+      "properties": {
+        "coordinateIndex": 0,
+        "uTiling": 1,
+        "vTiling": 1,
+        "unMirrorU": false,
+        "unMirrorV": false,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionVectorParameter_0": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionVectorParameter"
+      },
+      "properties": {
+        "defaultValue": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "bUseCustomPrimitiveData": false,
+        "primitiveDataIndex": 0,
+        "channelNames": {
+          "r": "",
+          "g": "",
+          "b": "",
+          "a": ""
+        },
+        "parameterName": "ScanUVScale",
+        "group": "None",
+        "sortPriority": 32,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": []
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionComponentMask_2": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionComponentMask"
+      },
+      "properties": {
+        "r": true,
+        "g": true,
+        "b": false,
+        "a": false,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "RGB",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionVectorParameter_0"
+          },
+          "input_name": "None"
+        }
+      ]
+    },
+    "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_0": {
+      "class": {
+        "refPath": "/Script/Engine.MaterialExpressionMultiply"
+      },
+      "properties": {
+        "constA": 0,
+        "constB": 1,
+        "materialExpressionEditorX": 0,
+        "materialExpressionEditorY": 0,
+        "desc": ""
+      },
+      "inputs": [
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionTextureCoordinate_0"
+          },
+          "input_name": "A"
+        },
+        {
+          "output_name": "",
+          "expression": {
+            "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionComponentMask_2"
+          },
+          "input_name": "B"
+        }
+      ]
+    }
+  },
+  "outputs": {
+    "BaseColor": {
+      "output_name": "",
+      "expression": {
+        "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_4"
+      },
+      "input_name": ""
+    },
+    "Normal": {
+      "output_name": "",
+      "expression": {
+        "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionNormalize_0"
+      },
+      "input_name": ""
+    },
+    "Roughness": {
+      "output_name": "",
+      "expression": {
+        "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionLinearInterpolate_3"
+      },
+      "input_name": ""
+    },
+    "Metallic": {
+      "output_name": "",
+      "expression": {
+        "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionConstant_3"
+      },
+      "input_name": ""
+    },
+    "AmbientOcclusion": {
+      "output_name": "",
+      "expression": {
+        "refPath": "/Game/Art/Candidates/Village/Final/M_SetSurface.M_SetSurface:MaterialExpressionMultiply_8"
+      },
+      "input_name": ""
+    }
+  }
+}

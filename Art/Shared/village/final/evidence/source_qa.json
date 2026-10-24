@@ -1,0 +1,5347 @@
+{
+  "meshes": {
+    "SM_Village_HouseA": {
+      "triangles": 6120,
+      "slots": [
+        "SM_Village_HouseA_Brick",
+        "SM_Village_HouseA_Roof",
+        "SM_Village_HouseA_Trim",
+        "SM_Village_HouseA_Glass",
+        "SM_Village_HouseA_Wood",
+        "SM_Village_HouseA_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 6120,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseA_Damaged": {
+      "triangles": 6158,
+      "slots": [
+        "SM_Village_HouseA_Damaged_Brick",
+        "SM_Village_HouseA_Damaged_Roof",
+        "SM_Village_HouseA_Damaged_Trim",
+        "SM_Village_HouseA_Damaged_Glass",
+        "SM_Village_HouseA_Damaged_Wood",
+        "SM_Village_HouseA_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 6158,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseA_Damaged_LOD1": {
+      "triangles": 2988,
+      "slots": [
+        "SM_Village_HouseA_Damaged_Brick",
+        "SM_Village_HouseA_Damaged_Roof",
+        "SM_Village_HouseA_Damaged_Trim",
+        "SM_Village_HouseA_Damaged_Glass",
+        "SM_Village_HouseA_Damaged_Wood",
+        "SM_Village_HouseA_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2988,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseA_Damaged_MASTER": {
+      "triangles": 6650,
+      "slots": [
+        "SM_Village_HouseA_Damaged_Brick",
+        "SM_Village_HouseA_Damaged_Roof",
+        "SM_Village_HouseA_Damaged_Trim",
+        "SM_Village_HouseA_Damaged_Glass",
+        "SM_Village_HouseA_Damaged_Wood",
+        "SM_Village_HouseA_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 6650,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseA_LOD1": {
+      "triangles": 2376,
+      "slots": [
+        "SM_Village_HouseA_Brick",
+        "SM_Village_HouseA_Roof",
+        "SM_Village_HouseA_Trim",
+        "SM_Village_HouseA_Glass",
+        "SM_Village_HouseA_Wood",
+        "SM_Village_HouseA_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2376,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseA_MASTER": {
+      "triangles": 6392,
+      "slots": [
+        "SM_Village_HouseA_Brick",
+        "SM_Village_HouseA_Roof",
+        "SM_Village_HouseA_Trim",
+        "SM_Village_HouseA_Glass",
+        "SM_Village_HouseA_Wood",
+        "SM_Village_HouseA_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 6392,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseA_Rubble": {
+      "triangles": 1760,
+      "slots": [
+        "SM_Village_HouseA_Rubble_Brick",
+        "SM_Village_HouseA_Rubble_Roof",
+        "SM_Village_HouseA_Rubble_Trim",
+        "SM_Village_HouseA_Rubble_Glass",
+        "SM_Village_HouseA_Rubble_Wood",
+        "SM_Village_HouseA_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 1760,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseA_Rubble_LOD1": {
+      "triangles": 1568,
+      "slots": [
+        "SM_Village_HouseA_Rubble_Brick",
+        "SM_Village_HouseA_Rubble_Roof",
+        "SM_Village_HouseA_Rubble_Trim",
+        "SM_Village_HouseA_Rubble_Glass",
+        "SM_Village_HouseA_Rubble_Wood",
+        "SM_Village_HouseA_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 1568,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseA_Rubble_MASTER": {
+      "triangles": 3812,
+      "slots": [
+        "SM_Village_HouseA_Rubble_Brick",
+        "SM_Village_HouseA_Rubble_Roof",
+        "SM_Village_HouseA_Rubble_Trim",
+        "SM_Village_HouseA_Rubble_Glass",
+        "SM_Village_HouseA_Rubble_Wood",
+        "SM_Village_HouseA_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 3812,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseB": {
+      "triangles": 6196,
+      "slots": [
+        "SM_Village_HouseB_Brick",
+        "SM_Village_HouseB_Roof",
+        "SM_Village_HouseB_Trim",
+        "SM_Village_HouseB_Glass",
+        "SM_Village_HouseB_Wood",
+        "SM_Village_HouseB_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 6196,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseB_Damaged": {
+      "triangles": 6012,
+      "slots": [
+        "SM_Village_HouseB_Damaged_Brick",
+        "SM_Village_HouseB_Damaged_Roof",
+        "SM_Village_HouseB_Damaged_Trim",
+        "SM_Village_HouseB_Damaged_Glass",
+        "SM_Village_HouseB_Damaged_Wood",
+        "SM_Village_HouseB_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 6012,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseB_Damaged_LOD1": {
+      "triangles": 2798,
+      "slots": [
+        "SM_Village_HouseB_Damaged_Brick",
+        "SM_Village_HouseB_Damaged_Roof",
+        "SM_Village_HouseB_Damaged_Trim",
+        "SM_Village_HouseB_Damaged_Glass",
+        "SM_Village_HouseB_Damaged_Wood",
+        "SM_Village_HouseB_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2798,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseB_Damaged_MASTER": {
+      "triangles": 6444,
+      "slots": [
+        "SM_Village_HouseB_Damaged_Brick",
+        "SM_Village_HouseB_Damaged_Roof",
+        "SM_Village_HouseB_Damaged_Trim",
+        "SM_Village_HouseB_Damaged_Glass",
+        "SM_Village_HouseB_Damaged_Wood",
+        "SM_Village_HouseB_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 6444,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseB_LOD1": {
+      "triangles": 2274,
+      "slots": [
+        "SM_Village_HouseB_Brick",
+        "SM_Village_HouseB_Roof",
+        "SM_Village_HouseB_Trim",
+        "SM_Village_HouseB_Glass",
+        "SM_Village_HouseB_Wood",
+        "SM_Village_HouseB_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2274,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseB_MASTER": {
+      "triangles": 6564,
+      "slots": [
+        "SM_Village_HouseB_Brick",
+        "SM_Village_HouseB_Roof",
+        "SM_Village_HouseB_Trim",
+        "SM_Village_HouseB_Glass",
+        "SM_Village_HouseB_Wood",
+        "SM_Village_HouseB_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 6564,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseB_Rubble": {
+      "triangles": 1092,
+      "slots": [
+        "SM_Village_HouseB_Rubble_Brick",
+        "SM_Village_HouseB_Rubble_Roof",
+        "SM_Village_HouseB_Rubble_Trim",
+        "SM_Village_HouseB_Rubble_Glass",
+        "SM_Village_HouseB_Rubble_Wood",
+        "SM_Village_HouseB_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 1092,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseB_Rubble_LOD1": {
+      "triangles": 832,
+      "slots": [
+        "SM_Village_HouseB_Rubble_Brick",
+        "SM_Village_HouseB_Rubble_Roof",
+        "SM_Village_HouseB_Rubble_Trim",
+        "SM_Village_HouseB_Rubble_Glass",
+        "SM_Village_HouseB_Rubble_Wood",
+        "SM_Village_HouseB_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 832,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseB_Rubble_MASTER": {
+      "triangles": 2988,
+      "slots": [
+        "SM_Village_HouseB_Rubble_Brick",
+        "SM_Village_HouseB_Rubble_Roof",
+        "SM_Village_HouseB_Rubble_Trim",
+        "SM_Village_HouseB_Rubble_Glass",
+        "SM_Village_HouseB_Rubble_Wood",
+        "SM_Village_HouseB_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2988,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseC": {
+      "triangles": 4412,
+      "slots": [
+        "SM_Village_HouseC_Brick",
+        "SM_Village_HouseC_Roof",
+        "SM_Village_HouseC_Trim",
+        "SM_Village_HouseC_Glass",
+        "SM_Village_HouseC_Wood",
+        "SM_Village_HouseC_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 4412,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseC_Damaged": {
+      "triangles": 4676,
+      "slots": [
+        "SM_Village_HouseC_Damaged_Brick",
+        "SM_Village_HouseC_Damaged_Roof",
+        "SM_Village_HouseC_Damaged_Trim",
+        "SM_Village_HouseC_Damaged_Glass",
+        "SM_Village_HouseC_Damaged_Wood",
+        "SM_Village_HouseC_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 4676,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseC_Damaged_LOD1": {
+      "triangles": 2219,
+      "slots": [
+        "SM_Village_HouseC_Damaged_Brick",
+        "SM_Village_HouseC_Damaged_Roof",
+        "SM_Village_HouseC_Damaged_Trim",
+        "SM_Village_HouseC_Damaged_Glass",
+        "SM_Village_HouseC_Damaged_Wood",
+        "SM_Village_HouseC_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2219,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseC_Damaged_MASTER": {
+      "triangles": 5200,
+      "slots": [
+        "SM_Village_HouseC_Damaged_Brick",
+        "SM_Village_HouseC_Damaged_Roof",
+        "SM_Village_HouseC_Damaged_Trim",
+        "SM_Village_HouseC_Damaged_Glass",
+        "SM_Village_HouseC_Damaged_Wood",
+        "SM_Village_HouseC_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 5200,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseC_LOD1": {
+      "triangles": 1670,
+      "slots": [
+        "SM_Village_HouseC_Brick",
+        "SM_Village_HouseC_Roof",
+        "SM_Village_HouseC_Trim",
+        "SM_Village_HouseC_Glass",
+        "SM_Village_HouseC_Wood",
+        "SM_Village_HouseC_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 1670,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseC_MASTER": {
+      "triangles": 4780,
+      "slots": [
+        "SM_Village_HouseC_Brick",
+        "SM_Village_HouseC_Roof",
+        "SM_Village_HouseC_Trim",
+        "SM_Village_HouseC_Glass",
+        "SM_Village_HouseC_Wood",
+        "SM_Village_HouseC_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 4780,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseC_Rubble": {
+      "triangles": 1060,
+      "slots": [
+        "SM_Village_HouseC_Rubble_Brick",
+        "SM_Village_HouseC_Rubble_Roof",
+        "SM_Village_HouseC_Rubble_Trim",
+        "SM_Village_HouseC_Rubble_Glass",
+        "SM_Village_HouseC_Rubble_Wood",
+        "SM_Village_HouseC_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 1060,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseC_Rubble_LOD1": {
+      "triangles": 804,
+      "slots": [
+        "SM_Village_HouseC_Rubble_Brick",
+        "SM_Village_HouseC_Rubble_Roof",
+        "SM_Village_HouseC_Rubble_Trim",
+        "SM_Village_HouseC_Rubble_Glass",
+        "SM_Village_HouseC_Rubble_Wood",
+        "SM_Village_HouseC_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 804,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_HouseC_Rubble_MASTER": {
+      "triangles": 2916,
+      "slots": [
+        "SM_Village_HouseC_Rubble_Brick",
+        "SM_Village_HouseC_Rubble_Roof",
+        "SM_Village_HouseC_Rubble_Trim",
+        "SM_Village_HouseC_Rubble_Glass",
+        "SM_Village_HouseC_Rubble_Wood",
+        "SM_Village_HouseC_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2916,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Farmhouse": {
+      "triangles": 7400,
+      "slots": [
+        "SM_Village_Farmhouse_Brick",
+        "SM_Village_Farmhouse_Roof",
+        "SM_Village_Farmhouse_Trim",
+        "SM_Village_Farmhouse_Glass",
+        "SM_Village_Farmhouse_Wood",
+        "SM_Village_Farmhouse_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 7400,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Farmhouse_Damaged": {
+      "triangles": 6856,
+      "slots": [
+        "SM_Village_Farmhouse_Damaged_Brick",
+        "SM_Village_Farmhouse_Damaged_Roof",
+        "SM_Village_Farmhouse_Damaged_Trim",
+        "SM_Village_Farmhouse_Damaged_Glass",
+        "SM_Village_Farmhouse_Damaged_Wood",
+        "SM_Village_Farmhouse_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 6856,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Farmhouse_Damaged_LOD1": {
+      "triangles": 2991,
+      "slots": [
+        "SM_Village_Farmhouse_Damaged_Brick",
+        "SM_Village_Farmhouse_Damaged_Roof",
+        "SM_Village_Farmhouse_Damaged_Trim",
+        "SM_Village_Farmhouse_Damaged_Glass",
+        "SM_Village_Farmhouse_Damaged_Wood",
+        "SM_Village_Farmhouse_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2991,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Farmhouse_Damaged_MASTER": {
+      "triangles": 7216,
+      "slots": [
+        "SM_Village_Farmhouse_Damaged_Brick",
+        "SM_Village_Farmhouse_Damaged_Roof",
+        "SM_Village_Farmhouse_Damaged_Trim",
+        "SM_Village_Farmhouse_Damaged_Glass",
+        "SM_Village_Farmhouse_Damaged_Wood",
+        "SM_Village_Farmhouse_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 7216,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Farmhouse_LOD1": {
+      "triangles": 2524,
+      "slots": [
+        "SM_Village_Farmhouse_Brick",
+        "SM_Village_Farmhouse_Roof",
+        "SM_Village_Farmhouse_Trim",
+        "SM_Village_Farmhouse_Glass",
+        "SM_Village_Farmhouse_Wood",
+        "SM_Village_Farmhouse_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2524,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Farmhouse_MASTER": {
+      "triangles": 7624,
+      "slots": [
+        "SM_Village_Farmhouse_Brick",
+        "SM_Village_Farmhouse_Roof",
+        "SM_Village_Farmhouse_Trim",
+        "SM_Village_Farmhouse_Glass",
+        "SM_Village_Farmhouse_Wood",
+        "SM_Village_Farmhouse_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 7624,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Farmhouse_Rubble": {
+      "triangles": 1220,
+      "slots": [
+        "SM_Village_Farmhouse_Rubble_Brick",
+        "SM_Village_Farmhouse_Rubble_Roof",
+        "SM_Village_Farmhouse_Rubble_Trim",
+        "SM_Village_Farmhouse_Rubble_Glass",
+        "SM_Village_Farmhouse_Rubble_Wood",
+        "SM_Village_Farmhouse_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 1220,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Farmhouse_Rubble_LOD1": {
+      "triangles": 948,
+      "slots": [
+        "SM_Village_Farmhouse_Rubble_Brick",
+        "SM_Village_Farmhouse_Rubble_Roof",
+        "SM_Village_Farmhouse_Rubble_Trim",
+        "SM_Village_Farmhouse_Rubble_Glass",
+        "SM_Village_Farmhouse_Rubble_Wood",
+        "SM_Village_Farmhouse_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 948,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Farmhouse_Rubble_MASTER": {
+      "triangles": 3276,
+      "slots": [
+        "SM_Village_Farmhouse_Rubble_Brick",
+        "SM_Village_Farmhouse_Rubble_Roof",
+        "SM_Village_Farmhouse_Rubble_Trim",
+        "SM_Village_Farmhouse_Rubble_Glass",
+        "SM_Village_Farmhouse_Rubble_Wood",
+        "SM_Village_Farmhouse_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 3276,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Barn": {
+      "triangles": 3768,
+      "slots": [
+        "SM_Village_Barn_Brick",
+        "SM_Village_Barn_Roof",
+        "SM_Village_Barn_Trim",
+        "SM_Village_Barn_Glass",
+        "SM_Village_Barn_Wood",
+        "SM_Village_Barn_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 3768,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Barn_Damaged": {
+      "triangles": 4324,
+      "slots": [
+        "SM_Village_Barn_Damaged_Brick",
+        "SM_Village_Barn_Damaged_Roof",
+        "SM_Village_Barn_Damaged_Trim",
+        "SM_Village_Barn_Damaged_Glass",
+        "SM_Village_Barn_Damaged_Wood",
+        "SM_Village_Barn_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 4324,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Barn_Damaged_LOD1": {
+      "triangles": 2612,
+      "slots": [
+        "SM_Village_Barn_Damaged_Brick",
+        "SM_Village_Barn_Damaged_Roof",
+        "SM_Village_Barn_Damaged_Trim",
+        "SM_Village_Barn_Damaged_Glass",
+        "SM_Village_Barn_Damaged_Wood",
+        "SM_Village_Barn_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2612,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Barn_Damaged_MASTER": {
+      "triangles": 4936,
+      "slots": [
+        "SM_Village_Barn_Damaged_Brick",
+        "SM_Village_Barn_Damaged_Roof",
+        "SM_Village_Barn_Damaged_Trim",
+        "SM_Village_Barn_Damaged_Glass",
+        "SM_Village_Barn_Damaged_Wood",
+        "SM_Village_Barn_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 4936,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Barn_LOD1": {
+      "triangles": 2108,
+      "slots": [
+        "SM_Village_Barn_Brick",
+        "SM_Village_Barn_Roof",
+        "SM_Village_Barn_Trim",
+        "SM_Village_Barn_Glass",
+        "SM_Village_Barn_Wood",
+        "SM_Village_Barn_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2108,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Barn_MASTER": {
+      "triangles": 4120,
+      "slots": [
+        "SM_Village_Barn_Brick",
+        "SM_Village_Barn_Roof",
+        "SM_Village_Barn_Trim",
+        "SM_Village_Barn_Glass",
+        "SM_Village_Barn_Wood",
+        "SM_Village_Barn_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 4120,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Barn_Rubble": {
+      "triangles": 1220,
+      "slots": [
+        "SM_Village_Barn_Rubble_Brick",
+        "SM_Village_Barn_Rubble_Roof",
+        "SM_Village_Barn_Rubble_Trim",
+        "SM_Village_Barn_Rubble_Glass",
+        "SM_Village_Barn_Rubble_Wood",
+        "SM_Village_Barn_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 1220,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Barn_Rubble_LOD1": {
+      "triangles": 948,
+      "slots": [
+        "SM_Village_Barn_Rubble_Brick",
+        "SM_Village_Barn_Rubble_Roof",
+        "SM_Village_Barn_Rubble_Trim",
+        "SM_Village_Barn_Rubble_Glass",
+        "SM_Village_Barn_Rubble_Wood",
+        "SM_Village_Barn_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 948,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Barn_Rubble_MASTER": {
+      "triangles": 3396,
+      "slots": [
+        "SM_Village_Barn_Rubble_Brick",
+        "SM_Village_Barn_Rubble_Roof",
+        "SM_Village_Barn_Rubble_Trim",
+        "SM_Village_Barn_Rubble_Glass",
+        "SM_Village_Barn_Rubble_Wood",
+        "SM_Village_Barn_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 3396,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Workshop": {
+      "triangles": 4544,
+      "slots": [
+        "SM_Village_Workshop_Brick",
+        "SM_Village_Workshop_Roof",
+        "SM_Village_Workshop_Trim",
+        "SM_Village_Workshop_Glass",
+        "SM_Village_Workshop_Wood",
+        "SM_Village_Workshop_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 4544,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Workshop_Damaged": {
+      "triangles": 4844,
+      "slots": [
+        "SM_Village_Workshop_Damaged_Brick",
+        "SM_Village_Workshop_Damaged_Roof",
+        "SM_Village_Workshop_Damaged_Trim",
+        "SM_Village_Workshop_Damaged_Glass",
+        "SM_Village_Workshop_Damaged_Wood",
+        "SM_Village_Workshop_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 4844,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Workshop_Damaged_LOD1": {
+      "triangles": 2675,
+      "slots": [
+        "SM_Village_Workshop_Damaged_Brick",
+        "SM_Village_Workshop_Damaged_Roof",
+        "SM_Village_Workshop_Damaged_Trim",
+        "SM_Village_Workshop_Damaged_Glass",
+        "SM_Village_Workshop_Damaged_Wood",
+        "SM_Village_Workshop_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2675,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Workshop_Damaged_MASTER": {
+      "triangles": 5412,
+      "slots": [
+        "SM_Village_Workshop_Damaged_Brick",
+        "SM_Village_Workshop_Damaged_Roof",
+        "SM_Village_Workshop_Damaged_Trim",
+        "SM_Village_Workshop_Damaged_Glass",
+        "SM_Village_Workshop_Damaged_Wood",
+        "SM_Village_Workshop_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": -1,
+      "reimport": {
+        "triangles": 5411,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Workshop_LOD1": {
+      "triangles": 2172,
+      "slots": [
+        "SM_Village_Workshop_Brick",
+        "SM_Village_Workshop_Roof",
+        "SM_Village_Workshop_Trim",
+        "SM_Village_Workshop_Glass",
+        "SM_Village_Workshop_Wood",
+        "SM_Village_Workshop_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2172,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Workshop_MASTER": {
+      "triangles": 4944,
+      "slots": [
+        "SM_Village_Workshop_Brick",
+        "SM_Village_Workshop_Roof",
+        "SM_Village_Workshop_Trim",
+        "SM_Village_Workshop_Glass",
+        "SM_Village_Workshop_Wood",
+        "SM_Village_Workshop_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 4944,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Workshop_Rubble": {
+      "triangles": 1156,
+      "slots": [
+        "SM_Village_Workshop_Rubble_Brick",
+        "SM_Village_Workshop_Rubble_Roof",
+        "SM_Village_Workshop_Rubble_Trim",
+        "SM_Village_Workshop_Rubble_Glass",
+        "SM_Village_Workshop_Rubble_Wood",
+        "SM_Village_Workshop_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 1156,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Workshop_Rubble_LOD1": {
+      "triangles": 892,
+      "slots": [
+        "SM_Village_Workshop_Rubble_Brick",
+        "SM_Village_Workshop_Rubble_Roof",
+        "SM_Village_Workshop_Rubble_Trim",
+        "SM_Village_Workshop_Rubble_Glass",
+        "SM_Village_Workshop_Rubble_Wood",
+        "SM_Village_Workshop_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 892,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Workshop_Rubble_MASTER": {
+      "triangles": 3164,
+      "slots": [
+        "SM_Village_Workshop_Rubble_Brick",
+        "SM_Village_Workshop_Rubble_Roof",
+        "SM_Village_Workshop_Rubble_Trim",
+        "SM_Village_Workshop_Rubble_Glass",
+        "SM_Village_Workshop_Rubble_Wood",
+        "SM_Village_Workshop_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 3164,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Church": {
+      "triangles": 7220,
+      "slots": [
+        "SM_Village_Church_Brick",
+        "SM_Village_Church_Roof",
+        "SM_Village_Church_Trim",
+        "SM_Village_Church_Glass",
+        "SM_Village_Church_Wood",
+        "SM_Village_Church_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 7220,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Church_Damaged": {
+      "triangles": 7000,
+      "slots": [
+        "SM_Village_Church_Damaged_Brick",
+        "SM_Village_Church_Damaged_Roof",
+        "SM_Village_Church_Damaged_Trim",
+        "SM_Village_Church_Damaged_Glass",
+        "SM_Village_Church_Damaged_Wood",
+        "SM_Village_Church_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 7000,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Church_Damaged_LOD1": {
+      "triangles": 5003,
+      "slots": [
+        "SM_Village_Church_Damaged_Brick",
+        "SM_Village_Church_Damaged_Roof",
+        "SM_Village_Church_Damaged_Trim",
+        "SM_Village_Church_Damaged_Glass",
+        "SM_Village_Church_Damaged_Wood",
+        "SM_Village_Church_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 5003,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Church_Damaged_MASTER": {
+      "triangles": 7984,
+      "slots": [
+        "SM_Village_Church_Damaged_Brick",
+        "SM_Village_Church_Damaged_Roof",
+        "SM_Village_Church_Damaged_Trim",
+        "SM_Village_Church_Damaged_Glass",
+        "SM_Village_Church_Damaged_Wood",
+        "SM_Village_Church_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 7984,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Church_LOD1": {
+      "triangles": 5286,
+      "slots": [
+        "SM_Village_Church_Brick",
+        "SM_Village_Church_Roof",
+        "SM_Village_Church_Trim",
+        "SM_Village_Church_Glass",
+        "SM_Village_Church_Wood",
+        "SM_Village_Church_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 5286,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Church_MASTER": {
+      "triangles": 7922,
+      "slots": [
+        "SM_Village_Church_Brick",
+        "SM_Village_Church_Roof",
+        "SM_Village_Church_Trim",
+        "SM_Village_Church_Glass",
+        "SM_Village_Church_Wood",
+        "SM_Village_Church_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 7922,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Church_Rubble": {
+      "triangles": 2260,
+      "slots": [
+        "SM_Village_Church_Rubble_Brick",
+        "SM_Village_Church_Rubble_Roof",
+        "SM_Village_Church_Rubble_Trim",
+        "SM_Village_Church_Rubble_Glass",
+        "SM_Village_Church_Rubble_Wood",
+        "SM_Village_Church_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2260,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Church_Rubble_LOD1": {
+      "triangles": 1786,
+      "slots": [
+        "SM_Village_Church_Rubble_Brick",
+        "SM_Village_Church_Rubble_Roof",
+        "SM_Village_Church_Rubble_Trim",
+        "SM_Village_Church_Rubble_Glass",
+        "SM_Village_Church_Rubble_Wood",
+        "SM_Village_Church_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 1786,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Village_Church_Rubble_MASTER": {
+      "triangles": 5344,
+      "slots": [
+        "SM_Village_Church_Rubble_Brick",
+        "SM_Village_Church_Rubble_Roof",
+        "SM_Village_Church_Rubble_Trim",
+        "SM_Village_Church_Rubble_Glass",
+        "SM_Village_Church_Rubble_Wood",
+        "SM_Village_Church_Rubble_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 5344,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Bridge_Span_Damaged": {
+      "triangles": 564,
+      "slots": [
+        "SM_Bridge_Span_Damaged_Brick",
+        "SM_Bridge_Span_Damaged_Roof",
+        "SM_Bridge_Span_Damaged_Trim",
+        "SM_Bridge_Span_Damaged_Glass",
+        "SM_Bridge_Span_Damaged_Wood",
+        "SM_Bridge_Span_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 564,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Bridge_Span_Damaged_LOD1": {
+      "triangles": 564,
+      "slots": [
+        "SM_Bridge_Span_Damaged_Brick",
+        "SM_Bridge_Span_Damaged_Roof",
+        "SM_Bridge_Span_Damaged_Trim",
+        "SM_Bridge_Span_Damaged_Glass",
+        "SM_Bridge_Span_Damaged_Wood",
+        "SM_Bridge_Span_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 564,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Bridge_Span_Damaged_MASTER": {
+      "triangles": 1108,
+      "slots": [
+        "SM_Bridge_Span_Damaged_Brick",
+        "SM_Bridge_Span_Damaged_Roof",
+        "SM_Bridge_Span_Damaged_Trim",
+        "SM_Bridge_Span_Damaged_Glass",
+        "SM_Bridge_Span_Damaged_Wood",
+        "SM_Bridge_Span_Damaged_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 1108,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Bridge_Span_Destroyed": {
+      "triangles": 984,
+      "slots": [
+        "SM_Bridge_Span_Destroyed_Brick",
+        "SM_Bridge_Span_Destroyed_Roof",
+        "SM_Bridge_Span_Destroyed_Trim",
+        "SM_Bridge_Span_Destroyed_Glass",
+        "SM_Bridge_Span_Destroyed_Wood",
+        "SM_Bridge_Span_Destroyed_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 984,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Bridge_Span_Destroyed_LOD1": {
+      "triangles": 984,
+      "slots": [
+        "SM_Bridge_Span_Destroyed_Brick",
+        "SM_Bridge_Span_Destroyed_Roof",
+        "SM_Bridge_Span_Destroyed_Trim",
+        "SM_Bridge_Span_Destroyed_Glass",
+        "SM_Bridge_Span_Destroyed_Wood",
+        "SM_Bridge_Span_Destroyed_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 984,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    },
+    "SM_Bridge_Span_Destroyed_MASTER": {
+      "triangles": 2760,
+      "slots": [
+        "SM_Bridge_Span_Destroyed_Brick",
+        "SM_Bridge_Span_Destroyed_Roof",
+        "SM_Bridge_Span_Destroyed_Trim",
+        "SM_Bridge_Span_Destroyed_Glass",
+        "SM_Bridge_Span_Destroyed_Wood",
+        "SM_Bridge_Span_Destroyed_Rubble"
+      ],
+      "bad_geo": 0,
+      "bad_uv": 0,
+      "bad_tangents": 0,
+      "uv_channels": [
+        "UVMap",
+        "BakeUV"
+      ],
+      "reimport_triangle_delta": 0,
+      "reimport": {
+        "triangles": 2760,
+        "slots": [
+          "Brick",
+          "Roof",
+          "Trim",
+          "Glass",
+          "Wood",
+          "Rubble"
+        ],
+        "bad_geo": 0,
+        "bad_uv": 0,
+        "bad_tangents": 0,
+        "uv_channels": [
+          "UVMap",
+          "BakeUV"
+        ]
+      }
+    }
+  },
+  "apertures": {
+    "SM_Village_HouseA": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 9,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 11,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 14,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 15,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 17,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 18,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 19,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 20,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 21,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 6.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 22,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 6.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "SM_Village_HouseA_Damaged": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 5,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 6,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 9,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -7.950000286102295
+      },
+      {
+        "index": 11,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -7.9499993324279785
+      },
+      {
+        "index": 14,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 15,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 17,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 18,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 19,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 20,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 21,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 6.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 22,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 6.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -1.0
+      }
+    ],
+    "SM_Village_HouseB": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+Y",
+        "along_m": -3.5,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 2,
+        "face": "+Y",
+        "along_m": 3.5,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 9,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 11,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "+Y",
+        "along_m": -4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 14,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 15,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "+Y",
+        "along_m": 4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 17,
+        "face": "-Y",
+        "along_m": -4.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 18,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 19,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 20,
+        "face": "-Y",
+        "along_m": 4.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 21,
+        "face": "-Y",
+        "along_m": -4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 22,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 23,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 24,
+        "face": "-Y",
+        "along_m": 4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 25,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 6.2,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 26,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 6.2,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "SM_Village_HouseB_Damaged": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+Y",
+        "along_m": -3.5,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 2,
+        "face": "+Y",
+        "along_m": 3.5,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 5,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 6,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 9,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 11,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "+Y",
+        "along_m": -4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 14,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 15,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "+Y",
+        "along_m": 4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 17,
+        "face": "-Y",
+        "along_m": -4.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 18,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -7.949998378753662
+      },
+      {
+        "index": 19,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 20,
+        "face": "-Y",
+        "along_m": 4.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 21,
+        "face": "-Y",
+        "along_m": -4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 22,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 23,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 24,
+        "face": "-Y",
+        "along_m": 4.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 25,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 6.2,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 26,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 6.2,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -1.0
+      }
+    ],
+    "SM_Village_HouseC": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 0.5,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 9,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 11,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 14,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 15,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 17,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 5.8,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 18,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 5.8,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "SM_Village_HouseC_Damaged": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 0.5,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 5,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 6,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 9,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 11,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -8.449999332427979
+      },
+      {
+        "index": 14,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 15,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 17,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 5.8,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 18,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 5.8,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "SM_Village_Farmhouse": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "+X",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "-X",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 9,
+        "face": "-X",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 11,
+        "face": "-X",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": -6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 14,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 15,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "+Y",
+        "along_m": 6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 17,
+        "face": "+Y",
+        "along_m": -6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 18,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 19,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 20,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 21,
+        "face": "+Y",
+        "along_m": 6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 22,
+        "face": "-Y",
+        "along_m": -6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 23,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 24,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 25,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 26,
+        "face": "-Y",
+        "along_m": 6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 27,
+        "face": "-Y",
+        "along_m": -6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 28,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 29,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 30,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 31,
+        "face": "-Y",
+        "along_m": 6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 32,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 5.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 33,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 5.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "SM_Village_Farmhouse_Damaged": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 3,
+        "face": "+X",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 5,
+        "face": "+X",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 6,
+        "face": "-X",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 8,
+        "face": "-X",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 9,
+        "face": "-X",
+        "along_m": -3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 11,
+        "face": "-X",
+        "along_m": 3.0,
+        "sill_m": 3.9,
+        "head_m": 5.3,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 12,
+        "face": "+Y",
+        "along_m": -6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 14,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 15,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 16,
+        "face": "+Y",
+        "along_m": 6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 17,
+        "face": "+Y",
+        "along_m": -6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 18,
+        "face": "+Y",
+        "along_m": -3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 19,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 20,
+        "face": "+Y",
+        "along_m": 3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 21,
+        "face": "+Y",
+        "along_m": 6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 22,
+        "face": "-Y",
+        "along_m": -6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 23,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -9.950000286102295
+      },
+      {
+        "index": 24,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 25,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 26,
+        "face": "-Y",
+        "along_m": 6.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 27,
+        "face": "-Y",
+        "along_m": -6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 28,
+        "face": "-Y",
+        "along_m": -3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -9.949999332427979
+      },
+      {
+        "index": 29,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 30,
+        "face": "-Y",
+        "along_m": 3.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 31,
+        "face": "-Y",
+        "along_m": 6.0,
+        "sill_m": 3.15,
+        "head_m": 4.65,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 4.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 32,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 5.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 33,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 5.0,
+        "head_m": 7.8,
+        "contract_eye_m": 7.5,
+        "proposed_eye_m": 7.5,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "SM_Village_Barn": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 4.5,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 2,
+        "face": "+Y",
+        "along_m": -3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "+Y",
+        "along_m": 3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "-Y",
+        "along_m": -3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "-Y",
+        "along_m": 3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 5.2,
+        "head_m": 6.7,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 5.95,
+        "first_hit_depth_m": -0.11999988555908203
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 5.2,
+        "head_m": 6.7,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 5.95,
+        "first_hit_depth_m": -0.11999988555908203
+      }
+    ],
+    "SM_Village_Barn_Damaged": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 4.5,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 2,
+        "face": "+Y",
+        "along_m": -3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 3,
+        "face": "+Y",
+        "along_m": 3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "-Y",
+        "along_m": -3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -11.950000286102295
+      },
+      {
+        "index": 5,
+        "face": "-Y",
+        "along_m": 3.25,
+        "sill_m": 0.9,
+        "head_m": 2.3,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 6,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 5.2,
+        "head_m": 6.7,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 5.95,
+        "first_hit_depth_m": -0.11999988555908203
+      },
+      {
+        "index": 7,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 5.2,
+        "head_m": 6.7,
+        "contract_eye_m": 4.5,
+        "proposed_eye_m": 5.95,
+        "first_hit_depth_m": -0.11999988555908203
+      }
+    ],
+    "SM_Village_Workshop": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": -3.0,
+        "sill_m": 0.0,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.12000036239624023
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": 3.0,
+        "sill_m": 0.0,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.12000036239624023
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 3,
+        "face": "-X",
+        "along_m": -3.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 5,
+        "face": "-X",
+        "along_m": 3.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 6,
+        "face": "+Y",
+        "along_m": -4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 8,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 9,
+        "face": "+Y",
+        "along_m": 4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "-Y",
+        "along_m": -4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 11,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 12,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "-Y",
+        "along_m": 4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      }
+    ],
+    "SM_Village_Workshop_Damaged": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": -3.0,
+        "sill_m": 0.0,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.12000036239624023
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": 3.0,
+        "sill_m": 0.0,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.12000036239624023
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 3,
+        "face": "-X",
+        "along_m": -3.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 4,
+        "face": "-X",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 5,
+        "face": "-X",
+        "along_m": 3.0,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 6,
+        "face": "+Y",
+        "along_m": -4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 7,
+        "face": "+Y",
+        "along_m": -1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 8,
+        "face": "+Y",
+        "along_m": 1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 9,
+        "face": "+Y",
+        "along_m": 4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 10,
+        "face": "-Y",
+        "along_m": -4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -1.0
+      },
+      {
+        "index": 11,
+        "face": "-Y",
+        "along_m": -1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -10.949999332427979
+      },
+      {
+        "index": 12,
+        "face": "-Y",
+        "along_m": 1.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 13,
+        "face": "-Y",
+        "along_m": 4.5,
+        "sill_m": 2.6,
+        "head_m": 4.0,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 3.3,
+        "first_hit_depth_m": -1.0
+      }
+    ],
+    "SM_Village_Church": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -2.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 2.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 3,
+        "face": "+Y",
+        "along_m": -8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 4,
+        "face": "+Y",
+        "along_m": -4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 5,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 6,
+        "face": "+Y",
+        "along_m": 4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 7,
+        "face": "+Y",
+        "along_m": 8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 8,
+        "face": "-Y",
+        "along_m": -8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 9,
+        "face": "-Y",
+        "along_m": -4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 10,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 11,
+        "face": "-Y",
+        "along_m": 4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 12,
+        "face": "-Y",
+        "along_m": 8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      }
+    ],
+    "SM_Village_Church_Damaged": [
+      {
+        "index": 0,
+        "face": "+X",
+        "along_m": 0.0,
+        "sill_m": 0.0,
+        "head_m": 2.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 1.5,
+        "first_hit_depth_m": -0.14999961853027344
+      },
+      {
+        "index": 1,
+        "face": "+X",
+        "along_m": -2.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 2,
+        "face": "+X",
+        "along_m": 2.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 3,
+        "face": "+Y",
+        "along_m": -8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 4,
+        "face": "+Y",
+        "along_m": -4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 5,
+        "face": "+Y",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 6,
+        "face": "+Y",
+        "along_m": 4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 7,
+        "face": "+Y",
+        "along_m": 8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 8,
+        "face": "-Y",
+        "along_m": -8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 9,
+        "face": "-Y",
+        "along_m": -4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 10,
+        "face": "-Y",
+        "along_m": 0.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 11,
+        "face": "-Y",
+        "along_m": 4.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      },
+      {
+        "index": 12,
+        "face": "-Y",
+        "along_m": 8.0,
+        "sill_m": 2.6,
+        "head_m": 6.2,
+        "contract_eye_m": 1.5,
+        "proposed_eye_m": 4.4,
+        "first_hit_depth_m": -0.1700000762939453
+      }
+    ]
+  }
+}

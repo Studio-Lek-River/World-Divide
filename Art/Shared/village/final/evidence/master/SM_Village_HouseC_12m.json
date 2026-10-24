@@ -1,0 +1,31 @@
+{
+  "cameraLocation": {
+    "x": 1280.2120859954014,
+    "y": -563.8155724715449,
+    "z": 928.2917236212553
+  },
+  "cameraRotation": {
+    "pitch": -35.000000000000014,
+    "yaw": 145.00000000000003,
+    "roll": -1.9413701666484745e-15
+  },
+  "cameraFOV": 60,
+  "grid": {
+    "spacingCm": 0,
+    "extentCm": 0,
+    "height": 0
+  },
+  "labeledActors": [],
+  "target_cm": [
+    475,
+    0,
+    240
+  ],
+  "arm_length_cm": 1200,
+  "label": "Unreal editor preview; not gameplay",
+  "sun_rotation_deg": [
+    -42,
+    135,
+    0
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "cameraLocation": {
+    "x": -12081.243118833918,
+    "y": -8208.129230192137,
+    "z": 20894.368338441516
+  },
+  "cameraRotation": {
+    "pitch": -54.999999999999986,
+    "yaw": 34.99999999999999,
+    "roll": -2.7725639338476256e-15
+  },
+  "cameraFOV": 60,
+  "grid": {
+    "spacingCm": 0,
+    "extentCm": 0,
+    "height": 0
+  },
+  "labeledActors": [],
+  "target_cm": [
+    -353.87921142578125,
+    3.459381103515625,
+    448.33331298828125
+  ],
+  "arm_length_cm": 24960,
+  "label": "Unreal editor preview; not gameplay",
+  "bounds_centre_world_cm": [
+    -353.87921142578125,
+    3.459381103515625,
+    448.33331298828125
+  ],
+  "camera_to_bounds_centre_cm": 24960.0,
+  "manual_separate_LOD_actor": true,
+  "sun_rotation_deg": [
+    -42,
+    135,
+    0
+  ]
+}

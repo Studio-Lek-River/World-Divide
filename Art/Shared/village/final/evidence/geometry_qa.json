@@ -1,0 +1,1290 @@
+{
+  "SM_Village_HouseA": {
+    "triangles": 6120,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.016640949151694853,
+    "bounds_m": [
+      [
+        -5.860000133514404,
+        -4.940000057220459,
+        -0.5
+      ],
+      [
+        6.350000381469727,
+        4.940000057220459,
+        10.479999542236328
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_HouseA_Damaged": {
+    "triangles": 6158,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.016640949151694853,
+    "bounds_m": [
+      [
+        -5.860000133514404,
+        -4.940000057220459,
+        -0.5
+      ],
+      [
+        6.350000381469727,
+        6.251194000244141,
+        10.479999542236328
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_HouseA_Damaged_LOD1": {
+    "triangles": 2988,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.0199872462781855,
+    "bounds_m": [
+      [
+        -5.860000133514404,
+        -4.940000057220459,
+        -0.5
+      ],
+      [
+        6.350000381469727,
+        6.251194000244141,
+        10.479999542236328
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_HouseA_LOD1": {
+    "triangles": 2376,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.0199872462781855,
+    "bounds_m": [
+      [
+        -5.860000133514404,
+        -4.940000057220459,
+        -0.5
+      ],
+      [
+        6.350000381469727,
+        4.940000057220459,
+        10.479999542236328
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_HouseA_Rubble": {
+    "triangles": 1760,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.11523304980653012,
+    "bounds_m": [
+      [
+        -5.586843013763428,
+        -4.5,
+        -0.5
+      ],
+      [
+        5.5,
+        4.5,
+        2.9560177326202393
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_HouseA_Rubble_LOD1": {
+    "triangles": 1568,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.14228477132887374,
+    "bounds_m": [
+      [
+        -5.578237056732178,
+        -4.5,
+        -0.5
+      ],
+      [
+        5.5,
+        4.5,
+        2.9560177326202393
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_HouseB": {
+    "triangles": 6196,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019992298596754766,
+    "bounds_m": [
+      [
+        -7.349999904632568,
+        -4.900000095367432,
+        -0.5
+      ],
+      [
+        7.800000190734863,
+        5.300000190734863,
+        10.760000228881836
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_HouseB_LOD1": {
+    "triangles": 2274,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.029333825858398478,
+    "bounds_m": [
+      [
+        -7.349999904632568,
+        -4.900000095367432,
+        -0.5
+      ],
+      [
+        7.800000190734863,
+        5.300000190734863,
+        10.760000228881836
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_HouseB_Damaged": {
+    "triangles": 6012,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.01995570489106868,
+    "bounds_m": [
+      [
+        -7.349999904632568,
+        -6.051147937774658,
+        -0.5
+      ],
+      [
+        7.800000190734863,
+        5.300000190734863,
+        10.760000228881836
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_HouseB_Damaged_LOD1": {
+    "triangles": 2798,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.01995570489106868,
+    "bounds_m": [
+      [
+        -7.349999904632568,
+        -6.051147937774658,
+        -0.5
+      ],
+      [
+        7.800000190734863,
+        5.300000190734863,
+        10.760000228881836
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_HouseB_Rubble": {
+    "triangles": 1092,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.11523306016110972,
+    "bounds_m": [
+      [
+        -7.0,
+        -4.5,
+        -0.5
+      ],
+      [
+        7.0,
+        4.6358208656311035,
+        2.7400519847869873
+      ]
+    ],
+    "collision_boxes": 1
+  },
+  "SM_Village_HouseB_Rubble_LOD1": {
+    "triangles": 832,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.14399994896090657,
+    "bounds_m": [
+      [
+        -7.0,
+        -4.5,
+        -0.5
+      ],
+      [
+        7.0,
+        4.6224822998046875,
+        2.7400519847869873
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_HouseC": {
+    "triangles": 4412,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019992298596754766,
+    "bounds_m": [
+      [
+        -5.099999904632568,
+        -5.150000095367432,
+        -0.5
+      ],
+      [
+        5.550000190734863,
+        5.150000095367432,
+        9.760000228881836
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_HouseC_LOD1": {
+    "triangles": 1670,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.029333825858398478,
+    "bounds_m": [
+      [
+        -5.099999904632568,
+        -5.150000095367432,
+        -0.5
+      ],
+      [
+        5.550000190734863,
+        5.150000095367432,
+        9.760000228881836
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_HouseC_Damaged": {
+    "triangles": 4676,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019955713924097267,
+    "bounds_m": [
+      [
+        -5.100000381469727,
+        -6.452134132385254,
+        -0.5
+      ],
+      [
+        5.550000190734863,
+        5.150000095367432,
+        9.760000228881836
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_HouseC_Damaged_LOD1": {
+    "triangles": 2219,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019955713924097267,
+    "bounds_m": [
+      [
+        -5.100000381469727,
+        -6.446684837341309,
+        -0.5
+      ],
+      [
+        5.550000190734863,
+        5.150000095367432,
+        9.760000228881836
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_HouseC_Rubble": {
+    "triangles": 1060,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.11523311594092277,
+    "bounds_m": [
+      [
+        -4.75,
+        -5.3130879402160645,
+        -0.5
+      ],
+      [
+        4.81931734085083,
+        4.857135772705078,
+        2.8055455684661865
+      ]
+    ],
+    "collision_boxes": 1
+  },
+  "SM_Village_HouseC_Rubble_LOD1": {
+    "triangles": 804,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.14399996594051404,
+    "bounds_m": [
+      [
+        -4.75,
+        -5.3130879402160645,
+        -0.5
+      ],
+      [
+        4.75,
+        4.790051460266113,
+        2.8055455684661865
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Farmhouse": {
+    "triangles": 7400,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019992298596754766,
+    "bounds_m": [
+      [
+        -9.350000381469727,
+        -5.730000019073486,
+        -0.5
+      ],
+      [
+        9.799999237060547,
+        5.730000019073486,
+        11.260000228881836
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_Farmhouse_LOD1": {
+    "triangles": 2524,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.029333825858398478,
+    "bounds_m": [
+      [
+        -9.350000381469727,
+        -5.730000019073486,
+        -0.5
+      ],
+      [
+        9.799999237060547,
+        5.730000019073486,
+        11.260000228881836
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Farmhouse_Damaged": {
+    "triangles": 6856,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019955684814801523,
+    "bounds_m": [
+      [
+        -9.350000381469727,
+        -7.391400337219238,
+        -0.5
+      ],
+      [
+        9.799999237060547,
+        5.730000019073486,
+        11.260000228881836
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_Farmhouse_Damaged_LOD1": {
+    "triangles": 2991,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019955684814801523,
+    "bounds_m": [
+      [
+        -9.350000381469727,
+        -7.366806507110596,
+        -0.5
+      ],
+      [
+        9.799999237060547,
+        5.730000019073486,
+        11.260000228881836
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Farmhouse_Rubble": {
+    "triangles": 1220,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.11523295478233313,
+    "bounds_m": [
+      [
+        -9.0,
+        -6.026491165161133,
+        -0.5
+      ],
+      [
+        9.0,
+        5.5,
+        2.5223958492279053
+      ]
+    ],
+    "collision_boxes": 1
+  },
+  "SM_Village_Farmhouse_Rubble_LOD1": {
+    "triangles": 948,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.14337220973175638,
+    "bounds_m": [
+      [
+        -9.0,
+        -6.026491165161133,
+        -0.5
+      ],
+      [
+        9.0,
+        5.5,
+        2.5223958492279053
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Barn": {
+    "triangles": 3768,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019992298596754766,
+    "bounds_m": [
+      [
+        -11.100000381469727,
+        -6.900000095367432,
+        -0.5
+      ],
+      [
+        11.100000381469727,
+        6.900000095367432,
+        11.319999694824219
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_Barn_LOD1": {
+    "triangles": 2108,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.029333825858398478,
+    "bounds_m": [
+      [
+        -11.100000381469727,
+        -6.900000095367432,
+        -0.5
+      ],
+      [
+        11.100000381469727,
+        6.900000095367432,
+        11.319999694824219
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Barn_Damaged": {
+    "triangles": 4324,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019955803268335355,
+    "bounds_m": [
+      [
+        -11.100000381469727,
+        -8.060271263122559,
+        -0.5
+      ],
+      [
+        11.100000381469727,
+        6.900000095367432,
+        11.319999694824219
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_Barn_Damaged_LOD1": {
+    "triangles": 2612,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019955803268335355,
+    "bounds_m": [
+      [
+        -11.100000381469727,
+        -8.060271263122559,
+        -0.5
+      ],
+      [
+        11.100000381469727,
+        6.900000095367432,
+        11.319999694824219
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Barn_Rubble": {
+    "triangles": 1220,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.11523286777894606,
+    "bounds_m": [
+      [
+        -10.372577667236328,
+        -6.794565677642822,
+        -0.5
+      ],
+      [
+        10.672723770141602,
+        7.16007137298584,
+        2.8951735496520996
+      ]
+    ],
+    "collision_boxes": 1
+  },
+  "SM_Village_Barn_Rubble_LOD1": {
+    "triangles": 948,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.14384662662454456,
+    "bounds_m": [
+      [
+        -10.27265739440918,
+        -6.6680588722229,
+        -0.5
+      ],
+      [
+        10.488336563110352,
+        7.16007137298584,
+        2.8951735496520996
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Workshop": {
+    "triangles": 4544,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019996458325173414,
+    "bounds_m": [
+      [
+        -8.350000381469727,
+        -6.400000095367432,
+        -0.5
+      ],
+      [
+        8.350000381469727,
+        6.400000095367432,
+        6.920000076293945
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_Workshop_LOD1": {
+    "triangles": 2172,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.029333825858398478,
+    "bounds_m": [
+      [
+        -8.350000381469727,
+        -6.400000095367432,
+        -0.5
+      ],
+      [
+        8.350000381469727,
+        6.400000095367432,
+        6.920000076293945
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Workshop_Damaged": {
+    "triangles": 4844,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019955684814801523,
+    "bounds_m": [
+      [
+        -8.350000381469727,
+        -7.710051536560059,
+        -0.5
+      ],
+      [
+        8.350000381469727,
+        6.400000095367432,
+        6.920000076293945
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_Workshop_Damaged_LOD1": {
+    "triangles": 2675,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019955684814801523,
+    "bounds_m": [
+      [
+        -8.350000381469727,
+        -7.656436443328857,
+        -0.5
+      ],
+      [
+        8.350000381469727,
+        6.400000095367432,
+        6.920000076293945
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Workshop_Rubble": {
+    "triangles": 1156,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.11523312715014081,
+    "bounds_m": [
+      [
+        -8.0,
+        -6.014685153961182,
+        -0.5
+      ],
+      [
+        8.0,
+        6.709080219268799,
+        2.8718597888946533
+      ]
+    ],
+    "collision_boxes": 1
+  },
+  "SM_Village_Workshop_Rubble_LOD1": {
+    "triangles": 892,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.143627402444584,
+    "bounds_m": [
+      [
+        -8.0,
+        -6.014685153961182,
+        -0.5
+      ],
+      [
+        8.0,
+        6.709080219268799,
+        2.8718597888946533
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Church": {
+    "triangles": 7220,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019995520030664887,
+    "bounds_m": [
+      [
+        -18.149999618530273,
+        -5.949999809265137,
+        -0.5
+      ],
+      [
+        11.799999237060547,
+        5.949999809265137,
+        36.0
+      ]
+    ],
+    "collision_boxes": 3
+  },
+  "SM_Village_Church_LOD1": {
+    "triangles": 5286,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.029333825858398478,
+    "bounds_m": [
+      [
+        -18.149999618530273,
+        -5.949999809265137,
+        -0.5
+      ],
+      [
+        11.799999237060547,
+        5.949999809265137,
+        36.0
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Church_Damaged": {
+    "triangles": 7000,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019955684814801523,
+    "bounds_m": [
+      [
+        -18.149999618530273,
+        -7.004092693328857,
+        -0.5
+      ],
+      [
+        11.799999237060547,
+        5.949999809265137,
+        20.799999237060547
+      ]
+    ],
+    "collision_boxes": 3
+  },
+  "SM_Village_Church_Damaged_LOD1": {
+    "triangles": 5003,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.019955684814801523,
+    "bounds_m": [
+      [
+        -18.149999618530273,
+        -7.004092693328857,
+        -0.5
+      ],
+      [
+        11.799999237060547,
+        5.949999809265137,
+        20.799999237060547
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Village_Church_Rubble": {
+    "triangles": 2260,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.03996220976794794,
+    "bounds_m": [
+      [
+        -18.077585220336914,
+        -5.966733455657959,
+        -0.5
+      ],
+      [
+        11.0,
+        5.89754581451416,
+        9.466666221618652
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Village_Church_Rubble_LOD1": {
+    "triangles": 1786,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.03996220976794794,
+    "bounds_m": [
+      [
+        -18.077585220336914,
+        -5.926794528961182,
+        -0.5
+      ],
+      [
+        11.0,
+        5.89754581451416,
+        9.466666221618652
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Bridge_Span_Damaged": {
+    "triangles": 564,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.05999568165830594,
+    "bounds_m": [
+      [
+        -15.0,
+        -7.050000190734863,
+        -1.75
+      ],
+      [
+        15.0,
+        7.050000190734863,
+        1.0
+      ]
+    ],
+    "collision_boxes": 4
+  },
+  "SM_Bridge_Span_Damaged_LOD1": {
+    "triangles": 564,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.05999568165830594,
+    "bounds_m": [
+      [
+        -15.0,
+        -7.050000190734863,
+        -1.75
+      ],
+      [
+        15.0,
+        7.050000190734863,
+        1.0
+      ]
+    ],
+    "collision_boxes": 0
+  },
+  "SM_Bridge_Span_Destroyed": {
+    "triangles": 984,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.03889051613527229,
+    "bounds_m": [
+      [
+        -16.028623580932617,
+        -8.262465476989746,
+        -9.444615364074707
+      ],
+      [
+        16.028623580932617,
+        7.050000190734863,
+        0.8090169429779053
+      ]
+    ],
+    "collision_boxes": 2
+  },
+  "SM_Bridge_Span_Destroyed_LOD1": {
+    "triangles": 984,
+    "slots": [
+      "Brick",
+      "Roof",
+      "Trim",
+      "Glass",
+      "Wood",
+      "Rubble"
+    ],
+    "degenerate_triangles": 0,
+    "degenerate_uv_triangles": 0,
+    "bad_tangents": 0,
+    "minimum_altitude_m": 0.0388905171469382,
+    "bounds_m": [
+      [
+        -16.028623580932617,
+        -8.262465476989746,
+        -9.444615364074707
+      ],
+      [
+        16.028623580932617,
+        7.050000190734863,
+        0.8090169429779053
+      ]
+    ],
+    "collision_boxes": 0
+  }
+}
