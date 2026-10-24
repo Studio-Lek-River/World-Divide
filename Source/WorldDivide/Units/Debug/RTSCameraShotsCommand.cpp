@@ -523,10 +523,12 @@ namespace RTSCameraShots
 			ARTSCameraPawn* Camera = GetCameraPawn();
 			Camera->ApplyTuning(Profiles[Shot.Profile].Tuning);
 			Camera->SetYawNow(Shot.Yaw);
-			Camera->JumpTo(Shot.Focus);
+			// Zoom before the jump: the jump keeps the view inside the pan area at the zoom it finds, and the previous shot's
+			// farthest zoom would hold a near focus a few hundred metres from the map's edge (#465).
 			const float Zoom = Shot.Zoom == EZoom::Min ? Camera->GetMinZoom()
 				: Shot.Zoom == EZoom::Default ? Camera->GetDefaultZoom() : Camera->GetMaxZoom();
 			Camera->SetZoomNow(Zoom);
+			Camera->JumpTo(Shot.Focus);
 			GetController()->SetViewTarget(Camera);
 		}
 
