@@ -1170,8 +1170,9 @@
    ],
    "lods": [
     3000,
-    400
-   ]
+    540
+   ],
+   "lod1_fbx": "fbx/SM_HQ19_WingDish_Elevation_LOD1.fbx"
   },
   "SM_HQ20_DoorBottomSeal": {
    "fbx": "fbx/SM_HQ20_DoorBottomSeal.fbx",

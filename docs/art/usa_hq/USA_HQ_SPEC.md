@@ -151,11 +151,11 @@ Warning lights: the data's `GarageBeacons` lights at the portal's beacon lamps (
 The HQ follows [`MODEL_PERFORMANCE.md`](../MODEL_PERFORMANCE.md) (Buildings) within the large building's budget since its shell was baked from the master (#373); the per-mesh breakdown is in `Art/USA/buildings/usa_hq/report_ue5.md` (LODs).
 
 - Two LODs, LOD0 and LOD1, no Nanite. The whole HQ switches to LOD1 at once at 260 m from the RTS camera (`usa_hq_recipe.SWITCH_DISTANCE`): setup stretches every mesh's bounds over the building's box (`building_art.cover_building`), so no part switches on its own.
-- `SM_HQ_Shell` is the game mesh baked from the master (#373, `Art/USA/buildings/usa_hq/issue373/`), its fine detail in two 2K normal and AO sets on UV1 (`usa_hq_recipe.SHELL_BAKE_*`, the building masters' `ShellBake` switch); it, `SM_HQ_ShellDetail` and the masts have hand-made LOD1s; the moving parts and the flag are reduced to their `BUDGETS`. Meshes under 2,000 triangles keep LOD0 only.
+- `SM_HQ_Shell` is the game mesh baked from the master (#373, `Art/USA/buildings/usa_hq/issue373/`), its fine detail in two 2K normal and AO sets on UV1 (`usa_hq_recipe.SHELL_BAKE_*`, the building masters' `ShellBake` switch); it, `SM_HQ_ShellDetail`, the masts and the wing dish (`usa_hq_recipe.HAND_LOD1`, `Tools/Art/usa_hq_lod1_blender.py`, #406) have hand-made LOD1s; the other moving parts and the flag are reduced to their `BUDGETS`. Meshes under 2,000 triangles keep LOD0 only.
 
 | | LOD0 | LOD1 |
 |---|---|---|
-| Whole HQ, triangles (every part counted each time it is drawn) | 144,485 | 39,596 |
+| Whole HQ, triangles (every part counted each time it is drawn) | 145,701 | 39,960 |
 | Budget asserted by `WorldDivide.Art.USAHeadquarters` | ≤ 150,000 | ≤ 40,000 |
 
 The full-detail delivery is kept for close-ups. Kit pieces mounted on the HQ count towards these budgets ([`BUILDING_KIT.md`](../BUILDING_KIT.md)). Performance acceptance with several HQs is #199.

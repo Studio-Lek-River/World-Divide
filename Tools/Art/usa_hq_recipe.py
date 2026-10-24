@@ -61,11 +61,14 @@ SHELL_UNBAKED = {"MI_HQ14_Paving", "MI_HQ19_Walkpad", "MI_USA_HQ_HQ20_FloorWear"
 BUDGETS = {
     "SM_HQ20_DoorSection_Delivery": (1200, 70),
     "SM_HQ19_Radar_Azimuth": (3000, 400),
-    "SM_HQ19_WingDish_Elevation": (3000, 400),
+    "SM_HQ19_WingDish_Elevation": (3000, 540),
     "SM_HQ20_DriveShaft": (1000, 150),
     "SM_HQ21_NationalFlag_Wind": (4000, 1000),
 }
 SWITCH_DISTANCE = 26000.0
+# The meshes whose LOD1 the engine's reduction breaks get a hand-made one (Tools/Art/usa_hq_lod1_blender.py, #406), its
+# triangles their LOD1 budget.
+HAND_LOD1 = ("SM_HQ19_WingDish_Elevation",)
 
 # Parts too small to see from the default zoom stop drawing past this distance (cm), beyond their last LOD switch.
 SMALL_PART_DRAW_DISTANCE = 12000.0
@@ -278,6 +281,8 @@ def meshes():
             "bounds": [rounded([low[c] for c in "xyz"], 2), rounded([high[c] for c in "xyz"], 2)],
             "lods": list(BUDGETS.get(name, ())),
         }
+        if name in HAND_LOD1:
+            result[name]["lod1_fbx"] = f"fbx/{name}_LOD1.fbx"
     return result
 
 

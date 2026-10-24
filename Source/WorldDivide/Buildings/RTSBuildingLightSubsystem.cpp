@@ -22,6 +22,10 @@ namespace
 		TEXT("rts.Fx.BuildingLightMax"), 24,
 		TEXT("Most real kit lights shown at once in the dark (BUILDING_KIT.md, Light budgets, #391), the nearest buildings' first; a starting hypothesis Gate A measures."));
 
+	TAutoConsoleVariable<int32> CVarBuildingForceLOD(
+		TEXT("rts.Debug.BuildingForceLOD"), -1,
+		TEXT("Forces every building with a LOD switch distance to this LOD at any distance, to picture LOD1 up close (#406); -1 decides by distance."));
+
 	/** Secondary kit lights shine only at this effects quality and above: High. */
 	constexpr int32 SecondaryLightQuality = 2;
 }
@@ -103,7 +107,8 @@ void URTSBuildingLightSubsystem::UpdateAll(float DeltaSeconds)
 		if (Data && Data->LODSwitchDistance > 0.f)
 		{
 			const float Distance = RTSNearestToView::GetDistance(CameraLocations, ViewLocationOverride, Building.GetActorLocation());
-			Building.SetForcedLOD(Distance > Data->LODSwitchDistance ? 1 : 0);
+			const int32 ForcedLOD = CVarBuildingForceLOD.GetValueOnGameThread();
+			Building.SetForcedLOD(ForcedLOD >= 0 ? ForcedLOD : Distance > Data->LODSwitchDistance ? 1 : 0);
 		}
 		if (bDark && Building.IsConstructed() && !Building.GetLightComponents().IsEmpty())
 		{

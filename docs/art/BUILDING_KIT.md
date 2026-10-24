@@ -408,7 +408,8 @@ Gate A closes the framework and the first lighting kit **on the HQ**: catalogue 
 per-instance lens states, the state table, the light budgets, the lighting pieces the HQ needs, and the HQ lit from kit
 fixtures within 7 + 2 lights. The bench measures the hypotheses above and the producer sets the budgets.
 
-Since the shell bake (#373) the HQ draws 144,485 of its 150,000 triangles at LOD0 and 39,596 of 40,000 at LOD1: its kit
+Since the shell bake (#373) and the wing dish's hand-made LOD1 (#406) the HQ draws 145,701 of its 150,000 triangles at LOD0
+and 39,960 of 40,000 at LOD1, kit pieces included: its kit
 fixtures (M7.00-09) have about 5,500 at LOD0 and 400 at LOD1.
 
 Reuse on a second building (the Barracks) is not part of Gate A: it follows when that building is worked on, and must
@@ -470,6 +471,11 @@ What the renderer does, measured with `r.StaticMeshLODDistanceScale` 1.25, 1.5 a
   The HQ's LOD1 switch (#358) was checked on that log: on screen the HQ stays at LOD0 to about 390 m.
 - Forced to LOD1 at 270 m (C2), the HQ's LOD1 shows holes and stray triangles on its roofs. At the renderer's own 390 m it
   shows the same; the `far_450m` shot of the production HQ has them too.
+  The holes were the shell's engine-collapsed LOD1, which the #373 bake replaced. `rts.Debug.BuildingForceLOD 1` forces
+  every building to LOD1 at any distance, so `ue.ps1 -Task buildingshots -Cvars rts.Debug.BuildingForceLOD=1` pictures
+  LOD1 at 12 and 150 m (#406). Seen that way, the engine's 400-triangle wing dish was a blob; it has a hand-made LOD1
+  since #406. The baked shell's LOD1 still differs from LOD0 on the roofs (coping band, thinned lattice racks, vent hoods,
+  the radome) and the core's glazing, which is a follow-up.
 
 **Chosen: C2.** The building decides its LOD once on the game thread (the light subsystem's tick already visits every
 building) and forces it on all its meshes, shell, parts and kit ISMs, with `SetForcedLodModel`, only when it changes.
@@ -493,7 +499,7 @@ which happens only as the camera crosses 260 m; per-instance data survives it.
 | Question | Decision |
 |---|---|
 | How does a shared kit mesh switch LOD with its building? | **C2**: one LOD decision per building on the game thread, forced on all its meshes. Kit meshes are shared; `cover_building` and per-building duplicate meshes are not used for kit pieces. Built in M7.00-05. |
-| The HQ's LOD1 roof holes, which C2 shows from 260 m instead of about 390 m | Fixed in a follow-up issue, not by switching later. |
+| The HQ's LOD1 roof holes, which C2 shows from 260 m instead of about 390 m | Fixed in a follow-up issue, not by switching later. Gone with the #373 bake; the wing dish got a hand-made LOD1 in #406, the shell's remaining LOD1 differences are a follow-up. |
 
 ## Producer decisions (#392)
 
