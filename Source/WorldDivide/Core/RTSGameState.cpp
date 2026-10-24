@@ -1,6 +1,7 @@
 #include "Core/RTSGameState.h"
 
 #include "Buildings/RTSBuilding.h"
+#include "Buildings/RTSCivilBuilding.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Data/RTSBuildingData.h"
 #include "Engine/World.h"
@@ -103,6 +104,27 @@ void ARTSGameState::ForEachBuilding(TFunctionRef<void(ARTSBuilding&)> Visit) con
 			{
 				Visit(*Building);
 			}
+		}
+	}
+}
+
+void ARTSGameState::RegisterCivilBuilding(ARTSCivilBuilding& Building)
+{
+	CivilBuildings.AddUnique(&Building);
+}
+
+void ARTSGameState::UnregisterCivilBuilding(const ARTSCivilBuilding& Building)
+{
+	CivilBuildings.RemoveAllSwap([&Building](const TWeakObjectPtr<ARTSCivilBuilding>& Listed) { return Listed.Get() == &Building || !Listed.IsValid(); });
+}
+
+void ARTSGameState::ForEachCivilBuilding(TFunctionRef<void(ARTSCivilBuilding&)> Visit) const
+{
+	for (const TWeakObjectPtr<ARTSCivilBuilding>& Listed : CivilBuildings)
+	{
+		if (ARTSCivilBuilding* Building = Listed.Get())
+		{
+			Visit(*Building);
 		}
 	}
 }

@@ -1,6 +1,7 @@
 #include "Combat/RTSAreaDamage.h"
 
 #include "Buildings/RTSBuilding.h"
+#include "Buildings/RTSCivilBuilding.h"
 #include "Combat/RTSHealthComponent.h"
 #include "Combat/RTSTargetable.h"
 #include "Core/RTSGameState.h"
@@ -74,10 +75,15 @@ namespace RTSCombat
 		if (const ARTSGameState* GameState = World.GetGameState<ARTSGameState>())
 		{
 			GameState->ForEachBuilding([&](ARTSBuilding& Building) { Consider(Building, Building); });
+			GameState->ForEachCivilBuilding([&](ARTSCivilBuilding& Building) { Consider(Building, Building); });
 		}
 		else
 		{
 			for (TActorIterator<ARTSBuilding> It(&World); It; ++It)
+			{
+				Consider(**It, **It);
+			}
+			for (TActorIterator<ARTSCivilBuilding> It(&World); It; ++It)
 			{
 				Consider(**It, **It);
 			}

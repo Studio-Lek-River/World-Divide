@@ -2,6 +2,7 @@
 
 #include "Combat/RTSHealthComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Core/RTSGameState.h"
 #include "Engine/StaticMesh.h"
 #include "Net/UnrealNetwork.h"
 
@@ -68,8 +69,22 @@ void ARTSCivilBuilding::BeginPlay()
 		}
 		HealthComponent->OnDamaged.AddDynamic(this, &ARTSCivilBuilding::HandleDamaged);
 		UpdateState();
+		// The game state exists by BeginPlay; listed, area damage finds it without scanning every actor.
+		if (ARTSGameState* GameState = GetWorld()->GetGameState<ARTSGameState>())
+		{
+			GameState->RegisterCivilBuilding(*this);
+		}
 	}
 	ShowState();
+}
+
+void ARTSCivilBuilding::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (ARTSGameState* GameState = GetWorld() ? GetWorld()->GetGameState<ARTSGameState>() : nullptr)
+	{
+		GameState->UnregisterCivilBuilding(*this);
+	}
+	Super::EndPlay(EndPlayReason);
 }
 
 void ARTSCivilBuilding::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

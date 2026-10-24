@@ -5,6 +5,7 @@
 #include "RTSGameState.generated.h"
 
 class ARTSBuilding;
+class ARTSCivilBuilding;
 
 UENUM(BlueprintType)
 enum class ERTSMatchResult : uint8
@@ -60,6 +61,15 @@ public:
 	/** Server only. Calls Visit for every standing building of every team. */
 	void ForEachBuilding(TFunctionRef<void(ARTSBuilding&)> Visit) const;
 
+	/** Server only. Lists a civilian building, so blasts find it (#433). */
+	void RegisterCivilBuilding(ARTSCivilBuilding& Building);
+
+	/** Server only. Takes a civilian building off the list. */
+	void UnregisterCivilBuilding(const ARTSCivilBuilding& Building);
+
+	/** Server only. Calls Visit for every listed civilian building, rubble included. */
+	void ForEachCivilBuilding(TFunctionRef<void(ARTSCivilBuilding&)> Visit) const;
+
 	virtual void PostInitializeComponents() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -75,4 +85,7 @@ private:
 
 	/** Server only, not replicated: each team's buildings, so weapons need not scan every actor for them. */
 	TMap<int32, TArray<TWeakObjectPtr<ARTSBuilding>>> BuildingsByTeam;
+
+	/** Server only, not replicated: the map's civilian buildings, which belong to no team. */
+	TArray<TWeakObjectPtr<ARTSCivilBuilding>> CivilBuildings;
 };
