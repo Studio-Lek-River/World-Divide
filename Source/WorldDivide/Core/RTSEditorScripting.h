@@ -154,6 +154,27 @@ public:
 	static bool UseExternalActors(UObject* WorldContextObject);
 
 	/**
+	 * Spawns the actor Label in WorldContextObject's world with one instanced static mesh component per mesh of Meshes, each
+	 * holding an instance at every one of Transforms (world), for map dressing such as River Crossing's fences, lamps and
+	 * poles (#157): a modular prop's parts share one origin, so they go in one call. The instances have no collision and
+	 * never affect navigation; Python cannot add components to an actor. Returns null and logs why without a world, a mesh
+	 * or a transform.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static AActor* SpawnPropInstances(UObject* WorldContextObject, const FString& Label, const TArray<UStaticMesh*>& Meshes,
+		const TArray<FTransform>& Transforms);
+
+	/**
+	 * Spawns the actor Label in WorldContextObject's world with a spline mesh of Mesh (modelled along +X) from each of Starts
+	 * to the matching one of Ends (world cm), hanging Sag of its length lower in the middle, as a power line's cables between
+	 * its poles' insulators (#157). No collision, no navigation, no shadow. Returns null and logs why without a world or a
+	 * mesh, or when Starts and Ends differ in number or are empty.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World Divide|Editor", meta = (WorldContext = "WorldContextObject"))
+	static AActor* SpawnCables(UObject* WorldContextObject, const FString& Label, UStaticMesh* Mesh, const TArray<FVector>& Starts,
+		const TArray<FVector>& Ends, float Sag);
+
+	/**
 	 * Makes Font a runtime font whose default typeface is Face alone, for the UI fonts setup_testmap.py imports: Python
 	 * cannot set the font face of a typeface entry. Returns false without a font or a face.
 	 */

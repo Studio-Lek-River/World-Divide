@@ -1,6 +1,7 @@
 """The greybox of WD_RiverCrossing_01 (#154): the layout of docs/world/maps/WD_RiverCrossing_01/02_MAP_DESIGN.md as a
-landscape, engine cubes, a Water plugin river, the concrete bridges of Tools/Art/bridge_blender.py (#155) and landscape
-spline roads drawn into the landscape's runtime virtual texture (#383).
+landscape, a Water plugin river, the concrete bridges of Tools/Art/bridge_blender.py (#155), landscape spline roads drawn
+into the landscape's runtime virtual texture (#383) and the village of the in-house civilian buildings with its props
+(#157).
 setup_rivercrossing.py builds it only when the level does not exist yet, or anew with ue.ps1 -Task rivercrossing
 -Rebuild: from then on the level is authored by hand (03_TECHNICAL_PLAN.md section 2) and this file is never run on it
 again. The river carves its bed through the landscape's Water edit layer on the GPU, so the build needs a renderer
@@ -19,7 +20,6 @@ import struct
 import unreal
 
 MAP_PATH = "/Game/Maps/WD_RiverCrossing_01"
-CUBE = "/Engine/BasicShapes/Cube.Cube"
 # Landscape collision reports the strongest paint layer's physical material (LANDSCAPE_LAYERS, #156), else the
 # landscape's default (#337, docs/engine/world-landscape.md).
 GROUND_PHYSICAL_MATERIAL = "/Game/Materials/Physical/PM_Dirt"
@@ -139,20 +139,50 @@ SUPPLY_HEIGHT = 300.0
 BUILDERS = 2
 BUILDERS_BEHIND = 24.0
 
-# Village blockout (02 "Central village"), the west bank: (x, y, length along x, width along y, height). The east bank
-# is the same turned about the centre. Streets of at least 10 m between faces; every house stays clear of the river.
-WEST_VILLAGE = (
-    (-135.0, -190.0, 16.0, 12.0, 8.0),
-    (-135.0, -130.0, 14.0, 14.0, 7.0),
-    (-180.0, -160.0, 16.0, 16.0, 9.0),
-    (-135.0, -70.0, 16.0, 12.0, 8.0),
-    (-180.0, -95.0, 14.0, 18.0, 7.0),
-    (-125.0, 0.0, 18.0, 14.0, 12.0),
-    (-180.0, 10.0, 16.0, 14.0, 8.0),
-    (-130.0, 80.0, 14.0, 14.0, 7.0),
-    (-180.0, 90.0, 16.0, 12.0, 8.0),
-    (-120.0, 150.0, 16.0, 14.0, 9.0),
-)
+# The village (02 "Central village", #157): each bank's buildings of the in-house set (#408), ARTSCivilBuilding actors of
+# CIVIL_DIR's DA_Civil_<Type>, as (type, x, y, garrison) along both sides of the bank's main street (the ring road at
+# VILLAGE_STREET_X), each with its door (village.json's entry, on its +X face) toward the street. Both banks are given in
+# the west bank's frame: the east bank's stand turned about the centre, so both have the same streets and distances to
+# the river, the bridges and the stockpiles. They look different, the west bank round a church square (the gap across the
+# street from the church), the east bank a barn and two workshops, one in a chain-link yard (VILLAGE_YARD), but hold the
+# same count, footprints within VILLAGE_AREA_TOLERANCE and, in the garrison buildings (actor tag GARRISON_TAG, D5 of
+# 05_PRODUCER_ACTIONS: tagged now for #252), the same capacity. check_layout holds the streets to 02: no face within
+# VILLAGE_MAIN_STREET / 2 of the main street's centre line, VILLAGE_LANE between neighbours, VILLAGE_RIVER_CLEARANCE from
+# the river.
+VILLAGE_SOURCE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "Art", "Shared", "village",
+                              "village.json")
+CIVIL_DIR = "/Game/Data/Civil"
+VILLAGE = {
+    "W": (
+        ("HouseA", -140.0, -190.0, False),
+        ("HouseC", -140.0, -160.0, True),
+        ("HouseB", -140.0, -120.0, True),
+        ("HouseA", -140.0, -80.0, False),
+        ("Church", -135.0, 0.0, True),
+        ("HouseB", -140.0, 80.0, False),
+        ("Farmhouse", -135.0, 140.0, False),
+        ("Farmhouse", -180.0, -150.0, False),
+        ("Workshop", -180.0, -90.0, False),
+        ("HouseA", -178.0, 60.0, False),
+    ),
+    "E": (
+        ("HouseA", -140.0, -190.0, False),
+        ("HouseC", -140.0, -160.0, False),
+        ("HouseB", -140.0, -120.0, True),
+        ("HouseA", -140.0, -80.0, False),
+        ("Barn", -135.0, 0.0, True),
+        ("Workshop", -138.0, 80.0, True),
+        ("Farmhouse", -135.0, 140.0, False),
+        ("Workshop", -182.0, -5.0, False),
+        ("HouseC", -180.0, -90.0, False),
+        ("HouseA", -178.0, 60.0, False),
+    ),
+}
+GARRISON_TAG = "Garrison"
+GARRISON_BUILDINGS = (3, 4)
+VILLAGE_AREA_TOLERANCE = 0.1
+VILLAGE_MAIN_STREET = 10.0
+VILLAGE_LANE = 7.0
 VILLAGE_RIVER_CLEARANCE = 15.0
 
 # Roads (02 "Road network", #383), the west side's; the east side has the same turned about the centre. Each is (name,
@@ -203,6 +233,62 @@ ROAD_SLOTS = {
 }
 ROAD_MESH = "/Engine/BasicShapes/Cube.Cube"
 ROAD_TILE = 4.0
+
+# The village's dressing (02 "Central village", #157): the in-house roadside kit of #409 in ROADSIDE_DIR, and Poly Haven's
+# power poles, street lamp and chain-link fence, whose meshes and textures are copied out of the never-cooked
+# /Game/PolyHaven into the committed PROPS_DIR, as the grass is, under two masters of their own (build_prop_masters). It
+# is all dressing (URTSEditorScripting::SpawnPropInstances): no collision and no navmesh, so a tank drives through a
+# fence as through a hedgerow; one actor per kind and bank, labelled Props_<bank>_<kind>. Positions are in the west
+# bank's frame (VILLAGE); the east bank's stand turned about the centre.
+ROADSIDE_DIR = "/Game/Art/Shared/Roadside"
+PROPS_DIR = "/Game/World/Props"
+PROP_MASTERS = {False: "M_VillageProp", True: "M_VillagePropMasked"}
+# Poly Haven props: (model, the meshes taken, by name or by a name prefix ending in "_", and the offset in cm that brings
+# the meshes' shared origin to the prop's foot: a modular kit's parts lie side by side in its scene).
+POLYHAVEN_PROPS = {
+    "Pole": ("modular_electricity_poles", ("SM_preset_02_",), (450.0, 0.0)),
+    "Lamp": ("street_lamp_01", ("SM_street_lamp_01",), (0.0, 0.0)),
+    "ChainLink": ("modular_chainlink_fence", ("SM_modular_chainlink_fence_double",), (195.0, 0.0)),
+    "ChainLinkPost": ("modular_chainlink_fence", ("SM_modular_chainlink_fence_post",), (100.0, 100.0)),
+}
+# A fence bay's length: the roadside kit's (roadside.json's rail_bay_cm and wire_bay_cm) and the chain-link panel's.
+RAIL_BAY = 3.0
+WIRE_BAY = 3.0
+CHAINLINK_BAY = 1.91
+# Street lamps every VILLAGE_LAMP_SPACING along the main street's river side, VILLAGE_LAMP_SIDE off its centre line; the
+# power line along its far side, a pole every VILLAGE_POLE_SPACING, two cables from the ends of each pole's cross-arm
+# (POLE_ARM either side of the pole, POLE_WIRE_HEIGHT up) to the next pole's, sagging CABLE_SAG of the span.
+VILLAGE_STREET_SPAN = (-270.0, 270.0)
+VILLAGE_LAMP_SIDE = 5.0
+VILLAGE_LAMP_SPACING = 30.0
+VILLAGE_POLE_SIDE = -6.0
+VILLAGE_POLE_SPACING = 40.0
+POLE_ARM = 0.5
+POLE_WIRE_HEIGHT = 5.8
+CABLE_SAG = 0.02
+CABLE_MESH = f"{ROADSIDE_DIR}/SM_PowerLine_Cable"
+# The signs (roadside kit, face toward +X): (sign, x, y, yaw). Traffic keeps right. At each end of the main street a
+# place-name sign and a 50 limit for the traffic coming in and a give-way for the traffic leaving onto the through road; a
+# priority-road sign on the main road before the junction and a warning before the bridge ramp.
+VILLAGE_SIGNS = (
+    ("place_name", -152.0, -282.0, -90.0),
+    ("speed_50", -152.0, -264.0, -90.0),
+    ("give_way", -162.0, -284.0, 90.0),
+    ("place_name", -162.0, 282.0, 90.0),
+    ("speed_50", -162.0, 264.0, 90.0),
+    ("give_way", -152.0, 284.0, -90.0),
+    ("priority_road", -190.0, -306.0, 180.0),
+    ("warning", -125.0, -306.0, 180.0),
+)
+# Post-and-rail garden fences VILLAGE_GARDEN off the back of every house (GARDEN_TYPES), from VILLAGE_GARDEN past one
+# side to past the other; a pasture of field-wire fence beside the farm with a VILLAGE_GATE gap toward the street; and
+# on the east bank the workshop's chain-link yard. Each run is a polyline of (x, y); bays are stretched to fit a leg.
+GARDEN_TYPES = ("HouseA", "HouseB", "HouseC", "Farmhouse")
+VILLAGE_GARDEN = 5.0
+VILLAGE_PASTURE = ((-205.0, -146.0), (-205.0, -185.0), (-240.0, -185.0), (-240.0, -115.0), (-205.0, -115.0),
+                   (-205.0, -142.0))
+VILLAGE_YARD = {"E": ((-193.0, -20.0), (-215.0, -20.0), (-215.0, 10.0), (-193.0, 10.0))}
+VILLAGE_PROP_CLEARANCE = 1.0
 # The landscape's runtime virtual texture (03 section 5): base colour, normal and roughness, which the landscape material
 # writes and reads (#156) and the roads draw into. RVT_TILE_COUNT and RVT_TILE_SIZE are log2: 2048 tiles of 256 texels,
 # about 5 mm a texel over the landscape, finer than the closest zoom's 7 mm a pixel. Adaptive keeps the page table small.
@@ -529,26 +615,99 @@ def write_weightmaps(heights, file_names):
             file.write(bytes(data))
 
 
+def read_village():
+    """village.json's buildings (#408) by type: capacity, entry and the pristine mesh's bounds in metres."""
+    with open(VILLAGE_SOURCE, encoding="utf-8") as file:
+        village = json.load(file)
+    types = {}
+    for key, building in village["buildings"].items():
+        if building["capacity"] > 0:
+            low, high = village["meshes"][building["states"][0]]["bounds"]
+            types[key] = {"capacity": building["capacity"], "low": [v / 100.0 for v in low], "high": [v / 100.0 for v in high]}
+    return types
+
+
+def village_yaw(x):
+    """A building's yaw in the west bank's frame: its door (+X) toward the main street."""
+    return 0.0 if x < VILLAGE_STREET_X else 180.0
+
+
+def village_buildings(types):
+    """Every village building, both banks, as (bank, index, type, centre, yaw, box, garrison) in world metres: box is the
+    pristine footprint (min x, max x, min y, max y), turned with the building."""
+    buildings = []
+    for bank, entries in VILLAGE.items():
+        for index, (kind, x, y, garrison) in enumerate(entries):
+            low, high = types[kind]["low"], types[kind]["high"]
+            yaw = village_yaw(x)
+            box = (x + low[0], x + high[0], y + low[1], y + high[1]) if yaw == 0.0 else \
+                (x - high[0], x - low[0], y - high[1], y - low[1])
+            centre = (x, y)
+            if bank == "E":
+                centre, yaw = rotate(centre), (yaw + 180.0) % 360.0
+                box = (-box[1], -box[0], -box[3], -box[2])
+            buildings.append((bank, index, kind, centre, yaw, box, garrison))
+    return buildings
+
+
+def box_gap(box, other):
+    """The clear distance between two (min x, max x, min y, max y) boxes along the axis they are apart on, < 0 overlapping."""
+    return max(other[0] - box[1], box[0] - other[1], other[2] - box[3], box[2] - other[3])
+
+
+def box_corners(box):
+    return [(x, y) for x in box[:2] for y in box[2:]]
+
+
 def check_layout():
-    """Raises when the layout breaks a rule the design depends on: a house or a supply source in the river or too close
-    to it, or two houses with less than a 10 m street between them."""
-    houses = [(x, y, length, width) for x, y, length, width, _ in WEST_VILLAGE]
-    for x, y, length, width in houses:
-        for corner_x in (x - length / 2.0, x + length / 2.0):
-            for corner_y in (y - width / 2.0, y + width / 2.0):
-                distance, half_width = river_distance(corner_x, corner_y)
-                if distance < half_width + VILLAGE_RIVER_CLEARANCE:
-                    raise RuntimeError(f"Village house at ({x}, {y}) stands within {VILLAGE_RIVER_CLEARANCE} m of the river")
-    everything = houses + [(*rotate((x, y)), length, width) for x, y, length, width in houses]
-    for index, (x, y, length, width) in enumerate(everything):
-        for other_x, other_y, other_length, other_width in everything[index + 1:]:
-            gap = max(abs(x - other_x) - (length + other_length) / 2.0, abs(y - other_y) - (width + other_width) / 2.0)
-            if gap < 10.0:
-                raise RuntimeError(f"Village houses at ({x}, {y}) and ({other_x}, {other_y}) leave a {gap:.1f} m street")
-    for name, (x, y), _ in WEST_SOURCES:
+    """Raises when the layout breaks a rule the design depends on (02 "Central village"): a building or a supply source in
+    the river or too close to it, a building in the main street's VILLAGE_MAIN_STREET or less than VILLAGE_LANE from a
+    neighbour or a stockpile, or banks that differ in count, garrison capacity or footprint."""
+    types = read_village()
+    buildings = village_buildings(types)
+    sources = [(name, point) for name, point, _ in WEST_SOURCES] + [(name, rotate(point)) for name, point, _ in WEST_SOURCES]
+    stockpiles = [(point[0] - SUPPLY_FOOTPRINT[0] / 2.0, point[0] + SUPPLY_FOOTPRINT[0] / 2.0,
+                   point[1] - SUPPLY_FOOTPRINT[1] / 2.0, point[1] + SUPPLY_FOOTPRINT[1] / 2.0) for _, point in sources]
+    for bank, index, kind, centre, _, box, _ in buildings:
+        where = f"Village {bank}{index + 1:02d} ({kind} at {centre[0]:.0f}, {centre[1]:.0f})"
+        for corner in box_corners(box):
+            distance, half_width = river_distance(*corner)
+            if distance < half_width + VILLAGE_RIVER_CLEARANCE:
+                raise RuntimeError(f"{where} stands within {VILLAGE_RIVER_CLEARANCE} m of the river")
+        street = VILLAGE_STREET_X if bank == "W" else -VILLAGE_STREET_X
+        if box[0] - VILLAGE_MAIN_STREET / 2.0 < street < box[1] + VILLAGE_MAIN_STREET / 2.0:
+            raise RuntimeError(f"{where} stands in the {VILLAGE_MAIN_STREET:.0f} m main street")
+        for other_bank, other_index, other_kind, _, _, other, _ in buildings:
+            if (other_bank, other_index) > (bank, index) and box_gap(box, other) < VILLAGE_LANE:
+                raise RuntimeError(f"{where} and {other_bank}{other_index + 1:02d} ({other_kind}) leave a "
+                                   f"{box_gap(box, other):.1f} m lane, under {VILLAGE_LANE:.0f}")
+        for stockpile in stockpiles:
+            if box_gap(box, stockpile) < VILLAGE_LANE:
+                raise RuntimeError(f"{where} stands within {VILLAGE_LANE:.0f} m of a supply source")
+    for name, (x, y) in sources:
         distance, half_width = river_distance(x, y)
         if distance < half_width + 20.0:
             raise RuntimeError(f"Supply source {name} lies within 20 m of the river")
+
+    banks = {}
+    for bank, _, kind, _, _, box, garrison in buildings:
+        count, garrisons, capacity, area = banks.get(bank, (0, 0, 0, 0.0))
+        banks[bank] = (count + 1, garrisons + garrison, capacity + (types[kind]["capacity"] if garrison else 0),
+                       area + (box[1] - box[0]) * (box[3] - box[2]))
+    (west_count, west_garrisons, west_capacity, west_area), (east_count, east_garrisons, east_capacity, east_area) = \
+        banks["W"], banks["E"]
+    if west_count != east_count or west_capacity != east_capacity:
+        raise RuntimeError(f"The banks differ: {west_count} and {east_count} buildings, garrison capacity {west_capacity} "
+                           f"and {east_capacity}")
+    for garrisons in (west_garrisons, east_garrisons):
+        if not GARRISON_BUILDINGS[0] <= garrisons <= GARRISON_BUILDINGS[1]:
+            raise RuntimeError(f"A bank has {garrisons} garrison buildings, not {GARRISON_BUILDINGS[0]} to "
+                               f"{GARRISON_BUILDINGS[1]}")
+    if abs(west_area - east_area) > VILLAGE_AREA_TOLERANCE * max(west_area, east_area):
+        raise RuntimeError(f"The banks' footprints differ: {west_area:.0f} and {east_area:.0f} m2")
+    unreal.log(f"rivercrossing_greybox: village of {west_count} + {east_count} buildings, garrison capacity "
+               f"{west_capacity} a bank in {west_garrisons} and {east_garrisons} buildings, footprints {west_area:.0f} and "
+               f"{east_area:.0f} m2")
 
 
 def cm(point, z=0.0):
@@ -569,20 +728,6 @@ def spawn(actor_class, location, yaw=0.0, label=None):
     if label:
         actor.set_actor_label(label)
     return actor
-
-
-def spawn_cube(label, center, size, yaw=0.0, material=None, collides=True):
-    """An engine cube of size (x, y, z) metres around center (x, y, z)."""
-    cube = spawn(unreal.StaticMeshActor, cm(center[:2], center[2]), yaw, label)
-    mesh = cube.static_mesh_component
-    mesh.set_static_mesh(unreal.load_asset(CUBE))
-    cube.set_actor_scale3d(unreal.Vector(*size))
-    if material:
-        mesh.set_material(0, unreal.load_asset(material))
-    if not collides:
-        mesh.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
-        mesh.set_editor_property("can_ever_affect_navigation", False)
-    return cube
 
 
 def spawn_nav_null(label, center, size, yaw=0.0):
@@ -708,8 +853,7 @@ def ramp_roads():
 def check_roads():
     """Raises when a road (02 "Road network") breaks a rule: a point near the river, a house in the road or its falloff, or a
     curve tighter than 25 m."""
-    houses = [(x, y, length, width) for x, y, length, width, _ in WEST_VILLAGE]
-    houses += [(*rotate((x, y)), length, width) for x, y, length, width in houses]
+    houses = [box for _, _, _, _, _, box, _ in village_buildings(read_village())]
     for name, kind, waypoints in WEST_ROADS:
         width, falloff, _ = ROAD_KINDS[kind]
         points = road_path(waypoints)
@@ -718,10 +862,11 @@ def check_roads():
             if distance < half_width + ROAD_RIVER_CLEARANCE:
                 raise RuntimeError(f"Road {name} passes within {ROAD_RIVER_CLEARANCE} m of the river at ({x:.0f}, {y:.0f})")
             for side in (1.0, -1.0):
-                for house_x, house_y, length, house_width in houses:
-                    gap = max(abs(side * x - house_x) - length / 2.0, abs(side * y - house_y) - house_width / 2.0)
+                for house in houses:
+                    gap = box_gap(house, (side * x, side * x, side * y, side * y))
                     if gap < width / 2.0 + falloff + ROAD_HOUSE_CLEARANCE:
-                        raise RuntimeError(f"Road {name} runs {gap:.1f} m from the house at ({house_x}, {house_y})")
+                        raise RuntimeError(f"Road {name} runs {gap:.1f} m from the house at ({(house[0] + house[1]) / 2.0:.0f}, "
+                                           f"{(house[2] + house[3]) / 2.0:.0f})")
         # The radius through three neighbouring points (circumradius) never under 25 m.
         for a, b, c in zip(points, points[1:], points[2:]):
             cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
@@ -1235,17 +1380,243 @@ def spawn_bridges(meshes):
 
 
 def spawn_village():
-    for bank, flip in (("W", False), ("E", True)):
-        for index, (x, y, length, width, house_height) in enumerate(WEST_VILLAGE):
-            point = rotate((x, y)) if flip else (x, y)
-            base = min(height(point[0] + dx, point[1] + dy) for dx in (-length / 2.0, length / 2.0)
-                       for dy in (-width / 2.0, width / 2.0))
-            # Sunk a metre into the ground; a null nav area over it so Recast leaves no island on its roof.
-            center = (point[0], point[1], base - 1.0 + (house_height + 1.0) / 2.0)
-            size = (length, width, house_height + 1.0)
-            label = f"Block_Village{bank}{index + 1:02d}"
-            spawn_cube(label, center, size)
-            spawn_nav_null(f"{label}_NavNull", center, (size[0], size[1], size[2] + 1.0))
+    """Both banks' buildings (VILLAGE) as ARTSCivilBuilding actors of their DA_Civil_<Type>, labelled Village_<bank><nn>,
+    the garrison buildings tagged GARRISON_TAG. Each stands on its footprint's lowest corner, its plinth (half a metre
+    under the mesh's origin) closing the gap on a slope, under a null nav area of its footprint and height, so Recast
+    leaves no island on its roof."""
+    types = read_village()
+    for bank, index, kind, centre, yaw, box, garrison in village_buildings(types):
+        path = f"{CIVIL_DIR}/DA_Civil_{kind}"
+        data = unreal.load_asset(path)
+        if not data:
+            raise RuntimeError(f"{path} is missing: run ue.ps1 -Task setup first (#408)")
+        base = min(height(*corner) for corner in box_corners(box))
+        label = f"Village_{bank}{index + 1:02d}"
+        building = spawn(unreal.RTSCivilBuilding, cm(centre, base), yaw, label)
+        building.set_editor_property("data", data)
+        if garrison:
+            building.set_editor_property("tags", [unreal.Name(GARRISON_TAG)])
+        tall = types[kind]["high"][2] + 1.0
+        spawn_nav_null(f"{label}_NavNull", ((box[0] + box[1]) / 2.0, (box[2] + box[3]) / 2.0, base + tall / 2.0 - 1.0),
+                       (box[1] - box[0], box[3] - box[2], tall + 1.0))
+
+
+def build_prop_masters(defaults):
+    """PROP_MASTERS, the Poly Haven props' materials (as /Game/PolyHaven's M_PolyHavenProp and M_PolyHavenPropMasked, which
+    are not cooked): base colour, normal and the ARM's AO, roughness and metalness; the masked one is two-sided and masked
+    by the alpha map's red. defaults are textures by kind, for the samplers' types. Returns them by masked."""
+    masters = {}
+    for masked, name in PROP_MASTERS.items():
+        path = f"{PROPS_DIR}/{name}"
+        if unreal.EditorAssetLibrary.does_asset_exist(path):
+            material = unreal.load_asset(path)
+        else:
+            material = asset_tools.create_asset(name, PROPS_DIR, unreal.Material, unreal.MaterialFactoryNew())
+        editing.delete_all_material_expressions(material)
+        samplers = {}
+        kinds = (("BaseColor", "BC", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR),
+                 ("Normal", "N", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL),
+                 ("ARM", "ARM", unreal.MaterialSamplerType.SAMPLERTYPE_MASKS))
+        if masked:
+            kinds += (("Alpha", "A", unreal.MaterialSamplerType.SAMPLERTYPE_MASKS),)
+        for index, (parameter, kind, sampler_type) in enumerate(kinds):
+            sample = material_node(material, unreal.MaterialExpressionTextureSampleParameter2D, -600, -300 + 350 * index)
+            sample.set_editor_property("parameter_name", parameter)
+            sample.set_editor_property("texture", defaults[kind])
+            sample.set_editor_property("sampler_type", sampler_type)
+            samplers[kind] = sample
+        editing.connect_material_property(samplers["BC"], "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
+        editing.connect_material_property(samplers["N"], "RGB", unreal.MaterialProperty.MP_NORMAL)
+        editing.connect_material_property(samplers["ARM"], "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
+        editing.connect_material_property(samplers["ARM"], "G", unreal.MaterialProperty.MP_ROUGHNESS)
+        editing.connect_material_property(samplers["ARM"], "B", unreal.MaterialProperty.MP_METALLIC)
+        if masked:
+            editing.connect_material_property(samplers["A"], "R", unreal.MaterialProperty.MP_OPACITY_MASK)
+            material.set_editor_property("blend_mode", unreal.BlendMode.BLEND_MASKED)
+            material.set_editor_property("two_sided", True)
+        # The Poly Haven meshes are Nanite, drawn as instances.
+        for usage in (unreal.MaterialUsage.MATUSAGE_INSTANCED_STATIC_MESHES, unreal.MaterialUsage.MATUSAGE_NANITE):
+            editing.set_material_usage(material, usage)
+            if not editing.has_material_usage(material, usage):
+                raise RuntimeError(f"{name}: could not set the usage {usage}")
+        editing.recompile_material(material)
+        masters[masked] = material
+    return masters
+
+
+def build_prop_assets():
+    """POLYHAVEN_PROPS' meshes copied from /Game/PolyHaven into PROPS_DIR, each slot's instance remade there under
+    PROP_MASTERS with its textures copied too, so nothing of the level points into the never-cooked folder. Does not save;
+    returns the meshes by prop."""
+    sources = {}
+    for prop, (model, wanted, _) in POLYHAVEN_PROPS.items():
+        folder = f"{POLYHAVEN_DIR}/{model}"
+        names = sorted(path.split(".")[0].rsplit("/", 1)[1] for path in unreal.EditorAssetLibrary.list_assets(folder, recursive=False))
+        meshes = [name for name in names if any(name.startswith(w) if w.endswith("_") else name == w for w in wanted)]
+        if not meshes:
+            raise RuntimeError(f"No {wanted} in {folder}: run ue.ps1 -Task freeassets (#409)")
+        sources[prop] = (model, meshes)
+
+    def texture(source, parameter):
+        if source is None:
+            return None
+        found = editing.get_material_instance_texture_parameter_value(source, parameter)
+        if not found or found.get_path_name().startswith(PROPS_DIR):
+            return found
+        return copy_asset(found.get_path_name().split(".")[0], f"{PROPS_DIR}/{found.get_name()}")
+
+    # The slots' instances by name, with their textures, from the source meshes (or a copy made before).
+    slots = {}
+    for prop, (model, meshes) in sources.items():
+        for name in meshes:
+            source = unreal.load_asset(f"{POLYHAVEN_DIR}/{model}/{name}")
+            for slot in source.static_materials:
+                interface = slot.material_interface
+                if interface and interface.get_name() not in slots:
+                    slots[interface.get_name()] = {parameter: texture(interface, parameter)
+                                                   for parameter in ("BaseColor", "Normal", "ARM", "Alpha")}
+    defaults = {}
+    for textures in slots.values():
+        for parameter, kind in (("BaseColor", "BC"), ("Normal", "N"), ("ARM", "ARM"), ("Alpha", "A")):
+            if textures[parameter] and kind not in defaults:
+                defaults[kind] = textures[parameter]
+    masters = build_prop_masters(defaults)
+    made = {}
+    for name, textures in slots.items():
+        made[name] = instance(PROPS_DIR, name, masters[textures["Alpha"] is not None])
+        for parameter, value in textures.items():
+            if value:
+                editing.set_material_instance_texture_parameter_value(made[name], parameter, value)
+        editing.update_material_instance(made[name])
+
+    props = {}
+    for prop, (model, meshes) in sources.items():
+        props[prop] = []
+        for name in meshes:
+            source = unreal.load_asset(f"{POLYHAVEN_DIR}/{model}/{name}")
+            mesh = copy_asset(f"{POLYHAVEN_DIR}/{model}/{name}", f"{PROPS_DIR}/{name}")
+            for index, slot in enumerate(source.static_materials):
+                if slot.material_interface:
+                    mesh.set_material(index, made[slot.material_interface.get_name()])
+            props[prop].append(mesh)
+    return props
+
+
+def prop_transform(point, z, yaw, offset=(0.0, 0.0), length=1.0):
+    """A dressing instance at point (metres, z the ground) turned yaw, its meshes' origin offset cm in its own frame, and
+    stretched length times along its X."""
+    turn = math.radians(yaw)
+    along = offset[0] * length
+    shift = (along * math.cos(turn) - offset[1] * math.sin(turn), along * math.sin(turn) + offset[1] * math.cos(turn))
+    location = unreal.Vector(point[0] * 100.0 + shift[0], point[1] * 100.0 + shift[1], z * 100.0)
+    return unreal.Transform(location, unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw), unreal.Vector(length, 1.0, 1.0))
+
+
+def fence_bays(points, bay):
+    """A fence along the polyline points: (start, yaw, stretch) of each bay, a whole number of bays a leg stretched to fit
+    it, and the corners and both ends, where the posts close the run."""
+    bays = []
+    for start, end in zip(points, points[1:]):
+        length = math.dist(start, end)
+        count = max(1, round(length / bay))
+        yaw = math.degrees(math.atan2(end[1] - start[1], end[0] - start[0]))
+        for step in range(count):
+            at = (start[0] + (end[0] - start[0]) * step / count, start[1] + (end[1] - start[1]) * step / count)
+            bays.append((at, yaw, length / count / bay))
+    return bays, list(points)
+
+
+def village_props(bank, buildings):
+    """The dressing of one bank, in world metres: {kind: [(point, yaw, stretch)]} for the kinds spawn_props lays, and the
+    cables as (start, end) pairs (x, y, z). Raises when a prop stands in a building, in the river or on a supply source."""
+    flip = (lambda point: rotate(point)) if bank == "E" else (lambda point: point)
+    boxes = [box for other_bank, _, _, _, _, box, _ in buildings if other_bank == bank]
+    props = {kind: [] for kind in ("Lamp", "Pole", "PostRail", "PostRailEnd", "FieldWire", "FieldWireEnd", "ChainLink",
+                                   "ChainLinkPost")}
+    props.update({f"Sign_{sign}": [] for sign, _, _, _ in VILLAGE_SIGNS})
+    turn = 180.0 if bank == "E" else 0.0
+
+    def add(kind, point, yaw, stretch=1.0):
+        props[kind].append((flip(point), yaw + turn, stretch))
+
+    def lay(kinds, points, bay):
+        bays, posts = fence_bays(points, bay)
+        for at, yaw, stretch in bays:
+            add(kinds[0], at, yaw, stretch)
+        for post in posts:
+            add(kinds[1], post, 0.0)
+
+    steps = int((VILLAGE_STREET_SPAN[1] - VILLAGE_STREET_SPAN[0]) / VILLAGE_LAMP_SPACING)
+    for step in range(steps + 1):
+        add("Lamp", (VILLAGE_STREET_X + VILLAGE_LAMP_SIDE, VILLAGE_STREET_SPAN[0] + VILLAGE_LAMP_SPACING * step), 0.0)
+    poles = []
+    steps = int((VILLAGE_STREET_SPAN[1] - VILLAGE_STREET_SPAN[0]) / VILLAGE_POLE_SPACING)
+    for step in range(steps + 1):
+        pole = (VILLAGE_STREET_X + VILLAGE_POLE_SIDE, VILLAGE_STREET_SPAN[0] + VILLAGE_POLE_SPACING * step)
+        add("Pole", pole, 0.0)
+        poles.append(pole)
+    cables = []
+    for start, end in zip(poles, poles[1:]):
+        for side in (-POLE_ARM, POLE_ARM):
+            ends = [flip((point[0] + side, point[1])) for point in (start, end)]
+            cables.append(tuple((x, y, height(x, y) + POLE_WIRE_HEIGHT) for x, y in ends))
+    for sign, x, y, yaw in VILLAGE_SIGNS:
+        add(f"Sign_{sign}", (x, y), yaw)
+    for _, _, kind, centre, yaw, box, _ in [b for b in buildings if b[0] == bank and b[2] in GARDEN_TYPES]:
+        # The back is the face away from the street, in the west bank's frame.
+        west = box if bank == "W" else (-box[1], -box[0], -box[3], -box[2])
+        back = west[0] - VILLAGE_GARDEN if (west[0] + west[1]) / 2.0 < VILLAGE_STREET_X else west[1] + VILLAGE_GARDEN
+        lay(("PostRail", "PostRailEnd"), ((back, west[2] - VILLAGE_GARDEN), (back, west[3] + VILLAGE_GARDEN)), RAIL_BAY)
+    lay(("FieldWire", "FieldWireEnd"), VILLAGE_PASTURE, WIRE_BAY)
+    if bank in VILLAGE_YARD:
+        lay(("ChainLink", "ChainLinkPost"), VILLAGE_YARD[bank], CHAINLINK_BAY)
+
+    sources = [point for _, point, _ in WEST_SOURCES] + [rotate(point) for _, point, _ in WEST_SOURCES]
+    for kind, placed in props.items():
+        for point, _, _ in placed:
+            spot = (point[0], point[0], point[1], point[1])
+            distance, half_width = river_distance(*point)
+            if distance < half_width + VILLAGE_RIVER_CLEARANCE:
+                raise RuntimeError(f"Village prop {kind} at ({point[0]:.0f}, {point[1]:.0f}) stands by the river")
+            for box in boxes:
+                if box_gap(box, spot) < VILLAGE_PROP_CLEARANCE:
+                    raise RuntimeError(f"Village prop {kind} at ({point[0]:.0f}, {point[1]:.0f}) stands in a building")
+            for source in sources:
+                if max(abs(point[0] - source[0]), abs(point[1] - source[1])) < SUPPLY_FOOTPRINT[0] / 2.0 + VILLAGE_PROP_CLEARANCE:
+                    raise RuntimeError(f"Village prop {kind} at ({point[0]:.0f}, {point[1]:.0f}) stands on a supply source")
+    return props, cables
+
+
+def spawn_props(world, props):
+    """Both banks' dressing (village_props) in world, each kind as one Props_<bank>_<kind> actor of instances
+    (POLYHAVEN_PROPS' copies in props, the roadside kit's meshes), and the power line's cables as Props_<bank>_Cables."""
+    meshes = dict(props)
+    for kind, name in (("PostRail", "SM_Fence_PostRail"), ("PostRailEnd", "SM_Fence_PostRail_End"),
+                       ("FieldWire", "SM_Fence_FieldWire"), ("FieldWireEnd", "SM_Fence_FieldWire_End")):
+        meshes[kind] = [unreal.load_asset(f"{ROADSIDE_DIR}/{name}")]
+    for sign, _, _, _ in VILLAGE_SIGNS:
+        meshes[f"Sign_{sign}"] = [unreal.load_asset(f"{ROADSIDE_DIR}/SM_Sign_{sign}")]
+    cable = unreal.load_asset(CABLE_MESH)
+    for kind, found in meshes.items():
+        if not found or None in found:
+            raise RuntimeError(f"The village's {kind} meshes are missing: run ue.ps1 -Task freeassets (#409)")
+    if not cable:
+        raise RuntimeError(f"{CABLE_MESH} is missing: run ue.ps1 -Task freeassets (#409)")
+
+    buildings = village_buildings(read_village())
+    for bank in VILLAGE:
+        placed, cables = village_props(bank, buildings)
+        for kind, instances in placed.items():
+            if not instances:
+                continue
+            offset = POLYHAVEN_PROPS[kind][2] if kind in POLYHAVEN_PROPS else (0.0, 0.0)
+            transforms = [prop_transform(point, height(*point), yaw, offset, stretch) for point, yaw, stretch in instances]
+            if not unreal.RTSEditorScripting.spawn_prop_instances(world, f"Props_{bank}_{kind}", meshes[kind], transforms):
+                raise RuntimeError(f"Could not lay the village's {kind} (SpawnPropInstances in the log says why)")
+        starts = [unreal.Vector(x * 100.0, y * 100.0, z * 100.0) for (x, y, z), _ in cables]
+        ends = [unreal.Vector(x * 100.0, y * 100.0, z * 100.0) for _, (x, y, z) in cables]
+        if not unreal.RTSEditorScripting.spawn_cables(world, f"Props_{bank}_Cables", cable, starts, ends, CABLE_SAG):
+            raise RuntimeError("Could not string the village's power line (SpawnCables in the log says why)")
 
 
 def spawn_side(spot, base, yaw):
@@ -1277,12 +1648,12 @@ def spawn_lighting():
     spawn(unreal.SkyAtmosphere, cm((0.0, 0.0)), label="SkyAtmosphere")
 
 
-def build_greybox(world, heightmap_file, river_material, bridge_meshes, road_materials):
+def build_greybox(world, heightmap_file, river_material, bridge_meshes, road_materials, props):
     """Fills world, a new empty level, with the greybox: One File Per Actor, the landscape with its paint layers, grass and
     material (#156), the river in river_material
     and its Water_ blockers, the bridges of bridge_meshes (build_bridge_assets), the runtime virtual texture and the roads
-    in road_materials (build_road_materials), the village, both sides' start spots, builders and supply sources, the
-    lighting and the navmesh bounds. Does not save."""
+    in road_materials (build_road_materials), the village (#157) and its dressing of props (build_prop_assets), both
+    sides' start spots, builders and supply sources, the lighting and the navmesh bounds. Does not save."""
     check_layout()
     if not unreal.RTSEditorScripting.use_external_actors(world):
         raise RuntimeError(f"Could not turn on One File Per Actor in {MAP_PATH}")
@@ -1307,6 +1678,7 @@ def build_greybox(world, heightmap_file, river_material, bridge_meshes, road_mat
     spawn_bridges(bridge_meshes)
     create_roads(world, road_materials, texture)
     spawn_village()
+    spawn_props(world, props)
     yaw = math.degrees(math.atan2(-WEST_BASE[1], -WEST_BASE[0]))
     spawn_side(0, WEST_BASE, yaw)
     spawn_side(1, rotate(WEST_BASE), yaw + 180.0)

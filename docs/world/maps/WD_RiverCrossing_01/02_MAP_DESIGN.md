@@ -123,6 +123,34 @@ The bridges can be destroyed later (DESIGN_FOUNDATION §6, persistent ruins). Th
 - **Streets:** at least 10 m between building faces on the main street and at least 7 m on side lanes. That leaves room for a tank to turn (pathing turns are visual, `FaceTowardYaw`, but believability needs it).
 - **Objective:** one capturable supply stockpile per bank (DESIGN_FOUNDATION §7), at about (-90, 40) and (90, -40).
 
+### Village layout (#157)
+
+`rivercrossing_greybox.py` (`VILLAGE`) lays out both banks from the in-house set of #408 (`ARTSCivilBuilding` with `DA_Civil_<Type>`), 10 buildings per bank, each with its door toward the bank's main street, the ring road at x = ∓157 m. Both banks use the same street, the same lots and the same distances to the river and the stockpiles. The west bank has a church square: the church faces an empty lot across the street. The east bank has a barn and two workshops, one with a chain-link yard.
+
+| | West bank | East bank |
+|---|---|---|
+| Buildings | 3 × village house, 2 × semi-detached, corner house, church, 2 × farmhouse, workshop | 3 × village house, semi-detached, 2 × corner house, barn, 2 × workshop, farmhouse |
+| Footprint | 1,781 m² | 1,678 m² (6% less) |
+| Garrison (actor tag `Garrison`, D5) | church 10, semi-detached 6, corner house 4 = **20** | barn 8, workshop 6, semi-detached 6 = **20** |
+
+- **Streets.** No building comes within 9 m of the main street's centre line (the ring road and its falloff), so its faces stand at least 18 m apart. Side lanes are at least 7 m, and every building stands at least 15 m from the river. The generator refuses a layout that breaks any of these rules or the equal capacity.
+- **Collision.** Each building's mesh is its collision, and a null nav volume over its footprint keeps the navmesh off its roof.
+- **Props (#409).** These are dressing only, with no collision and no navmesh:
+  - Street lamps every 30 m along the main street's river side.
+  - A power line on its far side, a pole every 40 m, with two `SM_PowerLine_Cable` spline-mesh cables from each pole's cross-arm.
+  - Place-name, 50, give-way, priority-road and warning signs.
+  - Post-and-rail garden fences behind the houses.
+  - A field-wire pasture by the farm.
+  - The east bank's chain-link yard.
+  
+  The Poly Haven meshes and textures are copied into the committed `/Game/World/Props` under their own masters, so the level never points into the uncooked `/Game/PolyHaven`.
+- **Checks.** `WorldDivide.Maps.RiverCrossing.Layout` checks:
+  - Equal counts and garrison capacity on both banks.
+  - No building in either 10 m main street.
+  - A tank drives each main street end to end (565 m along a 562 m street).
+  - The base routes stay within 3%. The enemy village stockpile is 0.7% apart, since the banks' buildings differ.
+- **Camera.** `ue.ps1 -Task camerashots -Map /Game/Maps/WD_RiverCrossing_01` adds `village_west` and `village_east`.
+
 ## Road network
 
 | Road | Type | Purpose |
@@ -163,7 +191,7 @@ Measured in the greybox phase with the navmesh and recorded in phase 2 of the ro
 - [x] Each side has the same number of supply sources, at the same distances (safe, forward, village).
 - [x] Each side has one hill of the same height, the same distance from its home bridge.
 - [ ] The cover around both bridges is equal: the same copse sizes and the same distances. *(No copses yet; they come with the vegetation in phase 6.)*
-- [x] Each village bank has the same number of buildings and the same garrison capacity. *(The buildings match; the garrison buildings are chosen in phase 5.)*
+- [x] Each village bank has the same number of buildings and the same garrison capacity. *(10 buildings a bank, 20 garrison capacity in 3 tagged buildings each, #157.)*
 - [x] There is no path from either base to the other that avoids both bridges.
 - [x] Building placement succeeds at no fewer than N test positions per base pad (N = 16).
 - [x] Starting units spawn and path to both bridges on both sides.

@@ -6,6 +6,7 @@
 #include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilderComponent.h"
 #include "Buildings/RTSBuilding.h"
+#include "Buildings/RTSCivilBuilding.h"
 #include "Buildings/RTSGarageComponent.h"
 #include "Buildings/RTSProductionComponent.h"
 #include "Combat/RTSHealthComponent.h"
@@ -16,6 +17,7 @@
 #include "Data/RTSAIBuildOrderData.h"
 #include "Data/RTSAircraftData.h"
 #include "Data/RTSBuildingData.h"
+#include "Data/RTSCivilBuildingData.h"
 #include "Data/RTSFactionData.h"
 #include "Data/RTSHarvesterData.h"
 #include "Data/RTSUnitData.h"
@@ -983,6 +985,21 @@ namespace RTSScaleTests
 	const float PadOffsets[] = { -12000.f, -6000.f, 6000.f, 12000.f };
 	/** Path samples along each leg, to find any stretch over the river. */
 	constexpr float RiverSampleStep = 200.f;
+	/**
+	 * Each village bank's main street (02 "Central village", #157): the ring road at X = -+VillageStreetX
+	 * (rivercrossing_greybox.py's VILLAGE_STREET_X) between the bridge roads at Y = -+VillageStreetEnd, VillageMainStreet
+	 * wide clear of buildings. A tank drives it from VillageStreetInset inside one end to as far inside the other, at most
+	 * VillageStreetDetour times the straight line, so the street runs through the bank rather than round it.
+	 */
+	constexpr float VillageStreetX = 15700.f;
+	constexpr float VillageStreetEnd = 29600.f;
+	constexpr float VillageMainStreet = 1000.f;
+	constexpr float VillageStreetInset = 1500.f;
+	constexpr float VillageStreetDetour = 1.05f;
+	/** Each bank tags this many of its buildings for the garrison (02: 3 to 4, D5), with the same capacity. */
+	const FName GarrisonTag(TEXT("Garrison"));
+	constexpr int32 MinGarrisonBuildings = 3;
+	constexpr int32 MaxGarrisonBuildings = 4;
 
 	/** The Water_ nav blockers of the river. */
 	TArray<const ANavModifierVolume*> GetWaterVolumes(UWorld& World)
@@ -1161,13 +1178,73 @@ namespace RTSScaleTests
 	}
 
 	/**
+	 * The village of #157 (02 "Central village"): both banks hold the same number of civilian buildings and, in those tagged
+	 * for the garrison, the same capacity; no building stands in a bank's 10 m main street; and a tank drives each main
+	 * street from end to end, never over the river.
+	 */
+	void CheckVillage(FAutomationTestBase& Test, UWorld& World, UNavigationSystemV1& NavSystem, const ARecastNavMesh& NavMesh,
+		const TArray<const ANavModifierVolume*>& Water)
+	{
+		int32 Buildings[2] = { 0, 0 };
+		int32 Garrisons[2] = { 0, 0 };
+		int32 Capacity[2] = { 0, 0 };
+		for (TActorIterator<ARTSCivilBuilding> It(&World); It; ++It)
+		{
+			const URTSCivilBuildingData* Data = It->GetData();
+			if (!Test.TestNotNull(*FString::Printf(TEXT("%s has its data"), *It->GetActorLabel()), Data))
+			{
+				continue;
+			}
+			const int32 Bank = It->GetActorLocation().X < 0.f ? 0 : 1;
+			++Buildings[Bank];
+			if (It->ActorHasTag(GarrisonTag))
+			{
+				Test.TestTrue(*FString::Printf(TEXT("%s, tagged for the garrison, can be garrisoned"), *It->GetActorLabel()), Data->CanGarrison());
+				++Garrisons[Bank];
+				Capacity[Bank] += Data->GarrisonCapacity;
+			}
+			const FBox Box = It->GetComponentsBoundingBox();
+			const float StreetX = Bank == 0 ? -VillageStreetX : VillageStreetX;
+			Test.TestFalse(*FString::Printf(TEXT("%s (%s) stands clear of the %.0f m main street at x %.0f m"), *It->GetActorLabel(),
+				*Box.ToString(), VillageMainStreet / 100.f, StreetX / 100.f),
+				Box.Max.X > StreetX - VillageMainStreet / 2.f && Box.Min.X < StreetX + VillageMainStreet / 2.f
+				&& Box.Max.Y > -VillageStreetEnd && Box.Min.Y < VillageStreetEnd);
+		}
+		Test.AddInfo(FString::Printf(TEXT("Village: west %d buildings, %d for the garrison holding %d; east %d, %d holding %d"),
+			Buildings[0], Garrisons[0], Capacity[0], Buildings[1], Garrisons[1], Capacity[1]));
+		Test.TestTrue(TEXT("Both banks have village buildings, as many on each"), Buildings[0] > 0 && Buildings[0] == Buildings[1]);
+		for (int32 Bank = 0; Bank < 2; ++Bank)
+		{
+			Test.TestTrue(*FString::Printf(TEXT("Bank %d tags %d buildings for the garrison, %d to %d"), Bank, Garrisons[Bank],
+				MinGarrisonBuildings, MaxGarrisonBuildings), Garrisons[Bank] >= MinGarrisonBuildings && Garrisons[Bank] <= MaxGarrisonBuildings);
+		}
+		Test.TestTrue(TEXT("Both banks' garrison buildings hold the same capacity"), Capacity[0] > 0 && Capacity[0] == Capacity[1]);
+
+		for (const float StreetX : { -VillageStreetX, VillageStreetX })
+		{
+			const FVector From(StreetX, -VillageStreetEnd + VillageStreetInset, 0.f);
+			const FVector To(StreetX, VillageStreetEnd - VillageStreetInset, 0.f);
+			const FRiverRoute Route = FindRiverRoute(NavSystem, NavMesh, Water, From, To);
+			const FString What = FString::Printf(TEXT("The main street at x %.0f m"), StreetX / 100.f);
+			if (Test.TestTrue(*FString::Printf(TEXT("%s: a tank finds a full path along it"), *What), Route.bFound))
+			{
+				Test.AddInfo(FString::Printf(TEXT("%s: %.0f m along a %.0f m street"), *What, Route.Length / 100.f, FVector::Dist2D(From, To) / 100.f));
+				Test.TestTrue(*FString::Printf(TEXT("%s: the path runs through the village, at most %.0f%% over the straight line"), *What,
+					100.f * (VillageStreetDetour - 1.f)), Route.Length <= VillageStreetDetour * FVector::Dist2D(From, To));
+				Test.TestFalse(*FString::Printf(TEXT("%s: the path never runs over the river"), *What), Route.bOverWater);
+			}
+		}
+	}
+
+	/**
 	 * The balance checklist of 02_MAP_DESIGN.md that the navmesh can measure, on WD_RiverCrossing_01 (#154): a tank finds a
 	 * full path from each base to both bridges, both village stockpiles and the other base; no path runs over the river off
 	 * a bridge, so the way from base to base always takes one; each side's routes are as long as the other side's turned
 	 * about the centre, within 3%; both bridge decks carry vehicle navmesh; the landscape outside both bases is dirt to the
 	 * vehicles' dust (#337); and a vehicle factory can be placed at every site of a grid on both base pads. And of the Water
 	 * plugin river and the concrete bridges (#155): the river is walkable by no agent and transparent to ground traces
-	 * (CheckRiverWater), and the vehicle lane across every span of both decks is at least 6 m wide.
+	 * (CheckRiverWater), and the vehicle lane across every span of both decks is at least 6 m wide. And the village (#157,
+	 * CheckVillage).
 	 */
 	DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FRTSCheckRiverCrossing, FAutomationTestBase*, Test);
 	bool FRTSCheckRiverCrossing::Update()
@@ -1284,6 +1361,8 @@ namespace RTSScaleTests
 				}
 			}
 		}
+
+		CheckVillage(*Test, *World, *NavSystem, *NavMesh, Water);
 
 		for (int32 Team = 0; Team < 2; ++Team)
 		{

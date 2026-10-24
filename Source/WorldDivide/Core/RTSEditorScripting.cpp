@@ -33,7 +33,9 @@
 
 #if WITH_EDITOR
 #include "ActorFactories/ActorFactory.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/RuntimeVirtualTextureComponent.h"
+#include "Components/SplineMeshComponent.h"
 #include "Editor.h"
 #include "Engine/CollisionProfile.h"
 #include "Engine/StaticMesh.h"
@@ -830,6 +832,94 @@ bool URTSEditorScripting::UseExternalActors(UObject* WorldContextObject)
 	return true;
 #else
 	return false;
+#endif
+}
+
+#if WITH_EDITOR
+namespace
+{
+	/** An empty actor labelled Label in World, its root a static scene component for the dressing's components. */
+	AActor* SpawnDressingActor(UWorld& World, const FString& Label)
+	{
+		AActor* Actor = World.SpawnActor<AActor>();
+		USceneComponent* Root = NewObject<USceneComponent>(Actor, TEXT("Root"));
+		Root->SetMobility(EComponentMobility::Static);
+		Actor->SetRootComponent(Root);
+		Actor->AddInstanceComponent(Root);
+		Root->RegisterComponent();
+		Actor->SetActorLabel(Label);
+		return Actor;
+	}
+
+	/** Dressing: seen, never collided with and never in the navmesh. */
+	void MakeDressing(UPrimitiveComponent& Component)
+	{
+		Component.SetMobility(EComponentMobility::Static);
+		Component.SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Component.SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+		Component.SetCanEverAffectNavigation(false);
+		Component.SetGenerateOverlapEvents(false);
+	}
+}
+#endif
+
+AActor* URTSEditorScripting::SpawnPropInstances(UObject* WorldContextObject, const FString& Label, const TArray<UStaticMesh*>& Meshes,
+	const TArray<FTransform>& Transforms)
+{
+#if WITH_EDITOR
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	if (!World || Meshes.IsEmpty() || Meshes.Contains(nullptr) || Transforms.IsEmpty())
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("SpawnPropInstances %s: no world, a missing mesh or no transforms"), *Label);
+		return nullptr;
+	}
+	AActor* Actor = SpawnDressingActor(*World, Label);
+	for (UStaticMesh* Mesh : Meshes)
+	{
+		UInstancedStaticMeshComponent* Instances = NewObject<UInstancedStaticMeshComponent>(Actor, *Mesh->GetName());
+		MakeDressing(*Instances);
+		Instances->SetStaticMesh(Mesh);
+		Instances->SetupAttachment(Actor->GetRootComponent());
+		Actor->AddInstanceComponent(Instances);
+		Instances->RegisterComponent();
+		Instances->AddInstances(Transforms, false, true);
+	}
+	return Actor;
+#else
+	return nullptr;
+#endif
+}
+
+AActor* URTSEditorScripting::SpawnCables(UObject* WorldContextObject, const FString& Label, UStaticMesh* Mesh, const TArray<FVector>& Starts,
+	const TArray<FVector>& Ends, float Sag)
+{
+#if WITH_EDITOR
+	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull) : nullptr;
+	if (!World || !Mesh || Starts.IsEmpty() || Starts.Num() != Ends.Num())
+	{
+		UE_LOG(LogWorldDivide, Error, TEXT("SpawnCables %s: no world or mesh, or %d starts for %d ends"), *Label, Starts.Num(), Ends.Num());
+		return nullptr;
+	}
+	AActor* Actor = SpawnDressingActor(*World, Label);
+	for (int32 Index = 0; Index < Starts.Num(); ++Index)
+	{
+		// A cubic Hermite curve's middle lies (StartTangent - EndTangent) / 8 off the chord's, so tangents tilted 4 sag down at
+		// the start and up at the end hang the middle Sag of the length below it, close to a catenary for a small sag.
+		const FVector Chord = Ends[Index] - Starts[Index];
+		const FVector Tilt(0.0, 0.0, 4.0 * Sag * Chord.Size());
+		USplineMeshComponent* Cable = NewObject<USplineMeshComponent>(Actor, *FString::Printf(TEXT("Cable%02d"), Index));
+		MakeDressing(*Cable);
+		Cable->SetCastShadow(false);
+		Cable->SetStaticMesh(Mesh);
+		Cable->SetForwardAxis(ESplineMeshAxis::X, false);
+		Cable->SetupAttachment(Actor->GetRootComponent());
+		Actor->AddInstanceComponent(Cable);
+		Cable->SetStartAndEnd(Starts[Index], Chord - Tilt, Ends[Index], Chord + Tilt, false);
+		Cable->RegisterComponent();
+	}
+	return Actor;
+#else
+	return nullptr;
 #endif
 }
 

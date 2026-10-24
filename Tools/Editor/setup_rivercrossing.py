@@ -64,9 +64,10 @@ def main():
         river_material = greybox.build_river_material()
         bridge_meshes = greybox.build_bridge_assets()
         road_materials = greybox.build_road_materials()
+        props = greybox.build_prop_assets()
         if not levels.new_level(path):
             raise RuntimeError(f"Could not create {path}")
-        greybox.build_greybox(editor_world(), HEIGHTMAP_FILE, river_material, bridge_meshes, road_materials)
+        greybox.build_greybox(editor_world(), HEIGHTMAP_FILE, river_material, bridge_meshes, road_materials, props)
         unreal.log(f"setup_rivercrossing: built the greybox of {path}")
 
     world = editor_world()
@@ -77,8 +78,9 @@ def main():
         raise RuntimeError(f"Could not build the navmesh of {path}")
 
     # The level and every actor file the build changed: the navmesh actors, and on a new level all of them, with the
-    # river material, the bridge's assets, the road materials and the runtime virtual texture.
-    owned = (greybox.BRIDGE_DIR + "/", greybox.RIVER_MATERIAL_DIR + "/", greybox.ROAD_MATERIAL_DIR + "/", greybox.RVT_DIR + "/")
+    # river material, the bridge's assets, the road materials, the runtime virtual texture and the village's props.
+    owned = (greybox.BRIDGE_DIR + "/", greybox.RIVER_MATERIAL_DIR + "/", greybox.ROAD_MATERIAL_DIR + "/", greybox.RVT_DIR + "/",
+             greybox.PROPS_DIR + "/")
     dirty = list(saving.get_dirty_map_packages()) + [package for package in saving.get_dirty_content_packages()
                                                      if package.get_name().startswith(owned)]
     read_only = read_only_files(dirty)

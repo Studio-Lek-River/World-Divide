@@ -97,6 +97,10 @@ namespace RTSCameraShots
 		{ TEXT("base_yaw45"), FVector2D(-72000.f, -22000.f), 45.f },
 		// The junction of the west main road and the village ring road (#383).
 		{ TEXT("roads"), FVector2D(-15700.f, -30000.f), 0.f },
+		// Each village bank from its own side (#157): the west bank's main street by the church square, the east bank's by
+		// the barn, each looking toward the river.
+		{ TEXT("village_west"), FVector2D(-15700.f, 0.f), 0.f },
+		{ TEXT("village_east"), FVector2D(15700.f, 0.f), 180.f },
 		{ TEXT("edge"), FVector2D(-100000.f, -100000.f), 0.f, true },
 		{ TEXT("edge_yaw45"), FVector2D(-100000.f, -100000.f), 45.f, true },
 		{ TEXT("past_west_yaw45"), FVector2D(-160000.f, 0.f), 45.f, true },
