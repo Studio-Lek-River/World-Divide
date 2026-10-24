@@ -37,8 +37,9 @@
  * finished building of the data asset in the middle of the level (L_Bench), pictured by a camera at the RTS camera's pitch for each
  * arm length (ARTSCameraPawn::GetPitchForZoom) at 1920x1080, to Saved/BuildingShots/<BuildingData>[/<Folder>]/<shot>.png:
  * close_12m looks at its front from outside at the closest zoom, framed from its data (the footprint's front and the root
- * mesh's height) so every run lands on the same spot (#424); default_150m, far_450m and the pair either side of
- * the bench's LOD1 switch at 260 m (lod_before_249.6m, lod_after_270.4m, 4 % each way) look at the middle of its root mesh's
+ * mesh's height) so every run lands on the same spot (#424); side_12m looks along that front from its -Y end, low and 20
+ * degrees off the wall (#454), so a wall lamp's light is seen leaving it and falling down the wall; default_150m, far_450m
+ * and the pair either side of the bench's LOD1 switch at 260 m (lod_before_249.6m, lod_after_270.4m, 4 % each way) look at the middle of its root mesh's
  * bounds from that far. Each shot logs the LOD the renderer picks for every part (RTSUnitLOD). The data asset is looked
  * for under RTSBenchScene::BenchHQDir, then /Game/Data/Buildings, then the kit spike's /Game/Developers/KitSpike (#387), then
  * the kit showcases' /Game/Data/Showcase (DA_TestKitLighting, #392). ue.ps1 passes a Folder for a run with other console
@@ -99,10 +100,17 @@ namespace RTSBuildingShotsCommand
 		float Distance;
 		/** Looks at the ground before the front instead of the root mesh's middle. */
 		bool bFront;
+		/** A front view from the side: at the front's middle, from SideYaw and SidePitch. */
+		bool bSide = false;
 	};
+
+	/** side_12m's view (#454): its yaw from the building's (180 looks straight at the front) and its pitch. */
+	constexpr float SideYaw = 110.f;
+	constexpr float SidePitch = -15.f;
 
 	const FShot Shots[] = {
 		{ TEXT("close_12m"), 1200.f, true },
+		{ TEXT("side_12m"), 1200.f, true, true },
 		{ TEXT("default_150m"), 15000.f, false },
 		{ TEXT("far_450m"), 45000.f, false },
 		{ TEXT("lod_before_249.6m"), 24960.f, false },
@@ -296,14 +304,14 @@ namespace RTSBuildingShotsCommand
 		{
 			const FShot& Shot = Shots[ShotIndex];
 			const ARTSCameraPawn* Pawn = Controller.GetPawn<ARTSCameraPawn>();
-			const float Pitch = Pawn ? Pawn->GetPitchForZoom(Shot.Distance) : -55.f;
+			const float Pitch = Shot.bSide ? SidePitch : Pawn ? Pawn->GetPitchForZoom(Shot.Distance) : -55.f;
 			const UStaticMeshComponent* Root = RTSUnitLOD::FindHull(*Building);
 			FVector LookAt = Root ? Root->Bounds.Origin : Building->GetActorLocation();
 			if (Shot.bFront)
 			{
 				// From the data and the root mesh, not every part's bounds: a turning part would move the camera.
 				const FRTSBuildingFootprint Footprint = Building->GetGroundFootprint();
-				const float Inset = FMath::Min(FrontInset, 2.f * Footprint.Extent.X * FrontInsetShare);
+				const float Inset = Shot.bSide ? 0.f : FMath::Min(FrontInset, 2.f * Footprint.Extent.X * FrontInsetShare);
 				const float Height = Root ? FMath::Min(FrontHeight, static_cast<float>(Root->Bounds.BoxExtent.Z)) : FrontHeight;
 				LookAt = Footprint.ToWorld(FVector2D(Footprint.Extent.X - Inset, 0.f));
 				LookAt.Z = Building->GetActorLocation().Z + Height;
@@ -311,7 +319,7 @@ namespace RTSBuildingShotsCommand
 			TurnSunToFront(Shot.bFront && !bNight && !bTurned);
 			// Looking along +X, as the RTS camera looks north, for the far views; the close view looks at the building's front
 			// (+X at its yaw 0), towards -X unturned and along +X turned.
-			const FRotator Rotation(Pitch, Shot.bFront ? GetBuildingYaw() + 180.f : 0.f, 0.f);
+			const FRotator Rotation(Pitch, Shot.bFront ? GetBuildingYaw() + (Shot.bSide ? SideYaw : 180.f) : 0.f, 0.f);
 			Camera->SetActorLocationAndRotation(LookAt - Rotation.Vector() * Shot.Distance, Rotation);
 			GoTo(EStep::Settle);
 			return true;

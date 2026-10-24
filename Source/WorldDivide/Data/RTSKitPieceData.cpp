@@ -158,8 +158,13 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 		}
 		if (Piece.GlareMesh && Piece.GlareStrength > 0.f && Piece.LensBounds.IsValid)
 		{
+			// A lamp that shines one way hangs its halo half out of its lens along its light, clear of the housing round the
+			// lens (#454); the others' halo stands in their lens's middle.
+			const bool bAimed = Piece.bHasLight && Piece.Light.Type != ERTSBuildingLightType::Point;
+			const FVector Centre = bAimed ? Piece.Light.Location + Piece.Light.Rotation.Vector() * (0.5f * Piece.GlareRadius)
+				: Piece.LensBounds.GetCenter();
 			Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.GlareMesh,
-				FTransform(FQuat::Identity, Piece.LensBounds.GetCenter(), FVector(Piece.GlareRadius)) * Frame,
+				FTransform(FQuat::Identity, Centre, FVector(Piece.GlareRadius)) * Frame,
 				(Piece.bHasLight ? FLinearColor::MakeFromColorTemperature(Piece.Light.Kelvin) : Mount.IndicatorColor) * Piece.GlareStrength * Mount.Brightness,
 				/*bBeam*/ false });
 		}

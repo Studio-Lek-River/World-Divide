@@ -749,7 +749,7 @@ function Invoke-BuildingShots {
 		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
 		"`"-ExecCmds=rts.Debug.BuildingShots $Building $Folder$(if ($Night) { ' -Night' })$(if ($Turn) { ' -Turn' })`"", '-RTSBuildingShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
 		'-unattended', '-nosplash', '-nosound') + @(if ($Cvars) { "-dpcvars=$Cvars" }))
-	$Names = @('close_12m', 'default_150m', 'far_450m', 'lod_before_249.6m', 'lod_after_270.4m')
+	$Names = @('close_12m', 'side_12m', 'default_150m', 'far_450m', 'lod_before_249.6m', 'lod_after_270.4m')
 	$Problems = @($Names | Where-Object { -not (Test-Path (Join-Path $ShotDir "$_.png")) } | ForEach-Object { "missing $_.png" })
 	if (Test-Path $LogFile) {
 		Select-String -Path $LogFile -Pattern 'rts.Debug.BuildingShots: \S+ (from|at) ' | ForEach-Object { $_.Line -replace '^.*rts.Debug.BuildingShots: ', '  ' }

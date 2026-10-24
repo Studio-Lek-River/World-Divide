@@ -3533,11 +3533,15 @@ add_properties(headquarters, headquarters_layout)
 
 def make_kit_lighting_showcase(mesh, footprint, height):
     """DA_TestKitLighting (#392, #393): the kit's wall fixtures (01, 02, 03, 05, 09, the indicator blue) and its ceiling
-    fixtures (04, 07, facing out like the wall ones) mounted on the front of a plain block, footprint cells and height cm,
-    and the roof flood light (06), the warning beacon (08) and the mast beacons (12, 13) on its roof, for ue.ps1 -Task
-    buildingshots -Building DA_TestKitLighting. Test content only: nothing produces it. Its seven steady lights and one
-    warning light are a Large building's budget (BUILDING_KIT.md, Light budgets)."""
-    scale = building_fit(mesh, footprint, height)
+    fixtures (04, 07, facing out like the wall ones) mounted on the flat front of a plain block (#454: a front in relief
+    hangs them off its wall), footprint cells and height cm, and the roof flood light (06), the warning beacon (08) and the
+    mast beacons (12, 13) on its roof, for ue.ps1 -Task buildingshots -Building DA_TestKitLighting. Test content only:
+    nothing produces it. Its seven steady lights and one warning light are a Large building's budget (BUILDING_KIT.md,
+    Light budgets)."""
+    # Stretched to fill its footprint as building_fit's border leaves it, not kept square.
+    box = mesh.get_bounding_box()
+    scale = (footprint[0] * 95.0 / (box.max.x - box.min.x), footprint[1] * 95.0 / (box.max.y - box.min.y),
+             height / (box.max.z - box.min.z))
     bounds = mesh.get_bounds()
     front = (bounds.origin.x + bounds.box_extent.x) * scale[0]
     base = (bounds.origin.z - bounds.box_extent.z) * scale[2]
@@ -3573,7 +3577,7 @@ def make_kit_lighting_showcase(mesh, footprint, height):
     return showcase
 
 
-kit_lighting = make_kit_lighting_showcase(crate_mesh, (6, 10), 600.0)
+kit_lighting = make_kit_lighting_showcase(unreal.load_asset(CUBE), (6, 10), 600.0)
 if BENCH_HQ:
     make_bench_hq(headquarters_footprint, headquarters_layout)
 # The tower's spire scaled up. Two minutes to charge; three seconds after launch the strike lands, 80 m across at full

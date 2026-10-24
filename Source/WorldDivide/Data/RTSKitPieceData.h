@@ -135,7 +135,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
 	float BeamStrength = 0.f;
 
-	/** The glare halo round its lit lens at night (#440): a unit sphere scaled to GlareRadius cm at the lens's middle. */
+	/**
+	 * The glare halo round its lit lens at night (#440): a unit sphere scaled to GlareRadius cm at the lens's middle, or
+	 * half out of it along an aimed light (#454).
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit")
 	TObjectPtr<UStaticMesh> GlareMesh;
 
