@@ -73,7 +73,12 @@ namespace RTSKitLensData
 	 */
 	constexpr int32 SpinOn = 7;
 	constexpr int32 SpinOff = 8;
-	constexpr int32 Floats = 9;
+	/**
+	 * A blinking lens's phase (#460, ARTSBuilding::GetKitBlinkPhase): its building's, so a building's mast LEDs flash
+	 * together, and its glare halos with them (RTSKitGlowData::Blink). Read only where the lens's material has Blink 1.
+	 */
+	constexpr int32 Blink = 9;
+	constexpr int32 Floats = 10;
 }
 
 /**
@@ -93,5 +98,9 @@ namespace RTSKitGlowData
 	constexpr int32 Turn = 6;
 	constexpr int32 SpinOn = 7;
 	constexpr int32 SpinOff = 8;
-	constexpr int32 Floats = 9;
+	/** A blinking lens's halo (#460): 1 + its lens's phase (RTSKitLensData::Blink), half a cycle on for 13's second dome; 0 steady. */
+	constexpr int32 Blink = 9;
+	/** A point halo's least size (#460, glare_point): its radius never under this many radians from the camera; 0 none. */
+	constexpr int32 Point = 10;
+	constexpr int32 Floats = 11;
 }

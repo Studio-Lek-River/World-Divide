@@ -103,22 +103,19 @@ LIGHT_NIGHT_INDEX = 12
 LENS_LEVEL, LENS_GROUP, LENS_FAULT, LENS_FLASH, LENS_COLOR = 0, 1, 2, 3, 4
 # A turning beacon's switch times (#459, SPIN_HLSL), which its SWEEP reads.
 LENS_SPIN_ON, LENS_SPIN_OFF = 7, 8
-# A lens with Blink 1 (the mast LEDs, #393) also blinks on its own, LENS_BLINK, its rate jittered and its phase from
-# where it stands; with Alternate 1 its lens at U >= 0.5 (13's second dome) blinks half a cycle later. Only lenses
-# without a real light blink, so RTSKit::IsLensLit has no blink to repeat.
+# A blinking lens's phase (#460): its building's (ARTSBuilding::GetKitBlinkPhase), which its glare halos share.
+LENS_BLINK_PHASE = 9
+# The mast LEDs' blink (#393, #460, LENS_BLINK): an LED's, crisp on and off at a steady aviation rate, from Phase.
+BLINK_HLSL = "float blink = step(frac(Time * BlinkRate + Phase), BlinkDuty);\n"
+# A lens with Blink 1 (the mast LEDs) also blinks on its own, BLINK_HLSL from its building's phase; with Alternate 1 its
+# lens at U >= 0.5 (13's second dome) blinks half a cycle later. Only lenses without a real light blink, so
+# RTSKit::IsLensLit has no blink to repeat.
 LENS_HLSL = """
 float gate = lerp(1.0, Fixtures, saturate(Group));
 float fault = Fault > 0.0 ? step(0.35, frac(Time * 2.3 + Fault + 0.5 * sin(Time * 17.0 + Fault * 40.0))) : 1.0;
 float flash = Flash > 0.0 ? step(0.5, frac(Time + Flash)) : 1.0;
-float blink = 1.0;
-if (Blink > 0.0)
-{
-    float3 S = frac(Seed * float3(0.1031, 0.1030, 0.0973));
-    S += dot(S, S.yzx + 33.33);
-    S = frac((S.xxy + S.yzz) * S.zyx);
-    float Cycle = frac(Time * BlinkRate * (1.0 + BlinkJitter * (2.0 * S.x - 1.0)) + S.y + 0.5 * Alternate * step(0.5, U));
-    blink = saturate((BlinkDuty - Cycle) / max(BlinkFade, 0.001));
-}
+float Phase = BlinkPhase + 0.5 * Alternate * step(0.5, U);
+""" + BLINK_HLSL + """blink = Blink > 0.0 ? blink : 1.0;
 return Color * Level * gate * fault * flash * blink * lerp(DayGain, 1.0, Night) * Intensity;
 """
 # The lens's colour from its LightProfile's red P (#393): EmissionTint, turning to HotCoreTint where the profile is hottest,
@@ -127,9 +124,9 @@ LENS_SHAPE_HLSL = """
 float hot = saturate((P - 0.55) / 0.35) * HotCore;
 return P * lerp(Tint, HotTint, hot);
 """
-# The lens's blink (the obstruction beacon's, #351): BlinkRate a second, on for BlinkDuty of it and fading over its last
-# BlinkFade, every lens up to BlinkJitter faster or slower.
-LENS_BLINK = {"BlinkRate": 1.0, "BlinkDuty": 0.18, "BlinkFade": 0.06, "BlinkJitter": 0.08}
+# The lens's blink (the obstruction beacon's, #351, #460): BlinkRate a second (30 flashes a minute, within the 20-40 of
+# aviation obstruction lights), on for BlinkDuty of it; M_Kit_Glow's halos take the same.
+LENS_BLINK = {"BlinkRate": 0.5, "BlinkDuty": 0.4}
 # A turning beacon's spin (#459, RTSKit::GetSpin, whose constants these are; change both together): from its switch times
 # SpinOn and SpinOff (game seconds, RTSKitLensData; off while SpinOff >= SpinOn) at Time, its whole turns since it came on
 # at Rate turns a second, spun up over SpinUp seconds and coasting to a stop over Coast once off, and its lamp, glowing up
@@ -629,7 +626,8 @@ def build_lens_material(directory, name, white, white_masks):
     pins["Time"] = _node(material, unreal.MaterialExpressionTime, -900, 1120)
     pins["Blink"] = _scalar(material, -1200, 0, "Blink", 0.0)
     pins["Alternate"] = _scalar(material, -1200, 100, "Alternate", 0.0)
-    pins["Seed"] = _seed(material, -1900, 200)
+    pins["BlinkPhase"] = _node(material, unreal.MaterialExpressionPerInstanceCustomData, -1200, 200,
+                               data_index=LENS_BLINK_PHASE)
     for index, (key, value) in enumerate(sorted(LENS_BLINK.items())):
         pins[key] = _scalar(material, -1200, 300 + 100 * index, key, value)
     pins["U"] = vehicle_art._mask(material, -1200, 800, _node(material, unreal.MaterialExpressionTextureCoordinate,
@@ -702,6 +700,14 @@ def build_lens_material(directory, name, white, white_masks):
 GLOW_LEVEL, GLOW_FAULT, GLOW_FLASH, GLOW_COLOR = 0, 1, 2, 3
 # A turning beacon's (#459): its turns a second (0 for every other glow) and its part's switch times, SPIN_HLSL's.
 GLOW_TURN, GLOW_SPIN_ON, GLOW_SPIN_OFF = 6, 7, 8
+# A blinking lens's halo (#460): 1 + its lens's phase (half a cycle on for 13's second dome), 0 for every other glow.
+GLOW_BLINK = 9
+# A point halo (#460, the mast LEDs' glare_point): its least radius from the camera in radians, 0 for every other glow.
+GLOW_POINT = 10
+# A point halo's look, as a photographed aviation light at night: a near-white hot core (Core, CorePower, in Hot times
+# its colour's peak) in a soft, wide red glow (Soft, SoftPower), both across its sphere's face to the camera.
+GLOW_POINT_LOOK = {"Soft": 0.4, "SoftPower": 1.5, "Core": 2.5, "CorePower": 40.0}
+GLOW_POINT_HOT = (1.0, 0.55, 0.5)
 # A kit beam or glare halo (#440): lit with its lens (LENS_HLSL's fault and flash). A halo (and a Rect's beam, Cone.x < 0)
 # is brightest where its surface faces the camera (|N.V|^EdgePower, so its silhouette fades out), a beam fading along its
 # length U from the lens, in over StartFade and out as (1 - U)^AlongPower. A round beam (#458) is one solid body of light
@@ -780,11 +786,26 @@ else
 		glow *= FaceFloor + FaceGain * pow(facing, FacePower);
 	}
 }
-return Color * Level * fault * flash * lamp * glow;
+float3 colour = Color * glow;
+if (Point > 0.0 && Beam < 0.5)
+{
+""" + "".join(f"\tconst float Point{key} = {value};\n" for key, value in GLOW_POINT_LOOK.items()) + """\tconst float3 PointHot = float3""" + str(GLOW_POINT_HOT) + """;
+	float facing = saturate(abs(dot(normalize(N), normalize(V))));
+	float peak = max(Color.r, max(Color.g, Color.b));
+	colour = (Color * PointSoft * pow(facing, PointSoftPower) + peak * PointHot * PointCore * pow(facing, PointCorePower)) * Intensity;
+}
+float Phase = Blink;
+""" + BLINK_HLSL + """blink = Blink > 0.0 ? blink : 1.0;
+return colour * Level * fault * flash * lamp * blink;
 """
 # The turning beacon's beam turned about its instance's Z axis with its spin (#459), as SWEEP_HLSL turns its mirror; its
 # halo stays, round about that axis, and its normals with it.
 GLOW_TURN_HLSL = SPIN_HLSL.replace("Rate", "Turn") + """
+if (Point > 0.0 && Beam < 0.5)
+{
+	// A point halo (#460) grows so its radius (Scale cm, its unit sphere's) stays at least Point radians from the camera.
+	return P * (max(distance(Eye, Obj) * Point / max(Scale, 0.001), 1.0) - 1.0);
+}
 if (Turn <= 0.0 || Beam < 0.5) return float3(0.0, 0.0, 0.0);
 float a = 6.2831853 * frac(turns);
 float2 r = float2(P.x * cos(a) - P.y * sin(a), P.x * sin(a) + P.y * cos(a));
@@ -812,8 +833,11 @@ def build_glow_material(directory, name):
     for index, (pin, data) in enumerate((("Level", GLOW_LEVEL), ("Fault", GLOW_FAULT), ("Flash", GLOW_FLASH))):
         pins[pin] = _node(material, unreal.MaterialExpressionPerInstanceCustomData, -900, 120 * index, data_index=data)
     pins["Color"] = _node(material, unreal.MaterialExpressionPerInstanceCustomData3Vector, -900, 400, data_index=GLOW_COLOR)
-    for index, (pin, data) in enumerate((("Turn", GLOW_TURN), ("SpinOn", GLOW_SPIN_ON), ("SpinOff", GLOW_SPIN_OFF))):
+    for index, (pin, data) in enumerate((("Turn", GLOW_TURN), ("SpinOn", GLOW_SPIN_ON), ("SpinOff", GLOW_SPIN_OFF),
+                                         ("Blink", GLOW_BLINK), ("Point", GLOW_POINT))):
         pins[pin] = _node(material, unreal.MaterialExpressionPerInstanceCustomData, -1300, 120 * index, data_index=data)
+    for index, (key, value) in enumerate(sorted(LENS_BLINK.items())):
+        pins[key] = _scalar(material, -1600, 120 * index, key, value)
     pins["Time"] = _node(material, unreal.MaterialExpressionTime, -900, 520)
     pins["N"] = _node(material, unreal.MaterialExpressionVertexNormalWS, -900, 620)
     pins["V"] = _node(material, unreal.MaterialExpressionCameraVectorWS, -900, 720)
@@ -841,10 +865,21 @@ def build_glow_material(directory, name):
     glow = vehicle_art._custom(material, -400, 400, GLOW_HLSL, list(pins))
     for pin, node in pins.items():
         _connect(node, "", glow, pin)
-    turn = vehicle_art._custom(material, -400, 2200, GLOW_TURN_HLSL, ["P", "Time", "Turn", "SpinOn", "SpinOff", "Beam"])
+    turn = vehicle_art._custom(material, -400, 2200, GLOW_TURN_HLSL,
+                               ["P", "Time", "Turn", "SpinOn", "SpinOff", "Beam", "Point", "Eye", "Obj", "Scale"])
     _connect(_node(material, unreal.MaterialExpressionLocalPosition, -900, 2200), "", turn, "P")
-    for pin in ("Time", "Turn", "SpinOn", "SpinOff", "Beam"):
+    for pin in ("Time", "Turn", "SpinOn", "SpinOff", "Beam", "Point"):
         _connect(pins[pin], "", turn, pin)
+    # A point halo's camera distance and its sphere's radius in the world (#460).
+    _connect(_node(material, unreal.MaterialExpressionCameraPositionWS, -900, 2400), "", turn, "Eye")
+    _connect(_node(material, unreal.MaterialExpressionObjectPositionWS, -900, 2500), "", turn, "Obj")
+    radius = vehicle_art._transform(material, -900, 2600, unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL,
+                                    unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
+    _connect(_node(material, unreal.MaterialExpressionConstant3Vector, -1100, 2600,
+                   constant=unreal.LinearColor(1, 0, 0, 1)), "", radius, "")
+    length = _node(material, unreal.MaterialExpressionLength, -700, 2600)
+    _connect(radius, "", length, "")
+    _connect(length, "", turn, "Scale")
     world = vehicle_art._transform(material, -150, 2200, unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL,
                                    unreal.MaterialVectorCoordTransform.TRANSFORM_WORLD)
     _connect(turn, "", world, "")

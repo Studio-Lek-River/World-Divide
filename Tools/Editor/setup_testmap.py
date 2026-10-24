@@ -753,10 +753,11 @@ def make_kit_glow(piece, lens, parts, kept):
     """A piece's night look (#440) from its catalogue entry: its light's "profile", its "beam" ({"strength", "length"
     cm}: SM_Kit_<Piece>_Beam, building_art.write_beam_glb, from its lens's face along its light) and its "glare" (the
     halo's strength; "glare_radius" cm across, 1.3 × its lens's half size by default, and "glare_shape" "tube" stretches it
-    along its lens's longest side past its ends, #456). Returns the URTSKitPieceData values; none for what it does not have."""
+    along its lens's longest side past its ends, #456, and "pair" puts one round halo on each of its two domes along it,
+    1.3 × a dome's half size by default, #460). Returns the URTSKitPieceData values; none for what it does not have."""
     light = piece.get("light")
     result = {"profile": None, "beam_mesh": None, "beam_strength": 0.0, "glare_mesh": None, "glare_radius": 0.0,
-              "glare_length": 0.0, "glare_strength": 0.0}
+              "glare_length": 0.0, "glare_pair": 0.0, "glare_point": 0.0, "glare_strength": 0.0, "glare_tint": unreal.LinearColor(1.0, 1.0, 1.0, 1.0)}
     if light and "profile" in light:
         if light["type"] == "Rect":
             raise RuntimeError(f"kit_catalogue.json: {piece['id']}'s Rect light takes no profile")
@@ -782,14 +783,26 @@ def make_kit_glow(piece, lens, parts, kept):
         if not lens:
             raise RuntimeError(f"kit_catalogue.json: {piece['id']} has a glare but no lens")
         size = [high - low for low, high in zip(*lens)]
-        result["glare_mesh"] = parts["glare"]
-        result["glare_radius"] = float(piece.get("glare_radius", KIT_GLARE_SCALE * max(size) / 2.0))
-        result["glare_strength"] = float(piece["glare"])
         shape = piece.get("glare_shape", "round")
-        if shape not in ("round", "tube"):
-            raise RuntimeError(f"kit_catalogue.json: {piece['id']}'s glare_shape is round or tube, not {shape}")
+        if shape not in ("round", "tube", "pair"):
+            raise RuntimeError(f"kit_catalogue.json: {piece['id']}'s glare_shape is round, tube or pair, not {shape}")
+        # A pair's domes (13's) are as wide as its lens's other horizontal side, one at each end of its longest.
+        longest = max(size[:2])
+        dome = min(size[:2]) if shape == "pair" else max(size)
+        result["glare_mesh"] = parts["glare"]
+        result["glare_radius"] = float(piece.get("glare_radius", KIT_GLARE_SCALE * dome / 2.0))
+        result["glare_strength"] = float(piece["glare"])
+        result["glare_point"] = float(piece.get("glare_point", 0.0))
+        # A lightless lens (12, 13) glows in its own tint on a white mount colour; its halo takes the same.
+        tint = piece.get("glare_color", [1.0, 1.0, 1.0] if light else
+                         piece.get("finish", {}).get("Lens", {}).get("EmissionTint", [1.0, 1.0, 1.0]))
+        result["glare_tint"] = unreal.LinearColor(*tint, 1.0)
         if shape == "tube":
             result["glare_length"] = max(size) / 2.0 + result["glare_radius"]
+        if shape == "pair":
+            if max(size) != longest:
+                raise RuntimeError(f"kit_catalogue.json: {piece['id']}'s glare pair needs its lens longest across")
+            result["glare_pair"] = (longest - dome) / 2.0
     return result
 
 
@@ -909,7 +922,12 @@ def make_kit(masters):
             "glare_mesh": glow["glare_mesh"],
             "glare_radius": glow["glare_radius"],
             "glare_length": glow["glare_length"],
+            "glare_pair": glow["glare_pair"],
+            "glare_point": glow["glare_point"],
             "glare_strength": glow["glare_strength"],
+            "glare_tint": glow["glare_tint"],
+            "blink": bool(piece.get("finish", {}).get("Lens", {}).get("Blink", 0)),
+            "alternate": bool(piece.get("finish", {}).get("Lens", {}).get("Alternate", 0)),
             "lens_bounds": lens_bounds,
             "emergency_default": piece["emergency_default"],
             "fault_response": getattr(unreal.RTSKitFaultResponse, piece["fault_response"].upper()),
@@ -987,15 +1005,17 @@ def make_building_masters():
                   sorted(building_art.LENS_BLINK.items()),
                   building_art.FLAT_NORMAL, sorted(map(object_path, defaults)),
                   (building_art.LENS_LEVEL, building_art.LENS_GROUP, building_art.LENS_FAULT, building_art.LENS_FLASH,
-                   building_art.LENS_COLOR)))
+                   building_art.LENS_COLOR, building_art.LENS_BLINK_PHASE)))
     masters["M_Kit_Glow"] = plan_now(
         f"{KIT_MATERIAL_DIR}/M_Kit_Glow", lambda: building_art.build_glow_material(KIT_MATERIAL_DIR, "M_Kit_Glow"),
         spec_hash([building_art.build_glow_material, building_art._material, building_art._scalar,
                    building_art._multiply, vehicle_art._custom, vehicle_art._mask, vehicle_art._transform],
                   KIT_MATERIAL_DIR, building_art.GLOW_HLSL, building_art.GLOW_TURN_HLSL,
-                  sorted(building_art.GLOW_INSTANCES["MI_Kit_Beam"].items()),
+                  sorted(building_art.GLOW_INSTANCES["MI_Kit_Beam"].items()), sorted(building_art.LENS_BLINK.items()),
                   (building_art.GLOW_LEVEL, building_art.GLOW_FAULT, building_art.GLOW_FLASH, building_art.GLOW_COLOR,
-                   building_art.GLOW_TURN, building_art.GLOW_SPIN_ON, building_art.GLOW_SPIN_OFF)))
+                   building_art.GLOW_TURN, building_art.GLOW_SPIN_ON, building_art.GLOW_SPIN_OFF,
+                   building_art.GLOW_BLINK, building_art.GLOW_POINT), sorted(building_art.GLOW_POINT_LOOK.items()),
+                  building_art.GLOW_POINT_HOT))
     masters["M_Kit_Housing"] = plan_now(
         f"{KIT_MATERIAL_DIR}/M_Kit_Housing",
         lambda: building_art.build_kit_housing_material(KIT_MATERIAL_DIR, "M_Kit_Housing", *defaults),

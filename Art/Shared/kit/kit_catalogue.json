@@ -21,11 +21,14 @@
    "faction": "neutral",
    "slots": ["Housing", "Lens"],
    "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "glare": 1.6,
+   "glare_point": 0.25,
+   "glare_radius": 40,
    "emergency_default": true,
    "fault_response": "None",
    "mount_points": {"Base": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
    "budgets": {"lod0": 1200, "lod1": 400, "slots": 2},
-   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.001, 0.0004], "HotCoreTint": [1, 0.22, 0.035], "HotCore": 1, "Intensity": 14, "Blink": 1}}
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.001, 0.0004], "HotCoreTint": [1, 0.22, 0.035], "HotCore": 1, "Intensity": 14, "DayGain": 0.3, "Blink": 1}}
   },
   {
    "id": "lighting/01_WallLamp",
@@ -178,11 +181,15 @@
    "faction": "neutral",
    "slots": ["Housing", "Lens"],
    "atlas": {"Housing": "Trim", "Lens": "Lens"},
+   "glare": 1.6,
+   "glare_point": 0.25,
+   "glare_radius": 30,
+   "glare_shape": "pair",
    "emergency_default": true,
    "fault_response": "None",
    "mount_points": {"Base": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
    "budgets": {"lod0": 1200, "lod1": 400, "slots": 2},
-   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.001, 0.0004], "HotCoreTint": [1, 0.22, 0.035], "HotCore": 1, "Intensity": 14, "Blink": 1, "Alternate": 1}}
+   "finish": {"Housing": {}, "Lens": {"EmissionTint": [1, 0.001, 0.0004], "HotCoreTint": [1, 0.22, 0.035], "HotCore": 1, "Intensity": 14, "DayGain": 0.3, "Blink": 1, "Alternate": 1}}
   }
  ]
 }

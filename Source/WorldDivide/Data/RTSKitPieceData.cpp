@@ -146,6 +146,7 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 		Info.Priority = Piece.Light.Priority;
 		Info.MaxDrawDistance = Piece.Light.MaxDrawDistance;
 		Info.IndicatorColor = Mount.IndicatorColor;
+		Info.bBlink = Piece.bBlink;
 		Info.MountIndex = Index;
 
 		if (Piece.bHasLight)
@@ -184,16 +185,33 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 				&& Piece.Light.Behaviour != ERTSKitLightBehaviour::Rotate;
 			const FVector Centre = bAimed ? Piece.Light.Location + Piece.Light.Rotation.Vector() * (0.5f * Piece.GlareRadius)
 				: Piece.LensBounds.GetCenter();
-			// A tube's halo stretches along its lens's longest side (#456).
+			// A tube's halo stretches along its lens's longest side (#456); a pair stands on its two domes along it (#460).
+			const FVector Size = Piece.LensBounds.GetSize();
+			const int32 Longest = Size.X >= Size.Y && Size.X >= Size.Z ? 0 : Size.Y >= Size.Z ? 1 : 2;
 			FVector Scale(Piece.GlareRadius);
 			if (Piece.GlareLength > 0.f)
 			{
-				const FVector Size = Piece.LensBounds.GetSize();
-				Scale[Size.X >= Size.Y && Size.X >= Size.Z ? 0 : Size.Y >= Size.Z ? 1 : 2] = FMath::Max(Piece.GlareLength, Piece.GlareRadius);
+				Scale[Longest] = FMath::Max(Piece.GlareLength, Piece.GlareRadius);
 			}
-			Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.GlareMesh, FTransform(FQuat::Identity, Centre, Scale) * Frame,
-				(Piece.bHasLight ? FLinearColor::MakeFromColorTemperature(Piece.Light.Kelvin) * Piece.Light.Filter : Mount.IndicatorColor) * Piece.GlareStrength * Mount.Brightness,
-				/*bBeam*/ false });
+			const FLinearColor Color = (Piece.bHasLight ? FLinearColor::MakeFromColorTemperature(Piece.Light.Kelvin) * Piece.Light.Filter
+				: Mount.IndicatorColor) * Piece.GlareTint * Piece.GlareStrength * Mount.Brightness;
+			const float Shift = Piece.bBlink ? 0.f : -1.f;
+			const float Point = FMath::DegreesToRadians(Piece.GlarePoint);
+			if (Piece.GlarePair > 0.f)
+			{
+				FVector Along = FVector::ZeroVector;
+				Along[Longest] = Piece.GlarePair;
+				// The far one is the lens's U >= 0.5 half, which blinks half a cycle later on an alternating lens.
+				Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.GlareMesh, FTransform(FQuat::Identity, Centre - Along, Scale) * Frame,
+					Color, /*bBeam*/ false, Shift, Point });
+				Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.GlareMesh, FTransform(FQuat::Identity, Centre + Along, Scale) * Frame,
+					Color, /*bBeam*/ false, Piece.bBlink && Piece.bAlternate ? 0.5f : Shift, Point });
+			}
+			else
+			{
+				Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.GlareMesh, FTransform(FQuat::Identity, Centre, Scale) * Frame,
+					Color, /*bBeam*/ false, Shift, Point });
+			}
 		}
 
 		float Lens[RTSKitLensData::Floats] = {};

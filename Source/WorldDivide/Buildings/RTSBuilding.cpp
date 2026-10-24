@@ -1056,7 +1056,7 @@ void ARTSBuilding::ApplyKitGlows(const FRTSKitExpansion& Kit)
 			GlowIsBeam.Add(Glow.bBeam);
 		}
 		const int32 Instance = GlowComponents[Component]->AddInstance(Glow.Transform);
-		KitGlows.Add({ Glow.Part, Component, Instance, Glow.Color });
+		KitGlows.Add({ Glow.Part, Component, Instance, Glow.Color, Glow.BlinkShift, Glow.Point });
 	}
 	ShowKitGlows();
 }
@@ -1267,6 +1267,7 @@ void ARTSBuilding::SetKitLooks(TConstArrayView<FRTSKitLook> Looks)
 		Lens[RTSKitLensData::Color + 2] = Color.B;
 		Lens[RTSKitLensData::SpinOn] = KitSpins[Index].On;
 		Lens[RTSKitLensData::SpinOff] = KitSpins[Index].Off;
+		Lens[RTSKitLensData::Blink] = Part.bBlink ? GetKitBlinkPhase() : 0.f;
 		Instanced->SetCustomData(Instance, Lens);
 		Touched.AddUnique(Instanced);
 	}
@@ -1315,6 +1316,12 @@ void ARTSBuilding::ApplyKitLightLooks()
 			Values[RTSKitGlowData::SpinOn] = KitSpins[Glow.Part].On;
 			Values[RTSKitGlowData::SpinOff] = KitSpins[Glow.Part].Off;
 		}
+		// A blinking lens's halo blinks with it (#460), held lit with it by rts.Debug.KitLensSteady.
+		if (Glow.BlinkShift >= 0.f && CVarKitLensSteady.GetValueOnGameThread() == 0)
+		{
+			Values[RTSKitGlowData::Blink] = 1.f + FMath::Frac(GetKitBlinkPhase() + Glow.BlinkShift);
+		}
+		Values[RTSKitGlowData::Point] = Glow.Point;
 		Component->SetCustomData(Glow.Instance, Values);
 	}
 	for (UInstancedStaticMeshComponent* Component : GlowComponents)
@@ -1324,6 +1331,12 @@ void ARTSBuilding::ApplyKitLightLooks()
 			Component->MarkRenderInstancesDirty();
 		}
 	}
+}
+
+float ARTSBuilding::GetKitBlinkPhase() const
+{
+	const FVector Location = GetActorLocation();
+	return static_cast<float>(GetTypeHash(FIntPoint(FMath::RoundToInt(Location.X / 100.0), FMath::RoundToInt(Location.Y / 100.0))) % 1000u) / 1000.f;
 }
 
 float ARTSBuilding::GetKitLevel(int32 Part) const

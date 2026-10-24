@@ -366,6 +366,9 @@ private:
 	/** Part's look's level; a turning beacon's level when last on, as its lamp fades by its spin (KitSpins). */
 	float GetKitLevel(int32 Part) const;
 
+	/** Where in its cycle the building's blinking lenses and their halos are (#460), 0 to 1, from where it stands: the same on every machine. */
+	float GetKitBlinkPhase() const;
+
 	/** The kit pieces' beams and glare halos (FRTSKitExpansion::Glows), one instanced component per mesh, shown at night (#440). */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UInstancedStaticMeshComponent>> GlowComponents;
@@ -377,6 +380,10 @@ private:
 		int32 Component = INDEX_NONE;
 		int32 Instance = INDEX_NONE;
 		FLinearColor Color = FLinearColor::White;
+		/** FRTSKitGlow::BlinkShift: -1 steady. */
+		float BlinkShift = -1.f;
+		/** FRTSKitGlow::Point. */
+		float Point = 0.f;
 	};
 	TArray<FKitGlow> KitGlows;
 	/** Which of GlowComponents draw beams, which rts.Fx.KitBeams can turn off; the rest draw halos. */

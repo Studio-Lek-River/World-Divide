@@ -742,6 +742,7 @@ function Invoke-TrackShots {
 # at night (#424), to Night or that folder with _Night; -Turn with the building turned half a turn (#450), _Turn before _Night.
 # -Clip N (#459) takes close_12m and default_150m only, as N frames each over one turn of a turning beacon
 # (close_12m_00.png ...), to a folder with _Clip before _Turn: a still cannot show a turn.
+# -Cvars rts.Debug.BuildingShotsClipSeconds=S spans the clip over S game seconds instead (#460: a mast LED's blink).
 function Invoke-BuildingShots {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$Folder = if ($Cvars) { $Cvars -replace '[^A-Za-z0-9]+', '_' } else { '' }

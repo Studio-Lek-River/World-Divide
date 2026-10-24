@@ -157,8 +157,34 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
 	float GlareLength = 0.f;
 
+	/**
+	 * A pair of round halos (glare_shape pair, #460: 13's two domes), each this far in cm from its lens's middle along its
+	 * longest side, the one on the far side the lens's U >= 0.5 half; 0 one halo.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
+	float GlarePair = 0.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
 	float GlareStrength = 0.f;
+
+	/**
+	 * A point halo (glare_point, #460: the mast LEDs): a hot core in a soft, wide glow, its radius never under this many
+	 * degrees from the camera, so it reads as a point of light however far away; 0 a plain halo.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
+	float GlarePoint = 0.f;
+
+	/** The halo's tint on its light's or mount's colour (glare_color, #460): a lightless lens's own EmissionTint by default. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit")
+	FLinearColor GlareTint = FLinearColor::White;
+
+	/** Its lens blinks on its own (the finish's Blink, the mast LEDs, #393), and its halos with it (#460). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit")
+	bool bBlink = false;
+
+	/** Its lens's U >= 0.5 half (13's second dome) blinks half a cycle later (the finish's Alternate), its halo too. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit")
+	bool bAlternate = false;
 
 	/** The measured bounds of the Lens faces in the fixture frame; invalid for a piece without a lens. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit")
@@ -209,6 +235,8 @@ struct FRTSKitPart
 	ERTSKitLightPriority Priority = ERTSKitLightPriority::Primary;
 	float MaxDrawDistance = 0.f;
 	FLinearColor IndicatorColor = FLinearColor::White;
+	/** Its lens blinks on its own (URTSKitPieceData::bBlink), with its building's phase (RTSKitLensData::Blink). */
+	bool bBlink = false;
 	/** Its place among the building's mounts, which fixes its flash and flicker phases on every machine. */
 	int32 MountIndex = 0;
 
@@ -228,6 +256,10 @@ struct FRTSKitGlow
 	FLinearColor Color = FLinearColor::White;
 	/** A beam, which rts.Fx.KitBeams can turn off; a glare halo otherwise. */
 	bool bBeam = false;
+	/** A blinking lens's halo (#460): its part of a cycle after its lens's phase, 0 or 0.5 (13's second dome); -1 steady. */
+	float BlinkShift = -1.f;
+	/** A point halo's least radius from the camera in radians (URTSKitPieceData::GlarePoint); 0 a plain halo. */
+	float Point = 0.f;
 };
 
 /** A building's mounts (URTSBuildingData::Mounts) as what the building draws: RTSKit::Expand. */

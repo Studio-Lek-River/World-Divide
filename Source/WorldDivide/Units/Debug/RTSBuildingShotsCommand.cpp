@@ -55,6 +55,7 @@
  * its front faces the RTS camera at 150 and 450 m too; close_12m still looks at the front, which the sun then lights unturned.
  * -Clip=<N> (#459) pictures close_12m and default_150m only, each as N frames over one turn of a turning beacon
  * (RTSKit::RotateRate), the clock held a little further on for each, to <shot>_<NN>.png: a still cannot show a turn.
+ * rts.Debug.BuildingShotsClipSeconds spans the clip over that many game seconds instead (#460: a mast LED's blink).
  * With -RTSBuildingShotsQuit the game quits when done, exit code 1 on failure.
  */
 namespace RTSBuildingShotsCommand
@@ -86,6 +87,9 @@ namespace RTSBuildingShotsCommand
 	const TCHAR* ClipArg = TEXT("-Clip=");
 	/** Real seconds each clip frame after a view's first settles: the camera stands, only the clock moved. */
 	constexpr double ClipSettleSeconds = 0.5;
+	TAutoConsoleVariable<float> CVarClipSeconds(
+		TEXT("rts.Debug.BuildingShotsClipSeconds"), 0.f,
+		TEXT("The game seconds a building shots clip (-Clip) spans; 0 one turn of a turning beacon."));
 	/** How far the day close view turns the sun in yaw (#443): L_Bench's sun at yaw 35 lights the back, at 215 the front. */
 	constexpr float FrontSunYaw = 180.f;
 	/** The game time every shot is taken at (#424), so what moves on the game clock is the same in every run. */
@@ -174,7 +178,8 @@ namespace RTSBuildingShotsCommand
 				// Before the world ticks, so the radar and the like stay at rest, and the flag's wind, the plants' sway and
 				// the lamps' flashes (all on the game clock) show the same moment whenever the shot lands.
 				Building->SetEquipmentMotionScale(0.f);
-				World->TimeSeconds = ShotGameTime + (ClipFrames > 0 ? Frame / (RTSKit::RotateRate * ClipFrames) : 0.0);
+				const float ClipSeconds = CVarClipSeconds.GetValueOnGameThread();
+				World->TimeSeconds = ShotGameTime + (ClipFrames > 0 ? Frame * (ClipSeconds > 0.f ? ClipSeconds : 1.f / RTSKit::RotateRate) / ClipFrames : 0.0);
 			}
 			switch (Step)
 			{

@@ -157,9 +157,11 @@ The catalogue file is `{"pieces": [ ... ]}`.
 | `light.max_draw_distance` | cm from the camera beyond which the real light is off; the lens still glows |
 | `light.profile` | optional (#440): its light distribution profile, `downlight`, `spot` or `flood` (`building_art.LIGHT_PROFILES`, a hot centre and a soft edge), imported as `LP_Kit_<Profile>`. Point and Spot only: a Rect takes none, its area already softens it |
 | `beam` | optional (#440): `{"strength", "length"}`, the soft beam a Spot or Rect light throws through the air at night, see Night look |
-| `glare` | optional (#440): the strength of the glare halo round the lit lens at night |
+| `glare` | optional (#440): the strength of the glare halo round the lit lens at night. Whether a piece glows is its catalogue choice: a halo is additive glow only, never a light, and costs nothing in the light budget (#460) |
 | `glare_radius` | optional (#456): the halo's radius across, cm; 1.3 × the lens's half size by default |
-| `glare_shape` | optional (#456): `round` (default) or `tube`, a halo stretched along the lens's longest side to its ends plus `glare_radius` |
+| `glare_shape` | optional (#456): `round` (default) or `tube`, a halo stretched along the lens's longest side to its ends plus `glare_radius`; or `pair` (#460, 13), one round halo on each of two domes at the ends of the lens's longest side, as wide as its other horizontal side (1.3 × its half by default) |
+| `glare_point` | optional (#460, 12 and 13): a point halo, as a photographed aviation light at night: a near-white hot core in a soft, wide glow (`building_art.GLOW_POINT_LOOK`), its radius never under this many degrees from the camera, so it reads as a point of light at 150 m and beyond; 0.25 on the mast LEDs |
+| `glare_color` | optional (#460): the halo's tint on its light's or mount's colour; a lightless lens's own `EmissionTint` by default (12 and 13's red) |
 | `emergency_default` | the mount's `Emergency` when it does not say |
 | `fault_response` | `None`, `Flicker` or `Off`: what damage does to it, see the state table |
 | `mount_points` | named frames on the piece where it meets the building |
@@ -311,7 +313,11 @@ volumetric fog (route B) on `DA_TestKitLighting` and the USA HQ at 12, 150 and 4
   turned back into the beam's resting frame.
 - **Glare.** A piece with `glare` gets a halo, `SM_Kit_Glare` (a unit sphere) at its lens's middle, 1.3 × the lens's half
   size or `glare_radius`, on `MI_Kit_Glare`; a `tube` halo (04 and 07, #456, #457) is stretched along the lens's longest side
-  (`GlareLength`). A turning beacon's halo stays on its axis and flares as the beam's way round faces the camera across
+  (`GlareLength`); a `pair` (13, #460) puts one on each dome (`GlarePair`), the far one on the lens's U ≥ 0.5 half. A
+  blinking lens's halos blink with it (#460): the same `BLINK_HLSL` in `M_Kit_Glow`, from the lens's phase
+  (`RTSKitGlowData::Blink`), the second dome's half a cycle later. A `glare_point` halo (`RTSKitGlowData::Point`) grows by
+  world position offset as the camera draws back (`GLOW_TURN_HLSL`), never under its angle, and draws a hot core
+  (`GLOW_POINT_HOT` times its colour's peak) in its soft glow. A turning beacon's halo stays on its axis and flares as the beam's way round faces the camera across
   the ground (#459): `FaceFloor` (0.3) of its glow turned away, `FaceFloor + FaceGain` (6.3) facing, `FacePower` 8.
 - Beams and halos draw only at night (`ARTSBuilding::ShowKitGlows`), one instanced component per mesh per building, and
   glow with their part's look (`RTSKitGlowData`: level, fault, flash, colour; a turning beacon's turn rate and switch times), so they are out when the lamp is out (low
@@ -363,9 +369,11 @@ Only **real** lights count. Emissive-only pieces (09, 12, 13, 14, and every lens
     (1 − Fresnel), its base colour times GlassDarken; the instance draws masked and two-sided. `Sweep` (both masters):
     world position offset turns part of the piece about its Z axis at SweepRate (1.5 turns a second, as the turning
     light), on the lens where the profile's green is 0, on the housing above SweepMinZ within SweepRadius (cm). 08 uses
-    both for its dome and its turning reflector. A lens with `Blink` 1 blinks on its own, its phase from where it stands,
-    and with `Alternate` 1 its half at U ≥ 0.5 half a cycle later (13's second dome); only lenses without a real light
-    blink.
+    both for its dome and its turning reflector. A lens with `Blink` 1 blinks on its own like an LED (#460,
+    `LENS_BLINK`): crisp on and off, no fade, at a steady 0.5 Hz (30 flashes a minute, within the 20–40 of aviation
+    obstruction lights), lit 40 % of the cycle. Its phase is its building's (`ARTSBuilding::GetKitBlinkPhase`,
+    `RTSKitLensData::Blink`), so a building's mast LEDs flash together as on a real structure; with `Alternate` 1 its half
+    at U ≥ 0.5 blinks half a cycle later (13's second dome). Only lenses without a real light blink.
 - **Real dimensions** (see each piece's reference). Mounting plates, brackets, gaskets, cable glands and screws are
   geometry on L and XL pieces and normal-map detail on S and M ones (detail under 10 cm lives in the maps,
   `MODEL_PERFORMANCE.md`).
@@ -432,8 +440,8 @@ Present-day military and industrial fixtures, no brand look. Light values are th
 | 09 | Small chamfered wall box with a ribbed diffuser, slotted end plug, two Torx screws (#393); its `Wall` mount point turns it so the diffuser, modelled underneath, faces out from the wall and the screws up, where the RTS camera sees it (#441) | 24 × 9 × 9 | worn bare steel | ribbed neutral diffuser in a screwed bezel | emissive, colour per mount |
 | 10 | Bollard path light with a louvred head | Ø 20 × 100 | dark grey extruded aluminium, base plate with four anchor bolts | louvres throw light down only | 3000 K, 80 cd, 30/60°, 6 m |
 | 11 | Galvanised perimeter pole with a flat "shoebox" LED head on a short arm | pole 600 tall, head 60 × 30 × 10 | galvanised steel pole and base plate, grey head | flat glass underside | 4000 K, 800 cd, 30/55°, 22 m |
-| 12 | Aviation obstruction light (low-intensity, red) on a mast tip: dome, clamp-lug collar, stem with a gland nut (#393) | 46 × 46 × 56 at scale 1 | dark cast metal | red glass dome over an LED column | emissive red, blinking (`Blink`) |
-| 13 | Two red obstruction lights (12's head at 0.75 ×) on a bolted horizontal bar (#393) | 80 × 35 × 45 | weathered steel bar, gland nuts | two red domes | emissive red, blinking in turn (`Alternate`) |
+| 12 | Aviation obstruction light (low-intensity, red) on a mast tip: dome, clamp-lug collar, stem with a gland nut (#393) | 46 × 46 × 56 at scale 1 | dark cast metal | red glass dome over an LED column | emissive red, blinking (`Blink`), a red glare halo blinking with it (#460) |
+| 13 | Two red obstruction lights (12's head at 0.75 ×) on a bolted horizontal bar (#393) | 80 × 35 × 45 | weathered steel bar, gland nuts | two red domes | emissive red, blinking in turn (`Alternate`), a halo on each dome blinking with its dome (`glare_shape` `pair`, #460) |
 | 14 | Stack light: three or four LED segments on a short pole, or a cluster of four pilot lights on a plate | Ø 6 × 25 | black base, grey cap | segment lenses red, amber, green, blue/white | emissive, colour and pattern per mount |
 
 Appearance approval is per piece: Codex delivers a candidate with close-up and RTS-camera shots, the producer approves
