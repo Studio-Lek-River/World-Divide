@@ -145,6 +145,7 @@ The catalogue file is `{"pieces": [ ... ]}`.
 | `light.rotation` | optional: pitch, yaw, roll of the light in the fixture frame; `[0, 0, 0]` (default) shines along +X |
 | `light.offset` | optional (#455): cm the light stands out from its lens along `rotation`, so a shadowless Point lighting the area round a wall lamp does not burn the wall behind it white |
 | `light.type` | `Point`, `Spot` or `Rect` (`ERTSBuildingLightType`) |
+| `light.tube` | optional (#456): a Point whose source is a tube (`SourceLength`) as long as its lens's face along its Z and as thick as it across its Y, a fluorescent tube's soft all-round light; turn it with `rotation` so its Z runs along the tube |
 | `light.candela` | intensity, within the class maximum |
 | `light.kelvin` | colour temperature of the real fixture class |
 | `light.radius` | attenuation radius, cm |
@@ -156,6 +157,8 @@ The catalogue file is `{"pieces": [ ... ]}`.
 | `light.profile` | optional (#440): its light distribution profile, `downlight`, `spot` or `flood` (`building_art.LIGHT_PROFILES`, a hot centre and a soft edge), imported as `LP_Kit_<Profile>`. Point and Spot only: a Rect takes none, its area already softens it |
 | `beam` | optional (#440): `{"strength", "length"}`, the soft beam a Spot or Rect light throws through the air at night, see Night look |
 | `glare` | optional (#440): the strength of the glare halo round the lit lens at night |
+| `glare_radius` | optional (#456): the halo's radius across, cm; 1.3 × the lens's half size by default |
+| `glare_shape` | optional (#456): `round` (default) or `tube`, a halo stretched along the lens's longest side to its ends plus `glare_radius` |
 | `emergency_default` | the mount's `Emergency` when it does not say |
 | `fault_response` | `None`, `Flicker` or `Off`: what damage does to it, see the state table |
 | `mount_points` | named frames on the piece where it meets the building |
@@ -294,7 +297,8 @@ volumetric fog (route B) on `DA_TestKitLighting` and the USA HQ at 12, 150 and 4
   outer cone (a Rect 30°). It draws additive with `MI_Kit_Beam` on `M_Kit_Glow`: brightest where it faces the camera,
   fading along its length and where it meets geometry (depth fade). 05, 06 and 07 have strength 1, 01 and 03 0.25.
 - **Glare.** A piece with `glare` gets a halo, `SM_Kit_Glare` (a unit sphere) at its lens's middle, 1.3 × the lens's half
-  size, on `MI_Kit_Glare`.
+  size or `glare_radius`, on `MI_Kit_Glare`; a `tube` halo (04, #456) is stretched along the lens's longest side
+  (`GlareLength`).
 - Beams and halos draw only at night (`ARTSBuilding::ShowKitGlows`), one instanced component per mesh per building, and
   glow with their part's look (`RTSKitGlowData`: level, fault, flash, colour), so they are out when the lamp is out (low
   power, damage, destroyed), flicker and flash with it and turn cooler on battery. `rts.Fx.KitBeams 0` turns the beams off.

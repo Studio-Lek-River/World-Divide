@@ -694,6 +694,10 @@ def kit_light(light, lens, profile=None):
     if light["type"] == "Rect":
         value.set_editor_property("source_width", width)
         value.set_editor_property("source_height", height)
+    elif light.get("tube"):
+        # A tube (04, #456): a Point's source as long as its lens's face along its Z, as thick as it across its Y.
+        value.set_editor_property("source_radius", width / 2.0)
+        value.set_editor_property("source_length", height)
     else:
         value.set_editor_property("source_radius", min(width, height) / 2.0)
     value.set_editor_property("profile", profile)
@@ -744,10 +748,11 @@ def glow_profile(parts, name, kept):
 def make_kit_glow(piece, lens, parts, kept):
     """A piece's night look (#440) from its catalogue entry: its light's "profile", its "beam" ({"strength", "length"
     cm}: SM_Kit_<Piece>_Beam, building_art.write_beam_glb, from its lens's face along its light) and its "glare" (the
-    halo's strength). Returns the URTSKitPieceData values; none for what it does not have."""
+    halo's strength; "glare_radius" cm across, 1.3 × its lens's half size by default, and "glare_shape" "tube" stretches it
+    along its lens's longest side past its ends, #456). Returns the URTSKitPieceData values; none for what it does not have."""
     light = piece.get("light")
     result = {"profile": None, "beam_mesh": None, "beam_strength": 0.0, "glare_mesh": None, "glare_radius": 0.0,
-              "glare_strength": 0.0}
+              "glare_length": 0.0, "glare_strength": 0.0}
     if light and "profile" in light:
         if light["type"] == "Rect":
             raise RuntimeError(f"kit_catalogue.json: {piece['id']}'s Rect light takes no profile")
@@ -774,8 +779,13 @@ def make_kit_glow(piece, lens, parts, kept):
             raise RuntimeError(f"kit_catalogue.json: {piece['id']} has a glare but no lens")
         size = [high - low for low, high in zip(*lens)]
         result["glare_mesh"] = parts["glare"]
-        result["glare_radius"] = KIT_GLARE_SCALE * max(size) / 2.0
+        result["glare_radius"] = float(piece.get("glare_radius", KIT_GLARE_SCALE * max(size) / 2.0))
         result["glare_strength"] = float(piece["glare"])
+        shape = piece.get("glare_shape", "round")
+        if shape not in ("round", "tube"):
+            raise RuntimeError(f"kit_catalogue.json: {piece['id']}'s glare_shape is round or tube, not {shape}")
+        if shape == "tube":
+            result["glare_length"] = max(size) / 2.0 + result["glare_radius"]
     return result
 
 
@@ -894,6 +904,7 @@ def make_kit(masters):
             "beam_strength": glow["beam_strength"],
             "glare_mesh": glow["glare_mesh"],
             "glare_radius": glow["glare_radius"],
+            "glare_length": glow["glare_length"],
             "glare_strength": glow["glare_strength"],
             "lens_bounds": lens_bounds,
             "emergency_default": piece["emergency_default"],

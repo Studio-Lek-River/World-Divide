@@ -149,6 +149,7 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 			Light.Behaviour = Kit.Behaviour;
 			Light.Profile = Kit.Profile;
 			Light.SourceRadius = Kit.SourceRadius;
+			Light.SourceLength = Kit.SourceLength;
 			if (Piece.BeamMesh && Piece.BeamStrength > 0.f)
 			{
 				// In the mount's frame, its scale included (a mount may undo its building's MeshScale).
@@ -163,8 +164,14 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 			const bool bAimed = Piece.bHasLight && Piece.Light.Type != ERTSBuildingLightType::Point;
 			const FVector Centre = bAimed ? Piece.Light.Location + Piece.Light.Rotation.Vector() * (0.5f * Piece.GlareRadius)
 				: Piece.LensBounds.GetCenter();
-			Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.GlareMesh,
-				FTransform(FQuat::Identity, Centre, FVector(Piece.GlareRadius)) * Frame,
+			// A tube's halo stretches along its lens's longest side (#456).
+			FVector Scale(Piece.GlareRadius);
+			if (Piece.GlareLength > 0.f)
+			{
+				const FVector Size = Piece.LensBounds.GetSize();
+				Scale[Size.X >= Size.Y && Size.X >= Size.Z ? 0 : Size.Y >= Size.Z ? 1 : 2] = FMath::Max(Piece.GlareLength, Piece.GlareRadius);
+			}
+			Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.GlareMesh, FTransform(FQuat::Identity, Centre, Scale) * Frame,
 				(Piece.bHasLight ? FLinearColor::MakeFromColorTemperature(Piece.Light.Kelvin) : Mount.IndicatorColor) * Piece.GlareStrength * Mount.Brightness,
 				/*bBeam*/ false });
 		}

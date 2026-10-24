@@ -78,6 +78,10 @@ struct FRTSKitLight
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
 	float SourceRadius = 0.f;
 
+	/** A tube (light.tube, #456): its glowing source's length in cm along its Z, its lens's face; 0 a ball. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
+	float SourceLength = 0.f;
+
 	/** Windows, Fixtures, Accents, GarageLamps, Emergency or Warning. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
 	FName Group;
@@ -144,6 +148,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
 	float GlareRadius = 0.f;
+
+	/** A tube's halo (glare_shape tube, #456): its half length in cm along its lens's longest side; 0 a round halo. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
+	float GlareLength = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Kit", meta = (ClampMin = "0"))
 	float GlareStrength = 0.f;

@@ -996,6 +996,7 @@ ULocalLightComponent* ARTSBuilding::CreateLight(const FRTSBuildingLight& Data)
 	if (UPointLightComponent* Point = Cast<UPointLightComponent>(Light))
 	{
 		Point->SetSourceRadius(Data.SourceRadius);
+		Point->SetSourceLength(Data.SourceLength);
 	}
 	Light->SetIntensityUnits(ELightUnits::Candelas);
 	Light->SetIntensity(Data.Candelas);

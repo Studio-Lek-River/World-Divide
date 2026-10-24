@@ -233,6 +233,10 @@ struct FRTSBuildingLight
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
 	float SourceRadius = 0.f;
 
+	/** Point and Spot: the glowing source's length in cm along its Z, a tube (#456); 0 a ball. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
+	float SourceLength = 0.f;
+
 	/** Steady for the building's own lights; a kit piece's light takes its piece's (RTSKit::Expand). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
 	ERTSKitLightBehaviour Behaviour = ERTSKitLightBehaviour::Steady;

@@ -267,8 +267,11 @@ bool FRTSKitArtTest::RunTest(const FString& Parameters)
 				Real.OuterConeAngle <= Limits.MaxOuterCone);
 		}
 		TestTrue(*FString::Printf(TEXT("%s: its light shines from a Lens slot"), *Id), bLensSlot);
+		// Its light.offset (#455) stands it out along its light.
+		double Offset = 0.0;
+		(*Light)->TryGetNumberField(TEXT("offset"), Offset);
 		TestTrue(*FString::Printf(TEXT("%s: its light stands in its Lens"), *Id),
-			Data->LensBounds.IsValid && Data->LensBounds.ExpandBy(0.5).IsInside(Real.Location));
+			Data->LensBounds.IsValid && Data->LensBounds.ExpandBy(0.5).IsInside(Real.Location - Real.Rotation.Vector() * Offset));
 		TestTrue(*FString::Printf(TEXT("%s: its light shines out of its Lens"), *Id),
 			Data->LensBounds.IsValid && FVector::DotProduct(Real.Rotation.Vector(), Real.Location - Data->LensBounds.GetCenter()) > 0.0);
 	}
