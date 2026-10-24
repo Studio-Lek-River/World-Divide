@@ -33,8 +33,8 @@
 #include "WorldDivide.h"
 
 /**
- * rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] (#349; ue.ps1 -Task buildingshots -Building <DA>): one finished
- * building of the data asset in the middle of the level (L_Bench), pictured by a camera at the RTS camera's pitch for each
+ * rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn] (#349; ue.ps1 -Task buildingshots -Building <DA>): one
+ * finished building of the data asset in the middle of the level (L_Bench), pictured by a camera at the RTS camera's pitch for each
  * arm length (ARTSCameraPawn::GetPitchForZoom) at 1920x1080, to Saved/BuildingShots/<BuildingData>[/<Folder>]/<shot>.png:
  * close_12m looks at its front from outside at the closest zoom, framed from its data (the footprint's front and the root
  * mesh's height) so every run lands on the same spot (#424); default_150m, far_450m and the pair either side of
@@ -49,7 +49,9 @@
  * game's own state.
  * -Night pictures it at night (#424): the sun and the sky lit as the game's night (FRTSShotNight::GetGameMoon, L_TestMapNight's
  * moon, sky and exposure) and the world dark for its lamps and glow (URTSDayNightSubsystem, as rts.Light.ForceDark 1), to the
- * Folder Night unless one is given. With -RTSBuildingShotsQuit the game quits when done, exit code 1 on failure.
+ * Folder Night unless one is given. -Turn stands the building half a turn round (#450), as a player turns it at placement, so
+ * its front faces the RTS camera at 150 and 450 m too; close_12m still looks at the front, which the sun then lights unturned.
+ * With -RTSBuildingShotsQuit the game quits when done, exit code 1 on failure.
  */
 namespace RTSBuildingShotsCommand
 {
@@ -63,6 +65,8 @@ namespace RTSBuildingShotsCommand
 	/** Where the building stands; L_Bench's middle, clear of its teams' headquarters in the corners. */
 	const FVector BuildingLocation(0.f, 0.f, 0.f);
 	constexpr float BuildingYaw = 0.f;
+	/** How far -Turn turns the building (#450): its front, +X at yaw 0, then faces the RTS camera, which looks along +X. */
+	constexpr float TurnYaw = 180.f;
 	constexpr float CameraFOV = 60.f;
 	/**
 	 * The closest view looks at a point inside the footprint's front, FrontInsetShare of its depth up to FrontInset, and half
@@ -73,6 +77,8 @@ namespace RTSBuildingShotsCommand
 	constexpr float FrontHeight = 400.f;
 	const TCHAR* NightArg = TEXT("-Night");
 	const TCHAR* NightFolder = TEXT("Night");
+	const TCHAR* TurnArg = TEXT("-Turn");
+	const TCHAR* TurnFolder = TEXT("Turn");
 	/** How far the day close view turns the sun in yaw (#443): L_Bench's sun at yaw 35 lights the back, at 215 the front. */
 	constexpr float FrontSunYaw = 180.f;
 	/** The game time every shot is taken at (#424), so what moves on the game clock is the same in every run. */
@@ -106,8 +112,8 @@ namespace RTSBuildingShotsCommand
 	class FBuildingShotsRun : public TSharedFromThis<FBuildingShotsRun>
 	{
 	public:
-		FBuildingShotsRun(UWorld& InWorld, const FString& InDataName, const FString& InFolder, bool bInNight)
-			: World(&InWorld), DataName(InDataName), Folder(InFolder), bNight(bInNight)
+		FBuildingShotsRun(UWorld& InWorld, const FString& InDataName, const FString& InFolder, bool bInNight, bool bInTurned)
+			: World(&InWorld), DataName(InDataName), Folder(InFolder), bNight(bInNight), bTurned(bInTurned)
 		{
 		}
 
@@ -229,7 +235,7 @@ namespace RTSBuildingShotsCommand
 				return Finish(FString::Printf(TEXT("no building data %s in %s or %s (the bench HQs: ue.ps1 -Task setup -BenchHQ)"),
 					*DataName, RTSBenchScene::BenchHQDir, BuildingDataPath));
 			}
-			const FTransform Transform(FRotator(0.f, BuildingYaw, 0.f), BuildingLocation);
+			const FTransform Transform(FRotator(0.f, GetBuildingYaw(), 0.f), BuildingLocation);
 			Building = World->SpawnActorDeferred<ARTSBuilding>(ARTSBuilding::StaticClass(), Transform, nullptr, nullptr,
 				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 			if (!Building.IsValid())
@@ -302,14 +308,16 @@ namespace RTSBuildingShotsCommand
 				LookAt = Footprint.ToWorld(FVector2D(Footprint.Extent.X - Inset, 0.f));
 				LookAt.Z = Building->GetActorLocation().Z + Height;
 			}
-			TurnSunToFront(Shot.bFront && !bNight);
-			// Looking along +X, towards the building's front for the close view (its front faces +X at yaw 0) and from behind
-			// the front for the rest, as the RTS camera looks north.
-			const FRotator Rotation(Pitch, Shot.bFront ? 180.f : 0.f, 0.f);
+			TurnSunToFront(Shot.bFront && !bNight && !bTurned);
+			// Looking along +X, as the RTS camera looks north, for the far views; the close view looks at the building's front
+			// (+X at its yaw 0), towards -X unturned and along +X turned.
+			const FRotator Rotation(Pitch, Shot.bFront ? GetBuildingYaw() + 180.f : 0.f, 0.f);
 			Camera->SetActorLocationAndRotation(LookAt - Rotation.Vector() * Shot.Distance, Rotation);
 			GoTo(EStep::Settle);
 			return true;
 		}
+
+		float GetBuildingYaw() const { return bTurned ? BuildingYaw + TurnYaw : BuildingYaw; }
 
 		/** Turns every sun FrontSunYaw in yaw so the close view's front is lit, or back to where it stood. */
 		void TurnSunToFront(bool bTurn)
@@ -412,6 +420,7 @@ namespace RTSBuildingShotsCommand
 		FString DataName;
 		FString Folder;
 		bool bNight = false;
+		bool bTurned = false;
 		FRTSShotNight Night;
 		/** The world's time dilation before the run held the clock. */
 		TOptional<float> TimeDilation;
@@ -431,7 +440,7 @@ namespace RTSBuildingShotsCommand
 	{
 		if (!World || !World->IsGameWorld() || Args.IsEmpty())
 		{
-			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] needs a running game"));
+			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn] needs a running game"));
 			return;
 		}
 		if (FBuildingShotsRun::IsRunning())
@@ -441,21 +450,26 @@ namespace RTSBuildingShotsCommand
 		}
 		TArray<FString> Rest(Args);
 		const bool bNight = Rest.RemoveAll([](const FString& Arg) { return Arg.Equals(NightArg, ESearchCase::IgnoreCase); }) > 0;
+		const bool bTurn = Rest.RemoveAll([](const FString& Arg) { return Arg.Equals(TurnArg, ESearchCase::IgnoreCase); }) > 0;
 		if (Rest.IsEmpty())
 		{
-			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] needs a building"));
+			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn] needs a building"));
 			return;
 		}
-		const FString Folder = Rest.Num() > 1 ? Rest[1] : bNight ? FString(NightFolder) : FString();
-		const TSharedRef<FBuildingShotsRun> Run = MakeShared<FBuildingShotsRun>(*World, Rest[0], Folder, bNight);
+		FString Folder = Rest.Num() > 1 ? Rest[1] : FString(bTurn ? TurnFolder : TEXT(""));
+		if (Rest.Num() < 2 && bNight)
+		{
+			Folder = Folder.IsEmpty() ? FString(NightFolder) : Folder + TEXT("_") + NightFolder;
+		}
+		const TSharedRef<FBuildingShotsRun> Run = MakeShared<FBuildingShotsRun>(*World, Rest[0], Folder, bNight, bTurn);
 		FBuildingShotsRun::Start(Run);
 		Output.Logf(TEXT("rts.Debug.BuildingShots: %s to %s"), *Rest[0], *Run->GetShotDir());
 	}
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice BuildingShotsCommand(
 		TEXT("rts.Debug.BuildingShots"),
-		TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night]: one finished building of the data asset pictured at the RTS camera's pitch from 12, 150 and 450 m ")
-		TEXT("and either side of 260 m, with the LOD of every part logged, to Saved/BuildingShots/<BuildingData>[/<Folder>] (#349); -Night at night, to Night by default (#424)."),
+		TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] [-Turn]: one finished building of the data asset pictured at the RTS camera's pitch from 12, 150 and 450 m ")
+		TEXT("and either side of 260 m, with the LOD of every part logged, to Saved/BuildingShots/<BuildingData>[/<Folder>] (#349); -Night at night, to Night by default (#424); -Turn turned half a turn, to Turn or Turn_Night by default (#450)."),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunBuildingShots));
 }
 

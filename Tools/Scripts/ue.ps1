@@ -139,7 +139,9 @@ Saved/BuildingShots/<Building>. -Cvars runs it with console variables into a fol
 r_Nanite_0, what hardware without Nanite draws). The close view is framed from the building's data and its turning parts stay
 at rest, so two runs give the same pictures (#424). -Night pictures it at night (the sun and sky dimmed, its lamps and glow on
 as with rts.Light.ForceDark 1) into Night, or <cvars folder>_Night with -Cvars. The building shows Idle unless -Cvars sets
-rts.Debug.BuildingState (#442; 2 low power, -1 the game's own state: L_Bench's team is short of power).
+rts.Debug.BuildingState (#442; 2 low power, -1 the game's own state: L_Bench's team is short of power). -Turn stands it half
+a turn round, as a player turns it at placement, so its front faces the RTS camera at 150 and 450 m too (#450), into Turn
+(Turn_Night, <cvars folder>_Turn).
 Kitspike builds the shared building kit's git-ignored spike content in /Game/Developers/KitSpike (Tools/Editor/kit_spike.py,
 #387), then plays L_Bench with a renderer and pictures the lens row (rts.Debug.KitSpikeLens) to Saved/KitSpike with the cost
 of updating its instances logged. Buildingshots then takes -Building DA_KitSpike_<Large|Small>_<A|B>.
@@ -216,6 +218,8 @@ param(
 	[switch]$Screen,
 
 	[switch]$Night,
+
+	[switch]$Turn,
 
 	[switch]$LODs,
 
@@ -730,10 +734,11 @@ function Invoke-TrackShots {
 
 # One finished building pictured from the RTS camera at 12, 150 and 450 m and either side of the bench HQ's 260 m LOD switch
 # (#349; rts.Debug.BuildingShots), to Saved\BuildingShots\<Building>, or with -Cvars to a folder named after them; -Night
-# at night (#424), to Night or that folder with _Night.
+# at night (#424), to Night or that folder with _Night; -Turn with the building turned half a turn (#450), _Turn before _Night.
 function Invoke-BuildingShots {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$Folder = if ($Cvars) { $Cvars -replace '[^A-Za-z0-9]+', '_' } else { '' }
+	if ($Turn) { $Folder = if ($Folder) { "${Folder}_Turn" } else { 'Turn' } }
 	if ($Night) { $Folder = if ($Folder) { "${Folder}_Night" } else { 'Night' } }
 	$ShotDir = Join-Path $RepoRoot "Saved\BuildingShots\$Building"
 	if ($Folder) { $ShotDir = Join-Path $ShotDir $Folder }
@@ -741,7 +746,7 @@ function Invoke-BuildingShots {
 	Clear-ShotDir $ShotDir
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
 		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
-		"`"-ExecCmds=rts.Debug.BuildingShots $Building $Folder$(if ($Night) { ' -Night' })`"", '-RTSBuildingShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		"`"-ExecCmds=rts.Debug.BuildingShots $Building $Folder$(if ($Night) { ' -Night' })$(if ($Turn) { ' -Turn' })`"", '-RTSBuildingShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
 		'-unattended', '-nosplash', '-nosound') + @(if ($Cvars) { "-dpcvars=$Cvars" }))
 	$Names = @('close_12m', 'default_150m', 'far_450m', 'lod_before_249.6m', 'lod_after_270.4m')
 	$Problems = @($Names | Where-Object { -not (Test-Path (Join-Path $ShotDir "$_.png")) } | ForEach-Object { "missing $_.png" })
