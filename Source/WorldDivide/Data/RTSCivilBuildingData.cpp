@@ -15,3 +15,8 @@ UStaticMesh* URTSCivilBuildingData::GetMesh(ERTSCivilBuildingState State) const
 		return PristineMesh;
 	}
 }
+
+TArray<FRTSGarrisonFiringPosition> URTSCivilBuildingData::GetFiringPositions(ERTSCivilBuildingState State) const
+{
+	return FiringPositions.FilterByPredicate([State](const FRTSGarrisonFiringPosition& Position) { return Position.StandsIn(State); });
+}

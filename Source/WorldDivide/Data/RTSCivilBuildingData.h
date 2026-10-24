@@ -38,6 +38,12 @@ struct FRTSGarrisonFiringPosition
 	/** The full horizontal arc the shooter covers through the opening, centred on Yaw. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Garrison", meta = (ClampMin = "0", ClampMax = "180"))
 	float ArcDegrees = 90.f;
+
+	/** The most damaged state the opening still stands in: the church's belfry goes with the top of its tower (#447). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Garrison")
+	ERTSCivilBuildingState LastState = ERTSCivilBuildingState::Rubble;
+
+	bool StandsIn(ERTSCivilBuildingState State) const { return State <= LastState; }
 };
 
 /**
@@ -56,6 +62,9 @@ public:
 	UStaticMesh* GetMesh(ERTSCivilBuildingState State) const;
 
 	bool CanGarrison() const { return GarrisonCapacity > 0; }
+
+	/** The firing positions still standing in State. A squad member at one that is gone moves to a free one (#252). */
+	TArray<FRTSGarrisonFiringPosition> GetFiringPositions(ERTSCivilBuildingState State) const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
 	FText DisplayName;
@@ -86,7 +95,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Garrison")
 	FVector EntryPoint = FVector::ZeroVector;
 
-	/** The windows and doors the garrison fires from; at least as many as the capacity. */
+	/** The windows and doors the garrison fires from; in every state at least as many as the capacity. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Garrison")
 	TArray<FRTSGarrisonFiringPosition> FiringPositions;
 };

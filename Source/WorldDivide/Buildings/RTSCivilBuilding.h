@@ -30,6 +30,12 @@ public:
 	URTSCivilBuildingData* GetData() const { return Data; }
 	ERTSCivilBuildingState GetState() const { return State; }
 
+	/** The firing positions its current state still has. */
+	TArray<FRTSGarrisonFiringPosition> GetFiringPositions() const
+	{
+		return Data ? Data->GetFiringPositions(State) : TArray<FRTSGarrisonFiringPosition>();
+	}
+
 	//~ IRTSTargetable
 	virtual int32 GetTeamId() const override { return INDEX_NONE; }
 	virtual URTSHealthComponent* GetHealthComponent() const override { return HealthComponent; }

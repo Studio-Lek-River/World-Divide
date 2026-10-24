@@ -1228,6 +1228,8 @@ def make_village():
                 "location": unreal.Vector(*position["location"]),
                 "yaw": float(position["yaw"]),
                 "arc_degrees": float(position["arc"]),
+                # A belfry goes with the top of the church's tower (#447).
+                "last_state": getattr(unreal.RTSCivilBuildingState, position.get("last_state", "Rubble").upper()),
             }) for position in building["firing_positions"]],
         })
     return civil

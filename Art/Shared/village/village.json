@@ -3373,7 +3373,8 @@
       2150.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Pristine"
     },
     {
      "name": "BelfryPY",
@@ -3383,7 +3384,8 @@
       2150.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Pristine"
     },
     {
      "name": "BelfryNY",
@@ -3393,7 +3395,8 @@
       2150.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Pristine"
     }
    ]
   },

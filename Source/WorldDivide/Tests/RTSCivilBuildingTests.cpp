@@ -24,8 +24,10 @@ namespace RTSCivilBuildingTests
 /**
  * Every civilian building (#408, URTSCivilBuildingData in /Game/Data/Civil) has its three state meshes, each its own, with
  * collision; health; and a garrison #252 can use: no more capacity than firing positions, each named once, standing in
- * the building and looking out of it, and an entry point just outside the footprint. One without capacity has no
- * firing positions. The village set has at least the seven types of 05_PRODUCER_ACTIONS (houses, farmhouse, barn,
+ * the building and looking out of it, and an entry point just outside the footprint. In the pristine and the damaged
+ * state each position still standing lies under that state's mesh top, and there are at least as many as the capacity
+ * (#447: the damaged church loses its belfry). Rubble is left out: it is lower than every window. One without capacity
+ * has no firing positions. The village set has at least the seven types of 05_PRODUCER_ACTIONS (houses, farmhouse, barn,
  * workshop, landmark) that can be garrisoned.
  */
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRTSCivilBuildingDataTest, "WorldDivide.Data.CivilBuildings", RTSCivilBuildingTests::TestFlags)
@@ -87,6 +89,19 @@ bool FRTSCivilBuildingDataTest::RunTest(const FString& Parameters)
 			const FVector FromMiddle = (Position.Location - Box.GetCenter()) * FVector(1.f, 1.f, 0.f);
 			TestTrue(*FString::Printf(TEXT("%s's %s looks out"), *Name, *Position.Name.ToString()), FVector::DotProduct(Out, FromMiddle) > 0.f);
 			TestTrue(*FString::Printf(TEXT("%s's %s covers an arc"), *Name, *Position.Name.ToString()), Position.ArcDegrees > 0.f);
+		}
+		for (const ERTSCivilBuildingState State : {ERTSCivilBuildingState::Pristine, ERTSCivilBuildingState::Damaged})
+		{
+			const TArray<FRTSGarrisonFiringPosition> Standing = Data->GetFiringPositions(State);
+			const FString StateName = StaticEnum<ERTSCivilBuildingState>()->GetNameStringByValue(static_cast<int64>(State));
+			TestTrue(*FString::Printf(TEXT("%s has no more capacity than firing positions while %s (%d)"), *Name, *StateName,
+				Standing.Num()), Data->GarrisonCapacity <= Standing.Num());
+			const float Top = Data->GetMesh(State)->GetBoundingBox().Max.Z;
+			for (const FRTSGarrisonFiringPosition& Position : Standing)
+			{
+				TestTrue(*FString::Printf(TEXT("%s's %s stands under its %s top (%.0f cm)"), *Name, *Position.Name.ToString(),
+					*StateName, Top), Position.Location.Z < Top);
+			}
 		}
 		const FBox2D Footprint(FVector2D(Box.Min), FVector2D(Box.Max));
 		const FVector2D Entry(Data->EntryPoint);
