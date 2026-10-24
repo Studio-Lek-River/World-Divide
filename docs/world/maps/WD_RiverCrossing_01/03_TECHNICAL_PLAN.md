@@ -10,7 +10,7 @@ Each item is tagged **Verified** (checked in the project or the engine install),
 | Project plugins enabled | ModelingToolsEditorMode, EnhancedInput, Niagara, Water (#155, §7), PCG (#154, §6), CommonUI, PythonScriptPlugin, EditorScriptingUtilities, ModelContextProtocol, EditorToolset, SlateInspectorToolset, WorldDivideMCP, MetaHuman, ProceduralVegetationEditor (#158, experimental: the Megaplant trees' foliage material and its DynamicWind). Experimental and not used in code: MeshTerrainMode, MeshPartition, MeshPartitionWater, PCGMeshPartitionInterop, kept on by producer decision (2026-10-24) | `WorldDivide.uproject` |
 | Installed in the engine but **not enabled** | PCGGeometryScriptInterop, PCGWaterInterop (experimental), PCGPythonInterop, WaterAdvanced, WaterExtras, Landmass, LandscapePatch, Fab, Bridge (GeometryScripting is on as a dependency of ProceduralVegetationEditor) | `D:\Program Files\Epic Games\UE_5.8\Engine\Plugins\` |
 | Not installed | Cesium, Houdini Engine | same |
-| Lighting | `r.AllowStaticLighting=False`; Lumen, VSM and Nanite at engine defaults | `DefaultEngine.ini` |
+| Lighting | `r.AllowStaticLighting=False`; software Lumen GI and reflections, mesh distance fields and VSM set explicitly (#159); Nanite at the engine default | `DefaultEngine.ini` |
 | Navigation | `NavigationSystemV1` with `bAllowClientSideNavigation=True`; `RecastNavMesh` with `RuntimeGeneration=Dynamic`; one default agent (radius 34, height 144, step 35, slope 44°, cell 19, tile 1000) | `DefaultEngine.ini`, engine `BaseEngine.ini` |
 | Movement | `ARTSUnit` is an `APawn` with `UFloatingPawnMovement`, `MoveToLocation(..., bCanStrafe=true, bAllowPartialPath=true)`; separation by `URTSAvoidanceSubsystem` | `Units/RTSUnit.cpp`, `Units/RTSAvoidanceSubsystem.cpp` |
 | Ground finding | `RTSGround::Trace` traces WorldStatic only; the HQ uses a WorldStatic trace with `GroundSearchDepth=1000` | `Units/RTSGround.cpp`, `Core/RTSGameMode.cpp` |
@@ -204,8 +204,8 @@ Recommendations (part of the rescale issue, not this map):
 | ExponentialHeightFog | Low density (≤ 0.01) with a falloff that adds depth at the border ring only. **No volumetric fog.** |
 | PostProcessVolume (unbound) | Manual exposure as the project already uses for previews (`RTSEditorScripting.cpp`, manual exposure); mild bloom; no vignette, chromatic aberration or film grain; Lumen GI and reflections at a budgeted quality |
 
-- **GI:** Lumen software ray tracing. Hardware RT only if the minimum spec allows it. That is a producer decision.
-- **Lighting presets:** the existing `spawn_lighting` (Sun, SkyLight, SkyAtmosphere) stays the base, extended in this level by hand.
+- **GI:** Lumen software ray tracing (D7, decided 2026-10-24), virtual shadow maps, set in `Config/DefaultEngine.ini` (#159).
+- **Time of day (#159):** `rivercrossing_lighting.py` sets up the actors on every setup run and lights the level from `DA_TimeOfDay_RiverCrossing01` (`URTSTimeOfDayData`) at its default hour, 15:30: the sun at 45° shining along yaw 35. The sun's path follows the hour; exposure, fog, sky light and grade follow the sun's elevation, and below −6° the light is the moon. The afternoon is time of day Off (#313); #318 moves the sun with the same asset.
 
 ## 11. Nanite, LODs and HLOD
 

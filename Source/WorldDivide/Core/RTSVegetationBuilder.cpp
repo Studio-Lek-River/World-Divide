@@ -44,7 +44,7 @@ namespace RTSVegetationBuilder
 	/** The tag of every tree component, for line of sight (M6) and crushing to find them. */
 	const FName TreeTag(TEXT("WD_Tree"));
 	/** The point attribute holding the skinned or static mesh each point spawns. */
-	const FName MeshAttribute(TEXT("Mesh"));
+	const FName MeshAttributeName(TEXT("Mesh"));
 	/** Seconds GeneratePCG waits for one component. */
 	constexpr double GenerateTimeout = 900.0;
 
@@ -190,7 +190,7 @@ namespace RTSVegetationBuilder
 	}
 
 	/**
-	 * Splits In's points by weight over Entries, each share tagged with its mesh (MeshAttribute): a chain of random choices,
+	 * Splits In's points by weight over Entries, each share tagged with its mesh (MeshAttributeName): a chain of random choices,
 	 * each taking its entry's part of what the ones before it left. Adds the tagged shares of skinned meshes to Meshes, those
 	 * of trees to Trunks as well, and those of static meshes to Statics.
 	 */
@@ -236,7 +236,7 @@ namespace RTSVegetationBuilder
 
 			UPCGNode* Tag = nullptr;
 			UPCGAddAttributeSettings* Settings = Writer.Add<UPCGAddAttributeSettings>(Tag);
-			Settings->OutputTarget.SetAttributeName(MeshAttribute);
+			Settings->OutputTarget.SetAttributeName(MeshAttributeName);
 			Settings->AttributeTypes.Type = EPCGMetadataTypes::SoftObjectPath;
 			Writer.Connect(Chosen, ChosenPin, Tag, PCGPinConstants::DefaultInputLabel);
 			if (Entry.StaticMesh)
@@ -464,7 +464,7 @@ UPCGGraph* URTSEditorScripting::BuildVegetationGraph(const FString& AssetPath, c
 			UE_LOG(LogWorldDivide, Error, TEXT("BuildVegetationGraph %s: the skinned mesh spawner has no mesh selector"), *AssetPath);
 			return nullptr;
 		}
-		Selector->MeshAttribute.SetAttributeName(MeshAttribute);
+		Selector->MeshAttribute.SetAttributeName(MeshAttributeName);
 		FPCGSoftSkinnedMeshComponentDescriptor& Tree = Selector->TemplateDescriptor;
 		Tree.Mobility = EComponentMobility::Static;
 		Tree.BodyInstance.SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
@@ -488,7 +488,7 @@ UPCGGraph* URTSEditorScripting::BuildVegetationGraph(const FString& AssetPath, c
 			UE_LOG(LogWorldDivide, Error, TEXT("BuildVegetationGraph %s: the static mesh spawner has no by-attribute selector"), *AssetPath);
 			return nullptr;
 		}
-		ByAttribute->AttributeName = MeshAttribute;
+		ByAttribute->AttributeName = MeshAttributeName;
 		FPCGSoftISMComponentDescriptor& Static = ByAttribute->TemplateDescriptor;
 		Static.Mobility = EComponentMobility::Static;
 		Static.BodyInstance.SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
