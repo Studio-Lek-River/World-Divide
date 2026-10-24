@@ -150,7 +150,7 @@
    "atlas": {"Housing": "Trim", "Lens": "Lens"},
    "emergency_default": false,
    "fault_response": "None",
-   "mount_points": {"Wall": {"location": [0, 0, 0], "rotation": [0, 0, 0]}},
+   "mount_points": {"Wall": {"location": [4.5, 0, 4.5], "rotation": [-90, 0, 0]}},
    "budgets": {"lod0": 250, "lod1": 250, "slots": 2},
    "finish": {"Housing": {}, "Lens": {"HotCoreTint": [1, 1, 1], "HotCore": 1, "Intensity": 10}}
   },

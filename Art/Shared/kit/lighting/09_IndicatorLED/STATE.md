@@ -1,6 +1,6 @@
 # 09_IndicatorLED — Round 4 state
 
-**Producer appearance approval:** approved on the Round 4 sheets (2026-10-23). Claude integrated it in #393 (catalogue, setup, `DA_TestKitLighting`); the in-game close-up and night shots are in [../ingame/](../ingame/README.md) (#392). Its blue indicator does not show at night there: open.
+**Producer appearance approval:** approved on the Round 4 sheets (2026-10-23). Claude integrated it in #393 (catalogue, setup, `DA_TestKitLighting`); the in-game close-up and night shots are in [../ingame/](../ingame/README.md) (#392). Its underside diffuser did not show from the RTS camera, so its catalogue `Wall` mount point now turns it 90° to face out from the wall, screws up (#441); the mesh is unchanged.
 
 Independent art/technical pass, 2026-10-23. Producer approval pending.
 

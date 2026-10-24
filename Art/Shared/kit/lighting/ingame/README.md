@@ -21,8 +21,13 @@ The LowPower shots (#393) were taken the same way at 4a42426e with `rts.Debug.Bu
 | `pieces_12m_day_night.png` | each piece cropped from the 12 m frames, day left, night right |
 | `*_lowpower_day.png`, `*_lowpower_night.png` | the same three views in LowPower |
 | `pieces_12m_lowpower.png` | 12, 13 and 08 (top to bottom) cropped from the LowPower 12 m frames, day left, night right |
+| `indicator_09_441.png` | 09 before and after #441: 12 m night before, 12 m day, night and LowPower night after, 150 m night before and after |
 
 Seen in game: every fixture of 01–08, 12 and 13 reads by day and lights at night; 06's twin heads glow neutral white.
-09's blue indicator does not show at night (open, follow-up of #393).
+09's blue indicator did not show at night: its diffuser is modelled on the underside, out of the camera's sight. Since #441 its
+`Wall` mount point turns it to face out from the wall; `close_12m_day.png`, `close_12m_night.png` and
+`close_12m_lowpower_night.png` were taken again at b053a1a2 with that (`-Night`, `rts.Debug.BuildingState=2` for LowPower).
+At night its blue reads at 12 m and is out in LowPower; at 150 m the camera sees the roof and the back, so none of the
+front wall's fixtures shows there (`pieces_12m_day_night.png` still has 09's old crop).
 In LowPower 12 and 13 stay lit and 08 lights the roof amber; the other lamps but 03 are out. A frame catches one moment of
 the blink, so a mast LED can show in its dark phase (13 at night).
