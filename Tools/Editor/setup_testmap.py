@@ -2339,7 +2339,8 @@ def spawn_lighting():
 
 
 # The moon of L_TestMapNight: dim and cold, low enough in lux that URTSDayNightSubsystem::IsDark holds, with manual exposure
-# lifted so hulls still read as shapes against the ground while the lamps and their beams stand out.
+# lifted so hulls still read as shapes against the ground while the lamps and their beams stand out. The building shots'
+# night (FRTSShotNight::GetGameMoon, #424) takes the same values.
 NIGHT_MOON_LUX = 0.6
 NIGHT_MOON_COLOR = (0.55, 0.66, 1.0)
 NIGHT_MOON_PITCH = -40.0

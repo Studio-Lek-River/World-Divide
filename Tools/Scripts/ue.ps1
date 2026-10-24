@@ -36,6 +36,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task s
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task bench -Unit DA_TestM20Guardian,DA_TestM20Guardian@NaniteHQ,DA_TestM20Guardian@LodHQ -Quick -Passes -Shots
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task buildingshots -Building DA_BenchHQ_Nanite
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task buildingshots -Building DA_BenchHQ_Nanite -Cvars r.Nanite=0
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task buildingshots -Building DA_TestHeadquarters -Night
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task gate
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task packaudit
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Scripts/ue.ps1 -Task surfaces -Path D:\Downloads\textures
@@ -135,7 +136,9 @@ Buildingshots plays L_Bench with a renderer (a GPU is needed) at 1920x1080 and p
 asset -Building (rts.Debug.BuildingShots, #349; the bench HQs or any of Content/Data/Buildings) at the RTS camera's pitch from
 12, 150 and 450 m and at 249.6 and 270.4 m, 4 % either side of the bench's LOD1 switch, with every part's LOD printed, to
 Saved/BuildingShots/<Building>. -Cvars runs it with console variables into a folder named after them (r.Nanite=0 into
-r_Nanite_0, what hardware without Nanite draws).
+r_Nanite_0, what hardware without Nanite draws). The close view is framed from the building's data and its turning parts stay
+at rest, so two runs give the same pictures (#424). -Night pictures it at night (the sun and sky dimmed, its lamps and glow on
+as with rts.Light.ForceDark 1) into Night, or <cvars folder>_Night with -Cvars.
 Kitspike builds the shared building kit's git-ignored spike content in /Game/Developers/KitSpike (Tools/Editor/kit_spike.py,
 #387), then plays L_Bench with a renderer and pictures the lens row (rts.Debug.KitSpikeLens) to Saved/KitSpike with the cost
 of updating its instances logged. Buildingshots then takes -Building DA_KitSpike_<Large|Small>_<A|B>.
@@ -210,6 +213,8 @@ param(
 	[switch]$Quick,
 
 	[switch]$Screen,
+
+	[switch]$Night,
 
 	[switch]$LODs,
 
@@ -723,17 +728,19 @@ function Invoke-TrackShots {
 }
 
 # One finished building pictured from the RTS camera at 12, 150 and 450 m and either side of the bench HQ's 260 m LOD switch
-# (#349; rts.Debug.BuildingShots), to Saved\BuildingShots\<Building>, or with -Cvars to a folder named after them.
+# (#349; rts.Debug.BuildingShots), to Saved\BuildingShots\<Building>, or with -Cvars to a folder named after them; -Night
+# at night (#424), to Night or that folder with _Night.
 function Invoke-BuildingShots {
 	Assert-EditorClosed 'the game run loads the same project.'
 	$Folder = if ($Cvars) { $Cvars -replace '[^A-Za-z0-9]+', '_' } else { '' }
+	if ($Night) { $Folder = if ($Folder) { "${Folder}_Night" } else { 'Night' } }
 	$ShotDir = Join-Path $RepoRoot "Saved\BuildingShots\$Building"
 	if ($Folder) { $ShotDir = Join-Path $ShotDir $Folder }
 	$LogFile = Join-Path $RepoRoot 'Saved\Logs\BuildingShots.log'
 	Clear-ShotDir $ShotDir
 	$Process = Start-Process -FilePath $EditorExe -Wait -PassThru -ArgumentList (@(
 		"`"$Project`"", '/Game/Maps/L_Bench', '-game', '-windowed', '-RenderOffscreen', '-ResX=1920', '-ResY=1080',
-		"`"-ExecCmds=rts.Debug.BuildingShots $Building $Folder`"", '-RTSBuildingShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
+		"`"-ExecCmds=rts.Debug.BuildingShots $Building $Folder$(if ($Night) { ' -Night' })`"", '-RTSBuildingShotsQuit', "`"-abslog=$LogFile`"", $NoMCPPlugins,
 		'-unattended', '-nosplash', '-nosound') + @(if ($Cvars) { "-dpcvars=$Cvars" }))
 	$Names = @('close_12m', 'default_150m', 'far_450m', 'lod_before_249.6m', 'lod_after_270.4m')
 	$Problems = @($Names | Where-Object { -not (Test-Path (Join-Path $ShotDir "$_.png")) } | ForEach-Object { "missing $_.png" })

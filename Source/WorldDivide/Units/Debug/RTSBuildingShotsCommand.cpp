@@ -2,15 +2,18 @@
 
 #if !UE_BUILD_SHIPPING
 
+#include "Buildings/RTSBuildPlacement.h"
 #include "Buildings/RTSBuilding.h"
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Containers/Ticker.h"
+#include "Core/RTSDayNightSubsystem.h"
 #include "Data/RTSBuildingData.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
+#include "GameFramework/WorldSettings.h"
 #include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/CommandLine.h"
@@ -21,19 +24,25 @@
 #include "Player/RTSPlayerController.h"
 #include "UnrealClient.h"
 #include "Units/Debug/RTSBenchScene.h"
+#include "Units/Debug/RTSShotNight.h"
 #include "Units/Debug/RTSUnitLOD.h"
 #include "WorldDivide.h"
 
 /**
- * rts.Debug.BuildingShots <BuildingData> [Folder] (#349; ue.ps1 -Task buildingshots -Building <DA>): one finished building
- * of the data asset in the middle of the level (L_Bench), pictured by a camera at the RTS camera's pitch for each arm
- * length (ARTSCameraPawn::GetPitchForZoom) at 1920x1080, to Saved/BuildingShots/<BuildingData>[/<Folder>]/<shot>.png:
- * close_12m looks at its front from outside at the closest zoom; default_150m, far_450m and the pair either side of
+ * rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] (#349; ue.ps1 -Task buildingshots -Building <DA>): one finished
+ * building of the data asset in the middle of the level (L_Bench), pictured by a camera at the RTS camera's pitch for each
+ * arm length (ARTSCameraPawn::GetPitchForZoom) at 1920x1080, to Saved/BuildingShots/<BuildingData>[/<Folder>]/<shot>.png:
+ * close_12m looks at its front from outside at the closest zoom, framed from its data (the footprint's front and the root
+ * mesh's height) so every run lands on the same spot (#424); default_150m, far_450m and the pair either side of
  * the bench's LOD1 switch at 260 m (lod_before_249.6m, lod_after_270.4m, 4 % each way) look at the middle of its root mesh's
  * bounds from that far. Each shot logs the LOD the renderer picks for every part (RTSUnitLOD). The data asset is looked
  * for under RTSBenchScene::BenchHQDir, then /Game/Data/Buildings, then the kit spike's /Game/Developers/KitSpike (#387), then
  * the kit showcases' /Game/Data/Showcase (DA_TestKitLighting, #392). ue.ps1 passes a Folder for a run with other console
- * variables, such as NaniteOff for r.Nanite 0. With -RTSBuildingShotsQuit the game quits when done, exit code 1 on failure.
+ * variables, such as NaniteOff for r.Nanite 0. The parts that turn on their own stay at rest and the game clock is held at
+ * ShotGameTime, so the flag, the plants and the lamps look the same every run.
+ * -Night pictures it at night (#424): the sun and the sky lit as the game's night (FRTSShotNight::GetGameMoon, L_TestMapNight's
+ * moon, sky and exposure) and the world dark for its lamps and glow (URTSDayNightSubsystem, as rts.Light.ForceDark 1), to the
+ * Folder Night unless one is given. With -RTSBuildingShotsQuit the game quits when done, exit code 1 on failure.
  */
 namespace RTSBuildingShotsCommand
 {
@@ -48,9 +57,17 @@ namespace RTSBuildingShotsCommand
 	const FVector BuildingLocation(0.f, 0.f, 0.f);
 	constexpr float BuildingYaw = 0.f;
 	constexpr float CameraFOV = 60.f;
-	/** The closest view looks at a point this far inside the building's front and this high, so its front fills the frame. */
+	/**
+	 * The closest view looks at a point inside the footprint's front, FrontInsetShare of its depth up to FrontInset, and half
+	 * the root mesh's height up to FrontHeight, so a large building's front fills the frame and a small one's is not its roof.
+	 */
 	constexpr float FrontInset = 1000.f;
+	constexpr float FrontInsetShare = 0.25f;
 	constexpr float FrontHeight = 400.f;
+	const TCHAR* NightArg = TEXT("-Night");
+	const TCHAR* NightFolder = TEXT("Night");
+	/** The game time every shot is taken at (#424), so what moves on the game clock is the same in every run. */
+	constexpr double ShotGameTime = 60.0;
 
 	constexpr double ReadyTimeout = 60.0;
 	/** Real seconds the first view settles (Nanite pages, textures and shadows streaming in), then each later one. */
@@ -80,8 +97,8 @@ namespace RTSBuildingShotsCommand
 	class FBuildingShotsRun : public TSharedFromThis<FBuildingShotsRun>
 	{
 	public:
-		FBuildingShotsRun(UWorld& InWorld, const FString& InDataName, const FString& InFolder)
-			: World(&InWorld), DataName(InDataName), Folder(InFolder)
+		FBuildingShotsRun(UWorld& InWorld, const FString& InDataName, const FString& InFolder, bool bInNight)
+			: World(&InWorld), DataName(InDataName), Folder(InFolder), bNight(bInNight)
 		{
 		}
 
@@ -120,6 +137,13 @@ namespace RTSBuildingShotsCommand
 				// The cursor rests wherever the offscreen window put it; at an edge it would scroll the camera.
 				const FIntPoint Size = World->GetGameViewport()->Viewport->GetSizeXY();
 				Controller->SetMouseLocation(Size.X / 2, Size.Y / 2);
+			}
+			if (Building.IsValid())
+			{
+				// Before the world ticks, so the radar and the like stay at rest, and the flag's wind, the plants' sway and
+				// the lamps' flashes (all on the game clock) show the same moment whenever the shot lands.
+				Building->SetEquipmentMotionScale(0.f);
+				World->TimeSeconds = ShotGameTime;
 			}
 			switch (Step)
 			{
@@ -209,13 +233,29 @@ namespace RTSBuildingShotsCommand
 			{
 				Building->UpdateConstruction(FMath::Max(Data->BuildTime, 1.f) * 10.f);
 			}
+			Building->SetEquipmentMotionScale(0.f);
+			// The clock is held at ShotGameTime each frame and all but stopped in between (the lowest dilation there is).
+			if (AWorldSettings* Settings = World->GetWorldSettings())
+			{
+				TimeDilation = Settings->TimeDilation;
+				Settings->SetTimeDilation(0.f);
+			}
+			if (bNight)
+			{
+				const FRTSShotNight::FMoon Moon = FRTSShotNight::GetGameMoon();
+				Night.Set(*World, true, &Moon);
+				if (URTSDayNightSubsystem* DayNight = World->GetSubsystem<URTSDayNightSubsystem>())
+				{
+					DayNight->SetDarkOverride(true);
+				}
+			}
 			Camera = World->SpawnActor<ACameraActor>();
 			Camera->GetCameraComponent()->SetFieldOfView(CameraFOV);
 			Camera->GetCameraComponent()->bConstrainAspectRatio = false;
 			Controller->SetViewTarget(Camera.Get());
 			IFileManager::Get().MakeDirectory(*GetShotDir(), /*Tree*/ true);
-			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.BuildingShots: %s at %s, r.Nanite %s"), *Data->GetName(),
-				*BuildingLocation.ToString(), *GetCVar(TEXT("r.Nanite")));
+			UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.BuildingShots: %s at %s, r.Nanite %s, %s"), *Data->GetName(),
+				*BuildingLocation.ToString(), *GetCVar(TEXT("r.Nanite")), bNight ? TEXT("night") : TEXT("day"));
 			GoTo(EStep::Resize);
 			return true;
 		}
@@ -235,8 +275,12 @@ namespace RTSBuildingShotsCommand
 			FVector LookAt = Root ? Root->Bounds.Origin : Building->GetActorLocation();
 			if (Shot.bFront)
 			{
-				const FBox Box = Building->GetComponentsBoundingBox(/*bNonColliding*/ true);
-				LookAt = FVector(Box.Max.X - FrontInset, Box.GetCenter().Y, Building->GetActorLocation().Z + FrontHeight);
+				// From the data and the root mesh, not every part's bounds: a turning part would move the camera.
+				const FRTSBuildingFootprint Footprint = Building->GetGroundFootprint();
+				const float Inset = FMath::Min(FrontInset, 2.f * Footprint.Extent.X * FrontInsetShare);
+				const float Height = Root ? FMath::Min(FrontHeight, static_cast<float>(Root->Bounds.BoxExtent.Z)) : FrontHeight;
+				LookAt = Footprint.ToWorld(FVector2D(Footprint.Extent.X - Inset, 0.f));
+				LookAt.Z = Building->GetActorLocation().Z + Height;
 			}
 			// Looking along +X, towards the building's front for the close view (its front faces +X at yaw 0) and from behind
 			// the front for the rest, as the RTS camera looks north.
@@ -285,6 +329,18 @@ namespace RTSBuildingShotsCommand
 			{
 				Camera->Destroy();
 			}
+			if (TimeDilation && World.IsValid() && World->GetWorldSettings())
+			{
+				World->GetWorldSettings()->SetTimeDilation(*TimeDilation);
+			}
+			if (bNight && World.IsValid())
+			{
+				Night.Set(*World, false);
+				if (URTSDayNightSubsystem* DayNight = World->GetSubsystem<URTSDayNightSubsystem>())
+				{
+					DayNight->SetDarkOverride({});
+				}
+			}
 			if (Error.IsEmpty())
 			{
 				UE_LOG(LogWorldDivide, Display, TEXT("rts.Debug.BuildingShots: %d shots to %s"), ShotIndex, *GetShotDir());
@@ -306,6 +362,10 @@ namespace RTSBuildingShotsCommand
 		TWeakObjectPtr<UWorld> World;
 		FString DataName;
 		FString Folder;
+		bool bNight = false;
+		FRTSShotNight Night;
+		/** The world's time dilation before the run held the clock. */
+		TOptional<float> TimeDilation;
 		TWeakObjectPtr<ARTSBuilding> Building;
 		TWeakObjectPtr<ACameraActor> Camera;
 		EStep Step = EStep::WaitForPlayer;
@@ -320,7 +380,7 @@ namespace RTSBuildingShotsCommand
 	{
 		if (!World || !World->IsGameWorld() || Args.IsEmpty())
 		{
-			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] needs a running game"));
+			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] needs a running game"));
 			return;
 		}
 		if (FBuildingShotsRun::IsRunning())
@@ -328,15 +388,23 @@ namespace RTSBuildingShotsCommand
 			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots is already running"));
 			return;
 		}
-		const TSharedRef<FBuildingShotsRun> Run = MakeShared<FBuildingShotsRun>(*World, Args[0], Args.Num() > 1 ? Args[1] : FString());
+		TArray<FString> Rest(Args);
+		const bool bNight = Rest.RemoveAll([](const FString& Arg) { return Arg.Equals(NightArg, ESearchCase::IgnoreCase); }) > 0;
+		if (Rest.IsEmpty())
+		{
+			Output.Log(ELogVerbosity::Error, TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night] needs a building"));
+			return;
+		}
+		const FString Folder = Rest.Num() > 1 ? Rest[1] : bNight ? FString(NightFolder) : FString();
+		const TSharedRef<FBuildingShotsRun> Run = MakeShared<FBuildingShotsRun>(*World, Rest[0], Folder, bNight);
 		FBuildingShotsRun::Start(Run);
-		Output.Logf(TEXT("rts.Debug.BuildingShots: %s to %s"), *Args[0], *Run->GetShotDir());
+		Output.Logf(TEXT("rts.Debug.BuildingShots: %s to %s"), *Rest[0], *Run->GetShotDir());
 	}
 
 	FAutoConsoleCommandWithWorldArgsAndOutputDevice BuildingShotsCommand(
 		TEXT("rts.Debug.BuildingShots"),
-		TEXT("rts.Debug.BuildingShots <BuildingData> [Folder]: one finished building of the data asset pictured at the RTS camera's pitch from 12, 150 and 450 m ")
-		TEXT("and either side of 260 m, with the LOD of every part logged, to Saved/BuildingShots/<BuildingData>[/<Folder>] (#349)."),
+		TEXT("rts.Debug.BuildingShots <BuildingData> [Folder] [-Night]: one finished building of the data asset pictured at the RTS camera's pitch from 12, 150 and 450 m ")
+		TEXT("and either side of 260 m, with the LOD of every part logged, to Saved/BuildingShots/<BuildingData>[/<Folder>] (#349); -Night at night, to Night by default (#424)."),
 		FConsoleCommandWithWorldArgsAndOutputDeviceDelegate::CreateStatic(&RunBuildingShots));
 }
 

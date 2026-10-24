@@ -15,7 +15,7 @@ bool FRTSShotNight::IsNight() const
 	return Exposure.IsValid();
 }
 
-void FRTSShotNight::Set(UWorld& World, bool bNight)
+void FRTSShotNight::Set(UWorld& World, bool bNight, const FMoon* Moon)
 {
 	if (bNight == IsNight())
 	{
@@ -25,15 +25,16 @@ void FRTSShotNight::Set(UWorld& World, bool bNight)
 	{
 		Exposure->Destroy();
 		Exposure.Reset();
-		for (const TPair<TWeakObjectPtr<ULightComponentBase>, float>& Light : Lights)
+		for (const FLight& Light : Lights)
 		{
-			if (ULightComponent* Direct = Cast<ULightComponent>(Light.Key.Get()))
+			if (ULightComponent* Direct = Cast<ULightComponent>(Light.Light.Get()))
 			{
-				Direct->SetIntensity(Light.Value);
+				Direct->SetIntensity(Light.Intensity);
+				Direct->SetLightColor(Light.Color);
 			}
-			else if (USkyLightComponent* Sky = Cast<USkyLightComponent>(Light.Key.Get()))
+			else if (USkyLightComponent* Sky = Cast<USkyLightComponent>(Light.Light.Get()))
 			{
-				Sky->SetIntensity(Light.Value);
+				Sky->SetIntensity(Light.Intensity);
 			}
 		}
 		Lights.Reset();
@@ -51,20 +52,24 @@ void FRTSShotNight::Set(UWorld& World, bool bNight)
 	Settings.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
 	Settings.AutoExposureApplyPhysicalCameraExposure = false;
 	Settings.bOverride_AutoExposureBias = true;
-	Settings.AutoExposureBias = 0.f;
+	Settings.AutoExposureBias = Moon ? Moon->ExposureBias : 0.f;
 	for (TActorIterator<ADirectionalLight> It(&World); It; ++It)
 	{
 		ULightComponent* Light = It->GetLightComponent();
 		Light->SetMobility(EComponentMobility::Movable);
-		Lights.Add({ Light, Light->Intensity });
-		Light->SetIntensity(Light->Intensity * LightShare);
+		Lights.Add({ Light, Light->Intensity, Light->GetLightColor() });
+		Light->SetIntensity(Moon ? Moon->Lux : Light->Intensity * LightShare);
+		if (Moon)
+		{
+			Light->SetLightColor(Moon->Color);
+		}
 	}
 	for (TActorIterator<ASkyLight> It(&World); It; ++It)
 	{
 		USkyLightComponent* Sky = It->GetLightComponent();
 		Sky->SetMobility(EComponentMobility::Movable);
 		Lights.Add({ Sky, Sky->Intensity });
-		Sky->SetIntensity(Sky->Intensity * LightShare);
+		Sky->SetIntensity(Moon ? Moon->SkyIntensity : Sky->Intensity * LightShare);
 	}
 }
 
