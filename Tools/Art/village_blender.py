@@ -21,6 +21,9 @@ Wood, Char (blown openings, scorch) and Rubble; the spans keep Concrete and Asph
 import keeps. Metres in Blender, centimetres in the FBX, +X forward and Z up, as bridge_blender.py exports. It writes
 village.json (each mesh's slots, triangles, collision boxes and bounds, and each type's garrison data, in Unreal
 centimetres and degrees), which Tools/Editor/village_art.py reads. The output is committed; rerun only when the set changes.
+
+Superseded (#432): Art/Shared/village/ now holds the #431 art and a village.json merged from Art/Shared/village/final/.
+Do not rerun this script there; it would overwrite the accepted set with the greybox.
 """
 
 import json

@@ -702,6 +702,112 @@ def build_rubble_material(directory, name, textures, recipe):
     return _finish(material)
 
 
+def build_village_surface_material(directory, name, defaults):
+    """The village set's surface master (#431's M_SetSurface, Art/Shared/village/final/MATERIAL_RECIPE.md), every slot but
+    the glass: a scan on UV0 times ScanUVScale (BaseColor, Normal, ORM, each lerped in by UseScan) under SurfaceTint and
+    the mesh's own atlas on UV1 (AtlasTint; BakeNormal, an object-space normal, decoded and taken Local to Tangent; BakeAO),
+    the bake weighted by BakeStrength and faded out from DetailFadeStartCm over 50 m, where the far LOD's merged faces
+    would cross the atlas's charts. FlattenScan (#432, off by default) divides the scan's colour by its 25 cm average and
+    multiplies by its whole average, so a roof's 2 m repeat loses its blotches and keeps its courses. defaults: {parameter:
+    texture} for the six maps."""
+    material = _material(directory, name)
+    uv0 = _node(material, unreal.MaterialExpressionTextureCoordinate, -2400, 0, coordinate_index=0)
+    uv1 = _node(material, unreal.MaterialExpressionTextureCoordinate, -2400, 1200, coordinate_index=1)
+    scale = _node(material, unreal.MaterialExpressionComponentMask, -2400, 150, r=True, g=True, b=False, a=False)
+    _connect(_vector(material, -2600, 150, "ScanUVScale", (1.0, 1.0, 1.0, 1.0)), "", scale, "")
+    scan_uv = _multiply(material, -2200, 0, uv0, "", scale, "")
+
+    def sample(parameter, uv, x, y, sampler, **mip):
+        node = _node(material, unreal.MaterialExpressionTextureSampleParameter2D, x, y, parameter_name=parameter,
+                     texture=defaults[parameter], sampler_type=sampler, **mip)
+        _connect(uv, "", node, "UVs")
+        return node
+
+    color = sample("BaseColor", scan_uv, -1900, 0, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
+    normal = sample("Normal", scan_uv, -1900, 300, unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL)
+    orm = sample("ORM", scan_uv, -1900, 600, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+    atlas = sample("AtlasTint", uv1, -1900, 1200, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+    baked_normal = sample("BakeNormal", uv1, -1900, 1500, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+    baked_ao = sample("BakeAO", uv1, -1900, 1800, unreal.MaterialSamplerType.SAMPLERTYPE_MASKS)
+    use_scan = _scalar(material, -1900, 900, "UseScan", 1.0)
+
+    # FlattenScan: mip 8 of a 2048 map is 8 texels a repeat, mip 11 its one average.
+    local = sample("BaseColor", scan_uv, -1900, -600, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR,
+                   mip_value_mode=unreal.TextureMipValueMode.TMVM_MIP_LEVEL, const_mip_value=8)
+    whole = sample("BaseColor", scan_uv, -1900, -300, unreal.MaterialSamplerType.SAMPLERTYPE_COLOR,
+                   mip_value_mode=unreal.TextureMipValueMode.TMVM_MIP_LEVEL, const_mip_value=11)
+    floor = _node(material, unreal.MaterialExpressionMax, -1600, -600, const_b=0.02)
+    _connect(local, "RGB", floor, "A")
+    ratio = _node(material, unreal.MaterialExpressionDivide, -1450, -500)
+    _connect(color, "RGB", ratio, "A")
+    _connect(floor, "", ratio, "B")
+    flattened = _multiply(material, -1300, -400, ratio, "", whole, "RGB")
+    scan_color = _node(material, unreal.MaterialExpressionStaticSwitchParameter, -1100, -200, parameter_name="FlattenScan",
+                       default_value=False)
+    _connect(flattened, "", scan_color, "True")
+    _connect(color, "RGB", scan_color, "False")
+
+    # BaseColor = lerp(1, scan, UseScan) x SurfaceTint x AtlasTint.
+    scanned = _node(material, unreal.MaterialExpressionLinearInterpolate, -900, 0)
+    _connect(_node(material, unreal.MaterialExpressionConstant3Vector, -1100, -50,
+                   constant=unreal.LinearColor(1.0, 1.0, 1.0, 1.0)), "", scanned, "A")
+    _connect(scan_color, "", scanned, "B")
+    _connect(use_scan, "", scanned, "Alpha")
+    tinted = _multiply(material, -700, 0, scanned, "", _vector(material, -900, 150, "SurfaceTint", (1.0, 1.0, 1.0, 1.0)),
+                       "RGB")
+    _output(material, _multiply(material, -500, 0, tinted, "", atlas, "RGB"), "", unreal.MaterialProperty.MP_BASE_COLOR)
+
+    # weight = BakeStrength x (1 - saturate((distance - DetailFadeStartCm) / 5000)).
+    distance = _node(material, unreal.MaterialExpressionDistance, -1900, 2100)
+    _connect(_node(material, unreal.MaterialExpressionCameraPositionWS, -2100, 2050), "", distance, "A")
+    _connect(_node(material, unreal.MaterialExpressionObjectPositionWS, -2100, 2150), "", distance, "B")
+    beyond = _node(material, unreal.MaterialExpressionSubtract, -1700, 2100)
+    _connect(distance, "", beyond, "A")
+    _connect(_scalar(material, -1900, 2250, "DetailFadeStartCm", 18000.0), "", beyond, "B")
+    faded = _node(material, unreal.MaterialExpressionSaturate, -1350, 2100)
+    _connect(_multiply(material, -1500, 2100, beyond, "", _constant(material, -1700, 2250, 1.0 / 5000.0), ""), "",
+             faded, "")
+    fade = _node(material, unreal.MaterialExpressionOneMinus, -1200, 2100)
+    _connect(faded, "", fade, "")
+    weight = _multiply(material, -1000, 2100, fade, "", _scalar(material, -1200, 2250, "BakeStrength", 1.0), "")
+
+    # Normal = normalize(lerp(up, Local->Tangent(BakeNormal x 2 - 1), weight) + (Normal - up) x UseScan).
+    up = _node(material, unreal.MaterialExpressionConstant3Vector, -1100, 1350, constant=unreal.LinearColor(0, 0, 1, 1))
+    decoded = _node(material, unreal.MaterialExpressionAdd, -1450, 1500, const_b=-1.0)
+    _connect(_multiply(material, -1600, 1500, baked_normal, "RGB", _constant(material, -1800, 1650, 2.0), ""), "",
+             decoded, "A")
+    tangent = vehicle_art._transform(material, -1300, 1500, unreal.MaterialVectorCoordTransformSource.TRANSFORMSOURCE_LOCAL,
+                                     unreal.MaterialVectorCoordTransform.TRANSFORM_TANGENT)
+    _connect(decoded, "", tangent, "")
+    baked = _node(material, unreal.MaterialExpressionLinearInterpolate, -900, 1400)
+    _connect(up, "", baked, "A")
+    _connect(tangent, "", baked, "B")
+    _connect(weight, "", baked, "Alpha")
+    detail = _node(material, unreal.MaterialExpressionSubtract, -1300, 300)
+    _connect(_multiply(material, -1500, 300, normal, "RGB", use_scan, ""), "", detail, "A")
+    _connect(_multiply(material, -1500, 450, up, "", use_scan, ""), "", detail, "B")
+    unit = _node(material, unreal.MaterialExpressionNormalize, -500, 800)
+    _connect(_add(material, -700, 800, baked, "", detail, ""), "", unit, "VectorInput")
+    _output(material, unit, "", unreal.MaterialProperty.MP_NORMAL)
+
+    # Roughness = lerp(FlatRoughness, ORM.g, UseScan); AO = lerp(1, ORM.r, UseScan) x lerp(1, BakeAO.r, weight).
+    rough = _node(material, unreal.MaterialExpressionLinearInterpolate, -900, 600)
+    _connect(_scalar(material, -1100, 550, "FlatRoughness", 0.55), "", rough, "A")
+    _connect(orm, "G", rough, "B")
+    _connect(use_scan, "", rough, "Alpha")
+    _output(material, rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
+    scan_ao = _node(material, unreal.MaterialExpressionLinearInterpolate, -900, 700, const_a=1.0)
+    _connect(orm, "R", scan_ao, "B")
+    _connect(use_scan, "", scan_ao, "Alpha")
+    bake_ao = _node(material, unreal.MaterialExpressionLinearInterpolate, -900, 1800, const_a=1.0)
+    _connect(baked_ao, "R", bake_ao, "B")
+    _connect(weight, "", bake_ao, "Alpha")
+    _output(material, _multiply(material, -600, 1000, scan_ao, "", bake_ao, ""), "",
+            unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
+    _output(material, _constant(material, -600, 1100, 0.0), "", unreal.MaterialProperty.MP_METALLIC)
+    return _finish(material)
+
+
 def build_material_instance(directory, name, parent, scalars, vectors, textures=None, switches=None):
     """An instance of parent with the delivery's values, and textures ({parameter: texture}) and static switches
     ({parameter: bool}) where given. The parent is set first and the instance updated after, so the saved instance keeps
@@ -875,6 +981,27 @@ def import_kit_mesh(source, directory, name, slot_materials, bounds, triangles, 
         raise RuntimeError(f"{name}: could not set its LOD screen sizes")
     unreal.log(f"building_art: kit {name} LODs {triangles} triangles, screen sizes "
                f"{[round(s, 4) for s in mesh_editing.get_lod_screen_sizes(mesh)]}")
+    return mesh
+
+
+def attach_lod1(mesh, lod1_source, triangles, switch_distance):
+    """Gives a mesh imported alone (LOD0, triangles[0]) its hand-made LOD1 lod1_source (triangles[1], LOD0's slots), as
+    import_kit_mesh does, coming in at switch_distance cm from the camera to the middle of its bounds (#432: one mesh
+    draws a whole civilian building, so its bounds sphere is what the renderer measures)."""
+    name = mesh.get_name()
+    _reset_lods(mesh, triangles[0])
+    slots = [str(slot.material_slot_name) for slot in mesh.static_materials]
+    mesh_editing = vehicle_art._mesh_editing()
+    if mesh_editing.import_lod(mesh, 1, lod1_source) != 1:
+        raise RuntimeError(f"{name}: could not import LOD1 from {lod1_source}")
+    _rejoin_lod_slots(mesh, 1, slots, lod1_source)
+    if mesh.get_num_triangles(1) != triangles[1]:
+        raise RuntimeError(f"{lod1_source} imported {mesh.get_num_triangles(1)} triangles instead of {triangles[1]}")
+    screen_sizes = [1.0, 2.0 * vehicle_art.SCREEN_MULTIPLE * vehicle_art.lod_radius(mesh, False) / switch_distance]
+    if not mesh_editing.set_lod_screen_sizes(mesh, screen_sizes):
+        raise RuntimeError(f"{name}: could not set its LOD screen sizes")
+    unreal.log(f"building_art: {name} LODs {triangles} triangles, screen sizes "
+               f"{[round(s, 4) for s in mesh_editing.get_lod_screen_sizes(mesh)]} (LOD1 from {switch_distance / 100:.0f} m)")
     return mesh
 
 

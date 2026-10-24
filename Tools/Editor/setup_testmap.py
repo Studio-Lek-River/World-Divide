@@ -157,22 +157,30 @@ KIT_FACTIONS = {"neutral": "Neutral", "usa": "USA"}
 KIT_NEUTRAL_VARIANTS = {"MI_Kit_Neutral_Housing": "M_Bld_Surface", "MI_Kit_Neutral_Lens": "M_Kit_Lens"}
 # A kit mesh's LOD1 comes in at a building's switch (docs/art/MODEL_PERFORMANCE.md), cm from the camera.
 KIT_SWITCH_DISTANCE = 26000.0
-# River Crossing's village set and the bridge span's damage states (#408), as Tools/Art/village_blender.py exported them
-# (village.json): the meshes in VILLAGE_DIR (the spans' beside SM_Bridge_Span), a DA_Civil_<Type> (URTSCivilBuildingData)
-# per type in CIVIL_DIR. The flat slots are instances of the bridge's M_Bridge master: (colour, roughness); the spans'
-# Concrete and Asphalt keep the bridge's own instances.
+# River Crossing's village set and the bridge span's damage states (#408), in the #431 art (#432): village.json, merged
+# from Art/Shared/village/final/, gives every mesh its FBX and hand-made LOD1 beside it in VILLAGE_SOURCE_DIR and the
+# recipe of each of its slots. The meshes, the spans' too, go to VILLAGE_MESH_DIR, a DA_Civil_<Type>
+# (URTSCivilBuildingData) per type to CIVIL_DIR. Every slot but the glass is an instance of M_Village_Surface
+# (building_art.build_village_surface_material) with its scan and the mesh's atlas from VILLAGE_TEXTURE_SOURCE_DIR,
+# imported non-streamed (docs/art/MODEL_PERFORMANCE.md rule 6); the glass is an instance of M_Bld_Glass.
 VILLAGE_SOURCE_DIR = os.path.join(SHARED_SOURCE_DIR, "village")
+VILLAGE_TEXTURE_SOURCE_DIR = os.path.join(VILLAGE_SOURCE_DIR, "final", "textures")
 VILLAGE_DIR = f"{SHARED_DIR}/Village"
+VILLAGE_MESH_DIR = f"{VILLAGE_DIR}/Meshes"
+VILLAGE_MATERIAL_DIR = f"{VILLAGE_DIR}/Materials"
+VILLAGE_TEXTURE_DIR = f"{VILLAGE_DIR}/Textures"
 CIVIL_DIR = "/Game/Data/Civil"
-VILLAGE_SLOTS = {
-    "Wall": ((0.55, 0.52, 0.46), 0.9),
-    "Roof": ((0.30, 0.10, 0.06), 0.7),
-    "Trim": ((0.60, 0.60, 0.58), 0.6),
-    "Glass": ((0.02, 0.03, 0.035), 0.08),
-    "Wood": ((0.18, 0.11, 0.06), 0.85),
-    "Char": ((0.015, 0.014, 0.013), 0.95),
-    "Rubble": ((0.30, 0.28, 0.25), 0.95),
+VILLAGE_MASTER = "M_Village_Surface"
+# A village texture's import by the end of its name: colour scans sRGB, the scans' normals as normal maps, everything
+# else linear masks (the ORMs and the atlases, whose BakeNormal is object-space data, not a tangent normal).
+VILLAGE_TEXTURE_SETTINGS = {
+    "BaseColor": {"compression": "TC_Default", "srgb": True, "lod_group": "TEXTUREGROUP_World", "resize": None},
+    "Normal": {"compression": "TC_Normalmap", "srgb": False, "lod_group": "TEXTUREGROUP_WorldNormalMap", "resize": None},
+    "Masks": {"compression": "TC_Masks", "srgb": False, "lod_group": "TEXTUREGROUP_World", "resize": None},
 }
+# The barn's roof scan repeats in visible blotches (#432): its colour is flattened (FlattenScan) in every state.
+VILLAGE_FLATTENED_SLOTS = {("SM_Village_Barn", "Roof"), ("SM_Village_Barn_Damaged", "Roof"),
+                           ("SM_Village_Barn_Rubble", "Roof")}
 FLAG_DATA_DIR = "/Game/Data/Flags"
 FLAG_TEXTURE_SETTINGS = {"srgb": True, "compression": "TC_Default", "lod_group": "TEXTUREGROUP_World", "resize": None}
 # The garage door's cycle as delivered (animation/CT_HQ20_DoorMotion.csv), a curve table the garage plays (#192).
@@ -1103,34 +1111,106 @@ def make_usa_hq_rubble(switch_distance):
                   file_hash(lod1), switch_distance, sorted((s, object_path(m)) for s, m in materials.items())))
 
 
-def make_village():
-    """River Crossing's in-house village set (#408): every mesh of Art/Shared/village/village.json imported as the bridge's
-    are (rivercrossing_greybox.import_bridge_mesh: UCX_ collision, checked against the record; no Nanite, whose fallback would thin the greybox's count) and a
-    DA_Civil_<Type> per building with its three state meshes, health and garrison data. Returns the data by type."""
-    master = unreal.load_asset(f"{rivercrossing_greybox.BRIDGE_DIR}/{rivercrossing_greybox.BRIDGE_MASTER}")
-    if not master:
-        raise RuntimeError("M_Bridge is missing: run ue.ps1 -Task rivercrossing first")
-    slots = {name: plan_now(f"{VILLAGE_DIR}/MI_Village_{name}",
-                            lambda n=name, c=color, r=roughness: building_art.build_material_instance(
-                                VILLAGE_DIR, f"MI_Village_{n}", master, {"Roughness": r}, {"Color": (*c, 1.0)}),
-                            spec_hash([building_art.build_material_instance], VILLAGE_DIR, name, master, color, roughness))
-             for name, (color, roughness) in VILLAGE_SLOTS.items()}
-    for slot, (name, _, _) in rivercrossing_greybox.BRIDGE_SLOTS.items():
-        slots[slot] = unreal.load_asset(f"{rivercrossing_greybox.BRIDGE_DIR}/{name}")
+def import_village_texture(source, name):
+    """One of the village's textures, with the settings of its kind, kept in memory (never streamed)."""
+    kind = name.rsplit("_", 1)[-1]
+    texture = building_art.import_texture(source, VILLAGE_TEXTURE_DIR, name,
+                                          VILLAGE_TEXTURE_SETTINGS[kind if kind in ("BaseColor", "Normal") else "Masks"])
+    texture.set_editor_property("never_stream", True)
+    return texture
 
+
+def make_village():
+    """River Crossing's village set (#408) in the #431 art (#432): every mesh of Art/Shared/village/village.json imported
+    as the bridge's are (rivercrossing_greybox.import_bridge_mesh: UCX_ collision, checked against the record; no Nanite)
+    with its hand-made LOD1 from KIT_SWITCH_DISTANCE (building_art.attach_lod1), its slots on their instances, and a
+    DA_Civil_<Type> per building with its three state meshes, health and garrison data. Returns the data by type."""
+    glass_master = unreal.load_asset(f"{BUILDING_MATERIAL_DIR}/M_Bld_Glass")
+    if not glass_master:
+        raise RuntimeError("M_Bld_Glass is missing from the building masters")
     village = building_art.read_layout(os.path.join(VILLAGE_SOURCE_DIR, "village.json"))
+
+    names = set()
+    for record in village["meshes"].values():
+        for recipe in record["materials"].values():
+            if "atlas" in recipe:
+                names.update(f"{recipe['atlas']}_{map}" for map in ("Tint", "BakeNormal", "BakeAO"))
+            if "scan" in recipe:
+                names.update(f"{recipe['scan']}_{map}" for map in ("BaseColor", "Normal", "ORM"))
+    textures = {}
+    for name in sorted(names):
+        source = os.path.join(VILLAGE_TEXTURE_SOURCE_DIR, f"{name}.png")
+        textures[name] = plan_now(
+            f"{VILLAGE_TEXTURE_DIR}/{name}", lambda s=source, n=name: import_village_texture(s, n),
+            spec_hash([import_village_texture, building_art.import_texture], VILLAGE_TEXTURE_DIR, name,
+                      VILLAGE_TEXTURE_SETTINGS, file_hash(source)))
+
+    first = next(iter(village["meshes"]))
+    defaults = {"BaseColor": textures["Bricks085_BaseColor"], "Normal": textures["Bricks085_Normal"],
+                "ORM": textures["Bricks085_ORM"], "AtlasTint": textures[f"{first}_Tint"],
+                "BakeNormal": textures[f"{first}_BakeNormal"], "BakeAO": textures[f"{first}_BakeAO"]}
+    master = plan_now(
+        f"{VILLAGE_MATERIAL_DIR}/{VILLAGE_MASTER}",
+        lambda: building_art.build_village_surface_material(VILLAGE_MATERIAL_DIR, VILLAGE_MASTER, defaults),
+        spec_hash([building_art.build_village_surface_material, building_art._material, building_art._vector,
+                   building_art._scalar, building_art._multiply, building_art._add],
+                  VILLAGE_MATERIAL_DIR, sorted((p, object_path(t)) for p, t in defaults.items())))
+
+    def instance(mesh, slot, recipe):
+        name = f"MI_{mesh}_{slot}"
+        switches = {}
+        if recipe.get("glass"):
+            parent, maps = glass_master, {}
+            scalars, vectors = {"GlassOpacity": recipe["opacity"]}, {"SurfaceColor": (*recipe["color"], 1.0)}
+        else:
+            parent = master
+            scalars = {"UseScan": 1.0 if "scan" in recipe else 0.0, "BakeStrength": recipe["bake"]}
+            vectors = {"SurfaceTint": (*recipe["tint"], 1.0)}
+            if "scan_uv_scale" in recipe:
+                vectors["ScanUVScale"] = (*recipe["scan_uv_scale"], 1.0, 1.0)
+            maps = {map: textures[f"{recipe['atlas']}_{suffix}"]
+                    for map, suffix in (("AtlasTint", "Tint"), ("BakeNormal", "BakeNormal"), ("BakeAO", "BakeAO"))}
+            if "scan" in recipe:
+                maps.update({map: textures[f"{recipe['scan']}_{map}"] for map in ("BaseColor", "Normal", "ORM")})
+            if (mesh, slot) in VILLAGE_FLATTENED_SLOTS:
+                switches["FlattenScan"] = True
+        return plan_now(
+            f"{VILLAGE_MATERIAL_DIR}/{name}",
+            lambda: building_art.build_material_instance(VILLAGE_MATERIAL_DIR, name, parent, scalars, vectors, maps,
+                                                         switches),
+            spec_hash([building_art.build_material_instance], VILLAGE_MATERIAL_DIR, name, parent, sorted(scalars.items()),
+                      sorted(vectors.items()), sorted((p, object_path(t)) for p, t in maps.items()),
+                      sorted(switches.items())))
+
+    def import_village_mesh(source, name, record, bound, directory, lod1):
+        mesh = rivercrossing_greybox.import_bridge_mesh(source, name, record, bound, directory, nanite=False)
+        slots = [str(slot.material_slot_name) for slot in mesh.static_materials]
+        if slots != record["slots"]:
+            raise RuntimeError(f"{source} imported the slots {slots}, not {record['slots']}")
+        return building_art.attach_lod1(mesh, lod1, (record["triangles"], record["lod1"]["triangles"]),
+                                        KIT_SWITCH_DISTANCE)
+
     meshes = {}
     for name, record in village["meshes"].items():
-        directory = rivercrossing_greybox.BRIDGE_DIR if name.startswith("SM_Bridge_") else VILLAGE_DIR
+        directory = VILLAGE_MESH_DIR
         source = os.path.join(VILLAGE_SOURCE_DIR, record["fbx"])
-        bound = {slot: slots[slot] for slot in record["slots"]}
+        lod1 = os.path.join(VILLAGE_SOURCE_DIR, record["lod1"]["fbx"])
+        bound = {slot: instance(name, slot, recipe) for slot, recipe in record["materials"].items()}
         meshes[name] = plan_now(
             f"{directory}/{name}",
-            lambda s=source, n=name, r=record, b=bound, d=directory: rivercrossing_greybox.import_bridge_mesh(
-                s, n, r, b, d, nanite=False),
-            spec_hash([rivercrossing_greybox.import_bridge_mesh], directory, name, file_hash(source), record,
+            lambda s=source, n=name, r=record, b=bound, d=directory, l=lod1: import_village_mesh(s, n, r, b, d, l),
+            spec_hash([import_village_mesh, rivercrossing_greybox.import_bridge_mesh, building_art.attach_lod1,
+                       building_art._reset_lods, building_art._rejoin_lod_slots], directory, name, file_hash(source),
+                      file_hash(lod1), KIT_SWITCH_DISTANCE, record,
                       sorted((slot, object_path(m)) for slot, m in bound.items())))
     meshes["SM_Bridge_Span"] = unreal.load_asset(f"{rivercrossing_greybox.BRIDGE_DIR}/SM_Bridge_Span")
+    # The greybox (#408): its meshes, in VILLAGE_DIR and beside SM_Bridge_Span, and its flat MI_Village_<slot>. The art
+    # imports anew in VILLAGE_MESH_DIR, since a reimport over the greybox keeps its slots and binds the art's sections to
+    # them out of order.
+    delete_stale_assets(VILLAGE_DIR, set())
+    bridge = {path.split(".", 1)[0].rsplit("/", 1)[-1]
+              for path in assets.list_assets(rivercrossing_greybox.BRIDGE_DIR, recursive=False, include_folder=False)}
+    delete_stale_assets(rivercrossing_greybox.BRIDGE_DIR, bridge - set(village["meshes"]))
 
     civil = {}
     for key, building in village["buildings"].items():
