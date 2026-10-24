@@ -6,7 +6,10 @@
 
 class UStaticMesh;
 
-/** What a civilian building shows (#408): it falls from Pristine to Damaged to Rubble as it loses health, and stays as rubble. */
+/**
+ * What a civilian building shows (#408): it falls from Pristine to Damaged to Rubble as it loses health, and stays as rubble.
+ * Rubble is a ruin of wall stubs that still holds a garrison at ground level (#449).
+ */
 UENUM(BlueprintType)
 enum class ERTSCivilBuildingState : uint8
 {
@@ -39,11 +42,18 @@ struct FRTSGarrisonFiringPosition
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Garrison", meta = (ClampMin = "0", ClampMax = "180"))
 	float ArcDegrees = 90.f;
 
-	/** The most damaged state the opening still stands in: the church's belfry goes with the top of its tower (#447). */
+	/** The first state the position stands in: a gap in the ruins' wall stubs where a window above has fallen (#449). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Garrison")
+	ERTSCivilBuildingState FirstState = ERTSCivilBuildingState::Pristine;
+
+	/**
+	 * The most damaged state the opening still stands in: the church's belfry goes with the top of its tower (#447), an
+	 * upper window with the floor it is in (#449).
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Garrison")
 	ERTSCivilBuildingState LastState = ERTSCivilBuildingState::Rubble;
 
-	bool StandsIn(ERTSCivilBuildingState State) const { return State <= LastState; }
+	bool StandsIn(ERTSCivilBuildingState State) const { return FirstState <= State && State <= LastState; }
 };
 
 /**

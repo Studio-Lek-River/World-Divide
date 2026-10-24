@@ -115,6 +115,7 @@
 - **CONFIRMED:** Players can capture and sell enemy buildings, produce foreign units from captured factories and acquire more of an enemy tech tree by capturing appropriate prerequisite buildings/research.
 - **CONFIRMED:** Capturing foreign HQ permits constructing that foreign faction's builder and establishing its tech tree. Captured advanced research can bypass some rank requirements; other building/unit prerequisites still apply. Precise ownership of enemy general-specific content is **OPEN**; don't make capture automatically unlock every foreign doctrine.
 - **CONFIRMED:** Compatible civilian buildings can be garrisoned; capacity/firing slots depend on building. Appropriate counter-garrison weapons can clear occupants; severe building damage may kill those inside.
+- **CONFIRMED:** A civilian building shot to rubble stands as ruins: wall stubs that give cover and still hold a garrison, firing at ground level only (#449). More damage flattens the ruins to debris and the building is lost for good. A bulldozer can rebuild ruins, never a flattened building.
 
 ## 9. Infantry, squads, behavior and veterancy
 

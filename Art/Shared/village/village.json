@@ -1921,7 +1921,8 @@
       450.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPX04",
@@ -1931,7 +1932,8 @@
       450.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX05",
@@ -1961,7 +1963,8 @@
       450.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX08",
@@ -1971,7 +1974,8 @@
       450.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY09",
@@ -2011,7 +2015,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY13",
@@ -2021,7 +2026,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY14",
@@ -2031,7 +2037,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY15",
@@ -2071,7 +2078,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY19",
@@ -2081,7 +2089,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY20",
@@ -2091,7 +2100,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPX21",
@@ -2101,7 +2111,8 @@
       750.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX22",
@@ -2111,7 +2122,8 @@
       750.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     }
    ]
   },
@@ -2188,7 +2200,8 @@
       450.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPX06",
@@ -2198,7 +2211,8 @@
       450.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX07",
@@ -2228,7 +2242,8 @@
       450.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX10",
@@ -2238,7 +2253,8 @@
       450.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY11",
@@ -2268,7 +2284,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY14",
@@ -2278,7 +2295,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY15",
@@ -2288,7 +2306,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY16",
@@ -2298,7 +2317,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY17",
@@ -2348,7 +2368,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY22",
@@ -2358,7 +2379,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY23",
@@ -2368,7 +2390,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY24",
@@ -2378,7 +2401,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPX25",
@@ -2388,7 +2412,8 @@
       750.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX26",
@@ -2398,7 +2423,8 @@
       750.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     }
    ]
   },
@@ -2455,7 +2481,8 @@
       450.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPX04",
@@ -2465,7 +2492,8 @@
       450.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX05",
@@ -2495,7 +2523,8 @@
       450.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX08",
@@ -2505,7 +2534,8 @@
       450.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY09",
@@ -2535,7 +2565,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY12",
@@ -2545,7 +2576,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY13",
@@ -2575,7 +2607,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY16",
@@ -2585,7 +2618,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPX17",
@@ -2595,7 +2629,8 @@
       750.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX18",
@@ -2605,7 +2640,8 @@
       750.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     }
    ]
   },
@@ -2662,7 +2698,8 @@
       450.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPX04",
@@ -2672,7 +2709,8 @@
       450.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPX05",
@@ -2682,7 +2720,8 @@
       450.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX06",
@@ -2722,7 +2761,8 @@
       450.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX10",
@@ -2732,7 +2772,8 @@
       450.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX11",
@@ -2742,7 +2783,8 @@
       450.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY12",
@@ -2802,7 +2844,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY18",
@@ -2812,7 +2855,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY19",
@@ -2822,7 +2866,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY20",
@@ -2832,7 +2877,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY21",
@@ -2842,7 +2888,8 @@
       450.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY22",
@@ -2902,7 +2949,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY28",
@@ -2912,7 +2960,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY29",
@@ -2922,7 +2971,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY30",
@@ -2932,7 +2982,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY31",
@@ -2942,7 +2993,8 @@
       450.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPX32",
@@ -2952,7 +3004,8 @@
       750.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX33",
@@ -2962,7 +3015,8 @@
       750.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     }
    ]
   },
@@ -3049,7 +3103,8 @@
       595.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX07",
@@ -3059,7 +3114,30 @@
       595.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
+    },
+    {
+     "name": "RuinPY08",
+     "location": [
+      0.0,
+      -600.0,
+      150.0
+     ],
+     "yaw": -90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinNY09",
+     "location": [
+      0.0,
+      600.0,
+      150.0
+     ],
+     "yaw": 90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
     }
    ]
   },
@@ -3106,7 +3184,8 @@
       330.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX03",
@@ -3116,7 +3195,8 @@
       330.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX04",
@@ -3126,7 +3206,8 @@
       330.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNX05",
@@ -3136,7 +3217,8 @@
       330.0
      ],
      "yaw": -180.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY06",
@@ -3146,7 +3228,8 @@
       330.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY07",
@@ -3156,7 +3239,8 @@
       330.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY08",
@@ -3166,7 +3250,8 @@
       330.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY09",
@@ -3176,7 +3261,8 @@
       330.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY10",
@@ -3186,7 +3272,8 @@
       330.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY11",
@@ -3196,7 +3283,8 @@
       330.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY12",
@@ -3206,7 +3294,8 @@
       330.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY13",
@@ -3216,7 +3305,52 @@
       330.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
+    },
+    {
+     "name": "RuinNX14",
+     "location": [
+      -750.0,
+      300.0,
+      150.0
+     ],
+     "yaw": -180.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinNX15",
+     "location": [
+      -750.0,
+      -300.0,
+      150.0
+     ],
+     "yaw": -180.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinPY16",
+     "location": [
+      -150.0,
+      -550.0,
+      150.0
+     ],
+     "yaw": -90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinNY17",
+     "location": [
+      150.0,
+      550.0,
+      150.0
+     ],
+     "yaw": 90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
     }
    ]
   },
@@ -3253,7 +3387,8 @@
       440.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPX02",
@@ -3263,7 +3398,8 @@
       440.0
      ],
      "yaw": 0.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY03",
@@ -3273,7 +3409,8 @@
       440.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY04",
@@ -3283,7 +3420,8 @@
       440.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY05",
@@ -3293,7 +3431,8 @@
       440.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY06",
@@ -3303,7 +3442,8 @@
       440.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowPY07",
@@ -3313,7 +3453,8 @@
       440.0
      ],
      "yaw": -90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY08",
@@ -3323,7 +3464,8 @@
       440.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY09",
@@ -3333,7 +3475,8 @@
       440.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY10",
@@ -3343,7 +3486,8 @@
       440.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY11",
@@ -3353,7 +3497,8 @@
       440.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "WindowNY12",
@@ -3363,7 +3508,8 @@
       440.0
      ],
      "yaw": 90.0,
-     "arc": 90.0
+     "arc": 90.0,
+     "last_state": "Damaged"
     },
     {
      "name": "BelfryNX",
@@ -3397,6 +3543,116 @@
      "yaw": 90.0,
      "arc": 90.0,
      "last_state": "Pristine"
+    },
+    {
+     "name": "RuinPY13",
+     "location": [
+      -800.0,
+      -500.0,
+      150.0
+     ],
+     "yaw": -90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinPY14",
+     "location": [
+      -400.0,
+      -500.0,
+      150.0
+     ],
+     "yaw": -90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinPY15",
+     "location": [
+      0.0,
+      -500.0,
+      150.0
+     ],
+     "yaw": -90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinPY16",
+     "location": [
+      400.0,
+      -500.0,
+      150.0
+     ],
+     "yaw": -90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinPY17",
+     "location": [
+      800.0,
+      -500.0,
+      150.0
+     ],
+     "yaw": -90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinNY18",
+     "location": [
+      -800.0,
+      500.0,
+      150.0
+     ],
+     "yaw": 90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinNY19",
+     "location": [
+      -400.0,
+      500.0,
+      150.0
+     ],
+     "yaw": 90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinNY20",
+     "location": [
+      0.0,
+      500.0,
+      150.0
+     ],
+     "yaw": 90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinNY21",
+     "location": [
+      400.0,
+      500.0,
+      150.0
+     ],
+     "yaw": 90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
+    },
+    {
+     "name": "RuinNY22",
+     "location": [
+      800.0,
+      500.0,
+      150.0
+     ],
+     "yaw": 90.0,
+     "arc": 90.0,
+     "first_state": "Rubble"
     }
    ]
   },
