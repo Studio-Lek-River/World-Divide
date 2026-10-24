@@ -386,8 +386,10 @@ Appearance approval is per piece: Codex delivers a candidate with close-up and R
 it, and only then does Claude add its catalogue entry. 01, 02, 03, 05 and 06 were approved on 2026-10-23 (#392), 04 on
 2026-10-22 and 07, 08, 09, 12 and 13 on 2026-10-23 (#393; each piece's `STATE.md`). The game-side shots of a piece come
 from `DA_TestKitLighting` in `/Game/Data/Showcase`, a plain Large block with 01, 02, 03, 05, 09 (blue), 04 and 07 on its
-front and 06, 08, 12 and 13 on its roof: `ue.ps1 -Task buildingshots -Building DA_TestKitLighting`, with `-Cvars
-rts.Light.ForceDark=1` for the night and `rts.Light.ForceDark=1,rts.Debug.BuildingState=2` for low power.
+front and 06, 08, 12 and 13 on its roof: `ue.ps1 -Task buildingshots -Building DA_TestKitLighting -Cvars
+rts.Debug.BuildingState=0`, with `-Night` for the night (#424) and `rts.Debug.BuildingState=2` for low power. Leave out
+the Idle state and it shows low power: L_Bench's team is short of power. The in-game shots of 01–09, 12 and 13 are in
+`Art/Shared/kit/lighting/ingame/` (#392).
 
 ## Other kits (outline)
 

@@ -1,6 +1,6 @@
 # 08_WarningBeacon — Round 4b
 
-**Producer appearance approval:** "Approve" (2026-10-23), on the Round 4b sheets (day, night, LowPower). Claude integrated it in #393 (catalogue, setup, `DA_TestKitLighting`); the in-game close-up and night shots wait for #424.
+**Producer appearance approval:** "Approve" (2026-10-23), on the Round 4b sheets (day, night, LowPower). Claude integrated it in #393 (catalogue, setup, `DA_TestKitLighting`); the in-game close-up and night shots are in [../ingame/](../ingame/README.md) (#392).
 
 Issue #393, 2026-10-23. Ready for producer review; not approved yet.
 

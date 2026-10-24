@@ -2,6 +2,8 @@
 
 **Producer appearance approval — 2026-10-23:** "Yes they are all approved", given per piece on the Round 4b comparison sheets (reference, day, night, LOD0/LOD1). This approves the current model and finish; production integration and runtime validation are Claude's (#392).
 
+**In game — 2026-10-24:** close-up (12 m) and RTS (150/450 m) shots, day and night, on `DA_TestKitLighting`: [../ingame/](../ingame/README.md) (#392).
+
 
 2026-10-23, issue #392. Independent Blender/export check complete; producer approval given 2026-10-23 (see above).
 

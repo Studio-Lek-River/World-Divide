@@ -1,6 +1,6 @@
 # 07_ServiceBayLight — Round 4 state
 
-**Producer appearance approval:** "Ceiling lamp was fine" (2026-10-23), after its Round 4 delivery. Claude integrated it in #393 (catalogue, setup, `DA_TestKitLighting`); the in-game close-up and night shots wait for #424.
+**Producer appearance approval:** "Ceiling lamp was fine" (2026-10-23), after its Round 4 delivery. Claude integrated it in #393 (catalogue, setup, `DA_TestKitLighting`); the in-game close-up and night shots are in [../ingame/](../ingame/README.md) (#392).
 
 Independent art/technical pass, 2026-10-23. Producer approval pending.
 
