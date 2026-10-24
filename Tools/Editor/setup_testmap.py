@@ -1123,6 +1123,9 @@ def make_usa_hq():
             value.set_editor_property("group", record["group"])
         if "color" in record:
             value.set_editor_property("indicator_color", unreal.LinearColor(*record["color"], 1.0))
+        # Brighter or dimmer than its catalogue piece on this building alone (#453).
+        if "brightness" in record:
+            value.set_editor_property("brightness", record["brightness"])
         return value
 
     def collision_box(record):

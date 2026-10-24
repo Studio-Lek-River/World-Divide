@@ -310,6 +310,10 @@ struct FRTSKitMount
 	/** The colour of an indicator's glow (09, 14); white for every other piece. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount")
 	FLinearColor IndicatorColor = FLinearColor::White;
+
+	/** Scales its piece's brightness on this building alone (#453): its light, lens glow, glare and beam together. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mount", meta = (ClampMin = "0"))
+	float Brightness = 1.f;
 };
 
 /**

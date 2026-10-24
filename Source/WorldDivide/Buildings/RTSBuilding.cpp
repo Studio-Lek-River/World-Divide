@@ -29,6 +29,8 @@
 #include "Engine/TextureLightProfile.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "HAL/IConsoleManager.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "NavAreas/NavArea_Null.h"
 #include "NavMesh/RecastNavMesh.h"
 #include "Navigation/RTSNavAgents.h"
@@ -40,6 +42,7 @@
 #include "Units/RTSPrimitiveData.h"
 #include "Units/RTSUnit.h"
 #include "Units/RTSUnitShape.h"
+#include "UObject/UObjectIterator.h"
 #include "WorldDivide.h"
 
 namespace
@@ -62,6 +65,41 @@ namespace
 
 	/** How close to the footprint centre a navmesh point still counts as the hole not being there yet. */
 	const FVector NavCutQueryExtent(10.f, 10.f, 250.f);
+
+	TAutoConsoleVariable<int32> CVarKitLensSteady(
+		TEXT("rts.Debug.KitLensSteady"), 0,
+		TEXT("Holds the blinking kit lenses (the mast LEDs) lit, to picture them shining."));
+
+	/** Shows every building's kit looks again, so a brightness cvar takes effect at once. */
+	void RefreshKitBrightness(IConsoleVariable*)
+	{
+		for (TObjectIterator<ARTSBuilding> It; It; ++It)
+		{
+			if (!It->IsTemplate() && It->GetWorld())
+			{
+				const TArray<FRTSKitLook> Looks = It->GetKitLooks();
+				It->SetKitLooks(Looks);
+			}
+		}
+	}
+
+	TAutoConsoleVariable<float> CVarKitBrightness(
+		TEXT("rts.Debug.KitBrightness"), 1.f,
+		TEXT("Scales the kit lamps' brightness on this machine (#453): light, lens glow, glare and beam; 1 as the data says."),
+		FConsoleVariableDelegate::CreateStatic(&RefreshKitBrightness));
+
+	TAutoConsoleVariable<FString> CVarKitBrightnessOnly(
+		TEXT("rts.Debug.KitBrightnessOnly"), TEXT(""),
+		TEXT("Limits rts.Debug.KitBrightness to the mount with this name or the piece whose id ends in it (03_EntranceLight); empty scales all."),
+		FConsoleVariableDelegate::CreateStatic(&RefreshKitBrightness));
+
+	/** How much rts.Debug.KitBrightness scales Part's lamp: 1 unless it is set and matches the part. */
+	float GetDebugBrightness(const FRTSKitPart& Part)
+	{
+		const FString Only = CVarKitBrightnessOnly.GetValueOnGameThread();
+		const bool bMatches = Only.IsEmpty() || Part.Name == FName(*Only) || Part.Piece.EndsWith(Only);
+		return bMatches ? FMath::Max(CVarKitBrightness.GetValueOnGameThread(), 0.f) : 1.f;
+	}
 }
 
 ARTSBuilding::ARTSBuilding()
@@ -778,6 +816,18 @@ void ARTSBuilding::ApplyParts(const FRTSKitExpansion& Kit)
 			Part->SetRelativeTransform(Instances[0]);
 		}
 		Part->SetStaticMesh(Data.Mesh);
+		if (bKit && CVarKitLensSteady.GetValueOnGameThread() != 0)
+		{
+			for (int32 Slot = 0; Slot < Part->GetNumMaterials(); ++Slot)
+			{
+				float Blink = 0.f;
+				UMaterialInterface* Material = Part->GetMaterial(Slot);
+				if (Material && Material->GetScalarParameterValue(TEXT("Blink"), Blink) && Blink > 0.f)
+				{
+					Part->CreateDynamicMaterialInstance(Slot, Material)->SetScalarParameterValue(TEXT("Blink"), 0.f);
+				}
+			}
+		}
 		if (bFlag)
 		{
 			Part->SetMaterial(0, Flag->Material);
@@ -1183,7 +1233,7 @@ void ARTSBuilding::SetKitLooks(TConstArrayView<FRTSKitLook> Looks)
 		}
 		const FLinearColor Color = Part.IndicatorColor * (Look.bBattery ? RTSBuildingState::BatteryTint : FLinearColor::White);
 		float Lens[RTSKitLensData::Floats] = {};
-		Lens[RTSKitLensData::Level] = Look.Level;
+		Lens[RTSKitLensData::Level] = Look.Level * Part.Brightness * GetDebugBrightness(Part);
 		// The state already puts a normal lens out with its group; the Fixtures gate stays for the look between refreshes.
 		Lens[RTSKitLensData::Group] = Part.Group == TEXT("Fixtures") && !Look.bBattery && !Part.bEmergency ? 1.f : 0.f;
 		Lens[RTSKitLensData::Fault] = Look.Fault;
@@ -1211,7 +1261,8 @@ void ARTSBuilding::ApplyKitLightLooks()
 			continue;
 		}
 		const FRTSKitLook& Look = KitLooks[Kit.Part];
-		Light->SetIntensity(Kit.Candelas * Look.Level);
+		// The mount's Brightness is in its Candelas and glow colours already (RTSKit::Expand).
+		Light->SetIntensity(Kit.Candelas * Look.Level * GetDebugBrightness(KitParts[Kit.Part]));
 		Light->SetLightColor(Kit.Color * (Look.bBattery ? RTSBuildingState::BatteryTint : FLinearColor::White));
 	}
 	// The beams and halos glow with their part's look, flicker and flash included (M_Kit_Glow repeats the lens's sums).
@@ -1225,7 +1276,7 @@ void ARTSBuilding::ApplyKitLightLooks()
 		const FRTSKitLook& Look = KitLooks[Glow.Part];
 		const FLinearColor Color = Glow.Color * (Look.bBattery ? RTSBuildingState::BatteryTint : FLinearColor::White);
 		float Values[RTSKitGlowData::Floats] = {};
-		Values[RTSKitGlowData::Level] = Look.Level;
+		Values[RTSKitGlowData::Level] = Look.Level * GetDebugBrightness(KitParts[Glow.Part]);
 		Values[RTSKitGlowData::Fault] = Look.Fault;
 		Values[RTSKitGlowData::Flash] = Look.Flash;
 		Values[RTSKitGlowData::Color + 0] = Color.R;

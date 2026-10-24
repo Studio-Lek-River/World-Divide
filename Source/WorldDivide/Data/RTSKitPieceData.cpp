@@ -1,11 +1,16 @@
 #include "Data/RTSKitPieceData.h"
 
 #include "Engine/StaticMesh.h"
+#include "HAL/IConsoleManager.h"
 #include "Units/RTSPrimitiveData.h"
 
 namespace
 {
 	const FName FixturesGroup = TEXT("Fixtures");
+
+	TAutoConsoleVariable<FString> CVarKitMountOnly(
+		TEXT("rts.Debug.KitMountOnly"), TEXT(""),
+		TEXT("Mounts only the kit piece of the mount with this name on every building, to picture one lamp alone; empty mounts all."));
 }
 
 bool FRTSKitPart::IsWarning() const
@@ -87,6 +92,11 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 	for (int32 Index = 0; Index < Data.Mounts.Num(); ++Index)
 	{
 		const FRTSKitMount& Mount = Data.Mounts[Index];
+		const FString Only = CVarKitMountOnly.GetValueOnAnyThread();
+		if (!Only.IsEmpty() && Mount.Name != FName(*Only))
+		{
+			continue;
+		}
 		FTransform Frame;
 		FString Error;
 		if (!GetMountFrame(Data, Mount, Frame, Error))
@@ -107,6 +117,8 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 		const FName Group = !Mount.Group.IsNone() ? Mount.Group : Piece.bHasLight ? Piece.Light.Group : NAME_None;
 		FRTSKitPart& Info = Result.PartInfo.AddDefaulted_GetRef();
 		Info.Name = Name;
+		Info.Piece = Piece.Id;
+		Info.Brightness = Mount.Brightness;
 		Info.Group = Group;
 		Info.bEmergency = Mount.Emergency == ERTSKitOverride::Default ? Piece.bEmergencyDefault : Mount.Emergency == ERTSKitOverride::On;
 		Info.FaultResponse = Mount.bOverrideFaultResponse ? Mount.FaultResponse : Piece.FaultResponse;
@@ -128,7 +140,7 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 			Light.Location = Frame.TransformPosition(Kit.Location);
 			Light.Rotation = (Frame.GetRotation() * Kit.Rotation.Quaternion()).Rotator();
 			Light.Color = FLinearColor::MakeFromColorTemperature(Kit.Kelvin);
-			Light.Candelas = Kit.Candelas;
+			Light.Candelas = Kit.Candelas * Mount.Brightness;
 			Light.Radius = Kit.Radius;
 			Light.InnerConeAngle = Kit.InnerConeAngle;
 			Light.OuterConeAngle = Kit.OuterConeAngle;
@@ -141,18 +153,19 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 			{
 				// In the mount's frame, its scale included (a mount may undo its building's MeshScale).
 				Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.BeamMesh, FTransform(Kit.Rotation, Kit.Location) * Frame,
-					Light.Color * Piece.BeamStrength, /*bBeam*/ true });
+					Light.Color * Piece.BeamStrength * Mount.Brightness, /*bBeam*/ true });
 			}
 		}
 		if (Piece.GlareMesh && Piece.GlareStrength > 0.f && Piece.LensBounds.IsValid)
 		{
 			Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.GlareMesh,
 				FTransform(FQuat::Identity, Piece.LensBounds.GetCenter(), FVector(Piece.GlareRadius)) * Frame,
-				(Piece.bHasLight ? FLinearColor::MakeFromColorTemperature(Piece.Light.Kelvin) : Mount.IndicatorColor) * Piece.GlareStrength, /*bBeam*/ false });
+				(Piece.bHasLight ? FLinearColor::MakeFromColorTemperature(Piece.Light.Kelvin) : Mount.IndicatorColor) * Piece.GlareStrength * Mount.Brightness,
+				/*bBeam*/ false });
 		}
 
 		float Lens[RTSKitLensData::Floats] = {};
-		Lens[RTSKitLensData::Level] = 1.f;
+		Lens[RTSKitLensData::Level] = Mount.Brightness;
 		// A battery-backed lens stays on when the building's Fixtures go out (URTSBuildingStateComponent).
 		Lens[RTSKitLensData::Group] = Group == FixturesGroup && !Info.bEmergency ? 1.f : 0.f;
 		Lens[RTSKitLensData::Color + 0] = Mount.IndicatorColor.R;

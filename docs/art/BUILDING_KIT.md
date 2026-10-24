@@ -180,6 +180,7 @@ A building mounts pieces with `FRTSKitMount` entries in `URTSBuildingData::Mount
 | `FaultResponse` | overrides the piece's default (`bOverrideFaultResponse`) |
 | `Group` | overrides the piece's light group, for its light and its lens |
 | `IndicatorColor` | the colour of 09 and 14 |
+| `Brightness` | scales the piece's brightness on this building alone: light, lens glow, glare and beam together; 1 by default |
 
 The building's recipe JSON has **one line per mount**, and setup fills `Mounts` in. `transform` is location, rotation
 (pitch, yaw, roll) and scale:
@@ -193,8 +194,8 @@ The building's recipe JSON has **one line per mount**, and setup fills `Mounts` 
 ```
 
 The HQ mounts its two mast beacons and its flag this way since M7.00-05 (#390); setup reads `emergency` (true or false),
-`fault` (`None`, `Flicker` or `Off`), `group` and `color` (RGB) since M7.00-06 (#391), and a mount that leaves one out keeps
-its piece's. A piece that waves (the flag) carries its
+`fault` (`None`, `Flicker` or `Off`), `group` and `color` (RGB) since M7.00-06 (#391), and `brightness` since M7.00-32
+(#453), and a mount that leaves one out keeps its piece's. A piece that waves (the flag) carries its
 `wpo_disable_distance` in the catalogue.
 
 `RTSKit::Expand(BuildingData)` turns the mounts into parts, lights and per-instance data, a pure function: building ×
@@ -270,6 +271,12 @@ How it runs (#391):
 - `rts.Debug.BuildingState <0..5>` shows every building in one state on this machine (Idle, Producing, LowPower, Damaged,
   Critical, Destroyed; -1 off), for building shots: `ue.ps1 -Task buildingshots -Cvars "rts.Light.ForceDark=1,rts.Debug.BuildingState=2"`. Without it
   buildingshots shows Idle (#442); `-1` shows the state the game has.
+- `rts.Debug.KitBrightness <scale>` scales the kit lamps' brightness on this machine, live and without a setup run (#453):
+  light, lens glow, glare and beam, on top of each mount's `Brightness`. `rts.Debug.KitBrightnessOnly <name>` limits it to
+  the mount of that name or the piece whose id ends in it (`03_EntranceLight`); empty scales every lamp.
+  `rts.Debug.KitMountOnly <mount>` mounts only that mount's piece on every building, to picture one lamp alone, and
+  `rts.Debug.KitLensSteady 1` holds the blinking mast lenses lit: `ue.ps1 -Task buildingshots -Building DA_TestKitLighting
+  -Turn -Night -Cvars "rts.Debug.KitMountOnly=<Mount>,rts.Debug.KitBrightness=2"`.
 
 ## Night look
 

@@ -179,6 +179,10 @@ public:
 struct FRTSKitPart
 {
 	FName Name;
+	/** Its piece's catalogue id (URTSKitPieceData::Id). */
+	FString Piece;
+	/** The mount's Brightness, which its light and glows already carry; its lens takes it with its look. */
+	float Brightness = 1.f;
 	/** The mount's lighting group, or its piece's light's. */
 	FName Group;
 	/** Battery-backed: stays on, dimmed, on low power. */
