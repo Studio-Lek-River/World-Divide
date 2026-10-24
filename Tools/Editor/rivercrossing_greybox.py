@@ -1362,14 +1362,21 @@ def import_bridge_mesh(source, name, record, slots, directory=BRIDGE_DIR, nanite
 def spawn_bridges(meshes):
     """Each bridge's spans, piers and abutments along x across the river, labelled Bridge_<North|South>_<part>, every part
     world-static and blocking all, so ground traces (RTSGround) and the navmesh find the deck. The piers' tops and the
-    abutments' seats carry the girders' feet, deck_depth_cm under the road."""
+    abutments' seats carry the girders' feet, deck_depth_cm under the road. The spans are ARTSCivilBuilding actors of
+    DA_Civil_BridgeSpan (#444): shot down, a span's rubble leaves a gap the navmesh drops; piers and abutments stay."""
     half = BRIDGE_LENGTH / 2.0
     deck_depth = read_bridge_records()["deck_depth_cm"] / 100.0
+    path = f"{CIVIL_DIR}/DA_Civil_BridgeSpan"
+    span_data = unreal.load_asset(path)
+    if not span_data:
+        raise RuntimeError(f"{path} is missing: run ue.ps1 -Task setup first (#408)")
     for name, bridge_y in (("North", BRIDGE_Y), ("South", -BRIDGE_Y)):
-        parts = [(f"Span{span + 1}", "SM_Bridge_Span", -half + BRIDGE_SPAN * (span + 0.5), BRIDGE_DECK_TOP, 0.0)
-                 for span in range(BRIDGE_SPANS)]
-        parts += [(f"Pier{pier}", "SM_Bridge_Pier", -half + BRIDGE_SPAN * pier, BRIDGE_DECK_TOP - deck_depth, 0.0)
-                  for pier in range(1, BRIDGE_SPANS)]
+        for span in range(BRIDGE_SPANS):
+            x = -half + BRIDGE_SPAN * (span + 0.5)
+            building = spawn(unreal.RTSCivilBuilding, cm((x, bridge_y), BRIDGE_DECK_TOP), 0.0, f"Bridge_{name}_Span{span + 1}")
+            building.set_editor_property("data", span_data)
+        parts = [(f"Pier{pier}", "SM_Bridge_Pier", -half + BRIDGE_SPAN * pier, BRIDGE_DECK_TOP - deck_depth, 0.0)
+                 for pier in range(1, BRIDGE_SPANS)]
         parts += [("AbutmentW", "SM_Bridge_Abutment", -half, BRIDGE_DECK_TOP, 180.0),
                   ("AbutmentE", "SM_Bridge_Abutment", half, BRIDGE_DECK_TOP, 0.0)]
         for part, mesh, x, z, yaw in parts:

@@ -1195,6 +1195,11 @@ namespace RTSScaleTests
 			{
 				continue;
 			}
+			// The bridges' spans are civilian buildings too (#444), but no part of the village.
+			if (IsOnBridge(It->GetActorLocation()))
+			{
+				continue;
+			}
 			const int32 Bank = It->GetActorLocation().X < 0.f ? 0 : 1;
 			++Buildings[Bank];
 			if (It->ActorHasTag(GarrisonTag))
