@@ -703,6 +703,8 @@ def kit_light(light, lens, profile=None):
     else:
         value.set_editor_property("source_radius", min(width, height) / 2.0)
     value.set_editor_property("profile", profile)
+    # Coloured glass in front of the lamp (08's amber dome, #459), linear RGB; clear by default.
+    value.set_editor_property("filter", unreal.LinearColor(*light.get("filter", [1.0, 1.0, 1.0]), 1.0))
     value.set_editor_property("group", light["group"])
     value.set_editor_property("behaviour", getattr(unreal.RTSKitLightBehaviour, light["behaviour"].upper()))
     value.set_editor_property("priority", getattr(unreal.RTSKitLightPriority, light["priority"].upper()))

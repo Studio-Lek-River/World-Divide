@@ -152,6 +152,7 @@ The catalogue file is `{"pieces": [ ... ]}`.
 | `light.cone` | inner and outer cone angle, degrees (Spot, Rect barn doors) |
 | `light.group` | `Windows`, `Fixtures`, `Accents`, `GarageLamps`, `Emergency` or `Warning` |
 | `light.behaviour` | `Steady`, `Flash` or `Rotate` |
+| `light.filter` | optional: the coloured glass the lamp shines through, linear RGB, times its kelvin's colour for the light, beam and halo (08's amber dome, #459); clear by default |
 | `light.priority` | `Primary`, or `Secondary`: drawn only at High scalability and above |
 | `light.max_draw_distance` | cm from the camera beyond which the real light is off; the lens still glows |
 | `light.profile` | optional (#440): its light distribution profile, `downlight`, `spot` or `flood` (`building_art.LIGHT_PROFILES`, a hot centre and a soft edge), imported as `LP_Kit_<Profile>`. Point and Spot only: a Rect takes none, its area already softens it |
@@ -427,7 +428,7 @@ Present-day military and industrial fixtures, no brand look. Light values are th
 | 05 | Cylindrical spot can on a slotted swivel arm and a two-bolt wall plate, braided cable | can Ø 18 × 24, arm 25, plate 10 × 30 | dark weathered die-cast | clear glass over a honeycomb reflector | 3000 K, 600 cd, 10/30°, 20 m |
 | 06 | Two rectangular LED flood heads on a U-yoke, square post and four-bolt roof base plate | 82 × 28 × 71 | dark weathered steel, rear cooling fins | three LED panels per head behind glass | 4000 K, 500 cd, 25/55°, 20 m |
 | 07 | Recessed high-bay panel set flush in a bay ceiling, trim frame | 60 × 30 × 10 | white enamel frame, steel trim | prismatic acrylic panel | 4000 K, 300 cd, rect 56 × 26 cm, 12 m |
-| 08 | Rotating warning beacon: amber Fresnel dome on a two-band cast collar, short stem, bolted square base plate (#393) | Ø 18 × 32 | blackened cast iron, four hex bolts | see-through amber dome over a real bulb, holder and mirror that turn (`Glass`, `Sweep`) | amber (2200 K), one 450 cd spot (cone 10/24°, `spot` profile, 18 m) on the dome's axis facing its mirror's +X, turning with it at 1.5 Hz (#459); beam 0.35 × 7 m |
+| 08 | Rotating warning beacon: amber Fresnel dome on a two-band cast collar, short stem, bolted square base plate (#393) | Ø 18 × 32 | blackened cast iron, four hex bolts | see-through amber dome over a real bulb, holder and mirror that turn (`Glass`, `Sweep`) | amber (2200 K through an amber `filter` [1, 0.4, 0], about the lens's own tint), one 500 cd spot (cone 10/24°, `spot` profile, 18 m) on the dome's axis facing its mirror's +X, turning with it at 1.5 Hz (#459); beam 0.35 × 7 m |
 | 09 | Small chamfered wall box with a ribbed diffuser, slotted end plug, two Torx screws (#393); its `Wall` mount point turns it so the diffuser, modelled underneath, faces out from the wall and the screws up, where the RTS camera sees it (#441) | 24 × 9 × 9 | worn bare steel | ribbed neutral diffuser in a screwed bezel | emissive, colour per mount |
 | 10 | Bollard path light with a louvred head | Ø 20 × 100 | dark grey extruded aluminium, base plate with four anchor bolts | louvres throw light down only | 3000 K, 80 cd, 30/60°, 6 m |
 | 11 | Galvanised perimeter pole with a flat "shoebox" LED head on a short arm | pole 600 tall, head 60 × 30 × 10 | galvanised steel pole and base plate, grey head | flat glass underside | 4000 K, 800 cd, 30/55°, 22 m |

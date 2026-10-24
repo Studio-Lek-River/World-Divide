@@ -147,7 +147,7 @@
    "faction": "neutral",
    "slots": ["Housing", "Lens"],
    "atlas": {"Housing": "Trim", "Lens": "Lens"},
-   "light": {"anchor": "Lens", "type": "Spot", "candela": 450, "kelvin": 2200, "radius": 1800, "cone": [10, 24], "group": "Warning", "behaviour": "Rotate", "priority": "Primary", "max_draw_distance": 20000, "profile": "spot"},
+   "light": {"anchor": "Lens", "type": "Spot", "candela": 500, "kelvin": 2200, "filter": [1, 0.4, 0], "radius": 1800, "cone": [10, 24], "group": "Warning", "behaviour": "Rotate", "priority": "Primary", "max_draw_distance": 20000, "profile": "spot"},
    "beam": {"strength": 0.35, "length": 700},
    "glare": 0.8,
    "wpo_disable_distance": 15000,

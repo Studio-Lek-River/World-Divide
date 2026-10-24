@@ -53,6 +53,10 @@ struct FRTSKitLight
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "1000"))
 	float Kelvin = 3000.f;
 
+	/** The coloured glass its lamp shines through (the catalogue's "filter", linear RGB): 08's amber dome (#459); white for clear glass. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light")
+	FLinearColor Filter = FLinearColor::White;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Light", meta = (ClampMin = "0"))
 	float Radius = 800.f;
 

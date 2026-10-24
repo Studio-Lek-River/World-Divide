@@ -158,7 +158,7 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 			Light.Type = Kit.Type;
 			Light.Location = Frame.TransformPosition(Kit.Location);
 			Light.Rotation = (Frame.GetRotation() * Kit.Rotation.Quaternion()).Rotator();
-			Light.Color = FLinearColor::MakeFromColorTemperature(Kit.Kelvin);
+			Light.Color = FLinearColor::MakeFromColorTemperature(Kit.Kelvin) * Kit.Filter;
 			Light.Candelas = Kit.Candelas * Mount.Brightness;
 			Light.Radius = Kit.Radius;
 			Light.InnerConeAngle = Kit.InnerConeAngle;
@@ -192,7 +192,7 @@ FRTSKitExpansion RTSKit::Expand(const URTSBuildingData& Data)
 				Scale[Size.X >= Size.Y && Size.X >= Size.Z ? 0 : Size.Y >= Size.Z ? 1 : 2] = FMath::Max(Piece.GlareLength, Piece.GlareRadius);
 			}
 			Result.Glows.Add({ Result.PartInfo.Num() - 1, Piece.GlareMesh, FTransform(FQuat::Identity, Centre, Scale) * Frame,
-				(Piece.bHasLight ? FLinearColor::MakeFromColorTemperature(Piece.Light.Kelvin) : Mount.IndicatorColor) * Piece.GlareStrength * Mount.Brightness,
+				(Piece.bHasLight ? FLinearColor::MakeFromColorTemperature(Piece.Light.Kelvin) * Piece.Light.Filter : Mount.IndicatorColor) * Piece.GlareStrength * Mount.Brightness,
 				/*bBeam*/ false });
 		}
 
